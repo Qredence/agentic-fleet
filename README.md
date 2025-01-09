@@ -1,5 +1,7 @@
 # AgenticFleet
 
+[![Codacy Badge](https://api.codacy.com/project/badge/Grade/127fb3f8aa894b1ba6694bd03594a26f)](https://app.codacy.com/gh/Qredence/AgenticFleet?utm_source=github.com&utm_medium=referral&utm_content=Qredence/AgenticFleet&utm_campaign=Badge_Grade)
+
 <div align="left">
 <a href="https://pypi.org/project/agentic-fleet/">
    <img alt="Pepy Total Downlods" src="https://img.shields.io/pepy/dt/agentic-fleet">
