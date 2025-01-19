@@ -1,5 +1,7 @@
 # AgenticFleet
 
+A powerful multi-agent system for adaptive AI reasoning and automation. AgenticFleet combines Chainlit's interactive interface with AutoGen's multi-agent capabilities to create a flexible, powerful AI assistant platform.
+
 <div align="left">
 <a href="https://pypi.org/project/agentic-fleet/">
    <img alt="Pepy Total Downlods" src="https://img.shields.io/pepy/dt/agentic-fleet">
@@ -11,217 +13,119 @@
 
 [![Codacy Badge](https://app.codacy.com/project/badge/Grade/cf5bcfbdbf50493b9b5de381c24dc147)](https://app.codacy.com/gh/Qredence/AgenticFleet/dashboard?utm_source=gh&utm_medium=referral&utm_content=&utm_campaign=Badge_grade)
 
-AgenticFleet is an Adaptative Agentic System that leverages Chainlit for the frontend interface and FastAPI for the backend, built on the foundation of Autogen & Magentic-One.
+## Key Features
 
+- **Multi-Agent System**: Coordinated team of specialized AI agents
+  - Code generation and analysis
+  - Web content processing
+  - File system operations
+  
+- **Interactive Interface**
+  - Real-time communication via Chainlit
+  - Code syntax highlighting
+  - Markdown rendering
+  - File upload/download support
 
+- **Advanced Capabilities**
+  - OAuth authentication integration
+  - Configurable agent behaviors
+  - Comprehensive error handling
+  - Progress tracking
+  
+- **Developer-Friendly**
+  - Easy-to-use CLI
+  - Extensive documentation
+  - Flexible configuration
+  - Active community support
 
-https://github.com/user-attachments/assets/e36b215a-4fac-4b2a-95e2-90ce7701f277
+## Quick Start
 
-
-
-
-
-## Quick Links
-- [Join our Discord Community](https://discord.gg/ebgy7gtZHK)
-- [Follow us on Twitter](https://x.com/agenticfleet)
-- [Join Early Access Waitlist](https://www.qredence.ai/)
-
-## Features
-
-- Interactive Chainlit 2.0 chat interface 
-- FastAPI backend with structured logging and WebSocket support
-- General Multi-tasking Agentic System based on Magentic-One
-- Advanced prompt engineering with PromptFleet templates
-- Dataset and prompt fabric tools for AI training
-- Comprehensive error handling and connection management
-- Environment-based configuration
-- Extensible architecture for future enhancements
-- OAuth support with ability to run with or without authentication
-
-
-## Installation
-
-### From PyPI
-
-Recommended: create a virtual environment using uv:
+1. Install AgenticFleet using uv (recommended):
 
 ```bash
-uv venv
-source .venv/bin/activate  # On Unix/macOS
-# or
-.venv\Scripts\activate  # On Windows
-``` 
-
-The simplest way to install AgenticFleet is via pip:
-
-```bash
-pip install agentic-fleet # uv install agentic-fleet   
+uv pip install agentic-fleet
 ```
 
-Copy the example environment file and update it with your settings:
+2. Copy and configure environment variables:
 
 ```bash
+# Copy the example environment file
 cp .env.example .env
+
+# Open .env and update with your values
+# Required: Add your Azure OpenAI credentials
+# Recommended: Configure OAuth settings
 ```
 
-Install Playwright dependencies:
+3. Start the server:
 
 ```bash
-playwright install --with-deps chromium
+agenticfleet start
 ```
 
-Then, you can run the application using one of these commands:
+The web interface will be available at `http://localhost:8001`.
 
-```bash
-agenticfleet start      # Start with OAuth authentication enabled
-agenticfleet no-oauth   # Start without OAuth authentication
+## Documentation
+
+- [Installation Guide](docs/installation.md) - Detailed setup instructions
+- [Usage Guide](docs/usage-guide.md) - How to use AgenticFleet
+- [API Reference](docs/api-reference.md) - Complete API documentation
+- [Architecture Overview](docs/agentic-fleet.md) - System architecture and design
+
+## Configuration
+
+The `.env.example` file contains all required and recommended settings. Copy it to `.env` and update with your values:
+
+```env
+# Required: Azure OpenAI Configuration
+AZURE_OPENAI_API_KEY=your_api_key
+AZURE_OPENAI_ENDPOINT=your_endpoint
+AZURE_OPENAI_DEPLOYMENT=your_deployment
+AZURE_OPENAI_MODEL=your_model
+
+## Recommended: OAuth Configuration
+OAUTH_CLIENT_ID=your_client_id
+OAUTH_CLIENT_SECRET=your_client_secret
+OAUTH_REDIRECT_URI=http://localhost:8001/oauth/callback
 ```
-
-The application will be available at http://localhost:8001
-
-
-
-### From Source
-
-1. Clone the repository:
-
-```bash
-git clone https://github.com/qredence/agenticfleet.git
-cd agenticfleet
-```
-
-2. Create and activate a virtual environment using uv:
-
-```bash
-uv venv
-. .venv/bin/activate  # On Unix/macOS
-# or
-.venv\Scripts\activate  # On Windows
-```
-
-3. Install dependencies:
-
-Additional dependencies may be required for certain features. For example, to install Playwright dependencies:
-
-```bash
-sudo playwright install-deps
-sudo apt install -y nodejs npm
-npx playwright install-deps
-```
-
-## Roadmap (short-term)
-
-Current Progress:
-- [x] Implement core multi-agent architecture
-- [x] Add Multi-modal Surfer agent
-- [x] Add FileSurfer agent
-- [x] Integrate Chainlit 2.0 frontend
-- [x] Add OAuth authentication support
-- [x] Implement real-time streaming responses
-- [x] Add CogCache integration
-
-Short-term Goals:
-- [ ] Add Composio Agent
-- [ ] Implement LLM model auto-selection
-- [ ] Enhance agent coordination
-- [ ] Add message persistence
-- [ ] Improve file handling capabilities
-- [ ] Release AgenticFabric
-- [ ] Implement GraphFleet integration
-- [ ] Develop AI training tools
-
-Mid-term Goals:
-- [ ] Launch cloud service with OAuth + Freetier
-- [ ] Create comprehensive prompt engineering suite
-- [ ] Build enterprise deployment options
-- [ ] Establish agent marketplace
-- [ ] Enable cross-platform interoperability
-- [ ] Enhance UI/UX features
-- [ ] Implement advanced monitoring
-- [ ] Add automated error recovery
-
-## Prerequisites
-
-- Python 3.10 or later
-- uv package manager
-
-
-
-
-4. Configure environment variables:
-
-Copy the example environment file and update it with your settings:
-
-```bash
-cp .env.example .env
-```
-
-The `.env` file contains all necessary configuration for both backend and frontend:
-- Azure Services configuration (OpenAI, Key Vault, etc.)
-- External AI Services API keys
-- Backend server settings
-- Frontend (Chainlit) configuration
 
 ## Development
 
-To start the application in development mode:
+### Prerequisites
 
+- Python 3.10-3.12 (Python 3.13 is not yet supported)
+- uv package manager (recommended)
+- Azure OpenAI API access
+
+### Setup
+
+1. Clone and install:
 ```bash
-# Ensure you're in the virtual environment
-. .venv/bin/activate
-
-# Start the Chainlit application
-chainlit run src/app/app.py
+git clone https://github.com/qredence/agenticfleet.git
+cd agenticfleet
+pip install uv
+uv pip install -e ".[dev]"
 ```
 
-This will:
-- Launch the Chainlit interface at http://localhost:8001
-- Enable real-time agent communication
-- Provide colored logging output
-- Handle graceful shutdown
-
-
-
-
+2. Run tests:
+```bash
+pytest tests/
+```
 
 ## Contributing
 
-1. Fork the repository
-2. Create your feature branch (`git checkout -b feature/amazing-feature`)
-3. Commit your changes (`git commit -m 'Add some amazing feature'`)
-4. Push to the branch (`git push origin feature/amazing-feature`)
-5. Open a Pull Request
+We welcome contributions! Please see our [Contributing Guide](CONTRIBUTING.md) for details.
 
-Please ensure your PR:
-- Includes appropriate tests
-- Updates documentation as needed
-- Follows the existing code style
-- Includes proper error handling
-- Has meaningful commit messages
+## Security
 
-## Citation
-
-```bibtex
-@misc{fourney2024magenticonegeneralistmultiagentsolving,
-    title={Magentic-One: A Generalist Multi-Agent System for Solving Complex Tasks},
-    author={Adam Fourney and Gagan Bansal and Hussein Mozannar and Cheng Tan and Eduardo Salinas 
-            and Erkang and Zhu and Friederike Niedtner and Grace Proebsting and Griffin Bassman 
-            and Jack Gerrits and Jacob Alber and Peter Chang and Ricky Loynd and Robert West 
-            and Victor Dibia and Ahmed Awadallah and Ece Kamar and Rafah Hosn and Saleema Amershi},
-    year={2024},
-    eprint={2411.04468},
-    archivePrefix={arXiv},
-    primaryClass={cs.AI},
-    url={https://arxiv.org/abs/2411.04468}
-}
-```
-
-For more information about Autogen, visit their [documentation](https://microsoft.github.io/autogen/0.4.0.dev13/index.html).
+For security concerns, please review our [Security Policy](SECURITY.md).
 
 ## License
 
-This project is licensed under the [Apache 2.0 License](LICENSE).
+This project is licensed under the Apache-2.0 License - see the [LICENSE](LICENSE) file for details.
 
-## Star History
+## Support
 
-[![Star History Chart](https://api.star-history.com/svg?repos=Qredence/AgenticFleet&type=Date)](https://star-history.com/#Qredence/AgenticFleet&Date) 
+- [Issue Tracker](https://github.com/qredence/agenticfleet/issues)
+- [Discussions](https://github.com/qredence/agenticfleet/discussions)
+- Email: contact@qredence.ai

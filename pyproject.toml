@@ -4,31 +4,27 @@ build-backend = "hatchling.build"
 
 [project]
 name = "agentic-fleet"
-version = "0.4.3"
-summary = "A multi-agent system for adaptive AI reasoning and automation"
-requires-python = ">=3.10"
-readme = { file = "README.md", content-type = "text/markdown" }
-description = "Adaptive Agentic AI Reasoning That Empower, Inform, and Integrate Seamlessly"
-urls.homepage = "https://www.qredence.ai"
-urls."Bug Tracker" = "https://github.com/Qredence/AgenticFleet/issues"
-urls.documentation = "https://github.com/Qredence/AgenticFleet/tree/main/docs"
-urls."source code" = "https://github.com/Qredence/AgenticFleet"
-keywords = ["agentic", "autogen", "ai-agents", "agentic-ai", "machine-learning", "artificial-intelligence", "multi-agent", "ai", "qredence"]
+version = "0.4.50"
+description = "A powerful multi-agent system for adaptive AI reasoning and automation"
+readme = "README.md"
+requires-python = ">=3.10,<3.13"
+license = {text = "Apache-2.0"}
+keywords = ["ai", "agents", "automation", "multi-agent", "adaptive", "AI", "reasoning", "autogen-sample", "autogen", "magentic-one"]
 authors = [
-  {name = "Zachary BENSALEM", email = "contact@zachary.ai"}
+  { name = "Zachary BENSALEM", email = "contact@qredence.ai" },
 ]
-license = {file = "LICENSE"}
+
 classifiers = [
   "Development Status :: 4 - Beta",
-  "License :: OSI Approved :: Apache Software License",
-  "Programming Language :: Python :: 3",
+  "Programming Language :: Python",
   "Programming Language :: Python :: 3.10",
   "Programming Language :: Python :: 3.11",
   "Programming Language :: Python :: 3.12",
-
+  "Programming Language :: Python :: Implementation :: CPython",
 ]
 
 dependencies = [
+
     # Core Framework
     "fastapi>=0.109.0",
     "uvicorn>=0.24.0",
@@ -37,6 +33,7 @@ dependencies = [
     "python-dotenv>=1.0.1",
     "typing-extensions>=4.8.0",
     "packaging>=23.2",
+
     # Networking & Async
     "aiohttp>=3.11.11,<4.0.0",
     "httpx>=0.25.0",
@@ -44,18 +41,19 @@ dependencies = [
     "aiofiles>=23.1.0,<24.0.0",
     "python-multipart>=0.0.6",
     "asyncio>=3.4.3",
+
     # AI/ML Infrastructure
-    "autogen-core==0.4.1",
-    "autogen-agentchat==0.4.1",
-    "autogen-ext[openai,azure]>=0.4.1,<0.5.0",
-    "autogen-ext[docker]>=0.4.1,<0.5.0",
-    "autogen-ext[magentic-one]>=0.4.1,<0.5.0",
-    "autogen-ext[web-surfer]>=0.4.1,<0.5.0",
-    "autogen-magentic-one>=0.0.1",
+    "autogen-core>=0.4.2,<0.5.0",
+    "autogen-agentchat>=0.4.2,<0.5.0",
+    "autogen-ext[openai,azure]>=0.4.2,<0.5.0",
+    "autogen-ext[docker]>=0.4.2,<0.5.0",
+    "autogen-ext[magentic-one]>=0.4.2,<0.5.0",
+    "autogen-ext[web-surfer]>=0.4.2,<0.5.0",
     "magentic-one-cli==0.2.0",
     "agentops>=0.3.21",
     "promptflow-tracing==1.17.1",
     "composio-core>=0.6.11.post1",
+
     # Azure Services
     "azure-core>=1.32.0",
     "azure-identity>=1.19.0",
@@ -63,6 +61,7 @@ dependencies = [
     "azure-search-documents==11.6.0b4",
     "azure-storage-blob>=12.24.0",
     "azure-cosmos>=4.9.0",
+
     # Data Processing
     "pandas>=2.2.3",
     "numpy>=1.26,<2.0",
@@ -70,8 +69,10 @@ dependencies = [
     "yfinance>=0.2.51",
     "jsonlines>=4.0.0",
     "pytz>=2024.2",
+    "Pillow>=10.2.0",
+
     # Web & Utilities
-    "chainlit==2.0.3",
+    "chainlit>=2.0.4",
     "playwright>=1.49.1,<2.0.0",
     "beautifulsoup4>=4.12.0",
     "bing>=0.31",
@@ -79,6 +80,7 @@ dependencies = [
     "tenacity>=9.0.0",
     "docker>=7.1.0",
     "opentelemetry-instrumentation-fastapi>=0.44b0",
+    
     # Developer Tools
     "rich>=13.9.4",
     "aioconsole>=0.8.1",
@@ -88,55 +90,65 @@ dependencies = [
     "azure-ai-projects>=1.0.0b4",
     "azure-ai-inference>=1.0.0b6",
     "puremagic>=1.28",
+    "psutil>=5.9.6",
 ]
 
-[project.optional-dependencies]
-test = [
-  "pytest>=7.4.0",
-  "pytest-cov>=4.1.0",
-  "pytest-asyncio>=0.21.1",
-  "pytest-mock>=3.11.1",
-  "pytest-timeout>=2.1.0",
-  "coverage>=7.3.2"
-]
-
-dev = [
-  "black>=23.9.1",
-  "isort>=5.12.0",
-  "flake8>=6.1.0",
-  "mypy>=1.5.1",
-  "pre-commit>=3.4.0"
-]
-
-docs = [
-  "sphinx>=7.2.6",
-  "sphinx-rtd-theme>=1.3.0",
-  "sphinx-autodoc-typehints>=1.24.0"
-]
-
-[tool.hatch.build.targets.wheel]
-packages = ["src"]
-
-[tool.hatch.metadata]
-allow-direct-references = true
+[project.urls]
+Homepage = "https://github.com/qredence/agenticfleet"
+Documentation = "https://github.com/qredence/agenticfleet/tree/main/docs"
+Repository = "https://github.com/qredence/agenticfleet.git"
+Issues = "https://github.com/qredence/agenticfleet/issues"
+Source = "https://github.com/qredence/agenticfleet"
 
 [project.scripts]
-agenticfleet = "scripts.run:cli"
+agenticfleet = "agentic_fleet.cli:main"
 
 [tool.hatch.build]
-artifacts = [
-  "*.pyc",
-  "**/*.pyc",
-  "**/__pycache__",
-  "**/.pytest_cache",
-  "**/.mypy_cache",
-  "**/.coverage"
+packages = ["src/agentic_fleet"]
+exclude = [
+    # Python
+    "*.pyc",
+    "__pycache__",
+    "*.pyo",
+    "*.pyd",
+    "*.so",
+    "*.dylib",
+    "*.egg",
+    "*.egg-info",
+    # Build
+    "build",
+    "dist",
+    "eggs",
+    "sdist",
+    "develop-eggs",
+    # Directories
+    "tests",
+    "docs",
+    "examples",
+    ".git",
+    ".github",
+    ".pytest_cache",
+    ".mypy_cache",
+    ".ruff_cache",
+    # Config files
+    ".gitignore",
+    ".env*",
+    "*.log",
+    "tox.ini",
+    ".coverage",
+    "coverage.xml",
+    # System
+    ".DS_Store",
+    "Thumbs.db",
 ]
+
+[tool.hatch.version]
+path = "src/agentic_fleet/__init__.py"
 
 [tool.pytest.ini_options]
 minversion = "7.0"
 addopts = "-ra -q --cov=src --cov-report=xml --cov-report=term-missing"
-testpaths = ["src/backend/test", "src/frontend/test"]
+testpaths = ["tests"]
 python_files = ["test_*.py"]
 python_classes = ["Test*"]
 python_functions = ["test_*"]
@@ -179,4 +191,52 @@ exclude_lines = [
     "if __name__ == .__main__.:",
     "pass",
     "raise ImportError"
+]
+
+[tool.ruff]
+line-length = 88
+target-version = "py310"
+
+[tool.ruff.lint]
+select = [
+    "E",  # pycodestyle errors
+    "W",  # pycodestyle warnings
+    "F",  # pyflakes
+    "I",  # isort
+    "C",  # flake8-comprehensions
+    "B",  # flake8-bugbear
+]
+ignore = [
+    "E501",  # line too long, handled by black
+    "B008",  # do not perform function calls in argument defaults
+    "C901",  # too complex
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.4.3",
+    "pytest-cov>=4.1.0",
+    "pytest-asyncio>=0.21.1",
+    "black>=23.11.0",
+    "ruff>=0.1.0",
+    "pre-commit>=3.5.0",
+    "tox>=4.11.3",
+]
+
+test = [
+    "pytest>=7.4.3",
+    "pytest-cov>=4.1.0",
+    "pytest-asyncio>=0.21.1",
+    "pytest-mock>=3.12.0",
+    "pytest-timeout>=2.2.0",
+    "pytest-xdist>=3.5.0",
+    "coverage>=7.4.0",
+]
+
+docs = [
+    "sphinx>=7.2.6",
+    "sphinx-rtd-theme>=2.0.0",
+    "sphinx-autodoc-typehints>=1.25.2",
+    "sphinx-copybutton>=0.5.2",
+    "myst-parser>=2.0.0",
 ]
