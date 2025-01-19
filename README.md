@@ -13,6 +13,8 @@ A powerful multi-agent system for adaptive AI reasoning and automation. AgenticF
 
 [![Codacy Badge](https://app.codacy.com/project/badge/Grade/cf5bcfbdbf50493b9b5de381c24dc147)](https://app.codacy.com/gh/Qredence/AgenticFleet/dashboard?utm_source=gh&utm_medium=referral&utm_content=&utm_campaign=Badge_grade)
 
+![chainlitlight](https://github.com/user-attachments/assets/0d070c34-e5a8-40be-94f5-5c8307f1f64c)
+
 ## Key Features
 
 - **Multi-Agent System**: Coordinated team of specialized AI agents
@@ -45,6 +47,11 @@ A powerful multi-agent system for adaptive AI reasoning and automation. AgenticF
 ```bash
 uv pip install agentic-fleet
 ```
+
+```bash
+playwright install --with-deps chromium
+```
+
 
 2. Copy and configure environment variables:
 
