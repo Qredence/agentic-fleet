@@ -11,11 +11,11 @@ def run_server() -> None:
         ["chainlit", "run", "src/app/app.py", "-w", "--port", "8001"],
         env={**os.environ}
     )
-    
+
     print(f"\n✨ Service started:")
     print(f"🌐 Chainlit interface available at http://localhost:8001")
     print("\nPress Ctrl+C to stop the service\n")
-    
+
     try:
         # Wait for the process
         chainlit_process.wait()

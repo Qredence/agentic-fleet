@@ -66,8 +66,8 @@ class MagenticOneHelper:
         self.runtime = SingleThreadedAgentRuntime()
 
         self.client = AzureOpenAIChatCompletionClient(
-            model="gpt-4o",
-            azure_deployment="gpt-4o",
+            model="gpt-4o-2024-11-20",
+            azure_deployment="gpt-4o-fleet",
             api_version="2024-08-01-preview",
             azure_endpoint=os.getenv("AZURE_OPENAI_ENDPOINT"),
             azure_ad_token_provider=token_provider,
@@ -101,15 +101,15 @@ class MagenticOneHelper:
                     await code_executor.start()
 
                     executor = CodeExecutorAgent("Executor", code_executor=code_executor)
-                
+
                 # or remote = Azure ACA Dynamic Sessions execution
                 else:
                     pool_endpoint=os.getenv("POOL_MANAGEMENT_ENDPOINT")
                     assert pool_endpoint, "POOL_MANAGEMENT_ENDPOINT environment variable is not set"
                     with tempfile.TemporaryDirectory() as temp_dir:
                         executor = CodeExecutorAgent("Executor", code_executor=ACADynamicSessionsCodeExecutor(pool_management_endpoint=pool_endpoint, credential=azure_credential, work_dir=temp_dir))
-                
-                
+
+
                 agent_list.append(executor)
                 print("Executor added!")
 
@@ -118,14 +118,14 @@ class MagenticOneHelper:
                 web_surfer = MultimodalWebSurfer("WebSurfer", model_client=client)
                 agent_list.append(web_surfer)
                 print("WebSurfer added!")
-            
+
             # This is default MagenticOne agent - FileSurfer
             elif (agent["type"] == "MagenticOne" and agent["name"] == "FileSurfer"):
                 file_surfer = FileSurfer("FileSurfer", model_client=client)
                 agent_list.append(file_surfer)
                 print("FileSurfer added!")
-            
-      
+
+
         return agent_list
 
     def main(self, task):
@@ -134,7 +134,7 @@ class MagenticOneHelper:
             model_client=self.client,
             max_turns=self.max_rounds,
             max_stalls=self.max_stalls_before_replan,
-            
+
         )
         stream = team.run_stream(task=task)
         return stream

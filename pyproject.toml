@@ -7,7 +7,7 @@ name = "agentic-fleet"
 version = "0.4.50"
 description = "A powerful multi-agent system for adaptive AI reasoning and automation"
 readme = "README.md"
-requires-python = ">=3.10,<3.13"
+requires-python = ">=3.10"
 license = {text = "Apache-2.0"}
 keywords = ["ai", "agents", "automation", "multi-agent", "adaptive", "AI", "reasoning", "autogen-sample", "autogen", "magentic-one"]
 authors = [
@@ -49,7 +49,7 @@ dependencies = [
     "autogen-ext[docker]>=0.4.2,<0.5.0",
     "autogen-ext[magentic-one]>=0.4.2,<0.5.0",
     "autogen-ext[web-surfer]>=0.4.2,<0.5.0",
-    "magentic-one-cli==0.2.0",
+    "magentic-one-cli>=0.2.2",
     "agentops>=0.3.21",
     "promptflow-tracing==1.17.1",
     "composio-core>=0.6.11.post1",
@@ -70,6 +70,9 @@ dependencies = [
     "jsonlines>=4.0.0",
     "pytz>=2024.2",
     "Pillow>=10.2.0",
+    "plotly>=5.16.0",
+    "plotly-express>=0.4.1",
+    "requests-html>=0.10.0",
 
     # Web & Utilities
     "chainlit>=2.0.4",

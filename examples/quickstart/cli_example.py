@@ -24,11 +24,11 @@ async def run_single_agent(prompt: str) -> None:
             name="cli_assistant",
             system_message="You are a helpful CLI assistant"
         )
-        
+
         # Process message
         result = await agent.process_message(prompt)
         print(f"\nAgent response:\n{result}\n")
-        
+
     except Exception as e:
         logger.error(f"Error in single agent: {str(e)}")
 
@@ -37,11 +37,11 @@ async def run_agent_team(task: str) -> None:
     try:
         # Create and configure team
         team = await create_agent_team(task)
-        
+
         # Execute task
         result = await team.execute()
         print(f"\nTeam result:\n{result}\n")
-        
+
     except Exception as e:
         logger.error(f"Error in agent team: {str(e)}")
 
@@ -51,7 +51,7 @@ async def main():
     await run_single_agent(
         "Write a Python function to calculate the factorial of a number"
     )
-    
+
     # Agent team example
     await run_agent_team(
         """Create a data processing pipeline that:
