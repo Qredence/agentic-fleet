@@ -7,10 +7,10 @@ and FastAPI for the backend, providing a seamless development experience.
 """
 
 __version__ = "0.4.50"
-__author__ = "Zochory"
-__email__ = "zochory@qredence.com"
-__license__ = "MIT"
-__copyright__ = "Copyright 2025 Zochory"
+__author__ = "Qredence"
+__email__ = "contact@qredence.ai"
+__license__ = "Apache 2.0"
+__copyright__ = "Copyright 2025 Qredence"
 
 from importlib.metadata import PackageNotFoundError, version
 

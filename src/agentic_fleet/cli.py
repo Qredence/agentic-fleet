@@ -8,10 +8,11 @@ from typing import Optional
 import click
 from dotenv import load_dotenv
 
+
 def setup_environment(no_oauth: bool = False) -> None:
     """Setup environment variables based on OAuth setting."""
     load_dotenv()
-    
+
     if no_oauth:
         # Disable OAuth by setting empty values
         os.environ["OAUTH_CLIENT_ID"] = ""
@@ -39,14 +40,14 @@ def start(no_oauth: bool, port: int, host: str):
     """Start the AgenticFleet server."""
     # Setup environment based on OAuth flag
     setup_environment(no_oauth)
-    
+
     # Get app path
     app_path = get_app_path()
-    
+
     # Print startup message
     auth_mode = "without" if no_oauth else "with"
     click.echo(f"Starting AgenticFleet {auth_mode} OAuth on {host}:{port}...")
-    
+
     # Build chainlit command
     cmd = [
         "chainlit",
@@ -55,7 +56,7 @@ def start(no_oauth: bool, port: int, host: str):
         "--host", host,
         "--port", str(port)
     ]
-    
+
     try:
         subprocess.run(cmd, check=True)
     except subprocess.CalledProcessError as e:

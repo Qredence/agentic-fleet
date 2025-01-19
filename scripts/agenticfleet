@@ -19,11 +19,10 @@ def main():
         sys.exit(1)
 
     command = sys.argv[1]
-    
+
     if command == "start":
         # Check for no-oauth flag
         no_oauth = len(sys.argv) > 2 and sys.argv[2] == "no-oauth"
-        
         # Set environment variables for OAuth
         if no_oauth:
             os.environ["OAUTH_CLIENT_ID"] = ""
@@ -36,11 +35,11 @@ def main():
             print("Starting AgenticFleet without OAuth...")
         else:
             print("Starting AgenticFleet with OAuth...")
-        
+
         # Get the path to app.py
         app_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "src", "app"))
         app_path = os.path.join(app_dir, "app.py")
-        
+
         # Build and run chainlit command
         cmd = [
             "chainlit",
@@ -49,7 +48,7 @@ def main():
             "--port",
             "8000"
         ]
-        
+
         try:
             subprocess.run(cmd, check=True)
         except subprocess.CalledProcessError as e:

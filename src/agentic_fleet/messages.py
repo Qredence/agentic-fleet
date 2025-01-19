@@ -17,8 +17,8 @@ Example:
     ```
 """
 
-from typing import Dict, Any, Optional, List, Union, Literal
 from datetime import datetime, timezone
+from typing import Any, Dict, List, Literal, Optional, Union
 from pydantic import BaseModel, Field, validator
 
 MessageType = Literal["agent", "plan", "thought", "dialog", "code", "error"]
@@ -30,7 +30,7 @@ class BaseMessage(BaseModel):
     metadata: Optional[Dict[str, Any]] = Field(default=None, description="Additional metadata")
     message_type: MessageType = Field(..., description="Type of message")
 
-    @validator('timestamp')
+    @validator("timestamp")
     def validate_timestamp(cls, v: str) -> str:
         """Ensure timestamp is in ISO format."""
         try:
@@ -53,8 +53,8 @@ class PlanMessage(BaseMessage):
     estimated_time: Optional[str] = Field(default=None, description="Estimated time to complete")
     dependencies: Optional[List[str]] = Field(default_factory=list, description="Required dependencies")
     status: str = Field(default="pending", description="Current status of the plan")
-    
-    @validator('steps')
+
+    @validator("steps")
     def validate_steps(cls, v: List[str]) -> List[str]:
         """Ensure steps are not empty strings."""
         if any(not step.strip() for step in v):
@@ -70,8 +70,8 @@ class ThoughtMessage(BaseMessage):
         default=None, ge=0.0, le=1.0,
         description="Confidence level in the reasoning (0.0-1.0)"
     )
-    
-    @validator('confidence')
+
+    @validator("confidence")
     def validate_confidence(cls, v: Optional[float]) -> Optional[float]:
         """Validate confidence is between 0 and 1."""
         if v is not None and not 0 <= v <= 1:
@@ -131,18 +131,18 @@ MESSAGE_CLASSES: Dict[str, type] = {
 
 def create_message(message_type: MessageType, content: str, **kwargs: Any) -> AnyMessage:
     """Create a strongly-typed message instance.
-    
+
     Args:
         message_type: Type of message to create
         content: Main message content
         **kwargs: Additional arguments for the specific message type
-    
+
     Returns:
         An instance of the appropriate message class
-    
+
     Raises:
         ValueError: If message_type is not recognized or validation fails
-        
+
     Example:
         ```python
         error_msg = create_message(
@@ -155,11 +155,11 @@ def create_message(message_type: MessageType, content: str, **kwargs: Any) -> An
     """
     if message_type not in MESSAGE_CLASSES:
         raise ValueError(f"Unknown message type: {message_type}")
-    
+
     # Ensure message_type is included in kwargs
     kwargs['message_type'] = message_type
-    
+
     try:
         return MESSAGE_CLASSES[message_type](content=content, **kwargs)
-    except Exception as e:
-        raise ValueError(f"Failed to create {message_type} message: {str(e)}")
+    except Exception as err:
+        raise ValueError(f"Failed to create {message_type} message: {str(err)}") from err

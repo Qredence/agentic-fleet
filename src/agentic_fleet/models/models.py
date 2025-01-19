@@ -4,11 +4,19 @@ This module implements AutoGen-compatible agents and models for AI-powered inter
 It follows AutoGen's patterns for message handling, configuration, and agent lifecycle management.
 """
 
+# Standard library imports
 import asyncio
 import logging
 import os
-from typing import Dict, List, Optional, Union, Any
+from typing import Any, Dict, List, Optional, Union
 
+# Third-party imports
+from autogen_agentchat.agents import (
+    AssistantAgent,
+    UserProxyAgent
+)
+
+from autogen_agentchat.teams import MagenticOneGroupChat
 from autogen_core import (
     AgentId,
     MessageContext,
@@ -16,16 +24,12 @@ from autogen_core import (
     SingleThreadedAgentRuntime,
     message_handler
 )
-from autogen_agentchat.agents import (
-    AssistantAgent,
-    UserProxyAgent
-)
-from autogen_agentchat.teams import MagenticOneGroupChat
+
 from autogen_core.models import (
+    AssistantMessage,
     ChatCompletionClient,
     SystemMessage,
-    UserMessage,
-    AssistantMessage
+    UserMessage
 )
 from autogen_ext.models.openai import (
     AzureOpenAIChatCompletionClient,
@@ -33,6 +37,15 @@ from autogen_ext.models.openai import (
 )
 from azure.identity import DefaultAzureCredential, get_bearer_token_provider
 from dotenv import load_dotenv
+
+# Local imports
+from autogen_core import (
+    AgentId,
+    MessageContext,
+    RoutedAgent,
+    SingleThreadedAgentRuntime,
+    message_handler
+)
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -48,7 +61,7 @@ def create_azure_client() -> AzureOpenAIChatCompletionClient:
             DefaultAzureCredential(),
             "https://cognitiveservices.azure.com/.default"
         )
-        
+
         return AzureOpenAIChatCompletionClient(
             azure_deployment=os.getenv("AZURE_OPENAI_DEPLOYMENT", "gpt-4"),
             model=os.getenv("AZURE_OPENAI_MODEL", "gpt-4"),
@@ -84,7 +97,7 @@ def create_cogcache_client() -> OpenAIChatCompletionClient:
 
 class EnhancedAssistantAgent(AssistantAgent):
     """Enhanced AutoGen assistant agent with improved capabilities."""
-    
+
     def __init__(
         self,
         name: str,
@@ -142,7 +155,7 @@ class EnhancedAssistantAgent(AssistantAgent):
 
 class EnhancedUserProxyAgent(UserProxyAgent):
     """Enhanced AutoGen user proxy agent with improved capabilities."""
-    
+
     def __init__(
         self,
         name: str,
@@ -177,37 +190,37 @@ async def create_agent_team(
     model_client: Optional[ChatCompletionClient] = None
 ) -> MagenticOneGroupChat:
     """Create a team of agents for collaborative task solving.
-    
+
     Args:
         task: The task to be solved
         model_client: Optional model client (uses Azure by default)
-        
+
     Returns:
         A configured group chat team
     """
     try:
         model_client = model_client or create_azure_client()
-        
+
         # Create agents
         assistant = EnhancedAssistantAgent(
             name="Assistant",
             system_message="You are a helpful AI assistant.",
             model_client=model_client
         )
-        
+
         user_proxy = EnhancedUserProxyAgent(
             name="UserProxy",
             system_message="You are a helpful user proxy."
         )
-        
+
         # Create team
         team = MagenticOneGroupChat(
             participants=[assistant, user_proxy],
             model_client=model_client
         )
-        
+
         return team
-        
+
     except Exception as e:
         logger.error(f"Failed to create agent team: {str(e)}")
         raise
@@ -217,12 +230,12 @@ async def main() -> None:
     try:
         # Create team
         team = await create_agent_team("What are fun things to do in Seattle?")
-        
+
         # Run conversation
         async for response in team.run_stream(task="What are fun things to do in Seattle?"):
             if isinstance(response, (str, dict)):
                 print(response)
-                
+
     except Exception as e:
         logger.exception("Error in main")
         raise
