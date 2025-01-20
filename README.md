@@ -3,9 +3,10 @@
 A powerful multi-agent system for adaptive AI reasoning and automation. AgenticFleet combines Chainlit's interactive interface with AutoGen's multi-agent capabilities to create a flexible, powerful AI assistant platform.
 
 <div align="left">
-<a href="https://pypi.org/project/agentic-fleet/">
-   <img alt="Pepy Total Downlods" src="https://img.shields.io/pepy/dt/agentic-fleet">
-</a>
+
+  <img alt="Pepy Total Downloads" src="https://img.shields.io/pepy/dt/agentic-fleet?style=for-the-badge&color=blue">
+
+
 <img alt="GitHub License" src="https://img.shields.io/github/license/qredence/agenticfleet">
 <img alt="GitHub forks" src="https://img.shields.io/github/forks/qredence/agenticfleet">
 <img alt="GitHub Repo stars" src="https://img.shields.io/github/stars/qredence/agenticfleet">
