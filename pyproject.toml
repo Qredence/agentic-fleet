@@ -43,12 +43,12 @@ dependencies = [
     "asyncio>=3.4.3",
 
     # AI/ML Infrastructure
-    "autogen-core>=0.4.2,<0.5.0",
-    "autogen-agentchat>=0.4.2,<0.5.0",
-    "autogen-ext[openai,azure]>=0.4.2,<0.5.0",
-    "autogen-ext[docker]>=0.4.2,<0.5.0",
-    "autogen-ext[magentic-one]>=0.4.2,<0.5.0",
-    "autogen-ext[web-surfer]>=0.4.2,<0.5.0",
+    "autogen-core>=0.4.3,<0.5.0",
+    "autogen-agentchat>=0.4.3,<0.5.0",
+    "autogen-ext[openai,azure]>=0.4.3,<0.5.0",
+    "autogen-ext[docker]>=0.4.3,<0.5.0",
+    "autogen-ext[magentic-one]>=0.4.3,<0.5.0",
+    "autogen-ext[web-surfer]>=0.4.3,<0.5.0",
     "magentic-one-cli>=0.2.2",
     "agentops>=0.3.21",
     "promptflow-tracing==1.17.1",
@@ -75,7 +75,7 @@ dependencies = [
     "requests-html>=0.10.0",
 
     # Web & Utilities
-    "chainlit>=2.0.4",
+    "chainlit>=2.0.5",
     "playwright>=1.49.1,<2.0.0",
     "beautifulsoup4>=4.12.0",
     "bing>=0.31",

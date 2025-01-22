@@ -101,12 +101,12 @@ requires-dist = [
     { name = "aiofiles", specifier = ">=23.1.0,<24.0.0" },
     { name = "aiohttp", specifier = ">=3.11.11,<4.0.0" },
     { name = "asyncio", specifier = ">=3.4.3" },
-    { name = "autogen-agentchat", specifier = ">=0.4.2,<0.5.0" },
-    { name = "autogen-core", specifier = ">=0.4.2,<0.5.0" },
-    { name = "autogen-ext", extras = ["docker"], specifier = ">=0.4.2,<0.5.0" },
-    { name = "autogen-ext", extras = ["magentic-one"], specifier = ">=0.4.2,<0.5.0" },
-    { name = "autogen-ext", extras = ["openai", "azure"], specifier = ">=0.4.2,<0.5.0" },
-    { name = "autogen-ext", extras = ["web-surfer"], specifier = ">=0.4.2,<0.5.0" },
+    { name = "autogen-agentchat", specifier = ">=0.4.3,<0.5.0" },
+    { name = "autogen-core", specifier = ">=0.4.3,<0.5.0" },
+    { name = "autogen-ext", extras = ["docker"], specifier = ">=0.4.3,<0.5.0" },
+    { name = "autogen-ext", extras = ["magentic-one"], specifier = ">=0.4.3,<0.5.0" },
+    { name = "autogen-ext", extras = ["openai", "azure"], specifier = ">=0.4.3,<0.5.0" },
+    { name = "autogen-ext", extras = ["web-surfer"], specifier = ">=0.4.3,<0.5.0" },
     { name = "azure-ai-inference", specifier = ">=1.0.0b6" },
     { name = "azure-ai-projects", specifier = ">=1.0.0b4" },
     { name = "azure-core", specifier = ">=1.32.0" },
@@ -118,7 +118,7 @@ requires-dist = [
     { name = "beautifulsoup4", specifier = ">=4.12.0" },
     { name = "bing", specifier = ">=0.31" },
     { name = "black", marker = "extra == 'dev'", specifier = ">=23.11.0" },
-    { name = "chainlit", specifier = ">=2.0.4" },
+    { name = "chainlit", specifier = ">=2.0.5" },
     { name = "composio-core", specifier = ">=0.6.11.post1" },
     { name = "coverage", marker = "extra == 'test'", specifier = ">=7.4.0" },
     { name = "docker", specifier = ">=7.1.0" },
@@ -443,19 +443,19 @@ wheels = [
 
 [[package]]
 name = "autogen-agentchat"
-version = "0.4.2"
+version = "0.4.3"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "autogen-core" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/c6/ac/15406c6167fd95e21a76e08d1347b4b8d87bfbda281ae70593f8b547fcea/autogen_agentchat-0.4.2.tar.gz", hash = "sha256:00634e7fbb6b8e922b44cea1b6632c7afdf6a285ed4a14dc84386b0669410c1c", size = 50815 }
+sdist = { url = "https://files.pythonhosted.org/packages/82/80/d4615c8e19c43e1a37a26c5e5c14adc77f2d5b791c04e525721983c94a2c/autogen_agentchat-0.4.3.tar.gz", hash = "sha256:28b77cca6f2c6f21319c0f7e8c07d0559c89d9899d00379d1b0b405ab7c8e5ea", size = 56419 }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/98/c3/d8b9ddaaa8131a5eed6f2e70782bc255bfc9cb74ec675a65d626fbd7d05e/autogen_agentchat-0.4.2-py3-none-any.whl", hash = "sha256:7723b7ecedc1640e0c5053dcafe0e8045efb396916e8a2ac4d3e582b1016b7e1", size = 58514 },
+    { url = "https://files.pythonhosted.org/packages/3c/f8/ae620de6658e1a3340dcdd6434c6b98681bd859ed14f7bf38663aec1c360/autogen_agentchat-0.4.3-py3-none-any.whl", hash = "sha256:b3067678682c74eac09fd23a911e8ac76a94d7435cb529f6aeae3a928f2239eb", size = 61276 },
 ]
 
 [[package]]
 name = "autogen-core"
-version = "0.4.2"
+version = "0.4.3"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "jsonref" },
@@ -465,21 +465,21 @@ dependencies = [
     { name = "pydantic" },
     { name = "typing-extensions" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/90/e7/20b073cd0d78cc735a94d0bef8feafe158c0f0c5c4f1f3bad94e01d7602f/autogen_core-0.4.2.tar.gz", hash = "sha256:14b735a8eb76540014187c0051e0f22d72d4e683017b08285be76746defc7125", size = 2288241 }
+sdist = { url = "https://files.pythonhosted.org/packages/68/39/449937a545ffce7a82a8d96a90204c936e0446b4cb1ada64362e7909aabf/autogen_core-0.4.3.tar.gz", hash = "sha256:39b889fdb03f58d1d656ac8aca8b80d28d447b2a505f77fd2ce27b932b02aa85", size = 2304186 }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/35/7a/d585292bdf6562576f66b0119a1cd73da780083702d05ce0405cdd2b8b3a/autogen_core-0.4.2-py3-none-any.whl", hash = "sha256:96a2a0e925d0ebb08556b556c5eb6c74177450e607309f9e318db33081adb1a0", size = 71782 },
+    { url = "https://files.pythonhosted.org/packages/94/e0/4e2bae4870b0c72416ce01e39cbb6845f7c9085f78d0817776490e21000a/autogen_core-0.4.3-py3-none-any.whl", hash = "sha256:ffff153f42bd96ab99fac2ec7b00939e39a45e334e4653b04b1039f2d6b3b4e4", size = 76433 },
 ]
 
 [[package]]
 name = "autogen-ext"
-version = "0.4.2"
+version = "0.4.3"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "autogen-core" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/f4/b5/999b398bf0558f678c6a624288da0daa122f7c52537649f01c876d375b1d/autogen_ext-0.4.2.tar.gz", hash = "sha256:a35a529f332322a279f3bd60f83edca513772e97f5dbd65988d4886105c1e62d", size = 102990 }
+sdist = { url = "https://files.pythonhosted.org/packages/51/b5/8ffe1c6c458913a1d5bf1394429181e77fa755c8fb05f41d5f710952bf19/autogen_ext-0.4.3.tar.gz", hash = "sha256:a32c1646fccdd5d3f2a81c961cbf18f0e795dc9b9c4c9ecfbf659a83d5c49896", size = 134666 }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/5b/2d/b0d5a80a2a241a233fdd4832d47214ad05a57552703ad35b1a6d04bb950c/autogen_ext-0.4.2-py3-none-any.whl", hash = "sha256:4f9a5eb6cf649cdba4a4bdf045946c5caf0f8976ff553f1d8cfcc71e391c0918", size = 111229 },
+    { url = "https://files.pythonhosted.org/packages/04/68/402b9f634a1b2d83c68093a795521b8f9038d377d76a374b14e13179bfde/autogen_ext-0.4.3-py3-none-any.whl", hash = "sha256:a96546dfb055c137d6ab10b8ae1764d7037c5a7c1f6aa44b4b0ccf926d566229", size = 133775 },
 ]
 
 [package.optional-dependencies]
@@ -834,7 +834,7 @@ wheels = [
 
 [[package]]
 name = "chainlit"
-version = "2.0.4"
+version = "2.0.5"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "aiofiles" },
@@ -860,9 +860,9 @@ dependencies = [
     { name = "uvicorn" },
     { name = "watchfiles" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/6b/58/5d6f11618dcb004555ef2ad2810717a342f3c86c660f80eb14b9ee258f90/chainlit-2.0.4.tar.gz", hash = "sha256:85aab1b3834cd48fed6e6f69dff91e034cf2262127844776fc59ae3b386ddf3c", size = 4644815 }
+sdist = { url = "https://files.pythonhosted.org/packages/1e/d8/7173caf3ca0d7480b3614e3126da9c592692d353764326fc0e1702b9eddd/chainlit-2.0.5.tar.gz", hash = "sha256:8af7746999d6641c69c33b67e5325e2d018432dd0b3306926d7435b862b0bfe2", size = 4646512 }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/50/e0/ad888a74135074d779b0b76a8f56da4026207eb1a032b35e5fea4d91d089/chainlit-2.0.4-py3-none-any.whl", hash = "sha256:c086a32d9b3b6b10672e9684f8cd79650f816789d7cb97d9a5027439457d9b3e", size = 4711949 },
+    { url = "https://files.pythonhosted.org/packages/dc/01/8f02145330355e2802b95f835afb4cf11ea503b779cd6136892d4940abc5/chainlit-2.0.5-py3-none-any.whl", hash = "sha256:30cd2c39a9393de047b4e64b3dcf84ca4f691cb61445d59ae9a29f8e1f1af006", size = 4709971 },
 ]
 
 [[package]]
