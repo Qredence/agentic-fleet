@@ -91,6 +91,7 @@ dependencies = [
     "codecov>=2.1.13",
     "pytest-cov>=6.0.0",
     "pytest>=8.3.4",
+    "pytest-asyncio>=0.25.2",
 ]
 
 [project.urls]
