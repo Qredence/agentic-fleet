@@ -41,5 +41,7 @@ jobs:
           path: dist/
       - name: Publish release distributions to PyPI
         uses: pypa/gh-action-pypi-publish@release/v1
+        env:
+          PYPI_TOKEN: ${{ secrets.PYPI_TOKEN }}
         with:
           packages-dir: dist/
