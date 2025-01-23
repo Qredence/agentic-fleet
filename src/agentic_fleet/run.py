@@ -1,8 +1,9 @@
 """Script to run the Chainlit server."""
 
 import os
-import subprocess
 import signal
+import subprocess
+
 
 def run_server() -> None:
     """Run the Chainlit server."""

@@ -10,14 +10,10 @@ import string
 import time
 from typing import Any, Dict, List, Optional, Union
 
-# Third-party imports
-from chainlit.input_widget import Select, Slider, TextInput
-from dotenv import load_dotenv
+import chainlit as cl
 import matplotlib.pyplot as plt
 import pandas as pd
-from pydantic import BaseModel, Field
 import requests
-import chainlit as cl
 
 # AutoGen imports
 from autogen_agentchat.agents import (
@@ -38,6 +34,11 @@ from autogen_ext.agents.magentic_one import MagenticOneCoderAgent
 from autogen_ext.agents.web_surfer import MultimodalWebSurfer
 from autogen_ext.code_executors.local import LocalCommandLineCodeExecutor
 from autogen_ext.models.openai import AzureOpenAIChatCompletionClient
+
+# Third-party imports
+from chainlit.input_widget import Select, Slider, TextInput
+from dotenv import load_dotenv
+from pydantic import BaseModel, Field
 
 # Initialize logging
 logging.basicConfig(level=logging.INFO)

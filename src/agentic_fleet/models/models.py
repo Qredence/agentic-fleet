@@ -11,32 +11,8 @@ import os
 from typing import Any, Dict, List, Optional, Union
 
 # Third-party imports
-from autogen_agentchat.agents import (
-    AssistantAgent,
-    UserProxyAgent
-)
-
+from autogen_agentchat.agents import AssistantAgent, UserProxyAgent
 from autogen_agentchat.teams import MagenticOneGroupChat
-from autogen_core import (
-    AgentId,
-    MessageContext,
-    RoutedAgent,
-    SingleThreadedAgentRuntime,
-    message_handler
-)
-
-from autogen_core.models import (
-    AssistantMessage,
-    ChatCompletionClient,
-    SystemMessage,
-    UserMessage
-)
-from autogen_ext.models.openai import (
-    AzureOpenAIChatCompletionClient,
-    OpenAIChatCompletionClient
-)
-from azure.identity import DefaultAzureCredential, get_bearer_token_provider
-from dotenv import load_dotenv
 
 # Local imports
 from autogen_core import (
@@ -44,8 +20,20 @@ from autogen_core import (
     MessageContext,
     RoutedAgent,
     SingleThreadedAgentRuntime,
-    message_handler
+    message_handler,
 )
+from autogen_core.models import (
+    AssistantMessage,
+    ChatCompletionClient,
+    SystemMessage,
+    UserMessage,
+)
+from autogen_ext.models.openai import (
+    AzureOpenAIChatCompletionClient,
+    OpenAIChatCompletionClient,
+)
+from azure.identity import DefaultAzureCredential, get_bearer_token_provider
+from dotenv import load_dotenv
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)

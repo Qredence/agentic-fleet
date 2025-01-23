@@ -2,6 +2,7 @@
 
 from agentic_fleet.cli import cli
 
+
 def main():
     """Entry point for the AgenticFleet CLI."""
     cli()

@@ -1,25 +1,24 @@
 import asyncio
 import logging
 import os
+import tempfile
+from typing import Any, AsyncGenerator, Dict, List, Optional
 
-from typing import Optional, AsyncGenerator, Dict, Any, List
-from autogen_agentchat.ui import Console
 from autogen_agentchat.agents import CodeExecutorAgent
 from autogen_agentchat.teams import MagenticOneGroupChat
+from autogen_agentchat.ui import Console
+from autogen_core import AgentId, AgentProxy, DefaultTopicId, SingleThreadedAgentRuntime
 from autogen_ext.agents.file_surfer import FileSurfer
 from autogen_ext.agents.magentic_one import MagenticOneCoderAgent
 from autogen_ext.agents.web_surfer import MultimodalWebSurfer
-from autogen_ext.code_executors.local import LocalCommandLineCodeExecutor
 from autogen_ext.code_executors.azure import ACADynamicSessionsCodeExecutor
 from autogen_ext.code_executors.docker import DockerCommandLineCodeExecutor
+from autogen_ext.code_executors.local import LocalCommandLineCodeExecutor
 from autogen_ext.models.openai import AzureOpenAIChatCompletionClient
-from autogen_core import AgentId, AgentProxy, DefaultTopicId
-from autogen_core import SingleThreadedAgentRuntime
 from azure.identity import DefaultAzureCredential, get_bearer_token_provider
-import tempfile
-from promptflow.tracing import start_trace
-from autogen_ext.models.openai import AzureOpenAIChatCompletionClient
 from dotenv import load_dotenv
+from promptflow.tracing import start_trace
+
 load_dotenv()
 
 
