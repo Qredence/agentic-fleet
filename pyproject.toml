@@ -88,6 +88,8 @@ dependencies = [
     "psutil>=5.9.6",
     "redis>=5.2.1",
     "axios>=0.4.0",
+    "codecov>=2.1.13",
+    "pytest-cov>=6.0.0",
 ]
 
 [project.urls]

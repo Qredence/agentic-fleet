@@ -32,6 +32,7 @@ dependencies = [
     { name = "beautifulsoup4" },
     { name = "bing" },
     { name = "chainlit" },
+    { name = "codecov" },
     { name = "composio-core" },
     { name = "docker" },
     { name = "fastapi" },
@@ -53,6 +54,7 @@ dependencies = [
     { name = "puremagic" },
     { name = "pydantic" },
     { name = "pydantic-settings" },
+    { name = "pytest-cov" },
     { name = "python-dotenv" },
     { name = "python-multipart" },
     { name = "pytz" },
@@ -121,6 +123,7 @@ requires-dist = [
     { name = "bing", specifier = ">=0.31" },
     { name = "black", marker = "extra == 'dev'", specifier = ">=23.11.0" },
     { name = "chainlit", specifier = ">=2.0.5" },
+    { name = "codecov", specifier = ">=2.1.13" },
     { name = "composio-core", specifier = ">=0.6.11.post1" },
     { name = "coverage", marker = "extra == 'test'", specifier = ">=7.4.0" },
     { name = "docker", specifier = ">=7.1.0" },
@@ -149,6 +152,7 @@ requires-dist = [
     { name = "pytest", marker = "extra == 'test'", specifier = ">=7.4.3" },
     { name = "pytest-asyncio", marker = "extra == 'dev'", specifier = ">=0.21.1" },
     { name = "pytest-asyncio", marker = "extra == 'test'", specifier = ">=0.21.1" },
+    { name = "pytest-cov", specifier = ">=6.0.0" },
     { name = "pytest-cov", marker = "extra == 'dev'", specifier = ">=4.1.0" },
     { name = "pytest-cov", marker = "extra == 'test'", specifier = ">=4.1.0" },
     { name = "pytest-mock", marker = "extra == 'test'", specifier = ">=3.12.0" },
@@ -980,6 +984,19 @@ source = { registry = "https://pypi.org/simple" }
 sdist = { url = "https://files.pythonhosted.org/packages/54/7a/a507c709be2c96e1bb6102eb7b7f4026c5e5e223ef7d745a17d239e9d844/cobble-0.1.4.tar.gz", hash = "sha256:de38be1539992c8a06e569630717c485a5f91be2192c461ea2b220607dfa78aa", size = 3805 }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/d5/e1/3714a2f371985215c219c2a70953d38e3eed81ef165aed061d21de0e998b/cobble-0.1.4-py3-none-any.whl", hash = "sha256:36c91b1655e599fd428e2b95fdd5f0da1ca2e9f1abb0bc871dec21a0e78a2b44", size = 3984 },
+]
+
+[[package]]
+name = "codecov"
+version = "2.1.13"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "coverage" },
+    { name = "requests" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/2c/bb/594b26d2c85616be6195a64289c578662678afa4910cef2d3ce8417cf73e/codecov-2.1.13.tar.gz", hash = "sha256:2362b685633caeaf45b9951a9b76ce359cd3581dd515b430c6c3f5dfb4d92a8c", size = 21416 }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/af/02/18785edcdf6266cdd6c6dc7635f1cbeefd9a5b4c3bb8aff8bd681e9dd095/codecov-2.1.13-py2.py3-none-any.whl", hash = "sha256:c2ca5e51bba9ebb43644c43d0690148a55086f7f5e6fd36170858fa4206744d5", size = 16512 },
 ]
 
 [[package]]
