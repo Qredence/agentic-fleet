@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "agentic-fleet"
-version = "0.4.50"
+version = "0.4.60"
 description = "A powerful multi-agent system for adaptive AI reasoning and automation"
 readme = "README.md"
 requires-python = ">=3.10"
@@ -51,7 +51,6 @@ dependencies = [
     "autogen-ext[web-surfer]>=0.4.3,<0.5.0",
     "magentic-one-cli>=0.2.2",
     "agentops>=0.3.21",
-    "promptflow-tracing==1.17.1",
     "composio-core>=0.6.11.post1",
 
     # Azure Services
@@ -69,7 +68,7 @@ dependencies = [
     "yfinance>=0.2.51",
     "jsonlines>=4.0.0",
     "pytz>=2024.2",
-    "Pillow>=10.2.0",
+    "pillow>=11.0.0",
     "plotly>=5.16.0",
     "plotly-express>=0.4.1",
     "requests-html>=0.10.0",
@@ -105,6 +104,7 @@ Source = "https://github.com/qredence/agenticfleet"
 
 [project.scripts]
 agenticfleet = "agentic_fleet.cli:main"
+post_install = "agentic_fleet.scripts:install_playwright_deps"
 
 [tool.hatch.build]
 packages = ["src/agentic_fleet"]
@@ -168,7 +168,7 @@ multi_line_output = 3
 line_length = 100
 
 [tool.mypy]
-python_version = "3.10"
+python_version = "3.12"
 warn_return_any = true
 warn_unused_configs = true
 disallow_untyped_defs = true
@@ -198,7 +198,7 @@ exclude_lines = [
 
 [tool.ruff]
 line-length = 88
-target-version = "py310"
+target-version = "py312"
 
 [tool.ruff.lint]
 select = [
