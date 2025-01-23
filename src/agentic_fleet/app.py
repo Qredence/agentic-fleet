@@ -69,58 +69,58 @@ az_model_client = AzureOpenAIChatCompletionClient(
 )
 
 
-@cl.oauth_callback
-async def oauth_callback(
-    provider_id: str,
-    token: str,
-    raw_user_data: Dict[str, str],
-    default_user: cl.User,
-) -> cl.User:
-    """Handle OAuth authentication callback.
+# OAuth configuration - only define callback if OAuth is enabled
+if os.getenv("USE_OAUTH", "false").lower() == "true":
+    @cl.oauth_callback
+    async def oauth_callback(
+        provider_id: str,
+        token: str,
+        raw_user_data: Dict[str, str],
+        default_user: cl.User,
+    ) -> cl.User:
+        """Handle OAuth authentication callback.
 
-    Args:
-        provider_id: OAuth provider identifier
-        token: Authentication token
-        raw_user_data: Raw user data from provider
-        default_user: Default user object
+        Args:
+            provider_id: OAuth provider identifier
+            token: Authentication token
+            raw_user_data: Raw user data from provider
+            default_user: Default user object
 
-    Returns:
-        Updated user object
-    """
-    try:
-        # Check if OAuth is disabled via environment variable
-        if os.getenv("DISABLE_OAUTH") == "1":
-            logger.info("OAuth is disabled, using default user")
+        Returns:
+            Updated user object
+        """
+        try:
+            # GitHub OAuth integration
+            if provider_id == "github":
+                client_id = os.getenv("OAUTH_GITHUB_CLIENT_ID")
+                client_secret = os.getenv("OAUTH_GITHUB_CLIENT_SECRET")
+
+                if not (client_id and client_secret):
+                    logger.warning("GitHub OAuth configuration incomplete")
+                    return default_user
+
+                # You can customize the user based on GitHub data
+                username = raw_user_data.get("login", "")
+                name = raw_user_data.get("name", "")
+                email = raw_user_data.get("email", "")
+
+                logger.info(f"Authenticated GitHub user: {username}")
+                return cl.User(
+                    identifier=username,
+                    metadata={
+                        "name": name,
+                        "email": email,
+                        "provider": "github"
+                    }
+                )
+
+            # Default fallback
+            logger.warning(f"Unsupported OAuth provider: {provider_id}")
             return default_user
 
-        # Handle GitHub OAuth
-        if provider_id == "github":
-            if not (os.getenv("OAUTH_GITHUB_CLIENT_ID") and os.getenv("OAUTH_GITHUB_CLIENT_SECRET")):
-                logger.warning("GitHub OAuth credentials not found")
-                return default_user
-
-            # You can customize the user based on GitHub data
-            username = raw_user_data.get("login", "")
-            name = raw_user_data.get("name", "")
-            email = raw_user_data.get("email", "")
-
-            logger.info(f"Authenticated GitHub user: {username}")
-            return cl.User(
-                identifier=username,
-                metadata={
-                    "name": name,
-                    "email": email,
-                    "provider": "github"
-                }
-            )
-
-        # Default fallback
-        logger.warning(f"Unsupported OAuth provider: {provider_id}")
-        return default_user
-
-    except Exception as e:
-        logger.error(f"OAuth callback error: {str(e)}")
-        return default_user
+        except Exception as e:
+            logger.error(f"OAuth callback error: {str(e)}")
+            return default_user
 
 @cl.on_settings_update
 async def update_settings(settings: Dict[str, Any]) -> None:
