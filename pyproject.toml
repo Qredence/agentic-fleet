@@ -24,7 +24,6 @@ classifiers = [
 ]
 
 dependencies = [
-
     # Core Framework
     "fastapi>=0.109.0",
     "uvicorn>=0.24.0",
@@ -33,7 +32,6 @@ dependencies = [
     "python-dotenv>=1.0.1",
     "typing-extensions>=4.8.0",
     "packaging>=23.2",
-
     # Networking & Async
     "aiohttp>=3.11.11,<4.0.0",
     "httpx>=0.25.0",
@@ -41,7 +39,6 @@ dependencies = [
     "aiofiles>=23.1.0,<24.0.0",
     "python-multipart>=0.0.6",
     "asyncio>=3.4.3",
-
     # AI/ML Infrastructure
     "autogen-core>=0.4.3,<0.5.0",
     "autogen-agentchat>=0.4.3,<0.5.0",
@@ -52,7 +49,6 @@ dependencies = [
     "magentic-one-cli>=0.2.2",
     "agentops>=0.3.21",
     "composio-core>=0.6.11.post1",
-
     # Azure Services
     "azure-core>=1.32.0",
     "azure-identity>=1.19.0",
@@ -60,7 +56,6 @@ dependencies = [
     "azure-search-documents==11.6.0b4",
     "azure-storage-blob>=12.24.0",
     "azure-cosmos>=4.9.0",
-
     # Data Processing
     "pandas>=2.2.3",
     "numpy>=1.26,<2.0",
@@ -72,7 +67,6 @@ dependencies = [
     "plotly>=5.16.0",
     "plotly-express>=0.4.1",
     "requests-html>=0.10.0",
-
     # Web & Utilities
     "chainlit>=2.0.5",
     "playwright>=1.49.1,<2.0.0",
@@ -82,7 +76,6 @@ dependencies = [
     "tenacity>=9.0.0",
     "docker>=7.1.0",
     "opentelemetry-instrumentation-fastapi>=0.44b0",
-    
     # Developer Tools
     "rich>=13.9.4",
     "aioconsole>=0.8.1",
@@ -93,6 +86,8 @@ dependencies = [
     "azure-ai-inference>=1.0.0b6",
     "puremagic>=1.28",
     "psutil>=5.9.6",
+    "redis>=5.2.1",
+    "axios>=0.4.0",
 ]
 
 [project.urls]

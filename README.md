@@ -46,7 +46,7 @@ uv pip install agentic-fleet
 ```
 
 ```bash
-playwright install --with-deps chromium
+playwright install --with-deps chromium # Optional: Install Playwright Chromium dependencies
 ```
 
 2. Copy and configure environment variables:
@@ -63,7 +63,8 @@ cp .env.example .env
 3. Start the server:
 
 ```bash
-agenticfleet start
+agenticfleet start # Run with OAuth
+agenticfleet start no-oauth # Run without OAuth
 ```
 
 The web interface will be available at `http://localhost:8001`.
@@ -87,9 +88,9 @@ AZURE_OPENAI_DEPLOYMENT=your_deployment
 AZURE_OPENAI_MODEL=your_model
 
 ## Recommended: OAuth Configuration
-OAUTH_CLIENT_ID=your_client_id
-OAUTH_CLIENT_SECRET=your_client_secret
-OAUTH_REDIRECT_URI=http://localhost:8001/oauth/callback
+USE_OAUTH=false
+OAUTH_GITHUB_CLIENT_ID=
+OAUTH_GITHUB_CLIENT_SECRET=
 ```
 
 ## Development

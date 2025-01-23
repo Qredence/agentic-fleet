@@ -3,7 +3,7 @@
 import os
 import subprocess
 import sys
-from typing import Optional
+from typing import Optional  # noqa: F401
 
 import click
 from dotenv import load_dotenv
@@ -27,27 +27,27 @@ def cli():
 @click.argument('mode', type=click.Choice(['default', 'no-oauth']), default='default')
 def start(mode: str):
     """Start the AgenticFleet server.
-    
+
     MODE can be either 'default' (with OAuth) or 'no-oauth'
     """
     # Load environment variables
     load_dotenv()
-    
+
     # Set OAuth mode
     no_oauth = mode == 'no-oauth'
-    
+
     # Get paths
     app_path = get_app_path()
     config_path = get_config_path(no_oauth)
-    
+
     # Set environment variables
     os.environ['USE_OAUTH'] = str(not no_oauth).lower()
     os.environ['CHAINLIT_CONFIG'] = config_path
-    
+
     # Print startup message
     auth_mode = "without" if no_oauth else "with"
     click.echo(f"Starting AgenticFleet {auth_mode} OAuth...")
-    
+
     # Build chainlit command
     cmd = ["chainlit", "run", app_path]
 
