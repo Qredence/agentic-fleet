@@ -48,7 +48,6 @@ dependencies = [
     { name = "playwright" },
     { name = "plotly" },
     { name = "plotly-express" },
-    { name = "promptflow-tracing" },
     { name = "psutil" },
     { name = "puremagic" },
     { name = "pydantic" },
@@ -134,12 +133,11 @@ requires-dist = [
     { name = "opentelemetry-instrumentation-fastapi", specifier = ">=0.44b0" },
     { name = "packaging", specifier = ">=23.2" },
     { name = "pandas", specifier = ">=2.2.3" },
-    { name = "pillow", specifier = ">=10.2.0" },
+    { name = "pillow", specifier = ">=11.0.0" },
     { name = "playwright", specifier = ">=1.49.1,<2.0.0" },
     { name = "plotly", specifier = ">=5.16.0" },
     { name = "plotly-express", specifier = ">=0.4.1" },
     { name = "pre-commit", marker = "extra == 'dev'", specifier = ">=3.5.0" },
-    { name = "promptflow-tracing", specifier = "==1.17.1" },
     { name = "psutil", specifier = ">=5.9.6" },
     { name = "puremagic", specifier = ">=1.28" },
     { name = "pydantic", specifier = ">=2.5.2" },
@@ -2916,19 +2914,6 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/2e/c8/e22c292035f1bac8b9f5237a2622305bc0304e776080b246f3df57c4ff9f/pre_commit-4.0.1.tar.gz", hash = "sha256:80905ac375958c0444c65e9cebebd948b3cdb518f335a091a670a89d652139d2", size = 191678 }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/16/8f/496e10d51edd6671ebe0432e33ff800aa86775d2d147ce7d43389324a525/pre_commit-4.0.1-py2.py3-none-any.whl", hash = "sha256:efde913840816312445dc98787724647c65473daefe420785f885e8ed9a06878", size = 218713 },
-]
-
-[[package]]
-name = "promptflow-tracing"
-version = "1.17.1"
-source = { registry = "https://pypi.org/simple" }
-dependencies = [
-    { name = "openai" },
-    { name = "opentelemetry-sdk" },
-    { name = "tiktoken" },
-]
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/60/c0/9b94affe4a635ab347770c8489acb0e8a190763eb83d10d1b6e317564e1c/promptflow_tracing-1.17.1-py3-none-any.whl", hash = "sha256:64deefccbea0a8115d71268597a775a73de7f4b5a2e69c7574cb4a62d8f6cba2", size = 26987 },
 ]
 
 [[package]]

@@ -2,15 +2,11 @@
 
 A powerful multi-agent system for adaptive AI reasoning and automation. AgenticFleet combines Chainlit's interactive interface with AutoGen's multi-agent capabilities to create a flexible, powerful AI assistant platform.
 
-<div align="left">
+![Pepy Total Downloads](https://img.shields.io/pepy/dt/agentic-fleet?style=for-the-badge&color=blue)
 
-  <img alt="Pepy Total Downloads" src="https://img.shields.io/pepy/dt/agentic-fleet?style=for-the-badge&color=blue">
-
-
-<img alt="GitHub License" src="https://img.shields.io/github/license/qredence/agenticfleet">
-<img alt="GitHub forks" src="https://img.shields.io/github/forks/qredence/agenticfleet">
-<img alt="GitHub Repo stars" src="https://img.shields.io/github/stars/qredence/agenticfleet">
-</div>
+![GitHub License](https://img.shields.io/github/license/qredence/agenticfleet)
+![GitHub forks](https://img.shields.io/github/forks/qredence/agenticfleet)
+![GitHub Repo stars](https://img.shields.io/github/stars/qredence/agenticfleet)
 
 [![Codacy Badge](https://app.codacy.com/project/badge/Grade/cf5bcfbdbf50493b9b5de381c24dc147)](https://app.codacy.com/gh/Qredence/AgenticFleet/dashboard?utm_source=gh&utm_medium=referral&utm_content=&utm_campaign=Badge_grade)
 
@@ -52,7 +48,6 @@ uv pip install agentic-fleet
 ```bash
 playwright install --with-deps chromium
 ```
-
 
 2. Copy and configure environment variables:
 
@@ -108,6 +103,7 @@ OAUTH_REDIRECT_URI=http://localhost:8001/oauth/callback
 ### Setup
 
 1. Clone and install:
+
 ```bash
 git clone https://github.com/qredence/agenticfleet.git
 cd agenticfleet
@@ -116,6 +112,7 @@ uv pip install -e ".[dev]"
 ```
 
 2. Run tests:
+
 ```bash
 pytest tests/
 ```
@@ -136,4 +133,4 @@ This project is licensed under the Apache-2.0 License - see the [LICENSE](LICENS
 
 - [Issue Tracker](https://github.com/qredence/agenticfleet/issues)
 - [Discussions](https://github.com/qredence/agenticfleet/discussions)
-- Email: contact@qredence.ai
+- Email: <contact@qredence.ai>
