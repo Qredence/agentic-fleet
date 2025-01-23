@@ -207,9 +207,9 @@ async def initialize_session() -> None:
         await cl.Message(content=welcome_text).send()
 
         # Create necessary directories
-        workspace_dir = os.path.join(os.getcwd(), "workspace")
-        debug_dir = os.path.join(os.getcwd(), "debug")
-        files_dir = os.path.join(os.getcwd(), ".files")
+        workspace_dir = os.path.join(os.getcwd(), "./files/workspace")
+        debug_dir = os.path.join(os.getcwd(), "./files/debug")
+        files_dir = os.path.join(os.getcwd(), "./files")
 
         for directory in [workspace_dir, debug_dir, files_dir]:
             os.makedirs(directory, exist_ok=True)
@@ -228,7 +228,7 @@ async def initialize_session() -> None:
                 animate_actions=False,
                 to_save_screenshots=True,
                 use_ocr=False,
-                debug_dir="debug"
+                debug_dir="./files/debug"
             )
 
             file_surfer = FileSurfer(
