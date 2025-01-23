@@ -1,0 +1,4 @@
+pytest
+pytest-cov
+requests
+# Add other test dependencies here
