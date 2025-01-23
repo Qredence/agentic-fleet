@@ -9,23 +9,14 @@ import click
 from dotenv import load_dotenv
 
 
-def setup_environment(no_oauth: bool = False) -> None:
-    """Setup environment variables based on OAuth setting."""
-    load_dotenv()
-
-    if no_oauth:
-        # Disable OAuth by setting empty values
-        os.environ["OAUTH_CLIENT_ID"] = ""
-        os.environ["OAUTH_CLIENT_SECRET"] = ""
-        os.environ["OAUTH_REDIRECT_URI"] = ""
-        os.environ["OAUTH_SCOPES"] = ""
-        os.environ["OAUTH_AUTHORIZE_URL"] = ""
-        os.environ["OAUTH_TOKEN_URL"] = ""
-        os.environ["OAUTH_USER_INFO_URL"] = ""
-
 def get_app_path() -> str:
     """Get the absolute path to the app.py file."""
     return os.path.abspath(os.path.join(os.path.dirname(__file__), "app.py"))
+
+def get_config_path(no_oauth: bool = False) -> str:
+    """Get the path to the appropriate config file."""
+    config_name = "config.no-oauth.toml" if no_oauth else "config.oauth.toml"
+    return os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", ".chainlit", config_name))
 
 @click.group()
 def cli():
@@ -33,29 +24,32 @@ def cli():
     pass
 
 @cli.command()
-@click.option('--no-oauth', is_flag=True, help='Start without OAuth authentication')
-@click.option('--port', default=8001, help='Port to run Magentic One server on')
-@click.option('--host', default='localhost', help='Host to run the server on')
-def start(no_oauth: bool, port: int, host: str):
-    """Start the AgenticFleet server."""
-    # Setup environment based on OAuth flag
-    setup_environment(no_oauth)
-
-    # Get app path
+@click.argument('mode', type=click.Choice(['default', 'no-oauth']), default='default')
+def start(mode: str):
+    """Start the AgenticFleet server.
+    
+    MODE can be either 'default' (with OAuth) or 'no-oauth'
+    """
+    # Load environment variables
+    load_dotenv()
+    
+    # Set OAuth mode
+    no_oauth = mode == 'no-oauth'
+    
+    # Get paths
     app_path = get_app_path()
-
+    config_path = get_config_path(no_oauth)
+    
+    # Set environment variables
+    os.environ['USE_OAUTH'] = str(not no_oauth).lower()
+    os.environ['CHAINLIT_CONFIG'] = config_path
+    
     # Print startup message
     auth_mode = "without" if no_oauth else "with"
-    click.echo(f"Starting AgenticFleet {auth_mode} OAuth on {host}:{port}...")
-
+    click.echo(f"Starting AgenticFleet {auth_mode} OAuth...")
+    
     # Build chainlit command
-    cmd = [
-        "chainlit",
-        "run",
-        app_path,
-        "--host", host,
-        "--port", str(port)
-    ]
+    cmd = ["chainlit", "run", app_path]
 
     try:
         subprocess.run(cmd, check=True)

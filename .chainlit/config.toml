@@ -2,9 +2,22 @@
 # Whether to enable telemetry (default: true). No personal data is collected.
 enable_telemetry = true
 
+[auth]
+# Enable authentication with username/password
+type = "basic"
+# List of authorized users
+users = [
+    { username = "admin", password = "admin" }
+]
+
+[project.oauth]
+# OAuth configuration is optional
+enabled = false
+# List of enabled providers (can be empty if OAuth is disabled)
+providers = []
 
 # List of environment variables to be provided by each user to use the app.
-user_env = [.env]
+user_env = []
 
 # Duration (in seconds) during which the session is saved when the connection is lost
 session_timeout = 3600
@@ -45,7 +58,7 @@ edit_message = true
 
 [UI]
 # Name of the assistant.
-name = "Assistant"
+name = "AgenticFleet"
 
 default_theme = "light"
 
