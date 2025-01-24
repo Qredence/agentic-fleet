@@ -2,8 +2,8 @@
 """Entry point script for AgenticFleet."""
 
 import os
-import sys
 import subprocess
+import sys
 
 # Add src directory to path
 src_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "src"))

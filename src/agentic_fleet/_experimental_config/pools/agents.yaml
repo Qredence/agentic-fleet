@@ -1,0 +1,227 @@
+agents:
+  - name: research_agent
+    type: worker
+    skills:
+      web_research: 0.90
+      data_analysis: 0.85
+      report_writing: 0.80
+      summarization: 0.85
+      code_generation: 0.20
+      code_debugging: 0.15
+      logical_reasoning: 0.75
+      translation: 0.30
+      sentiment_analysis: 0.70
+      image_generation: 0.10
+      web_browsing: 0.92
+      plugin_management: 0.60
+      math_solving: 0.25
+      dialog_management: 0.75
+      data_cleaning: 0.70
+      data_visualization: 0.60
+    tools: [web_search, data_extractor]
+    llm_config:
+      provider: openai
+      model: gpt-4
+    usecases:
+      market_research: 0.90
+      content_creation: 0.85
+      technical_writing: 0.70
+      general_research: 0.92
+
+  - name: coding_agent
+    type: worker
+    skills:
+      web_research: 0.30
+      data_analysis: 0.60
+      report_writing: 0.20
+      summarization: 0.25
+      code_generation: 0.95
+      code_debugging: 0.92
+      logical_reasoning: 0.80
+      translation: 0.10
+      sentiment_analysis: 0.20
+      image_generation: 0.05
+      web_browsing: 0.65
+      plugin_management: 0.85
+      math_solving: 0.70
+      dialog_management: 0.60
+      data_cleaning: 0.70
+      data_visualization: 0.50
+    tools: [code_executor, web_search]
+    llm_config:
+      provider: openai
+      model: gpt-4
+    usecases:
+      software_development: 0.95
+      code_optimization: 0.90
+      bug_fixing: 0.92
+      general_coding: 0.85
+
+  - name: analysis_agent
+    type: worker
+    skills:
+      web_research: 0.75
+      data_analysis: 0.92
+      report_writing: 0.80
+      summarization: 0.70
+      code_generation: 0.50
+      code_debugging: 0.40
+      logical_reasoning: 0.85
+      translation: 0.20
+      sentiment_analysis: 0.88
+      image_generation: 0.10
+      web_browsing: 0.70
+      plugin_management: 0.70
+      math_solving: 0.60
+      dialog_management: 0.70
+      data_cleaning: 0.90
+      data_visualization: 0.85
+    tools: [data_extractor, calculator, data_visualizer]
+    llm_config:
+      provider: anthropic
+      model: claude-3-opus
+    usecases:
+      data_reporting: 0.92
+      financial_analysis: 0.88
+      scientific_research: 0.85
+      general_analysis: 0.90
+
+  - name: translation_agent
+    type: worker
+    skills:
+      web_research: 0.60
+      data_analysis: 0.20
+      report_writing: 0.50
+      summarization: 0.60
+      code_generation: 0.10
+      code_debugging: 0.05
+      logical_reasoning: 0.40
+      translation: 0.95
+      sentiment_analysis: 0.70
+      image_generation: 0.05
+      web_browsing: 0.75
+      plugin_management: 0.50
+      math_solving: 0.10
+      dialog_management: 0.80
+      data_cleaning: 0.05
+      data_visualization: 0.05
+    tools: [translator, web_search]
+    llm_config:
+      provider: google
+      model: gemini-pro
+    usecases:
+      document_translation: 0.95
+      language_learning: 0.80
+      general_translation: 0.92
+
+  - name: creative_agent
+    type: worker
+    skills:
+      web_research: 0.70
+      data_analysis: 0.30
+      report_writing: 0.75
+      summarization: 0.70
+      code_generation: 0.10
+      code_debugging: 0.05
+      logical_reasoning: 0.50
+      translation: 0.20
+      sentiment_analysis: 0.60
+      image_generation: 0.90
+      web_browsing: 0.60
+      plugin_management: 0.40
+      math_solving: 0.10
+      dialog_management: 0.85
+      data_cleaning: 0.05
+      data_visualization: 0.65
+    tools: [image_generator, web_search]
+    llm_config:
+      provider: openai
+      model: gpt-4
+    usecases:
+      content_creation: 0.90
+      artistic_design: 0.85
+      general_creativity: 0.88
+
+  - name: debugging_agent
+    type: worker
+    skills:
+      web_research: 0.50
+      data_analysis: 0.70
+      report_writing: 0.40
+      summarization: 0.40
+      code_generation: 0.80
+      code_debugging: 0.95
+      logical_reasoning: 0.88
+      translation: 0.10
+      sentiment_analysis: 0.30
+      image_generation: 0.05
+      web_browsing: 0.70
+      plugin_management: 0.80
+      math_solving: 0.60
+      dialog_management: 0.65
+      data_cleaning: 0.50
+      data_visualization: 0.30
+    tools: [code_executor, web_search]
+    llm_config:
+      provider: anthropic
+      model: claude-3-opus
+    usecases:
+      software_debugging: 0.95
+      code_review: 0.90
+      general_debugging: 0.92
+
+  - name: math_agent
+    type: worker
+    skills:
+      web_research: 0.40
+      data_analysis: 0.80
+      report_writing: 0.50
+      summarization: 0.40
+      code_generation: 0.70
+      code_debugging: 0.60
+      logical_reasoning: 0.90
+      translation: 0.10
+      sentiment_analysis: 0.20
+      image_generation: 0.05
+      web_browsing: 0.50
+      plugin_management: 0.75
+      math_solving: 0.95
+      dialog_management: 0.60
+      data_cleaning: 0.85
+      data_visualization: 0.70
+    tools: [calculator, code_executor]
+    llm_config:
+      provider: google
+      model: gemini-pro
+    usecases:
+      mathematical_modeling: 0.95
+      scientific_computation: 0.90
+      general_math: 0.92
+
+  - name: orchestrator_agent
+    type: orchestrator
+    skills:
+      web_research: 0.80
+      data_analysis: 0.85
+      report_writing: 0.82
+      summarization: 0.80
+      code_generation: 0.75
+      code_debugging: 0.70
+      logical_reasoning: 0.88
+      translation: 0.70
+      sentiment_analysis: 0.75
+      image_generation: 0.50
+      web_browsing: 0.85
+      plugin_management: 0.90
+      math_solving: 0.75
+      dialog_management: 0.92
+      data_cleaning: 0.75
+      data_visualization: 0.70
+    tools: [web_search, data_extractor, code_executor, calculator, translator, image_generator]
+    llm_config:
+      provider: openai
+      model: gpt-4
+    usecases:
+      task_delegation: 0.95
+      workflow_management: 0.92
+      general_orchestration: 0.90

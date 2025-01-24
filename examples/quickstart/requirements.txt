@@ -1,3 +1,0 @@
-agentic-fleet>=0.4.50
-python-dotenv>=1.0.1
-chainlit>=2.0.3
