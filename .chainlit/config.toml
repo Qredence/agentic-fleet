@@ -90,4 +90,4 @@ custom_css = "/public/custom.css"
 # custom_build = "./public/build"
 
 [meta]
-generated_by = "2.0.5"
+generated_by = "2.0.6"
