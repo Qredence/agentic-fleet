@@ -8,7 +8,7 @@ import os
 import re
 import string
 import time
-from typing import Any, Dict, List, Optional, Union
+from typing import Any, AsyncGenerator, Dict, List, Optional, Union
 
 import chainlit as cl
 import matplotlib.pyplot as plt
@@ -53,6 +53,20 @@ DEFAULT_MAX_ROUNDS = 50
 DEFAULT_MAX_TIME = 10
 DEFAULT_MAX_STALLS = 5
 DEFAULT_START_PAGE = "https://bing.com"
+
+async def stream_text(text: str) -> AsyncGenerator[str, None]:
+    """Stream text content word by word.
+    
+    Args:
+        text: Text to stream
+        
+    Yields:
+        Each word of the text with a delay
+    """
+    words = text.split()
+    for i, word in enumerate(words):
+        await asyncio.sleep(STREAM_DELAY)
+        yield word + (" " if i < len(words) - 1 else "")
 
 # Initialize Azure OpenAI client
 az_model_client = AzureOpenAIChatCompletionClient(
@@ -290,68 +304,97 @@ async def initialize_session() -> None:
 
 
 async def process_response(response: Any, collected_responses: List[str]) -> None:
-    """Process agent responses while preserving agent attribution and showing inner messages.
+    """Process agent responses with step visualization.
 
     Args:
         response: Agent response to process
         collected_responses: List to collect processed responses
     """
     try:
-        # Handle TaskResult objects
-        if isinstance(response, TaskResult):
-            for msg in response.messages:
-                await process_message(msg, collected_responses)
-            if response.stop_reason:
-                await cl.Message(
-                    content=f"🛑 Task stopped: {response.stop_reason}",
-                    author="System"
-                ).send()
-            return
+        async with cl.Step(name="Response Processing", type="process") as main_step:
+            main_step.input = str(response)
 
-        # Handle TextMessage objects directly
-        if isinstance(response, TextMessage):
-            await process_message(response, collected_responses)
-            return
+            # Handle TaskResult objects
+            if isinstance(response, TaskResult):
+                async with cl.Step(name="Task Execution", type="task") as task_step:
+                    task_step.input = getattr(response, 'task', 'Task execution')
+                    
+                    for msg in response.messages:
+                        await process_message(msg, collected_responses)
+                    
+                    if response.stop_reason:
+                        task_step.output = f"Task stopped: {response.stop_reason}"
+                        await cl.Message(
+                            content=f"🛑 {task_step.output}",
+                            author="System"
+                        ).send()
 
-        # Handle chat messages
-        if hasattr(response, 'chat_message'):
-            await process_message(response.chat_message, collected_responses)
-            return
+            # Handle TextMessage objects directly
+            elif isinstance(response, TextMessage):
+                async with cl.Step(name=f"Agent: {response.source}", type="message") as msg_step:
+                    msg_step.input = response.content
+                    await process_message(response, collected_responses)
 
-        # Handle inner thoughts and reasoning
-        if hasattr(response, 'inner_monologue'):
-            await cl.Message(
-                content=f"💭 Inner thought: {response.inner_monologue}",
-                author="System",
-                indent=1
-            ).send()
-            return
+            # Handle chat messages
+            elif hasattr(response, 'chat_message'):
+                async with cl.Step(name="Chat Message", type="message") as chat_step:
+                    chat_step.input = str(response.chat_message)
+                    await process_message(response.chat_message, collected_responses)
 
-        # Handle function calls
-        if hasattr(response, 'function_call'):
-            await cl.Message(
-                content=f"🛠️ Function call: {response.function_call}",
-                author="System",
-                indent=1
-            ).send()
-            return
+            # Handle inner thoughts and reasoning
+            elif hasattr(response, 'inner_monologue'):
+                async with cl.Step(name="Inner Thought", type="reasoning") as thought_step:
+                    thought_step.input = response.inner_monologue
+                    await cl.Message(
+                        content=f"💭 Inner thought: {response.inner_monologue}",
+                        author="System",
+                        indent=1
+                    ).send()
+                    thought_step.output = "Processed inner thought"
 
-        # Handle multimodal messages (images, etc.)
-        if isinstance(response, (list, tuple)):
-            await _process_multimodal_message(response)
-            return
+            # Handle function calls
+            elif hasattr(response, 'function_call'):
+                async with cl.Step(name="Function Call", type="function") as func_step:
+                    func_step.input = str(response.function_call)
+                    await cl.Message(
+                        content=f"🛠️ Function call: {response.function_call}",
+                        author="System",
+                        indent=1
+                    ).send()
+                    func_step.output = "Function call processed"
 
-        # Handle any other type of response
-        content = str(response)
-        await cl.Message(content=content, author="System").send()
-        collected_responses.append(content)
+            # Handle multimodal messages (images, etc.)
+            elif isinstance(response, (list, tuple)):
+                async with cl.Step(name="Multimodal Content", type="media") as media_step:
+                    media_step.input = "Processing multimodal content"
+                    await _process_multimodal_message(response)
+                    media_step.output = "Multimodal content processed"
+
+            # Handle any other type of response
+            else:
+                async with cl.Step(name="Generic Response", type="other") as generic_step:
+                    content = str(response)
+                    generic_step.input = content
+                    await cl.Message(content=content, author="System").send()
+                    collected_responses.append(content)
+                    generic_step.output = "Response processed"
+
+            main_step.output = "Response processed successfully"
 
     except Exception as e:
         logger.error(f"Error processing response: {str(e)}")
         await cl.Message(content=f"⚠️ Error processing response: {str(e)}").send()
 
-async def process_message(message: Union[TextMessage, Any], collected_responses: List[str]) -> None:
-    """Process a single message with proper formatting."""
+async def process_message(
+    message: Union[TextMessage, Any],
+    collected_responses: List[str]
+) -> None:
+    """Process a single message with proper formatting and step visualization.
+
+    Args:
+        message: Message to process
+        collected_responses: List to collect processed responses
+    """
     try:
         # Extract content and source
         content = message.content if hasattr(message, 'content') else str(message)
@@ -359,39 +402,65 @@ async def process_message(message: Union[TextMessage, Any], collected_responses:
 
         # Check for plan and update task list
         if "Here is the plan to follow as best as possible:" in content:
-            task_list = cl.user_session.get("task_list")
-            if task_list:
-                steps = extract_steps_from_content(content)
-                task_list.tasks.clear()  # Clear existing tasks
-                for step in steps:
-                    task = cl.Task(title=step)
-                    await task_list.add_task(task)
-                task_list.status = "Executing Plan..."
-                await task_list.send()
+            async with cl.Step(name="Plan Creation", type="planning") as plan_step:
+                plan_step.input = content
+                task_list = cl.user_session.get("task_list")
+                if task_list:
+                    steps = extract_steps_from_content(content)
+                    task_list.tasks.clear()  # Clear existing tasks
+                    for step in steps:
+                        task = cl.Task(title=step)
+                        await task_list.add_task(task)
+                    task_list.status = "Executing Plan..."
+                    await task_list.send()
+                    plan_step.output = f"Created plan with {len(steps)} steps"
 
         # Format content based on message type
         if isinstance(message, TextMessage):
             # Send the message with proper attribution
-            await cl.Message(content=content, author=source).send()
-            collected_responses.append(content)
+            step_name = f"Message from {source}"
+            async with cl.Step(name=step_name, type="message") as msg_step:
+                msg_step.input = content
+                # Stream text content using Chainlit's streaming capability
+                msg = cl.Message(content="", author=source)
+                async for chunk in stream_text(content):
+                    await msg.stream_token(chunk)
+                await msg.send()
+                collected_responses.append(content)
+                msg_step.output = "Message processed"
+                
         elif isinstance(message, MultiModalMessage):
-            # Only process the images from multimodal content
-            for item in message.content:
-                if isinstance(item, Image):
-                    image_data = getattr(item, 'data', None) or getattr(item, 'content', None)
-                    if image_data:
-                        await _handle_image_data(image_data)
+            # Process multimodal content
+            async with cl.Step(name="Multimodal Processing", type="media") as media_step:
+                media_step.input = "Processing multimodal message"
+                for item in message.content:
+                    if isinstance(item, Image):
+                        image_data = getattr(item, 'data', None) or getattr(item, 'content', None)
+                        if image_data:
+                            await _handle_image_data(image_data)
+                media_step.output = "Multimodal content processed"
+                
         elif isinstance(message, FunctionCall):
             # Handle function calls
-            await cl.Message(
-                content=f"🛠️ Function: {message.name}\nArgs: {json.dumps(message.args, indent=2)}",
-                author=source,
-                indent=1
-            ).send()
+            async with cl.Step(name=f"Function: {message.name}", type="function") as func_step:
+                func_step.input = json.dumps(message.args, indent=2)
+                await cl.Message(
+                    content=f"🛠️ Function: {message.name}\nArgs: {json.dumps(message.args, indent=2)}",
+                    author=source,
+                    indent=1
+                ).send()
+                func_step.output = "Function call processed"
         else:
             # Handle other message types
-            await cl.Message(content=content, author=source).send()
-            collected_responses.append(content)
+            async with cl.Step(name="Generic Message", type="other") as gen_step:
+                gen_step.input = content
+                # Stream text content using Chainlit's streaming capability
+                msg = cl.Message(content="", author="System")
+                async for chunk in stream_text(content):
+                    await msg.stream_token(chunk)
+                await msg.send()
+                collected_responses.append(content)
+                gen_step.output = "Message processed"
 
     except Exception as e:
         logger.error(f"Error processing message: {str(e)}")
@@ -479,7 +548,7 @@ async def _handle_image_data(image_data: Union[str, bytes]) -> Optional[cl.Image
 
 @cl.on_message
 async def handle_message(message: cl.Message):
-    """Handle incoming user messages and coordinate agent responses."""
+    """Handle incoming user messages and coordinate agent responses with step visualization."""
     try:
         # Get task list and team from session
         task_list = cl.user_session.get("task_list")
@@ -495,36 +564,43 @@ async def handle_message(message: cl.Message):
         await task_list.send()
         cl.user_session.set("task_list", task_list)
 
-        # Process message with team
-        collected_responses = []
-        current_task = None
+        # Create top-level step for message handling
+        async with cl.Step(name="Message Processing", type="process") as process_step:
+            process_step.input = message.content
+            
+            # Process message with team
+            collected_responses = []
+            current_task = None
 
-        async for response in team.run_stream(task=message.content):
-            # Process the response
-            await process_response(response, collected_responses)
+            async for response in team.run_stream(task=message.content):
+                # Process the response
+                await process_response(response, collected_responses)
 
-            # Update task status if we have tasks
-            if task_list.tasks:
-                # Find first non-completed task
-                for task in task_list.tasks:
-                    if task.status != cl.TaskStatus.DONE:
-                        task.status = cl.TaskStatus.RUNNING
-                        current_task = task
-                        break
-                await task_list.send()
+                # Update task status if we have tasks
+                if task_list.tasks:
+                    # Find first non-completed task
+                    for task in task_list.tasks:
+                        if task.status != cl.TaskStatus.DONE:
+                            task.status = cl.TaskStatus.RUNNING
+                            current_task = task
+                            break
+                    await task_list.send()
 
-            # Mark current task as done if we have one
-            if current_task:
-                current_task.status = cl.TaskStatus.DONE
-                current_task = None
-                await task_list.send()
+                # Mark current task as done if we have one
+                if current_task:
+                    current_task.status = cl.TaskStatus.DONE
+                    current_task = None
+                    await task_list.send()
 
-        # Mark all remaining tasks as done
-        for task in task_list.tasks:
-            if task.status != cl.TaskStatus.DONE:
-                task.status = cl.TaskStatus.DONE
-        task_list.status = "Done"
-        await task_list.send()
+            # Mark all remaining tasks as done
+            for task in task_list.tasks:
+                if task.status != cl.TaskStatus.DONE:
+                    task.status = cl.TaskStatus.DONE
+            task_list.status = "Done"
+            await task_list.send()
+
+            # Set process step output
+            process_step.output = f"Processed message with {len(collected_responses)} responses"
 
     except Exception as e:
         logger.error(f"Error processing message: {str(e)}")

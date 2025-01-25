@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "agentic-fleet"
-version = "0.4.60"
+version = "0.4.61"
 description = "A powerful multi-agent system for adaptive AI reasoning and automation"
 readme = "README.md"
 requires-python = ">=3.10"
@@ -36,7 +36,7 @@ dependencies = [
     "aiohttp>=3.11.11,<4.0.0",
     "httpx>=0.25.0",
     "requests>=2.32.3",
-    "aiofiles>=23.1.0,<24.0.0",
+    "aiofiles>=23.1.0",
     "python-multipart>=0.0.6",
     "asyncio>=3.4.3",
     # AI/ML Infrastructure
@@ -46,6 +46,7 @@ dependencies = [
     "autogen-ext[docker]>=0.4.3,<0.5.0",
     "autogen-ext[magentic-one]>=0.4.3,<0.5.0",
     "autogen-ext[web-surfer]>=0.4.3,<0.5.0",
+    "autogen-ext[langchain]>=0.4.3,<0.5.0",
     "magentic-one-cli>=0.2.2",
     "agentops>=0.3.21",
     "composio-core>=0.6.11.post1",
@@ -67,8 +68,9 @@ dependencies = [
     "plotly>=5.16.0",
     "plotly-express>=0.4.1",
     "requests-html>=0.10.0",
+    "seaborn>=0.13.0",
     # Web & Utilities
-    "chainlit>=2.0.5",
+    "chainlit>=2.0.6",
     "playwright>=1.49.1,<2.0.0",
     "beautifulsoup4>=4.12.0",
     "bing>=0.31",
@@ -92,8 +94,13 @@ dependencies = [
     "pytest-cov>=6.0.0",
     "pytest>=8.3.4",
     "pytest-asyncio>=0.25.2",
+    "scikit-learn>=1.6.1",
+    "ipykernel>=6.29.5",
+    "authlib>=1.4.0",
+    "starlette>=0.41.3",
+    "semantic-kernel>=1.19.0",
+    "tiktoken>=0.8.0",
 ]
-
 [project.urls]
 Homepage = "https://github.com/qredence/agenticfleet"
 Documentation = "https://github.com/qredence/agenticfleet/tree/main/docs"
@@ -143,6 +150,8 @@ exclude = [
     ".DS_Store",
     "Thumbs.db",
 ]
+
+
 
 [tool.hatch.version]
 path = "src/agentic_fleet/__init__.py"

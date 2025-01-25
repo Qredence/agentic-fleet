@@ -12,24 +12,50 @@ A powerful multi-agent system for adaptive AI reasoning and automation. AgenticF
 
 ![chainlitlight](https://github.com/user-attachments/assets/0d070c34-e5a8-40be-94f5-5c8307f1f64c)
 
+## Core Components
+
+AgenticFleet operates through a coordinated team of specialized agents:
+
+- **WebSurfer**: Expert web navigation agent
+  - Extracts information from web pages
+  - Captures and processes screenshots
+  - Provides structured summaries of findings
+
+- **FileSurfer**: File system specialist
+  - Searches and analyzes workspace files
+  - Manages file operations efficiently
+  - Extracts relevant information from documents
+
+- **Coder**: Development expert
+  - Generates and reviews code
+  - Implements solutions
+  - Maintains code quality
+
+- **Executor**: Code execution specialist
+  - Safely runs code in isolated workspace
+  - Monitors execution and handles timeouts
+  - Provides detailed execution feedback
+
 ## Key Features
 
-- **Multi-Agent System**: Coordinated team of specialized AI agents
-  - Code generation and analysis
-  - Web content processing
-  - File system operations
+- **Multi-Agent System**
+  - Coordinated team of specialized AI agents
+  - Real-time inter-agent communication
+  - Task planning and execution tracking
   
 - **Interactive Interface**
-  - Real-time communication via Chainlit
+  - Real-time streaming responses
   - Code syntax highlighting
   - Markdown rendering
   - File upload/download support
+  - Progress visualization with task lists
 
 - **Advanced Capabilities**
-  - OAuth authentication integration
+  - GitHub OAuth authentication
   - Configurable agent behaviors
-  - Comprehensive error handling
-  - Progress tracking
+  - Comprehensive error handling and recovery
+  - Multi-modal content processing (text, images)
+  - Execution workspace isolation
   
 - **Developer-Friendly**
   - Easy-to-use CLI
@@ -57,28 +83,36 @@ cp .env.example .env
 
 # Open .env and update with your values
 # Required: Add your Azure OpenAI credentials
-# Recommended: Configure OAuth settings
+# Optional: Configure OAuth settings
 ```
 
 3. Start the server:
 
 ```bash
-agenticfleet start # Run with OAuth
-agenticfleet start no-oauth # Run without OAuth
+agenticfleet start   # Enable GitHub authentication
+agenticfleet start --no-oauth # Default local mode
 ```
 
 The web interface will be available at `http://localhost:8001`.
 
-## Documentation
+## System Architecture
 
-- [Installation Guide](docs/installation.md) - Detailed setup instructions
-- [Usage Guide](docs/usage-guide.md) - How to use AgenticFleet
-- [API Reference](docs/api-reference.md) - Complete API documentation
-- [Architecture Overview](docs/agentic-fleet.md) - System architecture and design
+```mermaid
+graph TD
+    User[Chainlit UI] -->|HTTP| App[app.py]
+    App --> AgentTeam[MagenticOneGroupChat]
+    AgentTeam --> WebSurfer
+    AgentTeam --> FileSurfer
+    AgentTeam --> Coder
+    AgentTeam --> Executor
+    WebSurfer -->|Selenium| Web[External Websites]
+    FileSurfer -->|OS| FileSystem[Local Files]
+    Executor -->|Subprocess| Code[Python/Runtime]
+```
 
 ## Configuration
 
-The `.env.example` file contains all required and recommended settings. Copy it to `.env` and update with your values:
+The `.env.example` file contains all required and recommended settings:
 
 ```env
 # Required: Azure OpenAI Configuration
@@ -87,11 +121,22 @@ AZURE_OPENAI_ENDPOINT=your_endpoint
 AZURE_OPENAI_DEPLOYMENT=your_deployment
 AZURE_OPENAI_MODEL=your_model
 
-## Recommended: OAuth Configuration
+# Optional: OAuth Configuration
 USE_OAUTH=false
 OAUTH_GITHUB_CLIENT_ID=
 OAUTH_GITHUB_CLIENT_SECRET=
+OAUTH_REDIRECT_URI=http://localhost:8001/oauth/callback
 ```
+
+## Error Handling
+
+AgenticFleet implements comprehensive error handling:
+
+- Graceful degradation on service failures
+- Detailed error logging and reporting
+- Automatic cleanup of resources
+- Session state recovery
+- Execution timeout management
 
 ## Development
 
@@ -109,7 +154,9 @@ OAUTH_GITHUB_CLIENT_SECRET=
 git clone https://github.com/qredence/agenticfleet.git
 cd agenticfleet
 pip install uv
+uv pip install -e .
 uv pip install -e ".[dev]"
+
 ```
 
 2. Run tests:
@@ -117,6 +164,13 @@ uv pip install -e ".[dev]"
 ```bash
 pytest tests/
 ```
+
+## Documentation
+
+- [Installation Guide](docs/installation.md) - Detailed setup instructions
+- [Usage Guide](docs/usage-guide.md) - How to use AgenticFleet
+- [API Reference](docs/api-reference.md) - Complete API documentation
+- [Architecture Overview](docs/agentic-fleet.md) - System architecture and design
 
 ## Contributing
 
