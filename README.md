@@ -135,3 +135,7 @@ This project is licensed under the Apache-2.0 License - see the [LICENSE](LICENS
 - [Issue Tracker](https://github.com/qredence/agenticfleet/issues)
 - [Discussions](https://github.com/qredence/agenticfleet/discussions)
 - Email: <contact@qredence.ai>
+
+## Star History
+
+[![Star History Chart](https://api.star-history.com/svg?repos=Qredence/AgenticFleet&type=Date)](https://star-history.com/#Qredence/AgenticFleet&Date)
