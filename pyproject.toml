@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "agentic-fleet"
-version = "0.4.61"
+version = "0.4.65"
 description = "A powerful multi-agent system for adaptive AI reasoning and automation"
 readme = "README.md"
 requires-python = ">=3.10"
@@ -78,7 +78,7 @@ dependencies = [
     "requests-html>=0.10.0",
     "seaborn>=0.13.0",
     # Web & Utilities
-    "chainlit>=2.0.6",
+    "chainlit>=2.0.603",
     "playwright>=1.49.1,<2.0.0",
     "beautifulsoup4>=4.12.0",
     "bing>=0.31",
@@ -107,6 +107,7 @@ dependencies = [
     "semantic-kernel>=1.19.0",
     "tiktoken>=0.8.0",
     "black>=24.10.0",
+    "gunicorn>=23.0.0",
 ]
 
 [project.urls]
@@ -164,12 +165,52 @@ path = "src/agentic_fleet/__init__.py"
 
 [tool.pytest.ini_options]
 minversion = "7.0"
-addopts = "-ra -q --cov=src --cov-report=xml --cov-report=term-missing"
+addopts = """
+    -ra
+    -q
+    --cov=src/agentic_fleet
+    --cov-report=xml
+    --cov-report=term-missing
+    --cov-branch
+    --cov-fail-under=80
+    -n auto
+    --durations=10
+    """
 testpaths = ["tests"]
 python_files = ["test_*.py"]
 python_classes = ["Test*"]
 python_functions = ["test_*"]
 asyncio_mode = "auto"
+markers = [
+    "unit: marks tests as unit tests",
+    "integration: marks tests as integration tests",
+    "e2e: marks tests as end-to-end tests",
+]
+filterwarnings = [
+    "error",
+    "ignore::DeprecationWarning",
+    "ignore::UserWarning",
+]
+
+[tool.coverage.run]
+branch = true
+source = ["src/agentic_fleet"]
+omit = [
+    "tests/*",
+    "**/__init__.py",
+]
+
+[tool.coverage.report]
+exclude_lines = [
+    "pragma: no cover",
+    "def __repr__",
+    "if __name__ == .__main__.:",
+    "raise NotImplementedError",
+    "if TYPE_CHECKING:",
+    "pass",
+    "\\.\\.\\.",
+]
+fail_under = 80
 
 [tool.black]
 line-length = 100
@@ -194,21 +235,6 @@ warn_redundant_casts = true
 warn_unused_ignores = true
 warn_no_return = true
 warn_unreachable = true
-
-[tool.coverage.run]
-source = ["src"]
-omit = ["**/test/*"]
-
-[tool.coverage.report]
-exclude_lines = [
-    "pragma: no cover",
-    "def __repr__",
-    "if self.debug:",
-    "raise NotImplementedError",
-    "if __name__ == .__main__.:",
-    "pass",
-    "raise ImportError"
-]
 
 [tool.ruff]
 line-length = 88
