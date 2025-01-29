@@ -40,13 +40,18 @@ dependencies = [
     "python-multipart>=0.0.6",
     "asyncio>=3.4.3",
     # AI/ML Infrastructure
-    "autogen-core>=0.4.3,<0.5.0",
-    "autogen-agentchat>=0.4.3,<0.5.0",
-    "autogen-ext[openai,azure]>=0.4.3,<0.5.0",
-    "autogen-ext[docker]>=0.4.3,<0.5.0",
-    "autogen-ext[magentic-one]>=0.4.3,<0.5.0",
-    "autogen-ext[web-surfer]>=0.4.3,<0.5.0",
-    "autogen-ext[langchain]>=0.4.3,<0.5.0",
+    "autogen-core>=0.4.4,<0.5.0",
+    "autogen-agentchat>=0.4.4,<0.5.0",
+    "autogen-ext[openai,azure]>=0.4.4,<0.5.0",
+    "autogen-ext[docker]>=0.4.4,<0.5.0",
+    "autogen-ext[magentic-one]>=0.4.4,<0.5.0",
+    "autogen-ext[web-surfer]>=0.4.4,<0.5.0",
+    "autogen-ext[langchain]>=0.4.4,<0.5.0",
+    # Model Providers
+    "google-cloud-aiplatform>=1.38.0", # For Gemini
+    "google-generativeai>=0.3.0", # For Gemini
+    "deepseek>=0.1.0", # For DeepSeek
+    "ollama>=0.1.5", # For Ollama
     "magentic-one-cli>=0.2.2",
     "agentops>=0.3.21",
     "composio-core>=0.6.11.post1",
@@ -57,6 +62,9 @@ dependencies = [
     "azure-search-documents==11.6.0b4",
     "azure-storage-blob>=12.24.0",
     "azure-cosmos>=4.9.0",
+    "azure-ai-projects>=1.0.0b4", # For Azure AI Foundry
+    "azure-ai-inference>=1.0.0b6", # For Azure AI Foundry
+    "azure-ai-ml>=1.12.1", # For Azure AI Foundry
     # Data Processing
     "pandas>=2.2.3",
     "numpy>=1.26,<2.0",
@@ -84,8 +92,6 @@ dependencies = [
     "grpcio-tools~=1.62.0",
     "typer>=0.15.1",
     "ruff==0.4.8",
-    "azure-ai-projects>=1.0.0b4",
-    "azure-ai-inference>=1.0.0b6",
     "puremagic>=1.28",
     "psutil>=5.9.6",
     "redis>=5.2.1",
@@ -100,7 +106,9 @@ dependencies = [
     "starlette>=0.41.3",
     "semantic-kernel>=1.19.0",
     "tiktoken>=0.8.0",
+    "black>=24.10.0",
 ]
+
 [project.urls]
 Homepage = "https://github.com/qredence/agenticfleet"
 Documentation = "https://github.com/qredence/agenticfleet/tree/main/docs"
@@ -150,8 +158,6 @@ exclude = [
     ".DS_Store",
     "Thumbs.db",
 ]
-
-
 
 [tool.hatch.version]
 path = "src/agentic_fleet/__init__.py"
@@ -250,4 +256,12 @@ docs = [
     "sphinx-autodoc-typehints>=1.25.2",
     "sphinx-copybutton>=0.5.2",
     "myst-parser>=2.0.0",
+]
+
+# Add model providers as optional dependencies
+models = [
+    "google-cloud-aiplatform>=1.38.0",
+    "google-generativeai>=0.3.0",
+    "deepseek>=0.1.0",
+    "ollama>=0.1.5",
 ]

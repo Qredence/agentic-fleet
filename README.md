@@ -36,6 +36,104 @@ AgenticFleet operates through a coordinated team of specialized agents:
   - Monitors execution and handles timeouts
   - Provides detailed execution feedback
 
+## Supported Model Providers
+
+AgenticFleet supports multiple LLM providers through a unified interface:
+
+- **OpenAI**
+  - GPT-4 and other OpenAI models
+  - Function calling and vision capabilities
+  - JSON mode support
+
+- **Azure OpenAI**
+  - Azure-hosted OpenAI models
+  - Azure AD authentication support
+  - Enterprise-grade security
+
+- **Google Gemini**
+  - Gemini Pro and Ultra models
+  - OpenAI-compatible API
+  - Multimodal capabilities
+
+- **DeepSeek**
+  - DeepSeek's language models
+  - OpenAI-compatible API
+  - Specialized model capabilities
+
+- **Ollama**
+  - Local model deployment
+  - Various open-source models
+  - Offline capabilities
+
+- **Azure AI Foundry**
+  - Azure-hosted models (e.g., Phi-4)
+  - GitHub authentication
+  - Enterprise integration
+
+- **CogCache**
+  - OpenAI-compatible API with caching
+  - Improved response times
+  - Cost optimization
+  - Automatic retry handling
+
+### Model Provider Installation
+
+Install providers using pip:
+
+```bash
+# Install base package
+pip install agentic-fleet
+
+# Install all model providers
+pip install "agentic-fleet[models]"
+
+# Or install individual providers
+pip install "google-cloud-aiplatform>=1.38.0" "google-generativeai>=0.3.0"  # For Gemini
+pip install "deepseek>=0.1.0"  # For DeepSeek
+pip install "ollama>=0.1.5"  # For Ollama
+```
+
+### Model Provider Usage
+
+```python
+from agentic_fleet.models import ModelFactory, ModelProvider
+from autogen_core.models import UserMessage
+
+# Create Azure OpenAI client
+azure_client = ModelFactory.create(
+    ModelProvider.AZURE_OPENAI,
+    deployment="your-deployment",
+    model="gpt-4",
+    endpoint="your-endpoint"
+)
+
+# Create Gemini client
+gemini_client = ModelFactory.create(
+    ModelProvider.GEMINI,
+    api_key="your-api-key"
+)
+
+# Create CogCache client
+cogcache_client = ModelFactory.create(
+    ModelProvider.COGCACHE,
+    api_key="your-cogcache-key",
+    model="gpt-4"
+)
+
+# Create local Ollama client
+ollama_client = ModelFactory.create(
+    ModelProvider.OLLAMA,
+    model="llama2:latest"
+)
+
+# Use any client
+async def test_model(client):
+    response = await client.create([
+        UserMessage(content="What is the capital of France?", source="user")
+    ])
+    print(response)
+```
+
 ## Key Features
 
 - **Multi-Agent System**
@@ -51,6 +149,7 @@ AgenticFleet operates through a coordinated team of specialized agents:
   - Progress visualization with task lists
 
 - **Advanced Capabilities**
+  - Multiple LLM provider support
   - GitHub OAuth authentication
   - Configurable agent behaviors
   - Comprehensive error handling and recovery
@@ -122,10 +221,16 @@ AZURE_OPENAI_DEPLOYMENT=your_deployment
 AZURE_OPENAI_MODEL=your_model
 
 # Optional: OAuth Configuration
-USE_OAUTH=false
+USE_OAUTH=false # Set to true to enable GitHub OAuth
 OAUTH_GITHUB_CLIENT_ID=
 OAUTH_GITHUB_CLIENT_SECRET=
 OAUTH_REDIRECT_URI=http://localhost:8001/oauth/callback
+
+# Optional: Other Model Provider Configurations
+GEMINI_API_KEY=your_gemini_key
+DEEPSEEK_API_KEY=your_deepseek_key
+GITHUB_TOKEN=your_github_pat  # For Azure AI Foundry
+COGCACHE_API_KEY=your_cogcache_key  # For CogCache proxy API
 ```
 
 ## Error Handling
@@ -148,7 +253,7 @@ AgenticFleet implements comprehensive error handling:
 
 ### Setup
 
-1. Clone and install:
+  1. Clone and install:
 
 ```bash
 git clone https://github.com/qredence/agenticfleet.git
@@ -156,7 +261,6 @@ cd agenticfleet
 pip install uv
 uv pip install -e .
 uv pip install -e ".[dev]"
-
 ```
 
 2. Run tests:

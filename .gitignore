@@ -152,7 +152,8 @@ src/frontend/.venv
 
 # windsurf rules
 .windsurfrules
-
+cline_docs/
+files
 # Python
 __pycache__/
 *.py[cod]
