@@ -1,0 +1,168 @@
+# Model Pool Configuration
+# This file contains the configuration for all available models across different providers
+
+azure_openai:
+  endpoint: ${AZURE_OPENAI_ENDPOINT}
+  api_version: "2024-02-15-preview"
+  models:
+    gpt4o:
+      name: "gpt-4o"
+      deployment: ${AZURE_OPENAI_GPT4O_DEPLOYMENT}
+      capabilities:
+        function_calling: true
+        json_output: true
+        vision: false
+        family: "azure"
+      use_cases:
+        - "planning"
+        - "coordination"
+        - "complex_reasoning"
+    
+    gpt4o_mini:
+      name: "gpt-4o-mini"
+      deployment: ${AZURE_OPENAI_GPT4OMINI_DEPLOYMENT}
+      capabilities:
+        function_calling: true
+        json_output: true
+        vision: false
+        family: "azure"
+      use_cases:
+        - "analysis"
+        - "writing"
+        - "task_execution"
+
+azure_ai_foundry:
+  endpoint: ${AZURE_AI_FOUNDRY_ENDPOINT}
+  api_version: "2024-02-15-preview"
+  models:
+    phi4:
+      name: "phi-4"
+      deployment: ${AZURE_AI_FOUNDRY_PHI4_DEPLOYMENT}
+      capabilities:
+        function_calling: true
+        json_output: true
+        vision: false
+        family: "azure_ai_foundry"
+      use_cases:
+        - "code_generation"
+        - "analysis"
+        - "task_execution"
+    
+    llama70b:
+      name: "llama-3.3-70b"
+      deployment: ${AZURE_AI_FOUNDRY_LLAMA70B_DEPLOYMENT}
+      capabilities:
+        function_calling: true
+        json_output: true
+        vision: false
+        family: "azure_ai_foundry"
+      use_cases:
+        - "complex_reasoning"
+        - "research"
+        - "planning"
+
+cogcache:
+  base_url: "https://proxy-api.cogcache.com/v1"
+  models:
+    gpt4o:
+      name: "gpt-4o-2024-08-06"
+      capabilities:
+        function_calling: true
+        json_output: true
+        vision: false
+        family: "cogcache"
+      use_cases:
+        - "complex_reasoning"
+        - "planning"
+        - "analysis"
+    
+    gpt4o_mini:
+      name: "gpt-4o-mini-2024-07-18"
+      capabilities:
+        function_calling: true
+        json_output: true
+        vision: false
+        family: "cogcache"
+      use_cases:
+        - "fast_responses"
+        - "general_tasks"
+        - "cost_effective"
+
+deepseek:
+  base_url: "https://api.deepseek.com/v1"
+  models:
+    chat:
+      name: "deepseek-chat"
+      capabilities:
+        function_calling: true
+        json_output: true
+        vision: false
+        family: "deepseek"
+      use_cases:
+        - "general_chat"
+        - "conversation"
+    
+    code:
+      name: "deepseek-code"
+      capabilities:
+        function_calling: true
+        json_output: true
+        code_generation: true
+        family: "deepseek"
+      use_cases:
+        - "code_generation"
+        - "code_review"
+        - "debugging"
+    
+    reasoning:
+      name: "deepseek-reasoning"
+      capabilities:
+        function_calling: true
+        json_output: true
+        reasoning: true
+        family: "deepseek"
+      use_cases:
+        - "complex_reasoning"
+        - "research"
+        - "analysis"
+
+gemini:
+  base_url: "https://generativelanguage.googleapis.com/v1beta"
+  models:
+    flash_thinking:
+      name: "gemini-2.0-flash-thinking-exp-01-21"
+      capabilities:
+        function_calling: true
+        json_output: true
+        vision: true
+        multimodal: true
+        family: "gemini"
+      use_cases:
+        - "fast_responses"
+        - "thinking_tasks"
+        - "multimodal_processing"
+    
+    flash:
+      name: "gemini-2.0-flash"
+      capabilities:
+        function_calling: true
+        json_output: true
+        vision: true
+        multimodal: true
+        family: "gemini"
+      use_cases:
+        - "fast_responses"
+        - "real_time_processing"
+    
+    experimental:
+      name: "gemini-exp-1206"
+      capabilities:
+        function_calling: true
+        json_output: true
+        vision: true
+        multimodal: true
+        experimental: true
+        family: "gemini"
+      use_cases:
+        - "experimental_features"
+        - "advanced_tasks"
