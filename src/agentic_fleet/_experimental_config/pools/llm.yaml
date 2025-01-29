@@ -1,0 +1,171 @@
+llms:
+  - name: gpt-4
+    provider: openai
+    capabilities:
+      research: 0.95
+      data_analysis: 0.90
+      content_synthesis: 0.92
+      code_generation: 0.85
+      logical_reasoning: 0.88
+      translation: 0.80
+      summarization: 0.93
+      question_answering: 0.94
+      sentiment_analysis: 0.87
+      image_generation: 0.70 # DALL-E functionality
+      web_browsing: 0.90
+      plugin_management: 0.75 # Interaction with external tools
+      math_solving: 0.70
+      dialog_management: 0.85
+      report_writing: 0.90
+
+  - name: claude-3-opus
+    provider: anthropic
+    capabilities:
+      research: 0.92
+      data_analysis: 0.85
+      content_synthesis: 0.90
+      code_generation: 0.75
+      logical_reasoning: 0.92
+      translation: 0.85
+      summarization: 0.90
+      question_answering: 0.88
+      sentiment_analysis: 0.88
+      image_generation: 0.05
+      web_browsing: 0.80
+      plugin_management: 0.80
+      math_solving: 0.80
+      dialog_management: 0.88
+      report_writing: 0.88
+
+  - name: gemini-pro
+    provider: google
+    capabilities:
+      research: 0.90
+      data_analysis: 0.88
+      content_synthesis: 0.85
+      code_generation: 0.80
+      logical_reasoning: 0.85
+      translation: 0.90
+      summarization: 0.88
+      question_answering: 0.90
+      sentiment_analysis: 0.85
+      image_generation: 0.80
+      web_browsing: 0.85
+      plugin_management: 0.70
+      math_solving: 0.75
+      dialog_management: 0.80
+      report_writing: 0.85
+
+  - name: llama-2-70b
+    provider: meta
+    capabilities:
+      research: 0.80
+      data_analysis: 0.75
+      content_synthesis: 0.82
+      code_generation: 0.70
+      logical_reasoning: 0.78
+      translation: 0.70
+      summarization: 0.80
+      question_answering: 0.82
+      sentiment_analysis: 0.75
+      image_generation: 0.05  # Not applicable
+      web_browsing: 0.60
+      plugin_management: 0.60
+      math_solving: 0.65
+      dialog_management: 0.75
+      report_writing: 0.78
+
+
+      # configs/pools/llm_pool.yaml
+# Configuration for available Language Models with capability-specific confidence.
+
+models:
+  - id: gpt-5-omniscient # Hypothetical Flagship Model (January 2025)
+    provider: openai
+    model_name: "gpt-5-turbo-0105" # Imagined model name
+    capabilities: # Broad and high confidence across all capabilities
+      research: 0.98
+      content_synthesis: 0.97
+      data_analysis: 0.96
+      coding: 0.97
+      customer_support: 0.95
+      fact_checking: 0.99
+      creative_writing: 0.98
+      image_analysis: 0.95 # New capability: Image Analysis
+      social_media_interaction: 0.96 # New capability: Social Media
+      scientific_reasoning: 0.97 # New capability: Scientific Reasoning
+    calibration:
+      slope: 0.95
+      intercept: -0.02
+
+  - id: claude-4-apex # Hypothetical Top-Tier Claude Model (January 2025)
+    provider: anthropic
+    model_name: "claude-4-apex-202501" # Imagined model name
+    capabilities:
+      research: 0.96
+      content_synthesis: 0.95
+      data_analysis: 0.97
+      coding: 0.94
+      customer_support: 0.90
+      fact_checking: 0.97
+      creative_writing: 0.96
+      image_analysis: 0.92 # New capability: Image Analysis
+      social_media_interaction: 0.93 # New capability: Social Media
+      scientific_reasoning: 0.95 # New capability: Scientific Reasoning
+    calibration:
+      slope: 0.92
+      intercept: +0.05
+
+  - id: gemini-ultra-vision # Hypothetical Gemini with Vision Focus (January 2025)
+    provider: google
+    model_name: "gemini-ultra-vision-0125" # Imagined model name
+    capabilities:
+      research: 0.85
+      content_synthesis: 0.80
+      data_analysis: 0.88
+      coding: 0.82
+      customer_support: 0.75
+      fact_checking: 0.80
+      creative_writing: 0.78
+      image_analysis: 0.97 # Very high confidence: Image Analysis Focus
+      social_media_interaction: 0.80
+      scientific_reasoning: 0.82
+    calibration:
+      slope: 0.90
+      intercept: 0.0
+
+  - id: mistral-small-v2-instruct # Hypothetical Efficient SLM (January 2025)
+    provider: mistral
+    model_name: "mistral-small-v2-instruct-0125" # Imagined model name
+    capabilities: # Lower overall confidence, but efficient
+      research: 0.75
+      content_synthesis: 0.70
+      data_analysis: 0.65
+      coding: 0.85 # Still good at coding
+      customer_support: 0.60
+      fact_checking: 0.65
+      creative_writing: 0.68
+      image_analysis: 0.20 # Very low confidence: Image Analysis
+      social_media_interaction: 0.55
+      scientific_reasoning: 0.50
+    calibration:
+      slope: 0.98
+      intercept: -0.01
+
+  - id: falcon-lite-instruct-v3 # Hypothetical Open-Source SLM (January 2025)
+    provider: tii # TII (Technology Innovation Institute) - Falcon models provider
+    model_name: "falcon-lite-instruct-v3-0125" # Imagined model name
+    capabilities: # Efficient, open-source alternative
+      research: 0.70
+      content_synthesis: 0.65
+      data_analysis: 0.60
+      coding: 0.80 # Decent coding ability
+      customer_support: 0.55
+      fact_checking: 0.60
+      creative_writing: 0.60
+      image_analysis: 0.15 # Very low confidence: Image Analysis
+      social_media_interaction: 0.50
+      scientific_reasoning: 0.45
+    calibration:
+      slope: 0.99
+      intercept: 0.01

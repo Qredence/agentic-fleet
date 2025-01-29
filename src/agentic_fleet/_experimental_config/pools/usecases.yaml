@@ -1,0 +1,153 @@
+usecases:
+  - name: market_research
+    description: "Conducting comprehensive market research and analysis."
+
+  - name: content_creation
+    description: "Generating creative content such as articles, stories, and designs."
+
+  - name: technical_writing
+    description: "Producing technical documentation and reports."
+
+  - name: general_research
+    description: "Performing general-purpose research on various topics."
+
+  - name: software_development
+    description: "Developing software applications and systems."
+
+  - name: code_optimization
+    description: "Optimizing existing code for better performance."
+
+  - name: bug_fixing
+    description: "Identifying and fixing bugs in software code."
+
+  - name: general_coding
+    description: "Performing general-purpose coding tasks."
+
+  - name: data_reporting
+    description: "Generating reports based on data analysis."
+
+  - name: financial_analysis
+    description: "Analyzing financial data and generating insights."
+
+  - name: scientific_research
+    description: "Conducting scientific research and analysis."
+
+  - name: general_analysis
+    description: "Performing general-purpose data analysis tasks."
+
+  - name: document_translation
+    description: "Translating documents between different languages."
+
+  - name: language_learning
+    description: "Assisting with learning new languages."
+
+  - name: general_translation
+    description: "Performing general-purpose translation tasks."
+
+  - name: artistic_design
+    description: "Creating artistic designs and visual content."
+
+  - name: general_creativity
+    description: "Performing tasks that require creative thinking."
+
+  - name: software_debugging
+    description: "Debugging software applications."
+
+  - name: code_review
+    description: "Reviewing code for quality and correctness."
+
+  - name: general_debugging
+    description: "Performing general-purpose debugging tasks."
+
+  - name: mathematical_modeling
+    description: "Creating mathematical models for various applications."
+
+  - name: scientific_computation
+    description: "Performing computations for scientific research."
+
+  - name: general_math
+    description: "Solving general mathematical problems."
+
+  - name: task_delegation
+    description: "Delegating tasks to appropriate agents."
+
+  - name: workflow_management
+    description: "Managing and orchestrating workflows."
+
+  - name: general_orchestration
+    description: "Performing general-purpose orchestration tasks."
+
+
+    # configs/pools/usecase_pool.yaml
+# Expanded Use Case templates for various tasks.
+
+usecases:
+  - id: market_research_article
+    description: "Produce a comprehensive market research article."
+    required_skills: [web_research, data_analysis, technical_writing, market_analysis]
+    tools: [web_search, data_visualizer, financial_data_api]
+    confidence_threshold: 0.78
+    workflow_config: "workflows/research_article_workflow.yaml"
+
+  - id: financial_risk_report
+    description: "Generate a financial risk assessment report."
+    required_skills: [financial_modeling, data_analysis, statistical_modeling, risk_assessment]
+    tools: [financial_data_api, data_visualizer, code_executor]
+    confidence_threshold: 0.85
+    workflow_config: "workflows/financial_risk_workflow.yaml" # Placeholder workflow
+
+  - id: customer_support_query_resolution
+    description: "Resolve a customer support query and update CRM."
+    required_skills: [customer_relationship_management, communication, problem_solving]
+    tools: [customer_crm_api, web_search, fact_checking_api]
+    confidence_threshold: 0.75
+    workflow_config: "workflows/customer_support_workflow.yaml" # Placeholder workflow
+
+  - id: code_generation_task
+    description: "Generate Python code to perform a specific task."
+    required_skills: [python_coding, software_development, algorithm_design]
+    tools: [code_executor, web_search]
+    confidence_threshold: 0.80
+    workflow_config: "workflows/code_generation_workflow.yaml" # Placeholder workflow
+
+  - id: creative_content_generation
+    description: "Generate creative content like stories or marketing copy."
+    required_skills: [creative_writing, content_synthesis, communication]
+    tools: [web_search]
+    confidence_threshold: 0.70
+    workflow_config: "workflows/creative_writing_workflow.yaml" # Placeholder workflow
+
+  - id: fact_verification_report
+    description: "Verify a set of claims and generate a fact-checking report."
+    required_skills: [fact_checking, web_research, source_validation]
+    tools: [fact_checking_api, web_search]
+    confidence_threshold: 0.88
+    workflow_config: "workflows/fact_checking_workflow.yaml" # Placeholder workflow
+
+  - id: image_classification_task # New Use Case
+    description: "Classify images based on predefined categories."
+    required_skills: [image_analysis, data_analysis]
+    tools: [image_analysis_api, data_visualizer] # Visualize image analysis results
+    confidence_threshold: 0.82
+    workflow_config: "workflows/image_classification_workflow.yaml" # Placeholder workflow
+
+  - id: social_media_campaign_management # New Use Case
+    description: "Manage a social media marketing campaign (content posting, engagement tracking)."
+    required_skills: [social_media_marketing, creative_writing, communication, market_analysis]
+    tools: [social_media_api, web_search, data_visualizer] # Track campaign performance
+    confidence_threshold: 0.78
+    workflow_config: "workflows/social_media_campaign_workflow.yaml" # Placeholder workflow
+
+  - id: scientific_literature_review # New Use Case
+    description: "Conduct a literature review on a scientific topic."
+    required_skills: [scientific_reasoning, web_research, scientific_data_analysis, technical_writing]
+    tools: [scientific_data_tool, web_search, code_executor] # Code executor for data processing if needed
+    confidence_threshold: 0.87
+    workflow_config: "workflows/scientific_literature_review_workflow.yaml" # Placeholder workflow
+
+  - id: real_time_data_dashboard # New Use Case
+    description: "Create a real-time data dashboard visualizing streaming data."
+    required_skills: [data_analysis, data_visualization, python_coding, real_time_data_analysis] # New Skill: real-time data analysis
+    tools: [real_time_data_stream, data_visualizer, code_executor] # Code for dashboard creation
+    confidence_threshold: 0.83
+    workflow_config: "workflows/real_time_dashboard_workflow.yaml" # Placeholder workflow

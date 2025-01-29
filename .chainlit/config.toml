@@ -2,19 +2,6 @@
 # Whether to enable telemetry (default: true). No personal data is collected.
 enable_telemetry = true
 
-[auth]
-# Enable authentication with username/password
-type = "basic"
-# List of authorized users
-users = [
-    { username = "admin", password = "admin" }
-]
-
-[project.oauth]
-# OAuth configuration is optional
-enabled = false
-# List of enabled providers (can be empty if OAuth is disabled)
-providers = []
 
 # List of environment variables to be provided by each user to use the app.
 user_env = []
@@ -41,13 +28,21 @@ latex = false
 # Automatically tag threads with the current chat profile (if a chat profile is used)
 auto_tag_thread = true
 
-
 # Allow users to edit their own messages
 edit_message = true
 
 # Authorize users to spontaneously upload files with messages
 [features.spontaneous_file_upload]
     enabled = true
+    # Define accepted file types using MIME types
+    # Examples:
+    # 1. For specific file types:
+    #    accept = ["image/jpeg", "image/png", "application/pdf"]
+    # 2. For all files of certain type:
+    #    accept = ["image/*", "audio/*", "video/*"]
+    # 3. For specific file extensions:
+    #    accept = { "application/octet-stream" = [".xyz", ".pdb"] }
+    # Note: Using "*/*" is not recommended as it may cause browser warnings
     accept = ["*/*"]
     max_files = 20
     max_size_mb = 500
@@ -58,11 +53,11 @@ edit_message = true
 
 [UI]
 # Name of the assistant.
-name = "AgenticFleet"
+name = "Assistant"
 
-default_theme = "light"
+# default_theme = "dark"
 
-# layout = "wide" 
+# layout = "wide"
 
 # Description of the assistant. This is used for HTML tags.
 # description = ""
@@ -71,11 +66,11 @@ default_theme = "light"
 cot = "full"
 
 # Link to your github repo. This will add a github button in the UI's header.
-github = "https://github.com/Qredence/AgenticFleet"
+# github = ""
 
 # Specify a CSS file that can be used to customize the user interface.
 # The CSS file can be served from the public directory or via an external link.
-custom_css = "/public/custom.css"
+# custom_css = "/public/test.css"
 
 # Specify a Javascript file that can be used to customize the user interface.
 # The Javascript file can be served from the public directory.
@@ -91,3 +86,4 @@ custom_css = "/public/custom.css"
 
 [meta]
 generated_by = "2.0.6"
+
