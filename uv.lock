@@ -10,7 +10,7 @@ resolution-markers = [
 
 [[package]]
 name = "agentic-fleet"
-version = "0.4.61"
+version = "0.4.65"
 source = { editable = "." }
 dependencies = [
     { name = "agentops" },
@@ -44,6 +44,7 @@ dependencies = [
     { name = "google-cloud-aiplatform" },
     { name = "google-generativeai" },
     { name = "grpcio-tools" },
+    { name = "gunicorn" },
     { name = "httpx" },
     { name = "ipykernel" },
     { name = "jsonlines" },
@@ -148,7 +149,7 @@ requires-dist = [
     { name = "bing", specifier = ">=0.31" },
     { name = "black", specifier = ">=24.10.0" },
     { name = "black", marker = "extra == 'dev'", specifier = ">=23.11.0" },
-    { name = "chainlit", specifier = ">=2.0.6" },
+    { name = "chainlit", specifier = ">=2.0.603" },
     { name = "codecov", specifier = ">=2.1.13" },
     { name = "composio-core", specifier = ">=0.6.11.post1" },
     { name = "coverage", marker = "extra == 'test'", specifier = ">=7.4.0" },
@@ -161,6 +162,7 @@ requires-dist = [
     { name = "google-generativeai", specifier = ">=0.3.0" },
     { name = "google-generativeai", marker = "extra == 'models'", specifier = ">=0.3.0" },
     { name = "grpcio-tools", specifier = "~=1.62.0" },
+    { name = "gunicorn", specifier = ">=23.0.0" },
     { name = "httpx", specifier = ">=0.25.0" },
     { name = "ipykernel", specifier = ">=6.29.5" },
     { name = "jsonlines", specifier = ">=4.0.0" },
@@ -2200,6 +2202,18 @@ wheels = [
     { url = "https://files.pythonhosted.org/packages/fd/d9/4360a6c12be3d7521b0b8c39e5d3801d622fbb81cc2721dbd3eee31e28c8/grpcio_tools-1.62.3-cp312-cp312-musllinux_1_1_x86_64.whl", hash = "sha256:e02d7c1a02e3814c94ba0cfe43d93e872c758bd8fd5c2797f894d0c49b4a1dfc", size = 3298378 },
     { url = "https://files.pythonhosted.org/packages/29/3b/7cdf4a9e5a3e0a35a528b48b111355cd14da601413a4f887aa99b6da468f/grpcio_tools-1.62.3-cp312-cp312-win32.whl", hash = "sha256:b881fd9505a84457e9f7e99362eeedd86497b659030cf57c6f0070df6d9c2b9b", size = 910416 },
     { url = "https://files.pythonhosted.org/packages/6c/66/dd3ec249e44c1cc15e902e783747819ed41ead1336fcba72bf841f72c6e9/grpcio_tools-1.62.3-cp312-cp312-win_amd64.whl", hash = "sha256:11c625eebefd1fd40a228fc8bae385e448c7e32a6ae134e43cf13bbc23f902b7", size = 1052856 },
+]
+
+[[package]]
+name = "gunicorn"
+version = "23.0.0"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "packaging" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/34/72/9614c465dc206155d93eff0ca20d42e1e35afc533971379482de953521a4/gunicorn-23.0.0.tar.gz", hash = "sha256:f014447a0101dc57e294f6c18ca6b40227a4c90e9bdb586042628030cba004ec", size = 375031 }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/cb/7d/6dac2a6e1eba33ee43f318edbed4ff29151a49b5d37f080aad1e6469bca4/gunicorn-23.0.0-py3-none-any.whl", hash = "sha256:ec400d38950de4dfd418cff8328b2c8faed0edb0d517d3394e457c317908ca4d", size = 85029 },
 ]
 
 [[package]]

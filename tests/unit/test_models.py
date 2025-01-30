@@ -1,7 +1,7 @@
 """Unit tests for the models module."""
 import pytest
 from unittest.mock import Mock, patch
-from autogen_core.models import ChatCompletionClient
+from autogen.core.provider import ChatCompletionClient
 
 from agentic_fleet.models.models import (
     EnhancedAssistantAgent,

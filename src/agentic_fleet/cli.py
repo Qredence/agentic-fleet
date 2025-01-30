@@ -18,15 +18,6 @@ def get_config_path(no_oauth: bool = False) -> str:
     config_name = "config.no-oauth.toml" if no_oauth else "config.oauth.toml"
     return os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", ".chainlit", config_name))
 
-def setup_environment(no_oauth: bool = False) -> None:
-    """Setup environment variables and configuration for the application.
-
-    Args:
-        no_oauth: Whether to disable OAuth authentication
-    """
-    load_dotenv()
-    os.environ['USE_OAUTH'] = str(not no_oauth).lower()
-
 @click.group()
 def cli():
     """AgenticFleet CLI - A multi-agent system for adaptive AI reasoning."""
@@ -40,7 +31,7 @@ def start(mode: str):
     MODE can be either 'default' (with OAuth) or 'no-oauth'
     """
     # Load environment variables
-    setup_environment(mode == 'no-oauth')
+    load_dotenv()
 
     # Set OAuth mode
     no_oauth = mode == 'no-oauth'
@@ -50,6 +41,7 @@ def start(mode: str):
     config_path = get_config_path(no_oauth)
 
     # Set environment variables
+    os.environ['USE_OAUTH'] = str(not no_oauth).lower()
     os.environ['CHAINLIT_CONFIG'] = config_path
 
     # Print startup message
