@@ -54,12 +54,13 @@ DEFAULT_MAX_TIME = 10
 DEFAULT_MAX_STALLS = 5
 DEFAULT_START_PAGE = "https://bing.com"
 
+
 async def stream_text(text: str) -> AsyncGenerator[str, None]:
     """Stream text content word by word.
-    
+
     Args:
         text: Text to stream
-        
+
     Yields:
         Each word of the text with a delay
     """
@@ -67,6 +68,7 @@ async def stream_text(text: str) -> AsyncGenerator[str, None]:
     for i, word in enumerate(words):
         await asyncio.sleep(STREAM_DELAY)
         yield word + (" " if i < len(words) - 1 else "")
+
 
 # Initialize Azure OpenAI client
 az_model_client = AzureOpenAIChatCompletionClient(
@@ -79,12 +81,13 @@ az_model_client = AzureOpenAIChatCompletionClient(
         "vision": True,
         "function_calling": True,
         "json_output": True,
-    }
+    },
 )
 
 
 # OAuth configuration - only define callback if OAuth is enabled
 if os.getenv("USE_OAUTH", "false").lower() == "true":
+
     @cl.oauth_callback
     async def oauth_callback(
         provider_id: str,
@@ -121,11 +124,7 @@ if os.getenv("USE_OAUTH", "false").lower() == "true":
                 logger.info(f"Authenticated GitHub user: {username}")
                 return cl.User(
                     identifier=username,
-                    metadata={
-                        "name": name,
-                        "email": email,
-                        "provider": "github"
-                    }
+                    metadata={"name": name, "email": email, "provider": "github"},
                 )
 
             # Default fallback
@@ -135,6 +134,7 @@ if os.getenv("USE_OAUTH", "false").lower() == "true":
         except Exception as e:
             logger.error(f"OAuth callback error: {str(e)}")
             return default_user
+
 
 @cl.on_settings_update
 async def update_settings(settings: Dict[str, Any]) -> None:
@@ -149,14 +149,19 @@ async def update_settings(settings: Dict[str, Any]) -> None:
     cl.user_session.set("max_stalls", settings.get("max_stalls", DEFAULT_MAX_STALLS))
     cl.user_session.set("start_page", settings.get("start_page", DEFAULT_START_PAGE))
 
+
 @cl.on_chat_start
 async def initialize_session() -> None:
     """Initialize user session and set up agent team."""
     try:
         # Handle user authentication
         app_user = cl.user_session.get("user")
-        greeting = f"Hi {app_user.identifier}! 👋" if app_user else "Hi there! Welcome to AgenticFleet 👋"
-        await cl.Message(f"{greeting} Feel free to adjust your experience in the settings above.").send()
+        greeting = (
+            f"Hi {app_user.identifier}! 👋" if app_user else "Hi there! Welcome to AgenticFleet 👋"
+        )
+        await cl.Message(
+            f"{greeting} Feel free to adjust your experience in the settings above."
+        ).send()
 
         # Initialize chat settings
         settings = cl.ChatSettings(
@@ -168,7 +173,7 @@ async def initialize_session() -> None:
                     min=1,
                     max=100,
                     step=1,
-                    description="Maximum number of conversation rounds"
+                    description="Maximum number of conversation rounds",
                 ),
                 Slider(
                     id="max_time",
@@ -177,7 +182,7 @@ async def initialize_session() -> None:
                     min=1,
                     max=60,
                     step=1,
-                    description="Maximum time in minutes for task completion"
+                    description="Maximum time in minutes for task completion",
                 ),
                 Slider(
                     id="max_stalls",
@@ -186,13 +191,13 @@ async def initialize_session() -> None:
                     min=1,
                     max=10,
                     step=1,
-                    description="Maximum number of stalls before replanning"
+                    description="Maximum number of stalls before replanning",
                 ),
                 TextInput(
                     id="start_page",
                     label="Start Page URL",
                     initial=DEFAULT_START_PAGE,
-                    description="Default URL for web searches"
+                    description="Default URL for web searches",
                 ),
             ]
         )
@@ -242,7 +247,7 @@ async def initialize_session() -> None:
                 animate_actions=False,
                 to_save_screenshots=True,
                 use_ocr=False,
-                debug_dir="./files/debug"
+                debug_dir="./files/debug",
             )
 
             file_surfer = FileSurfer(
@@ -251,18 +256,14 @@ async def initialize_session() -> None:
                 description="""You are an expert file system navigator. Your role is to:
                     1. Search and analyze files in the workspace
                     2. Extract relevant information from files
-                    3. Organize and manage file operations efficiently"""
+                    3. Organize and manage file operations efficiently""",
             )
 
-            coder = MagenticOneCoderAgent(
-                name="Coder",
-                model_client=az_model_client
-            )
+            coder = MagenticOneCoderAgent(name="Coder", model_client=az_model_client)
 
             # Create code executor with proper workspace
             code_executor = LocalCommandLineCodeExecutor(
-                work_dir=workspace_dir,
-                timeout=300  # 5 minutes timeout
+                work_dir=workspace_dir, timeout=300  # 5 minutes timeout
             )
 
             # Create executor agent
@@ -273,7 +274,7 @@ async def initialize_session() -> None:
                     1. Safely execute code in the workspace
                     2. Monitor execution and handle timeouts
                     3. Provide detailed feedback on execution results
-                    4. Maintain a clean and organized workspace"""
+                    4. Maintain a clean and organized workspace""",
             )
 
             # Create team with improved configuration
@@ -281,7 +282,7 @@ async def initialize_session() -> None:
                 participants=[surfer, file_surfer, coder, executor],
                 model_client=az_model_client,
                 max_turns=cl.user_session.get("max_rounds", DEFAULT_MAX_ROUNDS),
-                max_stalls=cl.user_session.get("max_stalls", DEFAULT_MAX_STALLS)
+                max_stalls=cl.user_session.get("max_stalls", DEFAULT_MAX_STALLS),
             )
             cl.user_session.set("team", team)
 
@@ -291,7 +292,9 @@ async def initialize_session() -> None:
             cl.user_session.set("task_list", task_list)
             await task_list.send()
 
-            await cl.Message(content="✅ Your multi-agent team is ready! Each agent has been initialized with specialized capabilities.").send()
+            await cl.Message(
+                content="✅ Your multi-agent team is ready! Each agent has been initialized with specialized capabilities."
+            ).send()
 
         except Exception as agent_error:
             logger.error(f"Failed to initialize agents: {str(agent_error)}")
@@ -317,17 +320,14 @@ async def process_response(response: Any, collected_responses: List[str]) -> Non
             # Handle TaskResult objects
             if isinstance(response, TaskResult):
                 async with cl.Step(name="Task Execution", type="task") as task_step:
-                    task_step.input = getattr(response, 'task', 'Task execution')
-                    
+                    task_step.input = getattr(response, "task", "Task execution")
+
                     for msg in response.messages:
                         await process_message(msg, collected_responses)
-                    
+
                     if response.stop_reason:
                         task_step.output = f"Task stopped: {response.stop_reason}"
-                        await cl.Message(
-                            content=f"🛑 {task_step.output}",
-                            author="System"
-                        ).send()
+                        await cl.Message(content=f"🛑 {task_step.output}", author="System").send()
 
             # Handle TextMessage objects directly
             elif isinstance(response, TextMessage):
@@ -336,30 +336,30 @@ async def process_response(response: Any, collected_responses: List[str]) -> Non
                     await process_message(response, collected_responses)
 
             # Handle chat messages
-            elif hasattr(response, 'chat_message'):
+            elif hasattr(response, "chat_message"):
                 async with cl.Step(name="Chat Message", type="message") as chat_step:
                     chat_step.input = str(response.chat_message)
                     await process_message(response.chat_message, collected_responses)
 
             # Handle inner thoughts and reasoning
-            elif hasattr(response, 'inner_monologue'):
+            elif hasattr(response, "inner_monologue"):
                 async with cl.Step(name="Inner Thought", type="reasoning") as thought_step:
                     thought_step.input = response.inner_monologue
                     await cl.Message(
                         content=f"💭 Inner thought: {response.inner_monologue}",
                         author="System",
-                        indent=1
+                        indent=1,
                     ).send()
                     thought_step.output = "Processed inner thought"
 
             # Handle function calls
-            elif hasattr(response, 'function_call'):
+            elif hasattr(response, "function_call"):
                 async with cl.Step(name="Function Call", type="function") as func_step:
                     func_step.input = str(response.function_call)
                     await cl.Message(
                         content=f"🛠️ Function call: {response.function_call}",
                         author="System",
-                        indent=1
+                        indent=1,
                     ).send()
                     func_step.output = "Function call processed"
 
@@ -385,10 +385,8 @@ async def process_response(response: Any, collected_responses: List[str]) -> Non
         logger.error(f"Error processing response: {str(e)}")
         await cl.Message(content=f"⚠️ Error processing response: {str(e)}").send()
 
-async def process_message(
-    message: Union[TextMessage, Any],
-    collected_responses: List[str]
-) -> None:
+
+async def process_message(message: Union[TextMessage, Any], collected_responses: List[str]) -> None:
     """Process a single message with proper formatting and step visualization.
 
     Args:
@@ -397,8 +395,8 @@ async def process_message(
     """
     try:
         # Extract content and source
-        content = message.content if hasattr(message, 'content') else str(message)
-        source = getattr(message, 'source', 'Unknown')
+        content = message.content if hasattr(message, "content") else str(message)
+        source = getattr(message, "source", "Unknown")
 
         # Check for plan and update task list
         if "Here is the plan to follow as best as possible:" in content:
@@ -428,18 +426,18 @@ async def process_message(
                 await msg.send()
                 collected_responses.append(content)
                 msg_step.output = "Message processed"
-                
+
         elif isinstance(message, MultiModalMessage):
             # Process multimodal content
             async with cl.Step(name="Multimodal Processing", type="media") as media_step:
                 media_step.input = "Processing multimodal message"
                 for item in message.content:
                     if isinstance(item, Image):
-                        image_data = getattr(item, 'data', None) or getattr(item, 'content', None)
+                        image_data = getattr(item, "data", None) or getattr(item, "content", None)
                         if image_data:
                             await _handle_image_data(image_data)
                 media_step.output = "Multimodal content processed"
-                
+
         elif isinstance(message, FunctionCall):
             # Handle function calls
             async with cl.Step(name=f"Function: {message.name}", type="function") as func_step:
@@ -447,7 +445,7 @@ async def process_message(
                 await cl.Message(
                     content=f"🛠️ Function: {message.name}\nArgs: {json.dumps(message.args, indent=2)}",
                     author=source,
-                    indent=1
+                    indent=1,
                 ).send()
                 func_step.output = "Function call processed"
         else:
@@ -465,6 +463,7 @@ async def process_message(
     except Exception as e:
         logger.error(f"Error processing message: {str(e)}")
         await cl.Message(content=f"⚠️ Error processing message: {str(e)}").send()
+
 
 def extract_steps_from_content(content: str) -> List[str]:
     """Extract steps from the content.
@@ -486,10 +485,11 @@ def extract_steps_from_content(content: str) -> List[str]:
                 step = line[2:].strip()
                 if step:
                     # Remove markdown formatting and extra whitespace
-                    step = re.sub(r'\*\*|\`\`\`|\*', '', step)
-                    step = re.sub(r'\s+', ' ', step)
+                    step = re.sub(r"\*\*|\`\`\`|\*", "", step)
+                    step = re.sub(r"\s+", " ", step)
                     steps.append(step)
     return steps
+
 
 async def _process_multimodal_message(content: List[Any]) -> None:
     """Process a multimodal message containing text and images.
@@ -501,13 +501,14 @@ async def _process_multimodal_message(content: List[Any]) -> None:
         for item in content:
             if isinstance(item, Image):
                 # Handle image data - check for both data and content attributes
-                image_data = getattr(item, 'data', None) or getattr(item, 'content', None)
+                image_data = getattr(item, "data", None) or getattr(item, "content", None)
                 if image_data:
                     await _handle_image_data(image_data)
 
     except Exception as e:
         logger.error(f"Error processing multimodal message: {str(e)}")
         await cl.Message(content=f"⚠️ Error processing multimodal message: {str(e)}").send()
+
 
 async def _handle_image_data(image_data: Union[str, bytes]) -> Optional[cl.Image]:
     """Handle image data processing and display.
@@ -517,7 +518,7 @@ async def _handle_image_data(image_data: Union[str, bytes]) -> Optional[cl.Image
     """
     try:
         if isinstance(image_data, str):
-            if image_data.startswith(('http://', 'https://')):
+            if image_data.startswith(("http://", "https://")):
                 # Display remote images directly
                 image = cl.Image(url=image_data, display="inline")
                 await cl.Message(content="📸 New screenshot:", elements=[image]).send()
@@ -567,7 +568,7 @@ async def handle_message(message: cl.Message):
         # Create top-level step for message handling
         async with cl.Step(name="Message Processing", type="process") as process_step:
             process_step.input = message.content
-            
+
             # Process message with team
             collected_responses = []
             current_task = None
@@ -624,6 +625,7 @@ async def cleanup() -> None:
         workspace_dir = os.path.join(os.getcwd(), "workspace")
         if os.path.exists(workspace_dir):
             import shutil
+
             shutil.rmtree(workspace_dir)
 
     except Exception as e:

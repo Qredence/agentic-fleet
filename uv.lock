@@ -149,7 +149,7 @@ requires-dist = [
     { name = "bing", specifier = ">=0.31" },
     { name = "black", specifier = ">=24.10.0" },
     { name = "black", marker = "extra == 'dev'", specifier = ">=23.11.0" },
-    { name = "chainlit", specifier = ">=2.0.603" },
+    { name = "chainlit", specifier = ">=2.1.0" },
     { name = "codecov", specifier = ">=2.1.13" },
     { name = "composio-core", specifier = ">=0.6.11.post1" },
     { name = "coverage", marker = "extra == 'test'", specifier = ">=7.4.0" },
@@ -1060,7 +1060,7 @@ wheels = [
 
 [[package]]
 name = "chainlit"
-version = "2.0.603"
+version = "2.1.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "aiofiles" },
@@ -1086,9 +1086,9 @@ dependencies = [
     { name = "uvicorn" },
     { name = "watchfiles" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/22/fe/e531b637aa14c74e6664b8ae9526db457dd030c405d9181066ba273551a7/chainlit-2.0.603.tar.gz", hash = "sha256:c4661d1d86a4592028517472bf1af1bfe6a513b4a75b1e17965c6d43554e0c31", size = 9435094 }
+sdist = { url = "https://files.pythonhosted.org/packages/4d/f4/eca0a4409b4264e508315415876d2990e7a58f13ef8945943c0f9db2a50d/chainlit-2.1.0.tar.gz", hash = "sha256:fd78da004a5319af91f5e60711322d84ffa1aa0e792b90de6314e1377b171b45", size = 9472013 }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/f0/88/01d6db479ba003a71fa2cf26dc0edb9f9ac863169427ec92fa26f31704b7/chainlit-2.0.603-py3-none-any.whl", hash = "sha256:3864b0eb26a7e0a2056ccf548812d6f2ec3b1407b63a629815cdea9b2ec93604", size = 9579486 },
+    { url = "https://files.pythonhosted.org/packages/b7/48/26fafbdc8cce1287b4fb55ba016d54c736c7fa5c90c0d5b2be1dbc90fe59/chainlit-2.1.0-py3-none-any.whl", hash = "sha256:72692b0f266a91805f328d5dedf7f24a79d41f3fb5f2e9dcd4f33ea67daec31e", size = 9620423 },
 ]
 
 [[package]]

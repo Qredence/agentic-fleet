@@ -3,8 +3,8 @@
 enable_telemetry = true
 
 [auth]
-# Enable authentication with username/password
-type = "basic"
+# Change to OAuth
+type = "oauth"
 # List of authorized users
 users = [
     { username = "admin", password = "admin" }
@@ -12,15 +12,27 @@ users = [
 
 [project.oauth]
 # OAuth configuration is optional
-enabled = false
+enabled = true
 # List of enabled providers (can be empty if OAuth is disabled)
-providers = []
+providers = ["github"]
+client_id = "OAUTH_GITHUB_CLIENT_ID"  
+client_secret = "OAUTH_GITHUB_CLIENT_SECRET"
+
+[project.oauth.github]
+prompt = "login"
+consent = "consent"
 
 # List of environment variables to be provided by each user to use the app.
 user_env = []
 
 # Duration (in seconds) during which the session is saved when the connection is lost
 session_timeout = 3600
+
+# Force consent prompt for all providers
+OAUTH_PROMPT = "consent"
+
+# Override specific provider to force login
+OAUTH_GITHUB_PROMPT = "login"
 
 # Duration (in seconds) of the user session expiry
 user_session_timeout = 1296000  # 15 days
@@ -41,7 +53,6 @@ latex = false
 # Automatically tag threads with the current chat profile (if a chat profile is used)
 auto_tag_thread = true
 
-
 # Allow users to edit their own messages
 edit_message = true
 
@@ -59,6 +70,7 @@ edit_message = true
 [UI]
 # Name of the assistant.
 name = "AgenticFleet"
+description = "AI Agent Fleet Management"
 
 default_theme = "light"
 
@@ -90,4 +102,8 @@ custom_css = "/public/custom.css"
 # custom_build = "./public/build"
 
 [meta]
-generated_by = "2.0.6"
+generated_by = "2.1.0"
+
+[server]
+port = 8001
+host = "localhost"
