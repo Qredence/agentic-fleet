@@ -1,0 +1,66 @@
+version: '3.8'
+
+services:
+  agenticfleet:
+    build:
+      context: .
+      dockerfile: .devcontainer/Dockerfile
+      args:
+        # Build arguments - can be overridden via .env or command line
+        VERSION: ${VERSION:-0.4.71}
+        AZURE_OPENAI_API_KEY: ${AZURE_OPENAI_API_KEY}
+        AZURE_OPENAI_ENDPOINT: ${AZURE_OPENAI_ENDPOINT}
+        AZURE_OPENAI_DEPLOYMENT: ${AZURE_OPENAI_DEPLOYMENT}
+        AZURE_OPENAI_MODEL: ${AZURE_OPENAI_MODEL}
+        USE_OAUTH: ${USE_OAUTH:-true}
+        OAUTH_GITHUB_CLIENT_ID: ${OAUTH_GITHUB_CLIENT_ID}
+        OAUTH_GITHUB_CLIENT_SECRET: ${OAUTH_GITHUB_CLIENT_SECRET}
+        OPENAI_API_KEY: ${OPENAI_API_KEY}
+        GEMINI_API_KEY: ${GEMINI_API_KEY}
+        DEEPSEEK_API_KEY: ${DEEPSEEK_API_KEY}
+        COGCACHE_API_KEY: ${COGCACHE_API_KEY}
+    
+    image: qredence/agenticfleet:${TAG:-latest}
+    container_name: agenticfleet
+    
+    env_file:
+      - .env
+    
+    environment:
+      - PYTHONUNBUFFERED=1
+      - PYTHONPATH=/workspace
+      - PORT=8001
+      - RUN_MODE=${RUN_MODE:-default}
+      - USE_OAUTH=true
+      - CHAINLIT_HOST=0.0.0.0
+      - CHAINLIT_PORT=8001
+      - CHAINLIT_AUTH_SECRET=${CHAINLIT_AUTH_SECRET:-password}
+    
+    volumes:
+      - .:/workspace
+      - ./.env:/workspace/.env:ro
+      - chainlit-cache:/workspace/.cache/chainlit
+    
+    ports:
+      - "8001:8001"
+    
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8001/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    
+    restart: unless-stopped
+    
+    deploy:
+      resources:
+        limits:
+          cpus: '2'
+          memory: 4G
+        reservations:
+          cpus: '1'
+          memory: 2G
+
+volumes:
+  chainlit-cache:
