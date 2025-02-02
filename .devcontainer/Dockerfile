@@ -1,16 +1,19 @@
-FROM python:3.12-slim
+# Use Alpine as the base image
+FROM python:3.12-alpine
 
 # Build argument for version only
 ARG VERSION=0.4.71
 
 # Install system dependencies
-RUN apt-get update && apt-get install -y \
+RUN apk add --no-cache \
     gcc \
     git \
     curl \
     nodejs \
     npm \
-    && rm -rf /var/lib/apt/lists/*
+    musl-dev \
+    libffi-dev \
+    openssl-dev
 
 WORKDIR /workspace
 
@@ -18,10 +21,10 @@ WORKDIR /workspace
 COPY pyproject.toml .
 COPY README.md .
 
-# Install Python dependencies
+# Install Python dependencies (excluding dev and test)
 RUN pip install --upgrade pip && \
     pip install hatch && \
-    pip install -e ".[dev,test]"
+    pip install .
 
 # Install Playwright dependencies
 RUN npx playwright install-deps && \
