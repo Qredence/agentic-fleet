@@ -1,16 +1,25 @@
-# Use Alpine as the base image
-FROM python:3.12-alpine
+# Use Debian-based Python image
+FROM python:3.12-slim-bullseye
 
 # Build argument for version only
 ARG VERSION=0.4.71
 
 # Install system dependencies
-RUN apk add --no-cache \
+RUN apt-get update && apt-get install -y \
     gcc \
+    g++ \
     git \
     curl \
     nodejs \
-    npm
+    npm \
+    chromium \
+    libnss3 \
+    libfreetype6 \
+    libharfbuzz0b \
+    ca-certificates \
+    fonts-freefont-ttf \
+    bash \
+    && rm -rf /var/lib/apt/lists/*
 
 # Set the working directory to where app.py and cli.py are located
 WORKDIR /src/agentic_fleet
@@ -21,11 +30,13 @@ COPY . .
 # Install Python dependencies (excluding dev and test)
 RUN pip install --upgrade pip && \
     pip install hatch && \
+    pip install playwright && \
+    playwright install chromium && \
     pip install -e .
 
-# Install Playwright dependencies and Chromium
-RUN npx playwright install-deps && \
-    npx playwright install chromium
+# Set environment variables for Playwright
+ENV PLAYWRIGHT_BROWSERS_PATH=/usr/bin/chromium \
+    PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=1
 
 # Set environment variables
 ENV PYTHONUNBUFFERED=1
