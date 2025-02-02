@@ -21,7 +21,7 @@ COPY . .
 # Install Python dependencies (excluding dev and test)
 RUN pip install --upgrade pip && \
     pip install hatch && \
-    pip install .
+    pip install -e .
 
 # Install Playwright dependencies and Chromium
 RUN npx playwright install-deps && \
