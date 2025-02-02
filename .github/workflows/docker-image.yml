@@ -26,5 +26,6 @@ jobs:
         uses: docker/build-push-action@v6
         with:
           context: .
+          file: .devcontainer/Dockerfile  # Update this path to the actual location of your Dockerfile
           push: true
           tags: ${{ secrets.DOCKERHUB_USERNAME }}/agenticfleet:latest
