@@ -42,7 +42,7 @@ ENV CHAINLIT_PORT=8001
 EXPOSE 8001
 
 # Copy entrypoint script from the correct path
-COPY ./scripts/docker-entrypoint.sh /usr/local/bin/
+COPY scripts/docker-entrypoint.sh /usr/local/bin/
 RUN chmod +x /usr/local/bin/docker-entrypoint.sh
 ENTRYPOINT ["docker-entrypoint.sh"]
 
