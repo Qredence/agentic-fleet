@@ -43,8 +43,8 @@ ENV PLAYWRIGHT_BROWSERS_PATH=/usr/bin/chromium \
 # Default environment variables for Azure OpenAI (can be overridden at runtime)
 ENV AZURE_OPENAI_API_KEY="" \
     AZURE_OPENAI_ENDPOINT="" \
-    AZURE_OPENAI_DEPLOYMENT="gpt-4o-mini" \
-    AZURE_OPENAI_MODEL="gpt-4o-mini" \
+    AZURE_OPENAI_DEPLOYMENT="" \
+    AZURE_OPENAI_MODEL="" \
     USE_OAUTH="false"
 
 # Set environment variables
