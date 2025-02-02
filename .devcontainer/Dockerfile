@@ -1,5 +1,5 @@
 # Use Debian-based Python image
-FROM python:3.12-slim-bullseye
+FROM python:3.12-slim-bullseye AS build
 
 # Build argument for version only
 ARG VERSION=0.4.71
@@ -33,6 +33,41 @@ RUN pip install --upgrade pip && \
     pip install playwright chainlit && \
     playwright install chromium && \
     pip install -e .
+
+# Set environment variables for Playwright and Chainlit
+ENV PLAYWRIGHT_BROWSERS_PATH=/usr/bin/chromium \
+    PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=1 \
+    CHAINLIT_HOST=0.0.0.0 \
+    CHAINLIT_PORT=8001
+
+# Default environment variables for Azure OpenAI (can be overridden at runtime)
+ENV AZURE_OPENAI_API_KEY="" \
+    AZURE_OPENAI_ENDPOINT="" \
+    AZURE_OPENAI_DEPLOYMENT="" \
+    AZURE_OPENAI_MODEL="" \
+    USE_OAUTH="false"
+
+# Set environment variables
+ENV PYTHONUNBUFFERED=1
+ENV PYTHONPATH=/workspace
+ENV PORT=8001
+ENV VERSION=${VERSION}
+
+# Default values for optional settings
+ENV USE_OAUTH=false
+ENV CHAINLIT_HOST=localhost
+ENV CHAINLIT_PORT=8001
+
+# Expose port
+EXPOSE 8001
+
+# Use a more minimal runtime image
+FROM python:3.12-slim-bullseye AS runtime
+
+# Copy only necessary files from the build stage
+COPY --from=build /src/agentic_fleet /src/agentic_fleet
+COPY --from=build /usr/local/bin /usr/local/bin
+COPY --from=build /usr/local/lib/python3.12 /usr/local/lib/python3.12
 
 # Set environment variables for Playwright and Chainlit
 ENV PLAYWRIGHT_BROWSERS_PATH=/usr/bin/chromium \

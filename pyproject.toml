@@ -116,6 +116,7 @@ Documentation = "https://github.com/qredence/agenticfleet/tree/main/docs"
 Repository = "https://github.com/qredence/agenticfleet.git"
 Issues = "https://github.com/qredence/agenticfleet/issues"
 Source = "https://github.com/qredence/agenticfleet"
+Docker = "https://hub.docker.com/r/qredence/agenticfleet"
 
 [project.scripts]
 agenticfleet = "agentic_fleet.cli:main"
