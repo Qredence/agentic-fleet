@@ -30,13 +30,22 @@ COPY . .
 # Install Python dependencies (excluding dev and test)
 RUN pip install --upgrade pip && \
     pip install hatch && \
-    pip install playwright && \
+    pip install playwright chainlit && \
     playwright install chromium && \
     pip install -e .
 
-# Set environment variables for Playwright
+# Set environment variables for Playwright and Chainlit
 ENV PLAYWRIGHT_BROWSERS_PATH=/usr/bin/chromium \
-    PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=1
+    PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=1 \
+    CHAINLIT_HOST=0.0.0.0 \
+    CHAINLIT_PORT=8001
+
+# Default environment variables for Azure OpenAI (can be overridden at runtime)
+ENV AZURE_OPENAI_API_KEY="" \
+    AZURE_OPENAI_ENDPOINT="" \
+    AZURE_OPENAI_DEPLOYMENT="gpt-4o-mini" \
+    AZURE_OPENAI_MODEL="gpt-4o-mini" \
+    USE_OAUTH="false"
 
 # Set environment variables
 ENV PYTHONUNBUFFERED=1
@@ -58,4 +67,4 @@ RUN chmod +x /usr/local/bin/docker-entrypoint.sh
 ENTRYPOINT ["docker-entrypoint.sh"]
 
 # Default command
-CMD ["agenticfleet", "start"]
+CMD ["chainlit", "run", "/src/agentic_fleet/src/agentic_fleet/app.py", "--host", "0.0.0.0", "--port", "8001"]
