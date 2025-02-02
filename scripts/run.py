@@ -1,10 +1,12 @@
 #!/usr/bin/env python3
 import os
-import sys
-import click
 import subprocess
-from dotenv import load_dotenv
+import sys
 from pathlib import Path
+
+import click
+from dotenv import load_dotenv
+
 
 @click.group()
 def cli():
