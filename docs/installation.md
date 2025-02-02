@@ -86,3 +86,17 @@ agenticfleet start
 2. Visit `http://localhost:8001` in your browser
 
 3. You should see the AgenticFleet interface and be able to interact with the system.
+
+## Using Docker Image
+
+The Docker image for AgenticFleet is available on Docker Hub. You can pull the latest image using the following command:
+
+```bash
+docker pull qredence/agenticfleet:latest
+```
+
+To run the Docker container, use the following command:
+
+```bash
+docker run -d -p 8001:8001 qredence/agenticfleet:latest
+```

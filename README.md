@@ -12,6 +12,34 @@ A powerful multi-agent system for adaptive AI reasoning and automation. AgenticF
 
 ![chainlitlight](https://github.com/user-attachments/assets/0d070c34-e5a8-40be-94f5-5c8307f1f64c)
 
+## Quick Start with Docker
+
+```bash
+# Pull the latest image
+docker pull qredence/agenticfleet:latest
+
+# Run with minimum required configuration
+docker run -d -p 8001:8001 qredence/agenticfleet:latest
+
+# Or run with additional configuration
+docker run -d -p 8001:8001 \
+  -e AZURE_OPENAI_API_KEY=your_key \
+  -e AZURE_OPENAI_ENDPOINT=your_endpoint \
+  -e AZURE_OPENAI_DEPLOYMENT=your_deployment \
+  -e AZURE_OPENAI_MODEL=your_model \
+  -e USE_OAUTH=true \
+  -e OAUTH_GITHUB_CLIENT_ID=your_client_id \
+  -e OAUTH_GITHUB_CLIENT_SECRET=your_client_secret \
+  qredence/agenticfleet:latest
+
+# Run without OAuth
+docker run -d -p 8001:8001 \
+  -e AZURE_OPENAI_API_KEY=your_key \
+  -e AZURE_OPENAI_ENDPOINT=your_endpoint \
+  -e USE_OAUTH=false \
+  qredence/agenticfleet:latest
+```
+
 ## Core Components
 
 AgenticFleet operates through a coordinated team of specialized agents:
@@ -36,47 +64,7 @@ AgenticFleet operates through a coordinated team of specialized agents:
   - Monitors execution and handles timeouts
   - Provides detailed execution feedback
 
-## Supported Model Providers
-
-AgenticFleet supports multiple LLM providers through a unified interface:
-
-- **OpenAI**
-  - GPT-4 and other OpenAI models
-  - Function calling and vision capabilities
-  - JSON mode support
-
-- **Azure OpenAI**
-  - Azure-hosted OpenAI models
-  - Azure AD authentication support
-  - Enterprise-grade security
-
-- **Google Gemini**
-  - Gemini Pro and Ultra models
-  - OpenAI-compatible API
-  - Multimodal capabilities
-
-- **DeepSeek**
-  - DeepSeek's language models
-  - OpenAI-compatible API
-  - Specialized model capabilities
-
-- **Ollama**
-  - Local model deployment
-  - Various open-source models
-  - Offline capabilities
-
-- **Azure AI Foundry**
-  - Azure-hosted models (e.g., Phi-4)
-  - GitHub authentication
-  - Enterprise integration
-
-- **CogCache**
-  - OpenAI-compatible API with caching
-  - Improved response times
-  - Cost optimization
-  - Automatic retry handling
-
-### Model Provider Installation
+## Model Provider Installation
 
 Install providers using pip:
 
@@ -93,7 +81,7 @@ pip install "deepseek>=0.1.0"  # For DeepSeek
 pip install "ollama>=0.1.5"  # For Ollama
 ```
 
-### Model Provider Usage
+## Model Provider Usage
 
 ```python
 from agentic_fleet.models import ModelFactory, ModelProvider
@@ -135,18 +123,6 @@ async def test_model(client):
 ```
 
 ## Key Features
-
-- **Multi-Agent System**
-  - Coordinated team of specialized AI agents
-  - Real-time inter-agent communication
-  - Task planning and execution tracking
-  
-- **Interactive Interface**
-  - Real-time streaming responses
-  - Code syntax highlighting
-  - Markdown rendering
-  - File upload/download support
-  - Progress visualization with task lists
 
 - **Advanced Capabilities**
   - Multiple LLM provider support
@@ -279,73 +255,45 @@ The dev container provides:
 - Live reload capability
 - All dependencies pre-installed
 
-### Quick Start with Docker
+## Supported Model Providers
 
-```bash
-# Pull the latest image
-docker pull qredenceai/agenticfleet:latest
+AgenticFleet supports multiple LLM providers through a unified interface:
 
-# Run with minimum required configuration
-docker run -d \
-  -p 8001:8001 \
-  -e AZURE_OPENAI_API_KEY=your_key \
-  -e AZURE_OPENAI_ENDPOINT=your_endpoint \
-  qredenceai/agenticfleet:latest
+- **OpenAI**
+  - GPT-4 and other OpenAI models
+  - Function calling and vision capabilities
+  - JSON mode support
 
-# Or run with additional configuration
-docker run -d \
-  -p 8001:8001 \
-  -e AZURE_OPENAI_API_KEY=your_key \
-  -e AZURE_OPENAI_ENDPOINT=your_endpoint \
-  -e AZURE_OPENAI_DEPLOYMENT=your_deployment \
-  -e AZURE_OPENAI_MODEL=your_model \
-  -e USE_OAUTH=true \
-  -e OAUTH_GITHUB_CLIENT_ID=your_client_id \
-  -e OAUTH_GITHUB_CLIENT_SECRET=your_client_secret \
-  qredenceai/agenticfleet:latest
+- **Azure OpenAI**
+  - Azure-hosted OpenAI models
+  - Azure AD authentication support
+  - Enterprise-grade security
 
-# Run without OAuth
-docker run -d \
-  -p 8001:8001 \
-  -e AZURE_OPENAI_API_KEY=your_key \
-  -e AZURE_OPENAI_ENDPOINT=your_endpoint \
-  -e USE_OAUTH=false \
-  qredenceai/agenticfleet:latest
-```
+- **Google Gemini**
+  - Gemini Pro and Ultra models
+  - OpenAI-compatible API
+  - Multimodal capabilities
 
-Required environment variables:
+- **DeepSeek**
+  - DeepSeek's language models
+  - OpenAI-compatible API
+  - Specialized model capabilities
 
-- `AZURE_OPENAI_API_KEY`: Your Azure OpenAI API key
-- `AZURE_OPENAI_ENDPOINT`: Your Azure OpenAI endpoint
+- **Ollama**
+  - Local model deployment
+  - Various open-source models
+  - Offline capabilities
 
-Optional environment variables:
+- **Azure AI Foundry**
+  - Azure-hosted models (e.g., Phi-4)
+  - GitHub authentication
+  - Enterprise integration
 
-- `USE_OAUTH`: Enable/disable OAuth (default: false)
-- `OAUTH_GITHUB_CLIENT_ID`: GitHub OAuth client ID
-- `OAUTH_GITHUB_CLIENT_SECRET`: GitHub OAuth client secret
-- `CHAINLIT_AUTH_SECRET`: Custom auth secret for sessions
-- Other API keys (GEMINI_API_KEY, DEEPSEEK_API_KEY, etc.)
-
-### Environment Configuration
-
-Required variables in `.env`:
-
-```env
-# Core Configuration
-AZURE_OPENAI_API_KEY=your_api_key
-AZURE_OPENAI_ENDPOINT=your_endpoint
-AZURE_OPENAI_DEPLOYMENT=your_deployment
-AZURE_OPENAI_MODEL=your_model
-
-# OAuth Settings (Optional)
-USE_OAUTH=true  # Set to false to disable
-OAUTH_GITHUB_CLIENT_ID=your_client_id
-OAUTH_GITHUB_CLIENT_SECRET=your_client_secret
-
-# Docker Settings (Optional)
-COMPOSE_PROJECT_NAME=agenticfleet
-DOCKER_BUILDKIT=1
-```
+- **CogCache**
+  - OpenAI-compatible API with caching
+  - Improved response times
+  - Cost optimization
+  - Automatic retry handling
 
 ## System Architecture
 
@@ -406,7 +354,7 @@ AgenticFleet implements comprehensive error handling:
 
 ### Setup
 
-  1. Clone and install:
+1. Clone and install:
 
 ```bash
 git clone https://github.com/qredence/agenticfleet.git
@@ -450,5 +398,3 @@ This project is licensed under the Apache-2.0 License - see the [LICENSE](LICENS
 ## Star History
 
 [![Star History Chart](https://api.star-history.com/svg?repos=Qredence/AgenticFleet&type=Date)](https://star-history.com/#Qredence/AgenticFleet&Date)
-
-````

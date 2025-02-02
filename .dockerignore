@@ -19,3 +19,7 @@ htmlcov/
 .mypy_cache/
 node_modules/
 .DS_Store
+# Exclude sensitive files and directories
+secrets/
+credentials/
+private/
