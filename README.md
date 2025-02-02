@@ -167,18 +167,21 @@ async def test_model(client):
 ### Option 1: Direct Installation
 
 1. Install using uv (recommended):
+
 ```bash
 uv pip install agentic-fleet
 playwright install --with-deps chromium  # Optional: Install Playwright
 ```
 
 2. Configure environment:
+
 ```bash
 cp .env.example .env
 # Edit .env with your API keys
 ```
 
 3. Start the server:
+
 ```bash
 agenticfleet start        # With OAuth
 agenticfleet start no-oauth  # Without OAuth
@@ -187,6 +190,7 @@ agenticfleet start no-oauth  # Without OAuth
 ### Option 2: Docker Setup
 
 1. Clone and configure:
+
 ```bash
 git clone https://github.com/qredence/agenticfleet.git
 cd agenticfleet
@@ -194,6 +198,7 @@ cp .env.example .env     # Configure your .env file
 ```
 
 2. Build and run with Docker Compose:
+
 ```bash
 # Build the image
 docker compose build
@@ -210,6 +215,7 @@ docker compose run -e RUN_MODE=no-oauth agenticfleet
 You can provide environment variables in several ways:
 
 1. Using a .env file:
+
 ```bash
 cp .env.example .env
 # Edit .env with your values
@@ -217,6 +223,7 @@ docker compose up
 ```
 
 2. Using command line arguments:
+
 ```bash
 docker compose build \
   --build-arg AZURE_OPENAI_API_KEY=your_key \
@@ -225,6 +232,7 @@ docker compose build \
 ```
 
 3. Using environment variables:
+
 ```bash
 export AZURE_OPENAI_API_KEY=your_key
 export AZURE_OPENAI_ENDPOINT=your_endpoint
@@ -232,6 +240,7 @@ docker compose up
 ```
 
 4. For production deployments:
+
 ```bash
 docker run -d \
   -e AZURE_OPENAI_API_KEY=your_key \
@@ -242,6 +251,7 @@ docker run -d \
 ```
 
 Key features of the Docker setup:
+
 - Python 3.12 environment
 - Automatic dependency installation
 - Volume mounting for live development
@@ -254,6 +264,7 @@ Key features of the Docker setup:
 For VS Code users with the Dev Containers extension:
 
 1. Open in VS Code:
+
 ```bash
 code agenticfleet
 ```
@@ -261,15 +272,64 @@ code agenticfleet
 2. Press F1 and select "Dev Containers: Open Folder in Container"
 
 The dev container provides:
+
 - Full Python 3.12 development environment
 - Pre-configured VS Code extensions
 - Integrated debugging
 - Live reload capability
 - All dependencies pre-installed
 
+### Quick Start with Docker
+
+```bash
+# Pull the latest image
+docker pull qredenceai/agenticfleet:latest
+
+# Run with minimum required configuration
+docker run -d \
+  -p 8001:8001 \
+  -e AZURE_OPENAI_API_KEY=your_key \
+  -e AZURE_OPENAI_ENDPOINT=your_endpoint \
+  qredenceai/agenticfleet:latest
+
+# Or run with additional configuration
+docker run -d \
+  -p 8001:8001 \
+  -e AZURE_OPENAI_API_KEY=your_key \
+  -e AZURE_OPENAI_ENDPOINT=your_endpoint \
+  -e AZURE_OPENAI_DEPLOYMENT=your_deployment \
+  -e AZURE_OPENAI_MODEL=your_model \
+  -e USE_OAUTH=true \
+  -e OAUTH_GITHUB_CLIENT_ID=your_client_id \
+  -e OAUTH_GITHUB_CLIENT_SECRET=your_client_secret \
+  qredenceai/agenticfleet:latest
+
+# Run without OAuth
+docker run -d \
+  -p 8001:8001 \
+  -e AZURE_OPENAI_API_KEY=your_key \
+  -e AZURE_OPENAI_ENDPOINT=your_endpoint \
+  -e USE_OAUTH=false \
+  qredenceai/agenticfleet:latest
+```
+
+Required environment variables:
+
+- `AZURE_OPENAI_API_KEY`: Your Azure OpenAI API key
+- `AZURE_OPENAI_ENDPOINT`: Your Azure OpenAI endpoint
+
+Optional environment variables:
+
+- `USE_OAUTH`: Enable/disable OAuth (default: false)
+- `OAUTH_GITHUB_CLIENT_ID`: GitHub OAuth client ID
+- `OAUTH_GITHUB_CLIENT_SECRET`: GitHub OAuth client secret
+- `CHAINLIT_AUTH_SECRET`: Custom auth secret for sessions
+- Other API keys (GEMINI_API_KEY, DEEPSEEK_API_KEY, etc.)
+
 ### Environment Configuration
 
 Required variables in `.env`:
+
 ```env
 # Core Configuration
 AZURE_OPENAI_API_KEY=your_api_key
@@ -390,3 +450,5 @@ This project is licensed under the Apache-2.0 License - see the [LICENSE](LICENS
 ## Star History
 
 [![Star History Chart](https://api.star-history.com/svg?repos=Qredence/AgenticFleet&type=Date)](https://star-history.com/#Qredence/AgenticFleet&Date)
+
+````

@@ -20,7 +20,7 @@ services:
         DEEPSEEK_API_KEY: ${DEEPSEEK_API_KEY}
         COGCACHE_API_KEY: ${COGCACHE_API_KEY}
     
-    image: qredence/agenticfleet:${TAG:-latest}
+    image: qredenceai/agenticfleet:${TAG:-latest}  # Updated Docker Hub username
     container_name: agenticfleet
     
     env_file:
@@ -32,7 +32,7 @@ services:
       - PORT=8001
       - RUN_MODE=${RUN_MODE:-default}
       - USE_OAUTH=true
-      - CHAINLIT_HOST=0.0.0.0
+      - CHAINLIT_HOST=localhost
       - CHAINLIT_PORT=8001
       - CHAINLIT_AUTH_SECRET=${CHAINLIT_AUTH_SECRET:-password}
     

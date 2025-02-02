@@ -3,7 +3,7 @@ set -e
 
 # Get version from pyproject.toml
 VERSION=$(grep '^version = ' pyproject.toml | cut -d'"' -f2 | tr -d '\n')
-IMAGE_NAME="qredence/agenticfleet"
+IMAGE_NAME="qredenceai/agenticfleet"  # Updated Docker Hub username
 BRANCH=$(git rev-parse --abbrev-ref HEAD)
 
 echo "Building AgenticFleet Docker image"
