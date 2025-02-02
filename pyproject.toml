@@ -84,7 +84,7 @@ dependencies = [
     "docker>=7.1.0",
     "markitdown>=0.0.1a3",
     "opentelemetry-instrumentation-fastapi>=0.44b0",
-    "playwright>=1.49.1,<2.0.0",
+    "playwright",
     "tenacity>=9.0.0",
     # Developer Tools
     "aioconsole>=0.8.1",
