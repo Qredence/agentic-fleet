@@ -10,7 +10,7 @@ resolution-markers = [
 
 [[package]]
 name = "agentic-fleet"
-version = "0.4.65"
+version = "0.4.70"
 source = { editable = "." }
 dependencies = [
     { name = "agentops" },

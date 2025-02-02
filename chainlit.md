@@ -1,14 +1,29 @@
-# Welcome to AgenticFleet! 🚀🤖
+# Welcome to AgenticFleet 🚀
 
-Hi there, Developer! 👋 We're excited to have you on board. AgenticFleet is a powerful tool designed to help you prototype, debug, and share applications built on top of LLMs. It is developed by Qredence, a company specializing in AI and software solutions.
+AgenticFleet is a powerful multi-agent system that combines:
+- Interactive chat interface
+- Multiple AI models
+- Specialized agents for different tasks
+- Persistent chat history (when signed in)
 
-## Useful Links 🔗
+## Authentication
 
-- **GitHub Repository:** Explore the codebase and contribute to the project on [GitHub](https://www.github.com/Qredence/AgenticFleet) 💻
-- **Qredence Website:** Learn more about Qredence and their offerings at [https://www.qredence.ai](https://www.qredence.ai) 🌐
+This instance uses GitHub OAuth for:
+- Secure access
+- Persistent chat history
+- Personalized settings
 
-We can't wait to see what you create with AgenticFleet! Happy coding! 💻😊
+## Features
 
-## Welcome screen
+- 💬 Chat with multiple specialized agents
+- 📝 Access your chat history
+- 🔄 Resume previous conversations
+- 🛠️ Execute code and analyze results
+- 🌐 Web search capabilities
+- 📁 File operations support
 
-To modify the welcome screen, edit the `chainlit.md` file at the root of your project. If you do not want a welcome screen, just leave this file empty.
+## Getting Started
+
+1. Sign in using your GitHub account
+2. Your chat history will be automatically saved
+3. Access previous conversations from the history panel

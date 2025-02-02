@@ -162,37 +162,130 @@ async def test_model(client):
   - Flexible configuration
   - Active community support
 
-## Quick Start
+## Installation Options
 
-1. Install AgenticFleet using uv (recommended):
+### Option 1: Direct Installation
 
+1. Install using uv (recommended):
 ```bash
 uv pip install agentic-fleet
+playwright install --with-deps chromium  # Optional: Install Playwright
 ```
 
+2. Configure environment:
 ```bash
-playwright install --with-deps chromium # Optional: Install Playwright Chromium dependencies
-```
-
-2. Copy and configure environment variables:
-
-```bash
-# Copy the example environment file
 cp .env.example .env
-
-# Open .env and update with your values
-# Required: Add your Azure OpenAI credentials
-# Optional: Configure OAuth settings
+# Edit .env with your API keys
 ```
 
 3. Start the server:
-
 ```bash
-agenticfleet start   # Enable GitHub authentication
-agenticfleet start --no-oauth # Default local mode
+agenticfleet start        # With OAuth
+agenticfleet start no-oauth  # Without OAuth
 ```
 
-The web interface will be available at `http://localhost:8001`.
+### Option 2: Docker Setup
+
+1. Clone and configure:
+```bash
+git clone https://github.com/qredence/agenticfleet.git
+cd agenticfleet
+cp .env.example .env     # Configure your .env file
+```
+
+2. Build and run with Docker Compose:
+```bash
+# Build the image
+docker compose build
+
+# Run with OAuth enabled (default)
+docker compose up
+
+# Or run without OAuth
+docker compose run -e RUN_MODE=no-oauth agenticfleet
+```
+
+### Docker Environment Configuration
+
+You can provide environment variables in several ways:
+
+1. Using a .env file:
+```bash
+cp .env.example .env
+# Edit .env with your values
+docker compose up
+```
+
+2. Using command line arguments:
+```bash
+docker compose build \
+  --build-arg AZURE_OPENAI_API_KEY=your_key \
+  --build-arg AZURE_OPENAI_ENDPOINT=your_endpoint \
+  --build-arg USE_OAUTH=true
+```
+
+3. Using environment variables:
+```bash
+export AZURE_OPENAI_API_KEY=your_key
+export AZURE_OPENAI_ENDPOINT=your_endpoint
+docker compose up
+```
+
+4. For production deployments:
+```bash
+docker run -d \
+  -e AZURE_OPENAI_API_KEY=your_key \
+  -e AZURE_OPENAI_ENDPOINT=your_endpoint \
+  -e USE_OAUTH=true \
+  -p 8001:8001 \
+  qredence/agenticfleet:latest
+```
+
+Key features of the Docker setup:
+- Python 3.12 environment
+- Automatic dependency installation
+- Volume mounting for live development
+- Environment variable management
+- Health checking and automatic restarts
+- Resource limits and optimization
+
+### Option 3: Development Container
+
+For VS Code users with the Dev Containers extension:
+
+1. Open in VS Code:
+```bash
+code agenticfleet
+```
+
+2. Press F1 and select "Dev Containers: Open Folder in Container"
+
+The dev container provides:
+- Full Python 3.12 development environment
+- Pre-configured VS Code extensions
+- Integrated debugging
+- Live reload capability
+- All dependencies pre-installed
+
+### Environment Configuration
+
+Required variables in `.env`:
+```env
+# Core Configuration
+AZURE_OPENAI_API_KEY=your_api_key
+AZURE_OPENAI_ENDPOINT=your_endpoint
+AZURE_OPENAI_DEPLOYMENT=your_deployment
+AZURE_OPENAI_MODEL=your_model
+
+# OAuth Settings (Optional)
+USE_OAUTH=true  # Set to false to disable
+OAUTH_GITHUB_CLIENT_ID=your_client_id
+OAUTH_GITHUB_CLIENT_SECRET=your_client_secret
+
+# Docker Settings (Optional)
+COMPOSE_PROJECT_NAME=agenticfleet
+DOCKER_BUILDKIT=1
+```
 
 ## System Architecture
 
