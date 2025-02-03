@@ -6,21 +6,13 @@ import json
 import logging
 import os
 import re
-import string
 import time
 from typing import Any, AsyncGenerator, Dict, List, Optional, Union
 
 import chainlit as cl
-import matplotlib.pyplot as plt
-import pandas as pd
-import requests
 
 # AutoGen imports
-from autogen_agentchat.agents import (
-    AssistantAgent,
-    CodeExecutorAgent,
-    UserProxyAgent,
-)
+from autogen_agentchat.agents import CodeExecutorAgent
 from autogen_agentchat.base import TaskResult
 from autogen_agentchat.messages import (
     FunctionCall,
@@ -36,9 +28,8 @@ from autogen_ext.code_executors.local import LocalCommandLineCodeExecutor
 from autogen_ext.models.openai import AzureOpenAIChatCompletionClient
 
 # Third-party imports
-from chainlit.input_widget import Select, Slider, TextInput
+from chainlit.input_widget import Slider, TextInput
 from dotenv import load_dotenv
-from pydantic import BaseModel, Field
 
 # Initialize logging
 logging.basicConfig(level=logging.INFO)
@@ -137,7 +128,7 @@ if os.getenv("USE_OAUTH", "false").lower() == "true":
 
 
 @cl.on_settings_update
-async def update_settings(settings: Dict[str, Any]) -> None:
+async def update_settings(settings: Dict[str, Union[int, str]]) -> None:
     """Handle settings updates from the UI.
 
     Args:

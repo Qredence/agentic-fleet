@@ -10,10 +10,9 @@ resolution-markers = [
 
 [[package]]
 name = "agentic-fleet"
-version = "0.4.70"
+version = "0.4.71"
 source = { editable = "." }
 dependencies = [
-    { name = "agentops" },
     { name = "aioconsole" },
     { name = "aiofiles" },
     { name = "aiohttp" },
@@ -122,7 +121,6 @@ test = [
 
 [package.metadata]
 requires-dist = [
-    { name = "agentops", specifier = ">=0.3.21" },
     { name = "aioconsole", specifier = ">=0.8.1" },
     { name = "aiofiles", specifier = ">=23.1.0" },
     { name = "aiohttp", specifier = ">=3.11.11,<4.0.0" },
@@ -177,7 +175,7 @@ requires-dist = [
     { name = "packaging", specifier = ">=23.2" },
     { name = "pandas", specifier = ">=2.2.3" },
     { name = "pillow", specifier = ">=11.0.0" },
-    { name = "playwright", specifier = ">=1.49.1,<2.0.0" },
+    { name = "playwright" },
     { name = "plotly", specifier = ">=5.16.0" },
     { name = "plotly-express", specifier = ">=0.4.1" },
     { name = "pre-commit", marker = "extra == 'dev'", specifier = ">=3.5.0" },
@@ -221,25 +219,6 @@ requires-dist = [
     { name = "typing-extensions", specifier = ">=4.8.0" },
     { name = "uvicorn", specifier = ">=0.24.0" },
     { name = "yfinance", specifier = ">=0.2.51" },
-]
-
-[[package]]
-name = "agentops"
-version = "0.3.26"
-source = { registry = "https://pypi.org/simple" }
-dependencies = [
-    { name = "opentelemetry-api" },
-    { name = "opentelemetry-exporter-otlp-proto-http" },
-    { name = "opentelemetry-sdk" },
-    { name = "packaging" },
-    { name = "psutil" },
-    { name = "pyyaml" },
-    { name = "requests" },
-    { name = "termcolor" },
-]
-sdist = { url = "https://files.pythonhosted.org/packages/76/a1/b03c6348a77798e750bde4eec03b4af620d71b9e4b64ff7dcf0860025a2d/agentops-0.3.26.tar.gz", hash = "sha256:bc824bf8727332f59bf803cf84440d13e9e398406222ab29f45909ac1e39f815", size = 234235 }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/f5/21/671c458951850bd3a445aa09eafd2793aae1104fa68351a5c3976cdf762b/agentops-0.3.26-py3-none-any.whl", hash = "sha256:20948f52e3ffb4ba1d52301c3a82e59490182c4dad22774ad831dce0181eb5c2", size = 72090 },
 ]
 
 [[package]]
@@ -5701,15 +5680,6 @@ source = { registry = "https://pypi.org/simple" }
 sdist = { url = "https://files.pythonhosted.org/packages/cd/94/91fccdb4b8110642462e653d5dcb27e7b674742ad68efd146367da7bdb10/tenacity-9.0.0.tar.gz", hash = "sha256:807f37ca97d62aa361264d497b0e31e92b8027044942bfa756160d908320d73b", size = 47421 }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/b6/cb/b86984bed139586d01532a587464b5805f12e397594f19f931c4c2fbfa61/tenacity-9.0.0-py3-none-any.whl", hash = "sha256:93de0c98785b27fcf659856aa9f54bfbd399e29969b0621bc7f762bd441b4539", size = 28169 },
-]
-
-[[package]]
-name = "termcolor"
-version = "2.4.0"
-source = { registry = "https://pypi.org/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/10/56/d7d66a84f96d804155f6ff2873d065368b25a07222a6fd51c4f24ef6d764/termcolor-2.4.0.tar.gz", hash = "sha256:aab9e56047c8ac41ed798fa36d892a37aca6b3e9159f3e0c24bc64a9b3ac7b7a", size = 12664 }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/d9/5f/8c716e47b3a50cbd7c146f45881e11d9414def768b7cd9c5e6650ec2a80a/termcolor-2.4.0-py3-none-any.whl", hash = "sha256:9297c0df9c99445c2412e832e882a7884038a25617c60cea2ad69488d4040d63", size = 7719 },
 ]
 
 [[package]]
