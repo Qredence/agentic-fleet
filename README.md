@@ -12,18 +12,117 @@ A powerful multi-agent system for adaptive AI reasoning and automation. AgenticF
 
 ![chainlitlight](https://github.com/user-attachments/assets/0d070c34-e5a8-40be-94f5-5c8307f1f64c)
 
-## Install base package (use Python 3.10+) and create virtual environment
+## Installation Guide
+
+### Prerequisites
+
+- **Python Version:** 3.10-3.12
+- **Operating Systems:** macOS, Linux, Windows
+
+### 1. Install `uv` Package Manager
+
+#### macOS/Linux
+```bash
+# Using pip
+pip install uv
+
+# Using homebrew (macOS)
+brew install uv
+
+# Using curl
+curl -LsSf https://astral.sh/uv/install.sh | sh
+```
+
+#### Windows
+```powershell
+# Using pip
+pip install uv
+
+# Using winget
+winget install uv
+```
+
+### 2. Create a Virtual Environment
 
 ```bash
-git clone https://github.com/qredence/agenticfleet.git
-cd agenticfleet
-pip install uv
-uv pip venv
-uv sync
-uv pip install agentic-fleet # or  uv pip install -e .
-#install playwight
-pip install playwight
+# Create a new virtual environment
+uv venv
+
+# Activate the virtual environment
+# On macOS/Linux
+source .venv/bin/activate
+
+# On Windows
+.venv\Scripts\activate
 ```
+
+### 3. Install AgenticFleet
+
+```bash
+# Install the latest stable version
+uv pip install agentic-fleet
+
+# Install with specific optional features
+uv pip install 'agentic-fleet[telemetry]'
+uv pip install 'agentic-fleet[tracing]'
+
+# Install Playwright for web automation and scraping
+uv pip install playwright
+playwright install --with-deps chromium  # Install Chromium browser and dependencies
+```
+
+#### Playwright Installation Notes
+- Installs Chromium browser for web automation
+- Includes necessary browser dependencies
+- Required for web scraping and browser-based agents
+- Supports headless and headed browser modes
+
+### 4. Verify Installation
+
+```bash
+# Check installed version
+uv pip show agentic-fleet
+
+# Run a quick test
+python -c "import agentic_fleet; print(agentic_fleet.__version__)"
+```
+
+### Troubleshooting
+
+- Ensure you're using Python 3.10-3.12
+- Update `uv` to the latest version: `pip install -U uv`
+- If you encounter issues, check our [GitHub Issues](https://github.com/Qredence/AgenticFleet/issues)
+
+### Best Practices
+
+- Always use a virtual environment
+- Keep `uv` updated
+- Use optional feature sets as needed
+- Report any installation issues on GitHub
+
+### Optional Feature Sets
+```bash
+# Install with specific optional features
+uv pip install 'agentic-fleet[telemetry]'
+uv pip install 'agentic-fleet[tracing]'
+```
+
+### ⚠️ Warning About Editable Installations
+
+**DO NOT use `-e` unless you are a core contributor.**
+
+Editable installations:
+- Are NOT supported in production
+- May introduce unexpected behaviors
+- Void package support and warranty
+- Are intended ONLY for package development
+
+If you modify the package locally:
+1. Open a GitHub issue
+2. Submit a pull request
+3. Discuss proposed changes with maintainers
+
+Unauthorized local modifications are strongly discouraged.
 
 ## Quick Start with Docker
 
@@ -86,180 +185,6 @@ Install providers using pip:
 pip install agentic-fleet
 ```
 
-## Model Provider Usage
-
-```python
-from agentic_fleet.models import ModelFactory, ModelProvider
-from autogen_core.models import UserMessage
-
-# Create Azure OpenAI client
-azure_client = ModelFactory.create(
-    ModelProvider.AZURE_OPENAI,
-    deployment="your-deployment",
-    model="gpt-4",
-    endpoint="your-endpoint"
-)
-
-# Create Gemini client
-gemini_client = ModelFactory.create(
-    ModelProvider.GEMINI,
-    api_key="your-api-key"
-)
-
-# Create CogCache client
-cogcache_client = ModelFactory.create(
-    ModelProvider.COGCACHE,
-    api_key="your-cogcache-key",
-    model="gpt-4"
-)
-
-# Create local Ollama client
-ollama_client = ModelFactory.create(
-    ModelProvider.OLLAMA,
-    model="llama2:latest"
-)
-
-# Use any client
-async def test_model(client):
-    response = await client.create([
-        UserMessage(content="What is the capital of France?", source="user")
-    ])
-    print(response)
-```
-
-## Key Features
-
-- **Advanced Capabilities**
-  - Multiple LLM provider support
-  - GitHub OAuth authentication
-  - Configurable agent behaviors
-  - Comprehensive error handling and recovery
-  - Multi-modal content processing (text, images)
-  - Execution workspace isolation
-  
-- **Developer-Friendly**
-  - Easy-to-use CLI
-  - Extensive documentation
-  - Flexible configuration
-  - Active community support
-
-## Installation Options
-
-### Option 1: Direct Installation
-
-1. Install using uv (recommended):
-
-```bash
-uv pip install agentic-fleet
-playwright install --with-deps chromium  # Optional: Install Playwright
-```
-
-2. Configure environment:
-
-```bash
-cp .env.example .env
-# Edit .env with your API keys
-```
-
-3. Start the server:
-
-```bash
-agenticfleet start        # With OAuth
-agenticfleet start no-oauth  # Without OAuth
-```
-
-### Option 2: Docker Setup
-
-1. Clone and configure:
-
-```bash
-git clone https://github.com/qredence/agenticfleet.git
-cd agenticfleet
-cp .env.example .env     # Configure your .env file
-```
-
-2. Build and run with Docker Compose:
-
-```bash
-# Build the image
-docker compose build
-
-# Run with OAuth enabled (default)
-docker compose up
-
-# Or run without OAuth
-docker compose run -e RUN_MODE=no-oauth agenticfleet
-```
-
-### Docker Environment Configuration
-
-You can provide environment variables in several ways:
-
-1. Using a .env file:
-
-```bash
-cp .env.example .env
-# Edit .env with your values
-docker compose up
-```
-
-2. Using command line arguments:
-
-```bash
-docker compose build \
-  --build-arg AZURE_OPENAI_API_KEY=your_key \
-  --build-arg AZURE_OPENAI_ENDPOINT=your_endpoint \
-  --build-arg USE_OAUTH=true
-```
-
-3. Using environment variables:
-
-```bash
-export AZURE_OPENAI_API_KEY=your_key
-export AZURE_OPENAI_ENDPOINT=your_endpoint
-docker compose up
-```
-
-4. For production deployments:
-
-```bash
-docker run -d \
-  -e AZURE_OPENAI_API_KEY=your_key \
-  -e AZURE_OPENAI_ENDPOINT=your_endpoint \
-  -e USE_OAUTH=true \
-  -p 8001:8001 \
-  qredence/agenticfleet:latest
-```
-
-Key features of the Docker setup:
-
-- Python 3.12 environment
-- Automatic dependency installation
-- Volume mounting for live development
-- Environment variable management
-- Health checking and automatic restarts
-- Resource limits and optimization
-
-### Option 3: Development Container
-
-For VS Code users with the Dev Containers extension:
-
-1. Open in VS Code:
-
-```bash
-code agenticfleet
-```
-
-2. Press F1 and select "Dev Containers: Open Folder in Container"
-
-The dev container provides:
-
-- Full Python 3.12 development environment
-- Pre-configured VS Code extensions
-- Integrated debugging
-- Live reload capability
-- All dependencies pre-installed
-
 ## Supported Model Providers
 
 AgenticFleet supports multiple LLM providers through a unified interface:
@@ -299,6 +224,22 @@ AgenticFleet supports multiple LLM providers through a unified interface:
   - Improved response times
   - Cost optimization
   - Automatic retry handling
+
+## Key Features
+
+- **Advanced Capabilities**
+  - Multiple LLM provider support
+  - GitHub OAuth authentication
+  - Configurable agent behaviors
+  - Comprehensive error handling and recovery
+  - Multi-modal content processing (text, images)
+  - Execution workspace isolation
+  
+- **Developer-Friendly**
+  - Easy-to-use CLI
+  - Extensive documentation
+  - Flexible configuration
+  - Active community support
 
 ## System Architecture
 
@@ -349,56 +290,63 @@ AgenticFleet implements comprehensive error handling:
 - Session state recovery
 - Execution timeout management
 
-## Development
+## Community Contributions
 
-### Prerequisites
+### 🤝 We Welcome Your Contributions!
 
-- Python 3.10-3.12 (Python 3.13 is not yet supported)
-- uv package manager (recommended)
-- Azure OpenAI API access
+AgenticFleet is an open-source project that thrives on community involvement. We actively encourage contributions from developers of all skill levels.
 
-### Setup
+#### How to Contribute
 
-1. Clone and install:
+1. **Forking the Repository**
+   ```bash
+   # Fork the repository on GitHub
+   # Clone your forked repository
+   git clone https://github.com/YOUR_USERNAME/AgenticFleet.git
+   cd AgenticFleet
+   ```
 
-```bash
-git clone https://github.com/qredence/agenticfleet.git
-cd agenticfleet
-pip install uv
-uv pip install -e .
-uv pip install -e ".[dev]"
-```
+2. **Reporting Issues**
+   - Use GitHub Issues to:
+     * Report bugs
+     * Suggest features
+     * Ask questions
+   - [Create a New Issue](https://github.com/Qredence/AgenticFleet/issues/new)
 
-2. Run tests:
+3. **Pull Requests**
+   - Fork the repository
+   - Create a new branch: `git checkout -b feature/your-feature-name`
+   - Make your changes
+   - Run pre-commit hooks: `pre-commit run --all-files`
+   - Commit with a clear, descriptive message
+   - Open a Pull Request
 
-```bash
-pytest tests/
-```
+#### Contribution Guidelines
 
-## Documentation
+- Read our [CONTRIBUTING.md](CONTRIBUTING.md) for detailed guidelines
+- Follow our [Code of Conduct](CODE_OF_CONDUCT.md)
+- Ensure code quality with pre-commit hooks
+- Write comprehensive tests for new features
+- Update documentation accordingly
 
-- [Installation Guide](docs/installation.md) - Detailed setup instructions
-- [Usage Guide](docs/usage-guide.md) - How to use AgenticFleet
-- [API Reference](docs/api-reference.md) - Complete API documentation
-- [Architecture Overview](docs/agentic-fleet.md) - System architecture and design
+#### Ways to Contribute
 
-## Contributing
+- 🐛 Bug reports
+- 📝 Documentation improvements
+- 🚀 Feature suggestions
+- 💻 Code contributions
+- 📖 Tutorials and examples
+- 🌐 Internationalization
 
-We welcome contributions! Please see our [Contributing Guide](CONTRIBUTING.md) for details.
+### Support the Project
 
-## Security
+- ⭐ Star the repository
+- 🐦 Follow us on X (Twitter): [@AgenticFleet](https://x.com/agenticfleet)
+- 💬 Join our Discord Community: [AgenticFleet Discord](https://discord.gg/ebgy7gtZHK)
+- 💡 Share your use cases
+- 🤝 Spread the word about AgenticFleet
 
-For security concerns, please review our [Security Policy](SECURITY.md).
-
-## License
-
-This project is licensed under the Apache-2.0 License - see the [LICENSE](LICENSE) file for details.
-
-## Support
-
-- [Issue Tracker](https://github.com/qredence/agenticfleet/issues)
-- [Discussions](https://github.com/qredence/agenticfleet/discussions)
-- Email: <contact@qredence.ai>
+We believe in the power of open-source and collaborative development. Your contributions, no matter how small, are valuable and appreciated!
 
 ## Star History
 

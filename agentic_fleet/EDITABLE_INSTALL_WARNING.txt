@@ -1,0 +1,17 @@
+⚠️ EDITABLE INSTALLATION WARNING ⚠️
+
+You have installed AgenticFleet in editable mode (-e).
+
+IMPORTANT NOTICES:
+1. This mode is intended ONLY for package contributors and developers.
+2. Local modifications are NOT supported in production.
+3. Changes made here will NOT be reflected in the official package.
+4. Unsupported modifications may break package functionality.
+
+RECOMMENDED ACTIONS:
+- For production: Use standard pip install
+- For development: Follow contribution guidelines
+- To contribute: Open a GitHub issue or pull request
+
+Contact: support@qredence.ai
+GitHub: https://github.com/Qredence/AgenticFleet

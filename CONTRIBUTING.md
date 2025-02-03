@@ -1,59 +1,104 @@
 # Contributing to AgenticFleet
 
-We love your input! We want to make contributing to AgenticFleet as easy and transparent as possible, whether it's:
+## 🤝 Welcome Contributors!
 
-- Reporting a bug
-- Discussing the current state of the code
-- Submitting a fix
-- Proposing new features
-- Becoming a maintainer
+AgenticFleet is an open-source project that thrives on community contributions. Whether you're fixing bugs, adding features, or improving documentation, your help is appreciated!
 
-## We Develop with Github
+## 📋 Contribution Guidelines
 
-We use GitHub to host code, to track issues and feature requests, as well as accept pull requests.
+### 1. Ways to Contribute
+- Reporting bugs
+- Suggesting enhancements
+- Writing code
+- Improving documentation
+- Reviewing pull requests
 
-## We Use [Github Flow](https://guides.github.com/introduction/flow/index.html)
+### 2. Development Setup
 
-Pull requests are the best way to propose changes to the codebase. We actively welcome your pull requests:
+#### Prerequisites
+- Python 3.10-3.12
+- `uv` package manager
+- `pre-commit`
 
-1. Fork the repo and create your branch from `main`.
-2. If you've added code that should be tested, add tests.
-3. If you've changed APIs, update the documentation.
-4. Ensure the test suite passes.
-5. Make sure your code lints.
-6. Issue that pull request!
+#### Local Development Environment
+```bash
+# Clone the repository
+git clone https://github.com/qredence/agenticfleet.git
+cd agenticfleet
 
-## Any contributions you make will be under the Apache 2.0 Software License
+# Create virtual environment
+uv pip venv
+source .venv/bin/activate
 
-In short, when you submit code changes, your submissions are understood to be under the same [Apache 2.0 License](http://www.apache.org/licenses/LICENSE-2.0) that covers the project. Feel free to contact the maintainers if that's a concern.
+# Install development dependencies
+uv pip install -e '.[dev]'
+pre-commit install
+```
 
-## Report bugs using Github's [issue tracker](https://github.com/yourusername/fleet/issues)
+### 3. ⚠️ Package Modification Warning
 
-We use GitHub issues to track public bugs. Report a bug by [opening a new issue](https://github.com/yourusername/fleet/issues/new); it's that easy!
+#### Editable Installation Risks
+- **NOT recommended for production**
+- May introduce unsupported behaviors
+- Intended ONLY for core contributors
+- Local modifications void official support
 
-## Write bug reports with detail, background, and sample code
+#### Modification Guidelines
+1. For bug fixes or features:
+   - Open a GitHub Issue first
+   - Discuss proposed changes
+   - Submit a Pull Request
 
-**Great Bug Reports** tend to have:
+2. Local Modifications:
+   - Create a fork of the repository
+   - Make changes in your fork
+   - Submit a Pull Request
+   - Do NOT modify the package directly
 
-- A quick summary and/or background
-- Steps to reproduce
-  - Be specific!
-  - Give sample code if you can.
-- What you expected would happen
-- What actually happens
-- Notes (possibly including why you think this might be happening, or stuff you tried that didn't work)
+### 4. Contribution Process
 
-## Use a Consistent Coding Style
+#### Workflow
+1. Fork the repository
+2. Create a feature branch
+3. Make your changes
+4. Run pre-commit checks
+5. Write/update tests
+6. Update documentation
+7. Submit a Pull Request
 
-- Use TypeScript for frontend code
-- Use Python for backend code
-- 2 spaces for indentation rather than tabs
-- You can try running `npm run lint` for style unification
+#### Pre-Commit Checks
+```bash
+# Run all pre-commit hooks
+pre-commit run --all-files
 
-## License
+# Specific checks
+pre-commit run black
+pre-commit run ruff
+pre-commit run mypy
+```
 
-By contributing, you agree that your contributions will be licensed under its Apache 2.0 License.
+### 5. Pull Request Guidelines
 
-## References
+- Use descriptive commit messages
+- Reference related issues
+- Explain the motivation for changes
+- Include tests for new functionality
+- Update documentation
 
-This document was adapted from the open-source contribution guidelines for [Facebook's Draft](https://github.com/facebook/draft-js/blob/a9316a723f9e918afde44dea68b5f9f39b7d9b00/CONTRIBUTING.md).
+### 6. Code of Conduct
+
+We follow the [Contributor Covenant Code of Conduct](CODE_OF_CONDUCT.md). Be respectful, inclusive, and constructive.
+
+### 7. Licensing
+
+- Contributions are under Apache 2.0 License
+- Preserve original copyright notices
+- Clearly document significant modifications
+
+## 📞 Support and Communication
+
+- 📧 Email: support@qredence.ai
+- 🐛 Issues: https://github.com/Qredence/AgenticFleet/issues
+- 💬 Discussions: https://github.com/Qredence/AgenticFleet/discussions
+
+**Remember:** Collaboration, clear communication, and mutual respect are key to successful open-source development!

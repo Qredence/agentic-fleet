@@ -4,60 +4,119 @@
   "service": "agenticfleet",
   "workspaceFolder": "/workspace",
   
-  // Mount configurations
+  // Mount configurations with improved caching
   "mounts": [
     "source=${localWorkspaceFolder}/.env,target=/workspace/.env,type=bind,consistency=cached",
-    "source=${localWorkspaceFolder},target=/workspace,type=bind,consistency=cached"
+    "source=${localWorkspaceFolder},target=/workspace,type=bind,consistency=cached",
+    "source=pip-cache,target=/root/.cache/pip,type=volume",
+    "source=node-modules-cache,target=/workspace/node_modules,type=volume"
   ],
 
-  // Features to install
+  // Enhanced features
   "features": {
     "ghcr.io/devcontainers/features/python:1": {
-      "version": "3.12"
+      "version": "3.12",
+      "installTools": true
     },
-    "ghcr.io/devcontainers/features/node:1": {},
-    "ghcr.io/devcontainers/features/git:1": {}
+    "ghcr.io/devcontainers/features/node:1": {
+      "version": "lts"
+    },
+    "ghcr.io/devcontainers/features/git:1": {},
+    "ghcr.io/devcontainers/features/github-cli:1": {},
+    "ghcr.io/devcontainers/features/common-utils:2": {
+      "installZsh": true,
+      "configureZshAsDefaultShell": true
+    }
   },
 
   // Environment variables
-  "runArgs": [
-    "--env-file", ".env"
-  ],
+  "containerEnv": {
+    "ENV_FILE": ".env",
+    "PYTHONUNBUFFERED": "1",
+    "PYTHONDONTWRITEBYTECODE": "1"
+  },
 
   // Port forwarding
-  "forwardPorts": [8001],
+  "forwardPorts": [8001, 8000],
   "portsAttributes": {
     "8001": {
       "label": "AgenticFleet Web UI",
       "onAutoForward": "notify"
+    },
+    "8000": {
+      "label": "Development Server",
+      "onAutoForward": "openBrowser"
     }
   },
 
-  // Post-create commands
-  "postCreateCommand": "pip install -e '.[dev,test]' && playwright install --with-deps chromium",
+  // Post-create commands with comprehensive setup
+  "postCreateCommand": 
+    "pip install -e '.[dev,test]' && " +
+    "playwright install --with-deps chromium && " +
+    "pre-commit install && " +
+    "pip install ruff mypy && " +
+    "uv pip install --system -e '.[dev,test]'",
 
-  // VS Code specific settings
+  // VS Code specific customizations
   "customizations": {
     "vscode": {
       "extensions": [
+        // Python Development
         "ms-python.python",
         "ms-python.vscode-pylance",
         "ms-python.black-formatter",
-        "ms-python.isort"
+        "ms-python.isort",
+        "charliermarsh.ruff",
+        "ms-python.mypy-type-checker",
+        
+        // Testing and Debugging
+        "littlefoxteam.vscode-python-test-adapter",
+        "hbenl.vscode-test-explorer",
+        
+        // Docker and Containers
+        "ms-azuretools.vscode-docker",
+        "ms-vscode-remote.remote-containers",
+        
+        // Git and Version Control
+        "eamodio.gitlens",
+        "mhutchie.git-graph",
+        
+        // Productivity
+        "streetsidesoftware.code-spell-checker",
+        "usernamehw.errorlens"
       ],
       "settings": {
+        // Python Configuration
         "python.defaultInterpreterPath": "/usr/local/bin/python",
         "python.formatting.provider": "black",
         "python.linting.enabled": true,
-        "python.testing.pytestEnabled": true
+        "python.linting.ruffEnabled": true,
+        "python.testing.pytestEnabled": true,
+        "python.testing.unittestEnabled": false,
+        "mypy.enabled": true,
+        "mypy.run": "onType",
+        
+        // Editor Preferences
+        "editor.formatOnSave": true,
+        "editor.codeActionsOnSave": {
+          "source.organizeImports": true
+        },
+        
+        // Spell Checking
+        "cSpell.language": "en"
       }
     }
   },
 
-  // Remote environment variables
+  // Remote environment variables with secure handling
   "remoteEnv": {
     "AZURE_OPENAI_API_KEY": "${localEnv:AZURE_OPENAI_API_KEY}",
     "AZURE_OPENAI_ENDPOINT": "${localEnv:AZURE_OPENAI_ENDPOINT}",
-    "OPENAI_API_KEY": "${localEnv:OPENAI_API_KEY}"
-  }
+    "OPENAI_API_KEY": "${localEnv:OPENAI_API_KEY}",
+    "PYTHONPATH": "/workspace"
+  },
+
+  // Optional: Persist bash history between container rebuilds
+  "updateContentCommand": "mkdir -p ~/.config/shell && touch ~/.config/shell/bash_history",
+  "postAttachCommand": "mkdir -p ~/.config/shell && touch ~/.config/shell/bash_history"
 }

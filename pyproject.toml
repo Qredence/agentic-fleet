@@ -266,31 +266,44 @@ ignore = [
 
 [project.optional-dependencies]
 dev = [
-    "pytest>=7.4.3",
+    # Linting and Code Quality
+    "ruff>=0.2.1",
+    "black>=24.1.1",
+    "isort>=5.13.2",
+    "mypy>=1.8.0",
+    "bandit[toml]>=1.7.6",
+    "pre-commit>=3.6.2",
+    
+    # Testing
+    "pytest>=8.0.2",
+    "pytest-asyncio>=0.23.3",
     "pytest-cov>=4.1.0",
-    "pytest-asyncio>=0.21.1",
-    "black>=23.11.0",
-    "ruff>=0.1.0",
-    "pre-commit>=3.5.0",
-    "tox>=4.11.3",
+    "coverage>=7.4.4",
+    
+    # Type Checking
+    "types-all>=0.1.0",
+    
+    # Documentation
+    "mkdocs>=1.5.3",
+    "mkdocstrings[python]>=0.24.0",
+    
+    # Debugging
+    "ipdb>=0.13.13",
+    "rich>=10.16.2"
 ]
 
+# Specific test dependencies
 test = [
-    "pytest>=7.4.3",
+    "pytest>=8.0.2",
+    "pytest-asyncio>=0.23.3",
     "pytest-cov>=4.1.0",
-    "pytest-asyncio>=0.21.1",
-    "pytest-mock>=3.12.0",
-    "pytest-timeout>=2.2.0",
-    "pytest-xdist>=3.5.0",
-    "coverage>=7.4.0",
+    "coverage>=7.4.4"
 ]
 
+# Optional dependencies for documentation
 docs = [
-    "sphinx>=7.2.6",
-    "sphinx-rtd-theme>=2.0.0",
-    "sphinx-autodoc-typehints>=1.25.2",
-    "sphinx-copybutton>=0.5.2",
-    "myst-parser>=2.0.0",
+    "mkdocs>=1.5.3",
+    "mkdocstrings[python]>=0.24.0"
 ]
 
 # Add model providers as optional dependencies
@@ -305,4 +318,24 @@ models = [
 grpc = [
     "grpcio-tools>=1.62.0",
     "protobuf>=5.29.3",
+]
+
+[tool.setuptools.packages.find]
+exclude = [
+    "tests*",
+    "docs*",
+    ".github*"
+]
+
+[tool.setuptools]
+# Prevent accidental editable installations
+dynamic-installation = false
+
+[tool.setuptools.dynamic]
+version = {attr = "agentic_fleet.__version__"}
+
+# Warning for editable installations
+[tool.setuptools.package-data]
+"agentic_fleet" = [
+    "EDITABLE_INSTALL_WARNING.txt"
 ]
