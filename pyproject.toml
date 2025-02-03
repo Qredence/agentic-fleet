@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "agentic-fleet"
-version = "0.4.71"
+version = "0.4.72"
 description = "A powerful multi-agent system for adaptive AI reasoning and automation"
 readme = "README.md"
 requires-python = ">=3.10"
@@ -32,6 +32,7 @@ dependencies = [
     "python-dotenv>=1.0.1",
     "typing-extensions>=4.8.0",
     "uvicorn>=0.24.0",
+
     # Networking & Async
     "aiofiles>=23.1.0",
     "aiohttp>=3.11.11,<4.0.0",
@@ -39,22 +40,24 @@ dependencies = [
     "httpx>=0.25.0",
     "python-multipart>=0.0.6",
     "requests>=2.32.3",
+
     # AI/ML Infrastructure
-    "autogen-agentchat>=0.4.4,<0.5.0",
-    "autogen-core>=0.4.4,<0.5.0",
-    "autogen-ext[docker]>=0.4.4,<0.5.0",
-    "autogen-ext[langchain]>=0.4.4,<0.5.0",
-    "autogen-ext[magentic-one]>=0.4.4,<0.5.0",
-    "autogen-ext[openai,azure]>=0.4.4,<0.5.0",
-    "autogen-ext[web-surfer]>=0.4.4,<0.5.0",
+    "autogen-agentchat>=0.4.5,<0.5.0",
+    "autogen-core>=0.4.5,<0.5.0",
+    "autogen-ext[docker]>=0.4.5,<0.5.0",
+    "autogen-ext[langchain]>=0.4.5,<0.5.0",
+    "autogen-ext[magentic-one]>=0.4.5,<0.5.0",
+    "autogen-ext[openai,azure]>=0.4.5,<0.5.0",
+    "autogen-ext[web-surfer]>=0.4.5,<0.5.0",
+    "autogen-ext[diskcache]>=0.4.5,<0.5.0",
+
     # Model Providers
-    "agentops>=0.3.21",
     "composio-core>=0.6.11.post1",
     "deepseek>=0.1.0", # For DeepSeek
-    "google-cloud-aiplatform>=1.38.0", # For Gemini
-    "google-generativeai>=0.3.0", # For Gemini
+   
     "magentic-one-cli>=0.2.2",
     "ollama>=0.1.5", # For Ollama
+
     # Azure Services
     "azure-ai-inference>=1.0.0b6", # For Azure AI Foundry
     "azure-ai-ml>=1.12.1", # For Azure AI Foundry
@@ -65,6 +68,7 @@ dependencies = [
     "azure-keyvault-secrets>=4.9.0",
     "azure-search-documents==11.6.0b4",
     "azure-storage-blob>=12.24.0",
+
     # Data Processing
     "jsonlines>=4.0.0",
     "matplotlib>=3.10.0",
@@ -77,6 +81,7 @@ dependencies = [
     "requests-html>=0.10.0",
     "seaborn>=0.13.0",
     "yfinance>=0.2.51",
+
     # Web & Utilities
     "beautifulsoup4>=4.12.0",
     "bing>=0.31",
@@ -85,7 +90,11 @@ dependencies = [
     "markitdown>=0.0.1a3",
     "opentelemetry-instrumentation-fastapi>=0.44b0",
     "playwright",
+    "sqlalchemy[asyncio]>=2.0.28",
+    "psycopg2-binary>=2.9.9",
+    "supabase>=2.3.1",
     "tenacity>=9.0.0",
+    
     # Developer Tools
     "aioconsole>=0.8.1",
     "axios>=0.4.0",
@@ -93,7 +102,6 @@ dependencies = [
     "black>=24.10.0",
     "codecov>=2.1.13",
     "gunicorn>=23.0.0",
-    "grpcio-tools~=1.62.0",
     "ipykernel>=6.29.5",
     "psutil>=5.9.6",
     "puremagic>=1.28",
@@ -116,7 +124,7 @@ Documentation = "https://github.com/qredence/agenticfleet/tree/main/docs"
 Repository = "https://github.com/qredence/agenticfleet.git"
 Issues = "https://github.com/qredence/agenticfleet/issues"
 Source = "https://github.com/qredence/agenticfleet"
-Docker = "https://hub.docker.com/r/qredence/agenticfleet"
+Docker = "https://hub.docker.com/r/qredenceai/agenticfleet"
 
 [project.scripts]
 agenticfleet = "agentic_fleet.cli:main"
@@ -293,6 +301,8 @@ models = [
     "ollama>=0.1.5",
 ]
 
-devops = [
-    "docker-compose>=2.0.0"
+# Add gRPC tools as optional dependency
+grpc = [
+    "grpcio-tools>=1.62.0",
+    "protobuf>=5.29.3",
 ]

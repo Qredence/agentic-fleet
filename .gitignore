@@ -198,6 +198,7 @@ chainlit.md
 debug/
 *.log
 *.tmp
+dump.rdb
 
 # Project specific
 workspace/

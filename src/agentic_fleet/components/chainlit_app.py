@@ -1,33 +1,29 @@
+import os
 import time
-from openai import AsyncOpenAI
 
 import chainlit as cl
-
-import os
 from dotenv import load_dotenv
+from openai import AsyncOpenAI
 
 load_dotenv()
 
 client = AsyncOpenAI(
     api_key=os.getenv("DEEPSEEK_API_KEY"),
     base_url="https://api.deepseek.com",
-    )
+)
 
 
 @cl.on_message
 async def on_message(msg: cl.Message):
     start = time.time()
-    
     # Format messages properly for Deepseek API
     messages = [{"role": "system", "content": "You are an helpful assistant"}]
-    
     # Get chat history and ensure proper interleaving
     chat_history = cl.chat_context.to_openai()
     messages.extend(chat_history)
-    
     # Add current message
     messages.append({"role": "user", "content": msg.content})
-    
+
     stream = await client.chat.completions.create(
         model="deepseek-chat",
         messages=messages,
@@ -35,19 +31,20 @@ async def on_message(msg: cl.Message):
     )
 
     thinking = True
-    
     # Initialize content before streaming
     final_answer = cl.Message(content="")
 
     # Streaming the thinking
     async with cl.Step(name="Thinking") as thinking_step:
         async for chunk in stream:
-            if not hasattr(chunk.choices[0], 'delta') or not hasattr(chunk.choices[0].delta, 'content'):
+            if not hasattr(chunk.choices[0], "delta") or not hasattr(
+                chunk.choices[0].delta, "content"
+            ):
                 continue
-                
+
             delta = chunk.choices[0].delta
             content = delta.content
-            
+
             if content is None:
                 continue
 
