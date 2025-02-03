@@ -88,7 +88,7 @@ class SQLAlchemyDataLayer(BaseDataLayer):
 
                 assert hasattr(result, "returns_rows")
 
-                # FIXME
+                # FIXME(<owner>)
                 # On select statements, we have rows. On insert/update we have rowcount.
                 # Normally, we'd check for one in the one case and the other in the other.
                 # For now, this is working, so we ignore.
