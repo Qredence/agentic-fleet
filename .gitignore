@@ -143,6 +143,7 @@ poetry.lock
 
 # Fleet
 .fleet
+archive/
 
 # Backend virtual environment
 src/backend/.venv
@@ -192,7 +193,7 @@ ENV/
 
 # Chainlit
 .chainlit/
-chainlit.md
+# chainlit.md
 
 # Debug and temp files
 debug/
@@ -205,3 +206,8 @@ workspace/
 labs/
 .files/
 uv.lock
+files/
+archive/
+.windsurfrules
+cline_docs/
+
