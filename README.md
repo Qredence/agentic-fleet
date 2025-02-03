@@ -12,6 +12,19 @@ A powerful multi-agent system for adaptive AI reasoning and automation. AgenticF
 
 ![chainlitlight](https://github.com/user-attachments/assets/0d070c34-e5a8-40be-94f5-5c8307f1f64c)
 
+## Install base package (use Python 3.10+) and create virtual environment
+
+```bash
+git clone https://github.com/qredence/agenticfleet.git
+cd agenticfleet
+pip install uv
+uv pip venv
+uv sync
+uv pip install agentic-fleet # or  uv pip install -e .
+#install playwight
+pip install playwight
+```
+
 ## Quick Start with Docker
 
 ```bash
@@ -71,14 +84,6 @@ Install providers using pip:
 ```bash
 # Install base package
 pip install agentic-fleet
-
-# Install all model providers
-pip install "agentic-fleet[models]"
-
-# Or install individual providers
-pip install "google-cloud-aiplatform>=1.38.0" "google-generativeai>=0.3.0"  # For Gemini
-pip install "deepseek>=0.1.0"  # For DeepSeek
-pip install "ollama>=0.1.5"  # For Ollama
 ```
 
 ## Model Provider Usage
