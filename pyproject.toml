@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "agentic-fleet"
-version = "0.4.71"
+version = "0.4.72"
 description = "A powerful multi-agent system for adaptive AI reasoning and automation"
 readme = "README.md"
 requires-python = ">=3.10"
@@ -49,12 +49,12 @@ dependencies = [
     "autogen-ext[magentic-one]>=0.4.5,<0.5.0",
     "autogen-ext[openai,azure]>=0.4.5,<0.5.0",
     "autogen-ext[web-surfer]>=0.4.5,<0.5.0",
+    "autogen-ext[diskcache]>=0.4.5,<0.5.0",
 
     # Model Providers
     "composio-core>=0.6.11.post1",
     "deepseek>=0.1.0", # For DeepSeek
-    "google-cloud-aiplatform>=1.38.0", # For Gemini
-    "google-generativeai>=0.3.0", # For Gemini
+   
     "magentic-one-cli>=0.2.2",
     "ollama>=0.1.5", # For Ollama
 
@@ -90,6 +90,9 @@ dependencies = [
     "markitdown>=0.0.1a3",
     "opentelemetry-instrumentation-fastapi>=0.44b0",
     "playwright",
+    "sqlalchemy[asyncio]>=2.0.28",
+    "psycopg2-binary>=2.9.9",
+    "supabase>=2.3.1",
     "tenacity>=9.0.0",
     
     # Developer Tools
@@ -99,7 +102,6 @@ dependencies = [
     "black>=24.10.0",
     "codecov>=2.1.13",
     "gunicorn>=23.0.0",
-    "grpcio-tools~=1.62.0",
     "ipykernel>=6.29.5",
     "psutil>=5.9.6",
     "puremagic>=1.28",
@@ -297,4 +299,10 @@ models = [
     "google-generativeai>=0.3.0",
     "deepseek>=0.1.0",
     "ollama>=0.1.5",
+]
+
+# Add gRPC tools as optional dependency
+grpc = [
+    "grpcio-tools>=1.62.0",
+    "protobuf>=5.29.3",
 ]
