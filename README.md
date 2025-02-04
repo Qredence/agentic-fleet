@@ -2,15 +2,28 @@
 
 A powerful multi-agent system for adaptive AI reasoning and automation. AgenticFleet combines Chainlit's interactive interface with AutoGen's multi-agent capabilities to create a flexible, powerful AI assistant platform.
 
-![Pepy Total Downloads](https://img.shields.io/pepy/dt/agentic-fleet?style=for-the-badge&color=blue)
+<div align="center">
+  <p>
+    <img src="https://img.shields.io/pepy/dt/agentic-fleet?style=for-the-badge&color=blue" alt="Pepy Total Downloads">
+    <img src="https://img.shields.io/github/license/qredence/agenticfleet?style=for-the-badge" alt="GitHub License">
+    <img src="https://img.shields.io/github/forks/qredence/agenticfleet?style=for-the-badge" alt="GitHub forks">
+    <img src="https://img.shields.io/github/stars/qredence/agenticfleet?style=for-the-badge" alt="GitHub Repo stars">
+    <a href="https://discord.gg/ebgy7gtZHK">
+      <img src="https://img.shields.io/discord/1234567890?style=for-the-badge&logo=discord&logoColor=white&label=Discord" alt="Discord">
+    </a>
+    <a href="https://x.com/agenticfleet">
+      <img src="https://img.shields.io/badge/Twitter-Follow-1DA1F2?style=for-the-badge&logo=x&logoColor=white" alt="Twitter Follow">
+    </a>
+  </p>
+</div>
 
-![GitHub License](https://img.shields.io/github/license/qredence/agenticfleet)
-![GitHub forks](https://img.shields.io/github/forks/qredence/agenticfleet)
-![GitHub Repo stars](https://img.shields.io/github/stars/qredence/agenticfleet)
+<div align="center">
+  <video src="https://github.com/user-attachments/assets/b1ad83ce-b8af-4406-99ed-257a07c0c7cf
+" autoplay loop muted playsinline width="800">
+    <p>Your browser doesn't support HTML5 video. Here is a <a href="assets/b1ad83ce-b8af-4406-99ed-257a07c0c7cf">link to the video</a> instead.</p>
+  </video>
+</div>
 
-[![Codacy Badge](https://app.codacy.com/project/badge/Grade/cf5bcfbdbf50493b9b5de381c24dc147)](https://app.codacy.com/gh/Qredence/AgenticFleet/dashboard?utm_source=gh&utm_medium=referral&utm_content=&utm_campaign=Badge_grade)
-
-![chainlitlight](https://github.com/user-attachments/assets/0d070c34-e5a8-40be-94f5-5c8307f1f64c)
 
 ## Installation Guide
 
@@ -255,6 +268,7 @@ graph TD
     FileSurfer -->|OS| FileSystem[Local Files]
     Executor -->|Subprocess| Code[Python/Runtime]
 ```
+![thumbnail](https://github.com/user-attachments/assets/e8050f0b-3bea-4772-992f-8d511efe9deb)
 
 ## Configuration
 
