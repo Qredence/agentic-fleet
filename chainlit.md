@@ -1,6 +1,7 @@
 # Welcome to AgenticFleet 🚀
 
 AgenticFleet is a powerful multi-agent system that combines:
+
 - Interactive chat interface
 - Multiple AI models
 - Specialized agents for different tasks
@@ -9,6 +10,7 @@ AgenticFleet is a powerful multi-agent system that combines:
 ## Authentication
 
 This instance uses GitHub OAuth for:
+
 - Secure access
 - Persistent chat history
 - Personalized settings
