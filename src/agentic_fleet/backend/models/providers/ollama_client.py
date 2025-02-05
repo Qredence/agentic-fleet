@@ -5,20 +5,22 @@ through their API endpoint. It supports both streaming and non-streaming respons
 with proper error handling and async capabilities.
 """
 
-from typing import Any, AsyncGenerator, Dict, List, Optional, Union
-import aiohttp
 import json
 import logging
 import os
 from enum import Enum
+from typing import Any, AsyncGenerator, Dict, List, Optional, Union
 
+import aiohttp
 from autogen_core.models import BaseProvider, Message, UserMessage
 from autogen_ext.models.openai import OpenAIChatCompletionClient
 
 logger = logging.getLogger(__name__)
 
+
 class OllamaModels(str, Enum):
     """Supported Ollama models."""
+
     LLAMA2 = "llama2"
     CODELLAMA = "codellama"
     MISTRAL = "mistral"
@@ -26,9 +28,10 @@ class OllamaModels(str, Enum):
     LLAVA = "llava"
     GEMMA = "gemma"
 
+
 class OllamaClient(BaseProvider):
     """Client for interacting with Ollama API.
-    
+
     This client provides access to locally hosted Ollama models through their API endpoint.
     It supports:
     - Multiple model variants
@@ -47,7 +50,7 @@ class OllamaClient(BaseProvider):
         model_info: Optional[Dict[str, Any]] = None,
     ):
         """Initialize Ollama client.
-        
+
         Args:
             model: Model identifier (e.g., "llama2", "codellama")
             base_url: Ollama API base URL
@@ -59,14 +62,14 @@ class OllamaClient(BaseProvider):
         self.base_url = base_url.rstrip("/")
         self.temperature = temperature
         self.max_tokens = max_tokens
-        
+
         self.model_info = model_info or {
             "vision": model == OllamaModels.LLAVA.value,
             "function_calling": True,
             "json_output": True,
             "family": "ollama",
         }
-        
+
         # Validate model availability
         if not self._is_valid_model(model):
             raise ValueError(f"Model {model} is not a recognized Ollama model")
@@ -81,10 +84,10 @@ class OllamaClient(BaseProvider):
 
     def _format_messages(self, messages: List[Message]) -> str:
         """Format messages for Ollama API.
-        
+
         Args:
             messages: List of Message objects
-            
+
         Returns:
             Formatted prompt string
         """
@@ -96,28 +99,28 @@ class OllamaClient(BaseProvider):
 
     async def generate(self, prompt: Union[str, List[Message]], **kwargs: Any) -> str:
         """Generate a response from the model.
-        
+
         Args:
             prompt: Input prompt or list of messages
             **kwargs: Additional parameters for the API call
-            
+
         Returns:
             Generated response text
-            
+
         Raises:
             ConnectionError: If unable to connect to Ollama server
             Exception: For other API errors
         """
         if isinstance(prompt, list):
             prompt = self._format_messages(prompt)
-            
+
         data = {
             "model": self.model,
             "prompt": prompt,
             "temperature": kwargs.get("temperature", self.temperature),
             "stream": False,
         }
-        
+
         if self.max_tokens:
             data["max_tokens"] = kwargs.get("max_tokens", self.max_tokens)
 
@@ -127,10 +130,10 @@ class OllamaClient(BaseProvider):
                     if response.status != 200:
                         error_text = await response.text()
                         raise Exception(f"Ollama API error: {error_text}")
-                    
+
                     result = await response.json()
                     return result["response"]
-                    
+
         except aiohttp.ClientError as e:
             logger.error(f"Failed to connect to Ollama server: {e}")
             raise ConnectionError(f"Unable to connect to Ollama server at {self.base_url}")
@@ -138,30 +141,32 @@ class OllamaClient(BaseProvider):
             logger.error(f"Error during Ollama API call: {e}")
             raise
 
-    async def stream(self, prompt: Union[str, List[Message]], **kwargs: Any) -> AsyncGenerator[str, None]:
+    async def stream(
+        self, prompt: Union[str, List[Message]], **kwargs: Any
+    ) -> AsyncGenerator[str, None]:
         """Stream responses from the model.
-        
+
         Args:
             prompt: Input prompt or list of messages
             **kwargs: Additional parameters for the API call
-            
+
         Yields:
             Generated response text chunks
-            
+
         Raises:
             ConnectionError: If unable to connect to Ollama server
             Exception: For other API errors
         """
         if isinstance(prompt, list):
             prompt = self._format_messages(prompt)
-            
+
         data = {
             "model": self.model,
             "prompt": prompt,
             "temperature": kwargs.get("temperature", self.temperature),
             "stream": True,
         }
-        
+
         if self.max_tokens:
             data["max_tokens"] = kwargs.get("max_tokens", self.max_tokens)
 
@@ -171,7 +176,7 @@ class OllamaClient(BaseProvider):
                     if response.status != 200:
                         error_text = await response.text()
                         raise Exception(f"Ollama API error: {error_text}")
-                    
+
                     async for line in response.content:
                         if line:
                             try:
@@ -180,13 +185,14 @@ class OllamaClient(BaseProvider):
                                     yield result["response"]
                             except json.JSONDecodeError:
                                 logger.warning(f"Failed to parse streaming response: {line}")
-                    
+
         except aiohttp.ClientError as e:
             logger.error(f"Failed to connect to Ollama server: {e}")
             raise ConnectionError(f"Unable to connect to Ollama server at {self.base_url}")
         except Exception as e:
             logger.error(f"Error during Ollama API streaming: {e}")
             raise
+
 
 # Example usage
 if __name__ == "__main__":
@@ -195,7 +201,9 @@ if __name__ == "__main__":
     client = OllamaClient(model="llama3.2", base_url="http://localhost:11434")
 
     async def main():
-        response = await client.generate([UserMessage(content="What is the capital of France?", source="user")])
+        response = await client.generate(
+            [UserMessage(content="What is the capital of France?", source="user")]
+        )
         print(response)
 
     asyncio.run(main())

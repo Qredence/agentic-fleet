@@ -14,7 +14,7 @@ from agentic_fleet.models.providers import (
     DeepSeekClient,
     GeminiClient,
     OllamaClient,
-    OpenAIClient
+    OpenAIClient,
 )
 
 # Load environment variables from .env file
