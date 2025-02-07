@@ -117,7 +117,8 @@
         "sidebar": {
             "title": "\u5386\u53f2\u5bf9\u8bdd",
             "filters": {
-                "search": "\u641c\u7d22"
+                "search": "\u641c\u7d22",
+                "placeholder": "\u641c\u7d22\u4f1a\u8bdd..."
             },
             "timeframes": {
                 "today": "\u4eca\u5929",
@@ -162,7 +163,12 @@
     "navigation": {
         "header": {
             "chat": "\u804a\u5929",
-            "readme": "\u8bf4\u660e"
+            "readme": "\u8bf4\u660e",
+            "theme": {
+                "light": "\u6d45\u8272\u4e3b\u9898",
+                "dark": "\u6df1\u8272\u4e3b\u9898",
+                "system": "\u8ddf\u968f\u7cfb\u7edf"
+            }
         },
         "newChat": {
             "button": "\u65b0\u5efa\u5bf9\u8bdd",
@@ -187,5 +193,22 @@
         "success": {
             "saved": "\u4fdd\u5b58\u6210\u529f"
         }
+    },
+    "alerts": {
+        "info": "\u4fe1\u606f",
+        "note": "\u6ce8\u91ca",
+        "tip": "\u63d0\u793a",
+        "important": "\u91cd\u8981",
+        "warning": "\u8b66\u544a",
+        "caution": "\u6ce8\u610f",
+        "debug": "\u8c03\u8bd5",
+        "example": "\u793a\u4f8b",
+        "success": "\u6210\u529f",
+        "help": "\u5e2e\u52a9",
+        "idea": "\u60f3\u6cd5",
+        "pending": "\u5f85\u5904\u7406",
+        "security": "\u5b89\u5168",
+        "beta": "\u6d4b\u8bd5",
+        "best-practice": "\u6700\u4f73\u5b9e\u8df5"
     }
 }

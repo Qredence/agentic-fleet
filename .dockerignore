@@ -23,3 +23,11 @@ node_modules/
 secrets/
 credentials/
 private/
+# Exclude tests
+tests/
+# Exclude documentation
+docs/
+# Exclude local logs
+logs/
+# Exclude local workspace
+files/

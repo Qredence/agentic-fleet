@@ -5,10 +5,12 @@ A powerful multi-agent system for adaptive AI reasoning and automation. AgenticF
 <div align="center">
   <p>
     <img src="https://img.shields.io/pepy/dt/agentic-fleet?style=for-the-badge&color=blue" alt="Pepy Total Downloads">
-    <img src="https://img.shields.io/github/license/qredence/agenticfleet?style=for-the-badge" alt="GitHub License">
+<img src="https://img.shields.io/github/stars/qredence/agenticfleet?style=for-the-badge&color=purple" alt="GitHub Repo stars">
+
+ <img src="https://img.shields.io/github/license/qredence/agenticfleet?style=for-the-badge" alt="GitHub License">
     <img src="https://img.shields.io/github/forks/qredence/agenticfleet?style=for-the-badge" alt="GitHub forks">
-    <img src="https://img.shields.io/github/stars/qredence/agenticfleet?style=for-the-badge" alt="GitHub Repo stars">
-    <a href="https://discord.gg/ebgy7gtZHK">
+
+ <a href="https://discord.gg/ebgy7gtZHK">
       <img src="https://img.shields.io/discord/1234567890?style=for-the-badge&logo=discord&logoColor=white&label=Discord" alt="Discord">
     </a>
     <a href="https://x.com/agenticfleet">
@@ -25,6 +27,45 @@ A powerful multi-agent system for adaptive AI reasoning and automation. AgenticF
 </div>
 
 
+AgenticFleet operates through a coordinated team of specialized agents:
+
+## System Architecture
+
+AgenticFleet operates through a coordinated team of specialized agents:
+
+```mermaid
+graph TD
+    User[Chainlit UI] -->|HTTP| App[app.py]
+    App --> AgentTeam[MagenticOneGroupChat]
+    AgentTeam --> WebSurfer
+    AgentTeam --> FileSurfer
+    AgentTeam --> Coder
+    AgentTeam --> Executor
+    WebSurfer -->|Selenium| Web[External Websites]
+    FileSurfer -->|OS| FileSystem[Local Files]
+    Executor -->|Subprocess| Code[Python/Runtime]
+```
+
+- **WebSurfer**: Expert web navigation agent
+  - Extracts information from web pages
+  - Captures and processes screenshots
+  - Provides structured summaries of findings
+
+- **FileSurfer**: File system specialist
+  - Searches and analyzes workspace files
+  - Manages file operations efficiently
+  - Extracts relevant information from documents
+
+- **Coder**: Development expert
+  - Generates and reviews code
+  - Implements solutions
+  - Maintains code quality
+
+- **Executor**: Code execution specialist
+  - Safely runs code in isolated workspace
+  - Monitors execution and handles timeouts
+  - Provides detailed execution feedback
+
 ## Installation Guide
 
 ### Prerequisites
@@ -35,6 +76,7 @@ A powerful multi-agent system for adaptive AI reasoning and automation. AgenticF
 ### 1. Install `uv` Package Manager
 
 #### macOS/Linux
+
 ```bash
 # Using pip
 pip install uv
@@ -47,6 +89,7 @@ curl -LsSf https://astral.sh/uv/install.sh | sh
 ```
 
 #### Windows
+
 ```powershell
 # Using pip
 pip install uv
@@ -85,6 +128,7 @@ playwright install --with-deps chromium  # Install Chromium browser and dependen
 ```
 
 #### Playwright Installation Notes
+
 - Installs Chromium browser for web automation
 - Includes necessary browser dependencies
 - Required for web scraping and browser-based agents
@@ -114,6 +158,7 @@ python -c "import agentic_fleet; print(agentic_fleet.__version__)"
 - Report any installation issues on GitHub
 
 ### Optional Feature Sets
+
 ```bash
 # Install with specific optional features
 uv pip install 'agentic-fleet[telemetry]'
@@ -125,12 +170,14 @@ uv pip install 'agentic-fleet[tracing]'
 **DO NOT use `-e` unless you are a core contributor.**
 
 Editable installations:
+
 - Are NOT supported in production
 - May introduce unexpected behaviors
 - Void package support and warranty
 - Are intended ONLY for package development
 
 If you modify the package locally:
+
 1. Open a GitHub issue
 2. Submit a pull request
 3. Discuss proposed changes with maintainers
@@ -268,6 +315,7 @@ graph TD
     FileSurfer -->|OS| FileSystem[Local Files]
     Executor -->|Subprocess| Code[Python/Runtime]
 ```
+
 ![thumbnail](https://github.com/user-attachments/assets/e8050f0b-3bea-4772-992f-8d511efe9deb)
 
 ## Configuration
@@ -306,13 +354,14 @@ AgenticFleet implements comprehensive error handling:
 
 ## Community Contributions
 
-### 🤝 We Welcome Your Contributions!
+### 🤝 We Welcome Your Contributions
 
 AgenticFleet is an open-source project that thrives on community involvement. We actively encourage contributions from developers of all skill levels.
 
 #### How to Contribute
 
 1. **Forking the Repository**
+
    ```bash
    # Fork the repository on GitHub
    # Clone your forked repository
@@ -322,9 +371,9 @@ AgenticFleet is an open-source project that thrives on community involvement. We
 
 2. **Reporting Issues**
    - Use GitHub Issues to:
-     * Report bugs
-     * Suggest features
-     * Ask questions
+     - Report bugs
+     - Suggest features
+     - Ask questions
    - [Create a New Issue](https://github.com/Qredence/AgenticFleet/issues/new)
 
 3. **Pull Requests**

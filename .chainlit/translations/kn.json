@@ -117,7 +117,8 @@
         "sidebar": {
             "title": "\u0cb9\u0cbf\u0c82\u0ca6\u0cbf\u0ca8 \u0cb8\u0c82\u0cad\u0cbe\u0cb7\u0ca3\u0cc6\u0c97\u0cb3\u0cc1",
             "filters": {
-                "search": "\u0cb9\u0cc1\u0ca1\u0cc1\u0c95\u0cbf"
+                "search": "\u0cb9\u0cc1\u0ca1\u0cc1\u0c95\u0cbf",
+                "placeholder": "Search conversations..."
             },
             "timeframes": {
                 "today": "\u0c87\u0c82\u0ca6\u0cc1",
@@ -162,7 +163,12 @@
     "navigation": {
         "header": {
             "chat": "\u0cb8\u0c82\u0cad\u0cbe\u0cb7\u0ca3\u0cc6",
-            "readme": "\u0c93\u0ca6\u0cbf"
+            "readme": "\u0c93\u0ca6\u0cbf",
+            "theme": {
+                "light": "Light Theme",
+                "dark": "Dark Theme",
+                "system": "Follow System"
+            }
         },
         "newChat": {
             "button": "\u0cb9\u0cca\u0cb8 \u0cb8\u0c82\u0cad\u0cbe\u0cb7\u0ca3\u0cc6",
@@ -187,5 +193,22 @@
         "success": {
             "saved": "\u0caf\u0cb6\u0cb8\u0ccd\u0cb5\u0cbf\u0caf\u0cbe\u0c97\u0cbf \u0c89\u0cb3\u0cbf\u0cb8\u0cb2\u0cbe\u0c97\u0cbf\u0ca6\u0cc6"
         }
+    },
+    "alerts": {
+        "info": "Info",
+        "note": "Note",
+        "tip": "Tip",
+        "important": "Important",
+        "warning": "Warning",
+        "caution": "Caution",
+        "debug": "Debug",
+        "example": "Example",
+        "success": "Success",
+        "help": "Help",
+        "idea": "Idea",
+        "pending": "Pending",
+        "security": "Security",
+        "beta": "Beta",
+        "best-practice": "Best Practice"
     }
 }

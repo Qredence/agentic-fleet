@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "agentic-fleet"
-version = "0.4.72"
+version = "0.4.73"
 description = "A powerful multi-agent system for adaptive AI reasoning and automation"
 readme = "README.md"
 requires-python = ">=3.10"
@@ -32,7 +32,6 @@ dependencies = [
     "python-dotenv>=1.0.1",
     "typing-extensions>=4.8.0",
     "uvicorn>=0.24.0",
-
     # Networking & Async
     "aiofiles>=23.1.0",
     "aiohttp>=3.11.11,<4.0.0",
@@ -40,7 +39,6 @@ dependencies = [
     "httpx>=0.25.0",
     "python-multipart>=0.0.6",
     "requests>=2.32.3",
-
     # AI/ML Infrastructure
     "autogen-agentchat>=0.4.5,<0.5.0",
     "autogen-core>=0.4.5,<0.5.0",
@@ -50,14 +48,11 @@ dependencies = [
     "autogen-ext[openai,azure]>=0.4.5,<0.5.0",
     "autogen-ext[web-surfer]>=0.4.5,<0.5.0",
     "autogen-ext[diskcache]>=0.4.5,<0.5.0",
-
     # Model Providers
     "composio-core>=0.6.11.post1",
     "deepseek>=0.1.0", # For DeepSeek
-   
     "magentic-one-cli>=0.2.2",
     "ollama>=0.1.5", # For Ollama
-
     # Azure Services
     "azure-ai-inference>=1.0.0b6", # For Azure AI Foundry
     "azure-ai-ml>=1.12.1", # For Azure AI Foundry
@@ -68,7 +63,6 @@ dependencies = [
     "azure-keyvault-secrets>=4.9.0",
     "azure-search-documents==11.6.0b4",
     "azure-storage-blob>=12.24.0",
-
     # Data Processing
     "jsonlines>=4.0.0",
     "matplotlib>=3.10.0",
@@ -81,11 +75,10 @@ dependencies = [
     "requests-html>=0.10.0",
     "seaborn>=0.13.0",
     "yfinance>=0.2.51",
-
     # Web & Utilities
     "beautifulsoup4>=4.12.0",
     "bing>=0.31",
-    "chainlit>=2.1.0",
+    "chainlit>=2.1.2",
     "docker>=7.1.0",
     "markitdown>=0.0.1a3",
     "opentelemetry-instrumentation-fastapi>=0.44b0",
@@ -94,7 +87,6 @@ dependencies = [
     "psycopg2-binary>=2.9.9",
     "supabase>=2.3.1",
     "tenacity>=9.0.0",
-    
     # Developer Tools
     "aioconsole>=0.8.1",
     "axios>=0.4.0",
@@ -116,6 +108,12 @@ dependencies = [
     "semantic-kernel>=1.19.0",
     "tiktoken>=0.8.0",
     "typer>=0.15.1",
+    "types-setuptools>=75.8.0.20250110",
+    "pyyaml>=6.0.2",
+    "setuptools>=75.8.0",
+    "modulegraph>=0.19.6",
+    "macholib>=1.16.3",
+    "py2app>=0.28.8",
 ]
 
 [project.urls]
@@ -280,9 +278,6 @@ dev = [
     "pytest-cov>=4.1.0",
     "coverage>=7.4.4",
     
-    # Type Checking
-    "types-all>=0.1.0",
-    
     # Documentation
     "mkdocs>=1.5.3",
     "mkdocstrings[python]>=0.24.0",
@@ -292,7 +287,6 @@ dev = [
     "rich>=10.16.2"
 ]
 
-# Specific test dependencies
 test = [
     "pytest>=8.0.2",
     "pytest-asyncio>=0.23.3",
@@ -300,21 +294,21 @@ test = [
     "coverage>=7.4.4"
 ]
 
-# Optional dependencies for documentation
 docs = [
     "mkdocs>=1.5.3",
     "mkdocstrings[python]>=0.24.0"
 ]
 
-# Add model providers as optional dependencies
 models = [
-    "google-cloud-aiplatform>=1.38.0",
-    "google-generativeai>=0.3.0",
-    "deepseek>=0.1.0",
     "ollama>=0.1.5",
+    "autogen-ext[semantic-kernel-anthropic]",
+    "autogen-ext[semantic-kernel-google]",
+    "autogen-ext[semantic-kernel-ollama]",
+    "autogen-ext[semantic-kernel-aws]",
+    "autogen-ext[semantic-kernel-mistralai]",
+    "autogen-ext[semantic-kernel-hugging-face]"
 ]
 
-# Add gRPC tools as optional dependency
 grpc = [
     "grpcio-tools>=1.62.0",
     "protobuf>=5.29.3",
@@ -329,7 +323,6 @@ exclude = [
 
 [tool.setuptools]
 # Prevent accidental editable installations
-dynamic-installation = false
 
 [tool.setuptools.dynamic]
 version = {attr = "agentic_fleet.__version__"}

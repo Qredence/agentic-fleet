@@ -1,6 +1,6 @@
 {
   "name": "AgenticFleet Dev Container",
-  "dockerComposeFile": "../docker-compose.yml",
+  "dockerComposeFile": "./docker-compose.yml",
   "service": "agenticfleet",
   "workspaceFolder": "/workspace",
   
@@ -50,12 +50,7 @@
   },
 
   // Post-create commands with comprehensive setup
-  "postCreateCommand": 
-    "pip install -e '.[dev,test]' && " +
-    "playwright install --with-deps chromium && " +
-    "pre-commit install && " +
-    "pip install ruff mypy && " +
-    "uv pip install --system -e '.[dev,test]'",
+  "postCreateCommand": "pip install -e '.[dev,test]' && playwright install --with-deps chromium && pre-commit install && pip install ruff mypy",
 
   // VS Code specific customizations
   "customizations": {

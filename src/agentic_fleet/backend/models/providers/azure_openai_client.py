@@ -5,8 +5,8 @@ It supports both streaming and non-streaming responses, with proper error handli
 retry mechanisms, and token management.
 """
 
-import logging
 import json
+import logging
 import time
 from typing import Any, AsyncGenerator, Dict, Optional, Union
 from urllib.parse import urljoin
@@ -20,13 +20,16 @@ from agentic_fleet.models.providers.base import BaseProvider
 
 logger = logging.getLogger(__name__)
 
+
 class AzureOpenAIError(Exception):
     """Base exception for Azure OpenAI client errors."""
+
     pass
+
 
 class AzureOpenAIClient(BaseProvider):
     """Client for Azure OpenAI API.
-    
+
     This client provides access to Azure-hosted OpenAI models through their API endpoint.
     It supports:
     - Multiple deployment configurations
@@ -48,7 +51,7 @@ class AzureOpenAIClient(BaseProvider):
         model_info: Optional[Dict[str, Any]] = None,
     ):
         """Initialize Azure OpenAI client.
-        
+
         Args:
             azure_deployment: Azure deployment name
             model: Model identifier
@@ -66,24 +69,24 @@ class AzureOpenAIClient(BaseProvider):
         self.api_key = api_key
         self.max_retries = max_retries
         self.timeout = timeout
-        
+
         self.model_info = model_info or {
             "vision": "gpt-4-vision" in model.lower(),
             "function_calling": True,
             "json_output": True,
             "family": "azure",
         }
-        
+
         # Initialize Azure credentials if no API key provided
         self.credentials = DefaultAzureCredential() if not api_key else None
-        
+
         # Token usage tracking
         self.total_prompt_tokens = 0
         self.total_completion_tokens = 0
 
     def _get_headers(self) -> Dict[str, str]:
         """Get request headers with authentication.
-        
+
         Returns:
             Dict of headers including authentication
         """
@@ -91,19 +94,19 @@ class AzureOpenAIClient(BaseProvider):
             "Content-Type": "application/json",
             "api-key": self.api_key,
         }
-        
+
         if not self.api_key and self.credentials:
             token = self.credentials.get_token("https://cognitiveservices.azure.com/.default")
             headers["Authorization"] = f"Bearer {token.token}"
-            
+
         return headers
 
     def _build_url(self, endpoint: str) -> str:
         """Build full API URL.
-        
+
         Args:
             endpoint: API endpoint path
-            
+
         Returns:
             Complete URL with base, deployment, and version
         """
@@ -111,20 +114,18 @@ class AzureOpenAIClient(BaseProvider):
         return f"{base}/{endpoint}?api-version={self.api_version}"
 
     @retry(
-        stop=stop_after_attempt(3),
-        wait=wait_exponential(multiplier=1, min=4, max=10),
-        reraise=True
+        stop=stop_after_attempt(3), wait=wait_exponential(multiplier=1, min=4, max=10), reraise=True
     )
     async def generate(self, prompt: str, **kwargs: Any) -> str:
         """Generate a response from the model.
-        
+
         Args:
             prompt: Input prompt
             **kwargs: Additional parameters for the API call
-            
+
         Returns:
             Generated response text
-            
+
         Raises:
             AzureOpenAIError: For API-related errors
             Exception: For other errors
@@ -138,21 +139,23 @@ class AzureOpenAIClient(BaseProvider):
         }
 
         try:
-            async with aiohttp.ClientSession(headers=self._get_headers(), timeout=self.timeout) as session:
+            async with aiohttp.ClientSession(
+                headers=self._get_headers(), timeout=self.timeout
+            ) as session:
                 async with session.post(self._build_url("chat/completions"), json=data) as response:
                     if response.status != 200:
                         error_text = await response.text()
                         raise AzureOpenAIError(f"Azure OpenAI API error: {error_text}")
-                    
+
                     result = await response.json()
-                    
+
                     # Update token usage
                     usage = result.get("usage", {})
                     self.total_prompt_tokens += usage.get("prompt_tokens", 0)
                     self.total_completion_tokens += usage.get("completion_tokens", 0)
-                    
+
                     return result["choices"][0]["message"]["content"]
-                    
+
         except aiohttp.ClientError as e:
             logger.error(f"Failed to connect to Azure OpenAI: {e}")
             raise AzureOpenAIError(f"Connection error: {e}")
@@ -165,14 +168,14 @@ class AzureOpenAIClient(BaseProvider):
 
     async def stream(self, prompt: str, **kwargs: Any) -> AsyncGenerator[str, None]:
         """Stream responses from the model.
-        
+
         Args:
             prompt: Input prompt
             **kwargs: Additional parameters for the API call
-            
+
         Yields:
             Generated response text chunks
-            
+
         Raises:
             AzureOpenAIError: For API-related errors
             Exception: For other errors
@@ -186,12 +189,14 @@ class AzureOpenAIClient(BaseProvider):
         }
 
         try:
-            async with aiohttp.ClientSession(headers=self._get_headers(), timeout=self.timeout) as session:
+            async with aiohttp.ClientSession(
+                headers=self._get_headers(), timeout=self.timeout
+            ) as session:
                 async with session.post(self._build_url("chat/completions"), json=data) as response:
                     if response.status != 200:
                         error_text = await response.text()
                         raise AzureOpenAIError(f"Azure OpenAI API error: {error_text}")
-                    
+
                     async for line in response.content:
                         if line:
                             try:
@@ -204,7 +209,7 @@ class AzureOpenAIClient(BaseProvider):
                                         yield content
                             except json.JSONDecodeError:
                                 logger.warning(f"Failed to parse streaming response: {line}")
-                    
+
         except aiohttp.ClientError as e:
             logger.error(f"Failed to connect to Azure OpenAI: {e}")
             raise AzureOpenAIError(f"Connection error: {e}")
@@ -217,7 +222,7 @@ class AzureOpenAIClient(BaseProvider):
 
     def get_token_usage(self) -> Dict[str, int]:
         """Get current token usage statistics.
-        
+
         Returns:
             Dict containing prompt and completion token counts
         """

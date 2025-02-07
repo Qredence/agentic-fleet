@@ -117,7 +117,8 @@
         "sidebar": {
             "title": "\u0aaa\u0abe\u0a9b\u0ab2\u0ac0 \u0a9a\u0ac7\u0a9f\u0acd\u0ab8",
             "filters": {
-                "search": "\u0ab6\u0acb\u0aa7\u0acb"
+                "search": "\u0ab6\u0acb\u0aa7\u0acb",
+                "placeholder": "Search conversations..."
             },
             "timeframes": {
                 "today": "\u0a86\u0a9c\u0ac7",
@@ -162,7 +163,12 @@
     "navigation": {
         "header": {
             "chat": "\u0a9a\u0ac7\u0a9f",
-            "readme": "\u0ab5\u0abe\u0a82\u0a9a\u0acb"
+            "readme": "\u0ab5\u0abe\u0a82\u0a9a\u0acb",
+            "theme": {
+                "light": "Light Theme",
+                "dark": "Dark Theme",
+                "system": "Follow System"
+            }
         },
         "newChat": {
             "button": "\u0aa8\u0ab5\u0ac0 \u0a9a\u0ac7\u0a9f",
@@ -187,5 +193,22 @@
         "success": {
             "saved": "\u0ab8\u0aab\u0ab3\u0aa4\u0abe\u0aaa\u0ac2\u0ab0\u0acd\u0ab5\u0a95 \u0ab8\u0abe\u0a9a\u0ab5\u0acd\u0aaf\u0ac1\u0a82"
         }
+    },
+    "alerts": {
+        "info": "Info",
+        "note": "Note",
+        "tip": "Tip",
+        "important": "Important",
+        "warning": "Warning",
+        "caution": "Caution",
+        "debug": "Debug",
+        "example": "Example",
+        "success": "Success",
+        "help": "Help",
+        "idea": "Idea",
+        "pending": "Pending",
+        "security": "Security",
+        "beta": "Beta",
+        "best-practice": "Best Practice"
     }
 }

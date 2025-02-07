@@ -2,8 +2,8 @@
 """Entry point script for AgenticFleet."""
 
 import os
-import sys
 import subprocess
+import sys
 
 # Add src directory to path
 src_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "src"))
@@ -37,7 +37,7 @@ def main():
             print("Starting AgenticFleet with OAuth...")
 
         # Get the path to app.py
-        app_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "src", "app"))
+        app_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "src", "agentic_fleet"))
         app_path = os.path.join(app_dir, "app.py")
 
         # Build and run chainlit command
