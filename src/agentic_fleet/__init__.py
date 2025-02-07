@@ -6,7 +6,7 @@ that can adapt and reason about complex tasks. It integrates with Chainlit for t
 and FastAPI for the backend, providing a seamless development experience.
 """
 
-__version__ = "0.4.50"
+__version__ = "0.4.73"
 __author__ = "Qredence"
 __email__ = "contact@qredence.ai"
 __license__ = "Apache 2.0"
