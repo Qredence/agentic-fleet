@@ -163,7 +163,7 @@ __pycache__/
 .Python
 build/
 develop-eggs/
-dist/
+
 downloads/
 eggs/
 .eggs/
@@ -224,3 +224,5 @@ archive
 .chainlit/translations/ta.json
 .chainlit/translations/te.json
 .chainlit/translations/zh-CN.json
+
+memory_bank
