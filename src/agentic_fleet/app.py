@@ -10,15 +10,19 @@ import time
 from typing import Any, AsyncGenerator, Dict, List, Optional, Union
 
 # AutoGen imports
-from autogen_agentchat.agents import CodeExecutorAgent
-from autogen_agentchat.base import TaskResult
-from autogen_agentchat.messages import (
-    FunctionCall,
-    Image,
-    MultiModalMessage,
-    TextMessage,
-)
-from autogen_agentchat.teams import MagenticOneGroupChat
+try:
+    from autogen_agentchat.agents import CodeExecutorAgent
+    from autogen_agentchat.base import TaskResult
+    from autogen_agentchat.messages import (
+        FunctionCall,
+        Image,
+        MultiModalMessage,
+        TextMessage,
+    )
+    from autogen_agentchat.teams import MagenticOneGroupChat
+except ModuleNotFoundError as e:
+    raise ModuleNotFoundError("The 'autogen_agentchat' module is not installed. Please install it using 'pip install autogen_agentchat'.") from e
+
 from autogen_ext.agents.file_surfer import FileSurfer
 from autogen_ext.agents.magentic_one import MagenticOneCoderAgent
 from autogen_ext.agents.web_surfer import MultimodalWebSurfer
@@ -28,8 +32,8 @@ from autogen_ext.models.openai import AzureOpenAIChatCompletionClient
 # Third-party imports
 from dotenv import load_dotenv
 
-from agentic_fleet.backend import (
-    Image,
+from agentic_fleet.backend.chainlit_components import (
+    Image,  # noqa: F811
     Message,
     Step,
     Task,
@@ -43,7 +47,7 @@ from agentic_fleet.backend import (
     on_stop,
     user_session,
 )
-from agentic_fleet.backend.chat_settings import (
+from agentic_fleet.backend.chainlit_components.chat_settings import (
     DEFAULT_MAX_ROUNDS,
     DEFAULT_MAX_STALLS,
     DEFAULT_MAX_TIME,
@@ -88,7 +92,7 @@ az_model_client = AzureOpenAIChatCompletionClient(
         "vision": True,
         "function_calling": True,
         "json_output": True,
-        "family": "gpt-4o"
+        "family": "gpt-4o",
     },
 )
 

@@ -62,9 +62,11 @@ dependencies = [
     { name = "httpx" },
     { name = "ipykernel" },
     { name = "jsonlines" },
+    { name = "macholib" },
     { name = "magentic-one-cli" },
     { name = "markitdown" },
     { name = "matplotlib" },
+    { name = "modulegraph" },
     { name = "numpy" },
     { name = "ollama" },
     { name = "opentelemetry-instrumentation-fastapi" },
@@ -77,6 +79,7 @@ dependencies = [
     { name = "psutil" },
     { name = "psycopg2-binary" },
     { name = "puremagic" },
+    { name = "py2app" },
     { name = "pydantic" },
     { name = "pydantic-settings" },
     { name = "pytest" },
@@ -179,7 +182,7 @@ requires-dist = [
     { name = "bing", specifier = ">=0.31" },
     { name = "black", specifier = ">=24.10.0" },
     { name = "black", marker = "extra == 'dev'", specifier = ">=24.1.1" },
-    { name = "chainlit", specifier = ">=2.1.1" },
+    { name = "chainlit", specifier = ">=2.1.2" },
     { name = "codecov", specifier = ">=2.1.13" },
     { name = "composio-core", specifier = ">=0.6.11.post1" },
     { name = "coverage", marker = "extra == 'dev'", specifier = ">=7.4.4" },
@@ -194,6 +197,7 @@ requires-dist = [
     { name = "ipykernel", specifier = ">=6.29.5" },
     { name = "isort", marker = "extra == 'dev'", specifier = ">=5.13.2" },
     { name = "jsonlines", specifier = ">=4.0.0" },
+    { name = "macholib", specifier = ">=1.16.3" },
     { name = "magentic-one-cli", specifier = ">=0.2.2" },
     { name = "markitdown", specifier = ">=0.0.1a3" },
     { name = "matplotlib", specifier = ">=3.10.0" },
@@ -201,6 +205,7 @@ requires-dist = [
     { name = "mkdocs", marker = "extra == 'docs'", specifier = ">=1.5.3" },
     { name = "mkdocstrings", extras = ["python"], marker = "extra == 'dev'", specifier = ">=0.24.0" },
     { name = "mkdocstrings", extras = ["python"], marker = "extra == 'docs'", specifier = ">=0.24.0" },
+    { name = "modulegraph", specifier = ">=0.19.6" },
     { name = "mypy", marker = "extra == 'dev'", specifier = ">=1.8.0" },
     { name = "numpy", specifier = ">=1.26,<2.0" },
     { name = "ollama", specifier = ">=0.1.5" },
@@ -217,6 +222,7 @@ requires-dist = [
     { name = "psutil", specifier = ">=5.9.6" },
     { name = "psycopg2-binary", specifier = ">=2.9.9" },
     { name = "puremagic", specifier = ">=1.28" },
+    { name = "py2app", specifier = ">=0.28.8" },
     { name = "pydantic", specifier = ">=2.5.2" },
     { name = "pydantic-settings", specifier = ">=2.2.1" },
     { name = "pytest", specifier = ">=8.3.4" },
@@ -370,6 +376,15 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/ba/b5/6d55e80f6d8a08ce22b982eafa278d823b541c925f11ee774b0b9c43473d/aiosignal-1.3.2.tar.gz", hash = "sha256:a8c255c66fafb1e499c9351d0bf32ff2d8a0321595ebac3b93713656d2436f54", size = 19424 }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/ec/6a/bc7e17a3e87a2985d3e8f4da4cd0f481060eb78fb08596c42be62c90a4d9/aiosignal-1.3.2-py2.py3-none-any.whl", hash = "sha256:45cde58e409a301715980c2b01d0c28bdde3770d8290b5eb2173759d9acb31a5", size = 7597 },
+]
+
+[[package]]
+name = "altgraph"
+version = "0.17.4"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/de/a8/7145824cf0b9e3c28046520480f207df47e927df83aa9555fb47f8505922/altgraph-0.17.4.tar.gz", hash = "sha256:1b5afbb98f6c4dcadb2e2ae6ab9fa994bbb8c1d75f4fa96d340f9437ae454406", size = 48418 }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/4d/3f/3bc3f1d83f6e4a7fcb834d3720544ca597590425be5ba9db032b2bf322a2/altgraph-0.17.4-py2.py3-none-any.whl", hash = "sha256:642743b4750de17e655e6711601b077bc6598dbfa3ba5fa2b2a35ce12b508dff", size = 21212 },
 ]
 
 [[package]]
@@ -1152,7 +1167,7 @@ wheels = [
 
 [[package]]
 name = "chainlit"
-version = "2.1.1"
+version = "2.1.2"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "aiofiles" },
@@ -1178,9 +1193,9 @@ dependencies = [
     { name = "uvicorn" },
     { name = "watchfiles" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/f3/3b/e5a2d902663edbb3506c0bfc62101e243e99d7bb3b381d2526375a397e00/chainlit-2.1.1.tar.gz", hash = "sha256:73d569995e140bacfe04817b4429b596670e88371bd4f75e999ca7dd2d62e4b2", size = 9470643 }
+sdist = { url = "https://files.pythonhosted.org/packages/ff/a0/75ec9ae5a639997aeac64a587269ce37ff2a128604667a9e77176cb2715b/chainlit-2.1.2.tar.gz", hash = "sha256:ae57831d58c16f3cb27f6dcbda8b843547c52b4272d0bbc16da0ed992a992f26", size = 9472021 }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/60/09/1e7c84b64247d6089e73cf8ccc0c6d388ec3f09175482cd3ea1507b0e9b9/chainlit-2.1.1-py3-none-any.whl", hash = "sha256:91dcc344db3ec27f0190a71d48a70c21aff6202625c1965e697b621561afdced", size = 9620511 },
+    { url = "https://files.pythonhosted.org/packages/49/fb/8ffce2eecd705011c37cc6dbecf86c8c6987f6d8ecfa1a594428bd4e7222/chainlit-2.1.2-py3-none-any.whl", hash = "sha256:471b7295cabad7dfec8f6123eb68dfd95f6cd2dc95a31fc45ddca8afc5131750", size = 9622023 },
 ]
 
 [[package]]
@@ -3088,6 +3103,18 @@ wheels = [
 ]
 
 [[package]]
+name = "macholib"
+version = "1.16.3"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "altgraph" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/95/ee/af1a3842bdd5902ce133bd246eb7ffd4375c38642aeb5dc0ae3a0329dfa2/macholib-1.16.3.tar.gz", hash = "sha256:07ae9e15e8e4cd9a788013d81f5908b3609aa76f9b1421bae9c4d7606ec86a30", size = 59309 }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/d1/5d/c059c180c84f7962db0aeae7c3b9303ed1d73d76f2bfbc32bc231c8be314/macholib-1.16.3-py2.py3-none-any.whl", hash = "sha256:0e315d7583d38b8c77e815b1ecbdbf504a8258d8b3e17b61165c6feb60d18f2c", size = 38094 },
+]
+
+[[package]]
 name = "magentic-one-cli"
 version = "0.2.3"
 source = { registry = "https://pypi.org/simple" }
@@ -3430,6 +3457,19 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/8f/64/bc658504b73b9ff064046e4ee3c551254d417d409b0d848c2054f2e8d528/mkdocstrings_python-1.14.4.tar.gz", hash = "sha256:12e1b1a3848554484896b602dda1096033adeb2715fef421f47d6a163d6c983d", size = 421537 }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/4b/49/22c0415d44dc7c1714b47944fbf0734306a99c992c84efd4c197e4f4dbc9/mkdocstrings_python-1.14.4-py3-none-any.whl", hash = "sha256:35d73fdf2079a2a4e2c8e8ff52976463a75d138f97ffadbc7d29108c6de11b35", size = 448488 },
+]
+
+[[package]]
+name = "modulegraph"
+version = "0.19.6"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "altgraph" },
+    { name = "setuptools" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/12/7a/7d1ef5824553c960b441b937dd26a0f99ea04a8c29a5ed099b7c06e9ef61/modulegraph-0.19.6.tar.gz", hash = "sha256:c914c8c95a0e10fe88505d4e9c2284b4e3dbc70943e306cc6567e36cc541bf4b", size = 88145 }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/ce/e2/f4e1bb5b49ca5521f86309554cebb1ce61290e2d813cd397946b3b354c13/modulegraph-0.19.6-py2.py3-none-any.whl", hash = "sha256:5443e6d93c0b263f4ea309e2ff01312eef7c424dd51981a1e78e960c90e572b8", size = 34898 },
 ]
 
 [[package]]
@@ -4833,6 +4873,21 @@ source = { registry = "https://pypi.org/simple" }
 sdist = { url = "https://files.pythonhosted.org/packages/09/2d/40599f25667733e41bbc3d7e4c7c36d5e7860874aa5fe9c584e90b34954d/puremagic-1.28.tar.gz", hash = "sha256:195893fc129657f611b86b959aab337207d6df7f25372209269ed9e303c1a8c0", size = 314945 }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/c5/53/200a97332d10ed3edd7afcbc5f5543920ac59badfe5762598327999f012e/puremagic-1.28-py3-none-any.whl", hash = "sha256:e16cb9708ee2007142c37931c58f07f7eca956b3472489106a7245e5c3aa1241", size = 43241 },
+]
+
+[[package]]
+name = "py2app"
+version = "0.28.8"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "altgraph" },
+    { name = "macholib" },
+    { name = "modulegraph" },
+    { name = "packaging" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/d1/d8/a81d296560df958e496a03e4373615db5157dacb388945110404cbd0879b/py2app-0.28.8.tar.gz", hash = "sha256:cab7aec752a8b83e7c6cef7c15271dc720155275e44cbf610e3162e0807313ec", size = 1173004 }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/83/12/a0932851fe222d9cf9193e192f01d7f62c89d9690b17d731ef5385df4360/py2app-0.28.8-py2.py3-none-any.whl", hash = "sha256:38b80f0c91f8d2dddb6396e6bbff8a84875f073c510f4f1a307e8ae44c7d73d8", size = 835661 },
 ]
 
 [[package]]

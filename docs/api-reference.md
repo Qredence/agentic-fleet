@@ -1,146 +1,15 @@
 # API Reference
 
-## Core Classes
+AgenticFleet currently leverages the [Microsoft Autogen](https://microsoft.github.io/autogen/) framework for its core agent functionality. Therefore, the primary API reference for agent creation, management, and interaction is the Autogen documentation:
 
-### MagenticOneCoderAgent
+*   **Autogen Documentation:** [https://microsoft.github.io/autogen/](https://microsoft.github.io/autogen/)
+*   **Autogen API Reference:** Refer to the Autogen documentation for details on classes, methods, and data structures.
+*   **Autogen Examples:** [https://github.com/microsoft/autogen/tree/main/samples](https://github.com/microsoft/autogen/tree/main/samples)
 
-The primary coding agent responsible for code generation and analysis.
+## AgenticFleet-Specific APIs
 
-```python
-class MagenticOneCoderAgent:
-    """
-    A specialized agent for code-related tasks.
-    
-    Attributes:
-        model_client: The Azure OpenAI client for API communication
-        system_prompt: Custom system prompt for the agent
-        tools: List of available coding tools
-    """
-```
+AgenticFleet provides a command-line interface (CLI) for starting the server and managing the system. The CLI is documented in the [Usage Guide](./usage-guide.md).
 
-#### Key Methods
+**Future Enhancements:**
 
-- `analyze_code(code: str) -> CodeAnalysis`: Analyzes code structure and quality
-- `generate_code(spec: str) -> str`: Generates code based on specifications
-- `review_pr(diff: str) -> PRReview`: Reviews code changes and provides feedback
-
-### MultimodalWebSurfer
-
-Agent for web content analysis and data extraction.
-
-```python
-class MultimodalWebSurfer:
-    """
-    Web surfing agent with multimodal capabilities.
-    
-    Attributes:
-        base_url: Starting point for web searches
-        max_depth: Maximum depth for recursive searches
-    """
-```
-
-#### Key Methods
-
-- `search(query: str) -> List[SearchResult]`: Performs web searches
-- `extract_content(url: str) -> WebContent`: Extracts content from URLs
-- `analyze_page(url: str) -> PageAnalysis`: Analyzes webpage structure
-
-### FileSurfer
-
-Agent for file system operations and content analysis.
-
-```python
-class FileSurfer:
-    """
-    File system navigation and analysis agent.
-    
-    Attributes:
-        root_dir: Base directory for file operations
-        allowed_extensions: List of processable file types
-    """
-```
-
-#### Key Methods
-
-- `scan_directory(path: str) -> FileTree`: Scans directory structure
-- `analyze_file(path: str) -> FileAnalysis`: Analyzes file content
-- `search_files(pattern: str) -> List[str]`: Searches for files matching pattern
-
-## Message Types
-
-### AgentMessage
-
-```python
-class AgentMessage:
-    """
-    Represents a message in the agent communication system.
-    
-    Attributes:
-        content: Message content
-        agent_name: Name of the sending agent
-        timestamp: Message creation time
-        message_type: Type of message (code, text, error, etc.)
-    """
-```
-
-### CodeBlock
-
-```python
-class CodeBlock:
-    """
-    Represents a code block in agent communications.
-    
-    Attributes:
-        code: The actual code content
-        language: Programming language
-        metadata: Additional code metadata
-    """
-```
-
-## Configuration Options
-
-### AgentConfig
-
-```python
-class AgentConfig:
-    """
-    Configuration settings for agent behavior.
-    
-    Attributes:
-        max_rounds: Maximum conversation rounds
-        max_time: Maximum task time in minutes
-        max_stalls: Maximum allowed stalls
-    """
-```
-
-## Error Handling
-
-### AgentError
-
-```python
-class AgentError(Exception):
-    """
-    Base class for agent-related errors.
-    
-    Attributes:
-        message: Error description
-        agent_name: Name of the agent raising the error
-        error_code: Unique error identifier
-    """
-```
-
-## Events
-
-### AgentEvent
-
-```python
-class AgentEvent:
-    """
-    Represents an event in the agent system.
-    
-    Attributes:
-        event_type: Type of event
-        data: Event data
-        timestamp: Event occurrence time
-    """
-```
+AgenticFleet is under active development. Future releases will include specialized AgenticFleet agents with their own APIs. This section of the documentation will be updated as these features become available.

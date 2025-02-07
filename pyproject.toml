@@ -78,7 +78,7 @@ dependencies = [
     # Web & Utilities
     "beautifulsoup4>=4.12.0",
     "bing>=0.31",
-    "chainlit>=2.1.1",
+    "chainlit>=2.1.2",
     "docker>=7.1.0",
     "markitdown>=0.0.1a3",
     "opentelemetry-instrumentation-fastapi>=0.44b0",
@@ -111,6 +111,9 @@ dependencies = [
     "types-setuptools>=75.8.0.20250110",
     "pyyaml>=6.0.2",
     "setuptools>=75.8.0",
+    "modulegraph>=0.19.6",
+    "macholib>=1.16.3",
+    "py2app>=0.28.8",
 ]
 
 [project.urls]
@@ -320,7 +323,6 @@ exclude = [
 
 [tool.setuptools]
 # Prevent accidental editable installations
-dynamic-installation = false
 
 [tool.setuptools.dynamic]
 version = {attr = "agentic_fleet.__version__"}
