@@ -46,7 +46,7 @@ def main():
             "run",
             app_path,
             "--port",
-            "8000"
+            "8001"
         ]
 
         try:

@@ -102,7 +102,7 @@ custom_css = "/public/custom.css"
 # custom_build = "./public/build"
 
 [meta]
-generated_by = "2.1.0"
+generated_by = "2.1.2"
 
 [server]
 port = 8001
