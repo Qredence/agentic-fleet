@@ -10,19 +10,15 @@ import time
 from typing import Any, AsyncGenerator, Dict, List, Optional, Union
 
 # AutoGen imports
-try:
-    from autogen_agentchat.agents import CodeExecutorAgent
-    from autogen_agentchat.base import TaskResult
-    from autogen_agentchat.messages import (
-        FunctionCall,
-        Image,
-        MultiModalMessage,
-        TextMessage,
-    )
-    from autogen_agentchat.teams import MagenticOneGroupChat
-except ModuleNotFoundError as e:
-    raise ModuleNotFoundError("The 'autogen_agentchat' module is not installed. Please install it using 'pip install autogen_agentchat'.") from e
-
+from autogen_agentchat.agents import CodeExecutorAgent
+from autogen_agentchat.base import TaskResult
+from autogen_agentchat.messages import (
+    FunctionCall,
+    Image,
+    MultiModalMessage,
+    TextMessage,
+)
+from autogen_agentchat.teams import MagenticOneGroupChat
 from autogen_ext.agents.file_surfer import FileSurfer
 from autogen_ext.agents.magentic_one import MagenticOneCoderAgent
 from autogen_ext.agents.web_surfer import MultimodalWebSurfer
