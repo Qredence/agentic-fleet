@@ -29,7 +29,7 @@ from autogen_ext.models.openai import AzureOpenAIChatCompletionClient
 from dotenv import load_dotenv
 
 from agentic_fleet.backend.chainlit_components import (
-    Image,  # noqa: F811
+    Image,
     Message,
     Step,
     Task,

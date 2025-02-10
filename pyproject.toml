@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "agentic-fleet"
-version = "0.4.73"
+version = "0.4.78"
 description = "A powerful multi-agent system for adaptive AI reasoning and automation"
 readme = "README.md"
 requires-python = ">=3.10"
@@ -78,11 +78,11 @@ dependencies = [
     # Web & Utilities
     "beautifulsoup4>=4.12.0",
     "bing>=0.31",
-    "chainlit>=2.1.2",
+    "chainlit>=2.2.0",
     "docker>=7.1.0",
     "markitdown>=0.0.1a3",
     "opentelemetry-instrumentation-fastapi>=0.44b0",
-    "playwright",
+    "playwright>=1.20.0", # Updated version for compatibility with playwright
     "sqlalchemy[asyncio]>=2.0.28",
     "psycopg2-binary>=2.9.9",
     "supabase>=2.3.1",
@@ -102,7 +102,6 @@ dependencies = [
     "pytest-cov>=6.0.0",
     "redis>=5.2.1",
     "rich>=13.9.4",
-    "ruff==0.4.8",
     "scikit-learn>=1.6.1",
     "starlette>=0.41.3",
     "semantic-kernel>=1.19.0",
@@ -114,7 +113,11 @@ dependencies = [
     "modulegraph>=0.19.6",
     "macholib>=1.16.3",
     "py2app>=0.28.8",
-]
+    # Additional development dependencies
+    "black>=24.10.0", # Code formatter
+    "isort>=5.13.2", # Import sorter
+    "ruff>=0.5.3",
+]  # Fix closing bracket for dependencies
 
 [project.urls]
 Homepage = "https://github.com/qredence/agenticfleet"
@@ -265,7 +268,7 @@ ignore = [
 [project.optional-dependencies]
 dev = [
     # Linting and Code Quality
-    "ruff>=0.2.1",
+    "ruff>=0.5.3",
     "black>=24.1.1",
     "isort>=5.13.2",
     "mypy>=1.8.0",

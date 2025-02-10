@@ -1,0 +1,105 @@
+## OpenAI Models
+openai:
+  provider: "autogen_ext.models.openai.OpenAIChatCompletionClient"
+  config:
+    model: "${OPENAI_MODEL}"
+    api_key: "${OPENAI_API_KEY}"
+
+
+## Azure Models
+
+azure:
+  provider: "autogen_ext.models.openai.AzureOpenAIChatCompletionClient"
+  config:
+    model: "${AZURE_OPENAI_MODEL}"
+    azure_endpoint: "${AZURE_OPENAI_ENDPOINT}"
+    azure_deployment: "${AZURE_OPENAI_DEPLOYMENT}"
+    api_version: "${AZURE_OPENAI_API_VERSION}"
+    api_key: "${AZURE_OPENAI_API_KEY}"
+
+## Google Gemini Models
+gemini:
+  provider: "autogen_ext.models.openai.OpenAIChatCompletionClient"
+  config:
+    model: "${GEMINI_MODEL}"
+    base_url: "https://generativelanguage.googleapis.com/v1beta/openai/"
+    api_key: "${GEMINI_API_KEY}"
+    model_info:
+      vision: true
+      function_calling: true
+      json_output: true
+      family: "unknown"
+
+
+gemini_streaming:
+  provider: "autogen_ext.models.openai.OpenAIChatCompletionClient"
+  config:
+    model: "${GEMINI_MODEL}"
+    base_url: "https://generativelanguage.googleapis.com/v1beta/openai/"
+    api_key: "${GEMINI_API_KEY}"
+    model_info:
+      vision: true
+      function_calling: true
+      json_output: true
+      family: "unknown"
+    stream: true
+
+
+gemini_function:
+  provider: "autogen_ext.models.openai.OpenAIChatCompletionClient"
+  config:
+    model: "${GEMINI_MODEL}"
+    base_url: "https://generativelanguage.googleapis.com/v1beta/openai/"
+    api_key: "${GEMINI_API_KEY}"
+    model_info:
+      vision: true
+      function_calling: true
+      json_output: true
+      family: "unknown"
+      tools:
+        - type: function
+          function:
+            name: get_weather
+            description: Get the weather in a given location
+            parameters:
+              type: object
+              properties:
+                location:
+                  type: string
+                  description: The city and state, e.g. Chicago, IL
+                unit:
+                  type: string
+                  enum:
+                    - celsius
+                    - fahrenheit
+              required:
+                - location
+                - unit
+            response:
+              type: object
+              properties:
+                temperature:
+                  type: number
+                  description: The temperature in the requested unit
+                conditions:
+                  type: string
+                  description: A description of the weather conditions
+
+gemini_structured:
+  provider: "autogen_ext.models.openai.OpenAIChatCompletionClient"
+  config:
+    model: "${GEMINI_MODEL}"
+    base_url: "https://generativelanguage.googleapis.com/v1beta/openai/"
+    api_key: "${GEMINI_API_KEY}"
+    model_info:
+      vision: true
+      function_calling: true
+      json_output: true
+      family: "unknown"
+    response_format: |
+      class CalendarEvent(BaseModel):
+          name: str
+          date: str
+          participants: list[str]
+
+

@@ -1,10 +1,8 @@
-version: '3.8'
-
 services:
   agenticfleet:
     build:
-      context: .
-      dockerfile: .devcontainer/Dockerfile
+      context: ..
+      dockerfile: Dockerfile
       args:
         # Build arguments - can be overridden via .env or command line
         VERSION: ${VERSION:-0.4.71}
@@ -19,13 +17,10 @@ services:
         GEMINI_API_KEY: ${GEMINI_API_KEY}
         DEEPSEEK_API_KEY: ${DEEPSEEK_API_KEY}
         COGCACHE_API_KEY: ${COGCACHE_API_KEY}
-    
     image: qredenceai/agenticfleet:${TAG:-latest}  # Updated Docker Hub username
     container_name: agenticfleet
-    
     env_file:
       - .env
-    
     environment:
       - PYTHONUNBUFFERED=1
       - PYTHONPATH=/workspace
@@ -35,24 +30,19 @@ services:
       - CHAINLIT_HOST=localhost
       - CHAINLIT_PORT=8001
       - CHAINLIT_AUTH_SECRET=${CHAINLIT_AUTH_SECRET:-password}
-    
     volumes:
       - .:/workspace
       - ./.env:/workspace/.env:ro
       - chainlit-cache:/workspace/.cache/chainlit
-    
     ports:
       - "8001:8001"
-    
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8001/health"]
       interval: 30s
       timeout: 10s
       retries: 3
       start_period: 40s
-    
     restart: unless-stopped
-    
     deploy:
       resources:
         limits:
@@ -61,6 +51,5 @@ services:
         reservations:
           cpus: '1'
           memory: 2G
-
 volumes:
   chainlit-cache:

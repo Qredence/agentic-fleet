@@ -12,17 +12,19 @@ RUN apk add --no-cache \
     nodejs \
     npm
 
-# Set the working directory to where app.py and cli.py are located
-WORKDIR /src/agentic_fleet
+# Set the working directory
+WORKDIR /workspace
 
 # Copy the entire application code into the working directory
-COPY . .
+COPY . /workspace/
 
 # Install Python dependencies (excluding dev and test)
 RUN pip install --upgrade pip && \
     pip install hatch && \
     pip install . && \
-    pip install playwright
+    pip install playwright && \
+    pip install --no-cache-dir build
+
 # Install Playwright dependencies and Chromium
 RUN npx playwright install-deps && \
     npx playwright install chromium
@@ -41,8 +43,8 @@ ENV CHAINLIT_PORT=8001
 # Expose port
 EXPOSE 8001
 
-# Copy entrypoint script from the correct path
-COPY ../scripts/docker-entrypoint.sh /usr/local/bin/
+# Copy entrypoint script
+COPY scripts/docker-entrypoint.sh /usr/local/bin/
 RUN chmod +x /usr/local/bin/docker-entrypoint.sh
 ENTRYPOINT ["docker-entrypoint.sh"]
 
