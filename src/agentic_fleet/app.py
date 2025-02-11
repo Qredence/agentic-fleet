@@ -9,6 +9,8 @@ import re
 import time
 from typing import Any, AsyncGenerator, Dict, List, Optional, Union
 
+import chainlit as cl
+
 # AutoGen imports
 from autogen_agentchat.agents import CodeExecutorAgent
 from autogen_agentchat.base import TaskResult
@@ -25,6 +27,7 @@ from autogen_ext.agents.web_surfer import MultimodalWebSurfer
 from autogen_ext.code_executors.local import LocalCommandLineCodeExecutor
 from autogen_ext.models.openai import AzureOpenAIChatCompletionClient
 
+# Removed erroneous import from cbainlit as it is not available.
 # Third-party imports
 from dotenv import load_dotenv
 
@@ -50,6 +53,7 @@ from agentic_fleet.backend.chainlit_components.chat_settings import (
     DEFAULT_START_PAGE,
     ChatSettings,
 )
+from agentic_fleet.backend.chainlit_components.supabase_auth import SupabaseAuth
 
 # Initialize logging
 logging.basicConfig(level=logging.INFO)
@@ -58,9 +62,11 @@ logger = logging.getLogger(__name__)
 # Load environment variables
 load_dotenv()
 
+
 # Constants
 STREAM_DELAY = 0.01
-
+PORT = int(os.getenv("PORT", "8001"))
+HOST = os.getenv("HOST", "localhost")
 
 async def stream_text(text: str) -> AsyncGenerator[str, None]:
     """Stream text content word by word.
@@ -93,6 +99,9 @@ az_model_client = AzureOpenAIChatCompletionClient(
 )
 
 
+# Initialize Supabase Auth
+supabase_auth = SupabaseAuth()
+
 # OAuth configuration - only define callback if OAuth is enabled
 if os.getenv("USE_OAUTH", "false").lower() == "true":
     @oauth_callback
@@ -102,7 +111,7 @@ if os.getenv("USE_OAUTH", "false").lower() == "true":
         raw_user_data: Dict[str, str],
         default_user: User,
     ) -> User:
-        """Handle OAuth authentication callback.
+        """Handle OAuth authentication callback using Supabase.
 
         Args:
             provider_id: OAuth provider identifier
@@ -113,34 +122,7 @@ if os.getenv("USE_OAUTH", "false").lower() == "true":
         Returns:
             Updated user object
         """
-        try:
-            # GitHub OAuth integration
-            if provider_id == "github":
-                client_id = os.getenv("OAUTH_GITHUB_CLIENT_ID")
-                client_secret = os.getenv("OAUTH_GITHUB_CLIENT_SECRET")
-
-                if not (client_id and client_secret):
-                    logger.warning("GitHub OAuth configuration incomplete")
-                    return default_user
-
-                # You can customize the user based on GitHub data
-                username = raw_user_data.get("login", "")
-                name = raw_user_data.get("name", "")
-                email = raw_user_data.get("email", "")
-
-                logger.info(f"Authenticated GitHub user: {username}")
-                return User(
-                    identifier=username,
-                    metadata={"name": name, "email": email, "provider": "github"},
-                )
-
-            # Default fallback
-            logger.warning(f"Unsupported OAuth provider: {provider_id}")
-            return default_user
-
-        except Exception as e:
-            logger.error(f"OAuth callback error: {str(e)}")
-            return default_user
+        return await supabase_auth.handle_callback(token, raw_user_data, default_user)
 
 
 @on_settings_update
@@ -156,8 +138,12 @@ async def update_settings(settings: Dict[str, Union[int, str]]) -> None:
     user_session.set("max_stalls", settings.get("max_stalls", DEFAULT_MAX_STALLS))
     user_session.set("start_page", settings.get("start_page", DEFAULT_START_PAGE))
 
+@cl.on_chat_start
+async def on_chat_start():
+    """Initialize the chat session when a new chat starts."""
+    await initialize_session()
 
-@on_chat_start
+
 async def initialize_session() -> None:
     """Initialize user session and set up agent team."""
     try:
@@ -203,6 +189,8 @@ async def initialize_session() -> None:
 
         for directory in [workspace_dir, debug_dir, files_dir]:
             os.makedirs(directory, exist_ok=True)
+
+
 
         try:
             # Initialize specialized agents
@@ -453,7 +441,7 @@ def extract_steps_from_content(content: str) -> List[str]:
             line = line.strip()
             if line.startswith(("- ", "* ")):
                 # Remove the bullet point and clean up
-                step = line[2:].strip()
+                step = line[2:].trip()
                 if step:
                     # Remove markdown formatting and extra whitespace
                     step = re.sub(r"\*\*|\`\`\`|\*", "", step)
@@ -588,7 +576,7 @@ async def cleanup() -> None:
     try:
         # Get the team from session
         team = user_session.get("team")
-        if team:
+        if team and hasattr(team, 'cleanup') and callable(getattr(team, 'cleanup')):
             # Clean up team resources
             await team.cleanup()
 
