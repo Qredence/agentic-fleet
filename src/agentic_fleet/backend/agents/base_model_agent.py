@@ -3,7 +3,8 @@ Base model agent using Pydantic, following the general structure of AutoGen agen
 """
 
 import logging
-from typing import Optional, Any
+from typing import Any, Optional
+
 from pydantic import BaseModel
 
 

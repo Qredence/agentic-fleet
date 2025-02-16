@@ -12,7 +12,6 @@ from .providers import (
     AzureOpenAIClient,
     DeepSeekClient,
     GeminiClient,
-    OllamaClient,
     OpenAIClient,
 )
 
@@ -22,7 +21,6 @@ class ModelProvider(Enum):
     OPENAI = auto()
     AZURE_OPENAI = auto()
     GEMINI = auto()
-    OLLAMA = auto()
     DEEPSEEK = auto()
     AZURE_AI_FOUNDRY = auto()
 
@@ -34,7 +32,6 @@ class ModelFactory:
         ModelProvider.OPENAI: OpenAIClient,
         ModelProvider.AZURE_OPENAI: AzureOpenAIClient,
         ModelProvider.GEMINI: GeminiClient,
-        ModelProvider.OLLAMA: OllamaClient,
         ModelProvider.DEEPSEEK: DeepSeekClient,
         ModelProvider.AZURE_AI_FOUNDRY: AzureAIFoundryClient,
     }

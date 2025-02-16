@@ -40,14 +40,12 @@ dependencies = [
     "python-multipart>=0.0.6",
     "requests>=2.32.3",
     # AI/ML Infrastructure
-    "autogen-agentchat>=0.4.5,<0.5.0",
-    "autogen-core>=0.4.5,<0.5.0",
-    "autogen-ext[docker]>=0.4.5,<0.5.0",
-    "autogen-ext[langchain]>=0.4.5,<0.5.0",
-    "autogen-ext[magentic-one]>=0.4.5,<0.5.0",
-    "autogen-ext[openai,azure]>=0.4.5,<0.5.0",
-    "autogen-ext[web-surfer]>=0.4.5,<0.5.0",
-    "autogen-ext[diskcache]>=0.4.5,<0.5.0",
+    "autogen-agentchat>=0.4.7,<0.5.0",
+    "autogen-core>=0.4.7,<0.5.0",
+    "autogen-ext[langchain,mcp,docker]>=0.4.7,<0.5.0",
+    "autogen-ext[magentic-one,web-surfer,file-surfer,video-surfer]>=0.4.7,<0.5.0",
+    "autogen-ext[openai,azure]>=0.4.7,<0.5.0",
+    "autogen-ext[diskcache]>=0.4.7,<0.5.0",
     # Model Providers
     "composio-core>=0.6.11.post1",
     "deepseek>=0.1.0", # For DeepSeek
@@ -78,7 +76,7 @@ dependencies = [
     # Web & Utilities
     "beautifulsoup4>=4.12.0",
     "bing>=0.31",
-    "chainlit>=2.2.0",
+    "chainlit>=2.2.1",
     "docker>=7.1.0",
     "markitdown>=0.0.1a3",
     "opentelemetry-instrumentation-fastapi>=0.44b0",

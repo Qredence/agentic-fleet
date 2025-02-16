@@ -6,7 +6,7 @@ that can adapt and reason about complex tasks. It integrates with Chainlit for t
 and FastAPI for the backend, providing a seamless development experience.
 """
 
-__version__ = "0.4.73"
+__version__ = "0.4.78"
 __author__ = "Qredence"
 __email__ = "contact@qredence.ai"
 __license__ = "Apache 2.0"
@@ -20,6 +20,18 @@ except PackageNotFoundError:
     # Package is not installed
     pass
 
-# Expose key components at package level
-from .app import handle_message, initialize_session, update_settings  # noqa: F401
-from .cli import cli  # noqa: F401
+# Core application imports
+from agentic_fleet.core.application import (
+    TEAM_CONFIGURATIONS,
+    create_chat_profile,
+    create_chat_profile_with_code_execution,
+    stream_text,
+)
+
+# Expose key components
+__all__ = [
+    'create_chat_profile',
+    'create_chat_profile_with_code_execution',
+    'stream_text',
+    'TEAM_CONFIGURATIONS'
+]

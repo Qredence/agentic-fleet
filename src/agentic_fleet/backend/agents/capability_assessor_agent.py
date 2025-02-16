@@ -4,11 +4,13 @@ assessing whether the available agents and tools can fulfill the requirements of
 """
 
 import logging
-from typing import Sequence, Dict, Any, Optional
+from typing import Any, Dict, Optional, Sequence
+
 from autogen_agentchat.agents import BaseChatAgent
 from autogen_agentchat.base import Response
 from autogen_agentchat.messages import ChatMessage, TextMessage
 from autogen_core import CancellationToken
+
 
 class CapabilityAssessorAgent(BaseChatAgent):
     """

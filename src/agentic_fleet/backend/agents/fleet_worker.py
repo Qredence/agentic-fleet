@@ -2,7 +2,7 @@ import logging
 
 from autogen_agentchat.agents import CodeExecutorAgent
 
-from agentic_fleet.agents.base_model_agent import BaseModelAgent
+from agentic_fleet.backend.agents.base_model_agent import BaseModelAgent
 
 
 class FleetWorker(BaseModelAgent, CodeExecutorAgent):

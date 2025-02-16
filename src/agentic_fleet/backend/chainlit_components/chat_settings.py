@@ -62,9 +62,7 @@ class ChatSettings:
         self.inputs = inputs
 
     def settings(self):
-        return dict(
-            [(input_widget.id, input_widget.initial) for input_widget in self.inputs]
-        )
+        return {input_widget.id: input_widget.initial for input_widget in self.inputs}
 
     async def send(self):
         settings = self.settings()

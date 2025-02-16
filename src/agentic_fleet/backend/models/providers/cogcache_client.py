@@ -14,11 +14,11 @@ from enum import Enum
 from typing import Any, AsyncGenerator, Dict, List, Optional, Union
 
 import aiohttp
+from autogen_core.models import LLMMessage, UserMessage
 from pydantic import BaseModel, Field
 from tenacity import retry, stop_after_attempt, wait_exponential
 
-from autogen_core.models import BaseProvider, Message, UserMessage
-from agentic_fleet.models.base import BaseModelInfo
+from agentic_fleet.backend.models.base import BaseModelInfo, BaseProvider
 
 logger = logging.getLogger(__name__)
 
@@ -193,7 +193,7 @@ class CogCacheClient(BaseProvider):
     )
     async def generate(
         self,
-        prompt: Union[str, List[Message]],
+        prompt: Union[str, List[LLMMessage]],
         temperature: float = 0.7,
         max_tokens: Optional[int] = None,
         cache_ttl: Optional[int] = None,
@@ -256,7 +256,7 @@ class CogCacheClient(BaseProvider):
 
     async def stream(
         self,
-        prompt: Union[str, List[Message]],
+        prompt: Union[str, List[LLMMessage]],
         temperature: float = 0.7,
         cache_ttl: Optional[int] = None,
         **kwargs: Any

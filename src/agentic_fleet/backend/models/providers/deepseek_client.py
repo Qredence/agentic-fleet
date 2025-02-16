@@ -13,10 +13,11 @@ from enum import Enum
 from typing import Any, AsyncGenerator, Dict, List, Optional, Union
 
 import aiohttp
+from autogen_core.models import LLMMessage, UserMessage
+from autogen_ext.models.openai import OpenAIChatCompletionClient
 from tenacity import retry, stop_after_attempt, wait_exponential
 
-from autogen_core.models import BaseProvider, Message, UserMessage
-from autogen_ext.models.openai import OpenAIChatCompletionClient
+from agentic_fleet.backend.models.base import BaseModelInfo, BaseProvider
 
 logger = logging.getLogger(__name__)
 
@@ -154,7 +155,7 @@ class DeepSeekClient(BaseProvider):
             "Authorization": f"Bearer {self.api_key}",
         }
 
-    def _format_messages(self, messages: List[Message]) -> List[Dict[str, str]]:
+    def _format_messages(self, messages: List[LLMMessage]) -> List[Dict[str, str]]:
         """Format messages for the API."""
         formatted = []
         for msg in messages:
@@ -169,7 +170,7 @@ class DeepSeekClient(BaseProvider):
     )
     async def generate(
         self, 
-        prompt: Union[str, List[Message]], 
+        prompt: Union[str, List[LLMMessage]], 
         temperature: float = 0.7,
         max_tokens: Optional[int] = None,
         **kwargs: Any
@@ -232,7 +233,7 @@ class DeepSeekClient(BaseProvider):
 
     async def stream(
         self, 
-        prompt: Union[str, List[Message]], 
+        prompt: Union[str, List[LLMMessage]], 
         temperature: float = 0.7,
         **kwargs: Any
     ) -> AsyncGenerator[str, None]:

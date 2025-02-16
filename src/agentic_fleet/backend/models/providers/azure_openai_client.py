@@ -16,7 +16,7 @@ from azure.core.exceptions import AzureError
 from azure.identity import DefaultAzureCredential
 from tenacity import retry, stop_after_attempt, wait_exponential
 
-from agentic_fleet.models.providers.base import BaseProvider
+from agentic_fleet.backend.models.base import BaseProvider
 
 logger = logging.getLogger(__name__)
 

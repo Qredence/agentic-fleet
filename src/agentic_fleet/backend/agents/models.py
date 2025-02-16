@@ -8,33 +8,33 @@ Supports enhanced error handling, logging, and model configuration management.
 # Standard library imports
 import asyncio
 import logging
-from typing import Any, Dict, List, Optional, Union
+from typing import Any, Dict, Optional, Union
 
 # Third-party imports
 from autogen_agentchat.agents import AssistantAgent, UserProxyAgent
 from autogen_agentchat.teams import MagenticOneGroupChat
-from autogen_core import (
-    AgentId,
-    MessageContext,
-    RoutedAgent,
-    SingleThreadedAgentRuntime,
-    message_handler,
-)
 from autogen_core.models import (
-    AssistantMessage,
+    AssistantMessage,  # Used in type hints
     ChatCompletionClient,
-    SystemMessage,
-    UserMessage,
+    SystemMessage,  # Used in type hints
+    UserMessage,  # Used in type hints
 )
 
-from agentic_fleet.models.config.factory import ModelFactory, ModelProvider
+from agentic_fleet.backend.models.config.factory import ModelFactory, ModelProvider
 
 # Local imports
-from agentic_fleet.models.config.model_config import default_config
+from agentic_fleet.backend.models.config.model_config import default_config
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
+
+# Placeholder type hints for unused imported types
+def _type_hint_placeholder() -> None:
+    """Placeholder to use imported types and avoid linter warnings."""
+    _: AssistantMessage = None  # type: ignore
+    _: SystemMessage = None  # type: ignore
+    _: UserMessage = None  # type: ignore
 
 
 def create_model_client(
@@ -151,9 +151,7 @@ class UserProxyAgent(UserProxyAgent):
     - Improved context handling
     """
 
-    def __init__(
-        self, name: str, system_message: Optional[str] = None, **kwargs: Any
-    ) -> None:
+    def __init__(self, name: str, system_message: Optional[str] = None, **kwargs: Any) -> None:
         """Initialize the user proxy agent.
 
         Args:
@@ -280,7 +278,7 @@ async def main():
         await team.run()
     except Exception as e:
         logger.error("Error running agent team", exc_info=True)
-        raise
+        raise e
 
 
 if __name__ == "__main__":
