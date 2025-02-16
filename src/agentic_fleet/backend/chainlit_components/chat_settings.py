@@ -12,6 +12,9 @@ from agentic_fleet.config import (
     DEFAULT_MAX_STALLS,
     DEFAULT_MAX_TIME,
     DEFAULT_START_PAGE,
+    DEFAULT_TEMPERATURE,
+    DEFAULT_SYSTEM_PROMPT,
+    config_manager
 )
 
 
@@ -24,6 +27,17 @@ class ChatSettings:
 
     def __init__(self) -> None:
         """Initialize chat settings with default configuration."""
+        # Get model configuration
+        model_config = config_manager.get_model_settings("azure")
+        available_models = [
+            {"label": model.get("name", "").upper(), "value": model.get("name", "")}
+            for model in model_config.get("models", {}).values()
+        ] or [
+            {"label": "O3-Mini", "value": "o3-mini"},
+            {"label": "GPT-4O-Mini", "value": "gpt-4o-mini"},
+            {"label": "GPT-3.5 Turbo", "value": "gpt-3.5-turbo"}
+        ]
+
         self.inputs = [
             # Fleet Configuration
             cl.Select(
@@ -69,17 +83,13 @@ class ChatSettings:
                 id="model_name",
                 label="Model",
                 value="o3-mini",
-                items=[
-                    {"label": "O3-Mini", "value": "o3-mini"},
-                    {"label": "GPT-4O-Mini", "value": "gpt-4o-mini"},
-                    {"label": "GPT-3.5 Turbo", "value": "gpt-3.5-turbo"}
-                ],
+                items=available_models,
                 description="Language model to use",
             ),
             cl.Slider(
                 id="temperature",
                 label="Temperature",
-                value=0.7,
+                value=DEFAULT_TEMPERATURE,
                 min=0.0,
                 max=2.0,
                 step=0.1,
@@ -88,7 +98,7 @@ class ChatSettings:
             cl.TextInput(
                 id="system_prompt",
                 label="System Prompt",
-                value="You are a helpful AI assistant.",
+                value=DEFAULT_SYSTEM_PROMPT,
                 description="Base prompt for the AI model",
             ),
             # Web Navigation
@@ -146,10 +156,14 @@ class ChatSettings:
 
     def get_model_config(self) -> Dict[str, Any]:
         """Get configuration specific to the model."""
+        model_settings = config_manager.get_model_settings(
+            "azure", self._settings["model_name"]
+        )
         return {
             "model": self._settings["model_name"],
             "temperature": self._settings["temperature"],
             "system_prompt": self._settings["system_prompt"],
+            **model_settings
         }
 
     def get_web_config(self) -> Dict[str, Any]:
