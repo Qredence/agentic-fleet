@@ -77,6 +77,8 @@ Before starting AgenticFleet, install the package using the `uv` package manager
 
 ```bash
 uv pip install agentic-fleet
+uv pip install playwright
+playwright install --with-deps chromium
 ```
 
 Then, set up your environment:

@@ -8,7 +8,7 @@ type = "oauth"
 
 [project.oauth]
 enabled = true
-providers = ["github", "google"]
+providers = ["github"]
 client_id = "OAUTH_GITHUB_CLIENT_ID"
 client_secret = "OAUTH_GITHUB_CLIENT_SECRET"
 
@@ -19,94 +19,58 @@ redirect_uri = "http://localhost:8000/auth/callback"
 client_id = "OAUTH_GITHUB_CLIENT_ID"
 client_secret = "OAUTH_GITHUB_CLIENT_SECRET"
 
-[project.oauth.google]
-prompt = "login"
-consent = "consent"
-client_id = "OAUTH_GOOGLE_CLIENT_ID"
-client_secret = "OAUTH_GOOGLE_CLIENT_SECRET"
-redirect_uri = "http://localhost:8000/auth/callback"
-
-
 # List of environment variables to be provided by each user to use the app.
 user_env = []
 
-# Duration (in seconds) during which the session is saved when the connection is lost
-session_timeout = 3600
 
-# Force consent prompt for all providers
-OAUTH_PROMPT = "consent"
-
-# Duration (in seconds) of the user session expiry
-user_session_timeout = 1296000  # 15 days
-
-# Enable third parties caching (e.g LangChain cache)
-cache = false
-
-# Authorized origins
-allow_origins = ["http://localhost:8000"]
-
-[features]
-# Process and display HTML in messages
-unsafe_allow_html = false
-
-# Process and display mathematical expressions
-latex = false
-
-# Automatically tag threads with the current chat profile
-auto_tag_thread = true
-
-# Allow users to edit their own messages
-edit_message = true
-
-# Authorize users to spontaneously upload files with messages
 [features.spontaneous_file_upload]
     enabled = true
     accept = ["*/*"]
     max_files = 20
     max_size_mb = 500
-
-[features.audio]
-    # Sample rate of the audio
-    sample_rate = 24000
+auto_tag_thread = true
 
 [UI]
-# Name of the assistant.
+# Name of the app and chatbot.
 name = "AgenticFleet"
-description = "AI Agent Fleet Management"
+# Description of the app and chatbot.
+description = "A multi-agent system for adaptive AI reasoning"
+# The default value for the expand messages settings.
+default_expand_messages = false
+# Hide the chain of thought details from the user.
+hide_cot = false
+# Enable dark mode.
+dark_mode = true
+# Show the copy button on messages.
+show_copy_button = true
+custom_css = "public/css/custom.css"
 
-default_theme = "light"
 
-# layout = "wide" 
+[features]
+# Enable the multi-modal file upload feature.
+multi_modal = true
+# Enable the speech to text feature.
+speech_to_text = false
+# Enable the file Q&A feature.
+file_qa = true
+edit_message = true
+unsafe_allow_html = false
+latex = false
 
-# Description of the assistant. This is used for HTML tags.
-# description = ""
+[oauth]
+# Enable OAuth web application flow.
+enable_oauth = true
 
-# Chain of Thought (CoT) display mode. Can be "hidden", "tool_call" or "full".
-cot = "full"
-
-# Link to your github repo. This will add a github button in the UI's header.
-github = "https://github.com/Qredence/AgenticFleet"
-
-# Specify a CSS file that can be used to customize the user interface.
-# The CSS file can be served from the public directory or via an external link.
-custom_css = "/public/custom.css"
-
-# Specify a Javascript file that can be used to customize the user interface.
-# The Javascript file can be served from the public directory.
-# custom_js = "/public/test.js"
-
-# Specify a custom meta image url.
-# custom_meta_image_url = "https://chainlit-cloud.s3.eu-west-3.amazonaws.com/logo/chainlit_banner.png"
-
-# Specify a custom build directory for the frontend.
-# This can be used to customize the frontend code.
-# Be careful: If this is a relative path, it should not start with a slash.
-# custom_build = "./public/build"
+# GitHub OAuth provider
+[[oauth.providers]]
+name = "github"
+client_id = "OAUTH_GITHUB_CLIENT_ID"
+client_secret = "OAUTH_GITHUB_CLIENT_SECRET"
+authorize_url = "https://github.com/login/oauth/authorize"
+access_token_url = "https://github.com/login/oauth/access_token"
+userinfo_url = "https://api.github.com/user"
+scope = ["user:email"]
 
 [meta]
-generated_by = "2.2.1"
-
-[server]
-port = 8000
-host = "localhost"
-
+generated_by = "AgenticFleet"
+version = "0.4.80"

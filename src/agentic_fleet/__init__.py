@@ -20,18 +20,44 @@ except PackageNotFoundError:
     # Package is not installed
     pass
 
+# Initialize configuration
+from agentic_fleet.config import config_manager
+config_manager.load_all()
+
 # Core application imports
 from agentic_fleet.core.application import (
-    TEAM_CONFIGURATIONS,
+    ApplicationManager,
+    create_application,
     create_chat_profile,
     create_chat_profile_with_code_execution,
     stream_text,
 )
 
+# Configuration imports
+from agentic_fleet.config import (
+    DEFAULT_MAX_ROUNDS,
+    DEFAULT_MAX_STALLS,
+    DEFAULT_MAX_TIME,
+    DEFAULT_START_PAGE,
+    DEFAULT_TEMPERATURE,
+    DEFAULT_SYSTEM_PROMPT,
+)
+
 # Expose key components
 __all__ = [
+    # Core components
+    'ApplicationManager',
+    'create_application',
     'create_chat_profile',
     'create_chat_profile_with_code_execution',
     'stream_text',
-    'TEAM_CONFIGURATIONS'
+    
+    # Configuration
+    'config_manager',
+    'DEFAULT_MAX_ROUNDS',
+    'DEFAULT_MAX_STALLS',
+    'DEFAULT_MAX_TIME',
+    'DEFAULT_START_PAGE',
+    'DEFAULT_TEMPERATURE',
+    'DEFAULT_SYSTEM_PROMPT',
 ]

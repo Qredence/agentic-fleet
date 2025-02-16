@@ -14,76 +14,52 @@ from autogen_ext.code_executors.local import LocalCommandLineCodeExecutor
 from autogen_ext.models.openai import AzureOpenAIChatCompletionClient
 from dotenv import load_dotenv
 
-from agentic_fleet.backend.application_manager import ApplicationManager
 from agentic_fleet.backend.chainlit_components.chat_settings import ChatSettings
-from agentic_fleet.config import Settings
-
+from agentic_fleet.config import (
+    config_manager,
+    DEFAULT_MAX_ROUNDS,
+    DEFAULT_MAX_STALLS,
+    DEFAULT_START_PAGE,
+)
 
 class AgentInitializationError(Exception):
     """Exception raised when agent initialization fails."""
     pass
 
-
+# Initialize configuration
 load_dotenv()
+config_manager.load_all()
 logger = logging.getLogger(__name__)
 
-# Team configurations for different use cases
-TEAM_CONFIGURATIONS = {
-    "default": {
-        "name": "Default Team",
-        "description": "General-purpose agent team with web, file, and code capabilities",
-        "agents": ["WebSurfer", "FileSurfer", "Coder", "Executor"],
-        "max_rounds": 50,
-        "max_stalls": 5,
-    },
-    "code_focused": {
-        "name": "Code Team",
-        "description": "Team focused on code generation and execution",
-        "agents": ["FileSurfer", "Coder", "Executor"],
-        "max_rounds": 30,
-        "max_stalls": 3,
-    },
-    "research": {
-        "name": "Research Team",
-        "description": "Team focused on web research and information gathering",
-        "agents": ["WebSurfer", "FileSurfer"],
-        "max_rounds": 40,
-        "max_stalls": 4,
-    },
-}
-
+# Load team configurations from fleet config
+TEAM_CONFIGURATIONS = config_manager.get_team_settings("magentic_fleet_one").get("teams", {})
 
 def create_chat_profile(
-    settings: Optional[Settings] = None,
     team_config: str = "default",
     model_client: Optional[AzureOpenAIChatCompletionClient] = None,
 ) -> Dict[str, Any]:
     """Create a chat profile with specified configuration.
 
     Args:
-        settings: Application settings
         team_config: Team configuration key
         model_client: Azure OpenAI model client
 
     Returns:
         Dict containing chat profile configuration
     """
-    settings = settings or Settings()
     config = TEAM_CONFIGURATIONS.get(team_config, TEAM_CONFIGURATIONS["default"])
 
     return {
         "name": config["name"],
         "description": config["description"],
-        "max_rounds": config["max_rounds"],
-        "max_stalls": config["max_stalls"],
+        "max_rounds": config.get("max_rounds", DEFAULT_MAX_ROUNDS),
+        "max_stalls": config.get("max_stalls", DEFAULT_MAX_STALLS),
         "model_client": model_client,
         "team_config": team_config,
     }
 
-
 def create_chat_profile_with_code_execution(
     workspace_dir: str,
-    settings: Optional[Settings] = None,
     team_config: str = "default",
     execution_timeout: int = 300,
 ) -> Dict[str, Any]:
@@ -91,32 +67,31 @@ def create_chat_profile_with_code_execution(
 
     Args:
         workspace_dir: Directory for code execution
-        settings: Application settings
         team_config: Team configuration key
         execution_timeout: Code execution timeout in seconds
 
     Returns:
         Dict containing chat profile with code execution configuration
     """
-    profile = create_chat_profile(settings, team_config)
+    profile = create_chat_profile(team_config)
     profile["workspace_dir"] = workspace_dir
     profile["execution_timeout"] = execution_timeout
     return profile
 
-
 class ApplicationManager:
     """Manages application lifecycle and resources."""
 
-    def __init__(self, settings: Settings):
+    def __init__(self, model_client: AzureOpenAIChatCompletionClient):
         """Initialize application manager.
 
         Args:
-            settings: Application settings
+            model_client: Azure OpenAI model client
         """
-        self.settings = settings
+        self.model_client = model_client
         self._initialized = False
         self.agent_team = None
         self.teams: Dict[str, MagenticOneGroupChat] = {}
+        self.settings = None
 
     async def start(self) -> None:
         """Start the application and initialize resources."""
@@ -168,11 +143,6 @@ class ApplicationManager:
             self.agent_team = await self.initialize_agent_team()
 
         try:
-            # Validate agent roles
-            if any(agent.role not in [self.settings.assistant_role, self.settings.coder_role] 
-                   for agent in self.agent_team.agents):
-                raise AgentInitializationError("Invalid agent role configuration")
-
             # Process message through agent team
             async for response in self.agent_team.process_chat(message):
                 yield response
@@ -188,16 +158,8 @@ class ApplicationManager:
             Configured agent team
         """
         try:
-            model_client = AzureOpenAIChatCompletionClient(
-                api_key=self.settings.AZURE_OPENAI_API_KEY,
-                api_version=self.settings.AZURE_OPENAI_API_VERSION,
-                azure_endpoint=self.settings.AZURE_OPENAI_ENDPOINT,
-                deployment_name=self.settings.AZURE_OPENAI_DEPLOYMENT,
-                model=self.settings.AZURE_OPENAI_MODEL,
-            )
-
-            # Create agent team using Magentic-One pattern
-            team = await self.create_agent_team(model_client)
+            # Create agent team using current model client
+            team = await self.create_agent_team(self.model_client)
             return team
 
         except Exception as e:
@@ -213,9 +175,57 @@ class ApplicationManager:
         Returns:
             Configured agent team
         """
-        # Implementation of agent team creation using Magentic-One pattern
-        # This will be implemented based on the specific requirements
-        pass
+        # Get agent configurations
+        agent_configs = config_manager.get_agent_settings("magentic_fleet_one")
+        
+        # Create agents based on configuration
+        agents = []
+        for agent_name, agent_config in agent_configs.get("agents", {}).items():
+            if agent_config["type"] == "MultimodalWebSurfer":
+                agents.append(
+                    MultimodalWebSurfer(
+                        name=agent_name,
+                        model_client=model_client,
+                        description=agent_config["description"],
+                        **agent_config.get("config", {})
+                    )
+                )
+            elif agent_config["type"] == "FileSurfer":
+                agents.append(
+                    FileSurfer(
+                        name=agent_name,
+                        model_client=model_client,
+                        description=agent_config["description"]
+                    )
+                )
+            elif agent_config["type"] == "MagenticOneCoderAgent":
+                agents.append(
+                    MagenticOneCoderAgent(
+                        name=agent_name,
+                        model_client=model_client,
+                        description=agent_config["description"],
+                        **agent_config.get("config", {})
+                    )
+                )
+            elif agent_config["type"] == "CodeExecutorAgent":
+                executor = LocalCommandLineCodeExecutor(**agent_config.get("executor_config", {}))
+                agents.append(
+                    CodeExecutorAgent(
+                        name=agent_name,
+                        code_executor=executor,
+                        description=agent_config["description"]
+                    )
+                )
+
+        # Create team with configured agents
+        team = MagenticOneGroupChat(
+            participants=agents,
+            model_client=model_client,
+            max_turns=DEFAULT_MAX_ROUNDS,
+            max_stalls=DEFAULT_MAX_STALLS,
+        )
+
+        return team
 
     async def create_team(
         self,
@@ -232,81 +242,59 @@ class ApplicationManager:
             Configured agent team
         """
         try:
+            team_config = config_manager.get_team_settings(profile.get("team_config", "default"))
             agents = []
-            config = TEAM_CONFIGURATIONS[profile.get("team_config", "default")]
 
-            for agent_type in config["agents"]:
-                if agent_type == "WebSurfer":
+            for agent_name in team_config.get("participants", []):
+                agent_config = config_manager.get_agent_settings(agent_name)
+                if not agent_config:
+                    continue
+
+                if agent_config["type"] == "MultimodalWebSurfer":
                     agents.append(
                         MultimodalWebSurfer(
-                            name="WebSurfer",
-                            model_client=model_client,
-                            description="Expert web surfer agent",
-                            start_page=self.settings.DEFAULT_START_PAGE,
-                            headless=True,
-                            debug_dir="./files/debug",
+                            name=agent_name,
+                            model_client=model_client or self.model_client,
+                            description=agent_config["description"],
+                            start_page=DEFAULT_START_PAGE,
+                            **agent_config.get("config", {})
                         )
                     )
-                elif agent_type == "FileSurfer":
+                elif agent_config["type"] == "FileSurfer":
                     agents.append(
                         FileSurfer(
-                            name="FileSurfer",
-                            model_client=model_client,
-                            description="Expert file system navigator",
+                            name=agent_name,
+                            model_client=model_client or self.model_client,
+                            description=agent_config["description"]
                         )
                     )
-                elif agent_type == "Coder":
+                elif agent_config["type"] == "MagenticOneCoderAgent":
                     agents.append(
                         MagenticOneCoderAgent(
-                            name="Coder",
-                            model_client=model_client,
-                            system_message="""
-                            You are a Principal Software Engineer. Your responsibilities include:
-                            - Writing production-grade code
-                            - Implementing best practices
-                            - Performing code reviews
-                            - Writing comprehensive tests
-                            - Documenting architectural decisions
-                            """,
-                            code_executor=LocalCommandLineCodeExecutor(
-                                work_dir=profile.get("workspace_dir", "./workspace"),
-                                timeout=profile.get("execution_timeout", 300),
-                            )
+                            name=agent_name,
+                            model_client=model_client or self.model_client,
+                            description=agent_config["description"],
+                            **agent_config.get("config", {})
                         )
                     )
-                elif agent_type == "Executor":
+                elif agent_config["type"] == "CodeExecutorAgent":
                     executor = LocalCommandLineCodeExecutor(
                         work_dir=profile.get("workspace_dir", "./workspace"),
-                        timeout=profile.get("execution_timeout", 300),
+                        timeout=profile.get("execution_timeout", 300)
                     )
                     agents.append(
                         CodeExecutorAgent(
-                            name="Executor",
+                            name=agent_name,
                             code_executor=executor,
-                            description="Expert code execution agent",
-                        )
-                    )
-                elif agent_type == "Assistant":
-                    agents.append(
-                        AssistantAgent(
-                            name="Assistant",
-                            model_client=model_client,
-                            system_message="""
-                            You are a Senior Solution Architect. Your responsibilities include:
-                            - Analyzing user requirements
-                            - Validating technical feasibility
-                            - Coordinating with coding agent
-                            - Ensuring security best practices
-                            - Communicating solutions to users
-                            """
+                            description=agent_config["description"]
                         )
                     )
 
             team = MagenticOneGroupChat(
                 participants=agents,
-                model_client=model_client,
-                max_turns=profile.get("max_rounds", 50),
-                max_stalls=profile.get("max_stalls", 5),
+                model_client=model_client or self.model_client,
+                max_turns=profile.get("max_rounds", DEFAULT_MAX_ROUNDS),
+                max_stalls=profile.get("max_stalls", DEFAULT_MAX_STALLS),
             )
 
             team_id = f"{profile['team_config']}_{len(self.teams)}"
@@ -325,19 +313,28 @@ class ApplicationManager:
             except Exception as e:
                 logger.error(f"Error during team cleanup: {str(e)}")
 
+    def add_cleanup_handler(self, handler: callable) -> None:
+        """Add a cleanup handler to be called during application shutdown.
 
-async def create_application(settings: Optional[Settings] = None) -> ApplicationManager:
+        Args:
+            handler: Cleanup handler function
+        """
+        # Store cleanup handler for later use
+        self._cleanup_handlers = getattr(self, '_cleanup_handlers', [])
+        self._cleanup_handlers.append(handler)
+
+async def create_application(model_client: AzureOpenAIChatCompletionClient) -> ApplicationManager:
     """Create and initialize application manager.
 
     Args:
-        settings: Application settings
+        model_client: Azure OpenAI model client
 
     Returns:
         Initialized application manager
     """
-    app = ApplicationManager(settings)
+    app = ApplicationManager(model_client)
+    await app.start()
     return app
-
 
 async def stream_text(text: str) -> List[str]:
     """Stream text content word by word.
