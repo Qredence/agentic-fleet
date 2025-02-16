@@ -5,16 +5,14 @@ openai:
     model: "${OPENAI_MODEL}"
     api_key: "${OPENAI_API_KEY}"
 
-
 ## Azure Models
-
 azure:
   provider: "autogen_ext.models.openai.AzureOpenAIChatCompletionClient"
   config:
     model: "${AZURE_OPENAI_MODEL}"
     azure_endpoint: "${AZURE_OPENAI_ENDPOINT}"
     azure_deployment: "${AZURE_OPENAI_DEPLOYMENT}"
-    api_version: "${AZURE_OPENAI_API_VERSION}"  
+    api_version: "${AZURE_OPENAI_API_VERSION}"
     api_key: "${AZURE_OPENAI_API_KEY}"
     model_info:
       vision: true
@@ -107,9 +105,10 @@ gemini_structured:
           date: str
           participants: list[str]
 
+
 model_settings:
   azure_openai:
-    deployment_name: 
+    deployment_name:
       default: "o3-mini"
       description: "Azure OpenAI deployment name"
       type: string
@@ -151,6 +150,10 @@ model_settings:
       editable: true
       min: 1
       max: 10
+
+    system_prompts:
+      web_surfer: "Expert web navigation agent responsible for:\n    1. Processing and analyzing web content\n    2. Navigating complex web structures\n    3. Extracting relevant information accurately"
+      code_executor: "Code execution specialist handling:\n    1. Safe code execution\n    2. Execution monitoring\n    3. Workspace maintenance"
 
   web_navigation:
     start_page:

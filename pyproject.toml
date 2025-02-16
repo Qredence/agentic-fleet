@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "agentic-fleet"
-version = "0.4.78"
+version = "0.4.80"
 description = "A powerful multi-agent system for adaptive AI reasoning and automation"
 readme = "README.md"
 requires-python = ">=3.10"
@@ -115,6 +115,15 @@ dependencies = [
     "black>=24.10.0", # Code formatter
     "isort>=5.13.2", # Import sorter
     "ruff>=0.5.3",
+    "websockets>=14.2",
+    "dataclasses-json>=0.6.7",
+    "python-socketio>=5.12.1",
+    "asyncer>=0.0.7",
+    "uptrace>=1.27.0",
+    "syncer>=2.0.3",
+    "nest-asyncio>=1.6.0",
+    "click>=8.1.8",
+    "pyjwt>=2.10.1",
 ]  # Fix closing bracket for dependencies
 
 [project.urls]

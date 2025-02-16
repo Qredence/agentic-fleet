@@ -144,7 +144,7 @@ poetry.lock
 # Fleet
 .fleet
 archive/
-
+archive
 # Backend virtual environment
 src/backend/.venv
 

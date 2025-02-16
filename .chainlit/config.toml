@@ -15,14 +15,17 @@ client_secret = "OAUTH_GITHUB_CLIENT_SECRET"
 [project.oauth.github]
 prompt = "login"
 consent = "consent"
-redirect_uri = "http://localhost:8000/auth/oauth/github/callback"
+redirect_uri = "http://localhost:8000/auth/callback"
+client_id = "OAUTH_GITHUB_CLIENT_ID"
+client_secret = "OAUTH_GITHUB_CLIENT_SECRET"
 
 [project.oauth.google]
 prompt = "login"
 consent = "consent"
-client_id = "${OAUTH_GOOGLE_CLIENT_ID}"
-client_secret = "${OAUTH_GOOGLE_CLIENT_SECRET}"
-redirect_uri = "http://localhost:8000/auth/oauth/google/callback"
+client_id = "OAUTH_GOOGLE_CLIENT_ID"
+client_secret = "OAUTH_GOOGLE_CLIENT_SECRET"
+redirect_uri = "http://localhost:8000/auth/callback"
+
 
 # List of environment variables to be provided by each user to use the app.
 user_env = []
@@ -72,12 +75,8 @@ name = "AgenticFleet"
 description = "AI Agent Fleet Management"
 
 default_theme = "light"
-# Large size content are by default collapsed for a cleaner ui
-default_collapse_content = false
 
-# The default value for the expand messages settings.
-default_expand_messages = true
-layout = "wide" 
+# layout = "wide" 
 
 # Description of the assistant. This is used for HTML tags.
 # description = ""
@@ -105,8 +104,9 @@ custom_css = "/public/custom.css"
 # custom_build = "./public/build"
 
 [meta]
-generated_by = "2.2.0"
+generated_by = "2.2.1"
 
 [server]
 port = 8000
 host = "localhost"
+

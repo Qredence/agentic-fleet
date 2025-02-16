@@ -1,0 +1,17 @@
+agents:
+  - name: "research_agent"
+    type: "AssistantAgent"
+    config:
+      system_message: "Research specialist"
+      model: "gpt-4"
+      
+  - name: "coding_agent"
+    type: "UserProxyAgent"
+    config:
+      human_input_mode: "NEVER"
+      max_consecutive_auto_reply: 5
+
+workflows:
+  default:
+    - research_agent
+    - coding_agent

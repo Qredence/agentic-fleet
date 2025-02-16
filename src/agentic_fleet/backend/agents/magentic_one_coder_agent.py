@@ -18,7 +18,6 @@ When you find an answer, verify the answer carefully. Include verifiable evidenc
 
 
 
-[docs]
 class MagenticOneCoderAgent(AssistantAgent):
     """An agent, used by MagenticOne that provides coding assistance using an LLM model client.
 

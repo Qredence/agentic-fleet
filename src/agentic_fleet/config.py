@@ -10,6 +10,12 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 # Load environment variables
 load_dotenv()
 
+# Default Configuration Values
+DEFAULT_MAX_ROUNDS = 10
+DEFAULT_MAX_TIME = 300  # 5 minutes
+DEFAULT_MAX_STALLS = 3
+DEFAULT_START_PAGE = "https://www.bing.com"
+
 class Settings(BaseSettings):
     """Application settings."""
 
@@ -35,12 +41,6 @@ class Settings(BaseSettings):
     CHAINLIT_AUTH_SECRET: Optional[str] = os.getenv("CHAINLIT_AUTH_SECRET")
     CHAINLIT_MAX_WORKERS: int = 4
 
-    # Agent Settings
-    DEFAULT_MAX_ROUNDS: int = 50
-    DEFAULT_MAX_TIME: int = 10  # minutes
-    DEFAULT_MAX_STALLS: int = 5
-    DEFAULT_START_PAGE: str = "https://bing.com"
-
     # Workspace Settings
     WORKSPACE_DIR: str = "workspace"
 
@@ -49,6 +49,12 @@ class Settings(BaseSettings):
     CORS_CREDENTIALS: bool = True
     CORS_METHODS: str = "GET,POST,PUT,DELETE,OPTIONS"
     CORS_HEADERS: str = "Content-Type,Authorization"
+
+    # Agent Role Configurations
+    assistant_role: str = "Solution Architect"
+    coder_role: str = "Principal Engineer"
+    max_code_review_rounds: int = 3
+    code_quality_threshold: float = 0.85
 
     model_config = SettingsConfigDict(
         env_file="../.env",

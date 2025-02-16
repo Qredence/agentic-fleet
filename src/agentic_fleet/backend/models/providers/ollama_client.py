@@ -11,7 +11,7 @@ from enum import Enum
 from typing import Any, AsyncGenerator, Dict, List, Optional, Union
 
 import aiohttp
-from autogen_core.models import Message, UserMessage
+from autogen_core.models import LLMMessage as Message, UserMessage
 
 from agentic_fleet.backend.models.base import BaseModelInfo, BaseProvider
 
