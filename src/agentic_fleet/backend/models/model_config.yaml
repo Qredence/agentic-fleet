@@ -1,0 +1,216 @@
+## OpenAI Models
+openai:
+  provider: "autogen_ext.models.openai.OpenAIChatCompletionClient"
+  config:
+    model: "${OPENAI_MODEL}"
+    api_key: "${OPENAI_API_KEY}"
+
+## Azure Models
+azure:
+  provider: "autogen_ext.models.openai.AzureOpenAIChatCompletionClient"
+  config:
+    model: "${AZURE_OPENAI_MODEL}"
+    azure_endpoint: "${AZURE_OPENAI_ENDPOINT}"
+    azure_deployment: "${AZURE_OPENAI_DEPLOYMENT}"
+    api_version: "${AZURE_OPENAI_API_VERSION}"
+    api_key: "${AZURE_OPENAI_API_KEY}"
+    model_info:
+      vision: true
+      function_calling: true
+      json_output: true
+      family: "azure"
+
+## Google Gemini Models
+gemini:
+  provider: "autogen_ext.models.openai.OpenAIChatCompletionClient"
+  config:
+    model: "${GEMINI_MODEL}"
+    base_url: "https://generativelanguage.googleapis.com/v1beta/openai/"
+    api_key: "${GEMINI_API_KEY}"
+    model_info:
+      vision: true
+      function_calling: true
+      json_output: true
+      family: "unknown"
+
+
+gemini_streaming:
+  provider: "autogen_ext.models.openai.OpenAIChatCompletionClient"
+  config:
+    model: "${GEMINI_MODEL}"
+    base_url: "https://generativelanguage.googleapis.com/v1beta/openai/"
+    api_key: "${GEMINI_API_KEY}"
+    model_info:
+      vision: true
+      function_calling: true
+      json_output: true
+      family: "unknown"
+    stream: true
+
+
+gemini_function:
+  provider: "autogen_ext.models.openai.OpenAIChatCompletionClient"
+  config:
+    model: "${GEMINI_MODEL}"
+    base_url: "https://generativelanguage.googleapis.com/v1beta/openai/"
+    api_key: "${GEMINI_API_KEY}"
+    model_info:
+      vision: true
+      function_calling: true
+      json_output: true
+      family: "unknown"
+      tools:
+        - type: function
+          function:
+            name: get_weather
+            description: Get the weather in a given location
+            parameters:
+              type: object
+              properties:
+                location:
+                  type: string
+                  description: The city and state, e.g. Chicago, IL
+                unit:
+                  type: string
+                  enum:
+                    - celsius
+                    - fahrenheit
+              required:
+                - location
+                - unit
+            response:
+              type: object
+              properties:
+                temperature:
+                  type: number
+                  description: The temperature in the requested unit
+                conditions:
+                  type: string
+                  description: A description of the weather conditions
+
+gemini_structured:
+  provider: "autogen_ext.models.openai.OpenAIChatCompletionClient"
+  config:
+    model: "${GEMINI_MODEL}"
+    base_url: "https://generativelanguage.googleapis.com/v1beta/openai/"
+    api_key: "${GEMINI_API_KEY}"
+    model_info:
+      vision: true
+      function_calling: true
+      json_output: true
+      family: "unknown"
+    response_format: |
+      class CalendarEvent(BaseModel):
+          name: str
+          date: str
+          participants: list[str]
+
+
+model_settings:
+  azure_openai:
+    deployment_name:
+      default: "o3-mini"
+      description: "Azure OpenAI deployment name"
+      type: string
+      editable: true
+
+    model_name:
+      default: "${AZURE_OPENAI_MODEL}"
+      description: "Specific model version"
+      type: string
+      editable: true
+
+    api_version:
+      default: "${AZURE_OPENAI_API_VERSION}"
+      description: "Azure OpenAI API version"
+      type: string
+      editable: true
+
+  agent_configuration:
+    max_rounds:
+      default: 10
+      description: "Maximum number of conversation rounds"
+      type: integer
+      editable: true
+      min: 1
+      max: 50
+  
+    max_time:
+      default: 30
+      description: "Maximum conversation time in minutes"
+      type: integer
+      editable: true
+      min: 5
+      max: 120
+
+    max_stalls:
+      default: 3
+      description: "Maximum number of conversation stalls before replanning"
+      type: integer
+      editable: true
+      min: 1
+      max: 10
+
+    system_prompts:
+      web_surfer: "Expert web navigation agent responsible for:\n    1. Processing and analyzing web content\n    2. Navigating complex web structures\n    3. Extracting relevant information accurately"
+      code_executor: "Code execution specialist handling:\n    1. Safe code execution\n    2. Execution monitoring\n    3. Workspace maintenance"
+
+  web_navigation:
+    start_page:
+      default: "https://www.bing.com"
+      description: "Default starting page for web navigation"
+      type: string
+      editable: true
+
+    headless_mode:
+      default: true
+      description: "Run web navigation in headless mode"
+      type: boolean
+      editable: true
+
+    screenshot_capture:
+      default: true
+      description: "Enable screenshot capturing during web navigation"
+      type: boolean
+      editable: true
+
+  code_execution:
+    timeout:
+      default: 300
+      description: "Code execution timeout in seconds"
+      type: integer
+      editable: true
+      min: 60
+      max: 600
+
+    workspace_directory:
+      default: "./files/workspace"
+      description: "Default workspace directory for code execution"
+      type: string
+      editable: true
+
+  logging:
+    log_level:
+      default: "INFO"
+      description: "Logging level for the application"
+      type: string
+      editable: true
+      options: 
+        - "DEBUG"
+        - "INFO"
+        - "WARNING"
+        - "ERROR"
+        - "CRITICAL"
+
+  experimental_features:
+    multimodal_processing:
+      default: true
+      description: "Enable advanced multimodal content processing"
+      type: boolean
+      editable: true
+
+    advanced_reasoning:
+      default: false
+      description: "Enable advanced AI reasoning capabilities"
+      type: boolean
+      editable: true

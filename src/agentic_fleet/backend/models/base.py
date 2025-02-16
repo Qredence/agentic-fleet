@@ -32,6 +32,14 @@ class BaseModelInfo:
             "family": self.family
         }
 
+    def __getitem__(self, key: str) -> Any:
+        """Allow dictionary-like access to model info attributes."""
+        return getattr(self, key)
+
+    def __contains__(self, key: str) -> bool:
+        """Check if an attribute exists."""
+        return hasattr(self, key)
+
 
 class BaseProvider(ABC):
     @abstractmethod

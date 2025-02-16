@@ -3,24 +3,29 @@
 enable_telemetry = true
 
 [auth]
-# Change to OAuth
+# Using OAuth
 type = "oauth"
-# List of authorized users
-users = [
-    { username = "admin", password = "admin" }
-]
 
 [project.oauth]
-# OAuth configuration is optional
 enabled = true
-# List of enabled providers (can be empty if OAuth is disabled)
-providers = ["github"]
-client_id = "OAUTH_GITHUB_CLIENT_ID"  
+providers = ["github", "google"]
+client_id = "OAUTH_GITHUB_CLIENT_ID"
 client_secret = "OAUTH_GITHUB_CLIENT_SECRET"
 
 [project.oauth.github]
 prompt = "login"
 consent = "consent"
+redirect_uri = "http://localhost:8000/auth/callback"
+client_id = "OAUTH_GITHUB_CLIENT_ID"
+client_secret = "OAUTH_GITHUB_CLIENT_SECRET"
+
+[project.oauth.google]
+prompt = "login"
+consent = "consent"
+client_id = "OAUTH_GOOGLE_CLIENT_ID"
+client_secret = "OAUTH_GOOGLE_CLIENT_SECRET"
+redirect_uri = "http://localhost:8000/auth/callback"
+
 
 # List of environment variables to be provided by each user to use the app.
 user_env = []
@@ -31,9 +36,6 @@ session_timeout = 3600
 # Force consent prompt for all providers
 OAUTH_PROMPT = "consent"
 
-# Override specific provider to force login
-OAUTH_GITHUB_PROMPT = "login"
-
 # Duration (in seconds) of the user session expiry
 user_session_timeout = 1296000  # 15 days
 
@@ -41,16 +43,16 @@ user_session_timeout = 1296000  # 15 days
 cache = false
 
 # Authorized origins
-allow_origins = ["*"]
+allow_origins = ["http://localhost:8000"]
 
 [features]
-# Process and display HTML in messages. This can be a security risk (see https://stackoverflow.com/questions/19603097/why-is-it-dangerous-to-render-user-generated-html-or-javascript)
+# Process and display HTML in messages
 unsafe_allow_html = false
 
-# Process and display mathematical expressions. This can clash with "$" characters in messages.
+# Process and display mathematical expressions
 latex = false
 
-# Automatically tag threads with the current chat profile (if a chat profile is used)
+# Automatically tag threads with the current chat profile
 auto_tag_thread = true
 
 # Allow users to edit their own messages
@@ -102,8 +104,9 @@ custom_css = "/public/custom.css"
 # custom_build = "./public/build"
 
 [meta]
-generated_by = "2.1.2"
+generated_by = "2.2.1"
 
 [server]
-port = 8001
+port = 8000
 host = "localhost"
+

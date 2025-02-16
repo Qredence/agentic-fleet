@@ -7,13 +7,13 @@ with proper error handling and async capabilities.
 
 import json
 import logging
-import os
 from enum import Enum
 from typing import Any, AsyncGenerator, Dict, List, Optional, Union
 
 import aiohttp
-from autogen_core.models import BaseProvider, Message, UserMessage
-from autogen_ext.models.openai import OpenAIChatCompletionClient
+from autogen_core.models import LLMMessage as Message, UserMessage
+
+from agentic_fleet.backend.models.base import BaseModelInfo, BaseProvider
 
 logger = logging.getLogger(__name__)
 
@@ -63,12 +63,12 @@ class OllamaClient(BaseProvider):
         self.temperature = temperature
         self.max_tokens = max_tokens
 
-        self.model_info = model_info or {
-            "vision": model == OllamaModels.LLAVA.value,
-            "function_calling": True,
-            "json_output": True,
-            "family": "ollama",
-        }
+        self.model_info = model_info or BaseModelInfo(
+            vision=model == OllamaModels.LLAVA.value,
+            function_calling=True,
+            json_output=True,
+            family="ollama"
+        )
 
         # Validate model availability
         if not self._is_valid_model(model):
@@ -136,7 +136,7 @@ class OllamaClient(BaseProvider):
 
         except aiohttp.ClientError as e:
             logger.error(f"Failed to connect to Ollama server: {e}")
-            raise ConnectionError(f"Unable to connect to Ollama server at {self.base_url}")
+            raise ConnectionError(f"Unable to connect to Ollama server at {self.base_url}") from e
         except Exception as e:
             logger.error(f"Error during Ollama API call: {e}")
             raise
@@ -188,7 +188,7 @@ class OllamaClient(BaseProvider):
 
         except aiohttp.ClientError as e:
             logger.error(f"Failed to connect to Ollama server: {e}")
-            raise ConnectionError(f"Unable to connect to Ollama server at {self.base_url}")
+            raise ConnectionError(f"Unable to connect to Ollama server at {self.base_url}") from e
         except Exception as e:
             logger.error(f"Error during Ollama API streaming: {e}")
             raise

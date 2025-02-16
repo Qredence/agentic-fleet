@@ -9,11 +9,11 @@ import os
 from enum import Enum
 from typing import Any, AsyncGenerator, Dict, List, Optional, Union
 
-from autogen_core.models import BaseProvider, Message, UserMessage
+from autogen_core.models import LLMMessage, UserMessage
 from autogen_ext.models.azure import AzureAIChatCompletionClient
 from azure.core.credentials import AzureKeyCredential
 
-from agentic_fleet.models.base import BaseModelInfo
+from agentic_fleet.backend.models.base import BaseModelInfo, BaseProvider
 
 
 class AzureAIFoundryModels(str, Enum):
@@ -133,7 +133,7 @@ class AzureAIFoundryClient(BaseProvider):
         self.total_prompt_tokens = 0
         self.total_completion_tokens = 0
 
-    async def generate(self, prompt: Union[str, List[Message]], **kwargs: Any) -> str:
+    async def generate(self, prompt: Union[str, List[LLMMessage]], **kwargs: Any) -> str:
         """Generate a response from the model.
 
         Args:
@@ -157,7 +157,7 @@ class AzureAIFoundryClient(BaseProvider):
         return response.content
 
     async def stream(
-        self, prompt: Union[str, List[Message]], **kwargs: Any
+        self, prompt: Union[str, List[LLMMessage]], **kwargs: Any
     ) -> AsyncGenerator[str, None]:
         """Stream responses from the model.
 

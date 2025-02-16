@@ -64,7 +64,6 @@ graph TD
     Executor -->|Subprocess| Code[Python/Runtime]
 ```
 
-
 - **WebSurfer**: Navigates the web, extracts data, and processes screenshots.
 - **FileSurfer**: Manages file operations and extracts information from local files.
 - **Coder**: Generates and reviews code, ensuring quality and efficiency.

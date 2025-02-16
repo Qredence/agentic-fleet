@@ -1,30 +1,24 @@
-"""Azure OpenAI API client implementation.
+"""Client implementation for Azure OpenAI API integration.
 
-This module provides a client for interacting with Azure OpenAI models through their API.
-It supports both streaming and non-streaming responses, with proper error handling,
-retry mechanisms, and token management.
+This module provides a client for interacting with Azure OpenAI's API endpoints.
+It supports:
+- Multiple deployment configurations
+- Streaming responses
+- Automatic retries with exponential backoff
+- Token usage tracking
+- Proper error handling
 """
 
-import json
 import logging
-import time
-from typing import Any, AsyncGenerator, Dict, Optional, Union
-from urllib.parse import urljoin
+from typing import Any, AsyncGenerator, Dict, List, Optional, Union
 
-import aiohttp
+from azure.core.credentials import AzureKeyCredential
 from azure.core.exceptions import AzureError
-from azure.identity import DefaultAzureCredential
-from tenacity import retry, stop_after_attempt, wait_exponential
+from openai import AsyncAzureOpenAI
 
-from agentic_fleet.models.providers.base import BaseProvider
+from agentic_fleet.backend.models.base import BaseModelInfo, BaseProvider
 
 logger = logging.getLogger(__name__)
-
-
-class AzureOpenAIError(Exception):
-    """Base exception for Azure OpenAI client errors."""
-
-    pass
 
 
 class AzureOpenAIClient(BaseProvider):
@@ -62,172 +56,186 @@ class AzureOpenAIClient(BaseProvider):
             timeout: Request timeout in seconds
             model_info: Model capabilities information
         """
+        super().__init__()
+        self.model_info = (
+            BaseModelInfo(**model_info) if isinstance(model_info, dict) 
+            else model_info or BaseModelInfo(
+                vision=False,
+                function_calling=True,
+                json_output=True,
+                family="azure_openai"
+            )
+        )
         self.deployment = azure_deployment
         self.model = model
         self.api_version = api_version
-        self.endpoint = azure_endpoint.rstrip("/")
+        self.endpoint = azure_endpoint
         self.api_key = api_key
         self.max_retries = max_retries
         self.timeout = timeout
 
-        self.model_info = model_info or {
-            "vision": "gpt-4-vision" in model.lower(),
-            "function_calling": True,
-            "json_output": True,
-            "family": "azure",
-        }
+        # Initialize Azure OpenAI client
+        self.client = AsyncAzureOpenAI(
+            api_key=api_key,
+            api_version=api_version,
+            azure_endpoint=azure_endpoint,
+            max_retries=max_retries,
+            timeout=timeout,
+        )
 
-        # Initialize Azure credentials if no API key provided
-        self.credentials = DefaultAzureCredential() if not api_key else None
-
-        # Token usage tracking
-        self.total_prompt_tokens = 0
-        self.total_completion_tokens = 0
-
-    def _get_headers(self) -> Dict[str, str]:
-        """Get request headers with authentication.
-
-        Returns:
-            Dict of headers including authentication
-        """
-        headers = {
-            "Content-Type": "application/json",
-            "api-key": self.api_key,
-        }
-
-        if not self.api_key and self.credentials:
-            token = self.credentials.get_token("https://cognitiveservices.azure.com/.default")
-            headers["Authorization"] = f"Bearer {token.token}"
-
-        return headers
-
-    def _build_url(self, endpoint: str) -> str:
-        """Build full API URL.
+    async def generate(
+        self,
+        messages: List[Dict[str, str]],
+        **kwargs: Any,
+    ) -> str:
+        """Generate a completion for the given messages.
 
         Args:
-            endpoint: API endpoint path
+            messages: List of message dictionaries
+            **kwargs: Additional arguments for generation
 
         Returns:
-            Complete URL with base, deployment, and version
+            Generated text completion
         """
-        base = f"{self.endpoint}/openai/deployments/{self.deployment}"
-        return f"{base}/{endpoint}?api-version={self.api_version}"
-
-    @retry(
-        stop=stop_after_attempt(3), wait=wait_exponential(multiplier=1, min=4, max=10), reraise=True
-    )
-    async def generate(self, prompt: str, **kwargs: Any) -> str:
-        """Generate a response from the model.
-
-        Args:
-            prompt: Input prompt
-            **kwargs: Additional parameters for the API call
-
-        Returns:
-            Generated response text
-
-        Raises:
-            AzureOpenAIError: For API-related errors
-            Exception: For other errors
-        """
-        messages = [{"role": "user", "content": prompt}]
-        data = {
-            "messages": messages,
-            "model": self.model,
-            "stream": False,
-            **kwargs,
-        }
-
         try:
-            async with aiohttp.ClientSession(
-                headers=self._get_headers(), timeout=self.timeout
-            ) as session:
-                async with session.post(self._build_url("chat/completions"), json=data) as response:
-                    if response.status != 200:
-                        error_text = await response.text()
-                        raise AzureOpenAIError(f"Azure OpenAI API error: {error_text}")
+            # Remove cancellation_token if present
+            kwargs.pop('cancellation_token', None)
 
-                    result = await response.json()
+            # Prepare the request parameters
+            request_params = {
+                "messages": messages,
+                "model": self.deployment,
+                "max_completion_tokens": kwargs.get("max_completion_tokens", 1000),
+                "temperature": kwargs.get("temperature", 0.7),
+                "stream": False
+            }
 
-                    # Update token usage
-                    usage = result.get("usage", {})
-                    self.total_prompt_tokens += usage.get("prompt_tokens", 0)
-                    self.total_completion_tokens += usage.get("completion_tokens", 0)
+            # Merge any additional parameters
+            request_params.update({k: v for k, v in kwargs.items() if k not in ["max_completion_tokens", "temperature", "stream", "n", "logprobs", "echo", "stop", "presence_penalty", "frequency_penalty", "best_of", "logit_bias", "user"]})
 
-                    return result["choices"][0]["message"]["content"]
+            # Create the completion
+            response = await self.client.create(**request_params)
 
-        except aiohttp.ClientError as e:
-            logger.error(f"Failed to connect to Azure OpenAI: {e}")
-            raise AzureOpenAIError(f"Connection error: {e}")
-        except AzureError as e:
-            logger.error(f"Azure authentication error: {e}")
-            raise AzureOpenAIError(f"Authentication error: {e}")
+            # Extract and return the text
+            return response.choices[0].message.content
+
         except Exception as e:
-            logger.error(f"Error during Azure OpenAI API call: {e}")
+            logger.error(f"Error creating completion: {e}")
             raise
 
-    async def stream(self, prompt: str, **kwargs: Any) -> AsyncGenerator[str, None]:
-        """Stream responses from the model.
+    async def stream(
+        self,
+        messages: List[Dict[str, str]],
+        **kwargs: Any,
+    ) -> AsyncGenerator[str, None]:
+        """Stream a completion for the given messages.
 
         Args:
-            prompt: Input prompt
-            **kwargs: Additional parameters for the API call
+            messages: List of message dictionaries
+            **kwargs: Additional arguments for generation
 
         Yields:
-            Generated response text chunks
-
-        Raises:
-            AzureOpenAIError: For API-related errors
-            Exception: For other errors
+            Streaming text tokens
         """
-        messages = [{"role": "user", "content": prompt}]
-        data = {
-            "messages": messages,
-            "model": self.model,
-            "stream": True,
-            **kwargs,
-        }
-
         try:
-            async with aiohttp.ClientSession(
-                headers=self._get_headers(), timeout=self.timeout
-            ) as session:
-                async with session.post(self._build_url("chat/completions"), json=data) as response:
-                    if response.status != 200:
-                        error_text = await response.text()
-                        raise AzureOpenAIError(f"Azure OpenAI API error: {error_text}")
+            # Remove cancellation_token if present
+            kwargs.pop('cancellation_token', None)
 
-                    async for line in response.content:
-                        if line:
-                            try:
-                                if line.startswith(b"data: "):
-                                    line = line[6:]  # Remove "data: " prefix
-                                result = json.loads(line)
-                                if result.get("choices"):
-                                    content = result["choices"][0].get("delta", {}).get("content")
-                                    if content:
-                                        yield content
-                            except json.JSONDecodeError:
-                                logger.warning(f"Failed to parse streaming response: {line}")
+            # Prepare the request parameters
+            request_params = {
+                "messages": messages,
+                "model": self.deployment,
+                "max_completion_tokens": kwargs.get("max_completion_tokens", 1000),
+                "temperature": kwargs.get("temperature", 0.7),
+                "stream": True
+            }
 
-        except aiohttp.ClientError as e:
-            logger.error(f"Failed to connect to Azure OpenAI: {e}")
-            raise AzureOpenAIError(f"Connection error: {e}")
-        except AzureError as e:
-            logger.error(f"Azure authentication error: {e}")
-            raise AzureOpenAIError(f"Authentication error: {e}")
+            # Merge any additional parameters
+            request_params.update({k: v for k, v in kwargs.items() if k not in ["max_completion_tokens", "temperature", "stream", "n", "logprobs", "echo", "stop", "presence_penalty", "frequency_penalty", "best_of", "logit_bias", "user"]})
+
+            # Create the streaming completion
+            async for chunk in await self.client.create(**request_params):
+                # Extract the token from the chunk
+                if chunk.choices and chunk.choices[0].delta and chunk.choices[0].delta.content:
+                    yield chunk.choices[0].delta.content
+
         except Exception as e:
-            logger.error(f"Error during Azure OpenAI API streaming: {e}")
+            logger.error(f"Error creating streaming completion: {e}")
             raise
 
-    def get_token_usage(self) -> Dict[str, int]:
-        """Get current token usage statistics.
+    async def create(
+        self,
+        messages: List[Dict[str, str]],
+        **kwargs: Any,
+    ) -> Dict[str, Any]:
+        """Create a chat completion.
+
+        Args:
+            messages: List of message dictionaries with 'role' and 'content' keys
+            **kwargs: Additional arguments to pass to the completion API
 
         Returns:
-            Dict containing prompt and completion token counts
+            The completion response
+        """
+        try:
+            # Remove cancellation_token if present
+            kwargs.pop('cancellation_token', None)
+
+            # Convert message objects to dictionaries
+            processed_messages = []
+            for msg in messages:
+                processed_msg = {
+                    "role": getattr(msg, "role", "user"),
+                    "content": msg.content
+                }
+                processed_messages.append(processed_msg)
+
+            # Prepare the request parameters
+            request_params = {
+                "model": self.deployment,
+                "messages": processed_messages,
+                "max_completion_tokens": kwargs.get("max_completion_tokens", 1000),
+                "temperature": kwargs.get("temperature", 0.7),
+                "stream": kwargs.get("stream", False)
+            }
+
+            # Merge any additional parameters
+            request_params.update({k: v for k, v in kwargs.items() if k not in ["max_completion_tokens", "temperature", "stream", "n", "logprobs", "echo", "stop", "presence_penalty", "frequency_penalty", "best_of", "logit_bias", "user"]})
+
+            # Create the completion
+            response = await self.client.chat.completions.create(**request_params)
+
+            return {
+                "choices": [
+                    {
+                        "message": {
+                            "role": choice.message.role,
+                            "content": choice.message.content
+                        },
+                        "finish_reason": choice.finish_reason,
+                        "index": choice.index
+                    }
+                    for choice in response.choices
+                ],
+                "usage": {
+                    "completion_tokens": response.usage.completion_tokens,
+                    "prompt_tokens": response.usage.prompt_tokens,
+                    "total_tokens": response.usage.total_tokens
+                }
+            }
+        except Exception as e:
+            logger.error(f"Error creating completion: {e}")
+            raise
+
+    async def get_model_info(self) -> Dict[str, Any]:
+        """Get model information as a dictionary.
+
+        Returns:
+            Dictionary representation of model capabilities
         """
         return {
-            "prompt_tokens": self.total_prompt_tokens,
-            "completion_tokens": self.total_completion_tokens,
-            "total_tokens": self.total_prompt_tokens + self.total_completion_tokens,
+            "vision": self.model_info.vision,
+            "function_calling": self.model_info.function_calling,
+            "json_output": self.model_info.json_output,
+            "family": self.model_info.family
         }

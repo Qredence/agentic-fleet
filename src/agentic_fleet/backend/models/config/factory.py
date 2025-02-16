@@ -81,8 +81,8 @@ class ModelFactory:
             raise ValueError("AZURE_OPENAI_ENDPOINT environment variable is required")
 
         return cast(ChatCompletionClient, AzureOpenAIClient(
-            deployment=os.getenv("AZURE_OPENAI_DEPLOYMENT", "gpt-4o"),
-            model=os.getenv("AZURE_OPENAI_MODEL", "gpt-4o"),
+            deployment=os.getenv("AZURE_OPENAI_DEPLOYMENT", "gpt-4o-mini"),
+            model=os.getenv("AZURE_OPENAI_MODEL", "gpt-4o-mini"),
             endpoint=endpoint,
             api_version=os.getenv("AZURE_OPENAI_API_VERSION", "2024-06-01")
         ))

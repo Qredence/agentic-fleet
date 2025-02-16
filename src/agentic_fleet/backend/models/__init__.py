@@ -39,7 +39,6 @@ from .providers import (
     AzureOpenAIClient,
     DeepSeekClient,
     GeminiClient,
-    OllamaClient,
     OpenAIClient,
 )
 
@@ -50,7 +49,6 @@ __all__ = [
     'OpenAIClient',
     'AzureOpenAIClient',
     'GeminiClient',
-    'OllamaClient',
     'DeepSeekClient',
     'AzureAIFoundryClient',
 ]

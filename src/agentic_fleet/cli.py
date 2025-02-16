@@ -3,62 +3,49 @@
 import os
 import subprocess
 import sys
-from typing import Optional  # noqa: F401
 
 import click
 from dotenv import load_dotenv
 
-
-def get_app_path() -> str:
-    """Get the absolute path to the app.py file."""
-    return os.path.abspath(os.path.join(os.path.dirname(__file__), "app.py"))
-
-def get_config_path(no_oauth: bool = False) -> str:
-    """Get the path to the appropriate config file."""
-    config_name = "config.no-oauth.toml" if no_oauth else "config.oauth.toml"
-    return os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", ".chainlit", config_name))
 
 @click.group()
 def cli():
     """AgenticFleet CLI - A multi-agent system for adaptive AI reasoning."""
     pass
 
+
 @cli.command()
 @click.argument('mode', type=click.Choice(['default', 'no-oauth']), default='default')
 def start(mode: str):
-    """Start the AgenticFleet server.
-
-    MODE can be either 'default' (with OAuth) or 'no-oauth'
-    """
-    # Load environment variables
-    load_dotenv()
-
-    # Set OAuth mode
-    no_oauth = mode == 'no-oauth'
-
-    # Get paths
-    app_path = get_app_path()
-    config_path = get_config_path(no_oauth)
-
-    # Set environment variables
-    os.environ['USE_OAUTH'] = str(not no_oauth).lower()
-    os.environ['CHAINLIT_CONFIG'] = config_path
-
-    # Print startup message
-    auth_mode = "without" if no_oauth else "with"
-    click.echo(f"Starting AgenticFleet {auth_mode} OAuth...")
-
-    # Build chainlit command
-    cmd = ["chainlit", "run", app_path]
-
+    """Start AgenticFleet with or without OAuth."""
     try:
-        subprocess.run(cmd, check=True)
+        # Load environment variables from .env file
+        load_dotenv()
+
+        # Set OAuth environment variables based on mode
+        if mode == 'no-oauth':
+            os.environ["USE_OAUTH"] = "false"
+            os.environ["OAUTH_CLIENT_ID"] = ""
+            os.environ["OAUTH_CLIENT_SECRET"] = ""
+            print("Starting AgenticFleet without OAuth...")
+        else:
+            os.environ["USE_OAUTH"] = "true"
+            print("Starting AgenticFleet with OAuth...")
+
+        # Get the path to app.py
+        app_dir = os.path.abspath(os.path.join(os.path.dirname(__file__)))
+        app_path = os.path.join(app_dir, "app.py")
+
+        # Run chainlit directly using subprocess
+        subprocess.run(["chainlit", "run", app_path], check=True)
+
     except subprocess.CalledProcessError as e:
-        click.echo(f"Error running chainlit: {e}", err=True)
+        print(f"Error running chainlit: {e}", file=sys.stderr)
         sys.exit(1)
-    except KeyboardInterrupt:
-        click.echo("\nShutting down...")
-        sys.exit(0)
+    except Exception as e:
+        print(f"Error starting AgenticFleet: {e}", file=sys.stderr)
+        sys.exit(1)
+
 
 def main():
     """Main entry point for the CLI."""
@@ -67,6 +54,7 @@ def main():
     except Exception as e:
         click.echo(f"Error: {str(e)}", err=True)
         sys.exit(1)
+
 
 if __name__ == "__main__":
     main()

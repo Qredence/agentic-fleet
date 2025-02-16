@@ -143,8 +143,8 @@ poetry.lock
 
 # Fleet
 .fleet
-archive/
-
+./archive/
+./archive
 # Backend virtual environment
 src/backend/.venv
 
@@ -226,3 +226,5 @@ archive
 .chainlit/translations/zh-CN.json
 
 memory_bank
+archive
+src/agentic_fleet/.null.py
