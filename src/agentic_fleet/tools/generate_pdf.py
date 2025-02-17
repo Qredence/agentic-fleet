@@ -37,7 +37,7 @@ async def generate_pdf(
     def get_image(image_url_or_path):
         """Fetch image from URL or local path."""
         if image_url_or_path.startswith(("http://", "https://")):
-            response = requests.get(image_url_or_path)
+            response = requests.get(image_url_or_path, timeout=5)
             if response.status_code == 200:
                 return BytesIO(response.content)
         elif Path(image_url_or_path).is_file():
