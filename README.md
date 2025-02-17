@@ -44,10 +44,16 @@ A powerful multi-agent system for adaptive AI reasoning and automation. AgenticF
 9. [Error Handling](#error-handling)
 10. [Community Contributions](#community-contributions)
 11. [Star History](#star-history)
+12. [API Overview](#api-overview)
+13. [Advanced Configuration](#advanced-configuration)
+14. [Supported Features](#supported-features)
+15. [Performance Optimization](#performance-optimization)
+16. [Contributing](#contributing)
+17. [License](#license)
 
 ## Introduction
 
-AgenticFleet operates through a coordinated team of specialized agents that work together to provide advanced AI capabilities. This project leverages Chainlit's interactive interface and AutoGen's multi-agent system to deliver robust and adaptive solutions.
+AgenticFleet operates through a coordinated team of specialized agents that work together to provide advanced AI capabilities. This project leverages Chainlit's interactive interface with AutoGen's multi-agent system to deliver robust and adaptive solutions.
 
 ## System Architecture
 
@@ -284,3 +290,94 @@ AgenticFleet welcomes contributions from the community. Please review our [CONTR
 ## Star History
 
 [![Star History Chart](https://api.star-history.com/svg?repos=Qredence/AgenticFleet&type=Date)](https://star-history.com/#Qredence/AgenticFleet&Date)
+
+## API Overview
+
+AgenticFleet provides a powerful, flexible API for building multi-agent AI systems. Detailed API documentation can be found in [API.md](API.md).
+
+### Quick API Examples
+
+#### Creating an Agent
+```python
+from agentic_fleet.backend.agents.base_agent import BaseAgent
+
+class MyCustomAgent(BaseAgent):
+    def __init__(self, name, capabilities):
+        super().__init__(name)
+        self.capabilities = capabilities
+    
+    def execute_task(self, task):
+        # Implement task execution logic
+        pass
+```
+
+#### Configuring a Team
+```python
+from agentic_fleet.backend.agents.orchestrator_agent import create_team
+
+team = create_team([
+    PlannerAgent(name="Strategic Planner"),
+    CodeCrafterAgent(name="Code Developer"),
+    ValidatorAgent(name="Quality Assurer")
+])
+```
+
+#### Task Management
+```python
+from agentic_fleet.backend.task_manager import TaskManager
+
+task_manager = TaskManager()
+task = task_manager.create_task(
+    description="Develop a complex software solution",
+    agents=team,
+    priority="high"
+)
+```
+
+## Advanced Configuration
+
+### Agent Configuration
+Agents can be configured using YAML files located in `src/agentic_fleet/config/`:
+
+```yaml
+# Example agent configuration
+agent_type: AssistantAgent
+name: AI Assistant
+model: gpt-4
+temperature: 0.7
+max_context_length: 4096
+```
+
+### Environment Setup
+1. Install dependencies:
+```bash
+pip install agentic-fleet
+```
+
+2. Set up environment variables:
+```bash
+export OPENAI_API_KEY=your_api_key
+export AZURE_OPENAI_KEY=your_azure_key
+```
+
+## Supported Features
+
+- Multi-agent task allocation
+- Dynamic team composition
+- Advanced error handling
+- Streaming AI interactions
+- Extensible agent framework
+
+## Performance Optimization
+
+- Use streaming APIs for real-time interactions
+- Configure model temperature between 0.7-1.0 for creative tasks
+- Implement efficient agent communication protocols
+
+## Contributing
+
+We welcome contributions! Please read our [API.md](API.md) for detailed guidelines on extending AgenticFleet.
+
+## License
+
+AgenticFleet is open-source software licensed under [INSERT LICENSE]

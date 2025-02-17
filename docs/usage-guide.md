@@ -91,7 +91,7 @@ agenticfleet start --no-oauth
 agenticfleet start --port 8080
 
 # Start the server with debug logging enabled
-agenticfleet start --debug
+agenticfleet start --config
 ```
 
 ## Advanced Features
