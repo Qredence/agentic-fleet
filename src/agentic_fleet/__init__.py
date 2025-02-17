@@ -25,22 +25,21 @@ from agentic_fleet.config import config_manager
 config_manager.load_all()
 
 # Core application imports
-from agentic_fleet.core.application import (
-    ApplicationManager,
-    create_application,
-    create_chat_profile,
-    create_chat_profile_with_code_execution,
-    stream_text,
-)
-
 # Configuration imports
 from agentic_fleet.config import (
     DEFAULT_MAX_ROUNDS,
     DEFAULT_MAX_STALLS,
     DEFAULT_MAX_TIME,
     DEFAULT_START_PAGE,
-    DEFAULT_TEMPERATURE,
     DEFAULT_SYSTEM_PROMPT,
+    DEFAULT_TEMPERATURE,
+)
+from agentic_fleet.core.application import (
+    ApplicationManager,
+    create_application,
+    create_chat_profile,
+    create_chat_profile_with_code_execution,
+    stream_text,
 )
 
 # Expose key components
