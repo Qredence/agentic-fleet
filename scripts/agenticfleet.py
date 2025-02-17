@@ -30,15 +30,16 @@ def main():
             print("Starting AgenticFleet without OAuth...")
             os.environ["USE_OAUTH"] = "false"
 
-        # Get the path to app.py
+        # Get the path to fastapi_app.py
         app_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "src", "agentic_fleet"))
-        app_path = os.path.join(app_dir, "app.py")
+        app_path = os.path.join(app_dir, "fastapi_app.py")
 
-        # Build chainlit command
+        # Build uvicorn command
         cmd = [
-            "chainlit",
-            "run",
-            app_path,
+            "uvicorn",
+            "fastapi_app:app",
+            "--host",
+            "0.0.0.0",
             "--port",
             "8001"
         ]
@@ -46,7 +47,7 @@ def main():
         try:
             subprocess.run(cmd, check=True)
         except subprocess.CalledProcessError as e:
-            print(f"Error running chainlit: {e}", file=sys.stderr)
+            print(f"Error running uvicorn: {e}", file=sys.stderr)
             sys.exit(1)
         except Exception as e:
             print(f"Unexpected error: {e}", file=sys.stderr)

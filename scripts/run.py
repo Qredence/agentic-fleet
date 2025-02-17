@@ -30,9 +30,9 @@ def run_app(no_oauth: bool):
     env_path = Path(__file__).parent.parent / ".env"
     load_dotenv(env_path)
 
-    app_path = os.path.join(os.path.dirname(__file__), "..", "src", "agentic_fleet", "app.py")
+    app_path = os.path.join(os.path.dirname(__file__), "..", "src", "agentic_fleet", "fastapi_app.py")
 
-    cmd = ["chainlit", "run", app_path, "--port", "8001"]
+    cmd = ["uvicorn", "fastapi_app:app", "--port", "8001"]
 
     if no_oauth:
         # Only disable OAuth-specific variables
