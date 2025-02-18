@@ -1,4 +1,5 @@
 version = 1
+revision = 1
 requires-python = ">=3.10"
 resolution-markers = [
     "python_full_version >= '3.13' and sys_platform == 'darwin'",
@@ -72,6 +73,7 @@ dependencies = [
     { name = "docker" },
     { name = "fastapi" },
     { name = "gunicorn" },
+    { name = "html2text" },
     { name = "httpx" },
     { name = "ipykernel" },
     { name = "isort" },
@@ -213,6 +215,7 @@ requires-dist = [
     { name = "fastapi", specifier = ">=0.109.0" },
     { name = "grpcio-tools", marker = "extra == 'grpc'", specifier = ">=1.62.0" },
     { name = "gunicorn", specifier = ">=23.0.0" },
+    { name = "html2text", specifier = ">=2024.2.26" },
     { name = "httpx", specifier = ">=0.25.0" },
     { name = "ipdb", marker = "extra == 'dev'", specifier = ">=0.13.13" },
     { name = "ipykernel", specifier = ">=6.29.5" },
@@ -288,6 +291,7 @@ requires-dist = [
     { name = "websockets", specifier = ">=14.2" },
     { name = "yfinance", specifier = ">=0.2.51" },
 ]
+provides-extras = ["dev", "test", "docs", "models", "grpc"]
 
 [[package]]
 name = "aioconsole"
@@ -2476,6 +2480,12 @@ sdist = { url = "https://files.pythonhosted.org/packages/2c/48/71de9ed269fdae9c8
 wheels = [
     { url = "https://files.pythonhosted.org/packages/07/c6/80c95b1b2b94682a72cbdbfb85b81ae2daffa4291fbfa1b1464502ede10d/hpack-4.1.0-py3-none-any.whl", hash = "sha256:157ac792668d995c657d93111f46b4535ed114f0c9c8d672271bbec7eae1b496", size = 34357 },
 ]
+
+[[package]]
+name = "html2text"
+version = "2024.2.26"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/1a/43/e1d53588561e533212117750ee79ad0ba02a41f52a08c1df3396bd466c05/html2text-2024.2.26.tar.gz", hash = "sha256:05f8e367d15aaabc96415376776cdd11afd5127a77fce6e36afc60c563ca2c32", size = 56527 }
 
 [[package]]
 name = "html5lib"

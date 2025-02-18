@@ -124,6 +124,7 @@ dependencies = [
     "nest-asyncio>=1.6.0",
     "click>=8.1.8",
     "pyjwt>=2.10.1",
+    "html2text>=2024.2.26",
 ]  # Fix closing bracket for dependencies
 
 [project.urls]
