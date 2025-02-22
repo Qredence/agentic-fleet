@@ -19,7 +19,12 @@ class CapabilityAssessorAgent(BaseChatAgent):
     in the plan.
     """
 
-    def __init__(self, name: str, description: str = "Capability Assessor Agent", agent_registry: Optional[Dict[str, Any]] = None):
+    def __init__(
+        self,
+        name: str,
+        description: str = "Capability Assessor Agent",
+        agent_registry: Optional[Dict[str, Any]] = None,
+    ):
         super().__init__(name, description=description)
         self._message_history: list[ChatMessage] = []
         # agent_registry:  A simple dictionary for this example.  In a real
@@ -31,7 +36,9 @@ class CapabilityAssessorAgent(BaseChatAgent):
     def produced_message_types(self) -> Sequence[type[ChatMessage]]:
         return (TextMessage,)
 
-    async def on_messages(self, messages: Sequence[ChatMessage], cancellation_token: CancellationToken) -> Response:
+    async def on_messages(
+        self, messages: Sequence[ChatMessage], cancellation_token: CancellationToken
+    ) -> Response:
         """
         Analyzes a plan (provided in the messages) and assesses if the current
         agent and tool registry has the capabilities to execute the plan.
@@ -45,7 +52,7 @@ class CapabilityAssessorAgent(BaseChatAgent):
 
         last_message = messages[-1]
         if not isinstance(last_message, TextMessage) or not last_message.content:
-             return Response(chat_message=TextMessage(content="No plan provided.", source=self.name))
+            return Response(chat_message=TextMessage(content="No plan provided.", source=self.name))
 
         plan_text = last_message.content
 
@@ -54,11 +61,15 @@ class CapabilityAssessorAgent(BaseChatAgent):
         if "research" in plan_text.lower() and "ResearchAgent" not in self.agent_registry:
             response_content = "Capability assessment failed: Missing ResearchAgent."
         elif "code execution" in plan_text.lower() and "FleetWorker" not in self.agent_registry:
-            response_content = "Capability assessment failed: Missing FleetWorker for code execution."
+            response_content = (
+                "Capability assessment failed: Missing FleetWorker for code execution."
+            )
         elif "tool use" in plan_text.lower() and "ToolCallerAgent" not in self.agent_registry:
             response_content = "Capability assessment failed: Missing ToolCallerAgent."
         else:
-            response_content = "Capability assessment successful: The current agent pool can handle the plan."
+            response_content = (
+                "Capability assessment successful: The current agent pool can handle the plan."
+            )
 
         response_message = TextMessage(content=response_content, source=self.name)
         self._message_history.append(response_message)

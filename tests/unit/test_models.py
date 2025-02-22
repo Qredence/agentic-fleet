@@ -1,14 +1,14 @@
 """Unit tests for the models module."""
+from unittest.mock import Mock
+
 import pytest
-from unittest.mock import Mock, patch
-from autogen.core.provider import ChatCompletionClient
+from autogen_core.models import ChatCompletionClient
 
 from agentic_fleet.models.models import (
     EnhancedAssistantAgent,
-    EnhancedUserProxyAgent,
-    create_azure_client,
-    create_agent_team
+    create_agent_team,
 )
+
 
 @pytest.fixture
 def mock_model_client():
@@ -32,9 +32,9 @@ async def test_enhanced_assistant_agent_process_message(mock_model_client):
         system_message="test message",
         model_client=mock_model_client
     )
-    
+
     mock_model_client.generate.return_value = "test response"
-    
+
     result = await agent.process_message("test message")
     assert result is not None
 
@@ -46,9 +46,9 @@ async def test_enhanced_assistant_agent_error_handling(mock_model_client):
         system_message="test message",
         model_client=mock_model_client
     )
-    
+
     mock_model_client.generate.side_effect = Exception("test error")
-    
+
     with pytest.raises(Exception):
         await agent.process_message("test message")
 

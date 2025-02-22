@@ -298,6 +298,7 @@ AgenticFleet provides a powerful, flexible API for building multi-agent AI syste
 ### Quick API Examples
 
 #### Creating an Agent
+
 ```python
 from agentic_fleet.backend.agents.base_agent import BaseAgent
 
@@ -312,6 +313,7 @@ class MyCustomAgent(BaseAgent):
 ```
 
 #### Configuring a Team
+
 ```python
 from agentic_fleet.backend.agents.orchestrator_agent import create_team
 
@@ -323,6 +325,7 @@ team = create_team([
 ```
 
 #### Task Management
+
 ```python
 from agentic_fleet.backend.task_manager import TaskManager
 
@@ -337,6 +340,7 @@ task = task_manager.create_task(
 ## Advanced Configuration
 
 ### Agent Configuration
+
 Agents can be configured using YAML files located in `src/agentic_fleet/config/`:
 
 ```yaml
@@ -349,12 +353,15 @@ max_context_length: 4096
 ```
 
 ### Environment Setup
+
 1. Install dependencies:
+
 ```bash
 pip install agentic-fleet
 ```
 
 2. Set up environment variables:
+
 ```bash
 export OPENAI_API_KEY=your_api_key
 export AZURE_OPENAI_KEY=your_azure_key

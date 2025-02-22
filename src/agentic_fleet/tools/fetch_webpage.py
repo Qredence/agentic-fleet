@@ -9,7 +9,10 @@ from bs4 import BeautifulSoup
 
 
 async def fetch_webpage(
-    url: str, include_images: bool = True, max_length: Optional[int] = None, headers: Optional[Dict[str, str]] = None
+    url: str,
+    include_images: bool = True,
+    max_length: Optional[int] = None,
+    headers: Optional[Dict[str, str]] = None,
 ) -> str:
     """Fetch a webpage and convert it to markdown format.
 

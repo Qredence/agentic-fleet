@@ -88,9 +88,7 @@ class Select(InputWidget):
             raise ValueError("Must provide values or items to create a Select")
 
         if self.values and self.items:
-            raise ValueError(
-                "You can only provide either values or items to create a Select"
-            )
+            raise ValueError("You can only provide either values or items to create a Select")
 
         if not self.values and self.initial_index is not None:
             raise ValueError(
@@ -113,9 +111,7 @@ class Select(InputWidget):
             "id": self.id,
             "label": self.label,
             "initial": self.initial,
-            "items": [
-                {"label": id, "value": value} for id, value in self.items.items()
-            ],
+            "items": [{"label": id, "value": value} for id, value in self.items.items()],
             "tooltip": self.tooltip,
             "description": self.description,
         }

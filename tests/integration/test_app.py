@@ -1,17 +1,20 @@
 """Integration tests for the main application."""
-import pytest
 import chainlit as cl
+import pytest
 from chainlit.context import ChainlitContext, context_var
 from chainlit.types import ThreadDict
+from chainlit.user import User
 
-from agentic_fleet.app import handle_message, initialize_session, update_settings
+from agentic_fleet.app import handle_message, setup_chat_settings, update_settings
 
 
 @pytest.fixture
 async def chainlit_context():
     """Set up a mock Chainlit context."""
     thread = ThreadDict(id="test_thread")
-    context = ChainlitContext()
+    user = User(id="test_user", metadata={})
+    session = {"thread": thread, "user": user}
+    context = ChainlitContext(session=session)
     context.thread = thread
     token = context_var.set(context)
     yield context
@@ -19,9 +22,9 @@ async def chainlit_context():
 
 
 @pytest.mark.asyncio
-async def test_initialize_session(chainlit_context):
-    """Test session initialization."""
-    await initialize_session()
+async def test_setup_chat_settings(chainlit_context):
+    """Test chat settings initialization."""
+    await setup_chat_settings()
     # Add assertions for session state
 
 

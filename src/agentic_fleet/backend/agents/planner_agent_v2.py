@@ -6,10 +6,12 @@ others to perform or gather information as needed.
 
 import logging
 from typing import Sequence
+
 from autogen_agentchat.agents import BaseChatAgent
 from autogen_agentchat.base import Response
 from autogen_agentchat.messages import ChatMessage, TextMessage
 from autogen_core import CancellationToken
+
 
 class PlannerAgentV2(BaseChatAgent):
     """
@@ -27,7 +29,9 @@ class PlannerAgentV2(BaseChatAgent):
         # This agent primarily produces text messages
         return (TextMessage,)
 
-    async def on_messages(self, messages: Sequence[ChatMessage], cancellation_token: CancellationToken) -> Response:
+    async def on_messages(
+        self, messages: Sequence[ChatMessage], cancellation_token: CancellationToken
+    ) -> Response:
         """
         Called by the framework whenever the agent is tasked to respond
         synchronously (non-streaming).

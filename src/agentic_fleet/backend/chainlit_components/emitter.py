@@ -227,9 +227,7 @@ class ChainlitEmitter(BaseChainlitEmitter):
             else:
                 user_id = None
             try:
-                should_tag_thread = (
-                    self.session.chat_profile and config.features.auto_tag_thread
-                )
+                should_tag_thread = self.session.chat_profile and config.features.auto_tag_thread
                 tags = [self.session.chat_profile] if should_tag_thread else None
                 await data_layer.update_thread(
                     thread_id=self.session.thread_id,
@@ -299,9 +297,7 @@ class ChainlitEmitter(BaseChainlitEmitter):
 
         return message
 
-    async def send_ask_user(
-        self, step_dict: StepDict, spec: AskSpec, raise_on_timeout=False
-    ):
+    async def send_ask_user(self, step_dict: StepDict, spec: AskSpec, raise_on_timeout=False):
         """Send a prompt to the UI and wait for a response."""
 
         try:
@@ -313,9 +309,7 @@ class ChainlitEmitter(BaseChainlitEmitter):
             # End the task temporarily so that the User can answer the prompt
             await self.task_end()
 
-            final_res: Optional[Union[StepDict, AskActionResponse, List[FileDict]]] = (
-                None
-            )
+            final_res: Optional[Union[StepDict, AskActionResponse, List[FileDict]]] = None
 
             if user_res:
                 interaction: Union[str, None] = None

@@ -5,17 +5,17 @@ app:
 
 environment:
   debug: false
-  workspace_dir: "./files/workspace"
-  downloads_dir: "./files/downloads"
-  debug_dir: "./files/debug"
-  logs_dir: "./files/logs"
+  workspace_dir: "./.files/workspace"
+  downloads_dir: "./.files/downloads"
+  debug_dir: "./.files/debug"
+  logs_dir: "./.files/logs"
   stream_delay: 0.01
 
 defaults:
   max_rounds: 10
   max_time: 300
   max_stalls: 3
-  start_page: "/welcome"
+  start_page: "https://www.bing.com"
   temperature: 0.7
   system_prompt: "You are a helpful AI assistant."
 

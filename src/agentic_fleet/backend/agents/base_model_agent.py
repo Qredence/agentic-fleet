@@ -33,7 +33,9 @@ class BaseModelAgent(BaseModel):
         In specialized agents, you can override this method
         with more specific logic.
         """
-        logging.info(f"[BaseModelAgent] {self.name} (role={self.role}) received input: {user_input}")
+        logging.info(
+            f"[BaseModelAgent] {self.name} (role={self.role}) received input: {user_input}"
+        )
         # Implement minimal placeholder logic:
         # In a real scenario, you could integrate with an LLM or other processing here.
         return f"BaseModelAgent {self.name} processed input: {user_input}"

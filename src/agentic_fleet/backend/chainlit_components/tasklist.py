@@ -8,6 +8,7 @@ import chainlit as cl
 
 class TaskStatus(Enum):
     """Task status enum."""
+
     READY = "ready"
     RUNNING = "running"
     DONE = "done"
@@ -18,10 +19,7 @@ class Task:
     """A task in a task list."""
 
     def __init__(
-        self,
-        title: str,
-        status: TaskStatus = TaskStatus.READY,
-        for_id: Optional[str] = None
+        self, title: str, status: TaskStatus = TaskStatus.READY, for_id: Optional[str] = None
     ):
         """Initialize task.
 

@@ -4,7 +4,7 @@ This module provides a factory pattern implementation for creating various LLM c
 """
 
 from enum import Enum, auto
-from typing import Any, Dict, Optional, Type
+from typing import Any, Dict, Type
 
 from .base import BaseModelInfo
 from .providers import (
@@ -18,6 +18,7 @@ from .providers import (
 
 class ModelProvider(Enum):
     """Supported model providers."""
+
     OPENAI = auto()
     AZURE_OPENAI = auto()
     GEMINI = auto()

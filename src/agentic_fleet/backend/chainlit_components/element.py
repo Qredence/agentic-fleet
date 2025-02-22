@@ -311,9 +311,7 @@ class Pyplot(Element):
             raise TypeError("figure must be a matplotlib.figure.Figure")
 
         image = BytesIO()
-        self.figure.savefig(
-            image, dpi=200, bbox_inches="tight", backend="Agg", format="png"
-        )
+        self.figure.savefig(image, dpi=200, bbox_inches="tight", backend="Agg", format="png")
         self.content = image.getvalue()
 
         super().__post_init__()
@@ -341,8 +339,6 @@ class Task:
         self.title = title
         self.status = status
         self.forId = forId
-
-
 
 
 @dataclass
@@ -385,7 +381,6 @@ class TaskList(Element):
         )
 
 
-
 @dataclass
 class Audio(Element):
     type: ClassVar[ElementType] = "audio"
@@ -420,7 +415,8 @@ class Plotly(Element):
     content: str = ""
 
     def __post_init__(self) -> None:
-        from plotly import graph_objects as go, io as pio
+        from plotly import graph_objects as go
+        from plotly import io as pio
 
         if not isinstance(self.figure, go.Figure):
             raise TypeError("figure must be a plotly.graph_objects.Figure")

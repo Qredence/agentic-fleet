@@ -1,7 +1,7 @@
 """Chat settings management for Agentic Fleet."""
 
 from dataclasses import dataclass, field
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List
 
 import chainlit as cl
 from chainlit.context import context
@@ -12,9 +12,9 @@ from agentic_fleet.config import (
     DEFAULT_MAX_STALLS,
     DEFAULT_MAX_TIME,
     DEFAULT_START_PAGE,
-    DEFAULT_TEMPERATURE,
     DEFAULT_SYSTEM_PROMPT,
-    config_manager
+    DEFAULT_TEMPERATURE,
+    config_manager,
 )
 
 
@@ -35,7 +35,7 @@ class ChatSettings:
         ] or [
             {"label": "O3-Mini", "value": "o3-mini"},
             {"label": "GPT-4O-Mini", "value": "gpt-4o-mini"},
-            {"label": "GPT-3.5 Turbo", "value": "gpt-3.5-turbo"}
+            {"label": "GPT-3.5 Turbo", "value": "gpt-3.5-turbo"},
         ]
 
         self.inputs = [
@@ -47,7 +47,7 @@ class ChatSettings:
                 items=[
                     {"label": "Collaborative", "value": "collaborative"},
                     {"label": "Competitive", "value": "competitive"},
-                    {"label": "Hybrid", "value": "hybrid"}
+                    {"label": "Hybrid", "value": "hybrid"},
                 ],
                 description="Mode of operation for the agent fleet",
             ),
@@ -118,9 +118,7 @@ class ChatSettings:
                 description="Maximum number of pages to visit per search",
             ),
         ]
-        self._settings = {
-            input_widget.id: input_widget.value for input_widget in self.inputs
-        }
+        self._settings = {input_widget.id: input_widget.value for input_widget in self.inputs}
 
     @property
     def settings(self) -> Dict[str, Any]:
@@ -156,14 +154,12 @@ class ChatSettings:
 
     def get_model_config(self) -> Dict[str, Any]:
         """Get configuration specific to the model."""
-        model_settings = config_manager.get_model_settings(
-            "azure", self._settings["model_name"]
-        )
+        model_settings = config_manager.get_model_settings("azure", self._settings["model_name"])
         return {
             "model": self._settings["model_name"],
             "temperature": self._settings["temperature"],
             "system_prompt": self._settings["system_prompt"],
-            **model_settings
+            **model_settings,
         }
 
     def get_web_config(self) -> Dict[str, Any]:

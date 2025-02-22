@@ -62,9 +62,7 @@ def header_auth_callback(
 
 @trace
 def oauth_callback(
-    func: Callable[
-        [str, str, Dict[str, str], User, Optional[str]], Awaitable[Optional[User]]
-    ],
+    func: Callable[[str, str, Dict[str, str], User, Optional[str]], Awaitable[Optional[User]]],
 ) -> Callable:
     """
     Framework agnostic decorator to authenticate the user via oauth

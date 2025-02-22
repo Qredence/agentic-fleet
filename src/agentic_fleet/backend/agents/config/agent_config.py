@@ -4,13 +4,15 @@ Configuration management for AgenticFleet agents.
 This module provides structured configuration and initialization for different agent types
 and team compositions. It follows the Magentic-One best practices for agent configuration.
 """
-from typing import Dict, List, Optional, Type
+
+from typing import Dict, List, Optional
 
 from pydantic import BaseModel, Field
 
 
 class AgentConfig(BaseModel):
     """Base configuration for all agents."""
+
     name: str
     role: str
     model_name: str = Field(default="gpt-4")
@@ -18,13 +20,16 @@ class AgentConfig(BaseModel):
     max_tokens: Optional[int] = Field(default=None)
     streaming: bool = Field(default=True)
 
+
 class TeamConfig(BaseModel):
     """Configuration for agent teams."""
+
     name: str
     description: str
     agents: List[AgentConfig]
     max_turns: int = Field(default=10)
     max_stalls: int = Field(default=3)
+
 
 # Default configurations for different agent types
 DEFAULT_WEB_SURFER_CONFIG = AgentConfig(
@@ -73,9 +78,11 @@ TEAM_REGISTRY: Dict[str, TeamConfig] = {
     "websearch_fleet": WEBSEARCH_FLEET_TEAM,
 }
 
+
 def get_team_config(team_name: str) -> Optional[TeamConfig]:
     """Retrieve team configuration by name."""
     return TEAM_REGISTRY.get(team_name.lower())
+
 
 def register_team_config(team_name: str, config: TeamConfig) -> None:
     """Register a new team configuration."""

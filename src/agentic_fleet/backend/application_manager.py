@@ -18,9 +18,7 @@ class ModelConfigSettings:
         # Azure OpenAI settings with proper defaults from model_config.yaml
         # Load Azure OpenAI deployment from model_config.yaml
         default_deployment = (
-            model_configs.get("azure", {})
-            .get("config", {})
-            .get("azure_deployment", "o3-mini")
+            model_configs.get("azure", {}).get("config", {}).get("azure_deployment", "o3-mini")
         )
         # Load Azure OpenAI settings from environment variables with defaults from model_config.yaml
         self.AZURE_OPENAI_DEPLOYMENT: str = os.getenv("AZURE_OPENAI_DEPLOYMENT", default_deployment)
@@ -60,6 +58,14 @@ class Settings(ModelConfigSettings, FleetConfigSettings):
         # OAuth settings
         self.USE_OAUTH: bool = os.getenv("USE_OAUTH", "false").lower() == "true"
         self.OAUTH_PROVIDERS: List[str] = os.getenv("OAUTH_PROVIDERS", "").split(",")
+
+        # Chat settings
+        self.temperature: float = float(os.getenv("DEFAULT_TEMPERATURE", "0.7"))
+        self.max_rounds: int = int(os.getenv("DEFAULT_MAX_ROUNDS", "10"))
+        self.max_time: int = int(os.getenv("DEFAULT_MAX_TIME", "300"))
+        self.system_prompt: str = os.getenv(
+            "DEFAULT_SYSTEM_PROMPT", "You are a helpful AI assistant."
+        )
 
 
 class ApplicationManager:

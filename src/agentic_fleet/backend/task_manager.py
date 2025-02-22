@@ -11,6 +11,7 @@ from agentic_fleet.backend.chainlit_components.task_list import TaskList
 
 class TaskStatus(Enum):
     """Task status enum for task management."""
+
     READY = "ready"
     RUNNING = "running"
     DONE = "done"

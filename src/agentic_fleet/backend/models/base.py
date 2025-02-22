@@ -1,7 +1,7 @@
 """Base classes and interfaces for model clients."""
 
-from typing import Any, Dict, Optional, AsyncGenerator
 from abc import ABC, abstractmethod
+from typing import Any, AsyncGenerator, Dict
 
 
 class BaseModelInfo:
@@ -13,11 +13,14 @@ class BaseModelInfo:
         json_output: Whether the model can output structured JSON
         family: The model family/provider name
     """
-    def __init__(self,
-                 vision: bool = False,
-                 function_calling: bool = False,
-                 json_output: bool = False,
-                 family: str = "unknown"):
+
+    def __init__(
+        self,
+        vision: bool = False,
+        function_calling: bool = False,
+        json_output: bool = False,
+        family: str = "unknown",
+    ):
         self.vision = vision
         self.function_calling = function_calling
         self.json_output = json_output
@@ -29,7 +32,7 @@ class BaseModelInfo:
             "vision": self.vision,
             "function_calling": self.function_calling,
             "json_output": self.json_output,
-            "family": self.family
+            "family": self.family,
         }
 
     def __getitem__(self, key: str) -> Any:
