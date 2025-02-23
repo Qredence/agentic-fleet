@@ -55,5 +55,5 @@ Retrieve user-specific prompts.
 - Include the token in the `Authorization` header for protected routes.
 
 ## License
-MIT License
+Apache 2.0
 
