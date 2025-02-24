@@ -1,21 +1,38 @@
-"""Integration tests for the main application."""
+"""
+Integration tests for the main application.
+"""
+
 import chainlit as cl
 import pytest
 from chainlit.context import ChainlitContext, context_var
+from chainlit.emitter import ChainlitEmitter
 from chainlit.types import ThreadDict
 from chainlit.user import User
 
 from agentic_fleet.app import handle_message, setup_chat_settings, update_settings
 
 
+class MockSession:
+    """Mock session object for testing."""
+    def __init__(self, thread_id: str = "test_thread", user_id: str = "test_user"):
+        """Initialize mock session."""
+        self.id = thread_id
+        self.user_id = user_id
+        self.user_env = {}
+        self.chat_settings = {}
+        self.chat_profile = {}
+        self.user = {"id": user_id}
+        self.emit = lambda event_name, data: None
+
+
 @pytest.fixture
 async def chainlit_context():
     """Set up a mock Chainlit context."""
-    thread = ThreadDict(id="test_thread")
-    user = User(id="test_user", metadata={})
-    session = {"thread": thread, "user": user}
+    thread_dict = ThreadDict()
+    session = MockSession()
     context = ChainlitContext(session=session)
-    context.thread = thread
+    context.thread_dict = thread_dict
+    context.emitter = ChainlitEmitter(session=session)
     token = context_var.set(context)
     yield context
     context_var.reset(token)

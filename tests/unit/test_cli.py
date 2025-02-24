@@ -51,4 +51,4 @@ def test_cli_start_invalid_mode():
     runner = CliRunner()
     result = runner.invoke(cli, ["start", "invalid"])
     assert result.exit_code == 2
-    assert "Invalid value for 'invalid'" in result.output
+    assert "Invalid value for '[[default|no-oauth]]': 'invalid' is not one of 'default', 'no-oauth'" in result.output

@@ -1,31 +1,14 @@
-# Welcome to AgenticFleet 🚀
+# Welcome to Chainlit! 🚀🤖
 
-AgenticFleet is a powerful multi-agent system that combines:
+Hi there, Developer! 👋 We're excited to have you on board. Chainlit is a powerful tool designed to help you prototype, debug and share applications built on top of LLMs.
 
-- Interactive chat interface
-- Multiple AI models
-- Specialized agents for different tasks
-- Persistent chat history (when signed in)
+## Useful Links 🔗
 
-## Authentication
+- **Documentation:** Get started with our comprehensive [Chainlit Documentation](https://docs.chainlit.io) 📚
+- **Discord Community:** Join our friendly [Chainlit Discord](https://discord.gg/k73SQ3FyUh) to ask questions, share your projects, and connect with other developers! 💬
 
-This instance uses GitHub OAuth for:
+We can't wait to see what you create with Chainlit! Happy coding! 💻😊
 
-- Secure access
-- Persistent chat history
-- Personalized settings
+## Welcome screen
 
-## Features
-
-- 💬 Chat with multiple specialized agents
-- 📝 Access your chat history
-- 🔄 Resume previous conversations
-- 🛠️ Execute code and analyze results
-- 🌐 Web search capabilities
-- 📁 File operations support
-
-## Getting Started
-
-1. Sign in using your GitHub account
-2. Your chat history will be automatically saved
-3. Access previous conversations from the history panel
+To modify the welcome screen, edit the `chainlit.md` file at the root of your project. If you do not want a welcome screen, just leave this file empty.
