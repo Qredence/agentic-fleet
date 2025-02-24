@@ -23,7 +23,7 @@ def main():
     if command == "start":
         # Check for no-oauth flag
         no_oauth = len(sys.argv) > 2 and sys.argv[2] == "no-oauth"
-        
+
         if not no_oauth:
             print("Starting AgenticFleet with OAuth...")
         else:

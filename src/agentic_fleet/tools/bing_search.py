@@ -46,18 +46,23 @@ async def bing_search(
 
     if not api_key:
         raise ValueError(
-            "BING_SEARCH_KEY environment variable is not set. " "Please obtain an API key from Azure Portal."
+            "BING_SEARCH_KEY environment variable is not set. "
+            "Please obtain an API key from Azure Portal."
         )
 
     # Validate safe_search parameter
     valid_safe_search = ["off", "moderate", "strict"]
     if safe_search.lower() not in valid_safe_search:
-        raise ValueError(f"Invalid safe_search value. Must be one of: {', '.join(valid_safe_search)}")
+        raise ValueError(
+            f"Invalid safe_search value. Must be one of: {', '.join(valid_safe_search)}"
+        )
 
     # Validate response_filter parameter
     valid_filters = ["webpages", "news", "images", "videos"]
     if response_filter.lower() not in valid_filters:
-        raise ValueError(f"Invalid response_filter value. Must be one of: {', '.join(valid_filters)}")
+        raise ValueError(
+            f"Invalid response_filter value. Must be one of: {', '.join(valid_filters)}"
+        )
 
     async def fetch_page_content(url: str, max_length: Optional[int] = 50000) -> str:
         """Helper function to fetch and convert webpage content to markdown"""
@@ -114,7 +119,10 @@ async def bing_search(
     try:
         async with httpx.AsyncClient() as client:
             response = await client.get(
-                "https://api.bing.microsoft.com/v7.0/search", headers=headers, params=params, timeout=10
+                "https://api.bing.microsoft.com/v7.0/search",
+                headers=headers,
+                params=params,
+                timeout=10,
             )
 
             # Handle common error cases
@@ -157,7 +165,9 @@ async def bing_search(
                 if include_snippets:
                     result["snippet"] = item.get("snippet", "")
                 if include_content:
-                    result["content"] = await fetch_page_content(result["link"], max_length=content_max_length)
+                    result["content"] = await fetch_page_content(
+                        result["link"], max_length=content_max_length
+                    )
 
             elif response_filter == "news":
                 result["link"] = item.get("url", "")
@@ -165,7 +175,9 @@ async def bing_search(
                     result["snippet"] = item.get("description", "")
                 result["date"] = item.get("datePublished", "")
                 if include_content:
-                    result["content"] = await fetch_page_content(result["link"], max_length=content_max_length)
+                    result["content"] = await fetch_page_content(
+                        result["link"], max_length=content_max_length
+                    )
 
             elif response_filter == "images":
                 result["link"] = item.get("contentUrl", "")
@@ -187,13 +199,17 @@ async def bing_search(
     except httpx.RequestException as e:
         error_msg = str(e)
         if "InvalidApiKey" in error_msg:
-            raise ValueError("Invalid API key. Please check your BING_SEARCH_KEY environment variable.") from e
+            raise ValueError(
+                "Invalid API key. Please check your BING_SEARCH_KEY environment variable."
+            ) from e
         elif "KeyExpired" in error_msg:
             raise ValueError("API key has expired. Please generate a new key.") from e
         else:
             raise ValueError(f"Search request failed: {error_msg}") from e
     except json.JSONDecodeError:
-        raise ValueError("Failed to parse API response. " "Please verify your API credentials and try again.") from None
+        raise ValueError(
+            "Failed to parse API response. " "Please verify your API credentials and try again."
+        ) from None
     except Exception as e:
         raise ValueError(f"Unexpected error during search: {str(e)}") from e
 

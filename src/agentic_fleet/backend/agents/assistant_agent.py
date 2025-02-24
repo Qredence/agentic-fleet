@@ -19,7 +19,9 @@ class AssistantAgent(BaseChatAgent):
     managing workies (if applicable) and basic message handling.
     """
 
-    def __init__(self, name: str, description: str = "Assistant Agent", workies: Optional[List[Any]] = None):
+    def __init__(
+        self, name: str, description: str = "Assistant Agent", workies: Optional[List[Any]] = None
+    ):
         super().__init__(name, description=description)
         self._message_history: list[ChatMessage] = []
         self.workies = workies or []  # List of WorkieAgent instances
@@ -28,14 +30,18 @@ class AssistantAgent(BaseChatAgent):
     def produced_message_types(self) -> Sequence[type[ChatMessage]]:
         return (TextMessage,)
 
-    async def on_messages(self, messages: Sequence[ChatMessage], cancellation_token: CancellationToken) -> Response:
+    async def on_messages(
+        self, messages: Sequence[ChatMessage], cancellation_token: CancellationToken
+    ) -> Response:
         """
         Handles incoming messages.  This is a basic implementation that should
         be overridden by subclasses.
         """
         self._message_history.extend(messages)
         # Default behavior: Acknowledge receipt of messages.
-        response_content = f"{self.name} received: {messages[-1].content if messages else 'No new messages.'}"
+        response_content = (
+            f"{self.name} received: {messages[-1].content if messages else 'No new messages.'}"
+        )
         response_message = TextMessage(content=response_content, source=self.name)
         self._message_history.append(response_message)
         return Response(chat_message=response_message)

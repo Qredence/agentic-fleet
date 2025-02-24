@@ -30,9 +30,9 @@ def cli():
 
 
 @cli.command()
-@click.argument('mode', type=click.Choice(['default', 'no-oauth']), default='default')
-@click.option('--host', default=None, help='Host to bind to')
-@click.option('--port', default=None, type=int, help='Port to bind to')
+@click.argument("mode", type=click.Choice(["default", "no-oauth"]), default="default")
+@click.option("--host", default=None, help="Host to bind to")
+@click.option("--port", default=None, type=int, help="Port to bind to")
 def start(mode: str, host: Optional[str], port: Optional[int]):
     """Start AgenticFleet with specified configuration.
 
@@ -51,11 +51,11 @@ def start(mode: str, host: Optional[str], port: Optional[int]):
             sys.exit(1)
 
         # Get application settings
-        app_settings = config_manager.get_app_settings()
+        config_manager.get_app_settings()
         security_settings = config_manager.get_security_settings()
 
         # Set OAuth environment variables based on mode
-        if mode == 'no-oauth':
+        if mode == "no-oauth":
             os.environ["USE_OAUTH"] = "false"
             os.environ["OAUTH_CLIENT_ID"] = ""
             os.environ["OAUTH_CLIENT_SECRET"] = ""
@@ -76,11 +76,11 @@ def start(mode: str, host: Optional[str], port: Optional[int]):
 
         # Run chainlit with the configured app
         cmd = ["chainlit", "run", app_path]
-        
+
         # Add host if specified
         if host:
             cmd.extend(["--host", host])
-        
+
         # Add port if specified
         if port:
             cmd.extend(["--port", str(port)])
@@ -99,6 +99,7 @@ def start(mode: str, host: Optional[str], port: Optional[int]):
 def version():
     """Display AgenticFleet version information."""
     from agentic_fleet import __version__
+
     click.echo(f"AgenticFleet version {__version__}")
 
 
@@ -126,7 +127,7 @@ def config():
     # Display model settings
     model_settings = config_manager.get_model_settings("azure")
     click.echo("\nModel Settings:")
-    click.echo(f"  Provider: Azure OpenAI")
+    click.echo("  Provider: Azure OpenAI")
     click.echo(f"  API Version: {model_settings.get('config', {}).get('api_version', 'Not set')}")
     click.echo("  Available Models:")
     for model in model_settings.get("models", {}).keys():

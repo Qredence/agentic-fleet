@@ -6,7 +6,6 @@ coordinating multiple agents.
 import logging
 from typing import Sequence
 
-from autogen_agentchat.agents import BaseChatAgent
 from autogen_agentchat.base import Response
 from autogen_agentchat.messages import ChatMessage, TextMessage
 from autogen_core import CancellationToken
@@ -29,13 +28,17 @@ class OrchestratorAgent(BaseModelAgent):
     def produced_message_types(self) -> Sequence[type[ChatMessage]]:
         return (TextMessage,)
 
-    async def on_messages(self, messages: Sequence[ChatMessage], cancellation_token: CancellationToken) -> Response:
+    async def on_messages(
+        self, messages: Sequence[ChatMessage], cancellation_token: CancellationToken
+    ) -> Response:
         """
         Orchestrates the action among multiple agents based on instructions
         and conversation content. This is a placeholder for more complex logic.
         """
         self._message_history.extend(messages)
-        orchestrate_output = "Orchestration plan executed, delegating sub-tasks among agents. (Placeholder)"
+        orchestrate_output = (
+            "Orchestration plan executed, delegating sub-tasks among agents. (Placeholder)"
+        )
         response_message = TextMessage(content=orchestrate_output, source=self.name)
         self._message_history.append(response_message)
         return Response(chat_message=response_message)

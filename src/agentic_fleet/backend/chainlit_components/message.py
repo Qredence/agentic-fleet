@@ -189,9 +189,7 @@ class MessageBase(ABC):
             step_dict = self.to_dict()
             await context.emitter.stream_start(step_dict)
         else:
-            await context.emitter.send_token(
-                id=self.id, token=token, is_sequence=is_sequence
-            )
+            await context.emitter.send_token(id=self.id, token=token, is_sequence=is_sequence)
 
 
 class Message(MessageBase):
@@ -284,11 +282,7 @@ class Message(MessageBase):
         await super().update()
 
         # Update tasks for all actions and elements
-        tasks = [
-            action.send(for_id=self.id)
-            for action in self.actions
-            if action.forId is None
-        ]
+        tasks = [action.send(for_id=self.id) for action in self.actions if action.forId is None]
         tasks.extend(element.send(for_id=self.id) for element in self.elements)
 
         # Run all tasks concurrently

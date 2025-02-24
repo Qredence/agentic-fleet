@@ -29,6 +29,7 @@ from agentic_fleet.backend.models.config.model_config import default_config
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
+
 # Placeholder type hints for unused imported types
 def _type_hint_placeholder() -> None:
     """Placeholder to use imported types and avoid linter warnings."""

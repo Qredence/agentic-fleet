@@ -29,7 +29,7 @@ A powerful multi-agent system for adaptive AI reasoning and automation. AgenticF
 2. [System Architecture](#system-architecture)
 3. [Quick Start](#quick-start)
    - [Installation & Environment Setup](#installation--environment-setup)
-   - [Starting AgenticFleet](#starting-agenticfleet)
+   - [Running AgenticFleet](#running-agenticfleet)
    - [Using Docker](#using-docker)
 4. [Installation Guide](#installation-guide)
    - [Prerequisites](#prerequisites)
@@ -75,7 +75,44 @@ graph TD
 - **Coder**: Generates and reviews code, ensuring quality and efficiency.
 - **Executor**: Executes code safely in an isolated environment and provides feedback.
 
-## Quick Start
+## Quick Start (fastest way)
+1. Install dependencies:
+
+```bash
+pip install agentic-fleet
+```
+
+2. Set up environment variables:
+
+```bash
+export OPENAI_API_KEY=your_api_key
+export AZURE_OPENAI_KEY=your_azure_key
+```
+
+3. Start AgenticFleet using one of these methods:
+
+```bash
+# Using CLI command (recommended)
+agenticfleet start
+
+# Using CLI command without OAuth
+agenticfleet start no-oauth
+```
+
+### Alternative Start Methods
+
+You can also use the provided scripts in the `scripts` directory:
+
+```bash
+# Using shell script
+./scripts/run.sh
+
+# Using Python script
+./scripts/run_direct.py
+
+# Using direct server start
+./scripts/start_server.sh
+```
 
 ### Installation & Environment Setup
 
@@ -107,17 +144,33 @@ Then, set up your environment:
    AZURE_OPENAI_MODEL=your_model
    ```
 
-### Starting AgenticFleet
+### Running AgenticFleet
 
-After installing the package and configuring your environment, start AgenticFleet using one of the following commands:
+There are several ways to run AgenticFleet:
 
-```bash
-# Start with OAuth enabled (default)
-agenticfleet start
+1. **Using CLI Commands** (Recommended):
+   ```bash
+   # Start with default configuration (OAuth enabled)
+   agenticfleet start
 
-# Or start without OAuth
-agenticfleet start no-oauth
-```
+   # Start without OAuth
+   agenticfleet start no-oauth
+
+   # Start with custom host and port
+   agenticfleet start --host localhost --port 8000
+   ```
+
+2. **Using Shell Script**:
+   ```bash
+   # Start the application using the shell script
+   ./scripts/run.sh
+   ```
+
+3. **Using Python Script**:
+   ```bash
+   # Start the application using Python
+   python scripts/run_direct.py
+   ```
 
 ### Using Docker
 
@@ -291,27 +344,10 @@ AgenticFleet welcomes contributions from the community. Please review our [CONTR
 
 [![Star History Chart](https://api.star-history.com/svg?repos=Qredence/AgenticFleet&type=Date)](https://star-history.com/#Qredence/AgenticFleet&Date)
 
-## API Overview
 
-AgenticFleet provides a powerful, flexible API for building multi-agent AI systems. Detailed API documentation can be found in [API.md](API.md).
-
-### Quick API Examples
-
-#### Creating an Agent
-```python
-from agentic_fleet.backend.agents.base_agent import BaseAgent
-
-class MyCustomAgent(BaseAgent):
-    def __init__(self, name, capabilities):
-        super().__init__(name)
-        self.capabilities = capabilities
-    
-    def execute_task(self, task):
-        # Implement task execution logic
-        pass
-```
 
 #### Configuring a Team
+
 ```python
 from agentic_fleet.backend.agents.orchestrator_agent import create_team
 
@@ -322,21 +358,12 @@ team = create_team([
 ])
 ```
 
-#### Task Management
-```python
-from agentic_fleet.backend.task_manager import TaskManager
 
-task_manager = TaskManager()
-task = task_manager.create_task(
-    description="Develop a complex software solution",
-    agents=team,
-    priority="high"
-)
-```
 
 ## Advanced Configuration
 
 ### Agent Configuration
+
 Agents can be configured using YAML files located in `src/agentic_fleet/config/`:
 
 ```yaml
@@ -349,15 +376,24 @@ max_context_length: 4096
 ```
 
 ### Environment Setup
+
 1. Install dependencies:
+
 ```bash
 pip install agentic-fleet
 ```
 
 2. Set up environment variables:
+
 ```bash
 export OPENAI_API_KEY=your_api_key
 export AZURE_OPENAI_KEY=your_azure_key
+```
+
+3. Start AgenticFleet:
+
+```bash
+agenticfleet start
 ```
 
 ## Supported Features

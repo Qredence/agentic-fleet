@@ -1,10 +1,8 @@
-import base64
 import os
 import urllib.parse
 from typing import Dict, List, Optional, Tuple
 
 import httpx
-from chainlit.secret import random_secret
 from chainlit.user import User
 from fastapi import HTTPException
 
@@ -19,7 +17,7 @@ class OAuthProvider:
     default_prompt: Optional[str] = None
 
     def is_configured(self):
-        return all([os.environ.get(env) for env in self.env])
+        return all(os.environ.get(env) for env in self.env)
 
     async def get_token(self, code: str, url: str) -> str:
         raise NotImplementedError
@@ -73,9 +71,7 @@ class GithubOAuthProvider(OAuthProvider):
             content = urllib.parse.parse_qs(response.text)
             token = content.get("access_token", [""])[0]
             if not token:
-                raise HTTPException(
-                    status_code=400, detail="Failed to get the access token"
-                )
+                raise HTTPException(status_code=400, detail="Failed to get the access token")
             return token
 
     async def get_user_info(self, token: str):
@@ -156,8 +152,6 @@ class GoogleOAuthProvider(OAuthProvider):
                 metadata={"image": google_user["picture"], "provider": "google"},
             )
             return (google_user, user)
-
-
 
 
 class GenericOAuthProvider(OAuthProvider):

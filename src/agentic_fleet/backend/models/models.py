@@ -4,7 +4,7 @@ This module provides enhanced versions of Autogen's agents with additional
 capabilities and improved error handling.
 """
 
-from typing import Any, Dict, List, Optional, Tuple, Union
+from typing import Any, Dict, Optional, Tuple
 
 from autogen_agentchat.agents import Agent, AssistantAgent, UserProxyAgent
 from autogen_core import ChatCompletionClient

@@ -7,5 +7,6 @@ def main():
     """Entry point for the AgenticFleet CLI."""
     cli()
 
+
 if __name__ == "__main__":
     main()

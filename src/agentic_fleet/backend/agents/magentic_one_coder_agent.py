@@ -17,7 +17,6 @@ If the result indicates there is an error, fix the error and output the code aga
 When you find an answer, verify the answer carefully. Include verifiable evidence in your response if possible."""
 
 
-
 class MagenticOneCoderAgent(AssistantAgent):
     """An agent, used by MagenticOne that provides coding assistance using an LLM model client.
 

@@ -10,6 +10,7 @@ import yaml
 SETTINGS_DIR = Path(__file__).parent
 APP_SETTINGS_PATH = SETTINGS_DIR / "app_settings.yaml"
 
+
 def load_app_settings() -> Dict[str, Any]:
     """Load application settings from YAML file.
 
@@ -21,12 +22,13 @@ def load_app_settings() -> Dict[str, Any]:
         yaml.YAMLError: If settings file is invalid
     """
     try:
-        with open(APP_SETTINGS_PATH, 'r') as f:
+        with open(APP_SETTINGS_PATH, "r") as f:
             return yaml.safe_load(f)
     except FileNotFoundError:
         raise FileNotFoundError(f"Settings file not found: {APP_SETTINGS_PATH}")
     except yaml.YAMLError as e:
         raise yaml.YAMLError(f"Error parsing settings file {APP_SETTINGS_PATH}: {e}")
+
 
 def get_required_env_vars() -> List[str]:
     """Get list of required environment variables.
@@ -36,6 +38,7 @@ def get_required_env_vars() -> List[str]:
     """
     settings = load_app_settings()
     return settings.get("required_env_vars", [])
+
 
 def validate_env_vars() -> Optional[List[str]]:
     """Validate that all required environment variables are set.
@@ -47,6 +50,7 @@ def validate_env_vars() -> Optional[List[str]]:
     missing_vars = [var for var in required_vars if not os.getenv(var)]
     return missing_vars if missing_vars else None
 
+
 def get_app_defaults() -> Dict[str, Any]:
     """Get default application settings.
 
@@ -55,6 +59,7 @@ def get_app_defaults() -> Dict[str, Any]:
     """
     settings = load_app_settings()
     return settings.get("defaults", {})
+
 
 def get_logging_config() -> Dict[str, Any]:
     """Get logging configuration.
@@ -65,6 +70,7 @@ def get_logging_config() -> Dict[str, Any]:
     settings = load_app_settings()
     return settings.get("logging", {})
 
+
 def get_security_config() -> Dict[str, Any]:
     """Get security configuration.
 
@@ -73,6 +79,7 @@ def get_security_config() -> Dict[str, Any]:
     """
     settings = load_app_settings()
     return settings.get("security", {})
+
 
 def get_environment_config() -> Dict[str, Any]:
     """Get environment configuration.
@@ -83,6 +90,7 @@ def get_environment_config() -> Dict[str, Any]:
     settings = load_app_settings()
     return settings.get("environment", {})
 
+
 def get_performance_config() -> Dict[str, Any]:
     """Get performance configuration.
 
@@ -91,6 +99,7 @@ def get_performance_config() -> Dict[str, Any]:
     """
     settings = load_app_settings()
     return settings.get("performance", {})
+
 
 def get_api_config() -> Dict[str, Any]:
     """Get API configuration.
@@ -101,6 +110,7 @@ def get_api_config() -> Dict[str, Any]:
     settings = load_app_settings()
     return settings.get("api", {})
 
+
 def get_app_info() -> Dict[str, Any]:
     """Get basic application information.
 
@@ -109,6 +119,7 @@ def get_app_info() -> Dict[str, Any]:
     """
     settings = load_app_settings()
     return settings.get("app", {})
+
 
 # Export configuration paths and functions
 __all__ = [
@@ -122,5 +133,5 @@ __all__ = [
     "get_environment_config",
     "get_performance_config",
     "get_api_config",
-    "get_app_info"
+    "get_app_info",
 ]

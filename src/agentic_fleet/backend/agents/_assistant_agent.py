@@ -277,7 +277,9 @@ class AssistantAgent(BaseChatAgent, Component[AssistantAgentConfig]):
         name: str,
         model_client: ChatCompletionClient,
         *,
-        tools: List[BaseTool[Any, Any] | Callable[..., Any] | Callable[..., Awaitable[Any]]] | None = None,
+        tools: (
+            List[BaseTool[Any, Any] | Callable[..., Any] | Callable[..., Awaitable[Any]]] | None
+        ) = None,
         handoffs: List[HandoffBase | str] | None = None,
         model_context: ChatCompletionContext | None = None,
         description: str = "An agent that provides assistance with ability to use tools.",
@@ -330,7 +332,9 @@ class AssistantAgent(BaseChatAgent, Component[AssistantAgentConfig]):
         self._handoffs: Dict[str, HandoffBase] = {}
         if handoffs is not None:
             if model_client.model_info["function_calling"] is False:
-                raise ValueError("The model does not support function calling, which is needed for handoffs.")
+                raise ValueError(
+                    "The model does not support function calling, which is needed for handoffs."
+                )
             for handoff in handoffs:
                 if isinstance(handoff, str):
                     handoff = HandoffBase(target=handoff)
@@ -366,7 +370,9 @@ class AssistantAgent(BaseChatAgent, Component[AssistantAgentConfig]):
             message_types.append(ToolCallSummaryMessage)
         return tuple(message_types)
 
-    async def on_messages(self, messages: Sequence[ChatMessage], cancellation_token: CancellationToken) -> Response:
+    async def on_messages(
+        self, messages: Sequence[ChatMessage], cancellation_token: CancellationToken
+    ) -> Response:
         async for message in self.on_messages_stream(messages, cancellation_token):
             if isinstance(message, Response):
                 return message
@@ -381,7 +387,9 @@ class AssistantAgent(BaseChatAgent, Component[AssistantAgentConfig]):
                 # Add handoff context to the model context.
                 for context_msg in msg.context:
                     await self._model_context.add_message(context_msg)
-            await self._model_context.add_message(UserMessage(content=msg.content, source=msg.source))
+            await self._model_context.add_message(
+                UserMessage(content=msg.content, source=msg.source)
+            )
 
         # Inner messages.
         inner_messages: List[AgentEvent | ChatMessage] = []
@@ -398,12 +406,16 @@ class AssistantAgent(BaseChatAgent, Component[AssistantAgentConfig]):
                     yield memory_query_event_msg
 
         # Generate an inference result based on the current model context.
-        llm_messages = self._get_compatible_context(self._system_messages + await self._model_context.get_messages())
+        llm_messages = self._get_compatible_context(
+            self._system_messages + await self._model_context.get_messages()
+        )
         model_result: CreateResult | None = None
         if self._model_client_stream:
             # Stream the model client.
             async for chunk in self._model_client.create_stream(
-                llm_messages, tools=self._tools + self._handoff_tools, cancellation_token=cancellation_token
+                llm_messages,
+                tools=self._tools + self._handoff_tools,
+                cancellation_token=cancellation_token,
             ):
                 if isinstance(chunk, CreateResult):
                     model_result = chunk
@@ -414,11 +426,15 @@ class AssistantAgent(BaseChatAgent, Component[AssistantAgentConfig]):
             assert isinstance(model_result, CreateResult)
         else:
             model_result = await self._model_client.create(
-                llm_messages, tools=self._tools + self._handoff_tools, cancellation_token=cancellation_token
+                llm_messages,
+                tools=self._tools + self._handoff_tools,
+                cancellation_token=cancellation_token,
             )
 
         # Add the response to the model context.
-        await self._model_context.add_message(AssistantMessage(content=model_result.content, source=self.name))
+        await self._model_context.add_message(
+            AssistantMessage(content=model_result.content, source=self.name)
+        )
 
         # Check if the response is a string and return it.
         if isinstance(model_result.content, str):
@@ -484,7 +500,10 @@ class AssistantAgent(BaseChatAgent, Component[AssistantAgentConfig]):
             # Return the output messages to signal the handoff.
             yield Response(
                 chat_message=HandoffMessage(
-                    content=handoffs[0].message, target=handoffs[0].target, source=self.name, context=handoff_context
+                    content=handoffs[0].message,
+                    target=handoffs[0].target,
+                    source=self.name,
+                    context=handoff_context,
                 ),
                 inner_messages=inner_messages,
             )
@@ -550,15 +569,25 @@ class AssistantAgent(BaseChatAgent, Component[AssistantAgentConfig]):
         try:
             if not self._tools + self._handoff_tools:
                 raise ValueError("No tools are available.")
-            tool = next((t for t in self._tools + self._handoff_tools if t.name == tool_call.name), None)
+            tool = next(
+                (t for t in self._tools + self._handoff_tools if t.name == tool_call.name), None
+            )
             if tool is None:
                 raise ValueError(f"The tool '{tool_call.name}' is not available.")
             arguments = json.loads(tool_call.arguments)
             result = await tool.run_json(arguments, cancellation_token)
             result_as_str = tool.return_value_as_string(result)
-            return (tool_call, FunctionExecutionResult(content=result_as_str, call_id=tool_call.id, is_error=False))
+            return (
+                tool_call,
+                FunctionExecutionResult(
+                    content=result_as_str, call_id=tool_call.id, is_error=False
+                ),
+            )
         except Exception as e:
-            return (tool_call, FunctionExecutionResult(content=f"Error: {e}", call_id=tool_call.id, is_error=True))
+            return (
+                tool_call,
+                FunctionExecutionResult(content=f"Error: {e}", call_id=tool_call.id, is_error=True),
+            )
 
     async def on_reset(self, cancellation_token: CancellationToken) -> None:
         """Reset the assistant agent to its initialization state."""
@@ -593,9 +622,11 @@ class AssistantAgent(BaseChatAgent, Component[AssistantAgentConfig]):
             model_context=self._model_context.dump_component(),
             memory=[memory.dump_component() for memory in self._memory] if self._memory else None,
             description=self.description,
-            system_message=self._system_messages[0].content
-            if self._system_messages and isinstance(self._system_messages[0].content, str)
-            else None,
+            system_message=(
+                self._system_messages[0].content
+                if self._system_messages and isinstance(self._system_messages[0].content, str)
+                else None
+            ),
             model_client_stream=self._model_client_stream,
             reflect_on_tool_use=self._reflect_on_tool_use,
             tool_call_summary_format=self._tool_call_summary_format,
@@ -607,10 +638,16 @@ class AssistantAgent(BaseChatAgent, Component[AssistantAgentConfig]):
         return cls(
             name=config.name,
             model_client=ChatCompletionClient.load_component(config.model_client),
-            tools=[BaseTool.load_component(tool) for tool in config.tools] if config.tools else None,
+            tools=(
+                [BaseTool.load_component(tool) for tool in config.tools] if config.tools else None
+            ),
             handoffs=config.handoffs,
             model_context=None,
-            memory=[Memory.load_component(memory) for memory in config.memory] if config.memory else None,
+            memory=(
+                [Memory.load_component(memory) for memory in config.memory]
+                if config.memory
+                else None
+            ),
             description=config.description,
             system_message=config.system_message,
             model_client_stream=config.model_client_stream,

@@ -14,6 +14,7 @@ from dotenv import load_dotenv
 # Load environment variables
 load_dotenv()
 
+
 def load_model_config(config_path: str = None) -> Dict[str, Any]:
     """Load model configuration from YAML file.
 
@@ -24,15 +25,12 @@ def load_model_config(config_path: str = None) -> Dict[str, Any]:
         Dictionary containing model configuration
     """
     if not config_path:
-        config_path = os.path.join(
-            os.path.dirname(__file__),
-            "model_config.yaml"
-        )
+        config_path = os.path.join(os.path.dirname(__file__), "model_config.yaml")
 
     if not os.path.exists(config_path):
         raise FileNotFoundError(f"Model config file not found: {config_path}")
 
-    with open(config_path, 'r') as f:
+    with open(config_path, "r") as f:
         config = yaml.safe_load(f)
 
     # Resolve environment variables in config
@@ -52,6 +50,7 @@ def load_model_config(config_path: str = None) -> Dict[str, Any]:
 
     return deep_resolve(config)
 
+
 def create_model_client(model_config: Dict[str, Any]) -> Any:
     """Create a model client based on the configuration.
 
@@ -70,6 +69,7 @@ def create_model_client(model_config: Dict[str, Any]) -> Any:
     client_class = getattr(module, class_name)
 
     return client_class(**config)
+
 
 def get_azure_model_client() -> Any:
     """Get the Azure OpenAI model client from the configuration.

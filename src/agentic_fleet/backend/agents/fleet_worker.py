@@ -11,9 +11,16 @@ class FleetWorker(BaseModelAgent, CodeExecutorAgent):
     and now inherits from BaseModelAgent for consistent structure.
     """
 
-    def __init__(self, name: str, code_executor: CodeExecutorAgent, description: str = "Executes and monitors code tasks with precision."):
+    def __init__(
+        self,
+        name: str,
+        code_executor: CodeExecutorAgent,
+        description: str = "Executes and monitors code tasks with precision.",
+    ):
         BaseModelAgent.__init__(self, name=name, description=description, role="Code Executor")
-        CodeExecutorAgent.__init__(self, name=name, code_executor=code_executor) # Pass the code_executor
+        CodeExecutorAgent.__init__(
+            self, name=name, code_executor=code_executor
+        )  # Pass the code_executor
         self.custom_attr = "FleetWorker Custom Attribute"
         logging.info("FleetWorker initialized with custom attributes in agents folder.")
 

@@ -9,6 +9,6 @@ This module contains core application functionality including:
 from .application import ApplicationManager, create_application
 
 __all__ = [
-    'ApplicationManager',
-    'create_application',
+    "ApplicationManager",
+    "create_application",
 ]
