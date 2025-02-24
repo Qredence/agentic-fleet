@@ -9,6 +9,7 @@ import click
 from dotenv import load_dotenv
 
 from agentic_fleet.config import config_manager
+from agentic_fleet.core.application import bootstrap
 
 
 def validate_environment() -> Optional[str]:
@@ -25,8 +26,7 @@ def validate_environment() -> Optional[str]:
 @click.group()
 def cli():
     """AgenticFleet CLI - A multi-agent system for adaptive AI reasoning."""
-    # Initialize configuration
-    config_manager.load_all()
+    pass
 
 
 @cli.command()
@@ -50,99 +50,67 @@ def start(mode: str, host: Optional[str], port: Optional[int]):
             click.echo(f"Environment validation failed: {error}", err=True)
             sys.exit(1)
 
-        # Get application settings
-        config_manager.get_app_settings()
-        security_settings = config_manager.get_security_settings()
-
         # Set OAuth environment variables based on mode
         if mode == "no-oauth":
             os.environ["USE_OAUTH"] = "false"
             os.environ["OAUTH_CLIENT_ID"] = ""
             os.environ["OAUTH_CLIENT_SECRET"] = ""
-            click.echo("Starting AgenticFleet without OAuth...")
-        else:
-            os.environ["USE_OAUTH"] = str(security_settings.get("use_oauth", "false")).lower()
-            click.echo("Starting AgenticFleet with OAuth...")
 
-        # Get the path to app.py
-        app_dir = os.path.abspath(os.path.dirname(__file__))
-        app_path = os.path.join(app_dir, "app.py")
+        # Initialize application through bootstrap
+        app = bootstrap.initialize_app()
 
-        # Set host and port
-        if host:
-            os.environ["HOST"] = host
-        if port:
-            os.environ["PORT"] = str(port)
+        # Get host and port from environment or CLI args
+        final_host = host or app.config.host
+        final_port = port or app.config.port
 
-        # Run chainlit with the configured app
-        cmd = ["chainlit", "run", app_path]
+        # Start Chainlit server
+        command = [
+            "chainlit",
+            "run",
+            "src/agentic_fleet/app.py",
+            "--host",
+            final_host,
+            "--port",
+            str(final_port),
+            "--headless"  # Run without browser auto-open
+        ]
+        
+        click.echo(f"Starting AgenticFleet on {final_host}:{final_port}")
+        subprocess.run(command, check=True)
 
-        # Add host if specified
-        if host:
-            cmd.extend(["--host", host])
-
-        # Add port if specified
-        if port:
-            cmd.extend(["--port", str(port)])
-
-        subprocess.run(cmd, check=True)
-
-    except subprocess.CalledProcessError as e:
-        click.echo(f"Error running chainlit: {e}", err=True)
-        sys.exit(1)
     except Exception as e:
-        click.echo(f"Error starting AgenticFleet: {e}", err=True)
+        click.echo(f"Error starting AgenticFleet: {str(e)}", err=True)
         sys.exit(1)
 
 
 @cli.command()
 def version():
     """Display AgenticFleet version information."""
-    from agentic_fleet import __version__
-
-    click.echo(f"AgenticFleet version {__version__}")
+    try:
+        from agentic_fleet import __version__
+        click.echo(f"AgenticFleet version: {__version__}")
+    except ImportError:
+        click.echo("Could not determine version", err=True)
+        sys.exit(1)
 
 
 @cli.command()
 def config():
     """Display current configuration."""
-    click.echo("\nAgenticFleet Configuration:")
-    click.echo("-" * 50)
-
-    # Display app settings
-    app_settings = config_manager.get_app_settings()
-    click.echo("\nApplication Settings:")
-    click.echo(f"  Name: {app_settings['app']['name']}")
-    click.echo(f"  Version: {app_settings['app']['version']}")
-    click.echo(f"  Host: {app_settings['app'].get('host', 'localhost')}")
-    click.echo(f"  Port: {app_settings['app'].get('port', 8001)}")
-
-    # Display environment settings
-    env_settings = config_manager.get_environment_settings()
-    click.echo("\nEnvironment Settings:")
-    click.echo(f"  Debug Mode: {env_settings.get('debug', False)}")
-    click.echo(f"  Workspace: {env_settings.get('workspace_dir', './files/workspace')}")
-    click.echo(f"  Downloads: {env_settings.get('downloads_dir', './files/downloads')}")
-
-    # Display model settings
-    model_settings = config_manager.get_model_settings("azure")
-    click.echo("\nModel Settings:")
-    click.echo("  Provider: Azure OpenAI")
-    click.echo(f"  API Version: {model_settings.get('config', {}).get('api_version', 'Not set')}")
-    click.echo("  Available Models:")
-    for model in model_settings.get("models", {}).keys():
-        click.echo(f"    - {model}")
-
-    click.echo("\n" + "-" * 50)
+    try:
+        app = bootstrap.initialize_app()
+        click.echo("\nApplication Configuration:")
+        click.echo("-" * 30)
+        for key, value in app.config.settings.items():
+            click.echo(f"{key}: {value}")
+    except Exception as e:
+        click.echo(f"Error displaying configuration: {e}", err=True)
+        sys.exit(1)
 
 
 def main():
     """Main entry point for the CLI."""
-    try:
-        cli()
-    except Exception as e:
-        click.echo(f"Error: {str(e)}", err=True)
-        sys.exit(1)
+    cli()
 
 
 if __name__ == "__main__":

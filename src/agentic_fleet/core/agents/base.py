@@ -8,21 +8,12 @@ It follows the patterns from the latest Microsoft Autogen documentation.
 
 from typing import Any, Dict, List, Optional, Union
 
-from autogen_core.agent import AssistantAgent
-from autogen_core.message import Message
-from autogen_core.model import ModelClient
-from pydantic import BaseModel, Field
+from autogen_agentchat.agents import AssistantAgent
+from autogen_agentchat.messages import ChatMessage, TextMessage
+from autogen_core import CancellationToken
+from autogen_core.models import ChatCompletionClient
 
-
-class AgentConfig(BaseModel):
-    """Configuration for an agent."""
-
-    name: str = Field(description="Name of the agent")
-    description: str = Field(description="Description of the agent's purpose")
-    system_message: Optional[str] = Field(
-        default=None, description="System message to configure the agent's behavior"
-    )
-    model: Optional[str] = Field(default=None, description="Model identifier to use for this agent")
+from ..config.configuration_manager import AgentConfig
 
 
 class BaseAgent(AssistantAgent):
@@ -39,7 +30,7 @@ class BaseAgent(AssistantAgent):
     def __init__(
         self,
         name: str,
-        model_client: Optional[ModelClient] = None,
+        model_client: Optional[ChatCompletionClient] = None,
         description: Optional[str] = None,
         system_message: Optional[str] = None,
         **kwargs: Any,
@@ -78,7 +69,7 @@ class BaseAgent(AssistantAgent):
         """
         pass
 
-    async def process_message(self, message: Union[str, Message]) -> Dict[str, Any]:
+    async def process_message(self, message: Union[str, ChatMessage]) -> Dict[str, Any]:
         """
         Process an incoming message and generate a response.
 
@@ -89,12 +80,12 @@ class BaseAgent(AssistantAgent):
             A dictionary containing the agent's response and any additional data.
         """
         if isinstance(message, str):
-            message = Message(content=message, source="user")
+            message = TextMessage(content=message, source="user")
 
         response = await self.generate_response(messages=[message])
         return {"content": response.content, "role": "assistant", "metadata": response.model_dump()}
 
-    async def run(self, task: Union[str, List[Message]]) -> Dict[str, Any]:
+    async def run(self, task: Union[str, List[ChatMessage]]) -> Dict[str, Any]:
         """
         Execute the agent's primary task.
 
@@ -105,7 +96,7 @@ class BaseAgent(AssistantAgent):
             A dictionary containing the task results and any additional data.
         """
         if isinstance(task, str):
-            task = [Message(content=task, source="user")]
+            task = [TextMessage(content=task, source="user")]
 
         response = await self.generate_response(messages=task)
         return {"content": response.content, "role": "assistant", "metadata": response.model_dump()}

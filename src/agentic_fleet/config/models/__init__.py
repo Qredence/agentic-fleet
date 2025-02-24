@@ -9,8 +9,8 @@ import yaml
 PACKAGE_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
 
 # Configuration file paths
-LLM_CONFIG_PATH = os.path.join(PACKAGE_ROOT, "@llm_config.yaml")
-AGENT_CONFIG_PATH = os.path.join(PACKAGE_ROOT, "config", "models", "agent_pool.yaml")
+LLM_CONFIG_PATH = os.path.join(PACKAGE_ROOT, "config", "model_config.yaml")
+AGENT_CONFIG_PATH = os.path.join(PACKAGE_ROOT, "config", "agents.yaml")
 FLEET_CONFIG_PATH = os.path.join(PACKAGE_ROOT, "config", "models", "fleet_config.yaml")
 
 
@@ -28,7 +28,7 @@ def load_yaml_config(path: str) -> dict:
 def load_llm_config() -> dict:
     """Load the LLM configuration."""
     config = load_yaml_config(LLM_CONFIG_PATH)
-    return config.get("Model", {})
+    return config.get("providers", {})
 
 
 def load_agent_config() -> dict:

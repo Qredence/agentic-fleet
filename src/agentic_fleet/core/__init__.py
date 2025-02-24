@@ -6,7 +6,7 @@ This module contains core application functionality including:
 - Base classes and utilities
 """
 
-from .application import ApplicationManager, create_application
+from .application.manager import ApplicationManager, create_application
 
 __all__ = [
     "ApplicationManager",

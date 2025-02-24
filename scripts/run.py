@@ -32,7 +32,7 @@ def run_app(no_oauth: bool):
 
     app_path = os.path.join(os.path.dirname(__file__), "..", "src", "agentic_fleet", "app.py")
 
-    cmd = ["chainlit", "run", app_path, "--port", "8001"]
+    cmd = ["chainlit", "run", app_path, "--port", "8000"]
 
     if no_oauth:
         # Only disable OAuth-specific variables

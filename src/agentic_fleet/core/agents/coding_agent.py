@@ -6,18 +6,26 @@ code based on given tasks and requirements.
 """
 
 import logging
-from typing import Any, Dict, List, Optional, Sequence
+from typing import Any, Dict, List, Optional, Sequence, Union
 
 from autogen_agentchat.agents import AssistantAgent
 from autogen_agentchat.base import Response
 from autogen_agentchat.messages import ChatMessage
 from autogen_core import CancellationToken
-from autogen_core.models._model_client import CreateResult, LLMMessage, RequestUsage
+from autogen_core.models import (
+    CreateResult,
+    RequestUsage,
+    ChatCompletionClient,
+    SystemMessage,
+    UserMessage,
+)
 from pydantic import BaseModel
 
+from agentic_fleet.core.agents.base import BaseAgent
 from agentic_fleet.core.tools.code_execution.code_execution_tool import (
     CodeBlock,
     ExecutionResult,
+    CodeExecutionTool,
 )
 
 logger = logging.getLogger(__name__)
@@ -33,38 +41,35 @@ class CodingConfig(BaseModel):
     review_temperature: float = 0.6
 
 
-class CodingAgent(AssistantAgent):
+class CodingAgent(BaseAgent):
     """
-    Agent that generates, executes, and optimizes code based on
-    given tasks and requirements.
+    An agent that generates, executes, and optimizes code based on tasks and requirements.
     """
 
     def __init__(
         self,
-        **kwargs: Any
+        name: str = "coding_agent",
+        config: Optional[CodingConfig] = None,
+        model_client: Optional[ChatCompletionClient] = None,
+        **kwargs: Any,
     ) -> None:
         """
-        Initialize the Coding Agent.
+        Initialize the coding agent.
 
         Args:
-            **kwargs: Additional arguments passed to AssistantAgent
+            name: Name of the agent
+            config: Configuration for the agent
+            model_client: Model client for chat completion
+            **kwargs: Additional arguments passed to BaseAgent
         """
-        # Remove 'name' and 'temperature' from kwargs if present
-        kwargs.pop('name', None)
-        temperature = kwargs.pop('temperature', None)
-
-        # Configure llm_config if temperature is provided
-        llm_config = kwargs.get('llm_config', {})
-        if temperature is not None:
-            llm_config['temperature'] = temperature
-        kwargs['llm_config'] = llm_config
-
+        self._name = name
         super().__init__(
-            name="Coding_Assistant",
-            system_message="""You are a coding expert. Use the code_execution tool for all code tasks.
-            Reply 'TERMINATE' when done.""",
-            **kwargs
+            name=name,
+            model_client=model_client,
+            **kwargs,
         )
+        self.config = config or CodingConfig()
+        self.code_execution_tool = CodeExecutionTool()
 
     async def process_message(self, message: str, token: CancellationToken = None) -> Response:
         """
@@ -117,7 +122,10 @@ class CodingAgent(AssistantAgent):
             )
 
     async def generate_response(
-        self, messages: Sequence[LLMMessage], token: CancellationToken = None
+        self,
+        messages: Sequence[ChatMessage],
+        token: CancellationToken = None,
+        temperature: Optional[float] = None
     ) -> CreateResult:
         """
         Generate a response based on the message history.
@@ -125,17 +133,25 @@ class CodingAgent(AssistantAgent):
         Args:
             messages: Sequence of messages in the conversation
             token: Cancellation token for the operation
+            temperature: Optional temperature parameter for response generation
 
         Returns:
             CreateResult containing the generated response
         """
-        result = await super().generate_response(messages, token)
-
-        # Add token usage information
-        if not hasattr(result, "usage"):
-            result.usage = RequestUsage(prompt_tokens=0, completion_tokens=0, total_tokens=0)
-
-        return result
+        # Pass temperature to model client if provided
+        if temperature is not None and self._model_client:
+            original_temp = getattr(self._model_client, 'temperature', None)
+            self._model_client.temperature = temperature
+            try:
+                response = await super().on_messages(messages, token)
+                return CreateResult(message=response.chat_message)
+            finally:
+                # Restore original temperature
+                if original_temp is not None:
+                    self._model_client.temperature = original_temp
+        else:
+            response = await super().on_messages(messages, token)
+            return CreateResult(message=response.chat_message)
 
     async def _generate_code(
         self, task: str, requirements: Dict[str, Any], context: Optional[Dict[str, Any]] = None
@@ -153,13 +169,8 @@ class CodingAgent(AssistantAgent):
         """
         try:
             messages = [
-                LLMMessage(
-                    role="system", content="Generate code based on the task and requirements."
-                ),
-                LLMMessage(
-                    role="user",
-                    content=f"Task: {task}\nRequirements: {requirements}\nContext: {context}",
-                ),
+                SystemMessage(content="Generate code based on the task and requirements."),
+                UserMessage(content=f"Task: {task}\nRequirements: {requirements}\nContext: {context}", source="user"),
             ]
 
             result = await self.generate_response(
@@ -190,7 +201,7 @@ class CodingAgent(AssistantAgent):
         try:
             code_block = CodeBlock(code=code, language=self._detect_language_from_code(code))
 
-            result = await self.code_execution_tool.execute(code_block, context)
+            result = await self.code_execution_tool.execute_code(code_block, context)
 
             return result
 
@@ -214,10 +225,8 @@ class CodingAgent(AssistantAgent):
         """
         try:
             messages = [
-                LLMMessage(role="system", content="Optimize the code based on specified metrics."),
-                LLMMessage(
-                    role="user", content=f"Code: {code}\nMetrics: {metrics}\nContext: {context}"
-                ),
+                SystemMessage(content="Optimize the code based on specified metrics."),
+                UserMessage(content=f"Code: {code}\nMetrics: {metrics}\nContext: {context}", source="user"),
             ]
 
             result = await self.generate_response(
@@ -241,14 +250,12 @@ class CodingAgent(AssistantAgent):
             context: Optional context information
 
         Returns:
-            Code review comments
+            Review comments and suggestions
         """
         try:
             messages = [
-                LLMMessage(
-                    role="system", content="Review code for quality, security, and best practices."
-                ),
-                LLMMessage(role="user", content=f"Code: {code}\nContext: {context}"),
+                SystemMessage(content="Review the code for quality, security, and best practices."),
+                UserMessage(content=f"Code: {code}\nContext: {context}", source="user"),
             ]
 
             result = await self.generate_response(

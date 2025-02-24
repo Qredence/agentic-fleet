@@ -39,36 +39,64 @@ class ConfigurationManager:
 
     def load_all(self):
         """Load all configuration files."""
-        configs = load_all_configs()
+        try:
+            configs = load_all_configs()
 
-        # Update configuration dictionaries
-        self._llm_configs = configs["llm"]
-        self._agent_configs = configs["agent"]  # Changed from agent_pool to agent
-        self._fleet_configs = configs["fleet"]
+            # Update configuration dictionaries
+            self._llm_configs = configs["llm"]
+            self._agent_configs = configs["agent"]
+            self._fleet_configs = configs["fleet"]
 
-        # Load environment settings
-        self._environment = {
-            "workspace_dir": os.getenv("WORKSPACE_DIR", "workspace"),
-            "debug_dir": os.getenv("DEBUG_DIR", "debug"),
-            "downloads_dir": os.getenv("DOWNLOADS_DIR", "downloads"),
-            "logs_dir": os.getenv("LOGS_DIR", "logs"),
-            "stream_delay": float(os.getenv("STREAM_DELAY", "0.01")),
+            # Load environment settings
+            self._environment = {
+                "workspace_dir": os.getenv("WORKSPACE_DIR", "workspace"),
+                "debug_dir": os.getenv("DEBUG_DIR", "debug"),
+                "downloads_dir": os.getenv("DOWNLOADS_DIR", "downloads"),
+                "logs_dir": os.getenv("LOGS_DIR", "logs"),
+                "stream_delay": float(os.getenv("STREAM_DELAY", "0.01")),
+            }
+
+            # Load security settings
+            self._security = {
+                "use_oauth": os.getenv("USE_OAUTH", "false").lower() == "true",
+                "oauth_providers": [],
+            }
+
+            # Load default settings
+            self._defaults = {
+                "max_rounds": int(os.getenv("DEFAULT_MAX_ROUNDS", "10")),
+                "max_time": int(os.getenv("DEFAULT_MAX_TIME", "300")),
+                "max_stalls": int(os.getenv("DEFAULT_MAX_STALLS", "3")),
+                "start_page": os.getenv("DEFAULT_START_PAGE", "https://www.bing.com"),
+                "system_prompt": os.getenv("DEFAULT_SYSTEM_PROMPT", "You are a helpful AI assistant."),
+            }
+        except FileNotFoundError as e:
+            print(f"Warning: Configuration file not found: {e}")
+            print("Using default configurations...")
+            self._initialize_defaults()
+        except Exception as e:
+            raise RuntimeError(f"Error loading configurations: {e}")
+
+    def _initialize_defaults(self):
+        """Initialize default configurations when files are missing."""
+        self._llm_configs = {
+            "azure": {
+                "name": "Azure OpenAI",
+                "models": {
+                    "gpt-4o": {
+                        "model_name": "gpt-4o",
+                        "context_length": 128000,
+                        "model_info": {
+                            "vision": True,
+                            "function_calling": True,
+                            "json_output": True,
+                        }
+                    }
+                }
+            }
         }
-
-        # Load security settings
-        self._security = {
-            "use_oauth": os.getenv("USE_OAUTH", "false").lower() == "true",
-            "oauth_providers": [],
-        }
-
-        # Load default settings
-        self._defaults = {
-            "max_rounds": int(os.getenv("DEFAULT_MAX_ROUNDS", "10")),
-            "max_time": int(os.getenv("DEFAULT_MAX_TIME", "300")),
-            "max_stalls": int(os.getenv("DEFAULT_MAX_STALLS", "3")),
-            "start_page": os.getenv("DEFAULT_START_PAGE", "https://www.bing.com"),
-            "system_prompt": os.getenv("DEFAULT_SYSTEM_PROMPT", "You are a helpful AI assistant."),
-        }
+        self._agent_configs = {}
+        self._fleet_configs = {}
 
     def validate_environment(self) -> Optional[str]:
         """Validate environment configuration."""

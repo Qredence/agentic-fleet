@@ -2,58 +2,46 @@
 agents:
   web_surfer:
     name: "WebSurfer"
+    description: "A specialized agent for web browsing and information gathering. Capable of navigating websites, extracting information, and handling web-based tasks."
     type: "MultimodalWebSurfer"
     class: "autogen_ext.agents.web_surfer.MultimodalWebSurfer"
-    description: |
-      Expert web surfer agent responsible for:
-      1. Navigate and extract information from web pages
-      2. Take screenshots of relevant content
-      3. Summarize findings in a clear, structured format
     config:
       downloads_folder: "./files/downloads"
       debug_dir: "./files/debug"
       headless: true
       animate_actions: false
-      to_save_screenshots: true
       use_ocr: false
       to_resize_viewport: true
+      to_save_screenshots: true
 
   file_surfer:
     name: "FileSurfer"
+    description: "An agent dedicated to file system operations. Manages file reading, writing, and navigation within the codebase."
     type: "FileSurfer"
     class: "autogen_ext.agents.file_surfer.FileSurfer"
-    description: |
-      Expert file system navigator responsible for:
-      1. Search and analyze files in the workspace
-      2. Extract relevant information from files
-      3. Organize and manage file operations efficiently
+    config:
+      workspace_dir: "./files/workspace"
 
   coder:
     name: "Coder"
+    description: "A specialized coding agent that can write, review, and optimize code across multiple programming languages."
     type: "MagenticOneCoderAgent"
     class: "autogen_ext.agents.magentic_one.MagenticOneCoderAgent"
-    description: |
-      Expert coding agent responsible for:
-      1. Writing and refactoring code
-      2. Implementing software features
-      3. Code review and optimization
     config:
       default_model: "gpt-4o"
       code_quality_threshold: 0.85
+      max_iterations: 3
+      review_changes: true
 
   executor:
     name: "Executor"
+    description: "An agent responsible for executing code and commands safely in an isolated environment."
     type: "CodeExecutorAgent"
     class: "autogen_agentchat.agents.CodeExecutorAgent"
-    description: |
-      Expert code execution agent responsible for:
-      1. Safely execute code in the workspace
-      2. Monitor execution and handle timeouts
-      3. Provide detailed feedback on execution results
-      4. Maintain a clean and organized workspace
     config:
-      work_dir: "./files/workspace"
       timeout: 300
+      allow_network: false
+      workspace_dir: "./files/workspace"
 
 # Team Configurations
 teams:
