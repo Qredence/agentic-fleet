@@ -46,11 +46,3 @@ providers:
           json_output: true
           family: "azure"
           architecture: "gpt-4o"
-
-ui:
-  avatars:
-    Orchestrator: "👑"
-    WebSurfer: "🌐"
-    FileSurfer: "📁"
-    Coder: "👨💻"
-    Executor: "⚡"

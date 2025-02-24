@@ -30,15 +30,19 @@ agents:
 teams:
   magentic_fleet_one:
     name: "MagenticFleet One"
-    description: "Default team configuration with all agents"
-    participants:
+    description: "Primary team configuration for MagenticFleet"
+    agents:
       - web_surfer
       - file_surfer
       - coder
       - executor
     config:
-      max_messages: 50
-      selector_description: "Select the most appropriate agent for the current task"
+      max_rounds: 10
+      max_time: 300
+      max_stalls: 3
+      temperature: 0.7
+      start_page: "https://www.bing.com"
+      system_prompt: "You are part of a specialized team of AI agents working together to solve complex tasks."
 
 chat_profiles:
   magentic_fleet_one:

@@ -1,0 +1,24 @@
+fleet_settings:
+  max_rounds: 10
+  max_stalls: 3
+  stream_output: true
+  show_thoughts: true
+
+team_profiles:
+  "MagenticFleet One":
+    participants:
+      - "WebSurfer"
+      - "FileSurfer"
+      - "Coder"
+      - "Executor"
+    config:
+      max_messages: 50
+      selector_description: "Select the most appropriate agent for the current task"
+
+defaults:
+  start_page: "https://www.google.com"
+  max_rounds: 10
+  max_stalls: 3
+  workspace_dir: "workspace"
+  downloads_dir: "downloads"
+  debug_dir: "debug" 

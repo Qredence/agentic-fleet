@@ -11,7 +11,7 @@ from agentic_fleet.core.application import (
     create_application,
 )
 
-__version__ = "0.1.0"
+__version__ = "0.4.9"
 __author__ = "Qredence"
 __email__ = "contact@qredence.ai"
 __license__ = "Apache 2.0"

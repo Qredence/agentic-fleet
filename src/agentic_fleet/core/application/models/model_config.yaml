@@ -1,0 +1,28 @@
+model_settings:
+  temperature: 0.7
+  max_tokens: 2000
+  top_p: 0.95
+  presence_penalty: 0.0
+  frequency_penalty: 0.0
+
+agent_settings:
+  web_surfer:
+    description: "A web-surfing agent capable of browsing and extracting information from the internet"
+    config:
+      timeout: 300
+      max_retries: 3
+      headless: true
+      animate_actions: false
+      use_ocr: false
+
+  file_surfer:
+    description: "A file system navigation agent capable of browsing and managing files"
+    config:
+      timeout: 300
+      max_retries: 3
+
+  executor:
+    description: "A code execution agent capable of running and managing code"
+    config:
+      timeout: 300
+      max_retries: 3 
