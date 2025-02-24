@@ -94,22 +94,41 @@ DEFAULT_SYSTEM_PROMPT = defaults.get("system_prompt", "")
 
 app_manager: Optional[ApplicationManager] = None
 
+
+# Factory function for client creation
+def create_client(
+    model_name: str,
+    streaming: bool = True,
+    vision: bool = False,
+    connection_pool_size: int = 10,
+    request_timeout: int = 30,
+) -> AzureOpenAIChatCompletionClient:
+    """Create and return an Azure OpenAI client with the specified configuration."""
+    return AzureOpenAIChatCompletionClient(
+        model=model_name,
+        deployment=model_name,
+        endpoint=os.getenv("AZURE_OPENAI_ENDPOINT"),
+        api_key=os.getenv("AZURE_OPENAI_API_KEY"),
+        api_version=os.getenv("AZURE_OPENAI_API_VERSION"),
+        model_streaming=streaming,
+        model_info={
+            "vision": vision,
+            "function_calling": True,
+            "json_output": True,
+            "family": "gpt-4o" if "gpt-4o" in model_name else "azure",
+            "architecture": model_name,
+        },
+        streaming=streaming,
+        connection_pool_size=connection_pool_size,
+        request_timeout=request_timeout,
+    )
+
+
 # Add connection pooling for Azure client
-client = AzureOpenAIChatCompletionClient(
-    model="gpt-4o-mini-2024-07-18",
-    deployment="gpt-4o-mini",
-    endpoint=os.getenv("AZURE_OPENAI_ENDPOINT"),
-    api_key=os.getenv("AZURE_OPENAI_API_KEY"),
-    api_version=os.getenv("AZURE_OPENAI_API_VERSION"),
-    model_streaming=True,
-    model_info={
-        "vision": True,  # Disable vision capabilities for now
-        "function_calling": True,
-        "json_output": True,
-        "family": "gpt-4o",
-        "architecture": "gpt-4o-mini",
-    },
+client = create_client(
+    model_name="gpt-4o-mini-2024-07-18",
     streaming=True,
+    vision=True,
     connection_pool_size=10,
     request_timeout=30,
 )
@@ -233,21 +252,11 @@ async def on_chat_start():
             else "o3-mini"
         )
 
-        # Initialize Azure OpenAI client with appropriate configuration
-        client = AzureOpenAIChatCompletionClient(
-            model=model_name,
-            deployment=model_name,
-            endpoint=os.getenv("AZURE_OPENAI_ENDPOINT"),
-            api_key=os.getenv("AZURE_OPENAI_API_KEY"),
-            api_version=os.getenv("AZURE_OPENAI_API_VERSION"),
+        # Initialize Azure OpenAI client with appropriate configuration using factory
+        client = create_client(
+            model_name=model_name,
             streaming=True,
-            model_info={
-                "vision": False,  # Disable vision capabilities for now
-                "function_calling": True,
-                "json_output": True,
-                "family": "azure",
-                "architecture": model_name,
-            },
+            vision=False,
         )
 
         # Initialize MagenticOne with configured client
@@ -355,20 +364,20 @@ async def on_chat_start():
 async def on_message(message: cl.Message):
     """Process incoming messages with task tracking."""
     task_list = cl.TaskList()
-    task_list.status = "Initializing..."
+    task_list.status = "Preparing agent team..."
     await task_list.send()
 
     try:
         # Task 1: Check for reset command
         reset_task = cl.Task(title="Checking command", status=cl.TaskStatus.RUNNING)
         await task_list.add_task(reset_task)
-        reset_msg = await cl.Message(content="Verifying input...").send()
+        reset_msg = await cl.Message(content="Checking command...").send()
         reset_task.forId = reset_msg.id
 
         if message.content.strip().lower() == "/reset":
             await on_reset(cl.Action(name="reset_agents", payload={"action": "reset"}))
             reset_task.status = cl.TaskStatus.DONE
-            task_list.status = "Reset completed"
+            task_list.status = "Agents reset successfully"
             await task_list.send()
             return
 
@@ -378,16 +387,17 @@ async def on_message(message: cl.Message):
         # Task 2: Initialize agent team
         init_task = cl.Task(title="Initializing Agents", status=cl.TaskStatus.RUNNING)
         await task_list.add_task(init_task)
-        init_msg = await cl.Message(content="Starting agent team...").send()
+        init_msg = await cl.Message(content="Initializing agent team...").send()
         init_task.forId = init_msg.id
 
         team = cl.user_session.get("magentic_one")
         if not team:
+            # Get settings from user session
+            settings = cl.user_session.get("settings", {})
             team = MagenticOne(
                 name="AgenticFleet Team",
-                model_client=client,
+                client=client,
                 code_executor=LocalCommandLineCodeExecutor(),
-                settings=settings
             )
             cl.user_session.set("magentic_one", team)
 
@@ -397,14 +407,28 @@ async def on_message(message: cl.Message):
         # Task 3: Process query
         process_task = cl.Task(title="Processing Query", status=cl.TaskStatus.RUNNING)
         await task_list.add_task(process_task)
-        process_msg = await cl.Message(content="Analyzing request...").send()
+        process_msg = await cl.Message(content="Processing your query...").send()
         process_task.forId = process_msg.id
 
-        response = await process_response(
-            message=message.content,
-            team=team,
-            settings=settings
+        # Create a list to collect responses
+        collected_responses = []
+        
+        # Create task message
+        task_message = TextMessage(
+            content=message.content,
+            source="user",
         )
+        
+        # Process with MagenticOne's run_stream
+        async with cl.Step(name="Processing with MagenticOne", show_input=True) as step:
+            step.input = message.content
+            
+            # Stream responses from MagenticOne
+            async for event in team.run_stream(task=message.content):
+                # Process each event from the stream
+                if hasattr(event, "content"):
+                    await cl.Message(content=event.content, author=getattr(event, "author", "Agent")).send()
+                    collected_responses.append(event.content)
 
         process_task.status = cl.TaskStatus.DONE
         await task_list.send()
@@ -413,33 +437,29 @@ async def on_message(message: cl.Message):
         format_task = cl.Task(title="Formatting Output", status=cl.TaskStatus.RUNNING)
         await task_list.add_task(format_task)
         
-        formatted_content = format_message_content(response)
-        result_msg = await cl.Message(
-            content=formatted_content,
-            author="Orchestrator",
-            language="markdown"
-        ).send()
-        format_task.forId = result_msg.id
+        if collected_responses:
+            formatted_content = format_message_content("\n".join(collected_responses))
+            result_msg = await cl.Message(
+                content=formatted_content,
+                author="Orchestrator",
+                language="markdown"
+            ).send()
+            format_task.forId = result_msg.id
 
         format_task.status = cl.TaskStatus.DONE
-        task_list.status = "Processing complete"
+        task_list.status = "Task completed successfully"
         await task_list.send()
 
     except Exception as e:
-        error_task = cl.Task(
-            title="Error Processing",
-            status=cl.TaskStatus.FAILED
-        )
+        error_task = cl.Task(title="Error Processing", status=cl.TaskStatus.FAILED)
         await task_list.add_task(error_task)
-        task_list.status = f"Failed: {str(e)}"
+        task_list.status = f"Error: {str(e)}"
         await task_list.send()
-        
+
         await cl.Message(
-            content=f"Error: {str(e)}",
-            author="System",
-            language="text"
+            content=f"Error: {str(e)}", author="System", language="text"
         ).send()
-        raise
+        logger.error(f"Message processing error: {traceback.format_exc()}")
 
 
 def format_message_content(content: str) -> str:
@@ -607,7 +627,7 @@ async def update_settings(new_settings: Dict[str, Any]):
     current_settings = cl.user_session.get("settings", {})
     current_settings.update(new_settings)
     cl.user_session.set("settings", current_settings)
-    await cl.Message(content="⚙️ Settings updated", author="System").send()
+    await cl.Message(content="⚙️ Settings updated successfully", author="System").send()
 
 
 async def setup_chat_settings():
@@ -621,7 +641,7 @@ async def setup_chat_settings():
         "system_prompt": DEFAULT_SYSTEM_PROMPT,
     }
     cl.user_session.set("settings", settings)
-    await cl.Message(content="⚙️ Chat settings initialized", author="System").send()
+    await cl.Message(content="⚙️ Chat settings initialized successfully", author="System").send()
 
 
 @cl.on_stop
@@ -716,15 +736,29 @@ async def run_team(
     try:
         # Create task message
         task_message = TextMessage(
-            role="user",
             content=task,
-            name="user",
+            source="user",
             metadata={"task_id": message_id},
         )
 
         # Stream team responses
         async for event in agent_team.run_stream(task_message):
-            pass
+            # Process each event from the stream
+            if hasattr(event, "content"):
+                author = getattr(event, "author", "Agent")
+                content = event.content
+                
+                # Update task status based on agent type
+                if hasattr(event, "agent_type"):
+                    await update_agent_status(event.agent_type, task_ledger, task_status, message_id)
+                
+                # Send message to UI
+                await cl.Message(content=content, author=author).send()
+                
+                # Check for task completion
+                if hasattr(event, "is_complete") and event.is_complete:
+                    await handle_task_completion(event, task_ledger, task_status, message_id)
 
     except Exception as e:
         logger.error(f"Error running agent team: {e}")
+        await handle_processing_error(e)
