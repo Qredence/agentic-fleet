@@ -33,7 +33,6 @@ dependencies = [
     "python-dotenv>=1.0.1",
     "typing-extensions>=4.8.0",
     "uvicorn>=0.24.0",
-
     # Networking & Async
     "aiofiles>=23.1.0",
     "aiohttp>=3.11.11,<4.0.0",
@@ -41,7 +40,6 @@ dependencies = [
     "httpx>=0.25.0",
     "python-multipart>=0.0.6",
     "requests>=2.32.3",
-
     # AI/ML Infrastructure
     "autogen-agentchat>=0.4.7,<0.5.0",
     "autogen-core>=0.4.7,<0.5.0",
@@ -51,24 +49,21 @@ dependencies = [
     "autogen-ext[diskcache]>=0.4.7,<0.5.0",
     "autogen-ext[grpc]<=0.4.7",
     "autogenstudio",
-
     # Model Providers
     "composio-core>=0.6.11.post1",
-    "deepseek>=0.1.0",  # For DeepSeek
+    "deepseek>=0.1.0", # For DeepSeek
     "magentic-one-cli",
-    "ollama>=0.1.5",  # For Ollama
-
+    "ollama>=0.1.5", # For Ollama
     # Azure Services
-    "azure-ai-inference>=1.0.0b6",  # For Azure AI Foundry
-    "azure-ai-ml>=1.12.1",  # For Azure AI Foundry
-    "azure-ai-projects>=1.0.0b4",  # For Azure AI Foundry
+    "azure-ai-inference>=1.0.0b6", # For Azure AI Foundry
+    "azure-ai-ml>=1.12.1", # For Azure AI Foundry
+    "azure-ai-projects>=1.0.0b4", # For Azure AI Foundry
     "azure-core>=1.32.0",
     "azure-cosmos>=4.9.0",
     "azure-identity>=1.19.0",
     "azure-keyvault-secrets>=4.9.0",
     "azure-search-documents==11.6.0b4",
     "azure-storage-blob>=12.24.0",
-
     # Data Processing
     "jsonlines>=4.0.0",
     "matplotlib>=3.10.0",
@@ -81,7 +76,6 @@ dependencies = [
     "requests-html>=0.10.0",
     "seaborn>=0.13.0",
     "yfinance>=0.2.51",
-
     # Web & Utilities
     "beautifulsoup4>=4.12.0",
     "bing>=0.31",
@@ -89,12 +83,11 @@ dependencies = [
     "docker>=7.1.0",
     "markitdown>=0.0.1a3",
     "opentelemetry-instrumentation-fastapi>=0.44b0",
-    "playwright>=1.20.0",  # Updated version for compatibility with playwright
+    "playwright>=1.20.0", # Updated version for compatibility with playwright
     "sqlalchemy[asyncio]>=2.0.28",
     "psycopg2-binary>=2.9.9",
     "supabase>=2.3.1",
     "tenacity>=9.0.0",
-
     # Developer Tools
     "aioconsole>=0.8.1",
     "axios>=0.4.0",
@@ -121,10 +114,9 @@ dependencies = [
     "modulegraph>=0.19.6",
     "macholib>=1.16.3",
     "py2app>=0.28.8",
-
     # Additional development dependencies
-    "black>=24.10.0",  # Code formatter
-    "isort>=5.13.2",  # Import sorter
+    "black>=24.10.0", # Code formatter
+    "isort>=5.13.2", # Import sorter
     "ruff>=0.5.3",
     "websockets>=14.2",
     "dataclasses-json>=0.6.7",
