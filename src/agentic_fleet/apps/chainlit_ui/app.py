@@ -312,7 +312,8 @@ async def on_chat_start():
 async def on_message(message: cl.Message):
     """Enhanced message processing with step tracking"""
     try:
-        if message.content.strip().lower() == "/reset":
+        # Handle both string and list content types
+        if isinstance(message.content, str) and message.content.strip().lower() == "/reset":
             await on_reset(cl.Action(name="reset_agents", payload={"action": "reset"}))
             return
 
@@ -384,7 +385,9 @@ async def on_message(message: cl.Message):
             main_step.input = message.content
             current_phase = "planning"
 
-            async for event in team.run_stream(task=message.content):
+            # Ensure task is a string
+            task_content = message.content if isinstance(message.content, str) else str(message.content)
+            async for event in team.run_stream(task=task_content):
                 try:
                     # Event handling based on type
                     if isinstance(event, TextMessage):
@@ -418,7 +421,7 @@ async def on_message(message: cl.Message):
                         await cl.Message(
                             content=formatted_content,
                             author=event.source or "Assistant",
-                            language="markdown",
+                            language="json",
                         ).send()
 
                     elif hasattr(event, "tool_name"):
@@ -427,7 +430,7 @@ async def on_message(message: cl.Message):
                         await cl.Message(
                             content=tool_message,
                             author="Tool Manager",
-                            language="markdown",
+                            language="json",
                         ).send()
 
                         timestamp = time.strftime("%H:%M:%S")
@@ -588,7 +591,7 @@ async def handle_task_completion(
     await cl.Message(
         content=f"🎉 **Task Complete**\n\n{formatted_result}",
         author="System",
-        language="markdown",
+        language="json",
     ).send()
 
 
@@ -599,7 +602,7 @@ async def handle_processing_error(error: Exception):
     await cl.Message(
         content=f"⚠️ **Error**\n```python\n{str(error)}\n```",
         author="System",
-        language="markdown",
+        language="json",
     ).send()
 
 
@@ -733,7 +736,9 @@ async def handle_message(message: cl.Message):
             step.input = message.content
 
             # Convert the message to a TextMessage for the agent team
-            agent_message = TextMessage(content=message.content, source="user")
+            # Ensure content is a string
+            content = message.content if isinstance(message.content, str) else str(message.content)
+            agent_message = TextMessage(content=content, source="user")
 
             # Process the message through each agent in the team
             for agent in agent_team:

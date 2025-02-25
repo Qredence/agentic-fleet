@@ -8,10 +8,13 @@ import traceback
 from abc import ABC
 from functools import lru_cache
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Union
+from typing import Any, Dict, List, Optional, Tuple, Union
 
 # Third-party imports
 import chainlit as cl
+import matplotlib.pyplot as plt
+import numpy as np
+import pandas as pd
 
 # AutoGen imports
 from autogen_agentchat.base import TaskResult
@@ -209,6 +212,241 @@ async def on_reset(action: cl.Action):
     await cl.Message(content="🔄 Agents successfully reset!", author="System").send()
 
 
+async def ask_user_for_input(question: str, options: List[str] = None) -> str:
+    """Ask the user for input with optional choices.
+
+    Args:
+        question: The question to ask the user
+        options: Optional list of choices for the user to select from
+
+    Returns:
+        The user's response as a string
+    """
+    if options:
+        # Use AskActionMessage for multiple-choice questions
+        res = await cl.AskActionMessage(
+            content=question, actions=[{"name": opt, "value": opt} for opt in options]
+        ).send()
+        return res["value"]
+    else:
+        # Use AskUserMessage for free-form input
+        res = await cl.AskUserMessage(content=question).send()
+        return res["content"]
+
+
+def detect_and_render_data(content: Any) -> Tuple[str, List[Any]]:
+    """Detect and render data visualizations from content.
+
+    Args:
+        content: The content to analyze and render
+
+    Returns:
+        Tuple of (text_content, elements) where elements are Chainlit UI elements
+    """
+    elements = []
+    text_content = ""
+
+    # Handle None case
+    if content is None:
+        return "", elements
+
+    # Handle list case - convert to string
+    if isinstance(content, list):
+        # If it's a list of simple types, join them
+        if all(isinstance(item, (str, int, float, bool)) for item in content):
+            text_content = "\n".join(str(item) for item in content)
+        else:
+            # For complex lists, try to convert to DataFrame if possible
+            try:
+                df = pd.DataFrame(content)
+                elements.append(cl.DataFrame(data=df, name="list_data_view"))
+                text_content = "List data (see below)"
+            except:
+                # Fall back to string representation
+                text_content = str(content)
+        return text_content, elements
+
+    # Handle pandas DataFrame
+    if isinstance(content, pd.DataFrame):
+        elements.append(cl.DataFrame(data=content, name="data_view"))
+        text_content = "DataFrame generated (see below)"
+
+    # Handle matplotlib/seaborn figure
+    elif isinstance(content, plt.Figure):
+        elements.append(cl.Image(content, name="plot_view"))
+        text_content = "Plot generated (see below)"
+
+    # Handle numpy arrays
+    elif isinstance(content, np.ndarray):
+        if content.ndim <= 2:  # Convert 1D or 2D arrays to DataFrame
+            df = pd.DataFrame(content)
+            elements.append(cl.DataFrame(data=df, name="array_view"))
+            text_content = "Array data (see below)"
+        else:
+            text_content = str(content)
+
+    # Handle dictionaries that might contain data
+    elif isinstance(content, dict) and any(
+        key in content for key in ["data", "values", "columns", "rows"]
+    ):
+        try:
+            df = pd.DataFrame(content)
+            elements.append(cl.DataFrame(data=df, name="dict_data_view"))
+            text_content = "Data from dictionary (see below)"
+        except:
+            text_content = str(content)
+
+    # Default case - return as string
+    else:
+        text_content = str(content) if content is not None else ""
+
+    return text_content, elements
+
+
+def is_code_block(text: str) -> bool:
+    """Check if text is primarily a code block.
+
+    Args:
+        text: Text to check
+
+    Returns:
+        True if text appears to be code, False otherwise
+    """
+    # Check for code block markers
+    if re.search(r"```\w*\n.*?\n```", text, re.DOTALL):
+        return True
+
+    # Check for common code patterns
+    code_patterns = [
+        r"^(import|from)\s+\w+",  # Python imports
+        r"^(def|class)\s+\w+",  # Python functions/classes
+        r"^(function|const|let|var)\s+\w+",  # JavaScript
+        r"^(public|private|class)\s+\w+",  # Java/C#
+        r"<\w+[^>]*>.*?</\w+>",  # HTML/XML
+    ]
+
+    for pattern in code_patterns:
+        if re.search(pattern, text, re.MULTILINE):
+            return True
+
+    return False
+
+
+def format_message_content(content: Any) -> str:
+    """Format message content with proper markdown and structure.
+
+    Args:
+        content: The content to format
+
+    Returns:
+        Formatted content string
+    """
+    # Handle non-string inputs
+    if content is None:
+        return ""
+
+    # Convert lists to strings
+    if isinstance(content, list):
+        # Join list items with newlines
+        content = "\n".join(str(item) for item in content)
+    elif not isinstance(content, str):
+        # Convert any other non-string type to string
+        content = str(content)
+
+    # Now we can safely process the string
+    if not content:
+        return ""
+
+    # Remove excessive newlines
+    content = re.sub(r"\n{3,}", "\n\n", content.strip())
+
+    # Process code blocks more safely
+    # First, find all code blocks with their positions
+    code_block_pattern = r"```(\w*)\n(.*?)\n```"
+    code_blocks = []
+
+    for match in re.finditer(code_block_pattern, content, re.DOTALL):
+        full_match = match.group(0)
+        lang = match.group(1) or ""
+        code = match.group(2)
+        start_pos = match.start()
+        end_pos = match.end()
+
+        # Only process non-code blocks (markdown/text) or blocks with no language
+        if not lang or lang.lower() in ["markdown", "text", "md"]:
+            if not is_code_block(code):
+                # Replace this block with just the code content
+                code_blocks.append((start_pos, end_pos, full_match, code.strip()))
+
+    # Replace blocks from end to start to avoid position shifts
+    for start_pos, end_pos, full_match, replacement in sorted(
+        code_blocks, reverse=True
+    ):
+        content = content[:start_pos] + replacement + content[end_pos:]
+
+    # Add bullet points to lists
+    content = re.sub(r"^(\d+\.\s)", "• ", content, flags=re.MULTILINE)
+
+    return content
+
+
+# Setup chat settings function
+async def setup_chat_settings():
+    """Initialize chat settings with default values."""
+    settings = {
+        "max_rounds": DEFAULT_MAX_ROUNDS,
+        "max_time": DEFAULT_MAX_TIME,
+        "max_stalls": DEFAULT_MAX_STALLS,
+        "start_page": DEFAULT_START_PAGE,
+        "temperature": DEFAULT_TEMPERATURE,
+        "system_prompt": DEFAULT_SYSTEM_PROMPT,
+    }
+    cl.user_session.set("settings", settings)
+    
+    # Register chat settings
+    await cl.ChatSettings(
+        [
+            Select(
+                id="model",
+                label="Model",
+                values=["gpt-4o-mini", "o3-mini"],
+                initial_value="gpt-4o-mini",
+            ),
+            Slider(
+                id="temperature",
+                label="Temperature",
+                initial=DEFAULT_TEMPERATURE,
+                min=0.0,
+                max=1.0,
+                step=0.1,
+            ),
+            Slider(
+                id="max_rounds",
+                label="Max Rounds",
+                initial=DEFAULT_MAX_ROUNDS,
+                min=1,
+                max=20,
+                step=1,
+            ),
+        ]
+    ).send()
+    
+    await cl.Message(
+        content="⚙️ Chat settings initialized successfully", author="🛠️ System"
+    ).send()
+
+
+@cl.on_settings_update
+async def update_settings(new_settings: Dict[str, Any]):
+    """Update chat settings with new values."""
+    current_settings = cl.user_session.get("settings", {})
+    current_settings.update(new_settings)
+    cl.user_session.set("settings", current_settings)
+    await cl.Message(
+        content="⚙️ Settings updated successfully", author="🛠️ System"
+    ).send()
+
+
 @cl.on_chat_start
 async def on_chat_start():
     """Handle new chat session initialization."""
@@ -363,33 +601,33 @@ async def on_chat_start():
 @cl.on_message
 async def on_message(message: cl.Message):
     """Process incoming messages with task tracking."""
-    task_list = cl.TaskList()
-    task_list.status = "Preparing agent team..."
+    # Create an enhanced TaskList with icons
+    task_list = cl.TaskList(
+        title="🔄 Processing Request",
+        status="Analyzing your query...",
+    )
     await task_list.send()
 
-    try:
-        # Task 1: Check for reset command
-        reset_task = cl.Task(title="Checking command", status=cl.TaskStatus.RUNNING)
-        await task_list.add_task(reset_task)
-        reset_msg = await cl.Message(content="Checking command...").send()
-        reset_task.forId = reset_msg.id
+    # Store the task list in user session for later updates
+    cl.user_session.set("current_task_list", task_list)
+    
+    # Initialize plan steps tracking
+    cl.user_session.set("plan_steps", {})
+    cl.user_session.set("plan_tasks", {})
 
-        if message.content.strip().lower() == "/reset":
+    try:
+        # Check for reset command without showing a message
+        # Handle both string and list content types
+        if (
+            isinstance(message.content, str)
+            and message.content.strip().lower() == "/reset"
+        ):
             await on_reset(cl.Action(name="reset_agents", payload={"action": "reset"}))
-            reset_task.status = cl.TaskStatus.DONE
-            task_list.status = "Agents reset successfully"
+            task_list.status = "✅ Agents reset successfully"
             await task_list.send()
             return
 
-        reset_task.status = cl.TaskStatus.DONE
-        await task_list.send()
-
-        # Task 2: Initialize agent team
-        init_task = cl.Task(title="Initializing Agents", status=cl.TaskStatus.RUNNING)
-        await task_list.add_task(init_task)
-        init_msg = await cl.Message(content="Initializing agent team...").send()
-        init_task.forId = init_msg.id
-
+        # Initialize agent team if needed
         team = cl.user_session.get("magentic_one")
         if not team:
             # Get settings from user session
@@ -401,103 +639,239 @@ async def on_message(message: cl.Message):
             )
             cl.user_session.set("magentic_one", team)
 
-        init_task.status = cl.TaskStatus.DONE
-        await task_list.send()
-
-        # Task 3: Process query
-        process_task = cl.Task(title="Processing Query", status=cl.TaskStatus.RUNNING)
+        # Update task list with processing task
+        process_task = cl.Task(
+            title="🧠 Processing with Agent Team",
+            status=cl.TaskStatus.RUNNING,
+            icon="🔄",
+        )
         await task_list.add_task(process_task)
-        process_msg = await cl.Message(content="Processing your query...").send()
-        process_task.forId = process_msg.id
 
         # Create a list to collect responses
         collected_responses = []
-        
-        # Create task message
-        task_message = TextMessage(
-            content=message.content,
-            source="user",
-        )
-        
+
         # Process with MagenticOne's run_stream
-        async with cl.Step(name="Processing with MagenticOne", show_input=True) as step:
+        async with cl.Step(name="Agent Processing", show_input=True) as step:
             step.input = message.content
-            
+
             # Stream responses from MagenticOne
-            async for event in team.run_stream(task=message.content):
+            # Ensure task is a string
+            task_content = (
+                message.content
+                if isinstance(message.content, str)
+                else str(message.content)
+            )
+            async for event in team.run_stream(task=task_content):
                 # Process each event from the stream
                 if hasattr(event, "content"):
-                    await cl.Message(content=event.content, author=getattr(event, "author", "Agent")).send()
-                    collected_responses.append(event.content)
+                    # Extract agent name and properly format it
+                    agent_name = getattr(
+                        event,
+                        "author",
+                        getattr(event, "name", getattr(event, "agent_type", "Agent")),
+                    )
 
+                    # Apply emoji and formatting to agent name
+                    formatted_author = rename_author(agent_name)
+
+                    # Check if content contains a question for the user
+                    content = event.content
+                    # Ensure content is a string
+                    if not isinstance(content, str):
+                        if content is None:
+                            content = ""
+                        elif isinstance(content, list):
+                            content = "\n".join(str(item) for item in content)
+                        else:
+                            content = str(content)
+
+                    # Check if this is the Orchestrator providing a plan
+                    if agent_name == "Orchestrator" and "Here is the plan to follow as best as possible:" in content:
+                        # Update the task list immediately
+                        plan_task = cl.Task(
+                            title="📋 Plan Created", 
+                            status=cl.TaskStatus.RUNNING,
+                            icon="📝"
+                        )
+                        await task_list.add_task(plan_task)
+                        task_list.status = "🔄 Executing plan..."
+                        await task_list.send()
+                        
+                        # Extract the plan from the content
+                        plan_text = content.split("Here is the plan to follow as best as possible:")[1].strip()
+                        
+                        # Create task status tracking
+                        task_status = {
+                            "planning": cl.Text(name="planned_tasks", content="", display="side"),
+                            "overview": cl.Text(name="task_overview", content="", display="side"),
+                            "completion": cl.Text(name="completed_tasks", content="", display="side"),
+                            "execution": cl.Text(name="execution_progress", content="", display="side")
+                        }
+                        
+                        # Extract and add individual plan steps as tasks
+                        await extract_and_add_plan_tasks(plan_text, task_list, task_status, message.id)
+
+                    # Check for plan updates from Orchestrator
+                    elif agent_name == "Orchestrator" and any(marker in content for marker in [
+                        "Updated plan:", 
+                        "Next steps:", 
+                        "Additional steps:",
+                        "Revised plan:"
+                    ]):
+                        # Extract the updated plan
+                        for marker in ["Updated plan:", "Next steps:", "Additional steps:", "Revised plan:"]:
+                            if marker in content:
+                                plan_update = content.split(marker)[1].strip()
+                                task_status = {
+                                    "planning": cl.Text(name="planned_tasks", content="", display="side"),
+                                    "overview": cl.Text(name="task_overview", content="", display="side"),
+                                    "completion": cl.Text(name="completed_tasks", content="", display="side"),
+                                    "execution": cl.Text(name="execution_progress", content="", display="side")
+                                }
+                                await extract_and_add_plan_tasks(plan_update, task_list, task_status, message.id, is_update=True)
+                                break
+
+                    if "?" in content and any(
+                        phrase in content.lower()
+                        for phrase in [
+                            "what would you like",
+                            "do you want",
+                            "should i",
+                            "would you prefer",
+                            "can you clarify",
+                        ]
+                    ):
+                        # This might be a question for the user
+                        if (
+                            "options:" in content.lower()
+                            or "options are:" in content.lower()
+                        ):
+                            # Try to extract options
+                            options_text = content.split("options:", 1)[-1].split(
+                                "options are:", 1
+                            )[-1]
+                            options = [
+                                opt.strip().strip("*-•").strip()
+                                for opt in re.split(r"[\n*•-]", options_text)
+                                if opt.strip()
+                            ]
+
+                            # Ask the user and wait for response
+                            user_response = await ask_user_for_input(
+                                content, options if options else None
+                            )
+
+                            # Send the user's response back to the agent
+                            await cl.Message(
+                                content=user_response, author="👤 User"
+                            ).send()
+                            collected_responses.append(
+                                f"User response: {user_response}"
+                            )
+                            continue
+
+                        # If we can't extract options but it seems like a question
+                        if re.search(r"\?\s*$", content.split("\n")[-1]):
+                            user_response = await ask_user_for_input(content)
+                            await cl.Message(
+                                content=user_response, author="👤 User"
+                            ).send()
+                            collected_responses.append(
+                                f"User response: {user_response}"
+                            )
+                            continue
+
+                    # Check for data visualizations
+                    if hasattr(event, "data") and event.data:
+                        text, elements = detect_and_render_data(event.data)
+                        if elements:
+                            await cl.Message(
+                                content=content,
+                                author=formatted_author,
+                                elements=elements,
+                            ).send()
+                            collected_responses.append(content)
+                            continue
+
+                    # Format the content
+                    formatted_content = format_message_content(content)
+
+                    # Determine if this is code and set language accordingly
+                    language = "markdown"
+                    if is_code_block(content):
+                        language = "python"  # Default to Python, could be improved to detect language
+
+                    # Send the message
+                    await cl.Message(
+                        content=formatted_content,
+                        author=formatted_author,
+                        language=language,
+                    ).send()
+                    collected_responses.append(content)
+
+        # Mark processing task as complete
         process_task.status = cl.TaskStatus.DONE
-        await task_list.send()
-
-        # Task 4: Format response
-        format_task = cl.Task(title="Formatting Output", status=cl.TaskStatus.RUNNING)
-        await task_list.add_task(format_task)
-        
-        if collected_responses:
-            formatted_content = format_message_content("\n".join(collected_responses))
-            result_msg = await cl.Message(
-                content=formatted_content,
-                author="Orchestrator",
-                language="markdown"
-            ).send()
-            format_task.forId = result_msg.id
-
-        format_task.status = cl.TaskStatus.DONE
-        task_list.status = "Task completed successfully"
+        task_list.status = "✅ Processing complete"
         await task_list.send()
 
     except Exception as e:
-        error_task = cl.Task(title="Error Processing", status=cl.TaskStatus.FAILED)
+        error_task = cl.Task(
+            title="❌ Error Processing", status=cl.TaskStatus.FAILED, icon="⚠️"
+        )
         await task_list.add_task(error_task)
-        task_list.status = f"Error: {str(e)}"
+        task_list.status = f"⚠️ Error: {str(e)}"
         await task_list.send()
 
         await cl.Message(
-            content=f"Error: {str(e)}", author="System", language="text"
+            content=f"Error: {str(e)}", author="🛠️ System", language="text"
         ).send()
         logger.error(f"Message processing error: {traceback.format_exc()}")
 
 
-def format_message_content(content: str) -> str:
-    """Format message content with proper markdown and structure."""
-    # Remove excessive newlines
-    content = re.sub(r"\n{3,}", "\n\n", content.strip())
-
-    # Format code blocks if present
-    content = re.sub(
-        r"```(\w+)?\n(.*?)\n```",
-        lambda m: f"```{m.group(1) or ''}\n{m.group(2).strip()}\n```",
-        content,
-        flags=re.DOTALL,
-    )
-
-    # Add bullet points to lists
-    content = re.sub(r"^(\d+\.\s)", "• ", content, flags=re.MULTILINE)
-
-    return content
-
-
-async def display_task_plan(
-    content: str, task_status: Dict[str, cl.Text], message_id: str
+async def extract_and_add_plan_tasks(
+    plan_text: str, 
+    task_list: cl.TaskList, 
+    task_status: Dict[str, cl.Text], 
+    message_id: str,
+    is_update: bool = False
 ):
-    """Extract and display the task plan from agent's message"""
+    """Extract plan steps and add them as individual tasks to the TaskList.
+    
+    Args:
+        plan_text: The plan text to extract steps from
+        task_list: The TaskList to add tasks to
+        task_status: Dictionary of Text elements for status updates
+        message_id: ID of the message to associate status updates with
+        is_update: Whether this is an update to an existing plan
+    """
     # Extract tasks using regex patterns
     tasks = []
-    for task in re.finditer(r"\d+\.\s+(.+?)(?=\n\d+\.|\n\n|$)", content):
+    
+    # Look for numbered steps (e.g., "1. Do something")
+    for task in re.finditer(r"\d+\.\s+(.+?)(?=\n\d+\.|\n\n|$)", plan_text):
         tasks.append(task.group(1).strip())
+    
+    # If no numbered steps found, try looking for bullet points
+    if not tasks:
+        for task in re.finditer(r"[-*•]\s+(.+?)(?=\n[-*•]|\n\n|$)", plan_text):
+            tasks.append(task.group(1).strip())
+    
+    # If still no tasks found, split by newlines and filter out empty lines
+    if not tasks:
+        tasks = [line.strip() for line in plan_text.split("\n") if line.strip()]
 
     if tasks:
         timestamp = time.strftime("%H:%M:%S")
-
+        
+        # Get existing plan steps or initialize empty dict
+        plan_steps = cl.user_session.get("plan_steps", {})
+        plan_tasks = cl.user_session.get("plan_tasks", {})
+        
         # Update planning section
         planning_element = cl.Text(
             name="planned_tasks",
             content=task_status["planning"].content
-            + f"\n[{timestamp}] 📋 Task Breakdown:\n"
+            + f"\n[{timestamp}] 📋 {'Updated' if is_update else 'Initial'} Task Breakdown:\n"
             + "\n".join(f"{i}. {task.strip()}" for i, task in enumerate(tasks, 1))
             + "\n",
             display="side",
@@ -509,256 +883,28 @@ async def display_task_plan(
         overview_element = cl.Text(
             name="task_overview",
             content=task_status["overview"].content
-            + f"\n[{timestamp}] 📝 Identified {len(tasks)} tasks to execute\n",
+            + f"\n[{timestamp}] 📝 {'Updated plan with' if is_update else 'Identified'} {len(tasks)} tasks to execute\n",
             display="side",
         )
         await overview_element.send(for_id=message_id)
         task_status["overview"] = overview_element
-
-
-async def handle_task_completion(
-    event: TaskResult,
-    task_ledger: cl.TaskList,
-    task_status: Dict[str, cl.Text],
-    message_id: str,
-):
-    """Handle task completion events with proper formatting"""
-    task_ledger.status = "✅ Task Completed"
-    # Update all tasks to completed status
-    for task in task_ledger.tasks:
-        task.status = cl.TaskStatus.COMPLETED
-    await task_ledger.send()
-
-    result_content = event.content if hasattr(event, "content") else "Task completed"
-    formatted_result = format_message_content(str(result_content))
-    timestamp = time.strftime("%H:%M:%S")
-
-    # Update completion status
-    completion_element = cl.Text(
-        name="completed_tasks",
-        content=task_status["completion"].content
-        + f"\n[{timestamp}] ✅ {formatted_result}\n",
-        display="side",
-    )
-    await completion_element.send(for_id=message_id)
-    task_status["completion"] = completion_element
-
-    # Update overview
-    overview_element = cl.Text(
-        name="task_overview",
-        content=task_status["overview"].content
-        + f"\n[{timestamp}] ✅ Task completed: {formatted_result[:50]}{'...' if len(formatted_result) > 50 else ''}\n",
-        display="side",
-    )
-    await overview_element.send(for_id=message_id)
-    task_status["overview"] = overview_element
-
-    await cl.Message(
-        content=f"🎉 **Task Complete**\n\n{formatted_result}",
-        author="System",
-        language="markdown",
-    ).send()
-
-
-async def handle_processing_error(error: Exception):
-    """Handle processing errors with proper formatting"""
-    error_trace = traceback.format_exc()
-    logger.error(f"Processing error: {error_trace}")
-    await cl.Message(
-        content=f"⚠️ **Error**\n```python\n{str(error)}\n```",
-        author="System",
-        language="markdown",
-    ).send()
-
-
-async def update_agent_status(
-    agent_type: str,
-    task_ledger: cl.TaskList,
-    task_status: Dict[str, cl.Text],
-    message_id: str,
-):
-    """Update agent status with proper formatting"""
-    agent_map = {
-        "WebSurfer": (1, "🌐 Web Search"),
-        "FileSurfer": (2, "📁 File Operations"),
-        "Coder": (3, "👨‍💻 Code Management"),
-        "Executor": (4, "⚡ Command Execution"),
-    }
-
-    if agent_type in agent_map:
-        idx, task_type = agent_map[agent_type]
-        # Update task status
-        if idx < len(task_ledger.tasks):
-            task = task_ledger.tasks[idx]
-            task.status = cl.TaskStatus.RUNNING
-            await task_ledger.send()
-
-        timestamp = time.strftime("%H:%M:%S")
-
-        # Update execution progress
-        execution_element = cl.Text(
-            name="execution_progress",
-            content=task_status["execution"].content
-            + f"\n[{timestamp}] 🔄 **{task_type}**: Active\n",
-            display="side",
-        )
-        await execution_element.send(for_id=message_id)
-        task_status["execution"] = execution_element
-
-        # Update overview
-        overview_element = cl.Text(
-            name="task_overview",
-            content=task_status["overview"].content
-            + f"\n[{timestamp}] 👉 {task_type} started\n",
-            display="side",
-        )
-        await overview_element.send(for_id=message_id)
-        task_status["overview"] = overview_element
-
-
-# ========================
-# SETTINGS & CLEANUP
-# ========================
-
-
-@cl.on_settings_update
-async def update_settings(new_settings: Dict[str, Any]):
-    """Update chat settings with new values."""
-    current_settings = cl.user_session.get("settings", {})
-    current_settings.update(new_settings)
-    cl.user_session.set("settings", current_settings)
-    await cl.Message(content="⚙️ Settings updated successfully", author="System").send()
-
-
-async def setup_chat_settings():
-    """Initialize chat settings with default values."""
-    settings = {
-        "max_rounds": DEFAULT_MAX_ROUNDS,
-        "max_time": DEFAULT_MAX_TIME,
-        "max_stalls": DEFAULT_MAX_STALLS,
-        "start_page": DEFAULT_START_PAGE,
-        "temperature": DEFAULT_TEMPERATURE,
-        "system_prompt": DEFAULT_SYSTEM_PROMPT,
-    }
-    cl.user_session.set("settings", settings)
-    await cl.Message(content="⚙️ Chat settings initialized successfully", author="System").send()
-
-
-@cl.on_stop
-async def cleanup():
-    """Cleanup resources"""
-    try:
-        if magentic_one := cl.user_session.get("magentic_one"):
-            await magentic_one.cleanup()
-        if app_manager:
-            await app_manager.shutdown()
-    except Exception as e:
-        logger.error(f"Cleanup error: {str(e)}")
-
-
-def agent_input_widgets() -> list:
-    """Generate Chainlit input widgets for agent configuration."""
-    return [
-        cl.Slider(
-            id="temperature",
-            label="Reasoning Temperature",
-            min=0.0,
-            max=2.0,
-            step=0.1,
-            value=DEFAULT_TEMPERATURE,
-        ),
-        cl.Select(
-            id="reasoning_mode",
-            label="Reasoning Strategy",
-            values=["conservative", "balanced", "creative"],
-            initial_value="balanced",
-        ),
-        cl.Switch(id="enable_validation", label="Auto-Validation", initial=True),
-    ]
-
-
-async def handle_message(message: cl.Message):
-    """Handle incoming chat messages."""
-    try:
-        # Get the agent team from the session
-        agent_team = cl.user_session.get("agent_team")
-        if not agent_team:
-            await cl.Message(
-                content="⚠️ No agent team available. Please reset the chat.",
-                author="System",
-            ).send()
-            return
-
-        # Get settings
-        settings = cl.user_session.get("settings", {})
-        max_rounds = settings.get("max_rounds", DEFAULT_MAX_ROUNDS)
-        max_time = settings.get("max_time", DEFAULT_MAX_TIME)
-
-        # Create a list to collect responses
-        collected_responses = []
-
-        # Process the message through the agent team
-        async with cl.Step(name="Processing Message", show_input=True) as step:
-            step.input = message.content
-
-            # Convert the message to a TextMessage for the agent team
-            agent_message = TextMessage(content=message.content, source="user")
-
-            # Process the message through each agent in the team
-            for agent in agent_team:
-                try:
-                    response = await agent.process_message(agent_message)
-                    await process_response(response, collected_responses)
-                except Exception as e:
-                    logger.error(
-                        f"Error processing message with agent {agent.name}: {e}"
-                    )
-                    await cl.Message(
-                        content=f"⚠️ Error with {agent.name}: {str(e)}", author="System"
-                    ).send()
-
-            step.output = "Message processed by agent team"
-
-    except Exception as e:
-        error_msg = f"⚠️ Error processing message: {str(e)}"
-        logger.error(f"Message handling error: {traceback.format_exc()}")
-        await cl.Message(content=error_msg, author="System").send()
-
-
-async def run_team(
-    agent_team: MagenticOne,
-    task: str,
-    task_ledger: Dict[str, Any],
-    task_status: Dict[str, cl.Text],
-    message_id: str,
-):
-    """Run the agent team on a task."""
-    try:
-        # Create task message
-        task_message = TextMessage(
-            content=task,
-            source="user",
-            metadata={"task_id": message_id},
-        )
-
-        # Stream team responses
-        async for event in agent_team.run_stream(task_message):
-            # Process each event from the stream
-            if hasattr(event, "content"):
-                author = getattr(event, "author", "Agent")
-                content = event.content
-                
-                # Update task status based on agent type
-                if hasattr(event, "agent_type"):
-                    await update_agent_status(event.agent_type, task_ledger, task_status, message_id)
-                
-                # Send message to UI
-                await cl.Message(content=content, author=author).send()
-                
-                # Check for task completion
-                if hasattr(event, "is_complete") and event.is_complete:
-                    await handle_task_completion(event, task_ledger, task_status, message_id)
-
-    except Exception as e:
-        logger.error(f"Error running agent team: {e}")
-        await handle_processing_error(e)
+        
+        # Add each task to the TaskList
+        for i, task_text in enumerate(tasks):
+            task_id = f"plan_task_{len(plan_steps) + i + 1}"
+            
+            # Create a new task in the TaskList
+            plan_task_item = cl.Task(
+                title=f"Step {len(plan_steps) + i + 1}: {task_text[:50]}{'...' if len(task_text) > 50 else ''}",
+                status=cl.TaskStatus.READY,
+                icon="📌"
+            )
+            await task_list.add_task(plan_task_item)
+            
+            # Store the task in the session for later reference
+            plan_tasks[task_id] = plan_task_item
+            plan_steps[task_id] = task_text
+        
+        # Update the session with the new tasks
+        cl.user_session.set("plan_steps", plan_steps)
+        cl.user_session.set("plan_tasks", plan_tasks)
