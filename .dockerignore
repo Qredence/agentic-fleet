@@ -1,33 +1,56 @@
+# Version control
 .git/
 .gitignore
+.github/
+
+# Environment and configuration
 .env
+.env.*
 .venv/
+venv/
+env/
+.python-version
+
+# Python cache files
 __pycache__/
 *.pyc
 *.pyo
 *.pyd
 .Python
 *.so
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+.coverage
+htmlcov/
+
+# Build artifacts
 dist/
 build/
 *.egg
 *.egg-info/
-.coverage
-htmlcov/
-.pytest_cache/
-.ruff_cache/
-.mypy_cache/
-node_modules/
+*.whl
+
+# Development tools
+.vscode/
+.idea/
+*.swp
+*.swo
 .DS_Store
-# Exclude sensitive files and directories
+node_modules/
+
+# Project-specific exclusions
 secrets/
 credentials/
 private/
-# Exclude tests
 tests/
-# Exclude documentation
 docs/
-# Exclude local logs
 logs/
-# Exclude local workspace
 files/
+workspace/
+notebooks/
+
+# Docker-specific
+.dockerignore
+docker-compose*.yml
+docker-compose*.yaml

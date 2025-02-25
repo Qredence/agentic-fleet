@@ -1,8 +1,3 @@
-# This is a symlink to the production Dockerfile
-# For development, use docker-compose with the dev service
-# For production, use docker-compose with the prod service
-# For more information, see the README.md file
-
 # Production Dockerfile for AgenticFleet
 FROM python:3.12-slim
 
@@ -40,25 +35,6 @@ RUN pip install .
 
 # Expose the port Chainlit runs on
 EXPOSE 8000
-
-# Set environment variables (using ARG for build-time flexibility)
-ARG OPENAI_API_KEY=""
-ARG AZURE_OPENAI_ENDPOINT=""
-ARG AZURE_OPENAI_API_KEY=""
-ARG AZURE_OPENAI_API_VERSION=""
-ARG USE_OAUTH=""
-
-# Set environment variables
-ENV OPENAI_API_KEY=${OPENAI_API_KEY} \
-    AZURE_OPENAI_ENDPOINT=${AZURE_OPENAI_ENDPOINT} \
-    AZURE_OPENAI_API_KEY=${AZURE_OPENAI_API_KEY} \
-    AZURE_OPENAI_API_VERSION=${AZURE_OPENAI_API_VERSION} \
-    USE_OAUTH=${USE_OAUTH}
-
-# Copy and set the entrypoint script
-COPY scripts/docker-entrypoint.sh /usr/local/bin/docker-entrypoint.sh
-RUN chmod +x /usr/local/bin/docker-entrypoint.sh
-ENTRYPOINT ["/usr/local/bin/docker-entrypoint.sh"]
 
 # Set the default command to run the Chainlit application
 CMD ["chainlit", "run", "src/agentic_fleet/app.py", "--host", "0.0.0.0", "--port", "8000"]
