@@ -8,9 +8,51 @@ consistent configuration state across the application.
 
 import logging
 from pathlib import Path
-from typing import List, Optional
+from typing import Dict, List, Optional, Any
 
 logger = logging.getLogger(__name__)
+
+
+class AgentConfig:
+    """
+    Configuration class for agent settings.
+    
+    This class represents the configuration for an agent, including its
+    name, description, and any specialized settings.
+    
+    Attributes:
+        name: The name of the agent
+        description: A description of the agent's purpose
+        settings: A dictionary of additional settings
+    """
+    
+    def __init__(self, name: str = "", description: str = "", **settings: Any):
+        """
+        Initialize an agent configuration.
+        
+        Args:
+            name: The name of the agent
+            description: A description of the agent's purpose
+            **settings: Additional settings for the agent
+        """
+        self.name = name
+        self.description = description
+        self.settings = settings
+    
+    def to_dict(self) -> Dict[str, Any]:
+        """Convert the configuration to a dictionary."""
+        return {
+            "name": self.name,
+            "description": self.description,
+            **self.settings
+        }
+    
+    @classmethod
+    def from_dict(cls, config: Dict[str, Any]) -> "AgentConfig":
+        """Create a configuration from a dictionary."""
+        name = config.pop("name", "")
+        description = config.pop("description", "")
+        return cls(name=name, description=description, **config)
 
 
 class ConfigurationManager:

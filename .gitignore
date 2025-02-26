@@ -163,7 +163,6 @@ __pycache__/
 .Python
 build/
 develop-eggs/
-
 downloads/
 eggs/
 .eggs/
@@ -178,11 +177,11 @@ wheels/
 *.egg
 
 # Virtual Environment
-.env
-.venv
-env/
 venv/
+env/
 ENV/
+.env
+.venv/
 
 # IDE
 .idea/
@@ -228,3 +227,83 @@ archive
 memory_bank
 archive
 src/agentic_fleet/.null.py
+
+# Environment Variables
+.env.*
+!.env.example
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Testing
+.coverage
+htmlcov/
+.pytest_cache/
+.tox/
+.nox/
+coverage.xml
+*.cover
+.hypothesis/
+
+# Jupyter Notebooks
+.ipynb_checkpoints
+
+# Distribution / packaging
+.Python
+env/
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# Chainlit specific
+.chainlit/
+.chainlit.env
+
+# Azure specific
+.azure/
+
+# Credentials and secrets
+*.pem
+*.key
+*.crt
+*.p12
+*.pfx
+credentials.json
+token.json
+secrets.json
+
+# Database
+*.sqlite
+*.sqlite3
+*.db
+
+# Temporary files
+tmp/
+temp/
+.temp/
+.tmp/
+
+# Docker
+.docker/
+docker-compose.override.yml
+
+# Playwright
+node_modules/
+playwright-report/
+test-results/

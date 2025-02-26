@@ -3,7 +3,7 @@
 This module provides functionality for processing and streaming messages in the chat interface.
 """
 
-from typing import Any, Dict, List, Optional, Union
+from typing import Any, Dict, List, Optional, Tuple, Union
 
 import chainlit as cl
 from autogen_agentchat.messages import TextMessage
@@ -18,27 +18,41 @@ async def stream_text(text: str, delay: float = 0.03) -> None:
     await cl.Message(content=text, stream=True).send()
 
 async def process_response(
-    response: Union[TextMessage, List[Any], Dict[str, Any]],
-    collected_responses: List[str]
-) -> None:
-    """Process agent responses with step visualization and error handling."""
+    response: Union[TextMessage, List[Any], Dict[str, Any]]
+) -> Tuple[Optional[str], Optional[str]]:
+    """Process agent responses and return response text and plan update."""
+    response_text = None
+    plan_update = None
+    
     try:
         if isinstance(response, TextMessage):
-            await cl.Message(content=response.content, author=response.source).send()
-            collected_responses.append(response.content)
+            response_text = response.content
+            # Check if this is a plan update
+            if "Here is the plan to follow as best as possible:" in response_text:
+                plan_parts = response_text.split("Here is the plan to follow as best as possible:")
+                if len(plan_parts) > 1:
+                    plan_update = plan_parts[1].strip()
+            
+            await cl.Message(content=response_text, author=response.source).send()
         elif isinstance(response, (list, tuple)):
             for item in response:
-                await process_response(item, collected_responses)
+                item_text, item_plan = await process_response(item)
+                if item_text:
+                    response_text = item_text
+                if item_plan:
+                    plan_update = item_plan
         elif isinstance(response, dict):
             if "content" in response:
-                await cl.Message(content=response["content"]).send()
-                collected_responses.append(response["content"])
+                response_text = response["content"]
+                await cl.Message(content=response_text).send()
             else:
-                await cl.Message(content=str(response)).send()
-                collected_responses.append(str(response))
+                response_text = str(response)
+                await cl.Message(content=response_text).send()
         else:
-            await cl.Message(content=str(response)).send()
-            collected_responses.append(str(response))
+            response_text = str(response)
+            await cl.Message(content=response_text).send()
     except Exception as e:
         error_msg = f"⚠️ Error processing response: {str(e)}"
-        await cl.Message(content=error_msg).send() 
+        await cl.Message(content=error_msg).send()
+    
+    return response_text, plan_update
