@@ -1,181 +1,116 @@
+"""Tests for the app module."""
+
 import pytest
-import pandas as pd
-import numpy as np
-import matplotlib.pyplot as plt
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock, patch, AsyncMock
 
 # Import the functions we want to test
-from agentic_fleet.app import format_message_content, detect_and_render_data
+from agentic_fleet.app import start_chat, message_handler, handle_settings_update
 
 
-def test_format_message_content_with_string():
-    """Test format_message_content with a string input."""
-    content = "This is a test string."
-    result = format_message_content(content)
-    assert result == "This is a test string."
+@pytest.mark.asyncio
+async def test_start_chat(mock_user_session, mock_chainlit_elements, mock_env_vars):
+    """Test that start_chat initializes properly."""
+    # Mock cl.ChatProfile
+    mock_profile = MagicMock()
+    mock_profile.name = "Test Profile"
+    mock_profile.markdown_description = "Test description"
+    mock_profile.model_settings = {"model_name": "gpt-4o-mini-2024-07-18"}
+    
+    # Mock the application manager
+    with patch("agentic_fleet.app.ApplicationManager") as mock_app_manager_class:
+        mock_app_manager = mock_app_manager_class.return_value
+        mock_app_manager.start = AsyncMock()
+        
+        # Mock the MagenticOne team
+        with patch("agentic_fleet.app.MagenticOne") as mock_team_class:
+            mock_team = mock_team_class.return_value
+            
+            # Call the function
+            await start_chat(mock_profile)
+            
+            # Verify the application manager was started
+            mock_app_manager.start.assert_called_once()
+            
+            # Verify the team was created and stored in the session
+            mock_team_class.assert_called_once()
+            assert mock_user_session.get.call_args_list[0][0][0] == "agent_team"
+            
+            # Verify that a welcome message was sent
+            message_instance = mock_chainlit_elements["Message"].return_value
+            assert message_instance.send.called
 
 
-def test_format_message_content_with_none():
-    """Test format_message_content with None input."""
-    content = None
-    result = format_message_content(content)
-    assert result == ""
+@pytest.mark.asyncio
+async def test_message_handler(mock_user_session, mock_chainlit_elements):
+    """Test that message_handler calls handle_chat_message."""
+    # Create a mock message
+    mock_message = MagicMock()
+    
+    # Patch the handle_chat_message function
+    with patch("agentic_fleet.app.handle_chat_message") as mock_handle_message:
+        mock_handle_message.return_value = AsyncMock()
+        
+        # Call the function
+        await message_handler(mock_message)
+        
+        # Verify handle_chat_message was called with the message
+        mock_handle_message.assert_called_once_with(mock_message)
 
 
-def test_format_message_content_with_list():
-    """Test format_message_content with a list input."""
-    content = ["Item 1", "Item 2", "Item 3"]
-    result = format_message_content(content)
-    assert "Item 1" in result
-    assert "Item 2" in result
-    assert "Item 3" in result
+@pytest.mark.asyncio
+async def test_handle_settings_update(mock_user_session, mock_settings_components):
+    """Test that handle_settings_update calls the settings manager."""
+    # Create mock settings
+    mock_settings = MagicMock()
+    
+    # Patch the settings_manager
+    with patch("agentic_fleet.app.settings_manager") as mock_settings_manager:
+        mock_settings_manager.handle_settings_update = AsyncMock()
+        
+        # Call the function
+        await handle_settings_update(mock_settings)
+        
+        # Verify settings_manager.handle_settings_update was called
+        mock_settings_manager.handle_settings_update.assert_called_once_with(mock_settings)
 
 
-def test_format_message_content_with_number():
-    """Test format_message_content with a number input."""
-    content = 42
-    result = format_message_content(content)
-    assert result == "42"
+@pytest.mark.asyncio
+async def test_on_action_reset(mock_chainlit_elements):
+    """Test that the reset action callback calls on_reset."""
+    # Create a mock action
+    mock_action = MagicMock()
+    
+    # Patch the on_reset function
+    with patch("agentic_fleet.app.on_reset") as mock_on_reset:
+        mock_on_reset.return_value = AsyncMock()
+        
+        # Import the function to test to force its resolution
+        from agentic_fleet.app import on_action_reset
+        
+        # Call the function
+        await on_action_reset(mock_action)
+        
+        # Verify on_reset was called with the action
+        mock_on_reset.assert_called_once_with(mock_action)
 
 
-def test_format_message_content_with_dict():
-    """Test format_message_content with a dictionary input."""
-    content = {"key1": "value1", "key2": "value2"}
-    result = format_message_content(content)
-    assert "key1" in result
-    assert "value1" in result
-    assert "key2" in result
-    assert "value2" in result
-
-
-def test_format_message_content_with_code_block():
-    """Test format_message_content with a code block."""
-    content = "Here is some code:\n```python\ndef hello():\n    print('Hello')\n```"
-    result = format_message_content(content)
-    assert "Here is some code:" in result
-    assert "def hello():" in result
-    assert "print('Hello')" in result
-
-
-@patch("chainlit.DataFrame")
-def test_detect_and_render_data_with_dataframe(mock_dataframe):
-    """Test detect_and_render_data with a pandas DataFrame."""
-    # Create a mock DataFrame
-    df = pd.DataFrame({"A": [1, 2, 3], "B": [4, 5, 6]})
-
-    # Mock the cl.DataFrame constructor
-    mock_df_instance = MagicMock()
-    mock_dataframe.return_value = mock_df_instance
-
-    # Call the function
-    text, elements = detect_and_render_data(df)
-
-    # Check the results
-    assert text == "DataFrame generated (see below)"
-    assert len(elements) == 1
-    assert elements[0] == mock_df_instance
-    mock_dataframe.assert_called_once()
-
-
-def test_detect_and_render_data_with_none():
-    """Test detect_and_render_data with None input."""
-    text, elements = detect_and_render_data(None)
-    assert text == ""
-    assert len(elements) == 0
-
-
-@patch("chainlit.DataFrame")
-def test_detect_and_render_data_with_list(mock_dataframe):
-    """Test detect_and_render_data with a list input."""
-    # Create a mock list
-    content = ["Item 1", "Item 2", "Item 3"]
-
-    # Call the function
-    text, elements = detect_and_render_data(content)
-
-    # Check the results
-    assert "Item 1" in text
-    assert "Item 2" in text
-    assert "Item 3" in text
-    assert len(elements) == 0  # Simple list should not create elements
-
-
-@patch("chainlit.DataFrame")
-def test_detect_and_render_data_with_complex_list(mock_dataframe):
-    """Test detect_and_render_data with a complex list input."""
-    # Create a mock complex list (list of dicts)
-    content = [{"name": "John", "age": 30}, {"name": "Jane", "age": 25}]
-
-    # Mock the cl.DataFrame constructor
-    mock_df_instance = MagicMock()
-    mock_dataframe.return_value = mock_df_instance
-
-    # Call the function
-    text, elements = detect_and_render_data(content)
-
-    # Check the results
-    assert text == "List data (see below)"
-    assert len(elements) == 1
-    assert elements[0] == mock_df_instance
-    mock_dataframe.assert_called_once()
-
-
-@patch("chainlit.Image")
-def test_detect_and_render_data_with_figure(mock_image):
-    """Test detect_and_render_data with a matplotlib figure."""
-    # Create a mock figure
-    fig, ax = plt.subplots()
-    ax.plot([1, 2, 3], [4, 5, 6])
-
-    # Mock the cl.Image constructor
-    mock_image_instance = MagicMock()
-    mock_image.return_value = mock_image_instance
-
-    # Call the function
-    text, elements = detect_and_render_data(fig)
-
-    # Check the results
-    assert text == "Plot generated (see below)"
-    assert len(elements) == 1
-    assert elements[0] == mock_image_instance
-    mock_image.assert_called_once()
-
-
-@patch("chainlit.DataFrame")
-def test_detect_and_render_data_with_numpy_array(mock_dataframe):
-    """Test detect_and_render_data with a numpy array."""
-    # Create a mock numpy array
-    arr = np.array([[1, 2, 3], [4, 5, 6]])
-
-    # Mock the cl.DataFrame constructor
-    mock_df_instance = MagicMock()
-    mock_dataframe.return_value = mock_df_instance
-
-    # Call the function
-    text, elements = detect_and_render_data(arr)
-
-    # Check the results
-    assert text == "Array data (see below)"
-    assert len(elements) == 1
-    assert elements[0] == mock_df_instance
-    mock_dataframe.assert_called_once()
-
-
-@patch("chainlit.DataFrame")
-def test_detect_and_render_data_with_dict(mock_dataframe):
-    """Test detect_and_render_data with a dictionary containing data."""
-    # Create a mock dictionary with data
-    content = {"data": [1, 2, 3], "columns": ["A", "B", "C"]}
-
-    # Mock the cl.DataFrame constructor
-    mock_df_instance = MagicMock()
-    mock_dataframe.return_value = mock_df_instance
-
-    # Call the function
-    text, elements = detect_and_render_data(content)
-
-    # Check the results
-    assert text == "Data from dictionary (see below)"
-    assert len(elements) == 1
-    assert elements[0] == mock_df_instance
-    mock_dataframe.assert_called_once()
+@pytest.mark.asyncio
+async def test_on_chat_stop(mock_user_session):
+    """Test that on_chat_stop cleans up resources properly."""
+    # Create a mock application manager
+    mock_app_manager = MagicMock()
+    mock_app_manager.stop = AsyncMock()
+    
+    # Patch the global app_manager
+    with patch("agentic_fleet.app.app_manager", mock_app_manager):
+        # Import the function to test to force its resolution
+        from agentic_fleet.app import on_chat_stop
+        
+        # Call the function
+        await on_chat_stop()
+        
+        # Verify app_manager.stop was called
+        mock_app_manager.stop.assert_called_once()
+        
+        # Verify user session was cleared
+        mock_user_session.clear.assert_called_once()
