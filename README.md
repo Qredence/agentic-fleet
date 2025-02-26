@@ -1,9 +1,9 @@
-# AgenticFleet
+<div align="center">
+  
+![hero@2x](https://github.com/user-attachments/assets/5c05ab46-cc81-4fe0-9fc4-4ad4e2cb1ad2)
 
 A powerful multi-agent system for adaptive AI reasoning and automation. AgenticFleet combines Chainlit's interactive interface with AutoGen's multi-agent capabilities to create a flexible, powerful AI assistant platform.
 
-<div align="center">
-  
 [![Weave Badge](https://img.shields.io/endpoint?url=https%3A%2F%2Fapp.workweave.ai%2Fapi%2Frepository%2Fbadge%2Forg_X84uIR347D2freSZkxeu4S9S%2F909560351&cacheSeconds=3600)](https://app.workweave.ai/reports/repository/org_X84uIR347D2freSZkxeu4S9S/909560351)
 </div>
 
