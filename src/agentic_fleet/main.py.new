@@ -1,20 +1,27 @@
-# Standard library imports
+"""
+Main entry point for AgenticFleet.
+
+This module serves as the primary entry point for both the CLI and the Chainlit application.
+It consolidates the functionality of the previous main.py, __main__.py, and app.py files.
+"""
+
 import logging
+import os
+import sys
 import traceback
 from pathlib import Path
-from typing import Optional
+from typing import Any, Dict, List, Optional
 
 # Third-party imports
 import chainlit as cl
-from autogen_ext.code_executors.local import LocalCommandLineCodeExecutor
-from autogen_ext.teams.magentic_one import MagenticOne
 from chainlit import Message, on_chat_start, on_message, on_settings_update, on_stop
 from dotenv import load_dotenv
 
-# Local imports - using the modular components
+# Local imports
+from agentic_fleet.agents import create_magentic_one_agent
 from agentic_fleet.config import config_manager
 from agentic_fleet.core.application.manager import ApplicationConfig, ApplicationManager
-from agentic_fleet.models.client_factory import get_cached_client
+from agentic_fleet.services.client_factory import get_cached_client
 from agentic_fleet.ui.message_handler import handle_chat_message, on_reset
 from agentic_fleet.ui.settings_handler import SettingsManager
 
@@ -56,7 +63,7 @@ async def start_chat(profile: Optional[cl.ChatProfile] = None):
         env_config = config_manager.get_environment_settings()
 
         # Initialize client based on profile or defaults
-        model_name = "gpt-4o-2024-11-20"
+        model_name = "gpt-4o-mini-2024-07-18"
         if profile and isinstance(profile, cl.ChatProfile):
             model_settings = profile.model_settings or {}
             model_name = model_settings.get("model_name", model_name)
@@ -84,10 +91,9 @@ async def start_chat(profile: Optional[cl.ChatProfile] = None):
         from agentic_fleet.ui.task_manager import initialize_task_list
         await initialize_task_list()
 
-        # Initialize MagenticOne agent team
-        team = MagenticOne(
+        # Initialize MagenticOne agent
+        team = create_magentic_one_agent(
             client=client,
-            code_executor=LocalCommandLineCodeExecutor(),
             hil_mode=True  # Enable human-in-the-loop mode
         )
 
@@ -113,7 +119,7 @@ async def start_chat(profile: Optional[cl.ChatProfile] = None):
 
         # Send welcome message
         welcome_message = (
-            f"🚀 Welcome to MagenticFleet!\n\n"
+            f"🚀 Welcome to AgenticFleet!\n\n"
             f"**Active Profile**: {profile_name}\n"
             f"**Model**: {model_name}\n"
             f"**Temperature**: {default_settings['temperature']}\n"
@@ -168,3 +174,9 @@ async def on_chat_stop():
 
     # Clear user session
     cl.user_session.clear()
+
+
+# Make the module runnable with Chainlit
+if __name__ == "__main__":
+    import chainlit as cl
+    cl.run()
