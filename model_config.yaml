@@ -1,0 +1,7 @@
+provider: autogen_ext.models.openai.AzureOpenAIChatCompletionClient
+config:
+  model: $AZURE_OPENAI_MODEL
+  azure_endpoint: $AZURE_OPENAI_ENDPOINT
+  azure_deployment: $AZURE_OPENAI_DEPLOYMENT
+  api_version: 2024-08-01-preview
+  api_key: $AZURE_OPENAI_API_KEY

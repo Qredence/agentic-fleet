@@ -141,21 +141,86 @@ dependencies = [
     "sse-starlette>=2.2.1",
 ]
 
-[project.urls]
-Homepage = "https://github.com/qredence/agenticfleet"
-Documentation = "https://github.com/qredence/agenticfleet/tree/main/docs"
-Repository = "https://github.com/qredence/agenticfleet.git"
-Issues = "https://github.com/qredence/agenticfleet/issues"
-Source = "https://github.com/qredence/agenticfleet"
-Docker = "https://hub.docker.com/r/qredenceai/agenticfleet"
+[project.optional-dependencies]
+test = [
+    "pytest>=7.4.0",
+    "pytest-asyncio>=0.21.0",
+    "pytest-cov>=4.1.0",
+    "pytest-mock>=3.11.1",
+    "pytest-sugar>=0.9.7",
+    "httpx>=0.25.0",
+    "respx>=0.20.2",
+    "coverage>=7.3.0",
+    "mypy>=1.5.0",
+    "ruff>=0.1.0",
+    "black>=23.9.0",
+    "isort>=5.12.0"
+]
 
-[project.scripts]
-agenticfleet = "agentic_fleet.cli:main"
-post_install = "agentic_fleet.scripts:install_playwright_deps"
-agenticfleet-run = "agentic_fleet.cli:run"
-agenticfleet-stop = "agentic_fleet.cli:stop"
-agenticfleet-restart = "agentic_fleet.cli:restart"
-agenticfleet-status = "agentic_fleet.cli:status"
+dev = [
+    # Linting and Code Quality
+    "ruff>=0.5.3",
+    "black>=24.1.1",
+    "isort>=5.13.2",
+
+    
+    # Testing
+    "pytest>=8.0.2",
+    "pytest-asyncio>=0.23.3",
+    "pytest-cov>=4.1.0",
+    "coverage>=7.4.4",
+    
+    # Documentation
+    "mkdocs>=1.5.3",
+    "mkdocstrings[python]>=0.24.0",
+    
+    # Debugging
+    "ipdb>=0.13.13",
+    "rich>=10.16.2"
+]
+
+docs = [
+    "mkdocs>=1.5.3",
+    "mkdocstrings[python]>=0.24.0"
+]
+
+models = [
+    "ollama>=0.1.5",
+    "autogen-ext[semantic-kernel-anthropic]",
+    "autogen-ext[semantic-kernel-google]",
+    "autogen-ext[semantic-kernel-ollama]",
+    "autogen-ext[semantic-kernel-aws]",
+    "autogen-ext[semantic-kernel-mistralai]",
+    "autogen-ext[semantic-kernel-hugging-face]"
+]
+
+[tool.pytest.ini_options]
+minversion = "7.4.0"
+addopts = "-ra -q --cov=agentic_fleet --cov-report=term-missing"
+testpaths = [
+    "tests"
+]
+
+[tool.coverage.run]
+source = ["agentic_fleet"]
+omit = [
+    "tests/*",
+    "*/__init__.py"
+]
+
+[tool.ruff]
+line-length = 120
+target-version = "py310"
+select = ["E", "F", "W", "I", "N", "UP", "ASYNC"]
+ignore = ["E501"]
+
+[tool.black]
+line-length = 120
+target-version = ['py310']
+
+[tool.isort]
+profile = "black"
+line_length = 120
 
 [tool.hatch.build]
 packages = ["src/agentic_fleet"]
@@ -198,144 +263,6 @@ exclude = [
 
 [tool.hatch.version]
 path = "src/agentic_fleet/__init__.py"
-
-[tool.pytest.ini_options]
-minversion = "7.0"
-addopts = """
-    -ra
-    -q
-    --cov=src/agentic_fleet
-    --cov-report=xml
-    --cov-report=term-missing
-    --cov-branch
-    --cov-fail-under=80
-    -n auto
-    --durations=10
-    """
-testpaths = ["tests"]
-python_files = ["test_*.py"]
-python_classes = ["Test*"]
-python_functions = ["test_*"]
-asyncio_mode = "auto"
-asyncio_default_fixture_loop_scope = "function"
-markers = [
-    "unit: marks tests as unit tests",
-    "integration: marks tests as integration tests",
-    "e2e: marks tests as end-to-end tests",
-]
-filterwarnings = [
-    "error",
-    "ignore::DeprecationWarning",
-    "ignore::UserWarning",
-]
-
-[tool.coverage.run]
-branch = true
-source = ["src/agentic_fleet"]
-omit = [
-    "tests/*",
-    "**/__init__.py",
-]
-
-[tool.coverage.report]
-exclude_lines = [
-    "pragma: no cover",
-    "def __repr__",
-    "if __name__ == .__main__.:",
-    "raise NotImplementedError",
-    "if TYPE_CHECKING:",
-    "pass",
-    "\\.\\.\\.",
-]
-fail_under = 80
-
-[tool.black]
-line-length = 100
-target-version = ["py310", "py311", "py312"]
-include = '\.pyi?$'
-
-[tool.isort]
-profile = "black"
-multi_line_output = 3
-line_length = 100
-
-[tool.mypy]
-python_version = "3.12"
-warn_return_any = true
-warn_unused_configs = true
-disallow_untyped_defs = true
-disallow_incomplete_defs = true
-check_untyped_defs = true
-disallow_untyped_decorators = true
-no_implicit_optional = true
-warn_redundant_casts = true
-warn_unused_ignores = true
-warn_no_return = true
-warn_unreachable = true
-
-[tool.ruff]
-line-length = 88
-target-version = "py312"
-
-[tool.ruff.lint]
-select = [
-    "E",  # pycodestyle errors
-    "W",  # pycodestyle warnings
-    "F",  # pyflakes
-    "I",  # isort
-    "C",  # flake8-comprehensions
-    "B",  # flake8-bugbear
-]
-ignore = [
-    "E501",  # line too long, handled by black
-    "B008",  # do not perform function calls in argument defaults
-    "C901",  # too complex
-]
-
-[project.optional-dependencies]
-dev = [
-    # Linting and Code Quality
-    "ruff>=0.5.3",
-    "black>=24.1.1",
-    "isort>=5.13.2",
-
-    
-    # Testing
-    "pytest>=8.0.2",
-    "pytest-asyncio>=0.23.3",
-    "pytest-cov>=4.1.0",
-    "coverage>=7.4.4",
-    
-    # Documentation
-    "mkdocs>=1.5.3",
-    "mkdocstrings[python]>=0.24.0",
-    
-    # Debugging
-    "ipdb>=0.13.13",
-    "rich>=10.16.2"
-]
-
-test = [
-    "pytest>=8.0.2",
-    "pytest-asyncio>=0.23.3",
-    "pytest-cov>=4.1.0",
-    "coverage>=7.4.4"
-]
-
-docs = [
-    "mkdocs>=1.5.3",
-    "mkdocstrings[python]>=0.24.0"
-]
-
-models = [
-    "ollama>=0.1.5",
-    "autogen-ext[semantic-kernel-anthropic]",
-    "autogen-ext[semantic-kernel-google]",
-    "autogen-ext[semantic-kernel-ollama]",
-    "autogen-ext[semantic-kernel-aws]",
-    "autogen-ext[semantic-kernel-mistralai]",
-    "autogen-ext[semantic-kernel-hugging-face]"
-]
 
 [tool.setuptools.packages.find]
 exclude = [

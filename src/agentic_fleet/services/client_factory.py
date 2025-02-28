@@ -1,4 +1,4 @@
-"""Module for client creation logic."""
+"""Module for client creation and management services."""
 
 # Standard library imports
 import logging
