@@ -1,3 +1,5 @@
+# Agentic Fleet
+
 <div align="center">
   
 ![hero@2x](https://github.com/user-attachments/assets/5c05ab46-cc81-4fe0-9fc4-4ad4e2cb1ad2)
@@ -60,365 +62,360 @@ A powerful multi-agent system for adaptive AI reasoning and automation. AgenticF
 
 AgenticFleet operates through a coordinated team of specialized agents that work together to provide advanced AI capabilities. This project leverages Chainlit's interactive interface with AutoGen's multi-agent system to deliver robust and adaptive solutions.
 
+A comprehensive platform for deploying, managing, and interacting with AI agents.
+
+## Overview
+
+Agentic Fleet is a sophisticated platform that provides a modular architecture for managing AI agents, tasks, and communication. It supports multiple agent types, task management, and communication channels with a focus on extensibility, allowing for easy integration of new agent types, tools, and interfaces.
+
+## Features
+
+- **Agent Management**: Create, update, and delete AI agents with different capabilities
+- **Task Management**: Assign tasks to agents and track their progress
+- **Real-time Communication**: Chat interfaces for real-time interaction with agents
+- **Multiple Interfaces**: REST API and Chainlit-based UI
+- **Tool Integration**: Web search, content generation, and data processing tools
+- **Authentication**: API key-based authentication for secure access
+- **Logging**: Comprehensive request logging for monitoring and debugging
+- **Database Integration**: SQLAlchemy ORM for data persistence
+
 ## System Architecture
 
-```mermaid
-graph TD
-    User[Chainlit UI] -->|HTTP| App[app.py]
-    App --> AgentTeam[MagenticOneGroupChat]
-    AgentTeam --> WebSurfer
-    AgentTeam --> FileSurfer
-    AgentTeam --> Coder
-    AgentTeam --> Executor
-    WebSurfer -->|Selenium| Web[External Websites]
-    FileSurfer -->|OS| FileSystem[Local Files]
-    Executor -->|Subprocess| Code[Python/Runtime]
-```
+The Agentic Fleet system is organized into several key components:
 
-- **WebSurfer**: Navigates the web, extracts data, and processes screenshots.
-- **FileSurfer**: Manages file operations and extracts information from local files.
-- **Coder**: Generates and reviews code, ensuring quality and efficiency.
-- **Executor**: Executes code safely in an isolated environment and provides feedback.
+### Core Components
 
-## Quick Start (fastest way)
-1. Install dependencies:
+1. **API Layer** (`src/agentic_fleet/api/`)
+   - FastAPI-based REST API for interacting with the system
+   - Endpoints for agent management, task execution, and chat interactions
+   - Middleware for authentication, logging, and error handling
 
-```bash
-pip install agentic-fleet
-```
+2. **Database Layer** (`src/agentic_fleet/database/`)
+   - SQLAlchemy ORM models for data persistence
+   - Models for agents, messages, and tasks
+   - Database session management and connection pooling
 
-2. Set up environment variables:
+3. **Service Layer** (`src/agentic_fleet/services/`)
+   - Business logic for agent operations, task management, and chat interactions
+   - Client factory for LLM model instantiation and caching
+   - Message processing services
 
-```bash
-export OPENAI_API_KEY=your_api_key
-export AZURE_OPENAI_KEY=your_azure_key
-```
+4. **Agent System** (`src/agentic_fleet/agents/`)
+   - Implementation of agent types (e.g., MagenticOne)
+   - Agent registration and discovery
+   - Agent execution and lifecycle management
 
-3. Start AgenticFleet using one of these methods:
+5. **Tools** (`src/agentic_fleet/tools/`)
+   - Utility tools available to agents
+   - Web search capabilities (Google, Bing)
+   - Content generation (images, PDFs)
+   - Web page fetching and data extraction
 
-```bash
-# Using CLI command (recommended)
-agenticfleet start
+6. **UI Layer** (`src/agentic_fleet/ui/`)
+   - Chainlit-based chat interface
+   - Settings management
+   - Task visualization and management
+   - Message handling and formatting
 
-# Using CLI command without OAuth
-agenticfleet start no-oauth
-```
+7. **Configuration System** (`src/agentic_fleet/config/`)
+   - YAML-based configuration for agents, models, and system settings
+   - Environment variable integration
+   - Configuration validation and loading
 
-### Alternative Start Methods
-
-You can also use the provided scripts in the `scripts` directory:
-
-```bash
-# Using shell script
-./scripts/run.sh
-
-# Using Python script
-./scripts/run_direct.py
-
-# Using direct server start
-./scripts/start_server.sh
-```
-
-### Installation & Environment Setup
-
-Before starting AgenticFleet, install the package using the `uv` package manager:
-
-```bash
-uv pip install agentic-fleet
-uv pip install playwright
-playwright install --with-deps chromium
-```
-
-Then, set up your environment:
-
-1. **Copy the Example File**
-
-   ```bash
-   cp .env.example .env
-   ```
-
-2. **Configure Environment Variables**
-
-   Open the `.env` file and set the required values. At a minimum, configure your Azure OpenAI settings:
-
-   ```env
-   # Required: Azure OpenAI Configuration
-   AZURE_OPENAI_API_KEY=your_api_key
-   AZURE_OPENAI_ENDPOINT=your_endpoint
-   AZURE_OPENAI_DEPLOYMENT=your_deployment
-   AZURE_OPENAI_MODEL=your_model
-   ```
-
-### Running AgenticFleet
-
-There are several ways to run AgenticFleet:
-
-1. **Using CLI Commands** (Recommended):
-   ```bash
-   # Start with default configuration (OAuth enabled)
-   agenticfleet start
-
-   # Start without OAuth
-   agenticfleet start no-oauth
-
-   # Start with custom host and port
-   agenticfleet start --host localhost --port 8000
-   ```
-
-2. **Using Shell Script**:
-   ```bash
-   # Start the application using the shell script
-   ./scripts/run.sh
-   ```
-
-3. **Using Python Script**:
-   ```bash
-   # Start the application using Python
-   python scripts/run_direct.py
-   ```
-
-### Using Docker
-
-If you prefer using Docker, follow these instructions:
-
-```bash
-# Pull the latest image
-docker pull qredence/agenticfleet:latest
-
-# Run with minimum configuration (replace placeholders with your actual values)
-docker run -d -p 8001:8001 \
-  -e AZURE_OPENAI_API_KEY=your_key \
-  -e AZURE_OPENAI_ENDPOINT=your_endpoint \
-  -e AZURE_OPENAI_DEPLOYMENT=your_deployment \
-  -e AZURE_OPENAI_MODEL=your_model \
-  qredence/agenticfleet:latest
-
-# Alternatively, run with additional configuration including OAuth
-docker run -d -p 8001:8001 \
-  -e AZURE_OPENAI_API_KEY=your_key \
-  -e AZURE_OPENAI_ENDPOINT=your_endpoint \
-  -e AZURE_OPENAI_DEPLOYMENT=your_deployment \
-  -e AZURE_OPENAI_MODEL=your_model \
-  -e USE_OAUTH=true \
-  -e OAUTH_GITHUB_CLIENT_ID=your_client_id \
-  -e OAUTH_GITHUB_CLIENT_SECRET=your_client_secret \
-  qredence/agenticfleet:latest
-
-# To run without OAuth:
-docker run -d -p 8001:8001 \
-  -e AZURE_OPENAI_API_KEY=your_key \
-  -e AZURE_OPENAI_ENDPOINT=your_endpoint \
-  -e USE_OAUTH=false \
-  qredence/agenticfleet:latest
-```
-
-## Installation Guide
+## Getting Started
 
 ### Prerequisites
 
-- **Python Version:** 3.10-3.12
-- **Operating Systems:** macOS, Linux, Windows
+- Python 3.10+
+- PostgreSQL (optional, for production)
+- API keys for external services (OpenAI, Google, Bing, etc.)
+- Node.js (for UI development)
 
-### Installation Steps
+### Installation
 
-1. **Install `uv` Package Manager**
-
-   `uv` is a fast and efficient package manager. Choose your preferred installation method:
-
-   #### macOS/Linux
-
+1. Clone the repository:
    ```bash
-   # Using pip
-   pip install uv
-
-   # Using Homebrew (macOS)
-   brew install uv
-
-   # Using curl
-   curl -LsSf https://astral.sh/uv/install.sh | sh
+   git clone https://github.com/yourusername/agentic-fleet.git
+   cd agentic-fleet
    ```
 
-   #### Windows
-
-   ```powershell
-   # Using pip
-   pip install uv
-
-   # Using winget
-   winget install uv
-   ```
-
-2. **Create and Activate a Virtual Environment**
-
+2. Create a virtual environment:
    ```bash
-   # Create a new virtual environment
-   uv venv
-
-   # Activate the virtual environment
-   # On macOS/Linux
-   source .venv/bin/activate
-
-   # On Windows
-   .venv\Scripts\activate
+   python -m venv .venv
+   source .venv/bin/activate  # On Windows: .venv\Scripts\activate
    ```
 
-3. **Install AgenticFleet**
-
+3. Install dependencies:
    ```bash
-   # Install the latest stable version
-   uv pip install agentic-fleet
-
-   # Install Playwright for web automation and scraping (needed by WebSurfer)
-   uv pip install playwright
-   playwright install --with-deps chromium
+   # Using the provided script
+   ./install_deps.sh
+   
+   # Or using make
+   make install
+   
+   # Or manually with pip
+   pip install -r requirements.txt
+   
+   # Or install directly from source with development dependencies
+   pip install -e ".[dev]"
    ```
 
-   **Playwright Installation Notes:**
-
-   - Installs the Chromium browser for web automation.
-   - Includes necessary browser dependencies.
-   - Required for web scraping and browser-based agents.
-   - Supports both headless and headed modes.
-
-4. **Verify Installation**
-
-   ```bash
-   # Check installed version
-   uv pip show agentic-fleet
-
-   # Run a quick version check
-   python -c "import agentic_fleet; print(agentic_fleet.__version__)"
+4. Create a `.env` file:
+   ```
+   HOST=0.0.0.0
+   PORT=8000
+   CHAINLIT_PORT=8001
+   RELOAD=True
+   API_KEY=your_secret_api_key  # Optional, for authentication
+   DATABASE_URL=postgresql+asyncpg://user:password@localhost/agentic_fleet  # Optional, for production
+   OPENAI_API_KEY=your_openai_api_key  # Required for LLM functionality
+   GOOGLE_API_KEY=your_google_api_key  # Optional, for Google Search tool
+   BING_API_KEY=your_bing_api_key  # Optional, for Bing Search tool
    ```
 
-### Troubleshooting Installation
+### Running the Application
 
-- Ensure you're using Python 3.10-3.12.
-- Update `uv` to the latest version: `pip install -U uv`.
-- If issues arise, consult our [GitHub Issues](https://github.com/Qredence/AgenticFleet/issues).
-
-### Optional Feature Sets
+#### API Server
 
 ```bash
-# Install with optional telemetry features
-uv pip install 'agentic-fleet[telemetry]'
+# Using make
+make run
 
-# Install with optional tracing features
-uv pip install 'agentic-fleet[tracing]'
+# Or directly with Python
+python -m agentic_fleet.main
+
+# Or using the installed entry point
+agentic-fleet
 ```
 
-### Warning About Editable Installations
+The API will be available at `http://localhost:8000`.
 
-**DO NOT use `-e` unless you are a core contributor.**  
-Editable installations are not supported in production, may introduce unexpected behaviors, and void package support. They are intended solely for package development. If you make local modifications, please file a GitHub issue and submit a pull request.
+- API Documentation: `http://localhost:8000/docs`
+- Alternative Documentation: `http://localhost:8000/redoc`
 
-## Model Provider Installation
+#### Chainlit UI
 
-Please refer to the existing documentation or the [docs/installation.md](docs/installation.md) file for details on installing model providers.
+```bash
+# Run the Chainlit UI
+python -m agentic_fleet.app
+```
 
-## Supported Model Providers
+The Chainlit UI will be available at `http://localhost:8001`.
 
-AgenticFleet supports multiple LLM providers including OpenAI, Azure OpenAI, Google Gemini, DeepSeek, Ollama, Azure AI Foundry, and CogCache. For specifics on configuration and usage, please refer to the detailed sections in the documentation.
+## API Endpoints
 
-## Key Features
+### Agents
 
-- Advanced multi-agent coordination
-- Support for several LLM providers
-- GitHub OAuth authentication (optional)
-- Configurable agent behaviors and execution isolation
-- Comprehensive error handling and automated recovery
-- Multi-modal content processing (text, images, etc.)
+- `GET /agents`: List all agents
+- `POST /agents`: Create a new agent
+- `GET /agents/{agent_id}`: Get agent details
+- `PUT /agents/{agent_id}`: Update an agent
+- `DELETE /agents/{agent_id}`: Delete an agent
+
+### Tasks
+
+- `GET /tasks`: List all tasks
+- `POST /tasks`: Create a new task
+- `GET /tasks/{task_id}`: Get task details
+- `PUT /tasks/{task_id}`: Update a task
+- `DELETE /tasks/{task_id}`: Delete a task
+- `POST /tasks/{task_id}/assign/{agent_id}`: Assign a task to an agent
+
+### Chat
+
+- `GET /chat/messages`: List all chat messages
+- `POST /chat/messages`: Create a new chat message
+- `GET /chat/messages/{message_id}`: Get message details
+- `PUT /chat/messages/{message_id}`: Update a message
+- `DELETE /chat/messages/{message_id}`: Delete a message
+- `WebSocket /chat/ws`: Real-time chat endpoint
+
+## User Interfaces
+
+### Chainlit UI
+
+The system provides a web-based chat interface using Chainlit:
+
+1. **Chat Interface**
+   - Real-time messaging with agents
+   - File upload and sharing
+   - Message history and threading
+
+2. **Settings Management**
+   - Model selection and configuration
+   - Temperature and other generation parameters
+   - Agent selection and customization
+
+3. **Task Management**
+   - Task creation and assignment
+   - Task status tracking
+   - Task prioritization
+
+## Agent System
+
+### Agent Types
+
+1. **MagenticOne**
+   - Based on the AutoGen framework
+   - Supports code execution and reasoning
+   - Human-in-the-loop capabilities
+   - Uses a team of specialized agents including:
+     - Orchestrator: Manages the conversation flow
+     - Coder: Writes and executes code
+     - WebSurfer: Browses and retrieves web content
+     - FileSurfer: Searches and manipulates files
+     - ComputerTerminal: Executes terminal commands
+
+### Agent Capabilities
+
+- Natural language understanding and generation
+- Tool usage (web search, content generation, etc.)
+- Task planning and execution
+- Memory and context management
+- Code execution in a sandboxed environment
+- Web browsing and information retrieval
+- File operations and document processing
+
+## Tools and Utilities
+
+The system provides several tools that agents can use:
+
+1. **Search Tools**
+   - Google Search
+   - Bing Search
+
+2. **Content Generation**
+   - Image generation
+   - PDF generation
+
+3. **Web Interaction**
+   - Webpage fetching and parsing
+   - Browser automation
+
+4. **Utility Tools**
+   - Calculator
+   - Data processing
+   - File operations
+
+## Development
+
+### Project Structure
+
+```
+agentic_fleet/
+├── src/
+│   └── agentic_fleet/
+│       ├── agents/              # Agent implementations
+│       ├── api/                 # API endpoints and middleware
+│       │   ├── dependencies/
+│       │   ├── middleware/
+│       │   ├── routes/
+│       │   └── app.py
+│       ├── apps/                # Application modules
+│       ├── config/              # Configuration system
+│       ├── core/                # Core functionality
+│       │   ├── application/
+│       │   ├── llm/
+│       │   └── workflows/
+│       ├── database/            # Database models and session
+│       │   ├── models/
+│       │   └── session.py
+│       ├── exceptions/          # Custom exceptions
+│       ├── message_processing/  # Message handling
+│       ├── models/              # Data models
+│       ├── schemas/             # Pydantic schemas
+│       ├── services/            # Business logic
+│       ├── shared/              # Shared utilities
+│       ├── tools/               # Agent tools
+│       ├── ui/                  # User interface
+│       │   ├── chainlit/
+│       │   └── message_handler.py
+│       ├── utils/               # Utility functions
+│       ├── app.py               # Chainlit application
+│       └── main.py              # FastAPI application
+├── tests/
+├── .env
+├── pyproject.toml
+├── requirements.txt
+├── Makefile
+└── README.md
+```
+
+### Development Commands
+
+The project includes a Makefile with common development commands:
+
+```bash
+# Install dependencies
+make install
+
+# Run tests
+make test
+
+# Run linting
+make lint
+
+# Format code
+make format
+
+# Clean build artifacts
+make clean
+
+# Run the application
+make run
+
+# Show help
+make help
+```
+
+### Running Tests
+
+```bash
+# Using make
+make test
+
+# Or directly with pytest
+pytest
+```
+
+### Adding New Components
+
+1. **New Agent Types**
+   - Create a new file in `agents/`
+   - Implement the agent interface
+   - Register the agent in `agents/__init__.py`
+
+2. **New Tools**
+   - Create a new file in `tools/`
+   - Implement the tool interface
+   - Register the tool in `tools/__init__.py`
+
+3. **New API Endpoints**
+   - Create a new file in `api/routes/`
+   - Implement the endpoint handlers
+   - Register the routes in `api/routes/__init__.py`
 
 ## Configuration
 
-For complete configuration details, review the `.env.example` file and the [docs/usage-guide.md](docs/usage-guide.md) for further instructions.
+The system uses a hierarchical configuration system:
 
-## Error Handling
+1. **Environment Variables**
+   - Runtime configuration
+   - Sensitive information (API keys, credentials)
 
-AgenticFleet includes robust error handling:
+2. **YAML Configuration Files**
+   - Agent definitions
+   - Model configurations
+   - Memory settings
 
-- Graceful degradation on failures
-- Detailed error logging and reporting
-- Automatic cleanup and session recovery
-- Execution timeout management
-
-## Community Contributions
-
-AgenticFleet welcomes contributions from the community. Please review our [CONTRIBUTING.md](CONTRIBUTING.md) and [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md) for guidelines on submitting issues and pull requests.
-
-## Star History
-
-[![Star History Chart](https://api.star-history.com/svg?repos=Qredence/AgenticFleet&type=Date)](https://star-history.com/#Qredence/AgenticFleet&Date)
-
-
-
-#### Configuring a Team
-
-```python
-from agentic_fleet.backend.agents.orchestrator_agent import create_team
-
-team = create_team([
-    PlannerAgent(name="Strategic Planner"),
-    CodeCrafterAgent(name="Code Developer"),
-    ValidatorAgent(name="Quality Assurer")
-])
-```
-
-
-
-## Advanced Configuration
-
-### Agent Configuration
-
-Agents can be configured using YAML files located in `src/agentic_fleet/config/`:
-
-```yaml
-# Example agent configuration
-agent_type: AssistantAgent
-name: AI Assistant
-model: gpt-4
-temperature: 0.7
-max_context_length: 4096
-```
-
-### Environment Setup
-
-1. Install dependencies:
-
-```bash
-pip install agentic-fleet
-```
-
-2. Set up environment variables:
-
-```bash
-export OPENAI_API_KEY=your_api_key
-export AZURE_OPENAI_KEY=your_azure_key
-```
-
-3. Start AgenticFleet:
-
-```bash
-agenticfleet start
-```
-
-## Supported Features
-
-- Multi-agent task allocation
-- Dynamic team composition
-- Advanced error handling
-- Streaming AI interactions
-- Extensible agent framework
-
-## Performance Optimization
-
-- Use streaming APIs for real-time interactions
-- Configure model temperature between 0.7-1.0 for creative tasks
-- Implement efficient agent communication protocols
-
-## Contributing
-
-We welcome contributions! Please read our [API.md](API.md) for detailed guidelines on extending AgenticFleet.
+3. **Dynamic Configuration**
+   - User preferences
+   - Session settings
 
 ## License
 
-AgenticFleet is open-source software licensed under [INSERT LICENSE]
+This project is licensed under the Apache License 2.0 - see the LICENSE file for details.
+
+## Contributing
+
+Contributions are welcome! Please feel free to submit a Pull Request.
