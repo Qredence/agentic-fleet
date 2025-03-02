@@ -1,23 +1,40 @@
+"""
+Smart Agent Module.
+
+This module provides a Smart Agent implementation that uses Azure OpenAI API
+to generate responses and pulls data from a vector database.
+"""
+
 import base64
 import inspect
 import json
+import os
 from logging import Logger
 from types import MappingProxyType
 from typing import List
+
+import fsspec
 import fsspec.implementations
+from agent import Agent
+from functions import SearchVectorFunction
+from models import AgentConfiguration, AgentResponse
 from openai import AzureOpenAI
 from openai.types.chat.chat_completion import ChatCompletion
 from openai.types.chat.chat_completion_message import ChatCompletionMessage
 from openai.types.chat.chat_completion_message_tool_call import ChatCompletionMessageToolCall
-from agent import Agent
-from models import AgentConfiguration, AgentResponse
-from functions import SearchVectorFunction
-import os
-import fsspec
 from openai.types.chat.chat_completion_tool_param import ChatCompletionToolParam
 
+
 class Smart_Agent(Agent):
-    """Smart agent that uses the pulls data from a vector database and uses the Azure OpenAI API to generate responses"""
+    """Smart agent that uses the pulls data from a vector database and uses the Azure OpenAI API to generate responses.
+
+    This agent extends the base Agent class and provides functionality to interact with
+    Azure OpenAI API and vector databases for enhanced reasoning capabilities.
+
+    Attributes:
+        _conversation: List of conversation history.
+        _functions_list: Dictionary of available functions for the agent.
+    """
 
     def __init__(
             self,
@@ -32,6 +49,20 @@ class Smart_Agent(Agent):
             max_question_with_detail_hist: int = 1,
             image_directory: str = "images",
     ) -> None:
+        """Initialize the Smart Agent.
+
+        Args:
+            logger: Logger instance for logging agent activities.
+            agent_configuration: Configuration for the agent.
+            client: Azure OpenAI client for API interactions.
+            search_vector_function: Function to search vector database.
+            init_history: Initial conversation history.
+            fs: File system implementation for handling files.
+            max_run_per_question: Maximum number of runs per question.
+            max_question_to_keep: Maximum number of questions to keep in history.
+            max_question_with_detail_hist: Maximum number of questions with detailed history.
+            image_directory: Directory to store images.
+        """
         super().__init__(logger=logger, agent_configuration=agent_configuration)
 
         self.__client: AzureOpenAI = client
@@ -40,26 +71,35 @@ class Smart_Agent(Agent):
         self.__max_question_with_detail_hist: int = max_question_with_detail_hist
         self.__functions_spec: List[ChatCompletionToolParam] = [
             tool.to_openai_tool() for tool in self._agent_configuration.tools]
-        if len(init_history) >0: #initialize the conversation with the history
+        if len(init_history) > 0:  # initialize the conversation with the history
             self._conversation = init_history
         self._functions_list = {
             "search": search_vector_function.search
         }
         self.__fs: fsspec.AbstractFileSystem = fs
         self.__image_directory: str = image_directory
-    def clean_up_history(self, max_q_with_detail_hist=1, max_q_to_keep=2) -> None:
-        """Clean up the history"""
 
-        question_count=0
-        removal_indices=[]
+    def clean_up_history(self, max_q_with_detail_hist=1, max_q_to_keep=2) -> None:
+        """Clean up the conversation history.
+
+        Reduces the conversation history to maintain performance by keeping
+        only the most recent questions and their detailed history.
+
+        Args:
+            max_q_with_detail_hist: Maximum number of questions with detailed history.
+            max_q_to_keep: Maximum number of questions to keep in history.
+        """
+
+        question_count = 0
+        removal_indices = []
 
         for idx in range(len(self._conversation)-1, 0, -1):
             message = dict(self._conversation[idx])
 
             if message.get("role") == "user":
-                question_count +=1
+                question_count += 1
 
-            if question_count>= max_q_with_detail_hist and question_count < max_q_to_keep:
+            if question_count >= max_q_with_detail_hist and question_count < max_q_to_keep:
                 if message.get("role") != "user" \
                     and message.get("role") != "assistant" \
                         and len(message.get("content") or []) == 0:
@@ -71,22 +111,35 @@ class Smart_Agent(Agent):
         for index in removal_indices:
             del self._conversation[index]
 
-
     def reset_history_to_last_question(self) -> None:
-        """Reset the history to the last question"""
+        """Reset the conversation history to the last question.
 
-        
+        Removes all conversation history except for the last question and its response.
+        """
+
         for i in range(len(self._conversation)-1, -1, -1):
-            message = dict(self._conversation[i])   
-            
+            message = dict(self._conversation[i])
+
             if message.get("role") == "user":
                 break
-            
+
             self._conversation.pop()
 
-
     def run(self, user_input: str | None, conversation=None, stream=False) -> AgentResponse:
-        if user_input is None or len(user_input)==0:  # if no input return init message
+        """Run the agent with the given user input.
+
+        Processes the user input, generates a response using the Azure OpenAI API,
+        and handles any tool calls required.
+
+        Args:
+            user_input: The user's input text.
+            conversation: Optional conversation history to use instead of the agent's history.
+            stream: Whether to stream the response.
+
+        Returns:
+            AgentResponse: The agent's response to the user input.
+        """
+        if user_input is None or len(user_input) == 0:  # if no input return init message
             return AgentResponse(conversation=self._conversation, response=self._conversation[1]["content"])
 
         if conversation is not None and len(conversation) > 0:
@@ -140,7 +193,15 @@ class Smart_Agent(Agent):
         )
 
     def __check_args(self, function, args) -> bool:
-        """Check if the function has the correct number of arguments"""
+        """Check if the arguments match the function signature.
+
+        Args:
+            function: The function to check arguments for.
+            args: The arguments to check.
+
+        Returns:
+            bool: True if arguments match the function signature, False otherwise.
+        """
         sig: inspect.Signature = inspect.signature(obj=function)
         params: MappingProxyType[str, inspect.Parameter] = sig.parameters
 
@@ -155,6 +216,14 @@ class Smart_Agent(Agent):
         return True
 
     def __verify_openai_tools(self, tool_calls: List[ChatCompletionMessageToolCall]) -> None:
+        """Verify that the tool calls from OpenAI are valid.
+
+        Args:
+            tool_calls: List of tool calls from OpenAI.
+
+        Raises:
+            ValueError: If a tool call is invalid.
+        """
         for tool_call in tool_calls:
             function_name: str = tool_call.function.name
             self._logger.debug(
@@ -196,10 +265,19 @@ class Smart_Agent(Agent):
             )
 
     def __generate_search_function_response(self, function_response):
+        """Generate a response from the search function results.
+
+        Args:
+            function_response: The response from the search function.
+
+        Returns:
+            str: A formatted response based on the search results.
+        """
         search_function_response = []
 
         for item in function_response:
-            image_path = os.path.join(self.__image_directory, item['image_path'])   
+            image_path = os.path.join(
+                self.__image_directory, item['image_path'])
             related_content = item['related_content']
 
             image_file: str | bytes = self.__fs.read_bytes(path=image_path)

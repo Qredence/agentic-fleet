@@ -1,31 +1,54 @@
 """
-Base Agent Module.
+This module defines the base agent class for specialized agents.
 
-This module defines the base agent class that all specialized agents
-(Mind Map Agent, Web Search Agent, Coding Agent) will inherit from.
-It follows the patterns from the latest Microsoft Autogen documentation.
+The base agent class provides common functionality for all specialized agents
+in the system (Mind Map Agent, Web Search Agent, Coding Agent, etc.).
+It follows patterns from Microsoft Autogen documentation.
 """
 
+import logging
 from typing import Any, Dict, List, Optional, Union
 
 from autogen_agentchat.agents import AssistantAgent
 from autogen_agentchat.messages import ChatMessage, TextMessage
-from autogen_core import CancellationToken
-from autogen_core.models import ChatCompletionClient
+from autogen_core.models import ChatCompletionClient, CreateResult
+from pydantic import BaseModel
 
-from ..config.configuration_manager import AgentConfig
+logger = logging.getLogger(__name__)
+
+
+class AgentConfig(BaseModel):
+    """
+    Configuration model for BaseAgent.
+
+    Attributes:
+        name: The name of the agent
+        description: A description of the agent's capabilities
+        system_message: The system message that defines the agent's behavior
+        model: The model identifier to use with this agent
+    """
+
+    name: str
+    description: Optional[str] = None
+    system_message: Optional[str] = None
+    model: Optional[str] = None
 
 
 class BaseAgent(AssistantAgent):
     """
-    Base class for all agents in the Agentic Reasoning System.
+    Base agent class that extends AssistantAgent from autogen-core.
 
-    This class extends AssistantAgent from autogen-core and provides
-    common functionality for all specialized agents in the system.
+    This class provides common functionality for all specialized agents
+    in the system. It handles basic agent operations like processing messages,
+    generating responses, and managing agent configuration.
+
+    Attributes:
+        component_type: The type of component this agent represents
+        version: The version of this agent implementation
     """
 
     component_type = "agent"
-    version = 1
+    version = "0.1.0"
 
     def __init__(
         self,
@@ -36,14 +59,14 @@ class BaseAgent(AssistantAgent):
         **kwargs: Any,
     ) -> None:
         """
-        Initialize a new agent instance.
+        Initialize a new BaseAgent instance.
 
         Args:
-            name: The name of this agent instance.
-            model_client: The model client to use for this agent.
-            description: Description of the agent's purpose.
-            system_message: Optional system message to configure the agent's behavior.
-            **kwargs: Additional keyword arguments for specialized agent configuration.
+            name: The name of this agent instance
+            model_client: The model client to use for this agent
+            description: A description of this agent's capabilities
+            system_message: The system message that defines this agent's behavior
+            **kwargs: Additional keyword arguments for agent configuration
         """
         super().__init__(
             name=name,
@@ -55,17 +78,38 @@ class BaseAgent(AssistantAgent):
         self._initialize_agent(**kwargs)
 
     def _get_default_system_message(self) -> str:
-        """Get the default system message for this agent type."""
+        """
+        Get the default system message for this agent type.
+
+        This method can be overridden by specialized agents to provide
+        a custom default system message.
+
+        Returns:
+            str: The default system message
+        """
         return f"You are {self.name}, a helpful AI assistant."
 
     def _get_default_description(self) -> str:
-        """Get the default description for this agent type."""
+        """
+        Get the default description for this agent type.
+
+        This method can be overridden by specialized agents to provide
+        a custom default description.
+
+        Returns:
+            str: The default description
+        """
         return "An agent that provides assistance with ability to use tools."
 
     def _initialize_agent(self, **kwargs: Any) -> None:
         """
         Perform any additional initialization specific to this agent type.
-        Can be overridden by specialized agents.
+
+        This method can be overridden by specialized agents to perform
+        custom initialization steps.
+
+        Args:
+            **kwargs: Additional keyword arguments for agent initialization
         """
         pass
 
@@ -73,11 +117,14 @@ class BaseAgent(AssistantAgent):
         """
         Process an incoming message and generate a response.
 
+        This method handles both string messages and ChatMessage objects,
+        converting strings to TextMessage objects if necessary.
+
         Args:
-            message: The input message to process.
+            message: The input message to process
 
         Returns:
-            A dictionary containing the agent's response and any additional data.
+            Dict[str, Any]: A dictionary containing the agent's response and metadata
         """
         if isinstance(message, str):
             message = TextMessage(content=message, source="user")
@@ -89,11 +136,14 @@ class BaseAgent(AssistantAgent):
         """
         Execute the agent's primary task.
 
+        This method handles both string tasks and lists of ChatMessage objects,
+        converting strings to TextMessage objects if necessary.
+
         Args:
-            task: The task description or list of messages to process.
+            task: The task description or list of messages to process
 
         Returns:
-            A dictionary containing the task results and any additional data.
+            Dict[str, Any]: A dictionary containing the task results and metadata
         """
         if isinstance(task, str):
             task = [TextMessage(content=task, source="user")]
@@ -105,8 +155,10 @@ class BaseAgent(AssistantAgent):
         """
         Dump the agent configuration to a dictionary format.
 
+        This method serializes the agent's configuration for storage or transmission.
+
         Returns:
-            A dictionary containing the agent's configuration.
+            Dict[str, Any]: A dictionary containing the agent's configuration
         """
         config = AgentConfig(
             name=self.name,
@@ -130,11 +182,13 @@ class BaseAgent(AssistantAgent):
         """
         Load an agent from a configuration dictionary.
 
+        This class method creates a new agent instance from a serialized configuration.
+
         Args:
-            config: Configuration dictionary from dump_component.
+            config: Configuration dictionary from dump_component
 
         Returns:
-            An instance of the agent.
+            BaseAgent: An instance of the agent
         """
         agent_config = AgentConfig(**config["config"])
         return cls(

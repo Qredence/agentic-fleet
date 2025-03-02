@@ -1,11 +1,11 @@
 """
-Services module for AgenticFleet.
+Services package for the Agentic Fleet application.
 
-This module contains business logic services that are used by the application,
-including client management, message processing, and other core functionality.
+This package contains all the business logic services.
 """
 
-from agentic_fleet.services.client_factory import create_client, get_cached_client
-from agentic_fleet.services.message_processing import process_response, stream_text
+from agentic_fleet.services.agent_service import AgentService
+from agentic_fleet.services.chat_service import ChatService
+from agentic_fleet.services.task_service import TaskService
 
-__all__ = ["create_client", "get_cached_client", "process_response", "stream_text"]
+__all__ = ["AgentService", "TaskService", "ChatService"]

@@ -12,22 +12,12 @@ from autogen_agentchat.agents import AssistantAgent
 from autogen_agentchat.base import Response
 from autogen_agentchat.messages import ChatMessage, TextMessage
 from autogen_core import CancellationToken
-from autogen_core.models import (
-    CreateResult,
-    RequestUsage,
-    ChatCompletionClient,
-    SystemMessage,
-    UserMessage,
-)
+from autogen_core.models import ChatCompletionClient, CreateResult, RequestUsage, SystemMessage, UserMessage
 from pydantic import BaseModel
 
 from agentic_fleet.core.agents.base import BaseAgent
 from agentic_fleet.core.models.messages import EnhancedSystemMessage
-from agentic_fleet.core.tools.code_execution.code_execution_tool import (
-    CodeBlock,
-    ExecutionResult,
-    CodeExecutionTool,
-)
+from agentic_fleet.core.tools.code_execution.code_execution_tool import CodeBlock, CodeExecutionTool, ExecutionResult
 
 logger = logging.getLogger(__name__)
 
@@ -45,6 +35,16 @@ class CodingConfig(BaseModel):
 class CodingAgent(BaseAgent):
     """
     An agent that generates, executes, and optimizes code based on tasks and requirements.
+
+    This agent specializes in coding tasks, providing capabilities to:
+    1. Generate code based on natural language descriptions
+    2. Execute the generated code
+    3. Optimize code for performance or other metrics
+    4. Review code for quality and correctness
+
+    Attributes:
+        config: Configuration settings for the coding agent
+        code_execution_tool: Tool for executing code
     """
 
     def __init__(
@@ -55,13 +55,13 @@ class CodingAgent(BaseAgent):
         **kwargs: Any,
     ) -> None:
         """
-        Initialize the coding agent.
+        Initialize a new CodingAgent instance.
 
         Args:
-            name: Name of the agent
-            config: Configuration for the agent
-            model_client: Model client for chat completion
-            **kwargs: Additional arguments passed to BaseAgent
+            name: The name of this agent instance
+            config: Configuration settings for the coding agent
+            model_client: The model client to use for this agent
+            **kwargs: Additional keyword arguments for agent configuration
         """
         self._name = name
         super().__init__(
@@ -74,14 +74,14 @@ class CodingAgent(BaseAgent):
 
     async def process_message(self, message: str, token: CancellationToken = None) -> Response:
         """
-        Process incoming messages and manage code operations.
+        Process an incoming message and generate a response.
 
         Args:
-            message: Incoming chat message
-            token: Cancellation token for the operation
+            message: The message content to process
+            token: Optional cancellation token to cancel processing
 
         Returns:
-            Response containing the operation result
+            Response: The agent's response to the message
         """
         try:
             # Parse the command and parameters from the message
@@ -101,7 +101,8 @@ class CodingAgent(BaseAgent):
 
             elif command == "optimize":
                 optimized = await self._optimize_code(
-                    params.get("code", ""), params.get("metrics", []), params.get("context", {})
+                    params.get("code", ""), params.get(
+                        "metrics", []), params.get("context", {})
                 )
                 return Response(content=str(optimized))
 
@@ -129,22 +130,25 @@ class CodingAgent(BaseAgent):
         temperature: Optional[float] = None,
     ) -> CreateResult:
         """
-        Generate a response based on the input messages.
+        Generate a response using the model client.
 
         Args:
-            messages: List of input messages
-            token: Optional cancellation token
-            temperature: Optional temperature for response generation
+            messages: Sequence of messages to send to the model
+            token: Optional cancellation token to cancel generation
+            temperature: Optional temperature parameter for generation
 
         Returns:
-            CreateResult containing the generated response
+            CreateResult: The result from the model client
+
+        Raises:
+            ValueError: If the model client is not set
         """
         # If model_client is None, create a mock response for testing
         if self._model_client is None:
             # Get the last message content for the mock response
             last_message = messages[-1] if messages else None
             content = "Mock response for testing"
-            
+
             if last_message:
                 # Create different mock responses based on the method being tested
                 if "Generate code" in str(messages):
@@ -153,7 +157,7 @@ class CodingAgent(BaseAgent):
                     content = "def add(a: int, b: int) -> int:\n    \"\"\"Add two numbers and return the result.\"\"\"\n    return a + b"
                 elif "Review the code" in str(messages):
                     content = "The code is simple and correct. It adds two numbers as required."
-            
+
             # Create a mock response using TextMessage
             mock_message = TextMessage(content=content, source="assistant")
             return CreateResult(
@@ -163,7 +167,7 @@ class CodingAgent(BaseAgent):
                 content=content,
                 cached=False
             )
-        
+
         # Pass temperature to model client if provided
         if temperature is not None and self._model_client:
             original_temp = getattr(self._model_client, 'temperature', None)
@@ -183,15 +187,15 @@ class CodingAgent(BaseAgent):
         self, task: str, requirements: Dict[str, Any], context: Optional[Dict[str, Any]] = None
     ) -> CodeBlock:
         """
-        Generate code based on task description and requirements.
+        Generate code based on a task description and requirements.
 
         Args:
             task: Description of the coding task
-            requirements: Specific requirements for the code
-            context: Optional context information
+            requirements: Dictionary of requirements for the code
+            context: Optional additional context for code generation
 
         Returns:
-            Generated code block
+            CodeBlock: Generated code block with language and content
         """
         try:
             # Use EnhancedSystemMessage instead of SystemMessage
@@ -202,15 +206,17 @@ class CodingAgent(BaseAgent):
 
             messages = [
                 system_message,
-                UserMessage(content=f"Task: {task}\nRequirements: {requirements}\nContext: {context}", source="user"),
-            ]
+                UserMessage(
+                    content=f"Task: {task}\nRequirements: {requirements}\nContext: {context}", source="user"),
+                ]
 
             result = await self.generate_response(
                 messages, temperature=self.config.generation_temperature
             )
 
             return CodeBlock(
-                code=result.content, language=self._detect_language(task, requirements)
+                code=result.content, language=self._detect_language(
+                    task, requirements)
             )
 
         except Exception as e:
@@ -221,17 +227,18 @@ class CodingAgent(BaseAgent):
         self, code: str, context: Optional[Dict[str, Any]] = None
     ) -> ExecutionResult:
         """
-        Execute a code block with safety checks.
+        Execute the provided code and return the result.
 
         Args:
-            code: Code to execute
-            context: Optional execution context
+            code: The code to execute
+            context: Optional additional context for execution
 
         Returns:
-            Result of code execution
+            ExecutionResult: Result of the code execution
         """
         try:
-            code_block = CodeBlock(code=code, language=self._detect_language_from_code(code))
+            code_block = CodeBlock(
+                code=code, language=self._detect_language_from_code(code))
 
             result = await self.code_execution_tool.execute_code(code_block, context)
 
@@ -245,15 +252,15 @@ class CodingAgent(BaseAgent):
         self, code: str, metrics: List[str], context: Optional[Dict[str, Any]] = None
     ) -> CodeBlock:
         """
-        Optimize code based on specified metrics.
+        Optimize the provided code based on specified metrics.
 
         Args:
-            code: Code to optimize
-            metrics: List of metrics to optimize for
-            context: Optional context information
+            code: The code to optimize
+            metrics: List of metrics to optimize for (e.g., "performance", "memory")
+            context: Optional additional context for optimization
 
         Returns:
-            Optimized code block
+            CodeBlock: Optimized code block with language and content
         """
         try:
             # Use EnhancedSystemMessage instead of SystemMessage
@@ -264,15 +271,17 @@ class CodingAgent(BaseAgent):
 
             messages = [
                 system_message,
-                UserMessage(content=f"Code: {code}\nMetrics: {metrics}\nContext: {context}", source="user"),
-            ]
+                UserMessage(
+                    content=f"Code: {code}\nMetrics: {metrics}\nContext: {context}", source="user"),
+                ]
 
             result = await self.generate_response(
                 messages, temperature=self.config.optimization_temperature
             )
 
             return CodeBlock(
-                code=result.content, language=self._detect_language_from_code(code)
+                code=result.content, language=self._detect_language_from_code(
+                    code)
             )
 
         except Exception as e:
@@ -281,14 +290,14 @@ class CodingAgent(BaseAgent):
 
     async def _review_code(self, code: str, context: Optional[Dict[str, Any]] = None) -> str:
         """
-        Review code for quality, security, and best practices.
+        Review the provided code for quality and correctness.
 
         Args:
-            code: Code to review
-            context: Optional context information
+            code: The code to review
+            context: Optional additional context for the review
 
         Returns:
-            Review comments and suggestions
+            str: Review comments and suggestions
         """
         try:
             # Use EnhancedSystemMessage instead of SystemMessage
@@ -299,8 +308,9 @@ class CodingAgent(BaseAgent):
 
             messages = [
                 system_message,
-                UserMessage(content=f"Code: {code}\nContext: {context}", source="user"),
-            ]
+                UserMessage(
+                    content=f"Code: {code}\nContext: {context}", source="user"),
+                ]
 
             result = await self.generate_response(
                 messages, temperature=self.config.review_temperature
@@ -314,13 +324,13 @@ class CodingAgent(BaseAgent):
 
     def _parse_message(self, content: str) -> tuple[str, Dict[str, Any]]:
         """
-        Parse the command and parameters from a message.
+        Parse a message into a task and requirements.
 
         Args:
-            content: Message content to parse
+            content: The message content to parse
 
         Returns:
-            Tuple of (command, parameters)
+            tuple: A tuple containing the task description and requirements dictionary
         """
         parts = content.split(maxsplit=1)
         command = parts[0].lower()
@@ -339,13 +349,15 @@ class CodingAgent(BaseAgent):
 
     def _improved_detect_language(self, text: str) -> str:
         """
-        Improved language detection using langdetect.
-
+        Detect the programming language from text using improved heuristics.
+        
+        Note: Requires the 'langdetect' package to be installed.
+        
         Args:
-            text: Text to analyze
-
+            text: The text to analyze for language detection
+            
         Returns:
-            Detected language as string (default is 'python')
+            str: The detected programming language
         """
         try:
             from langdetect import detect_langs
@@ -359,14 +371,14 @@ class CodingAgent(BaseAgent):
 
     def _detect_language(self, task: str, requirements: Dict[str, Any]) -> str:
         """
-        Detect the programming language from task and requirements using keyword matching and improved detection as fallback.
+        Detect the programming language from task description and requirements.
 
         Args:
-            task: Task description
-            requirements: Task requirements
+            task: The task description
+            requirements: Dictionary of requirements
 
         Returns:
-            Detected programming language
+            str: The detected programming language
         """
         language_hints = {
             "python": ["python", "pip", "numpy", "pandas"],
@@ -384,13 +396,13 @@ class CodingAgent(BaseAgent):
 
     def _detect_language_from_code(self, code: str) -> str:
         """
-        Detect the programming language from code content using pattern matching.
+        Detect the programming language from code content.
 
         Args:
-            code: Code content
+            code: The code content to analyze
 
         Returns:
-            Detected programming language
+            str: The detected programming language
         """
         language_patterns = {
             "python": ["def ", "import ", "class ", "print("],
@@ -406,10 +418,12 @@ class CodingAgent(BaseAgent):
 
     async def on_messages(self, messages: Sequence[ChatMessage]) -> Response:
         """
-        Handle incoming messages and generate responses.
+        Process a sequence of chat messages and generate a response.
+
+        This method is called by the agent runtime to process messages.
 
         Args:
-            messages: Sequence of messages to process
+            messages: Sequence of chat messages to process
 
         Returns:
             Response: The agent's response to the messages
@@ -423,15 +437,19 @@ class CodingAgent(BaseAgent):
         return Response(content=response if response else "Failed to process message")
 
     async def on_reset(self) -> None:
-        """Reset the agent's state."""
+        """
+        Reset the agent to its initial state.
+
+        This method is called when the agent needs to be reset.
+        """
         # No state to reset for now
         pass
 
     def produced_message_types(self) -> List[str]:
         """
-        Get the types of messages this agent can produce.
+        Get the list of message types this agent can produce.
 
         Returns:
-            List[str]: List of supported message types
+            List[str]: List of message type identifiers
         """
         return ["text", "code"]

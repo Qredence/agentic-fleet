@@ -3,7 +3,7 @@
 # Standard library imports
 import logging
 import os
-from typing import Dict, Any, List
+from typing import Any, Dict, List, Optional, Union, cast
 
 # Third-party imports
 import chainlit as cl
@@ -19,14 +19,14 @@ logger = logging.getLogger(__name__)
 
 class SettingsManager:
     """Class for managing chat settings and profiles."""
-    
-    def __init__(self):
+
+    def __init__(self) -> None:
         """Initialize the settings manager."""
         self.defaults = config_manager.get_defaults()
-    
+
     def get_default_settings(self) -> Dict[str, Any]:
         """Get default settings values.
-        
+
         Returns:
             Dictionary of default settings
         """
@@ -38,12 +38,12 @@ class SettingsManager:
             "temperature": self.defaults.get("temperature", 0.7),
             "system_prompt": self.defaults.get("system_prompt", ""),
         }
-    
-    async def setup_chat_settings(self):
+
+    async def setup_chat_settings(self) -> None:
         """Initialize chat settings with default values and UI elements."""
         # Get default settings
         defaults = self.get_default_settings()
-        
+
         # Register chat settings
         await cl.ChatSettings(
             [
@@ -76,32 +76,42 @@ class SettingsManager:
                 ),
             ]
         ).send()
-        
+
         logger.info("Chat settings initialized successfully")
-    
-    async def handle_settings_update(self, settings: cl.ChatSettings):
+
+    async def handle_settings_update(self, settings: Any) -> None:
         """Update chat settings with new values.
-        
+
         Args:
-            settings: New chat settings
+            settings: New chat settings (either ChatSettings object or dict)
         """
-        current_settings = cl.user_session.get("settings", {})
-        
+        current_settings = cl.user_session.get("settings", {}) or {}
+
         # Update each setting that was changed
-        for key, value in settings.dict().items():
+        # Handle both Pydantic model (with dict() method) and regular dict
+        if hasattr(settings, 'dict') and callable(getattr(settings, 'dict')):
+            settings_dict = settings.dict()
+        else:
+            settings_dict = cast(Dict[str, Any], settings)
+
+        for key, value in settings_dict.items():
             if key in current_settings and current_settings[key] != value:
-                logger.info(f"Setting '{key}' updated from {current_settings[key]} to {value}")
+                logger.info(
+                    f"Setting '{key}' updated from {current_settings[key]} to {value}")
                 current_settings[key] = value
-        
+
         # Store updated settings
         cl.user_session.set("settings", current_settings)
         logger.info("Settings updated successfully")
 
 
 @cl.set_chat_profiles
-async def chat_profiles():
+async def chat_profiles(user: Optional[Any] = None) -> List[cl.ChatProfile]:
     """Define enhanced chat profiles with metadata and icons.
-    
+
+    Args:
+        user: Optional user object passed by Chainlit
+
     Returns:
         List of chat profiles
     """
@@ -136,4 +146,4 @@ async def chat_profiles():
                 "temperature_range": [0.5, 1.2],
             },
         ),
-    ] 
+    ]

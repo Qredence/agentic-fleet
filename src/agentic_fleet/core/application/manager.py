@@ -45,9 +45,25 @@ class ApplicationConfig:
 
 
 class ApplicationManager:
-    """Manages the lifecycle and configuration of the AgenticFleet application."""
+    """
+    Manages the lifecycle and configuration of the AgenticFleet application.
+    
+    This class is responsible for initializing, starting, and shutting down
+    the application components, including model clients, agents, and services.
+    
+    Attributes:
+        config: The application configuration
+        model_client: The Azure OpenAI client for chat completions
+        _initialized: Flag indicating whether the application has been initialized
+    """
 
     def __init__(self, config: ApplicationConfig):
+        """
+        Initialize a new ApplicationManager instance.
+        
+        Args:
+            config: The application configuration
+        """
         self.config = config
         self._initialized = False
         self.model_client = AzureOpenAIChatCompletionClient(
@@ -60,7 +76,12 @@ class ApplicationManager:
         )
 
     async def initialize(self):
-        """Initialize the application manager."""
+        """
+        Initialize the application manager.
+        
+        This method sets up all required components and services for the application.
+        If the application is already initialized, this method returns without doing anything.
+        """
         if self._initialized:
             return
 
@@ -68,9 +89,12 @@ class ApplicationManager:
         self._initialized = True
 
     async def start(self):
-        """Start the application manager.
-
-        Initializes all components and starts the main application loop.
+        """
+        Start the application manager.
+        
+        This method initializes all components if not already initialized and
+        starts the main application loop. It handles the startup sequence for
+        all application components.
         """
         if not self._initialized:
             await self.initialize()
@@ -79,7 +103,12 @@ class ApplicationManager:
         logger.info("Starting application components")
 
     async def shutdown(self):
-        """Shutdown the application manager."""
+        """
+        Shutdown the application manager.
+        
+        This method gracefully stops all application components and services.
+        If the application is not initialized, this method returns without doing anything.
+        """
         if not self._initialized:
             return
 
