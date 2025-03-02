@@ -1,7 +1,7 @@
 {
   "name": "AgenticFleet Dev Container",
-  "dockerComposeFile": "./docker-compose.yml",
-  "service": "agenticfleet",
+  "image": "mcr.microsoft.com/devcontainers/python:3",
+  
   "workspaceFolder": "/workspace",
   
   // Mount configurations with improved caching
@@ -12,28 +12,12 @@
     "source=node-modules-cache,target=/workspace/node_modules,type=volume"
   ],
 
-  // Enhanced features
-  "features": {
-    "ghcr.io/devcontainers/features/python:1": {
-      "version": "3.12",
-      "installTools": true
-    },
-    "ghcr.io/devcontainers/features/node:1": {
-      "version": "lts"
-    },
-    "ghcr.io/devcontainers/features/git:1": {},
-    "ghcr.io/devcontainers/features/github-cli:1": {},
-    "ghcr.io/devcontainers/features/common-utils:2": {
-      "installZsh": true,
-      "configureZshAsDefaultShell": true
-    }
-  },
-
   // Environment variables
   "containerEnv": {
     "ENV_FILE": ".env",
     "PYTHONUNBUFFERED": "1",
-    "PYTHONDONTWRITEBYTECODE": "1"
+    "PYTHONDONTWRITEBYTECODE": "1",
+    "PYTHONPATH": "/workspace"
   },
 
   // Port forwarding
@@ -49,8 +33,8 @@
     }
   },
 
-  // Post-create commands with comprehensive setup
-  "postCreateCommand": "pip install -e '.[dev,test]' && playwright install --with-deps chromium && pre-commit install && pip install ruff mypy",
+  // Post-create commands using the script
+  "postCreateCommand": ".devcontainer/post-create.sh",
 
   // VS Code specific customizations
   "customizations": {
@@ -107,11 +91,6 @@
   "remoteEnv": {
     "AZURE_OPENAI_API_KEY": "${localEnv:AZURE_OPENAI_API_KEY}",
     "AZURE_OPENAI_ENDPOINT": "${localEnv:AZURE_OPENAI_ENDPOINT}",
-    "OPENAI_API_KEY": "${localEnv:OPENAI_API_KEY}",
-    "PYTHONPATH": "/workspace"
-  },
-
-  // Optional: Persist bash history between container rebuilds
-  "updateContentCommand": "mkdir -p ~/.config/shell && touch ~/.config/shell/bash_history",
-  "postAttachCommand": "mkdir -p ~/.config/shell && touch ~/.config/shell/bash_history"
+    "OPENAI_API_KEY": "${localEnv:OPENAI_API_KEY}"
+  }
 }

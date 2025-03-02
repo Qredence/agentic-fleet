@@ -2,7 +2,7 @@ services:
   agenticfleet:
     build:
       context: ..
-      dockerfile: Dockerfile
+      dockerfile: .devcontainer/Dockerfile
       args:
         # Build arguments - can be overridden via .env or command line
         VERSION: ${VERSION:-0.4.71}
