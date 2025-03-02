@@ -7,6 +7,8 @@ This directory contains the Docker configuration for AgenticFleet, providing a m
 - `base.Dockerfile`: Base image with core dependencies
 - `dev.Dockerfile`: Development environment with additional tools and live-reload
 - `prod.Dockerfile`: Production-optimized image
+- `docker-compose.yml`: Docker Compose configuration for all environments
+- `.dockerignore`: Files to exclude from Docker builds
 
 ## Quick Start
 
@@ -48,6 +50,16 @@ You can also build the Docker images manually using the provided script:
 ./scripts/docker-build.sh prod --push
 ```
 
+## Symlinks in Root Directory
+
+For convenience, the following symlinks are available in the project root:
+
+- `Dockerfile` → `docker/prod.Dockerfile`
+- `docker-compose.yml` → `docker/docker-compose.yml`
+- `.dockerignore` → `docker/.dockerignore`
+
+These symlinks allow you to run Docker commands directly from the root directory.
+
 ## Environment Variables
 
 The Docker containers require certain environment variables to function properly. You can provide these variables in a `.env` file in the project root or pass them directly to the container.
@@ -73,4 +85,4 @@ Both development and production environments expose port 8000, which can be acce
 
 ## Customization
 
-You can customize the Docker setup by modifying the `docker-compose.yml` file or the individual Dockerfiles in the `docker` directory.
+You can customize the Docker setup by modifying the `docker-compose.yml` file or the individual Dockerfiles in this directory.

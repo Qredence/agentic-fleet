@@ -1,4 +1,5 @@
 # Production Dockerfile for AgenticFleet
+# This file is symlinked from the root directory as /workspace/Dockerfile
 FROM python:3.12-slim
 
 # Set environment variables
