@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "agentic-fleet"
-version = "0.4.90"
+version = "0.4.91"
 description = "A powerful multi-agent system for adaptive AI reasoning and automation"
 readme = "README.md"
 requires-python = ">=3.10"
@@ -21,6 +21,10 @@ classifiers = [
   "Programming Language :: Python :: 3.11",
   "Programming Language :: Python :: 3.12",
   "Programming Language :: Python :: Implementation :: CPython",
+  "License :: OSI Approved :: Apache Software License",
+  "Operating System :: OS Independent",
+  "Intended Audience :: Developers",
+  "Topic :: Software Development :: Libraries :: Application Frameworks",
 ]
 
 dependencies = [
@@ -33,6 +37,7 @@ dependencies = [
     "python-dotenv>=1.0.1",
     "typing-extensions>=4.8.0",
     "uvicorn>=0.24.0",
+    "starlette>=0.41.3",
     # Networking & Async
     "aiofiles>=23.1.0",
     "aiohttp>=3.11.11,<4.0.0",
@@ -40,6 +45,9 @@ dependencies = [
     "httpx>=0.25.0",
     "python-multipart>=0.0.6",
     "requests>=2.32.3",
+    "websockets>=14.2",
+    "python-socketio>=5.12.1",
+    "sse-starlette>=2.2.1",
     # AI/ML Infrastructure
     "autogen-agentchat>=0.4.7,<0.5.0",
     "autogen-core>=0.4.7,<0.5.0",
@@ -49,6 +57,9 @@ dependencies = [
     "autogen-ext[diskcache]>=0.4.7,<0.5.0",
     "autogen-ext[grpc]<=0.4.7",
     "autogenstudio",
+    "dspy>=1.0.0",
+    "semantic-kernel>=1.19.0",
+    "tiktoken>=0.8.0",
     # Model Providers
     "composio-core>=0.6.11.post1",
     "deepseek>=0.1.0", # For DeepSeek
@@ -76,6 +87,7 @@ dependencies = [
     "requests-html>=0.10.0",
     "seaborn>=0.13.0",
     "yfinance>=0.2.51",
+    "scikit-learn>=1.6.1",
     # Web & Utilities
     "beautifulsoup4>=4.12.0",
     "bing>=0.31",
@@ -83,16 +95,23 @@ dependencies = [
     "docker>=7.1.0",
     "markitdown>=0.0.1a3",
     "opentelemetry-instrumentation-fastapi>=0.44b0",
-    "playwright>=1.20.0", # Updated version for compatibility with playwright
+    "playwright>=1.20.0",
     "sqlalchemy[asyncio]>=2.0.28",
     "psycopg2-binary>=2.9.9",
     "supabase>=2.3.1",
     "tenacity>=9.0.0",
+    "dataclasses-json>=0.6.7",
+    "html2text>=2024.2.26",
+    "pyjwt>=2.10.1",
+    "redis>=5.2.1",
+    "pyyaml>=6.0.2",
     # Developer Tools
     "aioconsole>=0.8.1",
     "axios>=0.4.0",
     "authlib>=1.4.0",
     "black>=24.10.0",
+    "isort>=5.13.2",
+    "ruff>=0.5.3",
     "codecov>=2.1.13",
     "gunicorn>=23.0.0",
     "ipykernel>=6.29.5",
@@ -101,44 +120,22 @@ dependencies = [
     "pytest-asyncio>=0.25.2",
     "pytest-cov>=6.0.0",
     "pytest-xdist>=3.5.0",
-    "redis>=5.2.1",
     "rich>=13.9.4",
-    "scikit-learn>=1.6.1",
-    "semantic-kernel>=1.19.0",
-    "starlette>=0.41.3",
-    "tiktoken>=0.8.0",
     "typer>=0.15.1",
     "types-setuptools>=75.8.0.20250110",
-    "pyyaml>=6.0.2",
     "setuptools>=75.8.0",
-    "modulegraph>=0.19.6",
-    "macholib>=1.16.3",
-    "py2app>=0.28.8",
-    # Additional development dependencies
-    "black>=24.10.0", # Code formatter
-    "isort>=5.13.2", # Import sorter
-    "ruff>=0.5.3",
-    "websockets>=14.2",
-    "dataclasses-json>=0.6.7",
-    "python-socketio>=5.12.1",
     "asyncer>=0.0.7",
     "uptrace>=1.27.0",
     "syncer>=2.0.3",
     "nest-asyncio>=1.6.0",
     "click>=8.1.8",
-    "pyjwt>=2.10.1",
-    "html2text>=2024.2.26",
     "grpcio>=1.70.0",
     "grpcio-tools==1.64.0",
     "absl-py==2.1.0",
-    "dspy>=1.0.0",
-    "pytest>=7.0.0",
-    "pytest-asyncio>=0.21.0",
-    "black>=23.0.0",
-    "isort>=5.0.0",
-    "ruff>=0.1.0",
-    "chainlit>=2.2.1",
-    "sse-starlette>=2.2.1",
+    # macOS specific
+    "modulegraph>=0.19.6",
+    "macholib>=1.16.3",
+    "py2app>=0.28.8",
 ]
 
 [project.optional-dependencies]
@@ -197,9 +194,8 @@ models = [
 [tool.pytest.ini_options]
 minversion = "7.4.0"
 addopts = "-ra -q --cov=agentic_fleet --cov-report=term-missing"
-testpaths = [
-    "tests"
-]
+testpaths = ["tests"]
+python_files = "test_*.py"
 
 [tool.coverage.run]
 source = ["agentic_fleet"]
@@ -282,3 +278,22 @@ version = {attr = "agentic_fleet.__version__"}
 "agentic_fleet" = [
     "EDITABLE_INSTALL_WARNING.txt"
 ]
+
+[project.urls]
+Homepage = "https://github.com/qredence/agentic-fleet"
+Documentation = "https://github.com/qredence/agentic-fleet#readme"
+Issues = "https://github.com/qredence/agentic-fleet/issues"
+Source = "https://github.com/qredence/agentic-fleet"
+
+[project.scripts]
+agentic-fleet = "agentic_fleet.main:main"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/agentic_fleet"]
+
+[tool.mypy]
+python_version = "3.10"
+warn_return_any = true
+warn_unused_configs = true
+disallow_untyped_defs = true
+disallow_incomplete_defs = true
