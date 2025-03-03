@@ -227,7 +227,7 @@ archive
 memory_bank
 archive
 src/agentic_fleet/.null.py
-
+.archive
 # Environment Variables
 .env.*
 !.env.example
