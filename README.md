@@ -419,3 +419,13 @@ This project is licensed under the Apache License 2.0 - see the LICENSE file for
 ## Contributing
 
 Contributions are welcome! Please feel free to submit a Pull Request.
+
+## Star History
+
+<a href="https://www.star-history.com/#qredence/agenticfleet&Date">
+ <picture>
+   <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/svg?repos=qredence/agenticfleet&type=Date&theme=dark" />
+   <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/svg?repos=qredence/agenticfleet&type=Date" />
+   <img alt="Star History Chart" src="https://api.star-history.com/svg?repos=qredence/agenticfleet&type=Date" />
+ </picture>
+</a>
