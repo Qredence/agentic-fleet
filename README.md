@@ -16,7 +16,7 @@ A powerful multi-agent system for adaptive AI reasoning and automation. AgenticF
     <img src="https://img.shields.io/github/license/qredence/agenticfleet?style=for-the-badge" alt="GitHub License">
     <img src="https://img.shields.io/github/forks/qredence/agenticfleet?style=for-the-badge" alt="GitHub forks">
     <a href="https://discord.gg/ebgy7gtZHK">
-      <img src="https://img.shields.io/discord/1234567890?style=for-the-badge&logo=discord&logoColor=white&label=Discord" alt="Discord">
+      <img src="https://img.shields.io/discord/ebgy7gtZHK?style=for-the-badge&logo=discord&logoColor=white&label=Discord" alt="Discord">
     </a>
     <a href="https://x.com/agenticfleet">
       <img src="https://img.shields.io/badge/Twitter-Follow-1DA1F2?style=for-the-badge&logo=x&logoColor=white" alt="Twitter Follow">
@@ -29,6 +29,31 @@ A powerful multi-agent system for adaptive AI reasoning and automation. AgenticF
     <p>Your browser doesn't support HTML5 video. Here is a <a href="assets/b1ad83ce-b8af-4406-99ed-257a07c0c7cf">link to the video</a> instead.</p>
   </video>
 </div>
+
+## 🗺️ Short-Term Roadmap
+
+Here's a glimpse into the upcoming features and tasks planned for the near future. This is based on our current open issues:
+
+**🚀 New Features:**
+
+* [#120] NVIDIA Agentiq / NIM / NEMO use
+* [#118] OpenAPI documentation
+* [#116] Provide a chat history feature
+* [#115] LLM model format and handling revamped
+* [#114] MCP support
+* [#113] Canvas-like interface
+
+**✨ Enhancements & Refinements:**
+
+* [#119] Secure Oauth feature enhancement
+* [#117] Simplify entirely the codebase (Review effort: 4)
+
+**🛠️ Tasks & Updates:**
+
+* [#112] Updating Chainlit version dependency
+
+*This roadmap is subject to change based on priorities and development progress. Check the [Issues tab](link-to-your-issues-page) for the most up-to-date status.*
+
 
 ## Table of Contents
 
