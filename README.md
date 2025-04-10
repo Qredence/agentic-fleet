@@ -10,6 +10,10 @@ A powerful multi-agent system for adaptive AI reasoning and automation. AgenticF
 [![Weave Badge](https://img.shields.io/endpoint?url=https%3A%2F%2Fapp.workweave.ai%2Fapi%2Frepository%2Fbadge%2Forg_X84uIR347D2freSZkxeu4S9S%2F909560351&cacheSeconds=3600)](https://app.workweave.ai/reports/repository/org_X84uIR347D2freSZkxeu4S9S/909560351)
 </div>
 
+## GitAds Sponsored
+[![Sponsored by GitAds](https://gitads.dev/v1/ad-serve?source=qredence/agenticfleet@github)](https://gitads.dev/v1/ad-track?source=qredence/agenticfleet@github)
+
+
 <div align="center">
   <p>
     <img src="https://img.shields.io/pepy/dt/agentic-fleet?style=for-the-badge&color=blue" alt="Pepy Total Downloads">
