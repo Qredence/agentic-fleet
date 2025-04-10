@@ -445,6 +445,8 @@ This project is licensed under the Apache License 2.0 - see the LICENSE file for
 
 Contributions are welcome! Please feel free to submit a Pull Request.
 
+<!-- GitAds-Verify: 1OSOFENG9INOEGRI1MSPGZETCDCJV7OV -->
+
 ## Star History
 
 [![Star History Chart](https://api.star-history.com/svg?repos=qredence/agenticfleet&type=Date)](https://www.star-history.com/#qredence/agenticfleet&Date)
