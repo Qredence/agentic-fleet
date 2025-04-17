@@ -5,14 +5,12 @@ This module provides the main application management functionality,
 including initialization and lifecycle management.
 """
 
-# Standard library imports
 import logging
 import os
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Dict, Optional
 
-# Third-party imports
 from autogen_ext.models.openai import AzureOpenAIChatCompletionClient
 
 logger = logging.getLogger(__name__)
