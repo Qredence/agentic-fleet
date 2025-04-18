@@ -14,7 +14,7 @@ from dotenv import load_dotenv
 # Local imports - using the modular components
 from agentic_fleet.config import config_manager
 from agentic_fleet.core.application.manager import ApplicationConfig, ApplicationManager
-from agentic_fleet.models.client_factory import get_cached_client
+from agentic_fleet.services.client_factory import get_cached_client
 from agentic_fleet.ui.message_handler import handle_chat_message, on_reset
 from agentic_fleet.ui.settings_handler import SettingsManager
 

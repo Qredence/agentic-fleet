@@ -1,4 +1,9 @@
-"""Module for client creation and management services."""
+"""Module for client creation and management services.
+
+This module provides functions for creating and managing LLM clients.
+It is the preferred implementation that replaces the deprecated
+agentic_fleet.models.client_factory module.
+"""
 
 # Standard library imports
 import logging
