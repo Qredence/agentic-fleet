@@ -46,9 +46,29 @@ client = None
 
 # Hook into chainlit events
 @on_chat_start
-async def start_chat(profile: Optional[cl.ChatProfile] = None):
+async def start_chat():
     """Initialize the chat session with the selected profile."""
     global client, app_manager
+
+    # Get the selected chat profile
+    profile = cl.user_session.get("chat_profile")
+    profile_name = profile if isinstance(profile, str) else "default" # Chainlit v2 uses string name
+    logger.info(f"Selected chat profile: {profile_name}")
+
+    # Load profile details from chainlit.md (requires Chainlit to parse this)
+    # We'll use defaults here and refine if Chainlit provides profile objects directly
+    profile_settings = {} # Placeholder - Chainlit should provide this based on chainlit.md
+    profile_desc = "Standard configuration"
+    icon = "public/icons/rocket.svg" # Default icon
+
+    # TODO: Ideally Chainlit provides the full profile object including model_settings
+    # For now, we'll use a default model and allow override via settings later if needed.
+    # This part might need adjustment based on how Chainlit v2 exposes profile data.
+    default_model_name = "gpt-4o-mini-2024-07-18"
+    model_name = default_model_name # Assume default for now
+
+    # Store profile type in session
+    cl.user_session.set("profile_type", profile_name)
 
     try:
         # Initialize configuration
@@ -62,15 +82,9 @@ async def start_chat(profile: Optional[cl.ChatProfile] = None):
         # Get environment settings
         env_config = config_manager.get_environment_settings()
 
-        # Initialize client based on profile or defaults
-        model_name = "gpt-4o-mini-2024-07-18"
-        if profile and isinstance(profile, cl.ChatProfile):
-            model_settings = profile.model_settings or {}
-            model_name = model_settings.get("model_name", model_name)
-
-        # Create cached client
+        # Create cached client using the determined model name
         client = get_cached_client(
-            model_name=model_name,
+            model_name=model_name, # Use model_name derived (currently default)
             streaming=True,
             vision=True,
             connection_pool_size=10,
@@ -91,14 +105,36 @@ async def start_chat(profile: Optional[cl.ChatProfile] = None):
         from agentic_fleet.ui.task_manager import initialize_task_list
         await initialize_task_list()
 
-        # Initialize MagenticOne agent
-        team = create_magentic_one_agent(
-            client=client,
-            hil_mode=True  # Enable human-in-the-loop mode
-        )
+        # Initialize agent based on profile
+        if profile_name == "MCP Focus":
+            logger.info("Initializing MCP Focus agent configuration...")
+            # Initialize MCP-focused agent with specific configurations
+            team = create_magentic_one_agent(
+                client=client,
+                hil_mode=True,
+                # Add MCP-specific config for MCP Focus profile
+                mcp_enabled=True  # Enable MCP specific features
+            )
+            profile_desc = "MCP Interaction Profile"
+            icon = "public/icons/microscope.svg"
+            
+            # Store profile type - important for message handler to use Custom elements
+            cl.user_session.set("ui_render_mode", "custom")
+        else: # Default to MagenticFleet profile
+            logger.info("Initializing standard MagenticFleet agent configuration...")
+            team = create_magentic_one_agent(
+                client=client,
+                hil_mode=True  # Enable human-in-the-loop mode
+            )
+            profile_desc = "Standard AgenticFleet Profile"
+            icon = "public/icons/rocket.svg"
+            
+            # Store profile type - important for message handler to use TaskList elements
+            cl.user_session.set("ui_render_mode", "tasklist")
 
         # Store team in user session
         cl.user_session.set("agent_team", team)
+        cl.user_session.set("profile_icon", icon)
 
         # Set up default settings
         default_settings = settings_manager.get_default_settings()
@@ -107,35 +143,39 @@ async def start_chat(profile: Optional[cl.ChatProfile] = None):
         # Setup chat settings UI
         await settings_manager.setup_chat_settings()
 
-        # Get profile information for welcome message
-        profile_name = (
-            profile.name if isinstance(profile, cl.ChatProfile) else "Default Profile"
-        )
-        profile_desc = (
-            profile.markdown_description
-            if isinstance(profile, cl.ChatProfile)
-            else "Standard configuration"
-        )
-
-        # Send welcome message
+        # Send welcome message using dynamic profile info
         welcome_message = (
             f"🚀 Welcome to AgenticFleet!\n\n"
             f"**Active Profile**: {profile_name}\n"
-            f"**Model**: {model_name}\n"
-            f"**Temperature**: {default_settings['temperature']}\n"
-            f"**Context Length**: 128,000 tokens\n\n"
+            f"**Model**: {model_name} (Note: Model selection via profile TBD)\n"
+            f"**Temperature**: {default_settings['temperature']}\n\n"
+            # f"**Context Length**: 128,000 tokens\n\n" # Context length often model-specific
             f"{profile_desc}"
         )
 
         await cl.Message(
             content=welcome_message,
+            author=profile_name, # Set author to profile name
             actions=[
                 cl.Action(
-                    name="reset_agents",
+                    name="reset_agents", # Keep reset action
                     label="🔄 Reset Agents",
                     tooltip="Restart the agent team",
                     payload={"action": "reset"},
-                )
+                ),
+                # Add MCP-specific action if profile is MCP Focus
+                *(
+                    [
+                        cl.Action(
+                            name="list_mcp_tools",
+                            label="🛠️ List MCP Tools",
+                            tooltip="Show available MCP tools",
+                            payload={"action": "list_mcp"},
+                        )
+                    ]
+                    if profile_name == "MCP Focus"
+                    else []
+                ),
             ],
         ).send()
 
@@ -161,6 +201,20 @@ async def handle_settings_update(settings: cl.ChatSettings):
 async def on_action_reset(action: cl.Action):
     """Handle reset action."""
     await on_reset(action)
+
+
+@cl.action_callback("list_mcp_tools")
+async def on_action_list_mcp(action: cl.Action):
+    """Handle list MCP tools action."""
+    # Placeholder: Implement logic to list MCP tools
+    # This might involve accessing MCP server info or calling a specific function
+    mcp_tools_list = "MCP Tools:\n- Tool A\n- Tool B (Not implemented yet)"
+    await cl.Message(
+        content=f"Available MCP Tools:\n```\n{mcp_tools_list}\n```",
+        author="System",
+    ).send()
+    # Prevent default message processing for this action
+    action.handled = True
 
 
 @on_stop
