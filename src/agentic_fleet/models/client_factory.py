@@ -1,116 +1,39 @@
-"""Module for client creation logic."""
+"""Module for client creation logic.
+
+DEPRECATED: This module is deprecated and will be removed in a future version.
+Use agentic_fleet.services.client_factory instead.
+"""
 
 # Standard library imports
 import logging
-import os
-from functools import lru_cache
-from typing import Any, Dict, Optional, Tuple
-
-# Third-party imports
-from autogen_ext.models.openai import AzureOpenAIChatCompletionClient
+import sys
+import warnings
+from importlib import import_module
 
 # Initialize logging
 logger = logging.getLogger(__name__)
 
+# Show deprecation warning
+warnings.warn(
+    "The agentic_fleet.models.client_factory module is deprecated and will be removed in a future version. "
+    "Use agentic_fleet.services.client_factory instead.",
+    DeprecationWarning,
+    stacklevel=2
+)
 
-def create_client(
-    model_name: str,
-    streaming: bool = True,
-    vision: bool = False,
-    connection_pool_size: int = 10,
-    request_timeout: int = 30,
-    **kwargs: Any,
-) -> AzureOpenAIChatCompletionClient:
-    """Create and return an Azure OpenAI client with the specified configuration.
+# Import all symbols from services.client_factory
+try:
+    # Import the services.client_factory module
+    client_factory = import_module("agentic_fleet.services.client_factory")
 
-    Args:
-        model_name: The name of the model to use
-        streaming: Whether to enable streaming responses
-        vision: Whether to enable vision capabilities
-        connection_pool_size: Connection pool size for the client
-        request_timeout: Request timeout in seconds
-        **kwargs: Additional parameters to pass to the client
-
-    Returns:
-        An instance of AzureOpenAIChatCompletionClient
-    """
-    # Added validation
-    if not all(
-        [
-            os.getenv("AZURE_OPENAI_ENDPOINT"),
-            os.getenv("AZURE_OPENAI_API_KEY"),
-            os.getenv("AZURE_OPENAI_API_VERSION"),
-        ]
-    ):
-        raise ValueError("Missing required Azure OpenAI environment variables")
-
-    # Determine model family
-    model_family = "gpt-4o" if "gpt-4o" in model_name else "azure"
-
-    # Create model_info dictionary
-    model_info = {
-        "vision": vision,
-        "function_calling": True,
-        "json_output": True,
-        "family": model_family,
-        "architecture": model_name,
-    }
-
-    # Create and return client
-    client = AzureOpenAIChatCompletionClient(
-        model=model_name,
-        deployment=model_name,
-        endpoint=os.getenv("AZURE_OPENAI_ENDPOINT"),
-        api_key=os.getenv("AZURE_OPENAI_API_KEY"),
-        api_version=os.getenv("AZURE_OPENAI_API_VERSION"),
-        model_streaming=streaming,
-        model_info=model_info,
-        streaming=streaming,
-        connection_pool_size=connection_pool_size,
-        request_timeout=request_timeout,
-        **kwargs,
+    # Import all symbols from services.client_factory
+    from agentic_fleet.services.client_factory import (
+        create_client,
+        get_cached_client,
+        get_client_for_profile
     )
 
-    logger.info(
-        f"Created client for model {model_name} with streaming={streaming}, vision={vision}"
-    )
-    return client
-
-
-@lru_cache(maxsize=10)
-def get_cached_client(
-    model_name: str,
-    streaming: bool = True,
-    vision: bool = False,
-    connection_pool_size: int = 10,
-    request_timeout: int = 30,
-    **kwargs: Any,
-) -> AzureOpenAIChatCompletionClient:
-    """Get a cached client instance or create a new one if not in cache.
-
-    This function caches clients based on their configuration parameters to avoid
-    creating multiple clients with the same settings.
-
-    Args:
-        model_name: The name of the model to use
-        streaming: Whether to enable streaming responses
-        vision: Whether to enable vision capabilities
-        connection_pool_size: Connection pool size for the client
-        request_timeout: Request timeout in seconds
-        **kwargs: Additional parameters to pass to the client
-
-    Returns:
-        An instance of AzureOpenAIChatCompletionClient from cache or newly created
-    """
-    # Convert kwargs to a hashable representation for caching
-    kwargs_items = tuple(sorted(kwargs.items()))
-
-    # Create and return a new client
-    return create_client(
-        model_name=model_name,
-        streaming=streaming,
-        vision=vision,
-        connection_pool_size=connection_pool_size,
-        request_timeout=request_timeout,
-        **kwargs,
-    )
+    logger.info("Successfully imported services.client_factory")
+except ImportError as e:
+    logger.error(f"Error importing services.client_factory: {e}")
+    sys.exit(1)
