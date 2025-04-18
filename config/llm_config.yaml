@@ -1,0 +1,70 @@
+# LLM Configuration
+models:
+  gpt-4o-mini:
+    name: "gpt-4o-mini-2024-07-18"
+    provider: "azure"
+    max_tokens: 128000
+    temperature_range: [0.3, 0.7]
+    default_temperature: 0.7
+    streaming: true
+    vision: true
+    connection_pool_size: 10
+    request_timeout: 30
+    description: "Speed-Optimized GPT-4o Mini Model"
+    icon: "public/icons/rocket.svg"
+
+  o3-mini:
+    name: "o3-mini"
+    provider: "azure"
+    max_tokens: 128000
+    temperature_range: [0.5, 1.2]
+    default_temperature: 0.8
+    streaming: true
+    vision: true
+    connection_pool_size: 10
+    request_timeout: 30
+    description: "Advanced Reasoning O3 Mini Model"
+    icon: "public/icons/microscope.svg"
+
+profiles:
+  default:
+    name: "Magentic Fleet Fast"
+    model: "gpt-4o-mini"
+    description: "Speed-Optimized Workflow with GPT-4o Mini"
+    icon: "public/icons/rocket.svg"
+    ui_render_mode: "tasklist"
+    features:
+      mcp_enabled: false
+      hil_mode: true
+
+  mcp_focus:
+    name: "MCP Focus"
+    model: "o3-mini"
+    description: "MCP Interaction Profile with O3 Mini"
+    icon: "public/icons/microscope.svg"
+    ui_render_mode: "custom"
+    features:
+      mcp_enabled: true
+      hil_mode: true
+
+mcp:
+  agent_coordinator:
+    name: "Agent Coordinator MCP"
+    description: "Coordinates multiple agents for complex tasks"
+    type: "agent_coordinator_mcp"
+    max_agents: 10
+    default_capabilities:
+      - "reasoning"
+      - "planning"
+      - "execution"
+
+  team_collaboration:
+    name: "Team Collaboration MCP"
+    description: "Enables collaborative problem-solving among agents"
+    type: "agent_coordinator_mcp"
+    max_agents: 5
+    default_capabilities:
+      - "reasoning"
+      - "research"
+      - "coding"
+      - "analysis"
