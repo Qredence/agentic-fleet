@@ -6,11 +6,6 @@ that can adapt and reason about complex tasks. It integrates with FastAPI for th
 and provides a modern web interface for interaction.
 """
 
-from agentic_fleet.core.application import (
-    ApplicationManager,
-    create_application,
-)
-
 __version__ = "0.4.9"
 __author__ = "Qredence"
 __email__ = "contact@qredence.ai"
@@ -31,11 +26,6 @@ from agentic_fleet.config import config_manager
 config_manager.load_all()
 
 __all__ = [
-    # Core components
-    "ApplicationManager",
-    "create_application",
     # Configuration
     "config_manager",
 ]
-
-# This file is intentionally left empty to mark the agentic_fleet directory as a package.

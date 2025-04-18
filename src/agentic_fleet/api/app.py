@@ -7,17 +7,17 @@ import os
 import platform
 import sys
 from datetime import datetime
-from typing import Any, Dict, List
+from typing import Any, Dict
 
-from fastapi import Depends, FastAPI, HTTPException, Request
+from fastapi import Depends, FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from agentic_fleet.api.middleware import AuthMiddleware, LoggingMiddleware
+from agentic_fleet.api.middleware import LoggingMiddleware
 from agentic_fleet.api.routes import agents, chat, tasks
 from agentic_fleet.database.session import get_db
-from agentic_fleet.exceptions import AgenticFleetAPIError, AgenticFleetDatabaseError, DatabaseConnectionError
+from agentic_fleet.exceptions import AgenticFleetAPIError, AgenticFleetDatabaseError
 
 # Configure logging
 logging.basicConfig(
@@ -44,17 +44,6 @@ app.add_middleware(
 
 # Add custom middleware
 app.add_middleware(LoggingMiddleware)
-
-# Add authentication middleware if API_KEY is set
-api_key = os.environ.get("API_KEY")
-if api_key:
-    # Paths that don't require authentication
-    public_paths = ["/docs", "/redoc", "/openapi.json"]
-    app.add_middleware(AuthMiddleware, api_key=api_key,
-                       exclude_paths=public_paths)
-    logger.info("Authentication middleware enabled")
-else:
-    logger.warning("No API_KEY set. Authentication middleware disabled.")
 
 # Exception handlers
 
@@ -114,8 +103,6 @@ async def health_check(db: AsyncSession = Depends(get_db)) -> Dict[str, Any]:
     except Exception as e:
         logger.error(f"Database health check failed: {str(e)}")
         db_status = "disconnected"
-        # Raise a custom exception if needed
-        # raise DatabaseConnectionError(f"Database connection failed: {str(e)}")
 
     # Get system information
     system_info = {

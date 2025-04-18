@@ -92,5 +92,8 @@
     "AZURE_OPENAI_API_KEY": "${localEnv:AZURE_OPENAI_API_KEY}",
     "AZURE_OPENAI_ENDPOINT": "${localEnv:AZURE_OPENAI_ENDPOINT}",
     "OPENAI_API_KEY": "${localEnv:OPENAI_API_KEY}"
+  },
+  "tasks": {
+    "build": "uv pip install -e '.[dev]' && pre-commit install"
   }
 }
