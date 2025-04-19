@@ -1,7 +1,6 @@
 ---
 chat_profiles:
-  - name: MagenticFleet
-    markdown_description: |
+  - name: AgenticFleet
       **Standard AgenticFleet Profile** 🚀
 
       Engage with the core multi-agent system for adaptive reasoning and task automation. Uses the default Azure OpenAI model configured for general tasks.
