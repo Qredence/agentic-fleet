@@ -72,7 +72,7 @@ async def get_models():
         logger.error(f"Error getting models: {e}")
         return JSONResponse(
             status_code=500,
-            content={"error": f"Error getting models: {str(e)}"},
+            content={"error": "An internal error occurred while processing your request."},
         )
 
 
@@ -87,7 +87,7 @@ async def get_profiles():
         logger.error(f"Error getting profiles: {e}")
         return JSONResponse(
             status_code=500,
-            content={"error": f"Error getting profiles: {str(e)}"},
+            content={"error": "An internal error occurred while processing your request."},
         )
 
 
