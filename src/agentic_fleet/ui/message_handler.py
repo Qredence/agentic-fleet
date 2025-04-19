@@ -13,6 +13,7 @@ import chainlit as cl
 # Local imports
 from agentic_fleet.message_processing import process_response
 from agentic_fleet.ui.task_manager import extract_and_add_plan_tasks
+from agentic_fleet.ui.components.canvas_panel import initialize_canvas, add_node_to_canvas, add_edge_to_canvas
 
 # Initialize logger
 logger = logging.getLogger(__name__)
@@ -28,6 +29,7 @@ async def handle_chat_message(message: cl.Message) -> None:
     render_mode = cl.user_session.get("ui_render_mode", "tasklist")  # Default to tasklist mode
     is_tasklist_mode = render_mode == "tasklist"
     is_custom_mode = render_mode == "custom"
+    is_canvas_mode = render_mode == "canvas"
 
     # Create TaskList if in tasklist mode
     task_list = None
@@ -42,6 +44,17 @@ async def handle_chat_message(message: cl.Message) -> None:
         # Initialize plan steps tracking
         cl.user_session.set("plan_steps", {})
         cl.user_session.set("plan_tasks", {})
+
+    # Initialize canvas if in canvas mode
+    if is_canvas_mode:
+        # Initialize the canvas interface
+        await initialize_canvas()
+
+        # Send a welcome message
+        await cl.Message(
+            content="🖌️ Canvas mode activated. Your responses will be visualized in a canvas interface.",
+            author="System"
+        ).send()
 
     try:
         # Check for reset command without showing a message
@@ -217,6 +230,70 @@ async def handle_chat_message(message: cl.Message) -> None:
                                     await cl.ErrorMessage(content=content).send()
                             except Exception as e:
                                 logger.warning(f"Error sending {content_type} element: {e}")
+
+                    elif is_canvas_mode:
+                        # Canvas Mode
+                        try:
+                            # Generate a unique ID for the node
+                            node_id = f"node_{len(cl.user_session.get('canvas_data', {}).get('nodes', []))}"
+
+                            if content_type == "text":
+                                # Add text content as a node to the canvas
+                                await add_node_to_canvas(
+                                    node_id=node_id,
+                                    node_type="text",
+                                    content=content,
+                                    metadata={"author": author}
+                                )
+                            elif content_type == "code":
+                                # Add code content as a node to the canvas
+                                await add_node_to_canvas(
+                                    node_id=node_id,
+                                    node_type="code",
+                                    content=content,
+                                    metadata={"language": language or "text", "author": author}
+                                )
+                            elif content_type == "image":
+                                # Add image content as a node to the canvas
+                                await add_node_to_canvas(
+                                    node_id=node_id,
+                                    node_type="image",
+                                    content=content,
+                                    metadata={"author": author}
+                                )
+                            elif content_type == "custom":
+                                # Add custom content as a node to the canvas
+                                await add_node_to_canvas(
+                                    node_id=node_id,
+                                    node_type="custom",
+                                    content=str(content),
+                                    metadata={"author": author}
+                                )
+                            elif content_type == "error":
+                                # Add error content as a node to the canvas
+                                await add_node_to_canvas(
+                                    node_id=node_id,
+                                    node_type="error",
+                                    content=content,
+                                    metadata={"author": author}
+                                )
+
+                            # If there's a previous node, add an edge between them
+                            previous_node_id = cl.user_session.get("previous_node_id")
+                            if previous_node_id:
+                                edge_id = f"edge_{len(cl.user_session.get('canvas_data', {}).get('edges', []))}"
+                                await add_edge_to_canvas(
+                                    edge_id=edge_id,
+                                    source_id=previous_node_id,
+                                    target_id=node_id,
+                                    edge_type="default"
+                                )
+
+                            # Store the current node ID for the next iteration
+                            cl.user_session.set("previous_node_id", node_id)
+
+                        except Exception as e:
+                            logger.warning(f"Error adding content to canvas: {e}")
 
                     # Handle plan updates if detected
                     if plan_update:

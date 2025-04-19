@@ -2,7 +2,7 @@
 <!-- GitAds-Verify: CUNI4DNKL8JREXW9AFND8MZFG85MZJGT -->
 
 <div align="center">
-  
+
 ![hero@2x](https://github.com/user-attachments/assets/5c05ab46-cc81-4fe0-9fc4-4ad4e2cb1ad2)
 
 A powerful multi-agent system for adaptive AI reasoning and automation. AgenticFleet combines Chainlit's interactive interface with AutoGen's multi-agent capabilities to create a flexible, powerful AI assistant platform.
@@ -45,7 +45,7 @@ Here's a glimpse into the upcoming features and tasks planned for the near futur
 * [#116] Provide a chat history feature
 * [#115] LLM model format and handling revamped
 * [#114] MCP support
-* [#113] Canvas-like interface
+* [#113] ✅ Canvas-like interface (Added Canvas View profile)
 
 **✨ Enhancements & Refinements:**
 
@@ -54,7 +54,7 @@ Here's a glimpse into the upcoming features and tasks planned for the near futur
 
 **🛠️ Tasks & Updates:**
 
-* [#112] Updating Chainlit version dependency
+* [#112] ✅ Updating Chainlit version dependency (Updated to >=2.5.0)
 
 *This roadmap is subject to change based on priorities and development progress. Check the [Issues tab](link-to-your-issues-page) for the most up-to-date status.*
 
@@ -182,13 +182,13 @@ The Agentic Fleet system is organized into several key components:
    ```bash
    # Using the provided script
    ./install_deps.sh
-   
+
    # Or using make
    make install
-   
+
    # Or manually with pip
    pip install -r requirements.txt
-   
+
    # Or install directly from source with development dependencies
    pip install -e ".[dev]"
    ```

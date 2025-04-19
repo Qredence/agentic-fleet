@@ -47,6 +47,16 @@ profiles:
       mcp_enabled: true
       hil_mode: true
 
+  canvas_view:
+    name: "Canvas View"
+    model: "gpt-4o-mini"
+    description: "Visual Canvas Interface for Interactive Exploration"
+    icon: "public/icons/canvas.svg"
+    ui_render_mode: "canvas"
+    features:
+      mcp_enabled: false
+      hil_mode: true
+
 mcp:
   agent_coordinator:
     name: "Agent Coordinator MCP"
