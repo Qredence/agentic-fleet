@@ -61,19 +61,10 @@ async def start_chat():
     profile_name = profile if isinstance(profile, str) else "default"
     logger.info(f"Selected chat profile: {profile_name}")
 
-    # Get profile configuration from LLM config
-    try:
-        profile_config = llm_config_manager.get_profile_config(profile_name)
-        profile_desc = profile_config.get("description", "Standard configuration")
-        icon = profile_config.get("icon", "public/icons/rocket.svg")
-        model_config = llm_config_manager.get_model_for_profile(profile_name)
-        model_name = model_config.get("name", "gpt-4o-mini-2024-07-18")
-    except ValueError as e:
-        logger.warning(f"Error loading profile configuration: {e}")
-        # Fallback to defaults
-        profile_desc = "Standard configuration"
-        icon = "public/icons/rocket.svg"
-        model_name = "gpt-4o-mini-2024-07-18"
+    # Use the specified Azure OpenAI model
+    profile_desc = "Azure OpenAI o4-mini Model"
+    icon = "public/icons/rocket.svg"
+    model_name = "o4-mini"
 
     # Store profile type in session
     cl.user_session.set("profile_type", profile_name)
@@ -161,8 +152,8 @@ async def initialize_agent_for_profile(profile_name: str, client: object) -> obj
         logger.info(f"Initializing agent for profile {profile_name}...")
         team = create_magentic_one_agent(
             client=client,
-            hil_mode=features.get("hil_mode", True),
-            mcp_enabled=features.get("mcp_enabled", False)
+            hil_mode=features.get("hil_mode", True)
+            # mcp_enabled parameter removed as it's not supported by MagenticOne
         )
 
         return team

@@ -138,6 +138,7 @@ dependencies = [
     "py2app>=0.28.8",
     "mem0ai>=0.1.86",
     "mcp>=1.6.0",
+    "literalai>=0.1.201",
 ]
 
 [project.optional-dependencies]

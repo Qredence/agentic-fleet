@@ -28,7 +28,7 @@ logger = logging.getLogger(__name__)
 load_dotenv()
 
 # Initialize application manager
-app_manager: Optional[ApplicationManager] = None
+app_manager: ApplicationManager | None = None
 
 # Initialize settings manager
 settings_manager = SettingsManager()
@@ -39,7 +39,7 @@ client = None
 
 # Hook into chainlit events
 @on_chat_start
-async def start_chat(profile: Optional[cl.ChatProfile] = None):
+async def start_chat(profile: cl.ChatProfile | None = None):
     """Initialize the chat session with the selected profile."""
     global client, app_manager
 
@@ -55,20 +55,11 @@ async def start_chat(profile: Optional[cl.ChatProfile] = None):
         # Get environment settings
         env_config = config_manager.get_environment_settings()
 
-        # Initialize client based on profile or defaults
-        model_name = "gpt-4o-2024-11-20"
-        if profile and isinstance(profile, cl.ChatProfile):
-            model_settings = profile.model_settings or {}
-            model_name = model_settings.get("model_name", model_name)
+        # Use the specified Azure OpenAI model
+        model_name = "o4-mini"
 
         # Create cached client
-        client = get_cached_client(
-            model_name=model_name,
-            streaming=True,
-            vision=True,
-            connection_pool_size=10,
-            request_timeout=30,
-        )
+        client = get_cached_client(model_name=model_name)
 
         # Initialize application manager
         app_manager = ApplicationManager(

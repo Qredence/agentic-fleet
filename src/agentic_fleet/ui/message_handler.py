@@ -12,8 +12,8 @@ import chainlit as cl
 
 # Local imports
 from agentic_fleet.message_processing import process_response
+from agentic_fleet.ui.components.canvas_panel import add_edge_to_canvas, add_node_to_canvas, initialize_canvas
 from agentic_fleet.ui.task_manager import extract_and_add_plan_tasks
-from agentic_fleet.ui.components.canvas_panel import initialize_canvas, add_node_to_canvas, add_edge_to_canvas
 
 # Initialize logger
 logger = logging.getLogger(__name__)

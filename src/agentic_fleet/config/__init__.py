@@ -47,14 +47,21 @@ class ConfigurationManager:
             self._agent_configs = configs["agent"]
             self._fleet_configs = configs["fleet"]
 
+            # Load app settings
+            app_settings = load_app_settings()
+            env_settings = app_settings.get("environment", {})
+
             # Load environment settings
             self._environment = {
-                "workspace_dir": os.getenv("WORKSPACE_DIR", "workspace"),
-                "debug_dir": os.getenv("DEBUG_DIR", "debug"),
-                "downloads_dir": os.getenv("DOWNLOADS_DIR", "downloads"),
-                "logs_dir": os.getenv("LOGS_DIR", "logs"),
-                "stream_delay": float(os.getenv("STREAM_DELAY", "0.01")),
+                "workspace_dir": os.getenv("WORKSPACE_DIR", env_settings.get("workspace_dir", "workspace")),
+                "debug_dir": os.getenv("DEBUG_DIR", env_settings.get("debug_dir", "debug")),
+                "downloads_dir": os.getenv("DOWNLOADS_DIR", env_settings.get("downloads_dir", "downloads")),
+                "logs_dir": os.getenv("LOGS_DIR", env_settings.get("logs_dir", "logs")),
+                "stream_delay": float(os.getenv("STREAM_DELAY", str(env_settings.get("stream_delay", "0.01")))),
             }
+
+            # Ensure directories exist
+            self._ensure_directories()
 
             # Load security settings
             self._security = {
@@ -140,9 +147,45 @@ class ConfigurationManager:
         """Get application settings."""
         return load_app_settings()
 
+    def _ensure_directories(self):
+        """Ensure that all required directories exist."""
+        # Get the project root directory
+        project_root = Path(__file__).parent.parent.parent.parent
+
+        # Create the .files directory if it doesn't exist
+        files_dir = project_root / ".files"
+        files_dir.mkdir(exist_ok=True)
+
+        # Create subdirectories
+        for dir_key in ["workspace_dir", "debug_dir", "downloads_dir", "logs_dir"]:
+            dir_path = self._environment.get(dir_key, "")
+            if dir_path:
+                # Handle both absolute and relative paths
+                if dir_path.startswith("./"):
+                    # Relative path to project root
+                    full_path = project_root / dir_path[2:]
+                elif not os.path.isabs(dir_path):
+                    # Relative path without ./
+                    full_path = project_root / dir_path
+                else:
+                    # Absolute path
+                    full_path = Path(dir_path)
+
+                # Create the directory
+                full_path.mkdir(parents=True, exist_ok=True)
+
+                # Update the environment with the full path
+                self._environment[dir_key] = str(full_path)
+
 
 # Create singleton instance
 config_manager = ConfigurationManager()
+
+# Initialize configuration
+try:
+    config_manager.load_all()
+except Exception as e:
+    print(f"Warning: Failed to initialize configuration: {e}")
 
 # Load default values from app_settings.yaml
 _app_settings = load_app_settings()

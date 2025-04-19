@@ -80,19 +80,34 @@ def create_client(
     }
 
     # Create and return client
-    client = AzureOpenAIChatCompletionClient(
-        model=model_name,
-        deployment=model_name,
-        endpoint=os.getenv("AZURE_OPENAI_ENDPOINT"),
-        api_key=os.getenv("AZURE_OPENAI_API_KEY"),
-        api_version=os.getenv("AZURE_OPENAI_API_VERSION"),
-        model_streaming=streaming,
-        model_info=model_info,
-        streaming=streaming,
-        connection_pool_size=connection_pool_size,
-        request_timeout=request_timeout,
-        **kwargs,
-    )
+    # Use AZURE_OPENAI_DEPLOYMENT environment variable if available, otherwise fall back to model_name
+    deployment_name = os.getenv("AZURE_OPENAI_DEPLOYMENT", model_name)
+
+    try:
+        client = AzureOpenAIChatCompletionClient(
+            model=model_name,
+            deployment=deployment_name,
+            endpoint=os.getenv("AZURE_OPENAI_ENDPOINT"),
+            api_key=os.getenv("AZURE_OPENAI_API_KEY"),
+            api_version=os.getenv("AZURE_OPENAI_API_VERSION"),
+            model_streaming=streaming,
+            model_info=model_info,
+            streaming=streaming,
+            connection_pool_size=connection_pool_size,
+            request_timeout=request_timeout,
+            **kwargs,
+        )
+    except Exception as e:
+        if "DeploymentNotFound" in str(e):
+            error_msg = (
+                f"Azure OpenAI deployment '{deployment_name}' not found. "
+                f"Please check that the deployment exists in your Azure OpenAI resource. "
+                f"If you created the deployment recently, please wait a few minutes and try again. "
+                f"You can also set the AZURE_OPENAI_DEPLOYMENT environment variable to specify a different deployment."
+            )
+            logger.error(error_msg)
+            raise ValueError(error_msg) from e
+        raise
 
     logger.info(
         f"Created client for model {model_name} with streaming={streaming}, vision={vision}"

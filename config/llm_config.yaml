@@ -1,7 +1,7 @@
 # LLM Configuration
 models:
-  gpt-4o-mini:
-    name: "gpt-4o-mini-2024-07-18"
+  o4-mini:
+    name: "o4-mini"
     provider: "azure"
     max_tokens: 128000
     temperature_range: [0.3, 0.7]
@@ -10,49 +10,16 @@ models:
     vision: true
     connection_pool_size: 10
     request_timeout: 30
-    description: "Speed-Optimized GPT-4o Mini Model"
+    description: "Azure OpenAI o4-mini Model"
     icon: "public/icons/rocket.svg"
-
-  o3-mini:
-    name: "o3-mini"
-    provider: "azure"
-    max_tokens: 128000
-    temperature_range: [0.5, 1.2]
-    default_temperature: 0.8
-    streaming: true
-    vision: true
-    connection_pool_size: 10
-    request_timeout: 30
-    description: "Advanced Reasoning O3 Mini Model"
-    icon: "public/icons/microscope.svg"
 
 profiles:
   default:
-    name: "Magentic Fleet Fast"
-    model: "gpt-4o-mini"
-    description: "Speed-Optimized Workflow with GPT-4o Mini"
+    name: "Magentic Fleet"
+    model: "o4-mini"
+    description: "Azure OpenAI o4-mini Model"
     icon: "public/icons/rocket.svg"
     ui_render_mode: "tasklist"
-    features:
-      mcp_enabled: false
-      hil_mode: true
-
-  mcp_focus:
-    name: "MCP Focus"
-    model: "o3-mini"
-    description: "MCP Interaction Profile with O3 Mini"
-    icon: "public/icons/microscope.svg"
-    ui_render_mode: "custom"
-    features:
-      mcp_enabled: true
-      hil_mode: true
-
-  canvas_view:
-    name: "Canvas View"
-    model: "gpt-4o-mini"
-    description: "Visual Canvas Interface for Interactive Exploration"
-    icon: "public/icons/canvas.svg"
-    ui_render_mode: "canvas"
     features:
       mcp_enabled: false
       hil_mode: true

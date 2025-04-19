@@ -1,6 +1,6 @@
 """Chainlit UI components and settings."""
 
-from typing import Any, Dict, List
+from typing import Any, Dict, List  # noqa: UP035
 
 import chainlit as cl
 
