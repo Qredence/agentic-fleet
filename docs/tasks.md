@@ -67,6 +67,12 @@ This document contains a prioritized list of actionable improvement tasks for th
 - [ ] 25. Add OAuth authentication support
 - [ ] 26. Implement NVIDIA Agentiq/NIM/NEMO integration
 - [ ] 27. Create OpenAPI documentation for all API endpoints
+- [ ] 51. Improve Chainlit App Functionality
+  - [ ] 51.1. Add or update tests for Chainlit event handlers and session flows
+  - [ ] 51.2. Document environment variables and setup for running the Chainlit app
+  - [ ] 51.3. Audit and update dependencies for Chainlit and related packages
+  - [ ] 51.4. Refactor code for modularity, docstrings, and specific exception handling
+  - [ ] 51.5. Ensure all improvements are tracked in tasks.md and documented in rules.md if relevant
 
 ## Performance Optimizations
 
@@ -102,3 +108,9 @@ This document contains a prioritized list of actionable improvement tasks for th
 - [ ] 48. Add security headers to all HTTP responses
 - [ ] 49. Implement proper authentication and authorization
 - [ ] 50. Add security scanning to CI/CD pipeline
+
+## [Planned] Establish .cursor Directory and Project Rules
+- Create a `.cursor` directory at the project root for rules and configuration.
+- Draft and maintain a `rules.md` file inside `.cursor` to define coding standards, commit conventions, branching, PR/review process, and task management guidelines.
+- Ensure all rules are actionable and up to date with current workflow.
+- Update this `tasks.md` as changes are made.
