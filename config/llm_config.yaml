@@ -15,7 +15,7 @@ models:
 
 profiles:
   default:
-    name: "Magentic Fleet"
+    name: "AgenticFleet"
     model: "o4-mini"
     description: "Azure OpenAI o4-mini Model"
     icon: "public/icons/rocket.svg"
