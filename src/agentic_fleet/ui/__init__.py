@@ -33,11 +33,15 @@ try:
                 """Patched utcnow method that uses now(UTC) instead.
 
                 This replaces the deprecated datetime.utcnow() with datetime.now(UTC).
+                The timezone information is removed to ensure compatibility with APIs
+                that expect naive datetime objects.
 
                 Returns:
-                    A timezone-aware datetime object representing the current UTC time
+                    A naive datetime object representing the current UTC time
                 """
-                return dt_module.datetime.now(dt_module.UTC)
+                # Get timezone-aware datetime and then remove timezone info
+                dt = dt_module.datetime.now(dt_module.UTC)
+                return dt.replace(tzinfo=None)
 
         # Replace the datetime module in literalai.helper with our patched version
         literalai.helper.datetime = PatchedDatetime
