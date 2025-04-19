@@ -18,21 +18,24 @@ import agentic_fleet.chainlit_app as chainlit_app
 @pytest.fixture
 def mock_chainlit():
     """Mock all chainlit dependencies."""
-    with patch("agentic_fleet.chainlit_app.cl") as mock_cl:
-        # Setup user_session with get and set methods
-        mock_user_session = MagicMock()
-        mock_user_session.get = MagicMock(return_value=None)
-        mock_user_session.set = MagicMock()
-        mock_cl.user_session = mock_user_session
+    mock_cl = MagicMock()
+    
+    # Setup user_session with get and set methods
+    mock_user_session = MagicMock()
+    mock_user_session.get = MagicMock(return_value=None)
+    mock_user_session.set = MagicMock()
+    mock_user_session.clear = MagicMock()
+    mock_cl.user_session = mock_user_session
 
-        # Mock Message class and methods
-        mock_message = MagicMock()
-        mock_message.send = AsyncMock()
-        mock_cl.Message.return_value = mock_message
+    # Mock Message class and methods
+    mock_message = MagicMock()
+    mock_message.send = AsyncMock()
+    mock_cl.Message = MagicMock(return_value=mock_message)
 
-        # Mock Action class
-        mock_cl.Action = MagicMock()
+    # Mock Action class
+    mock_cl.Action = MagicMock()
 
+    with patch("agentic_fleet.chainlit_app.cl", mock_cl):
         yield mock_cl
 
 
@@ -49,9 +52,9 @@ def mock_config_manager():
 @pytest.fixture
 def mock_client():
     """Mock the client factory."""
-    with patch("agentic_fleet.chainlit_app.get_cached_client") as mock_get_client:
+    with patch("agentic_fleet.chainlit_app.create_client") as mock_create_client:
         mock_client = MagicMock()
-        mock_get_client.return_value = mock_client
+        mock_create_client.return_value = mock_client
         yield mock_client
 
 
