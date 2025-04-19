@@ -6,7 +6,7 @@ that can adapt and reason about complex tasks. It integrates with FastAPI for th
 and provides a modern web interface for interaction.
 """
 
-__version__ = "0.4.9"
+__version__ = "0.4.94"
 __author__ = "Qredence"
 __email__ = "contact@qredence.ai"
 __license__ = "Apache 2.0"

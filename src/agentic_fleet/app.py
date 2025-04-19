@@ -14,7 +14,8 @@ from dotenv import load_dotenv
 # Local imports - using the modular components
 from agentic_fleet.config import config_manager
 from agentic_fleet.core.application.manager import ApplicationConfig, ApplicationManager
-from agentic_fleet.models.client_factory import get_cached_client
+from agentic_fleet.services.chat_service import ChatService
+from agentic_fleet.services.client_factory import get_cached_client
 from agentic_fleet.ui.message_handler import handle_chat_message, on_reset
 from agentic_fleet.ui.settings_handler import SettingsManager
 
@@ -28,7 +29,7 @@ logger = logging.getLogger(__name__)
 load_dotenv()
 
 # Initialize application manager
-app_manager: Optional[ApplicationManager] = None
+app_manager: ApplicationManager | None = None
 
 # Initialize settings manager
 settings_manager = SettingsManager()
@@ -36,10 +37,13 @@ settings_manager = SettingsManager()
 # Initialize client
 client = None
 
+# Initialize chat service
+chat_service = ChatService()
+
 
 # Hook into chainlit events
 @on_chat_start
-async def start_chat(profile: Optional[cl.ChatProfile] = None):
+async def start_chat(profile: cl.ChatProfile | None = None):
     """Initialize the chat session with the selected profile."""
     global client, app_manager
 
@@ -55,20 +59,11 @@ async def start_chat(profile: Optional[cl.ChatProfile] = None):
         # Get environment settings
         env_config = config_manager.get_environment_settings()
 
-        # Initialize client based on profile or defaults
-        model_name = "gpt-4o-2024-11-20"
-        if profile and isinstance(profile, cl.ChatProfile):
-            model_settings = profile.model_settings or {}
-            model_name = model_settings.get("model_name", model_name)
+        # Use the specified Azure OpenAI model
+        model_name = "o4-mini"
 
         # Create cached client
-        client = get_cached_client(
-            model_name=model_name,
-            streaming=True,
-            vision=True,
-            connection_pool_size=10,
-            request_timeout=30,
-        )
+        client = get_cached_client(model_name=model_name)
 
         # Initialize application manager
         app_manager = ApplicationManager(
@@ -97,6 +92,10 @@ async def start_chat(profile: Optional[cl.ChatProfile] = None):
         # Set up default settings
         default_settings = settings_manager.get_default_settings()
         cl.user_session.set("settings", default_settings)
+
+        # Set session ID for chat history
+        session_id = str(cl.user_session.id)
+        cl.user_session.set("session_id", session_id)
 
         # Setup chat settings UI
         await settings_manager.setup_chat_settings()
@@ -129,6 +128,12 @@ async def start_chat(profile: Optional[cl.ChatProfile] = None):
                     label="🔄 Reset Agents",
                     tooltip="Restart the agent team",
                     payload={"action": "reset"},
+                ),
+                cl.Action(
+                    name="view_history",
+                    label="📜 View Chat History",
+                    tooltip="View previous conversations",
+                    payload={"action": "history"},
                 )
             ],
         ).send()
@@ -155,6 +160,42 @@ async def handle_settings_update(settings: cl.ChatSettings):
 async def on_action_reset(action: cl.Action):
     """Handle reset action."""
     await on_reset(action)
+
+
+@cl.action_callback("view_history")
+async def on_action_view_history(action: cl.Action):
+    """Handle view history action."""
+    try:
+        # Get the current session ID
+        session_id = cl.user_session.get("session_id")
+        if not session_id:
+            session_id = str(cl.user_session.id)
+            cl.user_session.set("session_id", session_id)
+
+        # Get chat history for the current session
+        messages = await chat_service.get_chat_history(session_id)
+
+        if not messages:
+            await cl.Message(content="No chat history found for this session.").send()
+            return
+
+        # Format the chat history
+        history_content = "## 📜 Chat History\n\n"
+        for i, msg in enumerate(messages, 1):
+            sender = msg.sender if hasattr(msg, 'sender') else "Unknown"
+            content = msg.content if hasattr(msg, 'content') else "No content"
+            timestamp = msg.timestamp.strftime("%Y-%m-%d %H:%M:%S") if hasattr(msg, 'timestamp') and msg.timestamp else "Unknown time"
+
+            history_content += f"### Message {i} - {sender} ({timestamp})\n\n"
+            history_content += f"{content}\n\n"
+            history_content += "---\n\n"
+
+        # Display the chat history
+        await cl.Message(content=history_content).send()
+
+    except Exception as e:
+        logger.error(f"Error displaying chat history: {str(e)}")
+        await cl.Message(content=f"Error displaying chat history: {str(e)}").send()
 
 
 @on_stop

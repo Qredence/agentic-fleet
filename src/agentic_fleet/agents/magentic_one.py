@@ -2,12 +2,24 @@
 MagenticOne agent implementation for AgenticFleet.
 
 This module provides a wrapper and configuration for the MagenticOne agent from autogen.
+
+DEPRECATED: This module is deprecated and will be replaced by agentic_fleet.agents_pool in a future version.
+The agents_pool module provides a more modular, base-class approach to agent implementation.
 """
 
+import warnings
 from typing import Any, Dict, List, Optional, Union
 
 from autogen_ext.code_executors.local import LocalCommandLineCodeExecutor
 from autogen_ext.teams.magentic_one import MagenticOne as AutogenMagenticOne
+
+# Show deprecation warning
+warnings.warn(
+    "The agentic_fleet.agents.magentic_one module is deprecated and will be replaced by agentic_fleet.agents_pool in a future version. "
+    "The agents_pool module provides a more modular, base-class approach to agent implementation.",
+    DeprecationWarning,
+    stacklevel=2
+)
 
 
 class MagenticOneAgent:

@@ -120,33 +120,18 @@ async def chat_profiles():
     """Define enhanced chat profiles with metadata and icons."""
     return [
         cl.ChatProfile(
-            name="Magentic Fleet Fast",
+            name="Magentic Fleet",
             markdown_description=(
-                "**Speed-Optimized Workflow**\n\n"
-                "- Model: GPT-4o Mini (128k context)\n"
-                "- Response Time: <2s average\n"
-                "- Best for: Simple queries & quick tasks"
+                "**Azure OpenAI Model**\n\n"
+                "- Model: o4-mini (128k context)\n"
+                "- Azure OpenAI Integration\n"
+                "- Best for: General purpose tasks"
             ),
             icon="/public/avatars/rocket.svg",
             metadata={
-                "model": "gpt-4o-mini",
+                "model": "o4-mini",
                 "max_tokens": 128000,
                 "temperature_range": [0.3, 0.7],
-            },
-        ),
-        cl.ChatProfile(
-            name="Magentic Fleet Max",
-            markdown_description=(
-                "**Advanced Reasoning Suite**\n\n"
-                "- Model: O3 Mini (128k context)\n"
-                "- Multi-agent collaboration\n"
-                "- Complex problem solving"
-            ),
-            icon="/public/avatars/microscope.svg",
-            metadata={
-                "model": "o3-mini",
-                "max_tokens": 128000,
-                "temperature_range": [0.5, 1.2],
             },
         ),
     ]
@@ -194,16 +179,16 @@ async def on_chat_start():
         # Create default profile if none selected or if profile is just a string
         if not profile or isinstance(profile, str):
             profile = cl.ChatProfile(
-                name="Magentic Fleet Fast",
+                name="Magentic Fleet",
                 markdown_description=(
-                    "**Speed-Optimized Workflow**\n\n"
-                    "- Model: GPT-4o Mini (128k context)\n"
-                    "- Response Time: <2s average\n"
-                    "- Best for: Simple queries & quick tasks"
+                    "**Azure OpenAI Model**\n\n"
+                    "- Model: o4-mini (128k context)\n"
+                    "- Azure OpenAI Integration\n"
+                    "- Best for: General purpose tasks"
                 ),
                 icon="/public/avatars/rocket.svg",
                 metadata={
-                    "model": "gpt-4o-mini",
+                    "model": "o4-mini",
                     "max_tokens": 128000,
                     "temperature_range": [0.3, 0.7],
                 },
@@ -211,29 +196,40 @@ async def on_chat_start():
             logger.info("Using default profile")
             user_session.set("chat_profile", profile)
 
-        # Configure model based on profile name
-        model_name = (
-            "gpt-4o-mini"
-            if isinstance(profile, cl.ChatProfile) and "Fast" in profile.name
-            else "o3-mini"
-        )
+        # Use the specified Azure OpenAI model
+        model_name = "o4-mini"
 
         # Initialize Azure OpenAI client with appropriate configuration
-        client = AzureOpenAIChatCompletionClient(
-            model=model_name,
-            deployment=model_name,
-            endpoint=os.getenv("AZURE_OPENAI_ENDPOINT"),
-            api_key=os.getenv("AZURE_OPENAI_API_KEY"),
-            api_version=os.getenv("AZURE_OPENAI_API_VERSION"),
-            streaming=True,
-            model_info={
-                "vision": False,  # Disable vision capabilities for now
-                "function_calling": True,
-                "json_output": True,
-                "family": "azure",
-                "architecture": model_name,
-            },
-        )
+        # Use AZURE_OPENAI_DEPLOYMENT environment variable if available, otherwise fall back to model_name
+        deployment_name = os.getenv("AZURE_OPENAI_DEPLOYMENT", model_name)
+
+        try:
+            client = AzureOpenAIChatCompletionClient(
+                model=model_name,
+                deployment=deployment_name,
+                endpoint=os.getenv("AZURE_OPENAI_ENDPOINT"),
+                api_key=os.getenv("AZURE_OPENAI_API_KEY"),
+                api_version=os.getenv("AZURE_OPENAI_API_VERSION"),
+                streaming=True,
+                model_info={
+                    "vision": False,  # Disable vision capabilities for now
+                    "function_calling": True,
+                    "json_output": True,
+                    "family": "azure",
+                    "architecture": model_name,
+                },
+            )
+        except Exception as e:
+            if "DeploymentNotFound" in str(e):
+                error_msg = (
+                    f"Azure OpenAI deployment '{deployment_name}' not found. "
+                    f"Please check that the deployment exists in your Azure OpenAI resource. "
+                    f"If you created the deployment recently, please wait a few minutes and try again. "
+                    f"You can also set the AZURE_OPENAI_DEPLOYMENT environment variable to specify a different deployment."
+                )
+                logger.error(error_msg)
+                raise ValueError(error_msg) from e
+            raise
 
         # Initialize MagenticOne with configured client
         magentic_one = MagenticOne(

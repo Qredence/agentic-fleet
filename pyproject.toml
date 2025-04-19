@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "agentic-fleet"
-version = "0.4.91"
+version = "0.4.94"
 description = "A powerful multi-agent system for adaptive AI reasoning and automation"
 readme = "README.md"
 requires-python = ">=3.10"
@@ -49,13 +49,13 @@ dependencies = [
     "python-socketio>=5.12.1",
     "sse-starlette>=2.2.1",
     # AI/ML Infrastructure
-    "autogen-agentchat>=0.4.7,<0.5.0",
-    "autogen-core>=0.4.7,<0.5.0",
-    "autogen-ext[langchain,mcp,docker]>=0.4.7,<0.5.0",
-    "autogen-ext[magentic-one,web-surfer,file-surfer,video-surfer]>=0.4.7,<0.5.0",
-    "autogen-ext[openai,azure]>=0.4.7,<0.5.0",
-    "autogen-ext[diskcache]>=0.4.7,<0.5.0",
-    "autogen-ext[grpc]<=0.4.7",
+    "autogen-agentchat>=0.5.3,<0.6.0",
+    "autogen-core>=0.5.3,<0.6.0",
+    "autogen-ext[langchain,docker]>=0.5.3,<0.6.0",
+    "autogen-ext[web-surfer,file-surfer,video-surfer]>=0.5.3,<0.6.0",
+    "autogen-ext[azure,gemini]>=0.5.3,<0.6.0",
+    "autogen-ext[mcp,diskcache]>=0.5.3,<0.6.0",
+    "autogen-ext[grpc]>=0.5.3,<0.6.0",
     "autogenstudio",
     "dspy>=1.0.0",
     "semantic-kernel>=1.19.0",
@@ -78,7 +78,7 @@ dependencies = [
     # Data Processing
     "jsonlines>=4.0.0",
     "matplotlib>=3.10.0",
-    "numpy>=1.26,<2.0",
+    "numpy>=1.26",
     "pandas>=2.2.3",
     "pillow>=11.0.0",
     "plotly>=5.16.0",
@@ -91,7 +91,7 @@ dependencies = [
     # Web & Utilities
     "beautifulsoup4>=4.12.0",
     "bing>=0.31",
-    "chainlit>=2.2.1",
+    "chainlit>=2.5.0",
     "docker>=7.1.0",
     "markitdown>=0.0.1a3",
     "opentelemetry-instrumentation-fastapi>=0.44b0",
@@ -136,6 +136,9 @@ dependencies = [
     "modulegraph>=0.19.6",
     "macholib>=1.16.3",
     "py2app>=0.28.8",
+    "mem0ai>=0.1.86",
+    "mcp>=1.6.0",
+    "literalai>=0.1.201",
 ]
 
 [project.optional-dependencies]
@@ -160,17 +163,17 @@ dev = [
     "black>=24.1.1",
     "isort>=5.13.2",
 
-    
+
     # Testing
     "pytest>=8.0.2",
     "pytest-asyncio>=0.23.3",
     "pytest-cov>=4.1.0",
     "coverage>=7.4.4",
-    
+
     # Documentation
     "mkdocs>=1.5.3",
     "mkdocstrings[python]>=0.24.0",
-    
+
     # Debugging
     "ipdb>=0.13.13",
     "rich>=10.16.2"

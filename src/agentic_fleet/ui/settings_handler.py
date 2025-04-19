@@ -50,8 +50,8 @@ class SettingsManager:
                 Select(
                     id="model",
                     label="Model",
-                    values=["gpt-4o-mini", "o3-mini"],
-                    initial_value="gpt-4o-mini",
+                    values=["o4-mini", "o3-mini"],
+                    initial_value="o4-mini",
                 ),
                 Slider(
                     id="temperature",
@@ -124,13 +124,7 @@ async def chat_profiles(user: Optional[Any] = None) -> List[cl.ChatProfile]:
                 "- Response Time: <2s average\n"
                 "- Best for: Simple queries & quick tasks"
             ),
-            icon="/public/icons/rocket.svg",
-            model_settings={
-                "model_name": "gpt-4o-mini-2024-07-18",
-                "max_tokens": 128000,
-                "temperature_range": [0.3, 0.7],
-            },
-        ),
+            icon="/public/icons/rocket.svg"),
         cl.ChatProfile(
             name="Magentic Fleet Standard",
             markdown_description=(

@@ -1,23 +1,26 @@
+"""Message handler module for AgenticFleet Chainlit UI.
+
+This module contains functions for handling chat messages and rendering content.
+"""
+
+# Standard library imports
 import logging
 import traceback
-from typing import Dict, Optional
 
+# Third-party imports
 import chainlit as cl
-from chainlit import (
-    Action,
-    Message,
-    Step,
-    Task,
-    TaskList,
-    TaskStatus,
-    Text,
-    user_session,
-)
 
+# Local imports
 from agentic_fleet.message_processing import process_response
+from agentic_fleet.services.chat_service import ChatService
+from agentic_fleet.ui.components.canvas_panel import add_edge_to_canvas, add_node_to_canvas, initialize_canvas
 from agentic_fleet.ui.task_manager import extract_and_add_plan_tasks
 
+# Initialize logger
 logger = logging.getLogger(__name__)
+
+# Initialize chat service
+chat_service = ChatService()
 
 
 async def handle_chat_message(message: cl.Message) -> None:
@@ -26,19 +29,57 @@ async def handle_chat_message(message: cl.Message) -> None:
     Args:
         message: The incoming chat message
     """
-    # Create an enhanced TaskList with icons
-    task_list = cl.TaskList(
-        title="🔄 Processing Request",
-        status="Analyzing your query...",
-    )
-    await task_list.send()
+    # Get render mode from session (set in chainlit_app.py based on profile)
+    render_mode = cl.user_session.get("ui_render_mode", "tasklist")  # Default to tasklist mode
+    is_tasklist_mode = render_mode == "tasklist"
+    is_custom_mode = render_mode == "custom"
+    is_canvas_mode = render_mode == "canvas"
 
-    # Store the task list in user session for later updates
-    cl.user_session.set("current_task_list", task_list)
+    # Get session ID for chat history
+    session_id = cl.user_session.get("session_id")
+    if not session_id:
+        session_id = str(cl.user_session.id)
+        cl.user_session.set("session_id", session_id)
 
-    # Initialize plan steps tracking
-    cl.user_session.set("plan_steps", {})
-    cl.user_session.set("plan_tasks", {})
+    # Store user message in chat history
+    try:
+        from agentic_fleet.schemas.message import MessageCreate, MessageType
+        user_message = MessageCreate(
+            content=message.content,
+            sender="User",
+            receiver="Agent",
+            message_type=MessageType.TEXT,
+            session_id=session_id,
+            metadata={}
+        )
+        await chat_service.process_message(user_message)
+    except Exception as e:
+        logger.warning(f"Error storing user message in chat history: {e}")
+
+    # Create TaskList if in tasklist mode
+    task_list = None
+    if is_tasklist_mode:
+        task_list = cl.TaskList()
+        task_list.status = "Analyzing your query..." # Set status after creation
+        await task_list.send()
+
+        # Store the task list in user session for later updates
+        cl.user_session.set("current_task_list", task_list)
+
+        # Initialize plan steps tracking
+        cl.user_session.set("plan_steps", {})
+        cl.user_session.set("plan_tasks", {})
+
+    # Initialize canvas if in canvas mode
+    if is_canvas_mode:
+        # Initialize the canvas interface
+        await initialize_canvas()
+
+        # Send a welcome message
+        await cl.Message(
+            content="🖌️ Canvas mode activated. Your responses will be visualized in a canvas interface.",
+            author="System"
+        ).send()
 
     try:
         # Check for reset command without showing a message
@@ -48,8 +89,9 @@ async def handle_chat_message(message: cl.Message) -> None:
             and message.content.strip().lower() == "/reset"
         ):
             await on_reset(cl.Action(name="reset_agents", payload={"action": "reset"}))
-            task_list.status = "✅ Agents reset successfully"
-            await task_list.send()
+            if task_list:
+                task_list.status = "✅ Agents reset successfully"
+                await task_list.send()
             return
 
         # Get agent team from user session
@@ -58,210 +100,376 @@ async def handle_chat_message(message: cl.Message) -> None:
             # Raise error if team is missing
             raise ValueError("Agent team not initialized")
 
-        # Update task list with processing task
-        process_task = cl.Task(
-            title="🧠 Processing with Agent Team",
-            status=cl.TaskStatus.RUNNING,
-            icon="🔄",
-        )
-        await task_list.add_task(process_task)
+        # Update task list with processing task (only in tasklist mode)
+        process_task = None
+        if is_tasklist_mode and task_list:
+            process_task = cl.Task(title="🧠 Processing with Agent Team", status=cl.TaskStatus.RUNNING)
+            await task_list.add_task(process_task)
 
-        # Create a list to collect responses
-        collected_responses = []
+        # We'll process responses as they come in
 
-        # Create status elements for tracking
-        task_status = {
-            "overview": cl.Text(
-                name="task_overview", content="📊 **Task Overview:**\n", display="side"
-            ),
-            "planning": cl.Text(
-                name="planning", content="🧩 **Planning:**\n", display="side"
-            ),
-            "execution": cl.Text(
-                name="execution", content="⚙️ **Execution:**\n", display="side"
-            ),
-            "results": cl.Text(
-                name="results", content="🎯 **Results:**\n", display="side"
-            ),
-        }
+        # Create a main message container for elements
+        main_msg = cl.Message(content="", author="Agent") # Use a generic author initially
+        await main_msg.send()
+        message_id = main_msg.id # Get the ID of the container message
 
-        # Send a dummy message first to get a message_id
-        dummy_message = await cl.Message(content="").send()
-        message_id = dummy_message.id
-
-        # Send each status element with the message_id
-        for element in task_status.values():
-            await element.send(for_id=message_id)
-
-        # Process input with agent team
-        async with cl.Step(
-            name="Processing your request",
-            type="system",  # Use a valid step type
-            show_input=True,
-        ) as step:
-            async for chunk in team.run_stream(task=message.content):
-                # Process the response
-                response_text, plan_update = await process_response(chunk)
-
-                if response_text:
-                    collected_responses.append(response_text)
-                    step.output = "".join(collected_responses)
-                    await step.update()
-
-                # If a plan was detected, extract tasks
-                if plan_update:
-                    await extract_and_add_plan_tasks(
-                        plan_update,
-                        task_list,
-                        task_status,
-                        message_id,
-                        is_update=len(cl.user_session.get("plan_steps", {})) > 0,
-                    )
-
-        # Mark process task as complete
-        process_task.status = cl.TaskStatus.DONE
-        process_task.title = "✅ Processing complete"
-        await task_list.send()
-
-        # Set final output
-        final_response = "".join(collected_responses)
-        task_list.status = "✅ Response complete"
-        await task_list.send()
-
-        # Send final message with actions
-        await cl.Message(
-            content=final_response,
-            actions=[
-                cl.Action(
-                    name="refine_response",
-                    label="🔄 Refine Response",
-                    description="Ask the agent to refine this response",
+        # Initialize status tracking differently based on render mode
+        task_status = {}
+        if is_tasklist_mode:
+            # Create status elements for tasklist mode
+            task_status = {
+                "overview": cl.Text(
+                    name="task_overview", content="📊 **Task Overview:**\n", display="side"
                 ),
-                cl.Action(
-                    name="save_response",
-                    label="💾 Save Response",
-                    description="Save this response for later",
+                "planning": cl.Text(
+                    name="planning", content="🧩 **Planning:**\n", display="side"
                 ),
-            ],
-        ).send()
+                "execution": cl.Text(
+                    name="execution", content="⚙️ **Execution:**\n", display="side"
+                ),
+                "results": cl.Text(
+                    name="results", content="🎯 **Results:**\n", display="side"
+                ),
+            }
+
+            # Send status elements associated with the main message
+            for element in task_status.values():
+                await element.send(for_id=message_id)
+        elif is_custom_mode:
+            # For MCP profile, use a custom welcome element
+            await cl.Custom(
+                content={
+                    "type": "mcp_console",
+                    "data": "Initializing MCP environment..."
+                }
+            ).send()
+
+        # Process input with agent team - Stream elements directly
+        current_step = None # Track the current step for streaming text
+
+        # Run streaming with proper error handling
+        try:
+            # First await the coroutine to get the async iterator
+            stream_generator = await team.run_stream(task=message.content)
+
+            # Now iterate over the async iterator
+            async for chunk in stream_generator:
+                try:
+                    # Process the response chunk to get structured data
+                    processed_data, plan_update = await process_response(chunk)
+
+                    # Skip if no data to process
+                    if not processed_data:
+                        continue
+
+                    content_type = processed_data.get("type", "text")
+                    content = processed_data.get("content", "")
+                    author = _rename_author(processed_data.get("author", "Agent")) # Use rename function
+                    language = processed_data.get("language") # For code
+
+                    # Handle content based on render mode
+                    if is_tasklist_mode:
+                        # TaskList Mode (MagenticFleet profile)
+                        if content_type == "text":
+                            # Create new step if needed
+                            if not isinstance(current_step, cl.Step):
+                                current_step = cl.Step(name=f"Response from {author}", type="llm", show_input=False)
+                                await current_step.send()
+
+                            # Stream text to current step
+                            if isinstance(current_step, cl.Step):
+                                try:
+                                    await current_step.stream_token(content)
+                                except Exception as e:
+                                    logger.warning(f"Error streaming token: {e}")
+
+                        else:
+                            # Finalize any text step before sending other content
+                            if isinstance(current_step, cl.Step):
+                                await current_step.update()
+                                current_step = None # Reset step tracker
+
+                            # Create appropriate element based on content type
+                            try:
+                                if content_type == "code":
+                                    await cl.Message(content="", elements=[cl.Code(content=content, language=language)]).send()
+                                elif content_type == "image":
+                                    await cl.Message(content="", elements=[cl.Image(url=content, name="image")]).send()
+                                elif content_type == "custom":
+                                    await cl.Message(content="", elements=[cl.Custom(content=content)]).send()
+                                elif content_type == "error":
+                                    await cl.ErrorMessage(content=content).send()
+                            except Exception as e:
+                                logger.warning(f"Error sending {content_type} element: {e}")
+
+                    elif is_custom_mode:
+                        # Custom Mode (MCP Focus profile)
+                        if content_type == "text":
+                            # Handle text accumulation for article-style rendering
+                            if not isinstance(current_step, dict):
+                                current_step = {"type": "article", "chunks": []}
+
+                            # Add content to accumulated chunks
+                            chunk_dict = current_step
+                            if isinstance(chunk_dict.get("chunks"), list):
+                                chunk_dict["chunks"].append(content)
+
+                                # Check if we should send the accumulated text
+                                chunks = chunk_dict["chunks"]
+                                combined_text = "".join(chunks)
+                                if len(combined_text) > 500 or "." in content:
+                                    try:
+                                        await cl.Custom(
+                                            content={
+                                                "type": "article",
+                                                "data": combined_text,
+                                                "author": author
+                                            }
+                                        ).send()
+                                    except Exception as e:
+                                        logger.warning(f"Error sending article: {e}")
+
+                                    # Reset accumulator
+                                    current_step = {"type": "article", "chunks": []}
+
+                        elif content_type in ["code", "image", "custom", "error"]:
+                            # Reset text accumulator
+                            current_step = None
+
+                            # Send appropriate element based on content type
+                            try:
+                                if content_type == "code":
+                                    await cl.Message(content="", elements=[cl.Custom(
+                                        content={
+                                            "type": "rich_code",
+                                            "language": language or "text",
+                                            "data": content,
+                                            "author": author
+                                        }
+                                    )]).send()
+                                elif content_type == "image":
+                                    await cl.Message(content="", elements=[cl.Image(url=content, name="image")]).send()
+                                elif content_type == "custom":
+                                    await cl.Message(content="", elements=[cl.Custom(content=content)]).send()
+                                elif content_type == "error":
+                                    await cl.ErrorMessage(content=content).send()
+                            except Exception as e:
+                                logger.warning(f"Error sending {content_type} element: {e}")
+
+                    elif is_canvas_mode:
+                        # Canvas Mode
+                        try:
+                            # Generate a unique ID for the node
+                            node_id = f"node_{len(cl.user_session.get('canvas_data', {}).get('nodes', []))}"
+
+                            if content_type == "text":
+                                # Add text content as a node to the canvas
+                                await add_node_to_canvas(
+                                    node_id=node_id,
+                                    node_type="text",
+                                    content=content,
+                                    metadata={"author": author}
+                                )
+                            elif content_type == "code":
+                                # Add code content as a node to the canvas
+                                await add_node_to_canvas(
+                                    node_id=node_id,
+                                    node_type="code",
+                                    content=content,
+                                    metadata={"language": language or "text", "author": author}
+                                )
+                            elif content_type == "image":
+                                # Add image content as a node to the canvas
+                                await add_node_to_canvas(
+                                    node_id=node_id,
+                                    node_type="image",
+                                    content=content,
+                                    metadata={"author": author}
+                                )
+                            elif content_type == "custom":
+                                # Add custom content as a node to the canvas
+                                await add_node_to_canvas(
+                                    node_id=node_id,
+                                    node_type="custom",
+                                    content=str(content),
+                                    metadata={"author": author}
+                                )
+                            elif content_type == "error":
+                                # Add error content as a node to the canvas
+                                await add_node_to_canvas(
+                                    node_id=node_id,
+                                    node_type="error",
+                                    content=content,
+                                    metadata={"author": author}
+                                )
+
+                            # If there's a previous node, add an edge between them
+                            previous_node_id = cl.user_session.get("previous_node_id")
+                            if previous_node_id:
+                                edge_id = f"edge_{len(cl.user_session.get('canvas_data', {}).get('edges', []))}"
+                                await add_edge_to_canvas(
+                                    edge_id=edge_id,
+                                    source_id=previous_node_id,
+                                    target_id=node_id,
+                                    edge_type="default"
+                                )
+
+                            # Store the current node ID for the next iteration
+                            cl.user_session.set("previous_node_id", node_id)
+
+                        except Exception as e:
+                            logger.warning(f"Error adding content to canvas: {e}")
+
+                    # Handle plan updates if detected
+                    if plan_update:
+                        # Finalize any text step first
+                        if isinstance(current_step, cl.Step):
+                            await current_step.update()
+                            current_step = None
+
+                        # Process plan in tasklist mode
+                        if is_tasklist_mode and task_list and task_status:
+                            plan_steps = cl.user_session.get("plan_steps") or {}
+                            try:
+                                await extract_and_add_plan_tasks(
+                                    plan_update,
+                                    task_list,
+                                    task_status,
+                                    message_id,
+                                    is_update=len(plan_steps) > 0,
+                                )
+                            except Exception as e:
+                                logger.warning(f"Error processing plan update: {e}")
+
+                except Exception as e:
+                    # Log and handle chunk processing errors
+                    logger.error(f"Error processing chunk: {e}")
+                    await cl.ErrorMessage(
+                        content=f"Error processing response chunk: {str(e)}"
+                    ).send()
+
+        except Exception as e:
+            # Log and handle stream-level errors
+            logger.error(f"Streaming error: {e}")
+            await cl.ErrorMessage(
+                content=f"Streaming error: {str(e)}"
+            ).send()
+
+        # Finalize any remaining step
+        if current_step is not None:
+            try:
+                if isinstance(current_step, cl.Step):
+                    await current_step.update()
+                elif isinstance(current_step, dict) and isinstance(current_step.get("chunks"), list):
+                    chunks = current_step["chunks"]
+                    combined_text = "".join(chunks)
+                    if combined_text.strip():
+                        # Provide a default author
+                        final_author = "Agent"
+                        if 'author' in locals():
+                            final_author = author
+
+                        await cl.Custom(
+                            content={
+                                "type": "article",
+                                "data": combined_text,
+                                "author": final_author
+                            }
+                        ).send()
+            except Exception as e:
+                logger.warning(f"Error finalizing step: {e}")
+
+        # Complete task processing
+        if is_tasklist_mode and task_list is not None:
+            try:
+                if process_task is not None:
+                    process_task.status = cl.TaskStatus.DONE
+                    process_task.title = "✅ Processing complete"
+                await task_list.send()
+            except Exception as e:
+                logger.warning(f"Error completing task: {e}")
+
+        # Update main message
+        try:
+            main_msg.content = "Processing complete."
+            await main_msg.update()
+
+            # Store agent response in chat history
+            try:
+                from agentic_fleet.schemas.message import MessageCreate, MessageType
+                agent_message = MessageCreate(
+                    content=main_msg.content,
+                    sender="Agent",
+                    receiver="User",
+                    message_type=MessageType.TEXT,
+                    session_id=session_id,
+                    metadata={}
+                )
+                await chat_service.process_message(agent_message)
+            except Exception as e:
+                logger.warning(f"Error storing agent message in chat history: {e}")
+        except Exception as e:
+            logger.warning(f"Error updating main message: {e}")
+
+        # Send final actions
+        try:
+            await cl.Message(
+                content="Actions:",
+                actions=[
+                    cl.Action(
+                        name="refine_response",
+                        label="🔄 Refine Response",
+                        tooltip="Ask the agent to refine this response",
+                        payload={"action": "refine"}
+                    ),
+                    cl.Action(
+                        name="save_response",
+                        label="💾 Save Response",
+                        tooltip="Save this response for later",
+                        payload={"action": "save"}
+                    ),
+                ],
+            ).send()
+        except Exception as e:
+            logger.warning(f"Error sending action message: {e}")
 
     except Exception as e:
-        # Log the error
+        # Log the overall error
         logger.error(f"Error processing message: {str(e)}")
         logger.error(traceback.format_exc())
 
-        # Update task_list to show failure
-        task_list.status = f"⚠️ Error: {str(e)}"
-        await task_list.send()
+        # Update task list to show failure
+        if task_list:
+            try:
+                task_list.status = f"⚠️ Error: {str(e)}"
+                await task_list.send()
+            except Exception:
+                pass  # Ignore errors when trying to report errors
 
         # Send error message to user
-        await cl.Message(
-            content=f"An error occurred while processing your request: {str(e)}",
-        ).send()
+        try:
+            await cl.Message(
+                content=f"An error occurred while processing your request: {str(e)}",
+            ).send()
+        except Exception:
+            pass  # Ignore errors when trying to report errors
 
 
-async def on_reset(action: cl.Action) -> None:
+async def on_reset(_: cl.Action) -> None:
     """Reset the agent team.
 
     Args:
         action: The action triggering the reset
     """
-    # Clear the session
-    cl.user_session.clear()
+    try:
+        # Reinitialize the application
+        await cl.Message(content="🔄 Resetting agent team...").send()
 
-    # Reinitialize the application
-    await cl.Message(content="🔄 Resetting agent team...").send()
-
-    # Trigger chat restart
-    await cl.ChatRestartEvent().send()
-
-
-async def _handle_plan_creation(content: str, task_list: TaskList, message_id: str):
-    """Handle the creation of a new plan.
-
-    Args:
-        content: The content containing the plan
-        task_list: The task list to update
-        message_id: The ID of the message
-    """
-    # Update the task list
-    plan_task = cl.Task(
-        title="📋 Plan Created",
-        status=cl.TaskStatus.RUNNING,
-        icon="📝",
-    )
-    await task_list.add_task(plan_task)
-    task_list.status = "🔄 Executing plan..."
-    await task_list.send()
-
-    # Extract the plan from the content
-    plan_text = content.split("Here is the plan to follow as best as possible:")[
-        1
-    ].strip()
-
-    # Create task status tracking
-    task_status = {
-        "planning": cl.Text(name="planned_tasks", content="", display="side"),
-        "overview": cl.Text(name="task_overview", content="", display="side"),
-        "completion": cl.Text(name="completed_tasks", content="", display="side"),
-        "execution": cl.Text(
-            name="execution_progress",
-            content="",
-            display="side",
-        ),
-    }
-
-    # Extract and add individual plan steps as tasks
-    await extract_and_add_plan_tasks(plan_text, task_list, task_status, message_id)
-
-
-async def _handle_plan_update(content: str, task_list: TaskList, message_id: str):
-    """Handle updates to an existing plan.
-
-    Args:
-        content: The content containing the plan update
-        task_list: The task list to update
-        message_id: The ID of the message
-    """
-    # Extract the updated plan
-    for marker in [
-        "Updated plan:",
-        "Next steps:",
-        "Additional steps:",
-        "Revised plan:",
-    ]:
-        if marker in content:
-            plan_update = content.split(marker)[1].strip()
-            task_status = {
-                "planning": cl.Text(
-                    name="planned_tasks",
-                    content="",
-                    display="side",
-                ),
-                "overview": cl.Text(
-                    name="task_overview",
-                    content="",
-                    display="side",
-                ),
-                "completion": cl.Text(
-                    name="completed_tasks",
-                    content="",
-                    display="side",
-                ),
-                "execution": cl.Text(
-                    name="execution_progress",
-                    content="",
-                    display="side",
-                ),
-            }
-            await extract_and_add_plan_tasks(
-                plan_update,
-                task_list,
-                task_status,
-                message_id,
-                is_update=True,
-            )
-            break
+        # Trigger chat restart
+        await cl.ChatRestartEvent().send()
+    except Exception as e:
+        logger.error(f"Error during reset: {e}")
+        await cl.Message(content=f"Error during reset: {str(e)}").send()
 
 
 def _rename_author(orig_author: str) -> str:
