@@ -135,3 +135,19 @@ def cleanup_running_instances() -> None:
         subprocess.run(["pkill", "-f", "agenticfleet"], check=False)
     except Exception as e:
         logger.error(f"Failed to cleanup running instances: {e}")
+
+
+def ensure_directory_exists(path: str) -> None:
+    """
+    Ensure that a directory exists. If it does not, create it (including parents).
+    Args:
+        path: The directory path to ensure exists.
+    """
+    import os
+    from pathlib import Path
+    logger = logging.getLogger(__name__)
+    try:
+        Path(path).mkdir(parents=True, exist_ok=True)
+        logger.debug(f"Ensured directory exists: {path}")
+    except Exception as e:
+        logger.error(f"Failed to create directory {path}: {e}")

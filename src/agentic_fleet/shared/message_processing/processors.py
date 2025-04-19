@@ -256,10 +256,11 @@ async def _handle_image_data(image_data: Union[str, bytes]) -> Optional[Image]:
                 return image
         elif isinstance(image_data, bytes):
             from agentic_fleet.config import config_manager
+            from agentic_fleet.core.utils import ensure_directory_exists
 
             env_config = config_manager.get_environment_settings()
-            debug_dir = os.path.join(env_config["logs_dir"], "debug")
-            os.makedirs(debug_dir, exist_ok=True)
+            debug_dir = os.path.join(env_config.logs_dir, "debug")
+            ensure_directory_exists(debug_dir)
             temp_path = os.path.join(debug_dir, f"screenshot_{int(time.time())}.png")
             with open(temp_path, "wb") as f:
                 f.write(image_data)

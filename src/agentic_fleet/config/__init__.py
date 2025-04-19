@@ -11,16 +11,26 @@ from agentic_fleet.config.models import (
     load_all_configs,
 )
 from agentic_fleet.config.settings import (
-    get_api_config,
     get_app_defaults,
-    get_app_info,
-    get_environment_config,
     get_logging_config,
-    get_performance_config,
     get_security_config,
+    get_environment_config,
+    get_performance_config,
+    get_api_config,
+    get_app_info,
     load_app_settings,
     validate_env_vars,
 )
+from agentic_fleet.config.settings.models import (
+    EnvironmentConfig,
+    DefaultsConfig,
+    SecurityConfig,
+    ApiConfig,
+    CorsConfig,
+    LoggingConfig,
+    OAuthProviderConfig,
+)
+from agentic_fleet.core.utils import ensure_directory_exists
 
 # Configuration root directory
 CONFIG_ROOT = Path(__file__).parent
@@ -33,9 +43,12 @@ class ConfigurationManager:
         self._llm_configs = {}
         self._agent_configs = {}
         self._fleet_configs = {}
-        self._environment = {}
-        self._security = {}
-        self._defaults = {}
+        self._environment = None  # Will be EnvironmentConfig
+        self._security = None
+        self._defaults = None
+        self._api = None
+        self._cors = None
+        self._logging = None
 
     def load_all(self):
         """Load all configuration files."""
@@ -50,33 +63,27 @@ class ConfigurationManager:
             # Load app settings
             app_settings = load_app_settings()
             env_settings = app_settings.get("environment", {})
+            defaults_settings = app_settings.get("defaults", {})
+            security_settings = app_settings.get("security", {})
+            api_settings = app_settings.get("api", {})
+            cors_settings = app_settings.get("cors", {})
+            logging_settings = app_settings.get("logging", {})
 
-            # Load environment settings
-            self._environment = {
-                "workspace_dir": os.getenv("WORKSPACE_DIR", env_settings.get("workspace_dir", "workspace")),
-                "debug_dir": os.getenv("DEBUG_DIR", env_settings.get("debug_dir", "debug")),
-                "downloads_dir": os.getenv("DOWNLOADS_DIR", env_settings.get("downloads_dir", "downloads")),
-                "logs_dir": os.getenv("LOGS_DIR", env_settings.get("logs_dir", "logs")),
-                "stream_delay": float(os.getenv("STREAM_DELAY", str(env_settings.get("stream_delay", "0.01")))),
-            }
+            # Typed config objects
+            self._environment = EnvironmentConfig(**env_settings)
+            self._defaults = DefaultsConfig(**defaults_settings)
+            if "oauth_providers" in security_settings:
+                security_settings["oauth_providers"] = [
+                    OAuthProviderConfig(**prov) for prov in security_settings["oauth_providers"]
+                ]
+            self._security = SecurityConfig(**security_settings)
+            self._api = ApiConfig(**api_settings)
+            self._cors = CorsConfig(**cors_settings)
+            self._logging = LoggingConfig(**logging_settings)
 
             # Ensure directories exist
             self._ensure_directories()
 
-            # Load security settings
-            self._security = {
-                "use_oauth": os.getenv("USE_OAUTH", "false").lower() == "true",
-                "oauth_providers": [],
-            }
-
-            # Load default settings
-            self._defaults = {
-                "max_rounds": int(os.getenv("DEFAULT_MAX_ROUNDS", "10")),
-                "max_time": int(os.getenv("DEFAULT_MAX_TIME", "300")),
-                "max_stalls": int(os.getenv("DEFAULT_MAX_STALLS", "3")),
-                "start_page": os.getenv("DEFAULT_START_PAGE", "https://www.bing.com"),
-                "system_prompt": os.getenv("DEFAULT_SYSTEM_PROMPT", "You are a helpful AI assistant."),
-            }
         except FileNotFoundError as e:
             print(f"Warning: Configuration file not found: {e}")
             print("Using default configurations...")
@@ -131,17 +138,26 @@ class ConfigurationManager:
         """Get team configuration settings."""
         return get_team_config(team_name)
 
-    def get_environment_settings(self) -> Dict:
-        """Get environment settings."""
+    def get_environment_settings(self) -> EnvironmentConfig:
+        """Get environment settings as a typed object."""
         return self._environment
 
-    def get_security_settings(self) -> Dict:
-        """Get security settings."""
+    def get_defaults(self) -> DefaultsConfig:
+        """Get default settings as a typed object."""
+        return self._defaults
+
+    def get_security_settings(self) -> SecurityConfig:
+        """Get security settings as a typed object."""
         return self._security
 
-    def get_defaults(self) -> Dict:
-        """Get default settings."""
-        return self._defaults
+    def get_api_settings(self) -> ApiConfig:
+        return self._api
+
+    def get_cors_settings(self) -> CorsConfig:
+        return self._cors
+
+    def get_logging_settings(self) -> LoggingConfig:
+        return self._logging
 
     def get_app_settings(self) -> Dict:
         """Get application settings."""
@@ -154,11 +170,11 @@ class ConfigurationManager:
 
         # Create the .files directory if it doesn't exist
         files_dir = project_root / ".files"
-        files_dir.mkdir(exist_ok=True)
+        ensure_directory_exists(str(files_dir))
 
         # Create subdirectories
         for dir_key in ["workspace_dir", "debug_dir", "downloads_dir", "logs_dir"]:
-            dir_path = self._environment.get(dir_key, "")
+            dir_path = self._environment.__dict__.get(dir_key, "")
             if dir_path:
                 # Handle both absolute and relative paths
                 if dir_path.startswith("./"):
@@ -172,10 +188,10 @@ class ConfigurationManager:
                     full_path = Path(dir_path)
 
                 # Create the directory
-                full_path.mkdir(parents=True, exist_ok=True)
+                ensure_directory_exists(str(full_path))
 
                 # Update the environment with the full path
-                self._environment[dir_key] = str(full_path)
+                self._environment.__dict__[dir_key] = str(full_path)
 
 
 # Create singleton instance
