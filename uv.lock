@@ -229,7 +229,7 @@ requires-dist = [
     { name = "black", specifier = ">=24.10.0" },
     { name = "black", marker = "extra == 'dev'", specifier = ">=24.1.1" },
     { name = "black", marker = "extra == 'test'", specifier = ">=23.9.0" },
-    { name = "chainlit", specifier = ">=2.5.0" },
+    { name = "chainlit", specifier = ">=2.5.5" },
     { name = "click", specifier = ">=8.1.8" },
     { name = "codecov", specifier = ">=2.1.13" },
     { name = "composio-core", specifier = ">=0.6.11.post1" },

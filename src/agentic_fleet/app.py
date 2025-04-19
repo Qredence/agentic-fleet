@@ -3,6 +3,7 @@ import logging
 import traceback
 from pathlib import Path
 from typing import Optional
+import uuid
 
 # Third-party imports
 import chainlit as cl
@@ -93,7 +94,7 @@ async def start_chat(profile: cl.ChatProfile | None = None):
         cl.user_session.set("settings", default_settings)
 
         # Set session ID for chat history
-        session_id = str(cl.user_session.id)
+        session_id = str(uuid.uuid4())
         cl.user_session.set("session_id", session_id)
 
         # Setup chat settings UI
@@ -162,7 +163,7 @@ async def on_action_view_history(action: cl.Action):
         # Get the current session ID
         session_id = cl.user_session.get("session_id")
         if not session_id:
-            session_id = str(cl.user_session.id)
+            session_id = str(uuid.uuid4())
             cl.user_session.set("session_id", session_id)
 
         # Get chat history for the current session
@@ -201,12 +202,13 @@ async def on_chat_stop():
     global app_manager
 
     if app_manager:
-        await app_manager.stop()
-        logger.info("Application manager stopped")
+        try:
+            await app_manager.shutdown()
+            logger.info("Application manager stopped")
+        except Exception as e:
+            logger.error(f"Error shutting down application manager: {e}")
 
     # Clear user session
-    # Since UserSession doesn't have a clear() or keys() method, we'll use a different approach
-    # Just set the most common session variables to None
-    session_vars = ["agent_team", "team", "app_manager", "settings", "ui_render_mode", "mcp_servers"]
+    session_vars = ["agent_team", "team", "app_manager", "settings", "ui_render_mode", "mcp_servers", "session_id"]
     for key in session_vars:
         cl.user_session.set(key, None)

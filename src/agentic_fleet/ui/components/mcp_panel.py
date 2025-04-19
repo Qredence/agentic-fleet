@@ -5,7 +5,7 @@ This module provides UI components for displaying MCP information.
 
 import json
 import logging
-from typing import Any
+from typing import Any, List, Dict
 
 import chainlit as cl
 
@@ -14,8 +14,12 @@ from agentic_fleet.pool.mcp.mcp_factory import get_available_mcp_configs
 logger = logging.getLogger(__name__)
 
 
-async def list_available_mcps() -> None:
-    """List available MCP connections and their tools."""
+async def list_available_mcps() -> List[Dict[str, Any]]:
+    """List available MCP connections and their tools.
+    
+    Returns:
+        List of MCP server configurations
+    """
     try:
         # Get connected MCP servers from user session
         mcp_servers = cl.user_session.get("mcp_servers", [])
@@ -25,7 +29,7 @@ async def list_available_mcps() -> None:
                 content="No MCP servers currently connected. Use the MCP panel to connect to an MCP server.",
                 author="MCP Manager",
             ).send()
-            return
+            return []
 
         # Build a markdown list of all tools
         mcp_tools_list = "# Available MCP Tools\n\n"
@@ -54,12 +58,17 @@ async def list_available_mcps() -> None:
             content=mcp_tools_list,
             author="MCP Manager",
         ).send()
+        
+        # Return the list of servers
+        return mcp_servers
+        
     except Exception as e:
         logger.error(f"Error retrieving MCP tools: {e}")
         await cl.Message(
             content=f"Error retrieving MCP tools: {str(e)}",
             author="MCP Manager",
         ).send()
+        return []
 
 
 async def send_mcp_panel(mcp_id: str) -> None:
@@ -92,8 +101,18 @@ async def send_mcp_panel(mcp_id: str) -> None:
 
         # Add actions
         actions = [
-            cl.Action(name="connect_mcp", label="🔌 Connect", tooltip="Connect to this MCP", value=mcp_id),
-            cl.Action(name="disconnect_mcp", label="❌ Disconnect", tooltip="Disconnect from this MCP", value=mcp_id),
+            cl.Action(
+                name="connect_mcp",
+                label="🔌 Connect",
+                tooltip="Connect to this MCP",
+                payload={"mcp_id": mcp_id}
+            ),
+            cl.Action(
+                name="disconnect_mcp",
+                label="❌ Disconnect",
+                tooltip="Disconnect from this MCP",
+                payload={"mcp_id": mcp_id}
+            ),
         ]
 
         # Send the panel

@@ -55,7 +55,7 @@ class ChatService:
                 "timestamp": now,
                 "edited_at": None,
                 "is_edited": False,
-                "metadata": message.message_metadata,
+                "metadata": message.metadata,
                 "attachments": message.attachments,
             }
 

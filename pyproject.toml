@@ -91,7 +91,7 @@ dependencies = [
     # Web & Utilities
     "beautifulsoup4>=4.12.0",
     "bing>=0.31",
-    "chainlit>=2.5.0",
+    "chainlit>=2.5.5",
     "docker>=7.1.0",
     "markitdown>=0.0.1a3",
     "opentelemetry-instrumentation-fastapi>=0.44b0",
@@ -291,6 +291,7 @@ Source = "https://github.com/qredence/agentic-fleet"
 
 [project.scripts]
 agentic-fleet = "agentic_fleet.main:main"
+agentic-fleet-chainlit = "agentic_fleet.chainlit_app:main"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/agentic_fleet"]

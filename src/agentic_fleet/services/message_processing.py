@@ -16,7 +16,11 @@ TASK_STATUS_FAILED = "failed"
 
 async def stream_text(text: str, delay: float = 0.03) -> None:
     """Stream text with a delay between characters."""
-    await cl.Message(content=text, stream=True).send()
+    msg = cl.Message(content="")
+    await msg.send()
+    for char in text:
+        await msg.stream_token(char)
+    await msg.update()
 
 
 async def process_response(

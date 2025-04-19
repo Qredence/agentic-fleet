@@ -135,11 +135,8 @@ async def handle_chat_message(message: cl.Message) -> None:
 
         # Run streaming with proper error handling
         try:
-            # First await the coroutine to get the async iterator
-            stream_generator = await team.run_stream(task=message.content)
-
-            # Now iterate over the async iterator
-            async for chunk in stream_generator:
+            # Directly use the async generator without awaiting it first
+            async for chunk in team.run_stream(task=message.content):
                 try:
                     # Process the response chunk to get structured data
                     processed_data, plan_update = await process_response(chunk)

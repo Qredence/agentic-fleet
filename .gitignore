@@ -325,3 +325,4 @@ yarn-debug.log*
 yarn-error.log*
 
 .qodo
+.cursor/rules.md

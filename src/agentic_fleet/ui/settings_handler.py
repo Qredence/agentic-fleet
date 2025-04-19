@@ -106,11 +106,8 @@ class SettingsManager:
 
 
 @cl.set_chat_profiles
-def chat_profiles(user: Any | None = None) -> list[cl.ChatProfile]:
+async def chat_profiles() -> list[cl.ChatProfile]:
     """Define enhanced chat profiles with metadata and icons.
-
-    Args:
-        user: Optional user object passed by Chainlit
 
     Returns:
         List of chat profiles
@@ -124,7 +121,7 @@ def chat_profiles(user: Any | None = None) -> list[cl.ChatProfile]:
                 "- Response Time: <2s average\n"
                 "- Best for: Simple queries & quick tasks"
             ),
-            icon="/public/icons/rocket.svg",
+            icon="public/icons/rocket.svg",
         ),
         cl.ChatProfile(
             name="Magentic Fleet Standard",
@@ -134,11 +131,6 @@ def chat_profiles(user: Any | None = None) -> list[cl.ChatProfile]:
                 "- Multi-agent collaboration\n"
                 "- Complex problem solving"
             ),
-            icon="/public/icons/microscope.svg",
-            model_settings={
-                "model_name": "o3-mini",
-                "max_tokens": 128000,
-                "temperature_range": [0.5, 1.2],
-            },
+            icon="public/icons/microscope.svg",
         ),
     ]

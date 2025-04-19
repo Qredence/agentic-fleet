@@ -1,146 +1,213 @@
 """
-Core application module for AgenticFleet.
+Application manager for AgenticFleet.
 
-This module provides the main application management functionality,
-including initialization and lifecycle management.
+This module provides the main application manager that coordinates:
+- Agent team initialization and management
+- Configuration handling
+- Resource lifecycle management
 """
 
 import logging
-import os
-from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Dict, Optional
+from typing import Any, Dict, List, Optional, Union
 
-from autogen_ext.models.openai import AzureOpenAIChatCompletionClient
+from autogen_core.models import ChatCompletionClient
+from pydantic import BaseModel
+
+from agentic_fleet.core.agents.base import BaseAgent
+from agentic_fleet.core.agents.team_factory import TeamFactory
+from agentic_fleet.core.agents.team_manager import TeamManager
+from agentic_fleet.config import config_manager
 
 logger = logging.getLogger(__name__)
 
-
-@dataclass
-class ApplicationConfig:
-    """Configuration for the AgenticFleet application."""
-
+class ApplicationConfig(BaseModel):
+    """Configuration for the application manager."""
     project_root: Path
-    config_path: Optional[Path] = None
     debug: bool = False
     log_level: str = "INFO"
-    host: str = "localhost"
-    port: int = 8000
-
-    @property
-    def settings(self) -> Dict[str, Any]:
-        """Get application settings.
-
-        Returns:
-            Dict[str, Any]: Application settings
-        """
-        return {
-            "debug": self.debug,
-            "log_level": self.log_level,
-            "host": self.host,
-            "port": self.port,
-        }
-
+    default_team_specialization: str = "general"
 
 class ApplicationManager:
     """
-    Manages the lifecycle and configuration of the AgenticFleet application.
-
-    This class is responsible for initializing, starting, and shutting down
-    the application components, including model clients, agents, and services.
-
-    Attributes:
-        config: The application configuration
-        model_client: The Azure OpenAI client for chat completions
-        _initialized: Flag indicating whether the application has been initialized
+    Main application manager for AgenticFleet.
+    
+    The application manager:
+    1. Initializes and manages agent teams
+    2. Handles configuration and resources
+    3. Coordinates task execution
+    4. Manages application lifecycle
     """
 
-    def __init__(self, config: ApplicationConfig):
-        """
-        Initialize a new ApplicationManager instance.
+    def __init__(
+        self,
+        config: ApplicationConfig,
+        model_client: Optional[ChatCompletionClient] = None,
+    ) -> None:
+        """Initialize the application manager.
 
         Args:
-            config: The application configuration
+            config: Application configuration
+            model_client: The LLM client to use
         """
         self.config = config
-        self._initialized = False
-        # Use AZURE_OPENAI_DEPLOYMENT environment variable if available, otherwise fall back to a default
-        deployment_name = os.getenv("AZURE_OPENAI_DEPLOYMENT", "gpt-4o-mini")
+        self.model_client = model_client
+        
+        # Initialize components
+        self.team_factory = TeamFactory(model_client=model_client)
+        self.active_teams: Dict[str, TeamManager] = {}
+        
+        # Configure logging
+        logging.basicConfig(
+            level=getattr(logging, config.log_level.upper()),
+            format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+        )
 
+    async def start(self) -> None:
+        """Start the application manager."""
+        logger.info("Starting application manager")
+        
+        # Load configurations
+        config_manager.load_all()
+        
+        # Initialize default team if configured
+        if self.config.default_team_specialization:
+            await self.create_team(self.config.default_team_specialization)
+
+    async def create_team(
+        self,
+        specialization: str,
+        custom_config: Optional[Dict[str, Any]] = None,
+        team_id: Optional[str] = None
+    ) -> TeamManager:
+        """Create a new agent team.
+
+        Args:
+            specialization: The team specialization to use
+            custom_config: Optional custom configuration
+            team_id: Optional specific team ID to use
+
+        Returns:
+            The created team manager instance
+
+        Raises:
+            ValueError: If team creation fails
+        """
         try:
-            self.model_client = AzureOpenAIChatCompletionClient(
-                model="gpt-4o-mini-2024-07-18",
-                deployment=deployment_name,
-                api_key=os.getenv("AZURE_OPENAI_API_KEY"),
-                api_base=os.getenv("AZURE_OPENAI_API_BASE"),
-                api_version=os.getenv("AZURE_OPENAI_API_VERSION"),
-                streaming=True,
+            # Initialize default agents
+            available_agents = self._initialize_default_agents()
+            
+            # Create team using factory
+            team = self.team_factory.create_team(
+                specialization=specialization,
+                available_agents=available_agents,
+                custom_config=custom_config
             )
+            
+            # Generate team ID if not provided
+            if not team_id:
+                team_id = f"{specialization}_{len(self.active_teams)}"
+            
+            # Store team
+            self.active_teams[team_id] = team
+            
+            logger.info(f"Created team {team_id} with specialization {specialization}")
+            return team
+
         except Exception as e:
-            if "DeploymentNotFound" in str(e):
-                error_msg = (
-                    f"Azure OpenAI deployment '{deployment_name}' not found. "
-                    f"Please check that the deployment exists in your Azure OpenAI resource. "
-                    f"If you created the deployment recently, please wait a few minutes and try again. "
-                    f"You can also set the AZURE_OPENAI_DEPLOYMENT environment variable to specify a different deployment."
-                )
-                logger.error(error_msg)
-                raise ValueError(error_msg) from e
+            logger.error(f"Failed to create team: {str(e)}")
+            raise ValueError(f"Team creation failed: {str(e)}")
+
+    def _initialize_default_agents(self) -> Dict[str, BaseAgent]:
+        """Initialize the default set of agents.
+
+        Returns:
+            Dictionary of initialized agents
+        """
+        from agentic_fleet.core.agents.team import initialize_default_agents
+        agents = initialize_default_agents(model_client=self.model_client)
+        return {agent.name: agent for agent in agents}
+
+    async def execute_task(
+        self,
+        task: str,
+        team_id: Optional[str] = None,
+        specialization: Optional[str] = None
+    ) -> Any:
+        """Execute a task using an agent team.
+
+        Args:
+            task: The task to execute
+            team_id: Optional specific team ID to use
+            specialization: Optional team specialization to use if creating new team
+
+        Returns:
+            Task execution results
+
+        Raises:
+            ValueError: If no team is available and none can be created
+        """
+        # Get or create team
+        team = None
+        if team_id and team_id in self.active_teams:
+            team = self.active_teams[team_id]
+        elif specialization:
+            team = await self.create_team(specialization)
+        elif self.active_teams:
+            # Use first available team
+            team = next(iter(self.active_teams.values()))
+        else:
+            # Create default team
+            team = await self.create_team(self.config.default_team_specialization)
+
+        if not team:
+            raise ValueError("No team available and failed to create one")
+
+        # Execute task
+        try:
+            return await team.execute_task(task)
+        except Exception as e:
+            logger.error(f"Task execution failed: {str(e)}")
             raise
 
-    async def initialize(self):
+    def get_team(self, team_id: str) -> Optional[TeamManager]:
+        """Get a team by ID.
+
+        Args:
+            team_id: ID of the team to retrieve
+
+        Returns:
+            The team manager if found, None otherwise
         """
-        Initialize the application manager.
+        return self.active_teams.get(team_id)
 
-        This method sets up all required components and services for the application.
-        If the application is already initialized, this method returns without doing anything.
+    def list_teams(self) -> List[Dict[str, Any]]:
+        """List all active teams.
+
+        Returns:
+            List of team information dictionaries
         """
-        if self._initialized:
-            return
+        return [
+            {
+                "id": team_id,
+                "name": team.config.name,
+                "description": team.config.description,
+                "metrics": team.get_metrics(),
+                "agent_status": team.get_agent_status()
+            }
+            for team_id, team in self.active_teams.items()
+        ]
 
-        # Initialize core components
-        self._initialized = True
-
-    async def start(self):
-        """
-        Start the application manager.
-
-        This method initializes all components if not already initialized and
-        starts the main application loop. It handles the startup sequence for
-        all application components.
-        """
-        if not self._initialized:
-            await self.initialize()
-
-        # Start application components
-        logger.info("Starting application components")
-
-    async def shutdown(self):
-        """
-        Shutdown the application manager.
-
-        This method gracefully stops all application components and services.
-        If the application is not initialized, this method returns without doing anything.
-        """
-        if not self._initialized:
-            return
-
-        self._initialized = False
-
-
-def create_application(config: Optional[Dict[str, Any]] = None) -> ApplicationManager:
-    """
-    Create and initialize a new application instance.
-
-    Args:
-        config: Optional configuration dictionary
-
-    Returns:
-        ApplicationManager: Initialized application manager
-    """
-    if config is None:
-        config = {}
-
-    app_config = ApplicationConfig(project_root=Path(__file__).parent.parent.parent, **config)
-
-    return ApplicationManager(app_config)
+    async def shutdown(self) -> None:
+        """Shut down the application manager and clean up resources."""
+        logger.info("Shutting down application manager")
+        
+        # Clean up teams
+        for team in self.active_teams.values():
+            try:
+                await team.cleanup()
+            except Exception as e:
+                logger.warning(f"Error cleaning up team: {str(e)}")
+        
+        self.active_teams.clear()
+        logger.info("Application manager shutdown complete")
