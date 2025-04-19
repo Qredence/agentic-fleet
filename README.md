@@ -58,7 +58,6 @@ Here's a glimpse into the upcoming features and tasks planned for the near futur
 
 *This roadmap is subject to change based on priorities and development progress. Check the [Issues tab](link-to-your-issues-page) for the most up-to-date status.*
 
-
 ## GitAds Sponsored
 [![Sponsored by GitAds](https://gitads.dev/v1/ad-serve?source=qredence/agenticfleet@github)](https://gitads.dev/v1/ad-track?source=qredence/agenticfleet@github)
 
@@ -427,6 +426,49 @@ pytest
    - Create a new file in `api/routes/`
    - Implement the endpoint handlers
    - Register the routes in `api/routes/__init__.py`
+
+## Repository Structure
+
+The AgenticFleet codebase is organized as follows:
+
+```
+src/agentic_fleet/         # Main source code
+├── api/                   # API endpoints and handlers
+├── apps/                  # Application implementations
+├── config/                # Configuration management
+├── core/                  # Core functionality and utilities
+├── database/              # Database abstractions
+├── exceptions/            # Custom exceptions
+├── models/                # Data models
+├── pool/                  # Modular component pools
+│   ├── agents/            # Agent implementations
+│   ├── database/          # Database abstractions
+│   ├── mcp/               # Master Control Program implementations
+│   ├── memory/            # Memory implementations
+│   ├── plugin/            # Plugin system
+│   └── tool/              # Tool implementations
+├── schemas/               # API schemas and validators
+├── services/              # Business logic services
+├── shared/                # Shared utilities and constants
+├── tools/                 # Legacy tool implementations (deprecated)
+├── ui/                    # User interface components
+└── utils/                 # Utility functions
+
+tests/                     # Test suite
+├── unit/                  # Unit tests
+├── integration/           # Integration tests
+└── e2e/                   # End-to-end tests
+
+docs/                      # Documentation
+config/                    # Configuration files
+scripts/                   # Utility scripts
+```
+
+### Key Design Patterns
+
+- **Pool Pattern**: Modular components (agents, tools, MCPs) are organized in pools under `src/agentic_fleet/pool/` for better organization and extensibility.
+- **Service Pattern**: Business logic is encapsulated in service classes under `src/agentic_fleet/services/`.
+- **Configuration Management**: Centralized configuration via `src/agentic_fleet/config/`.
 
 ## Configuration
 

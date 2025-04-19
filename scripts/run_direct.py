@@ -5,9 +5,7 @@ import os
 import sys
 
 # Add src directory to path
-src_dir = os.path.abspath(
-    os.path.join(os.path.dirname(os.path.dirname(__file__)), "src")
-)
+src_dir = os.path.abspath(os.path.join(os.path.dirname(os.path.dirname(__file__)), "src"))
 sys.path.insert(0, src_dir)
 
 # Set environment variables

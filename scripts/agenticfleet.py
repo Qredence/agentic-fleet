@@ -9,6 +9,7 @@ import sys
 src_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "src"))
 sys.path.insert(0, src_dir)
 
+
 def main():
     """Main entry point."""
     if len(sys.argv) < 2:
@@ -35,13 +36,7 @@ def main():
         app_path = os.path.join(app_dir, "app.py")
 
         # Build chainlit command
-        cmd = [
-            "chainlit",
-            "run",
-            app_path,
-            "--port",
-            "8000"
-        ]
+        cmd = ["chainlit", "run", app_path, "--port", "8000"]
 
         try:
             subprocess.run(cmd, check=True)
@@ -54,6 +49,7 @@ def main():
     else:
         print(f"Unknown command: {command}")
         sys.exit(1)
+
 
 if __name__ == "__main__":
     main()

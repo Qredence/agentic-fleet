@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "agentic-fleet"
-version = "0.4.94"
+version = "0.4.95"
 description = "A powerful multi-agent system for adaptive AI reasoning and automation"
 readme = "README.md"
 requires-python = ">=3.10"
@@ -139,6 +139,7 @@ dependencies = [
     "mem0ai>=0.1.86",
     "mcp>=1.6.0",
     "literalai>=0.1.201",
+    "debugpy>=1.8.12",
 ]
 
 [project.optional-dependencies]
