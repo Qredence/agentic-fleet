@@ -187,7 +187,7 @@ The Agentic Fleet system is organized into several key components:
    make install
 
    # Or manually with pip
-  uv  pip install -r requirements.txt
+   pip install -r requirements.txt
 
    # Or install directly from source with development dependencies
    pip install -e ".[dev]"
