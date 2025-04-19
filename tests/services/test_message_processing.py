@@ -2,21 +2,18 @@
 Unit tests for the message processing service.
 """
 
-import pytest
 import chainlit as cl
+import pytest
+from autogen_agentchat.messages import TextMessage
 
 from agentic_fleet.services.message_processing import process_response
-from autogen_agentchat.messages import TextMessage
 
 
 @pytest.mark.asyncio
 async def test_process_response_text_message(mock_chainlit_context):
     """Test processing a TextMessage response."""
     # Create a mock TextMessage
-    mock_message = TextMessage(
-        content="Test response message",
-        source="TestAgent"
-    )
+    mock_message = TextMessage(content="Test response message", source="TestAgent")
 
     response_text, plan_update = await process_response(mock_message)
 
@@ -36,7 +33,7 @@ async def test_process_response_with_plan(mock_chainlit_context):
             "1. First step\n"
             "2. Second step"
         ),
-        source="PlanningAgent"
+        source="PlanningAgent",
     )
 
     response_text, plan_update = await process_response(mock_message)
@@ -52,7 +49,7 @@ async def test_process_response_list(mock_chainlit_context):
     # Create a list of TextMessages
     mock_messages = [
         TextMessage(content="First message", source="Agent1"),
-        TextMessage(content="Second message", source="Agent2")
+        TextMessage(content="Second message", source="Agent2"),
     ]
 
     response_text, plan_update = await process_response(mock_messages)
@@ -66,9 +63,7 @@ async def test_process_response_list(mock_chainlit_context):
 async def test_process_response_dict(mock_chainlit_context):
     """Test processing a dictionary response."""
     # Create a dictionary response
-    mock_dict_response = {
-        "content": "Dictionary response message"
-    }
+    mock_dict_response = {"content": "Dictionary response message"}
 
     response_text, plan_update = await process_response(mock_dict_response)
 

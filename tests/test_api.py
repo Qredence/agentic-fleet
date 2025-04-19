@@ -64,7 +64,7 @@ class TestAgentsEndpoints:
             "name": "Test Agent",
             "description": "A test agent",
             "capabilities": ["text", "code"],
-            "status": "active"
+            "status": "active",
         }
         response = client.post("/agents/", json=agent_data)
         assert response.status_code == 200
@@ -82,7 +82,7 @@ class TestAgentsEndpoints:
             "name": "Test Agent",
             "description": "A test agent",
             "capabilities": ["text", "code"],
-            "status": "active"
+            "status": "active",
         }
         create_response = client.post("/agents/", json=agent_data)
         agent_id = create_response.json()["id"]
@@ -114,11 +114,7 @@ class TestTasksEndpoints:
         """
         Test creating a task.
         """
-        task_data = {
-            "title": "Test Task",
-            "description": "A test task",
-            "status": "pending"
-        }
+        task_data = {"title": "Test Task", "description": "A test task", "status": "pending"}
         response = client.post("/tasks/", json=task_data)
         assert response.status_code == 200
         data = response.json()
@@ -150,7 +146,7 @@ class TestChatEndpoints:
             "content": "Hello, world!",
             "sender": "user",
             "receiver": "assistant",
-            "session_id": "test_session"
+            "session_id": "test_session",
         }
         response = client.post("/chat/messages", json=message_data)
         assert response.status_code == 200

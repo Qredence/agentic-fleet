@@ -18,8 +18,6 @@ class TaskStatus(str, Enum):
     FAILED = "failed"
 
 
-
-
 # Patch the Chainlit context to avoid context-related errors
 @pytest.fixture
 def mock_chainlit_context():
@@ -31,9 +29,7 @@ def mock_chainlit_context():
 
 
 @pytest.mark.asyncio
-async def test_extract_plan_tasks(
-    mock_user_session, mock_chainlit_elements, mock_chainlit_context
-):
+async def test_extract_plan_tasks(mock_user_session, mock_chainlit_elements, mock_chainlit_context):
     """Test extracting tasks from a plan and adding them to a task list."""
     plan_text = """1. First step
     2. Second step
@@ -50,9 +46,7 @@ async def test_extract_plan_tasks(
     task_status = {"planning": planning_mock, "overview": overview_mock}
 
     with patch("chainlit.TaskList", return_value=task_list):
-        await extract_and_add_plan_tasks(
-            plan_text, task_list, task_status, "test_message", False
-        )
+        await extract_and_add_plan_tasks(plan_text, task_list, task_status, "test_message", False)
 
     # Check that add_task was called for each extracted task
     assert task_list.add_task.call_count == 4
@@ -61,9 +55,7 @@ async def test_extract_plan_tasks(
 
 
 @pytest.mark.asyncio
-async def test_extract_plan_tasks_with_update(
-    mock_user_session, mock_chainlit_elements, mock_chainlit_context
-):
+async def test_extract_plan_tasks_with_update(mock_user_session, mock_chainlit_elements, mock_chainlit_context):
     """Test extracting tasks with the update flag set to True."""
     plan_text = "Updated plan with a single task"
 
@@ -77,18 +69,14 @@ async def test_extract_plan_tasks_with_update(
     task_status = {"planning": planning_mock, "overview": overview_mock}
 
     with patch("chainlit.TaskList", return_value=task_list):
-        await extract_and_add_plan_tasks(
-            plan_text, task_list, task_status, "test_message", True
-        )
+        await extract_and_add_plan_tasks(plan_text, task_list, task_status, "test_message", True)
 
     # Check that add_task was called for each extracted task
     assert task_list.add_task.call_count == 1
 
 
 @pytest.mark.asyncio
-async def test_update_task_status(
-    mock_user_session, mock_chainlit_elements, mock_chainlit_context
-):
+async def test_update_task_status(mock_user_session, mock_chainlit_elements, mock_chainlit_context):
     """Test updating task status."""
     # Create a mock task
     mock_task = MagicMock()
@@ -113,9 +101,7 @@ async def test_update_task_status(
 
 
 @pytest.mark.asyncio
-async def test_update_task_status_nonexistent_task(
-    mock_user_session, mock_chainlit_elements, mock_chainlit_context
-):
+async def test_update_task_status_nonexistent_task(mock_user_session, mock_chainlit_elements, mock_chainlit_context):
     """Test updating a task that doesn't exist."""
     # Set up mock tasks in user session
     mock_user_session["plan_tasks"] = {}
