@@ -2,7 +2,7 @@
 
 # Standard library imports
 import logging
-from typing import Optional, Dict
+from typing import Dict, Optional
 
 # Third-party imports
 import chainlit as cl
@@ -84,7 +84,6 @@ async def extract_and_add_plan_tasks(
     else:
         logger.error("Task list not found in session, cannot add tasks.")
 
-
     # Update plan steps in user session
     try:
         if is_update:
@@ -113,9 +112,7 @@ async def extract_and_add_plan_tasks(
     logger.info(f"Added {len(tasks)} tasks to the task list")
 
 
-async def update_task_status(
-    task_id: str, status: TaskStatus, message: str | None = None
-):
+async def update_task_status(task_id: str, status: TaskStatus, message: str | None = None):
     """Update the status of a task in the task list.
 
     Args:
@@ -128,16 +125,16 @@ async def update_task_status(
         # Ensure plan_tasks is retrieved as a dict, default to empty dict if None or error
         plan_tasks = cl.user_session.get("plan_tasks") or {}
         if not isinstance(plan_tasks, dict):
-             logger.warning(f"plan_tasks retrieved from session is not a dict: {type(plan_tasks)}. Resetting.")
-             plan_tasks = {}
+            logger.warning(f"plan_tasks retrieved from session is not a dict: {type(plan_tasks)}. Resetting.")
+            plan_tasks = {}
 
     except Exception as e:
-        plan_tasks = {} # Default to empty dict on error
+        plan_tasks = {}  # Default to empty dict on error
         logger.warning(f"Could not access user session for plan_tasks: {e}")
 
     # Check if task_id exists in the plan_tasks dictionary
     if isinstance(plan_tasks, dict) and task_id in plan_tasks:
-        task = plan_tasks.get(task_id) # Use .get for safer access
+        task = plan_tasks.get(task_id)  # Use .get for safer access
 
         # Ensure task is not None before accessing attributes
         if task:
@@ -153,19 +150,19 @@ async def update_task_status(
                     task.title = f"{task.title} ❌ {message}"
 
             # Update the task data within the plan_tasks dictionary
-            if isinstance(task, dict): # If task is stored as dict
-                 task['status'] = status
-                 if message and status == TaskStatus.DONE:
-                     task['title'] = f"{task.get('title', '')} ✓ {message}"
-                 elif message and status == TaskStatus.FAILED:
-                     task['title'] = f"{task.get('title', '')} ❌ {message}"
-            elif hasattr(task, "status"): # If task is stored as object
-                 task.status = status
-                 if hasattr(task, "title"):
-                     if message and status == TaskStatus.DONE:
-                         task.title = f"{task.title} ✓ {message}"
-                     elif message and status == TaskStatus.FAILED:
-                         task.title = f"{task.title} ❌ {message}"
+            if isinstance(task, dict):  # If task is stored as dict
+                task["status"] = status
+                if message and status == TaskStatus.DONE:
+                    task["title"] = f"{task.get('title', '')} ✓ {message}"
+                elif message and status == TaskStatus.FAILED:
+                    task["title"] = f"{task.get('title', '')} ❌ {message}"
+            elif hasattr(task, "status"):  # If task is stored as object
+                task.status = status
+                if hasattr(task, "title"):
+                    if message and status == TaskStatus.DONE:
+                        task.title = f"{task.title} ✓ {message}"
+                    elif message and status == TaskStatus.FAILED:
+                        task.title = f"{task.title} ❌ {message}"
 
             # Update the plan_tasks dictionary in the session (only if task was found)
             try:
@@ -180,18 +177,18 @@ async def update_task_status(
                     # Re-send the entire task list to reflect updates
                     await task_list.send()
                 else:
-                     logger.warning("Could not retrieve task_list from session to send update.")
+                    logger.warning("Could not retrieve task_list from session to send update.")
             except Exception as e:
                 logger.warning(f"Could not send task list update: {e}")
 
             logger.info(f"Updated task {task_id} status to {status}")
         else:
-             # Log if task was None
-             logger.warning(f"Task object for ID {task_id} is None or invalid.")
+            # Log if task was None
+            logger.warning(f"Task object for ID {task_id} is None or invalid.")
 
     elif not isinstance(plan_tasks, dict):
-         logger.error(f"plan_tasks is not a dictionary, cannot update task {task_id}")
+        logger.error(f"plan_tasks is not a dictionary, cannot update task {task_id}")
     else:
         # Only log warning if plan_tasks is confirmed to be a dict and task_id not found
         if isinstance(plan_tasks, dict):
-             logger.warning(f"Task ID {task_id} not found in plan_tasks dictionary.")
+            logger.warning(f"Task ID {task_id} not found in plan_tasks dictionary.")

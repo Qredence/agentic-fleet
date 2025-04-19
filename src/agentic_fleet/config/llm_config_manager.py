@@ -18,7 +18,7 @@ class LLMConfigManager:
 
     def __init__(self, config_path: Optional[str] = None):
         """Initialize the LLM config manager.
-        
+
         Args:
             config_path: Path to the LLM configuration YAML file.
                 If None, will use the default path.
@@ -42,13 +42,13 @@ class LLMConfigManager:
 
     def get_model_config(self, model_name: str) -> Dict[str, Any]:
         """Get the configuration for a specific model.
-        
+
         Args:
             model_name: The name of the model to get the configuration for.
-            
+
         Returns:
             The model configuration dictionary.
-            
+
         Raises:
             ValueError: If the model is not found in the configuration.
         """
@@ -59,13 +59,13 @@ class LLMConfigManager:
 
     def get_profile_config(self, profile_name: str) -> Dict[str, Any]:
         """Get the configuration for a specific profile.
-        
+
         Args:
             profile_name: The name of the profile to get the configuration for.
-            
+
         Returns:
             The profile configuration dictionary.
-            
+
         Raises:
             ValueError: If the profile is not found in the configuration.
         """
@@ -80,13 +80,13 @@ class LLMConfigManager:
 
     def get_model_for_profile(self, profile_name: str) -> Dict[str, Any]:
         """Get the model configuration for a specific profile.
-        
+
         Args:
             profile_name: The name of the profile to get the model for.
-            
+
         Returns:
             The model configuration dictionary for the profile.
-            
+
         Raises:
             ValueError: If the profile or model is not found in the configuration.
         """
@@ -98,7 +98,7 @@ class LLMConfigManager:
 
     def get_all_models(self) -> Dict[str, Dict[str, Any]]:
         """Get all available models.
-        
+
         Returns:
             Dictionary of all model configurations.
         """
@@ -106,7 +106,7 @@ class LLMConfigManager:
 
     def get_all_profiles(self) -> Dict[str, Dict[str, Any]]:
         """Get all available profiles.
-        
+
         Returns:
             Dictionary of all profile configurations.
         """

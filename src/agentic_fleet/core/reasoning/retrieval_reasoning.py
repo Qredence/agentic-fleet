@@ -91,9 +91,7 @@ class RetrievalReasoningOrchestrator(BaseChatAgent):
                     return await self._handle_mind_map(query)
         return None
 
-    async def process_message(
-        self, message: ChatMessage, token: CancellationToken = None
-    ) -> Response:
+    async def process_message(self, message: ChatMessage, token: CancellationToken = None) -> Response:
         """
         Process incoming messages and manage the reasoning flow.
 
@@ -139,9 +137,7 @@ class RetrievalReasoningOrchestrator(BaseChatAgent):
             },
         )
 
-    async def generate_response(
-        self, messages: Sequence[LLMMessage], token: CancellationToken = None
-    ) -> CreateResult:
+    async def generate_response(self, messages: Sequence[LLMMessage], token: CancellationToken = None) -> CreateResult:
         """
         Generate a response based on the message history.
 

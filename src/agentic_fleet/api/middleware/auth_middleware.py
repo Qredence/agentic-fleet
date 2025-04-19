@@ -27,8 +27,7 @@ class AuthMiddleware(BaseHTTPMiddleware):
         """
         super().__init__(app)
         self.api_key = api_key
-        self.exclude_paths = exclude_paths or [
-            "/api/docs", "/api/redoc", "/api/openapi.json"]
+        self.exclude_paths = exclude_paths or ["/api/docs", "/api/redoc", "/api/openapi.json"]
 
     async def dispatch(self, request: Request, call_next: Callable) -> Response:
         """
@@ -58,10 +57,7 @@ class AuthMiddleware(BaseHTTPMiddleware):
                 f"Unauthorized access attempt: {request.method} {request.url.path} "
                 f"Client: {request.client.host if request.client else 'Unknown'}"
             )
-            raise HTTPException(
-                status_code=HTTP_401_UNAUTHORIZED,
-                detail="Invalid or missing API key"
-            )
+            raise HTTPException(status_code=HTTP_401_UNAUTHORIZED, detail="Invalid or missing API key")
 
         # API key is valid, proceed with the request
         return await call_next(request)

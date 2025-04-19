@@ -26,21 +26,11 @@ class Settings(BaseSettings):
     debug: bool = Field(default=False, env="DEBUG")
 
     # Azure OpenAI settings
-    azure_openai_api_key: str = Field(
-        default="azure_openai_api_key", env="AZURE_OPENAI_API_KEY"
-    )
-    azure_openai_endpoint: str = Field(
-        default="AZURE_OPENAI_ENDPOINT", env="AZURE_OPENAI_ENDPOINT"
-    )
-    azure_openai_deployment: str = Field(
-        default="AZURE_OPENAI_DEPLOYMENT", env="AZURE_OPENAI_DEPLOYMENT"
-    )
-    azure_openai_api_version: str = Field(
-        default="AZURE_OPENAI_API_VERSION", env="AZURE_OPENAI_API_VERSION"
-    )
-    azure_openai_model: str = Field(
-        default="AZURE_OPENAI_MODEL", env="AZURE_OPENAI_MODEL"
-    )
+    azure_openai_api_key: str = Field(default="azure_openai_api_key", env="AZURE_OPENAI_API_KEY")
+    azure_openai_endpoint: str = Field(default="AZURE_OPENAI_ENDPOINT", env="AZURE_OPENAI_ENDPOINT")
+    azure_openai_deployment: str = Field(default="AZURE_OPENAI_DEPLOYMENT", env="AZURE_OPENAI_DEPLOYMENT")
+    azure_openai_api_version: str = Field(default="AZURE_OPENAI_API_VERSION", env="AZURE_OPENAI_API_VERSION")
+    azure_openai_model: str = Field(default="AZURE_OPENAI_MODEL", env="AZURE_OPENAI_MODEL")
 
     # Configuration dictionaries
     model_config: Dict[str, Any] = Field(default_factory=dict)

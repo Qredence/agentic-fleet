@@ -16,11 +16,7 @@ class EnhancedAssistantAgent(AssistantAgent):
     """Enhanced version of AssistantAgent with additional capabilities."""
 
     def __init__(
-        self,
-        name: str,
-        system_message: str,
-        model_client: Optional[ChatCompletionClient] = None,
-        **kwargs: Any
+        self, name: str, system_message: str, model_client: Optional[ChatCompletionClient] = None, **kwargs: Any
     ) -> None:
         """
         Initialize the enhanced assistant agent.
@@ -31,12 +27,7 @@ class EnhancedAssistantAgent(AssistantAgent):
             model_client: Optional model client for chat completion
             **kwargs: Additional arguments passed to AssistantAgent
         """
-        super().__init__(
-            name=name,
-            system_message=system_message,
-            model_client=model_client,
-            **kwargs
-        )
+        super().__init__(name=name, system_message=system_message, model_client=model_client, **kwargs)
         self._model_client = model_client
 
     async def process_message(self, message: str, token: CancellationToken = None) -> Response:
@@ -60,8 +51,7 @@ class EnhancedAssistantAgent(AssistantAgent):
 
 
 async def create_agent_team(
-    agents: List[EnhancedAssistantAgent],
-    team_config: Optional[Dict[str, Any]] = None
+    agents: List[EnhancedAssistantAgent], team_config: Optional[Dict[str, Any]] = None
 ) -> List[EnhancedAssistantAgent]:
     """
     Create a team of agents with specified configuration.
@@ -82,4 +72,4 @@ async def create_agent_team(
         for key, value in agent_config.items():
             setattr(agent, key, value)
 
-    return agents 
+    return agents

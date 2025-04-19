@@ -141,8 +141,6 @@ def create_application(config: Optional[Dict[str, Any]] = None) -> ApplicationMa
     if config is None:
         config = {}
 
-    app_config = ApplicationConfig(
-        project_root=Path(__file__).parent.parent.parent, **config
-    )
+    app_config = ApplicationConfig(project_root=Path(__file__).parent.parent.parent, **config)
 
     return ApplicationManager(app_config)

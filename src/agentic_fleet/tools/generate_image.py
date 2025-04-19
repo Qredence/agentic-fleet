@@ -30,9 +30,7 @@ async def generate_image(
     client = OpenAI()
 
     # Generate images using DALL-E 3
-    response = client.images.generate(
-        model="dall-e-3", prompt=query, n=1, response_format="b64_json", size=image_size
-    )
+    response = client.images.generate(model="dall-e-3", prompt=query, n=1, response_format="b64_json", size=image_size)
 
     saved_files = []
 

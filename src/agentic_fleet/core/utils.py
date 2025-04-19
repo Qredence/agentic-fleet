@@ -6,18 +6,16 @@ from typing import Optional, Tuple
 
 import psutil
 
-from agentic_fleet.config import config_manager
-
 logger = logging.getLogger(__name__)
 
 
 def cleanup_workspace():
     """Cleanup workspace by removing the workspace directory if it exists."""
+    from agentic_fleet.config import config_manager
+
     try:
         env_config = config_manager.get_environment_settings()
-        workspace_dir = os.path.join(
-            os.getcwd(), env_config.get("workspace_dir", "workspace")
-        )
+        workspace_dir = os.path.join(os.getcwd(), getattr(env_config, "workspace_dir", "workspace"))
         if os.path.exists(workspace_dir):
             import shutil
 
@@ -30,9 +28,7 @@ def cleanup_workspace():
 def create_and_set_workspace(user_profile):
     """Create and set a new workspace for the user. This is a stub implementation."""
     workspace = os.path.join(os.getcwd(), "workspace")
-    logger.info(
-        f"Workspace created for user: {user_profile.get('name', 'unknown')}, at {workspace}"
-    )
+    logger.info(f"Workspace created for user: {user_profile.get('name', 'unknown')}, at {workspace}")
     # You might want to add more logic here to create the directory and update user_profile
     user_profile["workspace"] = workspace
     return workspace
@@ -145,6 +141,7 @@ def ensure_directory_exists(path: str) -> None:
     """
     import os
     from pathlib import Path
+
     logger = logging.getLogger(__name__)
     try:
         Path(path).mkdir(parents=True, exist_ok=True)

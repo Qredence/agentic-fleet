@@ -2,12 +2,10 @@
 
 # Standard library imports
 import logging
-import os
-from typing import Any, Dict, List, Optional, Union, cast
+from typing import Any
 
 # Third-party imports
 import chainlit as cl
-from chainlit.chat_settings import ChatSettings
 from chainlit.input_widget import Select, Slider, Switch
 
 # Local imports
@@ -24,19 +22,22 @@ class SettingsManager:
         """Initialize the settings manager."""
         self.defaults = config_manager.get_defaults()
 
-    def get_default_settings(self) -> Dict[str, Any]:
+    def get_default_settings(self) -> dict[str, Any]:
         """Get default settings values.
 
         Returns:
             Dictionary of default settings
         """
+        # Handle DefaultsConfig object which doesn't have a get method
+        defaults_dict = self.defaults.__dict__ if hasattr(self.defaults, "__dict__") else {}
+
         return {
-            "max_rounds": self.defaults.get("max_rounds", 10),
-            "max_time": self.defaults.get("max_time", 300),
-            "max_stalls": self.defaults.get("max_stalls", 3),
-            "start_page": self.defaults.get("start_page", "https://www.bing.com"),
-            "temperature": self.defaults.get("temperature", 0.7),
-            "system_prompt": self.defaults.get("system_prompt", ""),
+            "max_rounds": defaults_dict.get("max_rounds", 10),
+            "max_time": defaults_dict.get("max_time", 300),
+            "max_stalls": defaults_dict.get("max_stalls", 3),
+            "start_page": defaults_dict.get("start_page", "https://www.bing.com"),
+            "temperature": defaults_dict.get("temperature", 0.7),
+            "system_prompt": defaults_dict.get("system_prompt", ""),
         }
 
     async def setup_chat_settings(self) -> None:
@@ -89,15 +90,14 @@ class SettingsManager:
 
         # Update each setting that was changed
         # Handle both Pydantic model (with dict() method) and regular dict
-        if hasattr(settings, 'dict') and callable(getattr(settings, 'dict')):
+        if hasattr(settings, "dict") and callable(getattr(settings, "dict")):
             settings_dict = settings.dict()
         else:
-            settings_dict = cast(Dict[str, Any], settings)
+            settings_dict = dict(settings)
 
         for key, value in settings_dict.items():
             if key in current_settings and current_settings[key] != value:
-                logger.info(
-                    f"Setting '{key}' updated from {current_settings[key]} to {value}")
+                logger.info(f"Setting '{key}' updated from {current_settings[key]} to {value}")
                 current_settings[key] = value
 
         # Store updated settings
@@ -106,7 +106,7 @@ class SettingsManager:
 
 
 @cl.set_chat_profiles
-async def chat_profiles(user: Optional[Any] = None) -> List[cl.ChatProfile]:
+def chat_profiles(user: Any | None = None) -> list[cl.ChatProfile]:
     """Define enhanced chat profiles with metadata and icons.
 
     Args:
@@ -124,7 +124,8 @@ async def chat_profiles(user: Optional[Any] = None) -> List[cl.ChatProfile]:
                 "- Response Time: <2s average\n"
                 "- Best for: Simple queries & quick tasks"
             ),
-            icon="/public/icons/rocket.svg"),
+            icon="/public/icons/rocket.svg",
+        ),
         cl.ChatProfile(
             name="Magentic Fleet Standard",
             markdown_description=(

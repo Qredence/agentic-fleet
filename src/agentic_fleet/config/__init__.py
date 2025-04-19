@@ -2,7 +2,7 @@
 
 import os
 from pathlib import Path
-from typing import Any, Dict, Optional
+from typing import Optional
 
 from agentic_fleet.config.models import (
     get_agent_config,
@@ -11,26 +11,25 @@ from agentic_fleet.config.models import (
     load_all_configs,
 )
 from agentic_fleet.config.settings import (
-    get_app_defaults,
-    get_logging_config,
-    get_security_config,
-    get_environment_config,
-    get_performance_config,
     get_api_config,
+    get_app_defaults,
     get_app_info,
+    get_environment_config,
+    get_logging_config,
+    get_performance_config,
+    get_security_config,
     load_app_settings,
     validate_env_vars,
 )
 from agentic_fleet.config.settings.models import (
-    EnvironmentConfig,
-    DefaultsConfig,
-    SecurityConfig,
     ApiConfig,
     CorsConfig,
+    DefaultsConfig,
+    EnvironmentConfig,
     LoggingConfig,
     OAuthProviderConfig,
+    SecurityConfig,
 )
-from agentic_fleet.core.utils import ensure_directory_exists
 
 # Configuration root directory
 CONFIG_ROOT = Path(__file__).parent
@@ -104,9 +103,9 @@ class ConfigurationManager:
                             "vision": True,
                             "function_calling": True,
                             "json_output": True,
-                        }
+                        },
                     }
-                }
+                },
             }
         }
         self._agent_configs = {}
@@ -114,6 +113,11 @@ class ConfigurationManager:
 
     def validate_environment(self) -> Optional[str]:
         """Validate environment configuration."""
+        # Use the imported validate_env_vars function if available
+        if 'validate_env_vars' in globals():
+            return validate_env_vars()
+            
+        # Fallback to the original implementation
         required_vars = [
             "AZURE_OPENAI_API_KEY",
             "AZURE_OPENAI_ENDPOINT",
@@ -126,15 +130,15 @@ class ConfigurationManager:
             return f"Missing required environment variables: {', '.join(missing)}"
         return None
 
-    def get_model_settings(self, provider: str, model_name: Optional[str] = None) -> Dict:
+    def get_model_settings(self, provider: str, model_name: str | None = None) -> dict:
         """Get model configuration settings."""
         return get_model_config(provider, model_name)
 
-    def get_agent_settings(self, agent_name: str) -> Dict:
+    def get_agent_settings(self, agent_name: str) -> dict:
         """Get agent configuration settings."""
         return get_agent_config(agent_name)
 
-    def get_team_settings(self, team_name: str) -> Dict:
+    def get_team_settings(self, team_name: str) -> dict:
         """Get team configuration settings."""
         return get_team_config(team_name)
 
@@ -159,12 +163,14 @@ class ConfigurationManager:
     def get_logging_settings(self) -> LoggingConfig:
         return self._logging
 
-    def get_app_settings(self) -> Dict:
+    def get_app_settings(self) -> dict:
         """Get application settings."""
         return load_app_settings()
 
     def _ensure_directories(self):
         """Ensure that all required directories exist."""
+        from agentic_fleet.core.utils import ensure_directory_exists
+
         # Get the project root directory
         project_root = Path(__file__).parent.parent.parent.parent
 

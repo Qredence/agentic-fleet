@@ -17,7 +17,7 @@ from .modules import ChainOfThoughtModule, ReflectionModule
 class DSPyReasoningAgent(AssistantAgent):
     """
     An Autogen agent enhanced with DSPy reasoning capabilities.
-    
+
     This agent combines Autogen's message handling with DSPy's structured
     reasoning, optimized for Azure OpenAI mini models.
     """
@@ -28,7 +28,7 @@ class DSPyReasoningAgent(AssistantAgent):
         model_name: AzureMiniCompiler.SUPPORTED_MODELS,
         api_key: str,
         system_prompt: Optional[str] = None,
-        **kwargs
+        **kwargs,
     ):
         """
         Initialize the DSPy-enhanced reasoning agent.
@@ -41,28 +41,20 @@ class DSPyReasoningAgent(AssistantAgent):
             **kwargs: Additional configuration parameters
         """
         super().__init__(name=name, **kwargs)
-        
+
         # Initialize DSPy compiler and modules
-        self.compiler = AzureMiniCompiler(
-            model_name=model_name,
-            api_key=api_key,
-            **kwargs
-        )
-        
+        self.compiler = AzureMiniCompiler(model_name=model_name, api_key=api_key, **kwargs)
+
         self.cot_module = ChainOfThoughtModule()
         self.reflection_module = ReflectionModule()
-        
+
         # Compile modules with our specialized compiler
         self.cot_module = self.compiler.compile(self.cot_module)
         self.reflection_module = self.compiler.compile(self.reflection_module)
-        
+
         self.system_prompt = system_prompt or self._default_system_prompt()
 
-    async def process_message(
-        self,
-        message: Message,
-        context: Optional[Dict[str, Any]] = None
-    ) -> Message:
+    async def process_message(self, message: Message, context: Optional[Dict[str, Any]] = None) -> Message:
         """
         Process incoming messages using DSPy-enhanced reasoning.
 
@@ -74,17 +66,12 @@ class DSPyReasoningAgent(AssistantAgent):
             A response message with enhanced reasoning
         """
         # Generate chain-of-thought reasoning
-        cot_result = await self._generate_reasoning(
-            message.content,
-            context
-        )
-        
+        cot_result = await self._generate_reasoning(message.content, context)
+
         # Reflect on the reasoning if needed
-        if context and context.get('reflect', False):
-            reflection = await self._reflect_on_reasoning(
-                cot_result.reasoning_steps
-            )
-            
+        if context and context.get("reflect", False):
+            reflection = await self._reflect_on_reasoning(cot_result.reasoning_steps)
+
             # Incorporate reflection into response
             response_content = (
                 f"Reasoning:\n{cot_result.reasoning_steps}\n\n"
@@ -93,38 +80,17 @@ class DSPyReasoningAgent(AssistantAgent):
                 f"Suggested Improvements:\n{reflection.improvements}"
             )
         else:
-            response_content = (
-                f"Reasoning:\n{cot_result.reasoning_steps}\n\n"
-                f"Conclusion:\n{cot_result.conclusion}"
-            )
-        
-        return Message(
-            role="assistant",
-            content=response_content,
-            name=self.name
-        )
+            response_content = f"Reasoning:\n{cot_result.reasoning_steps}\n\nConclusion:\n{cot_result.conclusion}"
 
-    async def _generate_reasoning(
-        self,
-        content: str,
-        context: Optional[Dict[str, Any]] = None
-    ) -> dspy.Prediction:
+        return Message(role="assistant", content=response_content, name=self.name)
+
+    async def _generate_reasoning(self, content: str, context: Optional[Dict[str, Any]] = None) -> dspy.Prediction:
         """Generate chain-of-thought reasoning for the given content."""
-        return self.cot_module(
-            context=context or {},
-            question=content
-        )
+        return self.cot_module(context=context or {}, question=content)
 
-    async def _reflect_on_reasoning(
-        self,
-        reasoning: str,
-        feedback: Optional[str] = None
-    ) -> dspy.Prediction:
+    async def _reflect_on_reasoning(self, reasoning: str, feedback: Optional[str] = None) -> dspy.Prediction:
         """Generate reflection on previous reasoning."""
-        return self.reflection_module(
-            reasoning=reasoning,
-            feedback=feedback
-        )
+        return self.reflection_module(reasoning=reasoning, feedback=feedback)
 
     def _default_system_prompt(self) -> str:
         """Get the default system prompt for the agent."""

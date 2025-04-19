@@ -12,9 +12,7 @@ from sqlalchemy.orm import sessionmaker
 from agentic_fleet.database.base import Base
 
 # Get database URL from environment variable or use SQLite as default
-DATABASE_URL = os.environ.get(
-    "DATABASE_URL", "sqlite:///./agentic_fleet.db"
-)
+DATABASE_URL = os.environ.get("DATABASE_URL", "sqlite:///./agentic_fleet.db")
 
 # Create engine based on whether the URL is for an async database or not
 if DATABASE_URL.startswith("postgresql+asyncpg"):
@@ -24,9 +22,7 @@ if DATABASE_URL.startswith("postgresql+asyncpg"):
         echo=False,
         future=True,
     )
-    SessionLocal = sessionmaker(
-        engine, class_=AsyncSession, expire_on_commit=False
-    )
+    SessionLocal = sessionmaker(engine, class_=AsyncSession, expire_on_commit=False)
 
     async def get_db() -> Generator[AsyncSession, None, None]:
         """
@@ -42,18 +38,16 @@ if DATABASE_URL.startswith("postgresql+asyncpg"):
             except Exception:
                 await session.rollback()
                 raise
+
 else:
     # Sync engine for SQLite or other databases
     engine = create_engine(
         DATABASE_URL,
-        connect_args={"check_same_thread": False} if DATABASE_URL.startswith(
-            "sqlite") else {},
+        connect_args={"check_same_thread": False} if DATABASE_URL.startswith("sqlite") else {},
         echo=False,
         future=True,
     )
-    SessionLocal = sessionmaker(
-        autocommit=False, autoflush=False, bind=engine
-    )
+    SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
     def get_db() -> Generator:
         """

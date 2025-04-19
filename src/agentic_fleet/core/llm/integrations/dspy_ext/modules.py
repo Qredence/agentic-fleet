@@ -16,7 +16,7 @@ class ChainOfThoughtModule(dspy.Module):
 
     input_context = InputField(desc="Context or situation to reason about")
     input_question = InputField(desc="Specific question or problem to address")
-    
+
     reasoning_steps = OutputField(desc="Step-by-step reasoning process")
     conclusion = OutputField(desc="Final conclusion based on reasoning")
 
@@ -44,7 +44,7 @@ class ChainOfThoughtModule(dspy.Module):
             Reasoning steps should be clear and concise.
             """
         )
-        
+
         return self.predict(prompt)
 
 
@@ -53,15 +53,11 @@ class ReflectionModule(dspy.Module):
 
     input_reasoning = InputField(desc="Previous reasoning or decision process")
     input_feedback = InputField(desc="Optional feedback or critique")
-    
+
     insights = OutputField(desc="Key insights from reflection")
     improvements = OutputField(desc="Suggested improvements")
 
-    def forward(
-        self,
-        reasoning: str,
-        feedback: Optional[str] = None
-    ) -> dspy.Prediction:
+    def forward(self, reasoning: str, feedback: Optional[str] = None) -> dspy.Prediction:
         """
         Generate reflective analysis of previous reasoning.
 
@@ -75,12 +71,13 @@ class ReflectionModule(dspy.Module):
         prompt_text = f"""
         Previous Reasoning: {reasoning}
         """
-        
+
         if feedback:
             prompt_text += f"\nFeedback: {feedback}"
-            
+
         prompt = dspy.ChainOfThought(
-            prompt_text + """
+            prompt_text
+            + """
             
             Let's reflect on this reasoning:
             1) What are the key insights?
@@ -90,5 +87,5 @@ class ReflectionModule(dspy.Module):
             Provide specific, actionable insights.
             """
         )
-        
+
         return self.predict(prompt)

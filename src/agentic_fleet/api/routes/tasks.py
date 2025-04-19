@@ -16,9 +16,7 @@ router = APIRouter()
 
 
 @router.get("/", response_model=Dict[str, List[Task]])
-async def list_tasks(
-    task_service: TaskService = Depends(get_task_service)
-) -> Dict[str, List[Task]]:
+async def list_tasks(task_service: TaskService = Depends(get_task_service)) -> Dict[str, List[Task]]:
     """
     List all tasks.
     """
@@ -30,10 +28,7 @@ async def list_tasks(
 
 
 @router.post("/", response_model=Task)
-async def create_task(
-    task: TaskCreate,
-    task_service: TaskService = Depends(get_task_service)
-) -> Task:
+async def create_task(task: TaskCreate, task_service: TaskService = Depends(get_task_service)) -> Task:
     """
     Create a new task.
     """
@@ -44,18 +39,14 @@ async def create_task(
 
 
 @router.get("/{task_id}", response_model=Task)
-async def get_task(
-    task_id: str,
-    task_service: TaskService = Depends(get_task_service)
-) -> Task:
+async def get_task(task_id: str, task_service: TaskService = Depends(get_task_service)) -> Task:
     """
     Get details for a specific task.
     """
     try:
         task = await task_service.get_task(task_id)
         if not task:
-            raise HTTPException(
-                status_code=404, detail=f"Task {task_id} not found")
+            raise HTTPException(status_code=404, detail=f"Task {task_id} not found")
         return task
     except HTTPException:
         raise
@@ -64,19 +55,14 @@ async def get_task(
 
 
 @router.put("/{task_id}", response_model=Task)
-async def update_task(
-    task_id: str,
-    task: TaskUpdate,
-    task_service: TaskService = Depends(get_task_service)
-) -> Task:
+async def update_task(task_id: str, task: TaskUpdate, task_service: TaskService = Depends(get_task_service)) -> Task:
     """
     Update an existing task.
     """
     try:
         updated_task = await task_service.update_task(task_id, task)
         if not updated_task:
-            raise HTTPException(
-                status_code=404, detail=f"Task {task_id} not found")
+            raise HTTPException(status_code=404, detail=f"Task {task_id} not found")
         return updated_task
     except HTTPException:
         raise
@@ -85,18 +71,14 @@ async def update_task(
 
 
 @router.delete("/{task_id}", response_model=Dict[str, bool])
-async def delete_task(
-    task_id: str,
-    task_service: TaskService = Depends(get_task_service)
-) -> Dict[str, bool]:
+async def delete_task(task_id: str, task_service: TaskService = Depends(get_task_service)) -> Dict[str, bool]:
     """
     Delete a task.
     """
     try:
         success = await task_service.delete_task(task_id)
         if not success:
-            raise HTTPException(
-                status_code=404, detail=f"Task {task_id} not found")
+            raise HTTPException(status_code=404, detail=f"Task {task_id} not found")
         return {"success": True}
     except HTTPException:
         raise
@@ -105,19 +87,14 @@ async def delete_task(
 
 
 @router.post("/{task_id}/assign/{agent_id}", response_model=Task)
-async def assign_task(
-    task_id: str,
-    agent_id: str,
-    task_service: TaskService = Depends(get_task_service)
-) -> Task:
+async def assign_task(task_id: str, agent_id: str, task_service: TaskService = Depends(get_task_service)) -> Task:
     """
     Assign a task to an agent.
     """
     try:
         task = await task_service.assign_task(task_id, agent_id)
         if not task:
-            raise HTTPException(
-                status_code=404, detail=f"Task {task_id} not found")
+            raise HTTPException(status_code=404, detail=f"Task {task_id} not found")
         return task
     except HTTPException:
         raise

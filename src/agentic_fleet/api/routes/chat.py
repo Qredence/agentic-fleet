@@ -21,8 +21,7 @@ router = APIRouter()
 
 @router.get("/messages", response_model=Dict[str, List[ChatMessage]])
 async def list_messages(
-    session_id: str,
-    chat_service: ChatService = Depends(get_chat_service)
+    session_id: str, chat_service: ChatService = Depends(get_chat_service)
 ) -> Dict[str, List[ChatMessage]]:
     """
     List all chat messages for a session.
@@ -39,8 +38,7 @@ async def list_messages(
 
 @router.post("/messages", response_model=ChatMessage)
 async def create_message(
-    message: ChatMessageCreate,
-    chat_service: ChatService = Depends(get_chat_service)
+    message: ChatMessageCreate, chat_service: ChatService = Depends(get_chat_service)
 ) -> ChatMessage:
     """
     Create a new chat message.
@@ -52,18 +50,14 @@ async def create_message(
 
 
 @router.get("/messages/{message_id}", response_model=ChatMessage)
-async def get_message(
-    message_id: str,
-    chat_service: ChatService = Depends(get_chat_service)
-) -> ChatMessage:
+async def get_message(message_id: str, chat_service: ChatService = Depends(get_chat_service)) -> ChatMessage:
     """
     Get a specific chat message.
     """
     try:
         message = await chat_service.get_message(message_id)
         if not message:
-            raise HTTPException(
-                status_code=404, detail=f"Message {message_id} not found")
+            raise HTTPException(status_code=404, detail=f"Message {message_id} not found")
         return message
     except HTTPException:
         raise
@@ -73,9 +67,7 @@ async def get_message(
 
 @router.put("/messages/{message_id}", response_model=ChatMessage)
 async def update_message(
-    message_id: str,
-    message: ChatMessageUpdate,
-    chat_service: ChatService = Depends(get_chat_service)
+    message_id: str, message: ChatMessageUpdate, chat_service: ChatService = Depends(get_chat_service)
 ) -> ChatMessage:
     """
     Update a chat message.
@@ -83,8 +75,7 @@ async def update_message(
     try:
         updated_message = await chat_service.update_message(message_id, message)
         if not updated_message:
-            raise HTTPException(
-                status_code=404, detail=f"Message {message_id} not found")
+            raise HTTPException(status_code=404, detail=f"Message {message_id} not found")
         return updated_message
     except HTTPException:
         raise
@@ -93,18 +84,14 @@ async def update_message(
 
 
 @router.delete("/messages/{message_id}", response_model=Dict[str, bool])
-async def delete_message(
-    message_id: str,
-    chat_service: ChatService = Depends(get_chat_service)
-) -> Dict[str, bool]:
+async def delete_message(message_id: str, chat_service: ChatService = Depends(get_chat_service)) -> Dict[str, bool]:
     """
     Delete a chat message.
     """
     try:
         success = await chat_service.delete_message(message_id)
         if not success:
-            raise HTTPException(
-                status_code=404, detail=f"Message {message_id} not found")
+            raise HTTPException(status_code=404, detail=f"Message {message_id} not found")
         return {"success": True}
     except HTTPException:
         raise
@@ -113,10 +100,7 @@ async def delete_message(
 
 
 @router.websocket("/ws")
-async def websocket_endpoint(
-    websocket: WebSocket,
-    chat_service: ChatService = Depends(get_chat_service)
-):
+async def websocket_endpoint(websocket: WebSocket, chat_service: ChatService = Depends(get_chat_service)):
     """
     WebSocket endpoint for real-time chat.
     """

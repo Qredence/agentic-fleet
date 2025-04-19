@@ -102,9 +102,7 @@ class CodeExecutionTool:
         # Validate code before execution
         validation = await self.validate_code(code_block)
         if not validation.valid:
-            return ExecutionResult(
-                success=False, error="Code validation failed: " + "; ".join(validation.errors)
-            )
+            return ExecutionResult(success=False, error="Code validation failed: " + "; ".join(validation.errors))
 
         # Prepare execution environment
         globals_dict = {"__builtins__": __builtins__, "np": np, "pd": pd}
@@ -132,9 +130,7 @@ class CodeExecutionTool:
             )
 
         except Exception as e:
-            execution_result = ExecutionResult(
-                success=False, error=str(e), output=output_buffer.getvalue()
-            )
+            execution_result = ExecutionResult(success=False, error=str(e), output=output_buffer.getvalue())
 
         # Record execution in history
         self.execution_history.append(
@@ -173,9 +169,7 @@ class CodeExecutionTool:
 
             if self._has_dangerous_operations(code_block.code):
                 validation_result.valid = False
-                validation_result.security_issues.append(
-                    "Potentially dangerous operations detected"
-                )
+                validation_result.security_issues.append("Potentially dangerous operations detected")
 
             # Style checks
             style_issues = []

@@ -37,9 +37,7 @@ class MindMapTool:
     logical relationships and dependencies in reasoning chains.
     """
 
-    def __init__(
-        self, graph_type: str = "directed", max_nodes: int = 50, clustering_threshold: float = 0.7
-    ) -> None:
+    def __init__(self, graph_type: str = "directed", max_nodes: int = 50, clustering_threshold: float = 0.7) -> None:
         """
         Initialize the Mind Map Tool.
 
@@ -121,11 +119,7 @@ class MindMapTool:
         analysis.append("\nKey Concepts:")
         for node, score in central_nodes:
             node_data = self.graph.nodes[node]
-            analysis.append(
-                f"- {node_data['label']} "
-                f"(Centrality: {score:.2f}, "
-                f"Type: {node_data['type']})"
-            )
+            analysis.append(f"- {node_data['label']} (Centrality: {score:.2f}, Type: {node_data['type']})")
 
         # Identify communities
         communities = list(nx.community.greedy_modularity_communities(self.graph.to_undirected()))
@@ -133,7 +127,7 @@ class MindMapTool:
         analysis.append("\nThematic Clusters:")
         for i, community in enumerate(communities):
             nodes = [self.graph.nodes[n]["label"] for n in community]
-            analysis.append(f"Cluster {i+1}: {', '.join(nodes)}")
+            analysis.append(f"Cluster {i + 1}: {', '.join(nodes)}")
 
         # Analyze paths and dependencies
         analysis.append("\nKey Dependencies:")

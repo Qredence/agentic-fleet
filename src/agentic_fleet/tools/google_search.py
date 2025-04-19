@@ -43,9 +43,7 @@ async def google_search(
     cse_id = os.getenv("GOOGLE_CSE_ID")
 
     if not api_key or not cse_id:
-        raise ValueError(
-            "Missing required environment variables. Please set GOOGLE_API_KEY and GOOGLE_CSE_ID."
-        )
+        raise ValueError("Missing required environment variables. Please set GOOGLE_API_KEY and GOOGLE_CSE_ID.")
 
     num_results = min(max(1, num_results), 10)
 
@@ -102,9 +100,7 @@ async def google_search(
 
     try:
         async with httpx.AsyncClient() as client:
-            response = await client.get(
-                "https://www.googleapis.com/customsearch/v1", params=params, timeout=10
-            )
+            response = await client.get("https://www.googleapis.com/customsearch/v1", params=params, timeout=10)
             response.raise_for_status()
             data = response.json()
 
@@ -116,9 +112,7 @@ async def google_search(
                         result["snippet"] = item.get("snippet", "")
 
                     if include_content:
-                        result["content"] = await fetch_page_content(
-                            result["link"], max_length=content_max_length
-                        )
+                        result["content"] = await fetch_page_content(result["link"], max_length=content_max_length)
 
                     results.append(result)
 

@@ -6,6 +6,7 @@ This module contains functions for handling chat messages and rendering content.
 # Standard library imports
 import logging
 import traceback
+import uuid
 
 # Third-party imports
 import chainlit as cl
@@ -38,19 +39,21 @@ async def handle_chat_message(message: cl.Message) -> None:
     # Get session ID for chat history
     session_id = cl.user_session.get("session_id")
     if not session_id:
-        session_id = str(cl.user_session.id)
+        # Fallback: generate a random session ID if not present (Chainlit user_session has no 'id' attribute)
+        session_id = str(uuid.uuid4())
         cl.user_session.set("session_id", session_id)
 
     # Store user message in chat history
     try:
         from agentic_fleet.schemas.message import MessageCreate, MessageType
+
         user_message = MessageCreate(
             content=message.content,
             sender="User",
             receiver="Agent",
             message_type=MessageType.TEXT,
             session_id=session_id,
-            metadata={}
+            metadata={},
         )
         await chat_service.process_message(user_message)
     except Exception as e:
@@ -60,7 +63,7 @@ async def handle_chat_message(message: cl.Message) -> None:
     task_list = None
     if is_tasklist_mode:
         task_list = cl.TaskList()
-        task_list.status = "Analyzing your query..." # Set status after creation
+        task_list.status = "Analyzing your query..."  # Set status after creation
         await task_list.send()
 
         # Store the task list in user session for later updates
@@ -77,17 +80,13 @@ async def handle_chat_message(message: cl.Message) -> None:
 
         # Send a welcome message
         await cl.Message(
-            content="🖌️ Canvas mode activated. Your responses will be visualized in a canvas interface.",
-            author="System"
+            content="🖌️ Canvas mode activated. Your responses will be visualized in a canvas interface.", author="System"
         ).send()
 
     try:
         # Check for reset command without showing a message
         # Handle both string and list content types
-        if (
-            isinstance(message.content, str)
-            and message.content.strip().lower() == "/reset"
-        ):
+        if isinstance(message.content, str) and message.content.strip().lower() == "/reset":
             await on_reset(cl.Action(name="reset_agents", payload={"action": "reset"}))
             if task_list:
                 task_list.status = "✅ Agents reset successfully"
@@ -109,27 +108,19 @@ async def handle_chat_message(message: cl.Message) -> None:
         # We'll process responses as they come in
 
         # Create a main message container for elements
-        main_msg = cl.Message(content="", author="Agent") # Use a generic author initially
+        main_msg = cl.Message(content="", author="Agent")  # Use a generic author initially
         await main_msg.send()
-        message_id = main_msg.id # Get the ID of the container message
+        message_id = main_msg.id  # Get the ID of the container message
 
         # Initialize status tracking differently based on render mode
         task_status = {}
         if is_tasklist_mode:
             # Create status elements for tasklist mode
             task_status = {
-                "overview": cl.Text(
-                    name="task_overview", content="📊 **Task Overview:**\n", display="side"
-                ),
-                "planning": cl.Text(
-                    name="planning", content="🧩 **Planning:**\n", display="side"
-                ),
-                "execution": cl.Text(
-                    name="execution", content="⚙️ **Execution:**\n", display="side"
-                ),
-                "results": cl.Text(
-                    name="results", content="🎯 **Results:**\n", display="side"
-                ),
+                "overview": cl.Text(name="task_overview", content="📊 **Task Overview:**\n", display="side"),
+                "planning": cl.Text(name="planning", content="🧩 **Planning:**\n", display="side"),
+                "execution": cl.Text(name="execution", content="⚙️ **Execution:**\n", display="side"),
+                "results": cl.Text(name="results", content="🎯 **Results:**\n", display="side"),
             }
 
             # Send status elements associated with the main message
@@ -137,15 +128,10 @@ async def handle_chat_message(message: cl.Message) -> None:
                 await element.send(for_id=message_id)
         elif is_custom_mode:
             # For MCP profile, use a custom welcome element
-            await cl.Custom(
-                content={
-                    "type": "mcp_console",
-                    "data": "Initializing MCP environment..."
-                }
-            ).send()
+            await cl.Custom(content={"type": "mcp_console", "data": "Initializing MCP environment..."}).send()
 
         # Process input with agent team - Stream elements directly
-        current_step = None # Track the current step for streaming text
+        current_step = None  # Track the current step for streaming text
 
         # Run streaming with proper error handling
         try:
@@ -164,8 +150,8 @@ async def handle_chat_message(message: cl.Message) -> None:
 
                     content_type = processed_data.get("type", "text")
                     content = processed_data.get("content", "")
-                    author = _rename_author(processed_data.get("author", "Agent")) # Use rename function
-                    language = processed_data.get("language") # For code
+                    author = _rename_author(processed_data.get("author", "Agent"))  # Use rename function
+                    language = processed_data.get("language")  # For code
 
                     # Handle content based on render mode
                     if is_tasklist_mode:
@@ -187,12 +173,14 @@ async def handle_chat_message(message: cl.Message) -> None:
                             # Finalize any text step before sending other content
                             if isinstance(current_step, cl.Step):
                                 await current_step.update()
-                                current_step = None # Reset step tracker
+                                current_step = None  # Reset step tracker
 
                             # Create appropriate element based on content type
                             try:
                                 if content_type == "code":
-                                    await cl.Message(content="", elements=[cl.Code(content=content, language=language)]).send()
+                                    await cl.Message(
+                                        content="", elements=[cl.Code(content=content, language=language)]
+                                    ).send()
                                 elif content_type == "image":
                                     await cl.Message(content="", elements=[cl.Image(url=content, name="image")]).send()
                                 elif content_type == "custom":
@@ -220,11 +208,7 @@ async def handle_chat_message(message: cl.Message) -> None:
                                 if len(combined_text) > 500 or "." in content:
                                     try:
                                         await cl.Custom(
-                                            content={
-                                                "type": "article",
-                                                "data": combined_text,
-                                                "author": author
-                                            }
+                                            content={"type": "article", "data": combined_text, "author": author}
                                         ).send()
                                     except Exception as e:
                                         logger.warning(f"Error sending article: {e}")
@@ -239,14 +223,19 @@ async def handle_chat_message(message: cl.Message) -> None:
                             # Send appropriate element based on content type
                             try:
                                 if content_type == "code":
-                                    await cl.Message(content="", elements=[cl.Custom(
-                                        content={
-                                            "type": "rich_code",
-                                            "language": language or "text",
-                                            "data": content,
-                                            "author": author
-                                        }
-                                    )]).send()
+                                    await cl.Message(
+                                        content="",
+                                        elements=[
+                                            cl.Custom(
+                                                content={
+                                                    "type": "rich_code",
+                                                    "language": language or "text",
+                                                    "data": content,
+                                                    "author": author,
+                                                }
+                                            )
+                                        ],
+                                    ).send()
                                 elif content_type == "image":
                                     await cl.Message(content="", elements=[cl.Image(url=content, name="image")]).send()
                                 elif content_type == "custom":
@@ -265,10 +254,7 @@ async def handle_chat_message(message: cl.Message) -> None:
                             if content_type == "text":
                                 # Add text content as a node to the canvas
                                 await add_node_to_canvas(
-                                    node_id=node_id,
-                                    node_type="text",
-                                    content=content,
-                                    metadata={"author": author}
+                                    node_id=node_id, node_type="text", content=content, metadata={"author": author}
                                 )
                             elif content_type == "code":
                                 # Add code content as a node to the canvas
@@ -276,15 +262,12 @@ async def handle_chat_message(message: cl.Message) -> None:
                                     node_id=node_id,
                                     node_type="code",
                                     content=content,
-                                    metadata={"language": language or "text", "author": author}
+                                    metadata={"language": language or "text", "author": author},
                                 )
                             elif content_type == "image":
                                 # Add image content as a node to the canvas
                                 await add_node_to_canvas(
-                                    node_id=node_id,
-                                    node_type="image",
-                                    content=content,
-                                    metadata={"author": author}
+                                    node_id=node_id, node_type="image", content=content, metadata={"author": author}
                                 )
                             elif content_type == "custom":
                                 # Add custom content as a node to the canvas
@@ -292,15 +275,12 @@ async def handle_chat_message(message: cl.Message) -> None:
                                     node_id=node_id,
                                     node_type="custom",
                                     content=str(content),
-                                    metadata={"author": author}
+                                    metadata={"author": author},
                                 )
                             elif content_type == "error":
                                 # Add error content as a node to the canvas
                                 await add_node_to_canvas(
-                                    node_id=node_id,
-                                    node_type="error",
-                                    content=content,
-                                    metadata={"author": author}
+                                    node_id=node_id, node_type="error", content=content, metadata={"author": author}
                                 )
 
                             # If there's a previous node, add an edge between them
@@ -308,10 +288,7 @@ async def handle_chat_message(message: cl.Message) -> None:
                             if previous_node_id:
                                 edge_id = f"edge_{len(cl.user_session.get('canvas_data', {}).get('edges', []))}"
                                 await add_edge_to_canvas(
-                                    edge_id=edge_id,
-                                    source_id=previous_node_id,
-                                    target_id=node_id,
-                                    edge_type="default"
+                                    edge_id=edge_id, source_id=previous_node_id, target_id=node_id, edge_type="default"
                                 )
 
                             # Store the current node ID for the next iteration
@@ -344,16 +321,12 @@ async def handle_chat_message(message: cl.Message) -> None:
                 except Exception as e:
                     # Log and handle chunk processing errors
                     logger.error(f"Error processing chunk: {e}")
-                    await cl.ErrorMessage(
-                        content=f"Error processing response chunk: {str(e)}"
-                    ).send()
+                    await cl.ErrorMessage(content=f"Error processing response chunk: {str(e)}").send()
 
         except Exception as e:
             # Log and handle stream-level errors
             logger.error(f"Streaming error: {e}")
-            await cl.ErrorMessage(
-                content=f"Streaming error: {str(e)}"
-            ).send()
+            await cl.ErrorMessage(content=f"Streaming error: {str(e)}").send()
 
         # Finalize any remaining step
         if current_step is not None:
@@ -366,15 +339,11 @@ async def handle_chat_message(message: cl.Message) -> None:
                     if combined_text.strip():
                         # Provide a default author
                         final_author = "Agent"
-                        if 'author' in locals():
+                        if "author" in locals():
                             final_author = author
 
                         await cl.Custom(
-                            content={
-                                "type": "article",
-                                "data": combined_text,
-                                "author": final_author
-                            }
+                            content={"type": "article", "data": combined_text, "author": final_author}
                         ).send()
             except Exception as e:
                 logger.warning(f"Error finalizing step: {e}")
@@ -397,13 +366,14 @@ async def handle_chat_message(message: cl.Message) -> None:
             # Store agent response in chat history
             try:
                 from agentic_fleet.schemas.message import MessageCreate, MessageType
+
                 agent_message = MessageCreate(
                     content=main_msg.content,
                     sender="Agent",
                     receiver="User",
                     message_type=MessageType.TEXT,
                     session_id=session_id,
-                    metadata={}
+                    metadata={},
                 )
                 await chat_service.process_message(agent_message)
             except Exception as e:
@@ -420,13 +390,13 @@ async def handle_chat_message(message: cl.Message) -> None:
                         name="refine_response",
                         label="🔄 Refine Response",
                         tooltip="Ask the agent to refine this response",
-                        payload={"action": "refine"}
+                        payload={"action": "refine"},
                     ),
                     cl.Action(
                         name="save_response",
                         label="💾 Save Response",
                         tooltip="Save this response for later",
-                        payload={"action": "save"}
+                        payload={"action": "save"},
                     ),
                 ],
             ).send()

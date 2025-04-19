@@ -37,17 +37,17 @@ class Smart_Agent(Agent):
     """
 
     def __init__(
-            self,
-            logger: Logger,
-            agent_configuration: AgentConfiguration,
-            client: AzureOpenAI,
-            search_vector_function: SearchVectorFunction,
-            init_history: List[dict],
-            fs: fsspec.AbstractFileSystem,
-            max_run_per_question: int = 10,
-            max_question_to_keep: int = 3,
-            max_question_with_detail_hist: int = 1,
-            image_directory: str = "images",
+        self,
+        logger: Logger,
+        agent_configuration: AgentConfiguration,
+        client: AzureOpenAI,
+        search_vector_function: SearchVectorFunction,
+        init_history: List[dict],
+        fs: fsspec.AbstractFileSystem,
+        max_run_per_question: int = 10,
+        max_question_to_keep: int = 3,
+        max_question_with_detail_hist: int = 1,
+        image_directory: str = "images",
     ) -> None:
         """Initialize the Smart Agent.
 
@@ -70,12 +70,11 @@ class Smart_Agent(Agent):
         self.__max_question_to_keep: int = max_question_to_keep
         self.__max_question_with_detail_hist: int = max_question_with_detail_hist
         self.__functions_spec: List[ChatCompletionToolParam] = [
-            tool.to_openai_tool() for tool in self._agent_configuration.tools]
+            tool.to_openai_tool() for tool in self._agent_configuration.tools
+        ]
         if len(init_history) > 0:  # initialize the conversation with the history
             self._conversation = init_history
-        self._functions_list = {
-            "search": search_vector_function.search
-        }
+        self._functions_list = {"search": search_vector_function.search}
         self.__fs: fsspec.AbstractFileSystem = fs
         self.__image_directory: str = image_directory
 
@@ -93,16 +92,18 @@ class Smart_Agent(Agent):
         question_count = 0
         removal_indices = []
 
-        for idx in range(len(self._conversation)-1, 0, -1):
+        for idx in range(len(self._conversation) - 1, 0, -1):
             message = dict(self._conversation[idx])
 
             if message.get("role") == "user":
                 question_count += 1
 
             if question_count >= max_q_with_detail_hist and question_count < max_q_to_keep:
-                if message.get("role") != "user" \
-                    and message.get("role") != "assistant" \
-                        and len(message.get("content") or []) == 0:
+                if (
+                    message.get("role") != "user"
+                    and message.get("role") != "assistant"
+                    and len(message.get("content") or []) == 0
+                ):
                     removal_indices.append(idx)
 
             if question_count >= max_q_to_keep:
@@ -117,7 +118,7 @@ class Smart_Agent(Agent):
         Removes all conversation history except for the last question and its response.
         """
 
-        for i in range(len(self._conversation)-1, -1, -1):
+        for i in range(len(self._conversation) - 1, -1, -1):
             message = dict(self._conversation[i])
 
             if message.get("role") == "user":
@@ -149,17 +150,19 @@ class Smart_Agent(Agent):
 
         self._conversation.append({"role": "user", "content": user_input})
         self.clean_up_history(
-            max_q_with_detail_hist=self.__max_question_with_detail_hist, max_q_to_keep=self.__max_question_to_keep)
+            max_q_with_detail_hist=self.__max_question_with_detail_hist, max_q_to_keep=self.__max_question_to_keep
+        )
 
         while True:
             response_message: ChatCompletionMessage
 
             if run_count >= self.__max_run_per_question:
                 self._logger.debug(
-                    msg=f"Need to move on from this question due to max run count reached ({run_count} runs)")
+                    msg=f"Need to move on from this question due to max run count reached ({run_count} runs)"
+                )
                 response_message = ChatCompletionMessage(
                     role="assistant",
-                    content="I am unable to answer this question at the moment, please ask another question."
+                    content="I am unable to answer this question at the moment, please ask another question.",
                 )
                 break
 
@@ -167,7 +170,7 @@ class Smart_Agent(Agent):
                 model=self._agent_configuration.model,
                 messages=self._conversation,
                 tools=self.__functions_spec,
-                tool_choice='auto',
+                tool_choice="auto",
                 temperature=0.2,
             )
 
@@ -186,11 +189,7 @@ class Smart_Agent(Agent):
             else:
                 break
 
-        return AgentResponse(
-            streaming=stream,
-            conversation=self._conversation,
-            response=response_message.content
-        )
+        return AgentResponse(streaming=stream, conversation=self._conversation, response=response_message.content)
 
     def __check_args(self, function, args) -> bool:
         """Check if the arguments match the function signature.
@@ -226,13 +225,11 @@ class Smart_Agent(Agent):
         """
         for tool_call in tool_calls:
             function_name: str = tool_call.function.name
-            self._logger.debug(
-                msg=f"Recommended Function call: {function_name}")
+            self._logger.debug(msg=f"Recommended Function call: {function_name}")
 
             # verify function exists
             if function_name not in self._functions_list:
-                self._logger.debug(
-                    msg=f"Function {function_name} does not exist, retrying")
+                self._logger.debug(msg=f"Function {function_name} does not exist, retrying")
                 self._conversation.pop()
                 break
 
@@ -252,8 +249,7 @@ class Smart_Agent(Agent):
                 function_response = function_to_call(**function_args)
 
             if function_name == "search":
-                function_response = self.__generate_search_function_response(
-                    function_response=function_response)
+                function_response = self.__generate_search_function_response(function_response=function_response)
 
             self._conversation.append(
                 {
@@ -276,24 +272,24 @@ class Smart_Agent(Agent):
         search_function_response = []
 
         for item in function_response:
-            image_path = os.path.join(
-                self.__image_directory, item['image_path'])
-            related_content = item['related_content']
+            image_path = os.path.join(self.__image_directory, item["image_path"])
+            related_content = item["related_content"]
 
             image_file: str | bytes = self.__fs.read_bytes(path=image_path)
-            image_bytes: bytes | None = image_file if isinstance(
-                image_file, bytes) else None
-            image_bytes = image_file.encode(
-                encoding='utf-8') if isinstance(image_file, str) else image_file
-            base64_image: str = base64.b64encode(
-                s=image_bytes).decode(encoding='utf-8')
+            image_bytes: bytes | None = image_file if isinstance(image_file, bytes) else None
+            image_bytes = image_file.encode(encoding="utf-8") if isinstance(image_file, str) else image_file
+            base64_image: str = base64.b64encode(s=image_bytes).decode(encoding="utf-8")
             self._logger.debug("image_path: ", image_path)
 
+            search_function_response.append({"type": "text", "text": f"file_name: {image_path}"})
             search_function_response.append(
-                {"type": "text", "text": f"file_name: {image_path}"})
-            search_function_response.append({"type": "image_url", "image_url": {
-                                            "url":  f"data:image/jpeg;base64,{base64_image}"}})
+                {"type": "image_url", "image_url": {"url": f"data:image/jpeg;base64,{base64_image}"}}
+            )
             search_function_response.append(
-                {"type": "text", "text": f"HINT: The following kind of content might be related to this topic\n: {related_content}"})
+                {
+                    "type": "text",
+                    "text": f"HINT: The following kind of content might be related to this topic\n: {related_content}",
+                }
+            )
 
         return search_function_response

@@ -48,7 +48,7 @@ class TaskService:
                 "updated_at": now,
                 "completed_at": None,
                 "metadata": task.metadata,
-                "results": None
+                "results": None,
             }
 
             self._tasks[task_id] = task_data
@@ -170,6 +170,5 @@ class TaskService:
 
             return Task(**task_data)
         except Exception as e:
-            logger.error(
-                f"Error assigning task {task_id} to agent {agent_id}: {str(e)}")
+            logger.error(f"Error assigning task {task_id} to agent {agent_id}: {str(e)}")
             raise

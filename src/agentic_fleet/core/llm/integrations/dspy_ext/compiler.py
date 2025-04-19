@@ -12,12 +12,13 @@ from typing import Dict, Literal, Optional
 import dspy
 from dspy.teleprompt import PromptConfig
 
+
 class AzureMiniCompiler(dspy.Compiler):
     """DSPy compiler configured specifically for Azure OpenAI mini models."""
 
     SUPPORTED_MODELS = Literal["o3-mini", "gpt-4o-mini"]
     DEFAULT_API_VERSION = "2024-12-01-preview"
-    
+
     def __init__(
         self,
         model_name: SUPPORTED_MODELS,
@@ -25,7 +26,7 @@ class AzureMiniCompiler(dspy.Compiler):
         api_version: str = DEFAULT_API_VERSION,
         deployment: Optional[str] = None,
         base_url: Optional[str] = None,
-        **kwargs
+        **kwargs,
     ):
         """
         Initialize the Azure Mini Compiler.
@@ -39,20 +40,20 @@ class AzureMiniCompiler(dspy.Compiler):
             **kwargs: Additional configuration parameters
         """
         super().__init__()
-        
+
         self.model_name = model_name
         self.api_version = api_version
         self.deployment = deployment or model_name
-        
+
         # Configure for smaller context windows and optimized prompts
         self.config = PromptConfig(
             max_tokens=4096,  # Adjusted for mini models
-            temperature=kwargs.get('temperature', 0.7),
+            temperature=kwargs.get("temperature", 0.7),
             model=f"{model_name}-{self._get_model_date()}",
             azure_deployment=self.deployment,
             azure_endpoint=base_url,
             azure_api_version=api_version,
-            azure_api_key=api_key
+            azure_api_key=api_key,
         )
 
     def _get_model_date(self) -> str:
@@ -60,12 +61,7 @@ class AzureMiniCompiler(dspy.Compiler):
         current_date = datetime.now()
         return current_date.strftime("%Y-%m-%d")
 
-    def compile(
-        self,
-        program: dspy.Program,
-        temperature: float = 0.7,
-        **kwargs
-    ) -> dspy.Prediction:
+    def compile(self, program: dspy.Program, temperature: float = 0.7, **kwargs) -> dspy.Prediction:
         """
         Compile a DSPy program with Azure mini model constraints.
 
@@ -80,15 +76,12 @@ class AzureMiniCompiler(dspy.Compiler):
         # Adjust configuration for specific compilation
         config = self.config.copy()
         config.temperature = temperature
-        
+
         # Add any additional Azure-specific parameters
-        azure_params = {
-            k: v for k, v in kwargs.items() 
-            if k.startswith('azure_')
-        }
+        azure_params = {k: v for k, v in kwargs.items() if k.startswith("azure_")}
         if azure_params:
             config.update(azure_params)
-            
+
         return super().compile(program, config=config)
 
     def get_config(self) -> Dict:
@@ -97,5 +90,5 @@ class AzureMiniCompiler(dspy.Compiler):
             "model_name": self.model_name,
             "api_version": self.api_version,
             "deployment": self.deployment,
-            "config": self.config.dict()
+            "config": self.config.dict(),
         }

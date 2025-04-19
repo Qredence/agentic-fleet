@@ -1,6 +1,7 @@
 from dataclasses import dataclass, field
 from typing import List, Optional
 
+
 @dataclass
 class EnvironmentConfig:
     debug: bool = False
@@ -9,6 +10,7 @@ class EnvironmentConfig:
     debug_dir: str = "./.files/debug"
     logs_dir: str = "./.files/logs"
     stream_delay: float = 0.01
+
 
 @dataclass
 class DefaultsConfig:
@@ -19,16 +21,19 @@ class DefaultsConfig:
     temperature: float = 0.7
     system_prompt: str = "You are a helpful AI assistant."
 
+
 @dataclass
 class OAuthProviderConfig:
     name: str
     client_id_env: str
     client_secret_env: str
 
+
 @dataclass
 class SecurityConfig:
     use_oauth: bool = True
     oauth_providers: List[OAuthProviderConfig] = field(default_factory=list)
+
 
 @dataclass
 class ApiConfig:
@@ -36,12 +41,14 @@ class ApiConfig:
     host: str = "0.0.0.0"
     port: int = 8000
 
+
 @dataclass
 class CorsConfig:
     origins: str = "*"
     credentials: bool = True
     methods: str = "GET,POST,PUT,DELETE,OPTIONS"
     headers: str = "Content-Type,Authorization"
+
 
 @dataclass
 class LoggingConfig:

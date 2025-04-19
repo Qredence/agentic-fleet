@@ -85,9 +85,7 @@ def initialize_default_agents(
     required_paths = ["workspace_dir", "downloads_dir", "debug_dir"]
     missing_paths = [path for path in required_paths if path not in env_config]
     if missing_paths:
-        raise ValueError(
-            f"Missing required environment paths: {', '.join(missing_paths)}"
-        )
+        raise ValueError(f"Missing required environment paths: {', '.join(missing_paths)}")
 
     # Default descriptions for agents
     default_descriptions = {
@@ -102,9 +100,7 @@ def initialize_default_agents(
         surfer = MultimodalWebSurfer(
             name="WebSurfer",
             model_client=app_manager.model_client,
-            description=web_surfer_config.get(
-                "description", default_descriptions["web_surfer"]
-            ),
+            description=web_surfer_config.get("description", default_descriptions["web_surfer"]),
             downloads_folder=env_config["downloads_dir"],
             debug_dir=env_config["debug_dir"],
             headless=True,
@@ -120,15 +116,11 @@ def initialize_default_agents(
         file_surfer = FileSurfer(
             name="FileSurfer",
             model_client=app_manager.model_client,
-            description=file_surfer_config.get(
-                "description", default_descriptions["file_surfer"]
-            ),
+            description=file_surfer_config.get("description", default_descriptions["file_surfer"]),
         )
 
         # Initialize Coder
-        coder = MagenticOneCoderAgent(
-            name="Coder", model_client=app_manager.model_client
-        )
+        coder = MagenticOneCoderAgent(name="Coder", model_client=app_manager.model_client)
 
         # Initialize Executor
         workspace_dir = os.path.join(os.getcwd(), env_config["workspace_dir"])
@@ -141,9 +133,7 @@ def initialize_default_agents(
         executor = CodeExecutorAgent(
             name="Executor",
             code_executor=code_executor,
-            description=executor_settings.get(
-                "description", default_descriptions["executor"]
-            ),
+            description=executor_settings.get("description", default_descriptions["executor"]),
         )
 
         return {
@@ -204,17 +194,11 @@ async def initialize_agent_team(
                     default_agents["coder"],
                     default_agents["executor"],
                 ],
-                max_turns=user_session.get(
-                    "max_rounds", defaults.get("max_rounds", 10)
-                ),
-                max_stalls=user_session.get(
-                    "max_stalls", defaults.get("max_stalls", 3)
-                ),
+                max_turns=user_session.get("max_rounds", defaults.get("max_rounds", 10)),
+                max_stalls=user_session.get("max_stalls", defaults.get("max_stalls", 3)),
             )
         except Exception as e:
-            raise RuntimeError(
-                f"Failed to initialize MagenticOneGroupChat: {str(e)}"
-            ) from e
+            raise RuntimeError(f"Failed to initialize MagenticOneGroupChat: {str(e)}") from e
     else:
         try:
             participants = []
@@ -233,13 +217,9 @@ async def initialize_agent_team(
                     MaxMessageTermination(max_messages=max_messages),
                     TextMentionTermination(text="DONE", ignore_case=True),
                 ],
-                selector_description=config.get(
-                    "selector_description", "Select the next agent to handle the task."
-                ),
+                selector_description=config.get("selector_description", "Select the next agent to handle the task."),
             )
         except Exception as e:
-            raise RuntimeError(
-                f"Failed to initialize SelectorGroupChat: {str(e)}"
-            ) from e
+            raise RuntimeError(f"Failed to initialize SelectorGroupChat: {str(e)}") from e
 
     return team

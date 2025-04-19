@@ -34,9 +34,7 @@ class WebSearchTool:
     to gather relevant information for decision making.
     """
 
-    def __init__(
-        self, max_results: int = 5, search_depth: int = 1, min_relevance_score: float = 0.7
-    ) -> None:
+    def __init__(self, max_results: int = 5, search_depth: int = 1, min_relevance_score: float = 0.7) -> None:
         """
         Initialize the Web Search Tool.
 
@@ -70,9 +68,9 @@ class WebSearchTool:
 
             # Score and filter results
             scored_results = await self._score_results(query, results)
-            filtered_results = [
-                r for r in scored_results if r.relevance_score >= self.min_relevance_score
-            ][: self.max_results]
+            filtered_results = [r for r in scored_results if r.relevance_score >= self.min_relevance_score][
+                : self.max_results
+            ]
 
             # If search depth > 1, follow links and analyze content
             if self.search_depth > 1:
@@ -178,11 +176,7 @@ class WebSearchTool:
                                 {
                                     "detailed_content": main_content.get_text(),
                                     "word_count": len(main_content.get_text().split()),
-                                    "links": [
-                                        a["href"]
-                                        for a in main_content.find_all("a")
-                                        if "href" in a.attrs
-                                    ],
+                                    "links": [a["href"] for a in main_content.find_all("a") if "href" in a.attrs],
                                 }
                             )
             except Exception as e:
