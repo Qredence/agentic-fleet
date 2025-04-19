@@ -12,11 +12,15 @@ import chainlit as cl
 
 # Local imports
 from agentic_fleet.message_processing import process_response
+from agentic_fleet.services.chat_service import ChatService
 from agentic_fleet.ui.components.canvas_panel import add_edge_to_canvas, add_node_to_canvas, initialize_canvas
 from agentic_fleet.ui.task_manager import extract_and_add_plan_tasks
 
 # Initialize logger
 logger = logging.getLogger(__name__)
+
+# Initialize chat service
+chat_service = ChatService()
 
 
 async def handle_chat_message(message: cl.Message) -> None:
@@ -30,6 +34,27 @@ async def handle_chat_message(message: cl.Message) -> None:
     is_tasklist_mode = render_mode == "tasklist"
     is_custom_mode = render_mode == "custom"
     is_canvas_mode = render_mode == "canvas"
+
+    # Get session ID for chat history
+    session_id = cl.user_session.get("session_id")
+    if not session_id:
+        session_id = str(cl.user_session.id)
+        cl.user_session.set("session_id", session_id)
+
+    # Store user message in chat history
+    try:
+        from agentic_fleet.schemas.message import MessageCreate, MessageType
+        user_message = MessageCreate(
+            content=message.content,
+            sender="User",
+            receiver="Agent",
+            message_type=MessageType.TEXT,
+            session_id=session_id,
+            metadata={}
+        )
+        await chat_service.process_message(user_message)
+    except Exception as e:
+        logger.warning(f"Error storing user message in chat history: {e}")
 
     # Create TaskList if in tasklist mode
     task_list = None
@@ -368,6 +393,21 @@ async def handle_chat_message(message: cl.Message) -> None:
         try:
             main_msg.content = "Processing complete."
             await main_msg.update()
+
+            # Store agent response in chat history
+            try:
+                from agentic_fleet.schemas.message import MessageCreate, MessageType
+                agent_message = MessageCreate(
+                    content=main_msg.content,
+                    sender="Agent",
+                    receiver="User",
+                    message_type=MessageType.TEXT,
+                    session_id=session_id,
+                    metadata={}
+                )
+                await chat_service.process_message(agent_message)
+            except Exception as e:
+                logger.warning(f"Error storing agent message in chat history: {e}")
         except Exception as e:
             logger.warning(f"Error updating main message: {e}")
 
