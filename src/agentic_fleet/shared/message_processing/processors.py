@@ -54,9 +54,7 @@ async def process_response(
         current_step.input = str(response)
 
         if isinstance(response, TaskResult):
-            async with cl.Step(
-                name="Task Execution", type="task", show_input=True, language="json"
-            ) as task_step:
+            async with cl.Step(name="Task Execution", type="task", show_input=True, language="json") as task_step:
                 task_step.input = getattr(response, "task", "Task execution")
                 for msg in response.messages:
                     await process_message(msg, collected_responses)
@@ -67,9 +65,7 @@ async def process_response(
 
         elif isinstance(response, TextMessage):
             source = getattr(response, "source", "Unknown")
-            async with cl.Step(
-                name=f"Agent: {source}", type="message", show_input=True
-            ) as msg_step:
+            async with cl.Step(name=f"Agent: {source}", type="message", show_input=True) as msg_step:
                 msg_step.input = response.content
                 await process_message(response, collected_responses)
                 msg_step.output = f"Message from {source} processed"
@@ -81,17 +77,13 @@ async def process_response(
                 chat_step.output = "Chat message processed"
 
         elif hasattr(response, "inner_monologue"):
-            async with cl.Step(
-                name="Inner Thought", type="reasoning", show_input=True
-            ) as thought_step:
+            async with cl.Step(name="Inner Thought", type="reasoning", show_input=True) as thought_step:
                 thought_step.input = str(response.inner_monologue)
                 await process_message(response.inner_monologue, collected_responses)
                 thought_step.output = "Inner thought processed"
 
         elif hasattr(response, "function_call"):
-            async with cl.Step(
-                name="Function Call", type="function", show_input=True, language="json"
-            ) as func_step:
+            async with cl.Step(name="Function Call", type="function", show_input=True, language="json") as func_step:
                 func_step.input = str(response.function_call)
                 collected_responses.append(str(response.function_call))
                 func_step.output = "Function call processed"
@@ -256,10 +248,11 @@ async def _handle_image_data(image_data: Union[str, bytes]) -> Optional[Image]:
                 return image
         elif isinstance(image_data, bytes):
             from agentic_fleet.config import config_manager
+            from agentic_fleet.core.utils import ensure_directory_exists
 
             env_config = config_manager.get_environment_settings()
-            debug_dir = os.path.join(env_config["logs_dir"], "debug")
-            os.makedirs(debug_dir, exist_ok=True)
+            debug_dir = os.path.join(env_config.logs_dir, "debug")
+            ensure_directory_exists(debug_dir)
             temp_path = os.path.join(debug_dir, f"screenshot_{int(time.time())}.png")
             with open(temp_path, "wb") as f:
                 f.write(image_data)

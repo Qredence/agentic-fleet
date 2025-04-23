@@ -55,8 +55,8 @@ class ChatService:
                 "timestamp": now,
                 "edited_at": None,
                 "is_edited": False,
-                "metadata": message.message_metadata,
-                "attachments": message.attachments
+                "metadata": message.metadata,
+                "attachments": message.attachments,
             }
 
             # Store the message
@@ -181,8 +181,7 @@ class ChatService:
 
             return messages
         except Exception as e:
-            logger.error(
-                f"Error getting chat history for session {session_id}: {str(e)}")
+            logger.error(f"Error getting chat history for session {session_id}: {str(e)}")
             raise
 
     async def register_websocket(self, session_id: str, websocket: WebSocket) -> None:
@@ -197,8 +196,7 @@ class ChatService:
             self._active_connections[session_id] = websocket
             logger.info(f"Registered WebSocket for session {session_id}")
         except Exception as e:
-            logger.error(
-                f"Error registering WebSocket for session {session_id}: {str(e)}")
+            logger.error(f"Error registering WebSocket for session {session_id}: {str(e)}")
             raise
 
     async def unregister_websocket(self, session_id: str) -> None:
@@ -213,8 +211,7 @@ class ChatService:
                 del self._active_connections[session_id]
                 logger.info(f"Unregistered WebSocket for session {session_id}")
         except Exception as e:
-            logger.error(
-                f"Error unregistering WebSocket for session {session_id}: {str(e)}")
+            logger.error(f"Error unregistering WebSocket for session {session_id}: {str(e)}")
             raise
 
     async def process_websocket_message(self, session_id: str, data: Dict[str, Any]) -> Message:
@@ -238,7 +235,7 @@ class ChatService:
                 "session_id": session_id,
                 "parent_id": data.get("parent_id"),
                 "metadata": data.get("metadata", {}),
-                "attachments": data.get("attachments", [])
+                "attachments": data.get("attachments", []),
             }
 
             message = MessageCreate(**message_data)
@@ -246,8 +243,7 @@ class ChatService:
             # Process the message
             return await self.process_message(message)
         except Exception as e:
-            logger.error(
-                f"Error processing WebSocket message for session {session_id}: {str(e)}")
+            logger.error(f"Error processing WebSocket message for session {session_id}: {str(e)}")
             raise
 
     async def broadcast_message(self, message: Message) -> None:
@@ -262,8 +258,7 @@ class ChatService:
             if session_id in self._active_connections:
                 websocket = self._active_connections[session_id]
                 await websocket.send_json(message.dict())
-                logger.info(
-                    f"Broadcasted message {message.id} to session {session_id}")
+                logger.info(f"Broadcasted message {message.id} to session {session_id}")
         except Exception as e:
             logger.error(f"Error broadcasting message {message.id}: {str(e)}")
             raise

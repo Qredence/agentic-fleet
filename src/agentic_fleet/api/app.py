@@ -70,6 +70,7 @@ async def database_exception_handler(request: Request, exc: AgenticFleetDatabase
         content={"detail": "Internal server error"},
     )
 
+
 # Include routers
 app.include_router(agents, prefix="/agents", tags=["agents"])
 app.include_router(tasks, prefix="/tasks", tags=["tasks"])

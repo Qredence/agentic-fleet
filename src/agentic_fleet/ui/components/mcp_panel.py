@@ -5,17 +5,21 @@ This module provides UI components for displaying MCP information.
 
 import json
 import logging
-from typing import Dict, List, Any, Optional
+from typing import Any, List, Dict
 
 import chainlit as cl
 
-from agentic_fleet.mcp_pool.mcp_factory import get_available_mcp_configs
+from agentic_fleet.pool.mcp.mcp_factory import get_available_mcp_configs
 
 logger = logging.getLogger(__name__)
 
 
-async def list_available_mcps() -> None:
-    """List available MCP connections and their tools."""
+async def list_available_mcps() -> List[Dict[str, Any]]:
+    """List available MCP connections and their tools.
+    
+    Returns:
+        List of MCP server configurations
+    """
     try:
         # Get connected MCP servers from user session
         mcp_servers = cl.user_session.get("mcp_servers", [])
@@ -23,9 +27,9 @@ async def list_available_mcps() -> None:
         if not mcp_servers or len(mcp_servers) == 0:
             await cl.Message(
                 content="No MCP servers currently connected. Use the MCP panel to connect to an MCP server.",
-                author="MCP Manager"
+                author="MCP Manager",
             ).send()
-            return
+            return []
 
         # Build a markdown list of all tools
         mcp_tools_list = "# Available MCP Tools\n\n"
@@ -54,12 +58,17 @@ async def list_available_mcps() -> None:
             content=mcp_tools_list,
             author="MCP Manager",
         ).send()
+        
+        # Return the list of servers
+        return mcp_servers
+        
     except Exception as e:
         logger.error(f"Error retrieving MCP tools: {e}")
         await cl.Message(
             content=f"Error retrieving MCP tools: {str(e)}",
             author="MCP Manager",
         ).send()
+        return []
 
 
 async def send_mcp_panel(mcp_id: str) -> None:
@@ -73,10 +82,7 @@ async def send_mcp_panel(mcp_id: str) -> None:
         mcp_configs = get_available_mcp_configs()
 
         if mcp_id not in mcp_configs:
-            await cl.Message(
-                content=f"Error: MCP configuration '{mcp_id}' not found.",
-                author="MCP Manager"
-            ).send()
+            await cl.Message(content=f"Error: MCP configuration '{mcp_id}' not found.", author="MCP Manager").send()
             return
 
         # Get the MCP configuration
@@ -99,32 +105,25 @@ async def send_mcp_panel(mcp_id: str) -> None:
                 name="connect_mcp",
                 label="🔌 Connect",
                 tooltip="Connect to this MCP",
-                value=mcp_id
+                payload={"mcp_id": mcp_id}
             ),
             cl.Action(
                 name="disconnect_mcp",
                 label="❌ Disconnect",
                 tooltip="Disconnect from this MCP",
-                value=mcp_id
-            )
+                payload={"mcp_id": mcp_id}
+            ),
         ]
 
         # Send the panel
-        await cl.Message(
-            content=panel_content,
-            author="MCP Manager",
-            actions=actions
-        ).send()
+        await cl.Message(content=panel_content, author="MCP Manager", actions=actions).send()
 
     except Exception as e:
         logger.error(f"Error sending MCP panel: {e}")
-        await cl.Message(
-            content=f"Error sending MCP panel: {str(e)}",
-            author="MCP Manager"
-        ).send()
+        await cl.Message(content=f"Error sending MCP panel: {str(e)}", author="MCP Manager").send()
 
 
-async def call_mcp_tool(server_name: str, tool_name: str, tool_args: Dict[str, Any]) -> Any:
+async def call_mcp_tool(server_name: str, tool_name: str, tool_args: dict[str, Any]) -> Any:
     """Call an MCP tool.
 
     Args:
@@ -161,7 +160,7 @@ async def call_mcp_tool(server_name: str, tool_name: str, tool_args: Dict[str, A
         # Send a message showing what we're calling
         await cl.Message(
             content=f"Calling MCP tool: `{tool_name}` on server `{server_name}`\nArguments: ```json\n{str(tool_args)}\n```",
-            author="MCP Manager"
+            author="MCP Manager",
         ).send()
 
         # Call the tool and get the result
@@ -174,17 +173,12 @@ async def call_mcp_tool(server_name: str, tool_name: str, tool_args: Dict[str, A
             # This is a simplified implementation and may need to be adjusted
             await mcp_instance.register_tool(tool_name, tool_args)
             result = await mcp_instance.process_message(
-                sender_id="user",
-                message=f"Call tool {tool_name}",
-                metadata={"tool_args": tool_args}
+                sender_id="user", message=f"Call tool {tool_name}", metadata={"tool_args": tool_args}
             )
 
         # Send back the result
         result_str = str(result) if result is not None else "No result returned"
-        await cl.Message(
-            content=f"MCP tool result:\n```json\n{result_str}\n```",
-            author="MCP Manager"
-        ).send()
+        await cl.Message(content=f"MCP tool result:\n```json\n{result_str}\n```", author="MCP Manager").send()
 
         return result
 

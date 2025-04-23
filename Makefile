@@ -9,7 +9,8 @@ install:
 
 # Run tests
 test:
-	pytest
+	@echo "Running test suite using .venv and pytest..."
+	@.venv/bin/python -m pytest
 
 # Run linting
 lint:

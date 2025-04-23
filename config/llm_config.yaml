@@ -7,7 +7,7 @@ models:
     temperature_range: [0.3, 0.7]
     default_temperature: 0.7
     streaming: true
-    vision: true
+    vision: false
     connection_pool_size: 10
     request_timeout: 30
     description: "Azure OpenAI o4-mini Model"

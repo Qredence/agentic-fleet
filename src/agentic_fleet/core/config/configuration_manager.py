@@ -46,11 +46,7 @@ class AgentConfig:
         Returns:
             Dict[str, Any]: A dictionary representation of the agent configuration
         """
-        return {
-            "name": self.name,
-            "description": self.description,
-            **self.settings
-        }
+        return {"name": self.name, "description": self.description, **self.settings}
 
     @classmethod
     def from_dict(cls, config: Dict[str, Any]) -> "AgentConfig":
@@ -81,10 +77,10 @@ class ConfigurationManager:
         _project_root: Cached project root path
     """
 
-    _instance: Optional['ConfigurationManager'] = None
+    _instance: Optional["ConfigurationManager"] = None
     _project_root: Optional[Path] = None
 
-    def __new__(cls) -> 'ConfigurationManager':
+    def __new__(cls) -> "ConfigurationManager":
         """Create or return the singleton instance."""
         if cls._instance is None:
             cls._instance = super().__new__(cls)
@@ -95,8 +91,7 @@ class ConfigurationManager:
         """Initialize the configuration manager with validation."""
         self._project_root = self.get_project_root()
         self._validate_root()
-        logger.info(
-            f"ConfigurationManager initialized at {self._project_root}")
+        logger.info(f"ConfigurationManager initialized at {self._project_root}")
 
     def _validate_root(self) -> None:
         """
@@ -105,10 +100,7 @@ class ConfigurationManager:
         Raises:
             FileNotFoundError: If required directories are missing
         """
-        required_dirs: List[Path] = [
-            self._project_root / "src" / "agentic_fleet",
-            self._project_root / "tests"
-        ]
+        required_dirs: List[Path] = [self._project_root / "src" / "agentic_fleet", self._project_root / "tests"]
 
         missing = [d for d in required_dirs if not d.exists()]
         if missing:
@@ -137,8 +129,7 @@ class ConfigurationManager:
                 current_dir = current_dir.parent
 
             if current_dir.name != "AgenticFleet":
-                raise FileNotFoundError(
-                    "Could not find project root directory")
+                raise FileNotFoundError("Could not find project root directory")
 
             self._project_root = current_dir
             logger.debug(f"Project root calculated: {self._project_root}")

@@ -31,9 +31,7 @@ async def create_reasoning_orchestrator(config: Dict[str, Any]) -> RetrievalReas
     # Initialize specialized agents
     mind_map_agent = MindMapAgent(name="mind_map_agent", **config.get("mind_map_config", {}))
 
-    web_search_agent = WebSearchAgent(
-        name="web_search_agent", **config.get("web_search_config", {})
-    )
+    web_search_agent = WebSearchAgent(name="web_search_agent", **config.get("web_search_config", {}))
 
     coding_agent = CodingAgent(name="coding_agent", **config.get("coding_config", {}))
 

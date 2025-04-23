@@ -10,14 +10,14 @@ from typing import Any, Dict, cast
 logger = logging.getLogger(__name__)
 
 # Apply patches for Chainlit LiteralAI integration if needed
-# 
+#
 # This includes:
 # 1. A patch for StepType enum compatibility issues in LiteralDataLayer.create_step
 # 2. A patch for the deprecated datetime.utcnow() usage in literalai.helper
 #    (This fixes the warning: "datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version.
 #     Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).")
 try:
-    if find_spec('chainlit') and find_spec('literalai'):
+    if find_spec("chainlit") and find_spec("literalai"):
         import datetime as dt_module
 
         import literalai.helper
@@ -75,14 +75,12 @@ try:
 
         # Apply the monkey patches - using a safer approach
         # Patch LiteralDataLayer.create_step
-        if hasattr(LiteralDataLayer, 'create_step'):
-            setattr(LiteralDataLayer, 'create_step', patched_create_step)
-            logger.info(
-                "Applied patch to LiteralDataLayer.create_step for StepType compatibility")
+        if hasattr(LiteralDataLayer, "create_step"):
+            setattr(LiteralDataLayer, "create_step", patched_create_step)
+            logger.info("Applied patch to LiteralDataLayer.create_step for StepType compatibility")
 
         # Log the datetime module patch
-        logger.info(
-            "Applied patch to literalai.helper.datetime to fix datetime.utcnow() deprecation")
+        logger.info("Applied patch to literalai.helper.datetime to fix datetime.utcnow() deprecation")
 
 except Exception as e:
     logger.warning(f"Failed to apply LiteralAI patch: {str(e)}")

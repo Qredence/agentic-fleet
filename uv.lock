@@ -49,7 +49,7 @@ wheels = [
 
 [[package]]
 name = "agentic-fleet"
-version = "0.4.94"
+version = "0.4.95"
 source = { editable = "." }
 dependencies = [
     { name = "absl-py" },
@@ -81,6 +81,7 @@ dependencies = [
     { name = "codecov" },
     { name = "composio-core" },
     { name = "dataclasses-json" },
+    { name = "debugpy" },
     { name = "deepseek" },
     { name = "docker" },
     { name = "dspy" },
@@ -228,13 +229,14 @@ requires-dist = [
     { name = "black", specifier = ">=24.10.0" },
     { name = "black", marker = "extra == 'dev'", specifier = ">=24.1.1" },
     { name = "black", marker = "extra == 'test'", specifier = ">=23.9.0" },
-    { name = "chainlit", specifier = ">=2.5.0" },
+    { name = "chainlit", specifier = ">=2.5.5" },
     { name = "click", specifier = ">=8.1.8" },
     { name = "codecov", specifier = ">=2.1.13" },
     { name = "composio-core", specifier = ">=0.6.11.post1" },
     { name = "coverage", marker = "extra == 'dev'", specifier = ">=7.4.4" },
     { name = "coverage", marker = "extra == 'test'", specifier = ">=7.3.0" },
     { name = "dataclasses-json", specifier = ">=0.6.7" },
+    { name = "debugpy", specifier = ">=1.8.12" },
     { name = "deepseek", specifier = ">=0.1.0" },
     { name = "docker", specifier = ">=7.1.0" },
     { name = "dspy", specifier = ">=1.0.0" },

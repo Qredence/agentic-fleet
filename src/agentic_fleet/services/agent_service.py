@@ -69,7 +69,7 @@ class AgentService:
                     "system_prompt": agent_model.system_prompt,
                 },
                 created_at=agent_model.created_at,
-                updated_at=agent_model.updated_at
+                updated_at=agent_model.updated_at,
             )
         except Exception as e:
             await self.db.rollback()
@@ -88,9 +88,7 @@ class AgentService:
         """
         try:
             # Query the database
-            result = await self.db.execute(
-                select(AgentModel).where(AgentModel.id == agent_id)
-            )
+            result = await self.db.execute(select(AgentModel).where(AgentModel.id == agent_id))
             agent_model = result.scalars().first()
 
             if not agent_model:
@@ -108,7 +106,7 @@ class AgentService:
                     "system_prompt": agent_model.system_prompt,
                 },
                 created_at=agent_model.created_at,
-                updated_at=agent_model.updated_at
+                updated_at=agent_model.updated_at,
             )
         except Exception as e:
             logger.error(f"Error getting agent {agent_id}: {str(e)}")
@@ -127,9 +125,7 @@ class AgentService:
         """
         try:
             # Check if agent exists
-            result = await self.db.execute(
-                select(AgentModel).where(AgentModel.id == agent_id)
-            )
+            result = await self.db.execute(select(AgentModel).where(AgentModel.id == agent_id))
             agent_model = result.scalars().first()
 
             if not agent_model:
@@ -170,7 +166,7 @@ class AgentService:
                     "system_prompt": agent_model.system_prompt,
                 },
                 created_at=agent_model.created_at,
-                updated_at=agent_model.updated_at
+                updated_at=agent_model.updated_at,
             )
         except Exception as e:
             await self.db.rollback()
@@ -189,9 +185,7 @@ class AgentService:
         """
         try:
             # Check if agent exists
-            result = await self.db.execute(
-                select(AgentModel).where(AgentModel.id == agent_id)
-            )
+            result = await self.db.execute(select(AgentModel).where(AgentModel.id == agent_id))
             agent_model = result.scalars().first()
 
             if not agent_model:
@@ -232,7 +226,7 @@ class AgentService:
                         "system_prompt": agent_model.system_prompt,
                     },
                     created_at=agent_model.created_at,
-                    updated_at=agent_model.updated_at
+                    updated_at=agent_model.updated_at,
                 )
                 for agent_model in agent_models
             ]

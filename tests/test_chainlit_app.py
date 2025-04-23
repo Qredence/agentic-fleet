@@ -1,9 +1,11 @@
 import os
 import sys
-import pytest
-from unittest.mock import patch, MagicMock, AsyncMock, call
 from pathlib import Path
-from agentic_fleet.core.application.manager import ApplicationManager, ApplicationConfig
+from unittest.mock import AsyncMock, MagicMock, call, patch
+
+import pytest
+
+from agentic_fleet.core.application.manager import ApplicationConfig, ApplicationManager
 
 """
 Unit tests for the chainlit_app.py module.
@@ -16,21 +18,24 @@ import agentic_fleet.chainlit_app as chainlit_app
 @pytest.fixture
 def mock_chainlit():
     """Mock all chainlit dependencies."""
-    with patch("agentic_fleet.chainlit_app.cl") as mock_cl:
-        # Setup user_session with get and set methods
-        mock_user_session = MagicMock()
-        mock_user_session.get = MagicMock(return_value=None)
-        mock_user_session.set = MagicMock()
-        mock_cl.user_session = mock_user_session
+    mock_cl = MagicMock()
+    
+    # Setup user_session with get and set methods
+    mock_user_session = MagicMock()
+    mock_user_session.get = MagicMock(return_value=None)
+    mock_user_session.set = MagicMock()
+    mock_user_session.clear = MagicMock()
+    mock_cl.user_session = mock_user_session
 
-        # Mock Message class and methods
-        mock_message = MagicMock()
-        mock_message.send = AsyncMock()
-        mock_cl.Message.return_value = mock_message
+    # Mock Message class and methods
+    mock_message = MagicMock()
+    mock_message.send = AsyncMock()
+    mock_cl.Message = MagicMock(return_value=mock_message)
 
-        # Mock Action class
-        mock_cl.Action = MagicMock()
+    # Mock Action class
+    mock_cl.Action = MagicMock()
 
+    with patch("agentic_fleet.chainlit_app.cl", mock_cl):
         yield mock_cl
 
 
@@ -47,9 +52,9 @@ def mock_config_manager():
 @pytest.fixture
 def mock_client():
     """Mock the client factory."""
-    with patch("agentic_fleet.chainlit_app.get_cached_client") as mock_get_client:
+    with patch("agentic_fleet.chainlit_app.create_client") as mock_create_client:
         mock_client = MagicMock()
-        mock_get_client.return_value = mock_client
+        mock_create_client.return_value = mock_client
         yield mock_client
 
 
@@ -103,8 +108,13 @@ def mock_task_manager():
 
 @pytest.mark.asyncio
 async def test_start_chat_default_profile(
-    mock_chainlit, mock_config_manager, mock_client, 
-    mock_app_manager, mock_agent_creator, mock_task_manager, mock_settings_manager
+    mock_chainlit,
+    mock_config_manager,
+    mock_client,
+    mock_app_manager,
+    mock_agent_creator,
+    mock_task_manager,
+    mock_settings_manager,
 ):
     """Test start_chat function with default profile."""
     # Setup
@@ -118,10 +128,7 @@ async def test_start_chat_default_profile(
     mock_config_manager.validate_environment.assert_called_once()
 
     # Check if agent was created with correct params
-    mock_agent_creator.assert_called_once_with(
-        client=mock_client,
-        hil_mode=True
-    )
+    mock_agent_creator.assert_called_once_with(client=mock_client, hil_mode=True)
 
     # Check if user session values were set
     assert mock_chainlit.user_session.set.call_args_list
@@ -133,8 +140,13 @@ async def test_start_chat_default_profile(
 
 @pytest.mark.asyncio
 async def test_start_chat_mcp_focus_profile(
-    mock_chainlit, mock_config_manager, mock_client, 
-    mock_app_manager, mock_agent_creator, mock_task_manager, mock_settings_manager
+    mock_chainlit,
+    mock_config_manager,
+    mock_client,
+    mock_app_manager,
+    mock_agent_creator,
+    mock_task_manager,
+    mock_settings_manager,
 ):
     """Test start_chat function with MCP Focus profile."""
     # Setup
@@ -147,7 +159,7 @@ async def test_start_chat_mcp_focus_profile(
     # Check if agent was created with correct params
     mock_agent_creator.assert_called_once_with(
         client=mock_client,
-        hil_mode=True
+        hil_mode=True,
         # mcp_enabled parameter removed as it's not supported by MagenticOne
     )
 
@@ -156,9 +168,7 @@ async def test_start_chat_mcp_focus_profile(
 
 
 @pytest.mark.asyncio
-async def test_start_chat_error_handling(
-    mock_chainlit, mock_config_manager, mock_client, mock_app_manager
-):
+async def test_start_chat_error_handling(mock_chainlit, mock_config_manager, mock_client, mock_app_manager):
     """Test error handling in start_chat function."""
     # Setup
     mock_config_manager.validate_environment.return_value = "Missing API key"
@@ -226,8 +236,7 @@ async def test_on_action_list_mcp_no_servers(mock_chainlit):
 
     # Assert
     mock_chainlit.Message.assert_called_with(
-        content="No MCP servers currently connected. Use `connect_mcp_server` to connect.",
-        author="MCP Manager"
+        content="No MCP servers currently connected. Use `connect_mcp_server` to connect.", author="MCP Manager"
     )
     mock_chainlit.Message().send.assert_awaited()
 
@@ -278,10 +287,11 @@ async def test_on_chat_stop(mock_chainlit):
 
 def test_main():
     """Test main function."""
-    with patch("agentic_fleet.chainlit_app.subprocess.run") as mock_run, \
-         patch("agentic_fleet.chainlit_app.sys.exit") as mock_exit, \
-         patch("agentic_fleet.chainlit_app.os.path.abspath") as mock_abspath:
-
+    with (
+        patch("agentic_fleet.chainlit_app.subprocess.run") as mock_run,
+        patch("agentic_fleet.chainlit_app.sys.exit") as mock_exit,
+        patch("agentic_fleet.chainlit_app.os.path.abspath") as mock_abspath,
+    ):
         # Setup
         mock_abspath.return_value = "/path/to/chainlit_app.py"
         mock_process = MagicMock()
@@ -299,9 +309,10 @@ def test_main():
 
 def test_main_error_handling():
     """Test error handling in the main function."""
-    with patch("agentic_fleet.chainlit_app.subprocess.run") as mock_run, \
-         patch("agentic_fleet.chainlit_app.sys.exit") as mock_exit:
-
+    with (
+        patch("agentic_fleet.chainlit_app.subprocess.run") as mock_run,
+        patch("agentic_fleet.chainlit_app.sys.exit") as mock_exit,
+    ):
         # Setup
         mock_run.side_effect = FileNotFoundError("No such file")
 

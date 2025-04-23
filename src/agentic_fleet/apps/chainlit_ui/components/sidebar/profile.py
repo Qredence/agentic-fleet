@@ -24,6 +24,4 @@ class ProfileSettings:
             await cl.Text(name="user_id", label="User ID", value=self.user_id).send()
 
             for key, value in self.settings.items():
-                await cl.Text(
-                    name=key, label=key.replace("_", " ").title(), value=str(value)
-                ).send()
+                await cl.Text(name=key, label=key.replace("_", " ").title(), value=str(value)).send()

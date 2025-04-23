@@ -3,6 +3,7 @@ import logging
 import traceback
 from pathlib import Path
 from typing import Optional
+import uuid
 
 # Third-party imports
 import chainlit as cl
@@ -20,9 +21,7 @@ from agentic_fleet.ui.message_handler import handle_chat_message, on_reset
 from agentic_fleet.ui.settings_handler import SettingsManager
 
 # Initialize logging
-logging.basicConfig(
-    level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
-)
+logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s")
 logger = logging.getLogger(__name__)
 
 # Load environment variables
@@ -69,21 +68,22 @@ async def start_chat(profile: cl.ChatProfile | None = None):
         app_manager = ApplicationManager(
             ApplicationConfig(
                 project_root=Path(__file__).parent.parent,
-                debug=env_config.get("debug", False),
-                log_level=env_config.get("log_level", "INFO"),
+                debug=getattr(env_config, "debug", False),
+                log_level=getattr(env_config, "log_level", "INFO"),
             )
         )
         await app_manager.start()
 
         # Initialize task list
         from agentic_fleet.ui.task_manager import initialize_task_list
+
         await initialize_task_list()
 
         # Initialize MagenticOne agent team
         team = MagenticOne(
             client=client,
             code_executor=LocalCommandLineCodeExecutor(),
-            hil_mode=True  # Enable human-in-the-loop mode
+            hil_mode=True,  # Enable human-in-the-loop mode
         )
 
         # Store team in user session
@@ -94,21 +94,15 @@ async def start_chat(profile: cl.ChatProfile | None = None):
         cl.user_session.set("settings", default_settings)
 
         # Set session ID for chat history
-        session_id = str(cl.user_session.id)
+        session_id = str(uuid.uuid4())
         cl.user_session.set("session_id", session_id)
 
         # Setup chat settings UI
         await settings_manager.setup_chat_settings()
 
         # Get profile information for welcome message
-        profile_name = (
-            profile.name if isinstance(profile, cl.ChatProfile) else "Default Profile"
-        )
-        profile_desc = (
-            profile.markdown_description
-            if isinstance(profile, cl.ChatProfile)
-            else "Standard configuration"
-        )
+        profile_name = profile.name if isinstance(profile, cl.ChatProfile) else "Default Profile"
+        profile_desc = profile.markdown_description if isinstance(profile, cl.ChatProfile) else "Standard configuration"
 
         # Send welcome message
         welcome_message = (
@@ -134,7 +128,7 @@ async def start_chat(profile: cl.ChatProfile | None = None):
                     label="📜 View Chat History",
                     tooltip="View previous conversations",
                     payload={"action": "history"},
-                )
+                ),
             ],
         ).send()
 
@@ -169,7 +163,7 @@ async def on_action_view_history(action: cl.Action):
         # Get the current session ID
         session_id = cl.user_session.get("session_id")
         if not session_id:
-            session_id = str(cl.user_session.id)
+            session_id = str(uuid.uuid4())
             cl.user_session.set("session_id", session_id)
 
         # Get chat history for the current session
@@ -182,9 +176,13 @@ async def on_action_view_history(action: cl.Action):
         # Format the chat history
         history_content = "## 📜 Chat History\n\n"
         for i, msg in enumerate(messages, 1):
-            sender = msg.sender if hasattr(msg, 'sender') else "Unknown"
-            content = msg.content if hasattr(msg, 'content') else "No content"
-            timestamp = msg.timestamp.strftime("%Y-%m-%d %H:%M:%S") if hasattr(msg, 'timestamp') and msg.timestamp else "Unknown time"
+            sender = msg.sender if hasattr(msg, "sender") else "Unknown"
+            content = msg.content if hasattr(msg, "content") else "No content"
+            timestamp = (
+                msg.timestamp.strftime("%Y-%m-%d %H:%M:%S")
+                if hasattr(msg, "timestamp") and msg.timestamp
+                else "Unknown time"
+            )
 
             history_content += f"### Message {i} - {sender} ({timestamp})\n\n"
             history_content += f"{content}\n\n"
@@ -204,8 +202,13 @@ async def on_chat_stop():
     global app_manager
 
     if app_manager:
-        await app_manager.stop()
-        logger.info("Application manager stopped")
+        try:
+            await app_manager.shutdown()
+            logger.info("Application manager stopped")
+        except Exception as e:
+            logger.error(f"Error shutting down application manager: {e}")
 
     # Clear user session
-    cl.user_session.clear()
+    session_vars = ["agent_team", "team", "app_manager", "settings", "ui_render_mode", "mcp_servers", "session_id"]
+    for key in session_vars:
+        cl.user_session.set(key, None)

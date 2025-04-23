@@ -1,5 +1,6 @@
 """Unit tests for the models module."""
-from unittest.mock import Mock, AsyncMock
+
+from unittest.mock import AsyncMock, Mock
 
 import pytest
 from autogen_core.models import ChatCompletionClient
@@ -21,11 +22,7 @@ def mock_model_client():
 @pytest.mark.asyncio
 async def test_enhanced_assistant_agent_initialization(mock_model_client):
     """Test initialization of EnhancedAssistantAgent."""
-    agent = EnhancedAssistantAgent(
-        name="test_agent",
-        system_message="test message",
-        model_client=mock_model_client
-    )
+    agent = EnhancedAssistantAgent(name="test_agent", system_message="test message", model_client=mock_model_client)
     assert agent is not None
     assert agent.name == "test_agent"
 
@@ -33,11 +30,7 @@ async def test_enhanced_assistant_agent_initialization(mock_model_client):
 @pytest.mark.asyncio
 async def test_enhanced_assistant_agent_process_message(mock_model_client):
     """Test message processing in EnhancedAssistantAgent."""
-    agent = EnhancedAssistantAgent(
-        name="test_agent",
-        system_message="test message",
-        model_client=mock_model_client
-    )
+    agent = EnhancedAssistantAgent(name="test_agent", system_message="test message", model_client=mock_model_client)
 
     mock_model_client.generate.return_value = "test response"
 
@@ -49,11 +42,7 @@ async def test_enhanced_assistant_agent_process_message(mock_model_client):
 @pytest.mark.asyncio
 async def test_enhanced_assistant_agent_error_handling(mock_model_client):
     """Test error handling in EnhancedAssistantAgent."""
-    agent = EnhancedAssistantAgent(
-        name="test_agent",
-        system_message="test message",
-        model_client=mock_model_client
-    )
+    agent = EnhancedAssistantAgent(name="test_agent", system_message="test message", model_client=mock_model_client)
 
     mock_model_client.generate.side_effect = Exception("test error")
 
@@ -65,17 +54,11 @@ async def test_enhanced_assistant_agent_error_handling(mock_model_client):
 @pytest.mark.asyncio
 async def test_create_agent_team():
     """Test creation of agent team."""
-    agent1 = EnhancedAssistantAgent(
-        name="agent1",
-        system_message="test message 1"
-    )
-    agent2 = EnhancedAssistantAgent(
-        name="agent2",
-        system_message="test message 2"
-    )
+    agent1 = EnhancedAssistantAgent(name="agent1", system_message="test message 1")
+    agent2 = EnhancedAssistantAgent(name="agent2", system_message="test message 2")
     agents = [agent1, agent2]
     team_config = {"max_rounds": 5, "temperature": 0.7}
-    
+
     result = await create_agent_team(agents, team_config)
     assert result is not None
     assert len(result) == 2

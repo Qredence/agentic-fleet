@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "agentic-fleet"
-version = "0.4.94"
+version = "0.4.95"
 description = "A powerful multi-agent system for adaptive AI reasoning and automation"
 readme = "README.md"
 requires-python = ">=3.10"
@@ -91,7 +91,7 @@ dependencies = [
     # Web & Utilities
     "beautifulsoup4>=4.12.0",
     "bing>=0.31",
-    "chainlit>=2.5.0",
+    "chainlit>=2.5.5",
     "docker>=7.1.0",
     "markitdown>=0.0.1a3",
     "opentelemetry-instrumentation-fastapi>=0.44b0",
@@ -139,6 +139,7 @@ dependencies = [
     "mem0ai>=0.1.86",
     "mcp>=1.6.0",
     "literalai>=0.1.201",
+    "debugpy>=1.8.12",
 ]
 
 [project.optional-dependencies]
@@ -290,6 +291,7 @@ Source = "https://github.com/qredence/agentic-fleet"
 
 [project.scripts]
 agentic-fleet = "agentic_fleet.main:main"
+agentic-fleet-chainlit = "agentic_fleet.chainlit_app:main"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/agentic_fleet"]

@@ -18,6 +18,7 @@ class TaskStatus(enum.Enum):
     """
     Task status enum.
     """
+
     PENDING = "pending"
     IN_PROGRESS = "in_progress"
     COMPLETED = "completed"
@@ -35,23 +36,19 @@ class Task(Base):
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     title = Column(String(255), nullable=False)
     description = Column(Text, nullable=True)
-    status = Column(Enum(TaskStatus),
-                    default=TaskStatus.PENDING, nullable=False)
+    status = Column(Enum(TaskStatus), default=TaskStatus.PENDING, nullable=False)
 
     # Task configuration and results
     input_data = Column(JSON, nullable=True)
     output_data = Column(JSON, nullable=True)
 
     # Foreign keys
-    agent_id = Column(UUID(as_uuid=True), ForeignKey(
-        "agent.id"), nullable=False)
-    parent_task_id = Column(
-        UUID(as_uuid=True), ForeignKey("task.id"), nullable=True)
+    agent_id = Column(UUID(as_uuid=True), ForeignKey("agent.id"), nullable=False)
+    parent_task_id = Column(UUID(as_uuid=True), ForeignKey("task.id"), nullable=True)
 
     # Timestamps
     created_at = Column(DateTime, default=datetime.utcnow)
-    updated_at = Column(DateTime, default=datetime.utcnow,
-                        onupdate=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     started_at = Column(DateTime, nullable=True)
     completed_at = Column(DateTime, nullable=True)
 

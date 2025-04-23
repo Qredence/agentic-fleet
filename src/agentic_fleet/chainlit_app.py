@@ -4,72 +4,99 @@ Chainlit application entry point for AgenticFleet.
 This module serves as the primary entry point for the Chainlit UI application.
 """
 
-# Standard library imports
-import logging
-import os
-import sys
-import traceback
-from pathlib import Path
-from typing import Any
+# Initialize environment variables first
+from dotenv import load_dotenv
+load_dotenv()
 
 # Third-party imports
 import chainlit as cl
+import chainlit.cli
 from chainlit import on_chat_start, on_message, on_settings_update, on_stop
-from dotenv import load_dotenv
+
+# Standard library imports
+import asyncio
+import logging
+import os
+import subprocess
+import sys
+import traceback
+from pathlib import Path
+from typing import Any, Dict, List, Optional, Tuple, Union
 
 # Local imports
-from agentic_fleet.agents import create_magentic_one_agent
 from agentic_fleet.config import config_manager
 from agentic_fleet.config.llm_config_manager import llm_config_manager
+from agentic_fleet.core.agents.team import initialize_default_agents
 from agentic_fleet.core.application.manager import ApplicationConfig, ApplicationManager
+from agentic_fleet.services.client_factory import create_client
+from agentic_fleet.ui.components.mcp_panel import list_available_mcps
+from agentic_fleet.ui.message_handler import handle_chat_message, on_reset
+from agentic_fleet.ui.settings_handler import SettingsManager
+from agentic_fleet.ui.task_manager import initialize_task_list
 
 # Import MCP handlers to register them with Chainlit
 # This import is used for its side effects (registering action callbacks)
 # pylint: disable=unused-import
-from agentic_fleet.mcp_pool import mcp_handlers  # noqa
-from agentic_fleet.services.client_factory import create_client
-from agentic_fleet.ui.message_handler import handle_chat_message, on_reset
-from agentic_fleet.ui.settings_handler import SettingsManager
+try:
+    import agentic_fleet.pool.mcp.mcp_handlers as mcp_handlers  # noqa
+except ImportError:
+    pass
 
 # Initialize logging
-logging.basicConfig(
-    level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
-)
+logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s")
 logger = logging.getLogger(__name__)
 
-# Load environment variables
-load_dotenv()
+class AppContext:
+    """Context class to encapsulate app-wide state."""
+    
+    def __init__(self) -> None:
+        """Initialize the application context."""
+        self.client: Any = None
+        self.app_manager: Optional[ApplicationManager] = None
+        self._cleanup_tasks: List[asyncio.Task] = []
 
-# Initialize application manager
-app_manager: ApplicationManager | None = None
+    async def cleanup(self) -> None:
+        """Clean up application resources."""
+        if self.app_manager:
+            try:
+                await self.app_manager.shutdown()
+                logger.info("Application manager stopped")
+            except Exception as e:
+                logger.warning(f"Application manager cleanup error: {str(e)}")
+
+        # Cancel any pending tasks
+        for task in self._cleanup_tasks:
+            if not task.done():
+                task.cancel()
+                try:
+                    await task
+                except asyncio.CancelledError:
+                    pass
+
+app_context = AppContext()
 
 # Initialize settings manager
 settings_manager = SettingsManager()
 
-# Initialize client
-client = None
-
-
-# Chainlit event handlers
 @on_chat_start
-async def start_chat():
+async def start_chat() -> None:
     """Initialize the chat session with the selected profile."""
-    global client, app_manager
-
-    # Get the selected chat profile
-    profile = cl.user_session.get("chat_profile")
-    profile_name = profile if isinstance(profile, str) else "default"
-    logger.info(f"Selected chat profile: {profile_name}")
-
-    # Use the specified Azure OpenAI model
-    profile_desc = "Azure OpenAI o4-mini Model"
-    icon = "public/icons/rocket.svg"
-    model_name = "o4-mini"
-
-    # Store profile type in session
-    cl.user_session.set("profile_type", profile_name)
-
     try:
+        # Get the selected chat profile
+        profile: Optional[str] = cl.user_session.get("chat_profile")
+        profile_name: str = profile if isinstance(profile, str) else "default"
+        logger.info(f"Selected chat profile: {profile_name}")
+
+        # Get profile configuration
+        profile_config: Dict[str, Any] = llm_config_manager.get_profile_config(profile_name)
+        model_config: Dict[str, Any] = profile_config.get("model_config", {})
+        model_name: str = model_config.get("name", "o4-mini")
+        profile_desc: str = profile_config.get("description", "Azure OpenAI o4-mini Model")
+        icon: str = profile_config.get("icon", "public/icons/rocket.svg")
+
+        # Store profile type in session
+        cl.user_session.set("profile_type", profile_name)
+
         # Initialize configuration
         config_manager.load_all()
         logger.info("Successfully loaded all configurations")
@@ -79,34 +106,35 @@ async def start_chat():
             raise ValueError(error)
 
         # Get environment settings
-        env_config = config_manager.get_environment_settings()
+        env_config: Any = config_manager.get_environment_settings()
 
-        # Use direct client creation to avoid the dict caching issues
-        logger.info(f"Creating client for model {model_name}")
-        client = create_client(
+        # Use profile-specific model_config for client creation
+        logger.info(f"Creating client for model {model_name} with profile config")
+        app_context.client = create_client(
             model_name=model_name,
-            streaming=True,
-            vision=True,
-            connection_pool_size=10,
-            request_timeout=30,
+            model_config=model_config,
+            streaming=model_config.get("streaming", True),
+            vision=model_config.get("vision", True),
+            connection_pool_size=model_config.get("connection_pool_size", 10),
+            request_timeout=model_config.get("request_timeout", 30),
         )
 
         # Initialize application manager
-        app_manager = ApplicationManager(
+        app_context.app_manager = ApplicationManager(
             ApplicationConfig(
-                project_root=Path(__file__).parent.parent,
-                debug=env_config.get("debug", False),
-                log_level=env_config.get("log_level", "INFO"),
+                project_root=Path(__file__).resolve().parent.parent,
+                debug=getattr(env_config, "debug", False),
+                log_level=getattr(env_config, "log_level", "INFO"),
             )
         )
-        await app_manager.start()
+        await app_context.app_manager.start()
 
         # Initialize task list
-        from agentic_fleet.ui.task_manager import initialize_task_list
         await initialize_task_list()
 
         # Initialize agent based on profile
-        team = await initialize_agent_for_profile(profile_name, client)
+        agents = initialize_default_agents(model_client=app_context.client)
+        team = agents[0] if agents else None
         profile_desc, icon = get_profile_metadata(profile_name)
 
         # Store team and profile info in user session
@@ -114,7 +142,7 @@ async def start_chat():
         cl.user_session.set("profile_icon", icon)
 
         # Set up default settings
-        default_settings = settings_manager.get_default_settings()
+        default_settings: Dict[str, Any] = settings_manager.get_default_settings()
         cl.user_session.set("settings", default_settings)
 
         # Setup chat settings UI
@@ -124,53 +152,11 @@ async def start_chat():
         await send_welcome_message(profile_name, model_name, default_settings, profile_desc)
 
     except Exception as e:
-        error_msg = f"⚠️ Initialization failed: {str(e)}"
+        error_msg: str = f"⚠️ Initialization failed: {str(e)}"
         logger.error(f"Chat start error: {traceback.format_exc()}")
         await cl.Message(content=error_msg).send()
 
-
-async def initialize_agent_for_profile(profile_name: str, client: object) -> object:
-    """Initialize the appropriate agent based on the profile name.
-
-    Args:
-        profile_name: The name of the profile
-        client: The LLM client to use
-
-    Returns:
-        The initialized agent team
-    """
-    try:
-        # Get profile configuration
-        profile_config = llm_config_manager.get_profile_config(profile_name)
-        features = profile_config.get("features", {})
-
-        # Get UI render mode from profile config
-        ui_render_mode = profile_config.get("ui_render_mode", "tasklist")
-        cl.user_session.set("ui_render_mode", ui_render_mode)
-
-        # Initialize agent with features from config
-        logger.info(f"Initializing agent for profile {profile_name}...")
-        team = create_magentic_one_agent(
-            client=client,
-            hil_mode=features.get("hil_mode", True)
-            # mcp_enabled parameter removed as it's not supported by MagenticOne
-        )
-
-        return team
-    except ValueError:
-        # Fallback to default initialization if profile not found
-        logger.info("Initializing standard MagenticFleet agent configuration...")
-        team = create_magentic_one_agent(
-            client=client,
-            hil_mode=True  # Enable human-in-the-loop mode
-        )
-        # Set tasklist UI render mode for standard profile
-        cl.user_session.set("ui_render_mode", "tasklist")
-
-        return team
-
-
-def get_profile_metadata(profile_name: str) -> tuple[str, str]:
+def get_profile_metadata(profile_name: str) -> Tuple[str, str]:
     """Get profile description and icon based on profile name.
 
     Args:
@@ -181,9 +167,9 @@ def get_profile_metadata(profile_name: str) -> tuple[str, str]:
     """
     try:
         # Get profile configuration
-        profile_config = llm_config_manager.get_profile_config(profile_name)
-        description = profile_config.get("description", "Standard AgenticFleet Profile")
-        icon = profile_config.get("icon", "public/icons/rocket.svg")
+        profile_config: Dict[str, Any] = llm_config_manager.get_profile_config(profile_name)
+        description: str = profile_config.get("description", "Standard AgenticFleet Profile")
+        icon: str = profile_config.get("icon", "public/icons/rocket.svg")
         return description, icon
     except ValueError:
         # Fallback to defaults if profile not found
@@ -191,8 +177,12 @@ def get_profile_metadata(profile_name: str) -> tuple[str, str]:
             return "MCP Interaction Profile", "public/icons/microscope.svg"
         return "Standard AgenticFleet Profile", "public/icons/rocket.svg"
 
-
-async def send_welcome_message(profile_name: str, model_name: str, settings: dict[str, Any], profile_desc: str) -> None:
+async def send_welcome_message(
+    profile_name: str,
+    model_name: str,
+    settings: Dict[str, Any],
+    profile_desc: str
+) -> None:
     """Send a welcome message with profile information.
 
     Args:
@@ -201,16 +191,16 @@ async def send_welcome_message(profile_name: str, model_name: str, settings: dic
         settings: The settings dictionary
         profile_desc: The profile description
     """
-    welcome_message = (
+    welcome_message: str = (
         f"🚀 Welcome to AgenticFleet!\n\n"
         f"**Active Profile**: {profile_name}\n"
         f"**Model**: {model_name}\n"
-        f"**Temperature**: {settings['temperature']}\n\n"
+        f"**Temperature**: {settings.get('temperature', 0.7)}\n\n"
         f"{profile_desc}"
     )
 
     # Create actions list
-    actions = [
+    actions: List[cl.Action] = [
         cl.Action(
             name="reset_agents",
             label="🔄 Reset Agents",
@@ -230,114 +220,135 @@ async def send_welcome_message(profile_name: str, model_name: str, settings: dic
             )
         )
 
-    await cl.Message(
+    # Get profile icon
+    icon: str = cl.user_session.get("profile_icon") or "public/icons/rocket.svg"
+
+    # Create elements list with avatar image
+    elements = [cl.Image(name="avatar", url=icon, display="inline", size="small")]
+
+    # Create and send message
+    msg = cl.Message(
         content=welcome_message,
         author=profile_name,
         actions=actions,
-    ).send()
+        elements=elements
+    )
 
+    await msg.send()
 
 @on_message
-async def message_handler(message: cl.Message):
+async def message_handler(message: cl.Message) -> None:
     """Handle incoming chat messages."""
-    await handle_chat_message(message)
-
+    try:
+        # Get the current profile type
+        profile_type = cl.user_session.get("profile_type", "default")
+        
+        # Process the message
+        await handle_chat_message(message)
+    except Exception as e:
+        error_msg = f"Error processing message: {str(e)}"
+        logger.error(f"Message handler error: {traceback.format_exc()}")
+        await cl.Message(content=error_msg, author="System").send()
 
 @on_settings_update
-async def handle_settings_update(settings: dict[str, Any]):
+async def handle_settings_update(settings: Dict[str, Any]) -> None:
     """Handle updates to chat settings."""
-    await settings_manager.handle_settings_update(settings)
-
+    try:
+        await settings_manager.handle_settings_update(settings)
+    except Exception as e:
+        logger.error(f"Settings update error: {str(e)}")
+        await cl.Message(
+            content=f"Failed to update settings: {str(e)}",
+            author="System"
+        ).send()
 
 @cl.action_callback("reset_agents")
-async def on_action_reset(action: cl.Action):
+async def on_action_reset(action: cl.Action) -> None:
     """Handle reset action."""
-    await on_reset(action)
-
+    try:
+        await on_reset(action)
+    except Exception as e:
+        logger.error(f"Reset action error: {str(e)}")
+        await cl.Message(
+            content=f"Failed to reset agents: {str(e)}",
+            author="System"
+        ).send()
 
 @cl.action_callback("list_mcp_tools")
-async def on_action_list_mcp(_: cl.Action):
+async def on_action_list_mcp(_: cl.Action) -> None:
     """Handle list MCP tools action."""
     try:
-        # Import here to avoid circular imports
-        from agentic_fleet.ui.components.mcp_panel import list_available_mcps
-
         # List available MCP configurations
-        await list_available_mcps()
-    except Exception as e:
-        await cl.Message(
-            content=f"Error retrieving MCP configurations: {str(e)}",
-            author="System",
-        ).send()
-        logger.error(f"Error listing MCP configurations: {traceback.format_exc()}")
+        mcp_servers = await list_available_mcps()
 
+        # Store the servers in the session for later use
+        cl.user_session.set("mcp_servers", mcp_servers)
+
+    except Exception as e:
+        error_msg = f"Error retrieving MCP configurations: {str(e)}"
+        logger.error(f"Error listing MCP configurations: {traceback.format_exc()}")
+        await cl.Message(content=error_msg, author="System").send()
 
 @on_stop
-async def on_chat_stop():
+async def on_chat_stop() -> None:
     """Clean up resources when the chat is stopped."""
-    global app_manager
-
-    if app_manager:
-        try:
-            await app_manager.shutdown()
-            logger.info("Application manager stopped")
-        except Exception as e:
-            logger.warning(f"Application manager cleanup error: {str(e)}")
-
-    # Reset session values
     try:
-        # Define keys to reset
-        session_keys = [
-            "agent_team", "settings", "current_task_list",
-            "plan_steps", "plan_tasks", "profile_icon",
-            "profile_type", "ui_render_mode"
-        ]
+        # Clean up application resources
+        await app_context.cleanup()
 
-        # Reset each key
+        # Reset session values
+        session_keys = [
+            "chat_profile",
+            "profile_type",
+            "agent_team",
+            "profile_icon",
+            "settings",
+            "mcp_servers"
+        ]
         for key in session_keys:
-            cl.user_session.set(key, None)
+            try:
+                cl.user_session.set(key, None)
+            except Exception as e:
+                logger.warning(f"Failed to reset session key {key}: {str(e)}")
 
     except Exception as e:
-        logger.warning(f"Session cleanup error: {str(e)}")
+        logger.error(f"Chat stop error: {str(e)}")
 
-
-def main():
+def main() -> None:
     """Run the Chainlit application."""
-    import subprocess
+    host: str = os.environ.get("CHAINLIT_HOST", "0.0.0.0")
+    port_env: str = os.environ.get("CHAINLIT_PORT", "8080")
+    
+    try:
+        port: int = int(port_env)
+        if not (0 < port < 65536):
+            port = 8080
+    except ValueError:
+        port = 8080
 
-    # Get configuration from environment variables
-    host = os.environ.get("CHAINLIT_HOST", "0.0.0.0")
-    port = int(os.environ.get("CHAINLIT_PORT", "8080"))
-
-    # Log startup info
     logger.info(f"Starting Chainlit UI on {host}:{port}")
 
-    # Get the current file path
-    current_file = os.path.abspath(__file__)
-
-    # Build chainlit command
-    cmd = [
-        "chainlit", "run",
-        current_file,
-        "--host", host,
-        "--port", str(port),
-        "--no-cache"
-    ]
-
-    logger.info(f"Executing: {' '.join(cmd)}")
     try:
-        # Execute chainlit as a subprocess
-        process = subprocess.run(cmd)
-        sys.exit(process.returncode)
+        result = subprocess.run(
+            [
+                "chainlit", "run",
+                os.path.abspath(__file__),
+                "--host", host,
+                "--port", str(port),
+                "--no-cache"
+            ],
+            check=True,
+        )
+        sys.exit(result.returncode)
     except FileNotFoundError:
-        logger.error("Chainlit command not found. Make sure it's installed correctly.")
-        logger.error("Try running: ./scripts/setup_chainlit.sh")
+        logger.error("Chainlit command not found. Make sure chainlit is installed.")
         sys.exit(1)
+    except subprocess.CalledProcessError as e:
+        logger.error(f"Chainlit process failed with return code {e.returncode}")
+        sys.exit(e.returncode)
     except Exception as e:
-        logger.error(f"Error running Chainlit: {e}")
+        logger.error(f"Failed to start Chainlit: {str(e)}")
         sys.exit(1)
 
-
-# Make the module directly runnable
 if __name__ == "__main__":
     main()

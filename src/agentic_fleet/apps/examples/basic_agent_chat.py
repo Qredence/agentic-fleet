@@ -1,23 +1,20 @@
 """Basic example of using AgenticFleet with Chainlit UI and AutoGen agents."""
 
-import os
 import logging
+import os
 from typing import Optional
 
 import chainlit as cl
-from dotenv import load_dotenv
-from autogen_ext.models.openai import AzureOpenAIChatCompletionClient
+from autogen_agentchat.messages import TextMessage
+from autogen_ext.agents.file_surfer import FileSurfer
 from autogen_ext.agents.magentic_one import MagenticOneCoderAgent
 from autogen_ext.agents.web_surfer import MultimodalWebSurfer
-from autogen_ext.agents.file_surfer import FileSurfer
 from autogen_ext.code_executors.local import LocalCommandLineCodeExecutor
-from autogen_agentchat.messages import TextMessage
+from autogen_ext.models.openai import AzureOpenAIChatCompletionClient
+from dotenv import load_dotenv
 
 # Initialize logging
-logging.basicConfig(
-    level=logging.INFO,
-    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
-)
+logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s")
 logger = logging.getLogger(__name__)
 
 # Load environment variables
@@ -26,6 +23,7 @@ load_dotenv()
 # Initialize global variables
 model_client: Optional[AzureOpenAIChatCompletionClient] = None
 agent_team = {}
+
 
 @cl.on_chat_start
 async def setup():
@@ -45,8 +43,8 @@ async def setup():
                 "function_calling": True,
                 "json_output": True,
                 "family": "azure",
-                "architecture": "gpt-4o-mini"
-            }
+                "architecture": "gpt-4o-mini",
+            },
         )
 
         # Initialize agents
@@ -58,21 +56,18 @@ async def setup():
                 description="Navigates and extracts information from the web",
                 headless=True,
                 start_page="https://www.bing.com",
-                animate_actions=False
+                animate_actions=False,
             ),
             "file_surfer": FileSurfer(
                 name="FileSurfer",
                 model_client=model_client,
-                description="Manages file operations and information extraction"
+                description="Manages file operations and information extraction",
             ),
-            "coder": MagenticOneCoderAgent(
-                name="Coder",
-                model_client=model_client
-            ),
+            "coder": MagenticOneCoderAgent(name="Coder", model_client=model_client),
             "executor": LocalCommandLineCodeExecutor(
                 work_dir=os.path.join(os.getcwd(), "workspace"),
-                timeout=300  # 5 minutes
-            )
+                timeout=300,  # 5 minutes
+            ),
         }
 
         # Send welcome message
@@ -81,14 +76,15 @@ async def setup():
             elements=[
                 cl.Text(content="- Web searches and information gathering", display="inline"),
                 cl.Text(content="- File operations and management", display="inline"),
-                cl.Text(content="- Code generation and execution", display="inline")
-            ]
+                cl.Text(content="- Code generation and execution", display="inline"),
+            ],
         ).send()
 
     except Exception as e:
         error_msg = f"Setup failed: {str(e)}"
         logger.error(error_msg)
         await cl.Message(content=f"⚠️ {error_msg}").send()
+
 
 @cl.on_message
 async def main(message: cl.Message):
@@ -101,28 +97,22 @@ async def main(message: cl.Message):
         # Process message through each agent
         for agent_name, agent in agent_team.items():
             # Update task status
-            task = cl.Task(
-                title=f"Processing with {agent_name}",
-                status=cl.TaskStatus.RUNNING
-            )
+            task = cl.Task(title=f"Processing with {agent_name}", status=cl.TaskStatus.RUNNING)
             task_list.tasks.append(task)
             await task_list.update()
 
             try:
                 # Convert message to TextMessage for agent processing
                 agent_message = TextMessage(content=message.content, source="user")
-                
+
                 # Process message with agent
                 if hasattr(agent, "process_message"):
                     response = await agent.process_message(agent_message)
-                    
+
                     # Handle response
                     if response:
-                        await cl.Message(
-                            content=str(response),
-                            author=agent_name
-                        ).send()
-                
+                        await cl.Message(content=str(response), author=agent_name).send()
+
                 # Update task status
                 task.status = cl.TaskStatus.DONE
                 await task_list.update()
@@ -131,15 +121,13 @@ async def main(message: cl.Message):
                 logger.error(f"Error with {agent_name}: {str(e)}")
                 task.status = cl.TaskStatus.FAILED
                 await task_list.update()
-                await cl.Message(
-                    content=f"⚠️ Error with {agent_name}: {str(e)}",
-                    author="System"
-                ).send()
+                await cl.Message(content=f"⚠️ Error with {agent_name}: {str(e)}", author="System").send()
 
     except Exception as e:
         error_msg = f"Message processing failed: {str(e)}"
         logger.error(error_msg)
         await cl.Message(content=f"⚠️ {error_msg}").send()
+
 
 @cl.on_stop
 async def cleanup():
@@ -151,5 +139,6 @@ async def cleanup():
     except Exception as e:
         logger.error(f"Cleanup error: {str(e)}")
 
+
 if __name__ == "__main__":
-    cl.run() 
+    cl.run()

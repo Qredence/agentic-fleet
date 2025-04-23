@@ -48,11 +48,7 @@ def create_client(
         ValueError: If required environment variables are missing
     """
     # Validate required environment variables
-    required_env_vars = [
-        "AZURE_OPENAI_ENDPOINT",
-        "AZURE_OPENAI_API_KEY",
-        "AZURE_OPENAI_API_VERSION"
-    ]
+    required_env_vars = ["AZURE_OPENAI_ENDPOINT", "AZURE_OPENAI_API_KEY", "AZURE_OPENAI_API_VERSION"]
 
     missing_vars = [var for var in required_env_vars if not os.getenv(var)]
     if missing_vars:
@@ -109,9 +105,7 @@ def create_client(
             raise ValueError(error_msg) from e
         raise
 
-    logger.info(
-        f"Created client for model {model_name} with streaming={streaming}, vision={vision}"
-    )
+    logger.info(f"Created client for model {model_name} with streaming={streaming}, vision={vision}")
     return client
 
 
@@ -123,7 +117,7 @@ def get_cached_client(
     connection_pool_size: int = 10,
     request_timeout: int = 30,
     use_config: bool = True,
-    model_config: Optional[Dict[str, Any]] = None, 
+    model_config: Optional[Dict[str, Any]] = None,
     **kwargs: Any,
 ) -> AzureOpenAIChatCompletionClient:
     """Get a cached client instance or create a new one if not in cache.
@@ -186,10 +180,10 @@ def get_client_for_profile(profile_name: str, **kwargs: Any) -> AzureOpenAIChatC
         # Get the model configuration for the profile
         # Get the model configuration for the profile
         model_config = llm_config_manager.get_model_for_profile(profile_name)
-        # Extract model name safely with a fallback 
+        # Extract model name safely with a fallback
         model_name = model_config.get("name", "gpt-4o-mini-2024-07-18")
 
-        # Create client directly without using the cache 
+        # Create client directly without using the cache
         # to avoid unhashable dict error
         return create_client(
             model_name=model_name,
@@ -198,7 +192,7 @@ def get_client_for_profile(profile_name: str, **kwargs: Any) -> AzureOpenAIChatC
             connection_pool_size=10,
             request_timeout=30,
             model_config=model_config,
-            **kwargs
+            **kwargs,
         )
     except ValueError as e:
         logger.error(f"Error getting client for profile {profile_name}: {e}")

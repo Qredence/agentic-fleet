@@ -18,7 +18,7 @@ warnings.warn(
     "The agentic_fleet.models.client_factory module is deprecated and will be removed in a future version. "
     "Use agentic_fleet.services.client_factory instead.",
     DeprecationWarning,
-    stacklevel=2
+    stacklevel=2,
 )
 
 # Import all symbols from services.client_factory
@@ -27,11 +27,7 @@ try:
     client_factory = import_module("agentic_fleet.services.client_factory")
 
     # Import all symbols from services.client_factory
-    from agentic_fleet.services.client_factory import (
-        create_client,
-        get_cached_client,
-        get_client_for_profile
-    )
+    from agentic_fleet.services.client_factory import create_client, get_cached_client, get_client_for_profile
 
     logger.info("Successfully imported services.client_factory")
 except ImportError as e:

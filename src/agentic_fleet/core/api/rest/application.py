@@ -172,9 +172,7 @@ class ApplicationManager:
             logger.error(f"Failed to initialize agent team: {str(e)}")
             raise
 
-    async def create_agent_team(
-        self, model_client: AzureOpenAIChatCompletionClient
-    ) -> MagenticOneGroupChat:
+    async def create_agent_team(self, model_client: AzureOpenAIChatCompletionClient) -> MagenticOneGroupChat:
         """Create and configure the agent team.
 
         Args:

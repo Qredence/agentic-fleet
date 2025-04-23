@@ -20,9 +20,7 @@ async def initialize_chat() -> None:
     """Initialize chat session with configured agents and settings."""
     try:
         # Get profile selection
-        profile = await cl.AskForOption(
-            content="Choose a chat profile:", options=chat_profiles(), timeout=180
-        )
+        profile = await cl.AskForOption(content="Choose a chat profile:", options=chat_profiles(), timeout=180)
 
         # Store profile in session
         await cl.user_session.set("chat_profile", profile)
@@ -30,7 +28,8 @@ async def initialize_chat() -> None:
         # Initialize agents
         app_manager = ApplicationManager.get_instance()
         agents = initialize_default_agents(app_manager.model_client)
-        team = initialize_agent_team(agents)
+        # Use the first agent as the team for streaming compatibility
+        team = agents[0] if agents else None
 
         # Store team in session
         await cl.user_session.set("agent_team", team)

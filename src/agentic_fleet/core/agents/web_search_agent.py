@@ -36,11 +36,7 @@ class WebSearchAgent(BaseChatAgent):
     """
 
     def __init__(
-        self,
-        name: str = "web_search_agent",
-        description: str = "",
-        temperature: float = 0.6,
-        **kwargs
+        self, name: str = "web_search_agent", description: str = "", temperature: float = 0.6, **kwargs
     ) -> None:
         """
         Initialize the Web Search Agent.
@@ -61,9 +57,7 @@ class WebSearchAgent(BaseChatAgent):
         )
         self.config = config
 
-    async def process_message(
-        self, message: ChatMessage, token: CancellationToken = None
-    ) -> Response:
+    async def process_message(self, message: ChatMessage, token: CancellationToken = None) -> Response:
         """
         Process incoming messages and manage web search operations.
 
@@ -79,35 +73,26 @@ class WebSearchAgent(BaseChatAgent):
             command, params = self._parse_message(message.content)
 
             if command == "search":
-                results = await self._perform_search(
-                    params.get("query", ""), params.get("context", {})
-                )
+                results = await self._perform_search(params.get("query", ""), params.get("context", {}))
                 return Response(content=str(results))
 
             elif command == "analyze":
-                analysis = await self._analyze_results(
-                    params.get("results", []), params.get("focus", None)
-                )
+                analysis = await self._analyze_results(params.get("results", []), params.get("focus", None))
                 return Response(content=analysis)
 
             elif command == "synthesize":
-                synthesis = await self._synthesize_information(
-                    params.get("query", ""), params.get("context", {})
-                )
+                synthesis = await self._synthesize_information(params.get("query", ""), params.get("context", {}))
                 return Response(content=synthesis)
 
             else:
                 return Response(
-                    content=f"Unknown command: {command}. Available commands: search, analyze, synthesize",
-                    error=True
+                    content=f"Unknown command: {command}. Available commands: search, analyze, synthesize", error=True
                 )
 
         except Exception as e:
             return Response(content=f"Error processing web search operation: {str(e)}", error=True)
 
-    async def generate_response(
-        self, messages: Sequence[LLMMessage], token: CancellationToken = None
-    ) -> CreateResult:
+    async def generate_response(self, messages: Sequence[LLMMessage], token: CancellationToken = None) -> CreateResult:
         """
         Generate a response based on the message history.
 
@@ -158,9 +143,7 @@ class WebSearchAgent(BaseChatAgent):
         """
         return ["text", "search_results"]
 
-    async def _perform_search(
-        self, query: str, context: Optional[Dict[str, Any]] = None
-    ) -> List[SearchResult]:
+    async def _perform_search(self, query: str, context: Optional[Dict[str, Any]] = None) -> List[SearchResult]:
         """
         Perform a web search and return relevant results.
 
@@ -183,9 +166,7 @@ class WebSearchAgent(BaseChatAgent):
 
             # Filter results by relevance
             filtered_results = [
-                result
-                for result in results
-                if result.relevance_score >= self.config.min_relevance_score
+                result for result in results if result.relevance_score >= self.config.min_relevance_score
             ]
 
             return filtered_results[: self.config.max_results]
@@ -193,9 +174,7 @@ class WebSearchAgent(BaseChatAgent):
         except Exception as e:
             raise RuntimeError(f"Error performing web search: {str(e)}")
 
-    async def _analyze_results(
-        self, results: List[SearchResult], focus: Optional[str] = None
-    ) -> str:
+    async def _analyze_results(self, results: List[SearchResult], focus: Optional[str] = None) -> str:
         """
         Analyze search results to extract key information.
 
@@ -209,23 +188,17 @@ class WebSearchAgent(BaseChatAgent):
         try:
             # Create messages for analysis
             messages = [
-                LLMMessage(
-                    role="system", content="Analyze the search results and extract key information."
-                ),
+                LLMMessage(role="system", content="Analyze the search results and extract key information."),
                 LLMMessage(role="user", content=f"Results: {results}\nFocus Area: {focus}"),
             ]
 
-            result = await self.generate_response(
-                messages, temperature=self.config.analysis_temperature
-            )
+            result = await self.generate_response(messages, temperature=self.config.analysis_temperature)
             return result.message.content
 
         except Exception as e:
             raise RuntimeError(f"Error analyzing search results: {str(e)}")
 
-    async def _synthesize_information(
-        self, query: str, context: Optional[Dict[str, Any]] = None
-    ) -> str:
+    async def _synthesize_information(self, query: str, context: Optional[Dict[str, Any]] = None) -> str:
         """
         Synthesize information from search results into a coherent response.
 
@@ -249,14 +222,10 @@ class WebSearchAgent(BaseChatAgent):
                     role="system",
                     content="Synthesize the analyzed information into a coherent response.",
                 ),
-                LLMMessage(
-                    role="user", content=f"Query: {query}\nAnalysis: {analysis}\nContext: {context}"
-                ),
+                LLMMessage(role="user", content=f"Query: {query}\nAnalysis: {analysis}\nContext: {context}"),
             ]
 
-            result = await self.generate_response(
-                messages, temperature=self.config.synthesis_temperature
-            )
+            result = await self.generate_response(messages, temperature=self.config.synthesis_temperature)
             return result.message.content
 
         except Exception as e:
@@ -275,9 +244,7 @@ class WebSearchAgent(BaseChatAgent):
         """
         try:
             messages = [
-                LLMMessage(
-                    role="system", content="Refine the search query using the provided context."
-                ),
+                LLMMessage(role="system", content="Refine the search query using the provided context."),
                 LLMMessage(role="user", content=f"Query: {query}\nContext: {context}"),
             ]
 

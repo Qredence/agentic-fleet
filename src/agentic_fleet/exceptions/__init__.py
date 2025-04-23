@@ -29,14 +29,12 @@ __all__ = [
     "AgenticFleetAPIError",
     "AgenticFleetDatabaseError",
     "AgenticFleetConfigError",
-
     # API exceptions
     "NotFoundError",
     "ValidationError",
     "AuthenticationError",
     "AuthorizationError",
     "RateLimitError",
-
     # Database exceptions
     "DatabaseConnectionError",
     "DatabaseQueryError",

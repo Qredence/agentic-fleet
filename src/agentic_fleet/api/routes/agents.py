@@ -2,21 +2,20 @@
 Routes for agent management.
 """
 
-from fastapi import APIRouter, Depends, HTTPException, Request
-from typing import Dict, List, Any, Optional
+from typing import Any, Dict, List, Optional
 
+from fastapi import APIRouter, Depends, HTTPException, Request
+
+from agentic_fleet.api.dependencies.services import get_agent_service
 from agentic_fleet.schemas.agent import Agent, AgentCreate, AgentUpdate
 from agentic_fleet.services.agent_service import AgentService
-from agentic_fleet.api.dependencies.services import get_agent_service
 
 # Create router
 router = APIRouter()
 
 
 @router.get("/", response_model=Dict[str, List[Agent]])
-async def list_agents(
-    agent_service: AgentService = Depends(get_agent_service)
-) -> Dict[str, List[Agent]]:
+async def list_agents(agent_service: AgentService = Depends(get_agent_service)) -> Dict[str, List[Agent]]:
     """
     List all available agents.
     """
@@ -28,10 +27,7 @@ async def list_agents(
 
 
 @router.get("/{agent_id}", response_model=Agent)
-async def get_agent(
-    agent_id: str,
-    agent_service: AgentService = Depends(get_agent_service)
-) -> Agent:
+async def get_agent(agent_id: str, agent_service: AgentService = Depends(get_agent_service)) -> Agent:
     """
     Get details for a specific agent.
     """
@@ -47,10 +43,7 @@ async def get_agent(
 
 
 @router.post("/", response_model=Agent)
-async def create_agent(
-    agent: AgentCreate,
-    agent_service: AgentService = Depends(get_agent_service)
-) -> Agent:
+async def create_agent(agent: AgentCreate, agent_service: AgentService = Depends(get_agent_service)) -> Agent:
     """
     Create a new agent.
     """
@@ -62,9 +55,7 @@ async def create_agent(
 
 @router.put("/{agent_id}", response_model=Agent)
 async def update_agent(
-    agent_id: str,
-    agent: AgentUpdate,
-    agent_service: AgentService = Depends(get_agent_service)
+    agent_id: str, agent: AgentUpdate, agent_service: AgentService = Depends(get_agent_service)
 ) -> Agent:
     """
     Update an existing agent.
@@ -81,10 +72,7 @@ async def update_agent(
 
 
 @router.delete("/{agent_id}", response_model=Dict[str, bool])
-async def delete_agent(
-    agent_id: str,
-    agent_service: AgentService = Depends(get_agent_service)
-) -> Dict[str, bool]:
+async def delete_agent(agent_id: str, agent_service: AgentService = Depends(get_agent_service)) -> Dict[str, bool]:
     """
     Delete an agent.
     """

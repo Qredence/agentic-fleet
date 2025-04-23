@@ -36,11 +36,7 @@ class MindMapAgent(BaseChatAgent):
     """
 
     def __init__(
-        self,
-        name: str = "mind_map_agent",
-        description: str = "",
-        temperature: float = 0.5,
-        **kwargs: Any
+        self, name: str = "mind_map_agent", description: str = "", temperature: float = 0.5, **kwargs: Any
     ) -> None:
         """
         Initialize the Mind Map Agent.
@@ -63,9 +59,7 @@ class MindMapAgent(BaseChatAgent):
         self.config = config
         self.temperature = temperature
 
-    async def process_message(
-        self, message: ChatMessage, token: CancellationToken = None
-    ) -> Response:
+    async def process_message(self, message: ChatMessage, token: CancellationToken = None) -> Response:
         """
         Process incoming messages and manage the mind map operations.
 
@@ -81,9 +75,7 @@ class MindMapAgent(BaseChatAgent):
             command, params = self._parse_message(message.content)
 
             if command == "construct":
-                result = await self._construct_mind_map(
-                    params.get("reasoning_chain", ""), params.get("context", {})
-                )
+                result = await self._construct_mind_map(params.get("reasoning_chain", ""), params.get("context", {}))
                 return Response(content=str(result))
 
             elif command == "insights":
@@ -91,9 +83,7 @@ class MindMapAgent(BaseChatAgent):
                 return Response(content=insights)
 
             elif command == "recommendations":
-                recommendations = await self._get_recommendations(
-                    params.get("query", ""), params.get("context", {})
-                )
+                recommendations = await self._get_recommendations(params.get("query", ""), params.get("context", {}))
                 return Response(content=str(recommendations))
 
             elif command == "clear":
@@ -108,9 +98,7 @@ class MindMapAgent(BaseChatAgent):
         except Exception as e:
             return Response(content=f"Error processing mind map operation: {str(e)}", error=True)
 
-    async def generate_response(
-        self, messages: Sequence[LLMMessage], token: CancellationToken = None
-    ) -> CreateResult:
+    async def generate_response(self, messages: Sequence[LLMMessage], token: CancellationToken = None) -> CreateResult:
         """
         Generate a response based on the message history.
 
@@ -144,15 +132,11 @@ class MindMapAgent(BaseChatAgent):
         """
         try:
             # Extract entities
-            entities_data = await self._extract_entities(
-                reasoning_chain, self.temperature
-            )
+            entities_data = await self._extract_entities(reasoning_chain, self.temperature)
             self.mind_map_tool.add_entities(entities_data)
 
             # Extract relationships
-            relationships_data = await self._extract_relationships(
-                reasoning_chain, self.temperature
-            )
+            relationships_data = await self._extract_relationships(reasoning_chain, self.temperature)
             self.mind_map_tool.add_relationships(relationships_data)
 
             return self.mind_map_tool.get_graph_state()
@@ -182,9 +166,7 @@ class MindMapAgent(BaseChatAgent):
         except Exception as e:
             raise RuntimeError(f"Error extracting insights: {str(e)}")
 
-    async def _get_recommendations(
-        self, query: str, context: Optional[Dict[str, Any]] = None
-    ) -> List[Dict[str, Any]]:
+    async def _get_recommendations(self, query: str, context: Optional[Dict[str, Any]] = None) -> List[Dict[str, Any]]:
         """
         Get strategic recommendations based on the mind map.
 
@@ -243,9 +225,7 @@ class MindMapAgent(BaseChatAgent):
     async def _extract_entities(self, text: str, temperature: float) -> str:
         """Extract entities from text using LLM."""
         messages = [
-            LLMMessage(
-                role="system", content="Extract key entities from the text. Format as JSON."
-            ),
+            LLMMessage(role="system", content="Extract key entities from the text. Format as JSON."),
             LLMMessage(role="user", content=text),
         ]
         result = await self.generate_response(messages)
@@ -254,9 +234,7 @@ class MindMapAgent(BaseChatAgent):
     async def _extract_relationships(self, text: str, temperature: float) -> str:
         """Extract relationships from text using LLM."""
         messages = [
-            LLMMessage(
-                role="system", content="Extract relationships between entities. Format as JSON."
-            ),
+            LLMMessage(role="system", content="Extract relationships between entities. Format as JSON."),
             LLMMessage(role="user", content=text),
         ]
         result = await self.generate_response(messages)

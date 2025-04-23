@@ -55,8 +55,5 @@ class LoggingMiddleware(BaseHTTPMiddleware):
             return response
         except Exception as e:
             # Log error details
-            logger.error(
-                f"Error: {request.method} {request.url.path} "
-                f"Error: {str(e)}"
-            )
+            logger.error(f"Error: {request.method} {request.url.path} Error: {str(e)}")
             raise

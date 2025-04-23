@@ -57,14 +57,10 @@ from chainlit import (
 from dotenv import load_dotenv
 from PIL import Image
 
-# Local imports
-from agentic_fleet.agent_registry import (
-    initialize_agent_team,
-)
-from agentic_fleet.apps.chainlit_ui.agent_registry.default_agents import (
-    initialize_default_agents,
-)
 from agentic_fleet.config import config_manager
+
+# Local imports
+from agentic_fleet.core.agents.team import initialize_agent_team, initialize_default_agents
 from agentic_fleet.core.application.app_manager import ApplicationManager, Settings
 from agentic_fleet.message_processing import (
     TASK_STATUS_COMPLETED,
@@ -75,9 +71,7 @@ from agentic_fleet.message_processing import (
 )
 
 # Initialize logging
-logging.basicConfig(
-    level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
-)
+logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s")
 logger = logging.getLogger(__name__)
 
 # Load environment variables
@@ -99,7 +93,7 @@ except Exception as e:
 env_config = config_manager.get_environment_settings()
 
 # Constants
-STREAM_DELAY = env_config.get("stream_delay", 0.03)
+STREAM_DELAY = getattr(env_config, "stream_delay", 0.03)
 PORT = int(os.getenv("CHAINLIT_PORT", os.getenv("PORT", "8000")))
 HOST = os.getenv("CHAINLIT_HOST", os.getenv("HOST", "localhost"))
 
@@ -232,9 +226,7 @@ async def on_chat_start():
             raise
 
         # Initialize MagenticOne with configured client
-        magentic_one = MagenticOne(
-            client=client, hil_mode=True, code_executor=LocalCommandLineCodeExecutor()
-        )
+        magentic_one = MagenticOne(client=client, hil_mode=True, code_executor=LocalCommandLineCodeExecutor())
 
         # Store MagenticOne instance and profile in user session
         user_session.set("magentic_one", magentic_one)
@@ -246,17 +238,13 @@ async def on_chat_start():
         await app_manager.start()
 
         # Initialize default agents
-        default_agents = initialize_default_agents(
-            app_manager, config_manager, user_session, defaults, env_config
-        )
+        default_agents = initialize_default_agents()
 
         # Get team configuration
         team_config = config_manager.get_team_settings("magentic_fleet_one")
 
         # Initialize agent team
-        agent_team = initialize_agent_team(
-            app_manager, user_session, team_config, default_agents, defaults
-        )
+        agent_team = initialize_agent_team(team_config)
         user_session.set("agent_team", agent_team)
 
         # Store settings in user session
@@ -265,14 +253,8 @@ async def on_chat_start():
         user_session.set("settings", settings)
 
         # Welcome message with profile details and reset control
-        profile_name = (
-            profile.name if isinstance(profile, cl.ChatProfile) else "Default Profile"
-        )
-        profile_desc = (
-            profile.markdown_description
-            if isinstance(profile, cl.ChatProfile)
-            else "Standard configuration"
-        )
+        profile_name = profile.name if isinstance(profile, cl.ChatProfile) else "Default Profile"
+        profile_desc = profile.markdown_description if isinstance(profile, cl.ChatProfile) else "Standard configuration"
 
         welcome_message = (
             f"🚀 Welcome to MagenticFleet!\n\n"
@@ -318,9 +300,7 @@ async def on_message(message: cl.Message):
             raise ValueError("Agent team not initialized")
 
         # Create initial message to attach progress elements to
-        initial_message = await cl.Message(
-            content="🚀 Starting task processing..."
-        ).send()
+        initial_message = await cl.Message(content="🚀 Starting task processing...").send()
 
         # Store the initial message ID for all subsequent updates
         message_id = initial_message.id
@@ -352,9 +332,7 @@ async def on_message(message: cl.Message):
                 content="## 📋 Task Progress Overview\n\nMonitoring task execution and progress...\n",
                 display="side",
             ),
-            "planning": cl.Text(
-                name="planned_tasks", content="### 📝 Planned Tasks\n", display="side"
-            ),
+            "planning": cl.Text(name="planned_tasks", content="### 📝 Planned Tasks\n", display="side"),
             "execution": cl.Text(
                 name="execution_progress",
                 content="### ⚡ Execution Progress\n",
@@ -405,8 +383,7 @@ async def on_message(message: cl.Message):
                             # Update overview
                             overview_element = cl.Text(
                                 name="task_overview",
-                                content=task_status["overview"].content
-                                + "\n🔄 Transitioning to execution phase...\n",
+                                content=task_status["overview"].content + "\n🔄 Transitioning to execution phase...\n",
                                 display="side",
                             )
                             await overview_element.send(for_id=message_id)
@@ -422,7 +399,9 @@ async def on_message(message: cl.Message):
 
                     elif hasattr(event, "tool_name"):
                         # Format tool calls with emoji and structure
-                        tool_message = f"🔧 **Tool Call**: {event.tool_name}\n```json\n{json.loads(event.response)}\n```"
+                        tool_message = (
+                            f"🔧 **Tool Call**: {event.tool_name}\n```json\n{json.loads(event.response)}\n```"
+                        )
                         await cl.Message(
                             content=tool_message,
                             author="Tool Manager",
@@ -434,8 +413,7 @@ async def on_message(message: cl.Message):
                         # Update execution progress
                         execution_element = cl.Text(
                             name="execution_progress",
-                            content=task_status["execution"].content
-                            + f"\n[{timestamp}] {tool_message}\n",
+                            content=task_status["execution"].content + f"\n[{timestamp}] {tool_message}\n",
                             display="side",
                         )
                         await execution_element.send(for_id=message_id)
@@ -452,16 +430,12 @@ async def on_message(message: cl.Message):
                         task_status["overview"] = overview_element
 
                     elif isinstance(event, TaskResult):
-                        await handle_task_completion(
-                            event, task_ledger, task_status, message_id
-                        )
+                        await handle_task_completion(event, task_ledger, task_status, message_id)
 
                     # Update agent status in task ledger
                     if hasattr(event, "source"):
                         agent_type = event.source.split(".")[-1]
-                        await update_agent_status(
-                            agent_type, task_ledger, task_status, message_id
-                        )
+                        await update_agent_status(agent_type, task_ledger, task_status, message_id)
 
                 except Exception as e:
                     await handle_processing_error(e)
@@ -471,8 +445,7 @@ async def on_message(message: cl.Message):
             timestamp = time.strftime("%H:%M:%S")
             overview_element = cl.Text(
                 name="task_overview",
-                content=task_status["overview"].content
-                + f"\n[{timestamp}] ✨ Task processing completed\n",
+                content=task_status["overview"].content + f"\n[{timestamp}] ✨ Task processing completed\n",
                 display="side",
             )
             await overview_element.send(for_id=message_id)
@@ -502,9 +475,7 @@ def format_message_content(content: str) -> str:
     return content
 
 
-async def display_task_plan(
-    content: str, task_status: Dict[str, cl.Text], message_id: str
-):
+async def display_task_plan(content: str, task_status: Dict[str, cl.Text], message_id: str):
     """Extract and display the task plan from agent's message"""
     # Extract tasks using regex patterns
     tasks = []
@@ -540,8 +511,7 @@ async def display_task_plan(
         # Update overview
         overview_element = cl.Text(
             name="task_overview",
-            content=task_status["overview"].content
-            + f"\n[{timestamp}] 📝 Identified {len(tasks)} tasks to execute\n",
+            content=task_status["overview"].content + f"\n[{timestamp}] 📝 Identified {len(tasks)} tasks to execute\n",
             display="side",
         )
         await overview_element.send(for_id=message_id)
@@ -567,8 +537,7 @@ async def handle_task_completion(
     # Update completion status
     completion_element = cl.Text(
         name="completed_tasks",
-        content=task_status["completion"].content
-        + f"\n[{timestamp}] ✅ {formatted_result}\n",
+        content=task_status["completion"].content + f"\n[{timestamp}] ✅ {formatted_result}\n",
         display="side",
     )
     await completion_element.send(for_id=message_id)
@@ -628,8 +597,7 @@ async def update_agent_status(
         # Update execution progress
         execution_element = cl.Text(
             name="execution_progress",
-            content=task_status["execution"].content
-            + f"\n[{timestamp}] 🔄 **{task_type}**: {task.title} active\n",
+            content=task_status["execution"].content + f"\n[{timestamp}] 🔄 **{task_type}**: {task.title} active\n",
             display="side",
         )
         await execution_element.send(for_id=message_id)
@@ -638,8 +606,7 @@ async def update_agent_status(
         # Update overview
         overview_element = cl.Text(
             name="task_overview",
-            content=task_status["overview"].content
-            + f"\n[{timestamp}] 👉 {task_type} started\n",
+            content=task_status["overview"].content + f"\n[{timestamp}] 👉 {task_type} started\n",
             display="side",
         )
         await overview_element.send(for_id=message_id)
@@ -742,12 +709,8 @@ async def handle_message(message: cl.Message):
                     response = await agent.process_message(agent_message)
                     await process_response(response, collected_responses)
                 except Exception as e:
-                    logger.error(
-                        f"Error processing message with agent {agent.name}: {e}"
-                    )
-                    await cl.Message(
-                        content=f"⚠️ Error with {agent.name}: {str(e)}", author="System"
-                    ).send()
+                    logger.error(f"Error processing message with agent {agent.name}: {e}")
+                    await cl.Message(content=f"⚠️ Error with {agent.name}: {str(e)}", author="System").send()
 
             step.output = "Message processed by agent team"
 

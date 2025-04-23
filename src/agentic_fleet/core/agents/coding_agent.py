@@ -101,8 +101,7 @@ class CodingAgent(BaseAgent):
 
             elif command == "optimize":
                 optimized = await self._optimize_code(
-                    params.get("code", ""), params.get(
-                        "metrics", []), params.get("context", {})
+                    params.get("code", ""), params.get("metrics", []), params.get("context", {})
                 )
                 return Response(content=str(optimized))
 
@@ -113,15 +112,12 @@ class CodingAgent(BaseAgent):
             else:
                 return Response(
                     content=f"Unknown command: {command}. Available commands: generate, execute, optimize, review",
-                    error=True
+                    error=True,
                 )
 
         except Exception as e:
             logger.error("Error processing code operation", exc_info=True)
-            return Response(
-                content=f"Error processing code operation: {str(e)}",
-                error=True
-            )
+            return Response(content=f"Error processing code operation: {str(e)}", error=True)
 
     async def generate_response(
         self,
@@ -154,7 +150,7 @@ class CodingAgent(BaseAgent):
                 if "Generate code" in str(messages):
                     content = "def add(a, b):\n    return a + b"
                 elif "Optimize the code" in str(messages):
-                    content = "def add(a: int, b: int) -> int:\n    \"\"\"Add two numbers and return the result.\"\"\"\n    return a + b"
+                    content = 'def add(a: int, b: int) -> int:\n    """Add two numbers and return the result."""\n    return a + b'
                 elif "Review the code" in str(messages):
                     content = "The code is simple and correct. It adds two numbers as required."
 
@@ -165,12 +161,12 @@ class CodingAgent(BaseAgent):
                 usage=RequestUsage(prompt_tokens=0, completion_tokens=0),
                 finish_reason="stop",
                 content=content,
-                cached=False
+                cached=False,
             )
 
         # Pass temperature to model client if provided
         if temperature is not None and self._model_client:
-            original_temp = getattr(self._model_client, 'temperature', None)
+            original_temp = getattr(self._model_client, "temperature", None)
             self._model_client.temperature = temperature
             try:
                 response = await super().on_messages(messages, token)
@@ -200,32 +196,23 @@ class CodingAgent(BaseAgent):
         try:
             # Use EnhancedSystemMessage instead of SystemMessage
             system_message = EnhancedSystemMessage(
-                content="Generate code based on the task and requirements.",
-                source="system"
+                content="Generate code based on the task and requirements.", source="system"
             )
 
             messages = [
                 system_message,
-                UserMessage(
-                    content=f"Task: {task}\nRequirements: {requirements}\nContext: {context}", source="user"),
-                ]
+                UserMessage(content=f"Task: {task}\nRequirements: {requirements}\nContext: {context}", source="user"),
+            ]
 
-            result = await self.generate_response(
-                messages, temperature=self.config.generation_temperature
-            )
+            result = await self.generate_response(messages, temperature=self.config.generation_temperature)
 
-            return CodeBlock(
-                code=result.content, language=self._detect_language(
-                    task, requirements)
-            )
+            return CodeBlock(code=result.content, language=self._detect_language(task, requirements))
 
         except Exception as e:
             logger.error("Error generating code", exc_info=True)
             raise RuntimeError(f"Error generating code: {str(e)}") from e
 
-    async def _execute_code(
-        self, code: str, context: Optional[Dict[str, Any]] = None
-    ) -> ExecutionResult:
+    async def _execute_code(self, code: str, context: Optional[Dict[str, Any]] = None) -> ExecutionResult:
         """
         Execute the provided code and return the result.
 
@@ -237,8 +224,7 @@ class CodingAgent(BaseAgent):
             ExecutionResult: Result of the code execution
         """
         try:
-            code_block = CodeBlock(
-                code=code, language=self._detect_language_from_code(code))
+            code_block = CodeBlock(code=code, language=self._detect_language_from_code(code))
 
             result = await self.code_execution_tool.execute_code(code_block, context)
 
@@ -265,24 +251,17 @@ class CodingAgent(BaseAgent):
         try:
             # Use EnhancedSystemMessage instead of SystemMessage
             system_message = EnhancedSystemMessage(
-                content="Optimize the code based on specified metrics.",
-                source="system"
+                content="Optimize the code based on specified metrics.", source="system"
             )
 
             messages = [
                 system_message,
-                UserMessage(
-                    content=f"Code: {code}\nMetrics: {metrics}\nContext: {context}", source="user"),
-                ]
+                UserMessage(content=f"Code: {code}\nMetrics: {metrics}\nContext: {context}", source="user"),
+            ]
 
-            result = await self.generate_response(
-                messages, temperature=self.config.optimization_temperature
-            )
+            result = await self.generate_response(messages, temperature=self.config.optimization_temperature)
 
-            return CodeBlock(
-                code=result.content, language=self._detect_language_from_code(
-                    code)
-            )
+            return CodeBlock(code=result.content, language=self._detect_language_from_code(code))
 
         except Exception as e:
             logger.error("Error optimizing code", exc_info=True)
@@ -302,19 +281,15 @@ class CodingAgent(BaseAgent):
         try:
             # Use EnhancedSystemMessage instead of SystemMessage
             system_message = EnhancedSystemMessage(
-                content="Review the code for quality, security, and best practices.",
-                source="system"
+                content="Review the code for quality, security, and best practices.", source="system"
             )
 
             messages = [
                 system_message,
-                UserMessage(
-                    content=f"Code: {code}\nContext: {context}", source="user"),
-                ]
+                UserMessage(content=f"Code: {code}\nContext: {context}", source="user"),
+            ]
 
-            result = await self.generate_response(
-                messages, temperature=self.config.review_temperature
-            )
+            result = await self.generate_response(messages, temperature=self.config.review_temperature)
 
             return result.content
 
@@ -350,12 +325,12 @@ class CodingAgent(BaseAgent):
     def _improved_detect_language(self, text: str) -> str:
         """
         Detect the programming language from text using improved heuristics.
-        
+
         Note: Requires the 'langdetect' package to be installed.
-        
+
         Args:
             text: The text to analyze for language detection
-            
+
         Returns:
             str: The detected programming language
         """

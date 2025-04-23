@@ -21,14 +21,12 @@ def initialize_default_agents() -> List[AssistantAgent]:
     agents = [
         MagenticOneCoderAgent(name="coder"),
         FileSurfer(name="file_surfer"),
-        MultimodalWebSurfer(name="web_surfer")
+        MultimodalWebSurfer(name="web_surfer"),
     ]
     return agents
 
 
-def initialize_agent_team(
-    team_config: Optional[Dict[str, Any]] = None
-) -> List[AssistantAgent]:
+def initialize_agent_team(team_config: Optional[Dict[str, Any]] = None) -> List[AssistantAgent]:
     """
     Initialize a team of agents with specified configuration.
 

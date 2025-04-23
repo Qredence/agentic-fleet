@@ -2,10 +2,10 @@
 Unit tests for the MagenticOne agent implementation.
 """
 
+import asyncio
 from unittest.mock import AsyncMock, Mock, patch
 
 import pytest
-import asyncio
 
 from agentic_fleet.agents.magentic_one import MagenticOneAgent, create_magentic_one_agent
 
@@ -44,12 +44,12 @@ def mock_magentic_one_team():
     """Mock the AutogenMagenticOne team."""
     mock_team = AsyncMock()
     mock_team.run.return_value = "Task completed"
-    
+
     async def mock_run_stream(task):
         chunks = ["Response chunk 1", "Response chunk 2"]
         for chunk in chunks:
             yield chunk
-    
+
     mock_team.run_stream.side_effect = mock_run_stream
     return mock_team
 
@@ -92,26 +92,18 @@ async def test_create_magentic_one_agent(
 
 @pytest.mark.asyncio
 async def test_magentic_one_agent_run_stream(
-    mock_client, 
-    mock_code_executor, 
-    mock_web_surfer, 
-    mock_magentic_one_team,
-    mock_chainlit_context
+    mock_client, mock_code_executor, mock_web_surfer, mock_magentic_one_team, mock_chainlit_context
 ):
     """Test the run_stream method of the MagenticOne agent."""
     # Patch the AutogenMagenticOne initialization to avoid context issues
-    with patch('autogen_ext.teams.magentic_one.MagenticOneGroupChat', return_value=mock_magentic_one_team):
+    with patch("autogen_ext.teams.magentic_one.MagenticOneGroupChat", return_value=mock_magentic_one_team):
         # Create our MagenticOneAgent
-        agent = MagenticOneAgent(
-            client=mock_client,
-            code_executor=mock_code_executor,
-            hil_mode=True
-        )
+        agent = MagenticOneAgent(client=mock_client, code_executor=mock_code_executor, hil_mode=True)
 
         # Test run_stream
         task = "Test task"
         stream_iterator = agent.run_stream(task)
-        
+
         results = []
         async for chunk in stream_iterator:
             results.append(chunk)
@@ -123,21 +115,13 @@ async def test_magentic_one_agent_run_stream(
 
 @pytest.mark.asyncio
 async def test_magentic_one_agent_run(
-    mock_client, 
-    mock_code_executor, 
-    mock_web_surfer, 
-    mock_magentic_one_team,
-    mock_chainlit_context
+    mock_client, mock_code_executor, mock_web_surfer, mock_magentic_one_team, mock_chainlit_context
 ):
     """Test the run method of the MagenticOne agent."""
     # Patch the AutogenMagenticOne initialization to avoid context issues
-    with patch('autogen_ext.teams.magentic_one.MagenticOneGroupChat', return_value=mock_magentic_one_team):
+    with patch("autogen_ext.teams.magentic_one.MagenticOneGroupChat", return_value=mock_magentic_one_team):
         # Create our MagenticOneAgent
-        agent = MagenticOneAgent(
-            client=mock_client,
-            code_executor=mock_code_executor,
-            hil_mode=True
-        )
+        agent = MagenticOneAgent(client=mock_client, code_executor=mock_code_executor, hil_mode=True)
 
         # Test run
         task = "Test task"

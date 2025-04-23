@@ -96,9 +96,7 @@ async def generate_pdf(
         content = section.get("content", "")
         image = section.get("image")
 
-        pdf.set_font(
-            "Arial", "B" if level in font_size else "", font_size.get(level, font_size["body"])
-        )
+        pdf.set_font("Arial", "B" if level in font_size else "", font_size.get(level, font_size["body"]))
         pdf.chapter_title(title)
 
         if content:

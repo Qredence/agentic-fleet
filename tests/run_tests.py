@@ -30,8 +30,7 @@ def run_tests(args: argparse.Namespace) -> int:
 
     # Add coverage if requested
     if args.coverage:
-        cmd.extend(["--cov=src.agentic_fleet",
-                   "--cov-report=term-missing", "--cov-report=xml"])
+        cmd.extend(["--cov=src.agentic_fleet", "--cov-report=term-missing", "--cov-report=xml"])
 
     # Add any additional arguments
     if args.pytest_args:
@@ -43,12 +42,9 @@ def run_tests(args: argparse.Namespace) -> int:
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Run Agentic Fleet tests")
-    parser.add_argument("-v", "--verbose",
-                        action="store_true", help="Increase verbosity")
-    parser.add_argument("-c", "--coverage", action="store_true",
-                        help="Generate coverage report")
-    parser.add_argument("pytest_args", nargs="*",
-                        help="Additional pytest arguments")
+    parser.add_argument("-v", "--verbose", action="store_true", help="Increase verbosity")
+    parser.add_argument("-c", "--coverage", action="store_true", help="Generate coverage report")
+    parser.add_argument("pytest_args", nargs="*", help="Additional pytest arguments")
 
     args = parser.parse_args()
     sys.exit(run_tests(args))

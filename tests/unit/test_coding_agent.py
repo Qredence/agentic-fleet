@@ -28,7 +28,7 @@ async def test_execute_code():
     assert isinstance(exec_result, ExecutionResult), "Output should be an ExecutionResult instance."
     # Depending on the implementation of ExecutionResult, you might check for output
     # For now, ensure that the result is not empty
-    assert hasattr(exec_result, 'output')
+    assert hasattr(exec_result, "output")
     assert exec_result.output is not None
 
 

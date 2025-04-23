@@ -3,18 +3,18 @@ Tools module for AgenticFleet.
 
 This module contains tool implementations for various tasks.
 
-DEPRECATED: This module is deprecated and will be replaced by agentic_fleet.tool_pool in a future version.
-The tool_pool module provides a more modular, base-class approach to tool implementation.
+DEPRECATED: This module is deprecated and will be replaced by agentic_fleet.pool.tool in a future version.
+The pool.tool module provides a more modular, base-class approach to tool implementation.
 """
 
 import warnings
 
 # Show deprecation warning
 warnings.warn(
-    "The agentic_fleet.tools module is deprecated and will be replaced by agentic_fleet.tool_pool in a future version. "
-    "The tool_pool module provides a more modular, base-class approach to tool implementation.",
+    "The agentic_fleet.tools module is deprecated and will be replaced by agentic_fleet.pool.tool in a future version. "
+    "The pool.tool module provides a more modular, base-class approach to tool implementation.",
     DeprecationWarning,
-    stacklevel=2
+    stacklevel=2,
 )
 
 from .bing_search import bing_search_tool
