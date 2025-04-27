@@ -58,9 +58,6 @@ Here's a glimpse into the upcoming features and tasks planned for the near futur
 
 *This roadmap is subject to change based on priorities and development progress. Check the [Issues tab](link-to-your-issues-page) for the most up-to-date status.*
 
-## GitAds Sponsored
-[![Sponsored by GitAds](https://gitads.dev/v1/ad-serve?source=qredence/agenticfleet@github)](https://gitads.dev/v1/ad-track?source=qredence/agenticfleet@github)
-
 
 ## Table of Contents
 
@@ -494,6 +491,10 @@ This project is licensed under the Apache License 2.0 - see the LICENSE file for
 ## Contributing
 
 Contributions are welcome! Please feel free to submit a Pull Request.
+
+## GitAds Sponsored
+[![Sponsored by GitAds](https://gitads.dev/v1/ad-serve?source=qredence/agenticfleet@github)](https://gitads.dev/v1/ad-track?source=qredence/agenticfleet@github)
+
 
 
 ## Star History
