@@ -21,17 +21,20 @@ from agentic_fleet.config import config_manager
 
 logger = logging.getLogger(__name__)
 
+
 class ApplicationConfig(BaseModel):
     """Configuration for the application manager."""
+
     project_root: Path
     debug: bool = False
     log_level: str = "INFO"
     default_team_specialization: str = "general"
 
+
 class ApplicationManager:
     """
     Main application manager for AgenticFleet.
-    
+
     The application manager:
     1. Initializes and manages agent teams
     2. Handles configuration and resources
@@ -52,33 +55,39 @@ class ApplicationManager:
         """
         self.config = config
         self.model_client = model_client
-        
+
         # Initialize components
         self.team_factory = TeamFactory(model_client=model_client)
         self.active_teams: Dict[str, TeamManager] = {}
-        
+
         # Configure logging
         logging.basicConfig(
             level=getattr(logging, config.log_level.upper()),
-            format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+            format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
         )
+
+        if model_client is None:
+            logger.warning("No model client provided. Agent functionality will be limited.")
 
     async def start(self) -> None:
         """Start the application manager."""
         logger.info("Starting application manager")
-        
+
         # Load configurations
         config_manager.load_all()
-        
-        # Initialize default team if configured
-        if self.config.default_team_specialization:
-            await self.create_team(self.config.default_team_specialization)
+
+        # Initialize default team if configured and model client is available
+        if self.config.default_team_specialization and self.model_client is not None:
+            try:
+                await self.create_team(self.config.default_team_specialization)
+            except ValueError as e:  # Example: Invalid configuration
+                logger.error(f"Configuration error while creating default team: {str(e)}")
+            except RuntimeError as e:  # Example: Resource allocation failure
+                logger.error(f"Runtime error while creating default team: {str(e)}")
+            # Continue without a team - the application can still function in a limited capacity
 
     async def create_team(
-        self,
-        specialization: str,
-        custom_config: Optional[Dict[str, Any]] = None,
-        team_id: Optional[str] = None
+        self, specialization: str, custom_config: Optional[Dict[str, Any]] = None, team_id: Optional[str] = None
     ) -> TeamManager:
         """Create a new agent team.
 
@@ -96,21 +105,46 @@ class ApplicationManager:
         try:
             # Initialize default agents
             available_agents = self._initialize_default_agents()
-            
+
+            # If no agents are available (e.g., because model_client is None),
+            # create a placeholder team instead
+            if not available_agents:
+                logger.warning(f"No agents available to create team with specialization {specialization}")
+                # Generate team ID if not provided
+                if not team_id:
+                    team_id = f"{specialization}_{len(self.active_teams)}"
+
+                # Create a placeholder team manager
+                from agentic_fleet.core.agents.team_manager import TeamManager
+
+                # Create basic configuration dictionary
+                team_config = {
+                    "name": f"Placeholder_{specialization}",
+                    "description": "Placeholder team created when no agents were available",
+                    "specialization": specialization,
+                }
+
+                # Create team with empty agent list
+                team = TeamManager(config=team_config)
+
+                # Store team
+                self.active_teams[team_id] = team
+
+                logger.info(f"Created placeholder team {team_id} with specialization {specialization}")
+                return team
+
             # Create team using factory
             team = self.team_factory.create_team(
-                specialization=specialization,
-                available_agents=available_agents,
-                custom_config=custom_config
+                specialization=specialization, available_agents=available_agents, custom_config=custom_config
             )
-            
+
             # Generate team ID if not provided
             if not team_id:
                 team_id = f"{specialization}_{len(self.active_teams)}"
-            
+
             # Store team
             self.active_teams[team_id] = team
-            
+
             logger.info(f"Created team {team_id} with specialization {specialization}")
             return team
 
@@ -125,15 +159,15 @@ class ApplicationManager:
             Dictionary of initialized agents
         """
         from agentic_fleet.core.agents.team import initialize_default_agents
+
+        if self.model_client is None:
+            logger.warning("model_client is None, skipping agent initialization that requires a model client")
+            return {}  # Return empty dictionary if no model client is available
+
         agents = initialize_default_agents(model_client=self.model_client)
         return {agent.name: agent for agent in agents}
 
-    async def execute_task(
-        self,
-        task: str,
-        team_id: Optional[str] = None,
-        specialization: Optional[str] = None
-    ) -> Any:
+    async def execute_task(self, task: str, team_id: Optional[str] = None, specialization: Optional[str] = None) -> Any:
         """Execute a task using an agent team.
 
         Args:
@@ -193,7 +227,7 @@ class ApplicationManager:
                 "name": team.config.name,
                 "description": team.config.description,
                 "metrics": team.get_metrics(),
-                "agent_status": team.get_agent_status()
+                "agent_status": team.get_agent_status(),
             }
             for team_id, team in self.active_teams.items()
         ]
@@ -201,13 +235,58 @@ class ApplicationManager:
     async def shutdown(self) -> None:
         """Shut down the application manager and clean up resources."""
         logger.info("Shutting down application manager")
-        
+
         # Clean up teams
         for team in self.active_teams.values():
             try:
                 await team.cleanup()
             except Exception as e:
                 logger.warning(f"Error cleaning up team: {str(e)}")
-        
+
         self.active_teams.clear()
         logger.info("Application manager shutdown complete")
+
+
+async def create_application(
+    project_root: Union[str, Path],
+    model_client: Optional[ChatCompletionClient] = None,
+    debug: bool = False,
+    log_level: str = "INFO",
+    default_team_specialization: str = "general",
+) -> ApplicationManager:
+    """Create and initialize a new application manager instance.
+
+    Args:
+        project_root: Path to the project root directory
+        model_client: Optional model client to use for LLM interactions
+        debug: Enable debug mode
+        log_level: Logging level to use
+        default_team_specialization: Default team specialization
+
+    Returns:
+        Initialized ApplicationManager instance
+    """
+    if isinstance(project_root, str):
+        project_root = Path(project_root)
+
+    if model_client is None:
+        logger.warning("No model client provided to create_application. Some functionality may be limited.")
+
+    config = ApplicationConfig(
+        project_root=project_root,
+        debug=debug,
+        log_level=log_level,
+        default_team_specialization=default_team_specialization,
+    )
+
+    app_manager = ApplicationManager(config=config, model_client=model_client)
+    await app_manager.start()
+
+    return app_manager
+
+
+logger.debug("Debug message")
+logger.info("Info message")
+logger.warning("Warning message")
+logger.error("Error message")
+logger.critical("Critical message")

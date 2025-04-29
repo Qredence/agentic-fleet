@@ -1,9 +1,9 @@
 # Standard library imports
 import logging
 import traceback
+import uuid
 from pathlib import Path
 from typing import Optional
-import uuid
 
 # Third-party imports
 import chainlit as cl
