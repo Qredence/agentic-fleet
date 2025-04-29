@@ -80,9 +80,11 @@ class ApplicationManager:
         if self.config.default_team_specialization and self.model_client is not None:
             try:
                 await self.create_team(self.config.default_team_specialization)
-            except Exception as e:
-                logger.error(f"Failed to create default team: {str(e)}")
-                # Continue without a team - the application can still function in a limited capacity
+            except ValueError as e:  # Example: Invalid configuration
+                logger.error(f"Configuration error while creating default team: {str(e)}")
+            except RuntimeError as e:  # Example: Resource allocation failure
+                logger.error(f"Runtime error while creating default team: {str(e)}")
+            # Continue without a team - the application can still function in a limited capacity
 
     async def create_team(
         self, specialization: str, custom_config: Optional[Dict[str, Any]] = None, team_id: Optional[str] = None
