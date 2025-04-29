@@ -6,13 +6,10 @@ This module serves as the primary entry point for the Chainlit UI application.
 
 # Initialize environment variables first
 from dotenv import load_dotenv
+
 load_dotenv()
 
 # Third-party imports
-import chainlit as cl
-import chainlit.cli
-from chainlit import on_chat_start, on_message, on_settings_update, on_stop
-
 # Standard library imports
 import asyncio
 import logging
@@ -22,6 +19,10 @@ import sys
 import traceback
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple, Union
+
+import chainlit as cl
+import chainlit.cli
+from chainlit import on_chat_start, on_message, on_settings_update, on_stop
 
 # Local imports
 from agentic_fleet.config import config_manager
@@ -46,9 +47,10 @@ except ImportError:
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s")
 logger = logging.getLogger(__name__)
 
+
 class AppContext:
     """Context class to encapsulate app-wide state."""
-    
+
     def __init__(self) -> None:
         """Initialize the application context."""
         self.client: Any = None
@@ -73,10 +75,12 @@ class AppContext:
                 except asyncio.CancelledError:
                     pass
 
+
 app_context = AppContext()
 
 # Initialize settings manager
 settings_manager = SettingsManager()
+
 
 @on_chat_start
 async def start_chat() -> None:
@@ -110,22 +114,35 @@ async def start_chat() -> None:
 
         # Use profile-specific model_config for client creation
         logger.info(f"Creating client for model {model_name} with profile config")
-        app_context.client = create_client(
-            model_name=model_name,
-            model_config=model_config,
-            streaming=model_config.get("streaming", True),
-            vision=model_config.get("vision", True),
-            connection_pool_size=model_config.get("connection_pool_size", 10),
-            request_timeout=model_config.get("request_timeout", 30),
-        )
+        try:
+            # Check required environment variables
+            required_env_vars = ["AZURE_OPENAI_ENDPOINT", "AZURE_OPENAI_API_KEY", "AZURE_OPENAI_API_VERSION"]
+            missing_vars = [var for var in required_env_vars if not os.getenv(var)]
+            if missing_vars:
+                raise ValueError(f"Missing required Azure OpenAI environment variables: {', '.join(missing_vars)}")
+
+            app_context.client = create_client(
+                model_name=model_name,
+                model_config=model_config,
+                streaming=model_config.get("streaming", True),
+                vision=model_config.get("vision", True),
+                connection_pool_size=model_config.get("connection_pool_size", 10),
+                request_timeout=model_config.get("request_timeout", 30),
+            )
+            logger.info(f"Created client for model {model_name} with streaming=True, vision=True")
+        except Exception as e:
+            error_msg = f"Failed to create model client: {str(e)}"
+            logger.error(error_msg)
+            raise ValueError(error_msg)
 
         # Initialize application manager
         app_context.app_manager = ApplicationManager(
-            ApplicationConfig(
+            config=ApplicationConfig(
                 project_root=Path(__file__).resolve().parent.parent,
                 debug=getattr(env_config, "debug", False),
                 log_level=getattr(env_config, "log_level", "INFO"),
-            )
+            ),
+            model_client=app_context.client,
         )
         await app_context.app_manager.start()
 
@@ -156,6 +173,7 @@ async def start_chat() -> None:
         logger.error(f"Chat start error: {traceback.format_exc()}")
         await cl.Message(content=error_msg).send()
 
+
 def get_profile_metadata(profile_name: str) -> Tuple[str, str]:
     """Get profile description and icon based on profile name.
 
@@ -177,12 +195,8 @@ def get_profile_metadata(profile_name: str) -> Tuple[str, str]:
             return "MCP Interaction Profile", "public/icons/microscope.svg"
         return "Standard AgenticFleet Profile", "public/icons/rocket.svg"
 
-async def send_welcome_message(
-    profile_name: str,
-    model_name: str,
-    settings: Dict[str, Any],
-    profile_desc: str
-) -> None:
+
+async def send_welcome_message(profile_name: str, model_name: str, settings: Dict[str, Any], profile_desc: str) -> None:
     """Send a welcome message with profile information.
 
     Args:
@@ -227,14 +241,10 @@ async def send_welcome_message(
     elements = [cl.Image(name="avatar", url=icon, display="inline", size="small")]
 
     # Create and send message
-    msg = cl.Message(
-        content=welcome_message,
-        author=profile_name,
-        actions=actions,
-        elements=elements
-    )
+    msg = cl.Message(content=welcome_message, author=profile_name, actions=actions, elements=elements)
 
     await msg.send()
+
 
 @on_message
 async def message_handler(message: cl.Message) -> None:
@@ -242,13 +252,14 @@ async def message_handler(message: cl.Message) -> None:
     try:
         # Get the current profile type
         profile_type = cl.user_session.get("profile_type", "default")
-        
+
         # Process the message
         await handle_chat_message(message)
     except Exception as e:
         error_msg = f"Error processing message: {str(e)}"
         logger.error(f"Message handler error: {traceback.format_exc()}")
         await cl.Message(content=error_msg, author="System").send()
+
 
 @on_settings_update
 async def handle_settings_update(settings: Dict[str, Any]) -> None:
@@ -257,10 +268,8 @@ async def handle_settings_update(settings: Dict[str, Any]) -> None:
         await settings_manager.handle_settings_update(settings)
     except Exception as e:
         logger.error(f"Settings update error: {str(e)}")
-        await cl.Message(
-            content=f"Failed to update settings: {str(e)}",
-            author="System"
-        ).send()
+        await cl.Message(content=f"Failed to update settings: {str(e)}", author="System").send()
+
 
 @cl.action_callback("reset_agents")
 async def on_action_reset(action: cl.Action) -> None:
@@ -269,10 +278,8 @@ async def on_action_reset(action: cl.Action) -> None:
         await on_reset(action)
     except Exception as e:
         logger.error(f"Reset action error: {str(e)}")
-        await cl.Message(
-            content=f"Failed to reset agents: {str(e)}",
-            author="System"
-        ).send()
+        await cl.Message(content=f"Failed to reset agents: {str(e)}", author="System").send()
+
 
 @cl.action_callback("list_mcp_tools")
 async def on_action_list_mcp(_: cl.Action) -> None:
@@ -289,6 +296,7 @@ async def on_action_list_mcp(_: cl.Action) -> None:
         logger.error(f"Error listing MCP configurations: {traceback.format_exc()}")
         await cl.Message(content=error_msg, author="System").send()
 
+
 @on_stop
 async def on_chat_stop() -> None:
     """Clean up resources when the chat is stopped."""
@@ -297,14 +305,7 @@ async def on_chat_stop() -> None:
         await app_context.cleanup()
 
         # Reset session values
-        session_keys = [
-            "chat_profile",
-            "profile_type",
-            "agent_team",
-            "profile_icon",
-            "settings",
-            "mcp_servers"
-        ]
+        session_keys = ["chat_profile", "profile_type", "agent_team", "profile_icon", "settings", "mcp_servers"]
         for key in session_keys:
             try:
                 cl.user_session.set(key, None)
@@ -314,11 +315,12 @@ async def on_chat_stop() -> None:
     except Exception as e:
         logger.error(f"Chat stop error: {str(e)}")
 
+
 def main() -> None:
     """Run the Chainlit application."""
     host: str = os.environ.get("CHAINLIT_HOST", "0.0.0.0")
     port_env: str = os.environ.get("CHAINLIT_PORT", "8080")
-    
+
     try:
         port: int = int(port_env)
         if not (0 < port < 65536):
@@ -330,13 +332,7 @@ def main() -> None:
 
     try:
         result = subprocess.run(
-            [
-                "chainlit", "run",
-                os.path.abspath(__file__),
-                "--host", host,
-                "--port", str(port),
-                "--no-cache"
-            ],
+            ["chainlit", "run", os.path.abspath(__file__), "--host", host, "--port", str(port), "--no-cache"],
             check=True,
         )
         sys.exit(result.returncode)
@@ -349,6 +345,7 @@ def main() -> None:
     except Exception as e:
         logger.error(f"Failed to start Chainlit: {str(e)}")
         sys.exit(1)
+
 
 if __name__ == "__main__":
     main()
