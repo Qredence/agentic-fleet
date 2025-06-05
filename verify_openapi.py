@@ -13,9 +13,9 @@ def check_file_exists(file_path, description):
     if os.path.exists(file_path):
         print(f"✓ {description}: {file_path}")
         return True
-    else:
-        print(f"✗ {description}: {file_path} (NOT FOUND)")
-        return False
+    
+    print(f"✗ {description}: {file_path} (NOT FOUND)")
+    return False
 
 def check_file_content(file_path, search_terms, description):
     """Check if a file contains specific terms."""
@@ -24,7 +24,7 @@ def check_file_content(file_path, search_terms, description):
         return False
     
     try:
-        with open(file_path, 'r') as f:
+        with open(file_path, 'r', encoding='utf-8') as f:
             content = f.read()
         
         found_terms = []
@@ -39,9 +39,9 @@ def check_file_content(file_path, search_terms, description):
         if missing_terms:
             print(f"✗ {description}: Missing {missing_terms}")
             return False
-        else:
-            print(f"✓ {description}: All required terms found")
-            return True
+        
+        print(f"✓ {description}: All required terms found")
+        return True
     except Exception as e:
         print(f"✗ {description}: Error reading file - {e}")
         return False
@@ -135,7 +135,7 @@ def main():
     else:
         all_checks_passed = False
     
-    print("\n" + "=" * 50)
+    print(f"\n{'=' * 50}")
     if all_checks_passed:
         print("✓ All OpenAPI documentation checks passed!")
         print("\nThe OpenAPI documentation has been successfully implemented:")

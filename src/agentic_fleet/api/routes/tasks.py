@@ -23,6 +23,9 @@ async def list_tasks(task_service: TaskService = Depends(get_task_service)) -> D
     Returns a list of all tasks in the system with their current status,
     assigned agents, and progress information.
     
+    Note: Future versions may support query parameters for filtering by status,
+    assigned agent, priority, or pagination (limit, offset).
+    
     Returns:
         Dict containing a list of all tasks
     """
@@ -37,6 +40,18 @@ async def list_tasks(task_service: TaskService = Depends(get_task_service)) -> D
 async def create_task(task: TaskCreate, task_service: TaskService = Depends(get_task_service)) -> Task:
     """
     Create a new task.
+    
+    Creates a new task that can be assigned to agents for execution.
+    The task will be created with a pending status and can be assigned later.
+    
+    Args:
+        task: Task creation data including title, description, and requirements
+        
+    Returns:
+        The created task with assigned ID and initial status
+        
+    Raises:
+        HTTPException: 500 if creation fails
     """
     try:
         return await task_service.create_task(task)
@@ -48,6 +63,18 @@ async def create_task(task: TaskCreate, task_service: TaskService = Depends(get_
 async def get_task(task_id: str, task_service: TaskService = Depends(get_task_service)) -> Task:
     """
     Get details for a specific task.
+    
+    Retrieves detailed information about a specific task including its
+    status, assigned agent, progress, and execution history.
+    
+    Args:
+        task_id: The unique identifier of the task
+        
+    Returns:
+        Task object with detailed information
+        
+    Raises:
+        HTTPException: 404 if task not found
     """
     try:
         task = await task_service.get_task(task_id)
@@ -64,6 +91,19 @@ async def get_task(task_id: str, task_service: TaskService = Depends(get_task_se
 async def update_task(task_id: str, task: TaskUpdate, task_service: TaskService = Depends(get_task_service)) -> Task:
     """
     Update an existing task.
+    
+    Updates the details, status, or configuration of an existing task.
+    Only provided fields will be updated; others remain unchanged.
+    
+    Args:
+        task_id: The unique identifier of the task to update
+        task: Task update data with fields to modify
+        
+    Returns:
+        The updated task with new configuration
+        
+    Raises:
+        HTTPException: 404 if task not found, 500 if update fails
     """
     try:
         updated_task = await task_service.update_task(task_id, task)
@@ -80,6 +120,18 @@ async def update_task(task_id: str, task: TaskUpdate, task_service: TaskService 
 async def delete_task(task_id: str, task_service: TaskService = Depends(get_task_service)) -> Dict[str, bool]:
     """
     Delete a task.
+    
+    Permanently removes a task from the system. This action cannot be undone.
+    If the task is currently assigned to an agent, it will be unassigned first.
+    
+    Args:
+        task_id: The unique identifier of the task to delete
+        
+    Returns:
+        Dict with success status
+        
+    Raises:
+        HTTPException: 404 if task not found, 500 if deletion fails
     """
     try:
         success = await task_service.delete_task(task_id)

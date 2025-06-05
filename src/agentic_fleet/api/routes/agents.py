@@ -22,6 +22,9 @@ async def list_agents(agent_service: AgentService = Depends(get_agent_service)) 
     Returns a list of all agents in the system with their current status,
     capabilities, and configuration details.
     
+    Note: Future versions may support query parameters for filtering by status,
+    capabilities, or pagination (limit, offset).
+    
     Returns:
         Dict containing a list of all agents
     """
@@ -89,6 +92,19 @@ async def update_agent(
 ) -> Agent:
     """
     Update an existing agent.
+    
+    Updates the configuration, capabilities, or status of an existing agent.
+    Only provided fields will be updated; others remain unchanged.
+    
+    Args:
+        agent_id: The unique identifier of the agent to update
+        agent: Agent update data with fields to modify
+        
+    Returns:
+        The updated agent with new configuration
+        
+    Raises:
+        HTTPException: 404 if agent not found, 500 if update fails
     """
     try:
         updated_agent = await agent_service.update_agent(agent_id, agent)
@@ -105,6 +121,18 @@ async def update_agent(
 async def delete_agent(agent_id: str, agent_service: AgentService = Depends(get_agent_service)) -> Dict[str, bool]:
     """
     Delete an agent.
+    
+    Permanently removes an agent from the system. This action cannot be undone.
+    Any tasks assigned to this agent will need to be reassigned.
+    
+    Args:
+        agent_id: The unique identifier of the agent to delete
+        
+    Returns:
+        Dict with success status
+        
+    Raises:
+        HTTPException: 404 if agent not found, 500 if deletion fails
     """
     try:
         success = await agent_service.delete_agent(agent_id)
