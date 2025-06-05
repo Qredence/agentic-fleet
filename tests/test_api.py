@@ -8,7 +8,7 @@ from datetime import datetime
 import pytest
 from fastapi.testclient import TestClient
 
-from agentic_fleet.api.app import app
+from agentic_fleet.api.main import app
 
 
 @pytest.fixture

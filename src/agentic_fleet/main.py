@@ -48,16 +48,20 @@ def run_fastapi():
 
 
 def run_api():
-    """Run the original API app."""
-    logger.info("Starting original API app")
+    """Run the comprehensive API app with OpenAPI documentation."""
+    logger.info("Starting comprehensive API app with OpenAPI documentation")
 
     # Import necessary modules
-    from agentic_fleet.api.app import app
+    from agentic_fleet.api.main import app
     from agentic_fleet.database.session import create_tables
 
     # Initialize database
-    create_tables()
-    logger.info("Database tables created")
+    try:
+        create_tables()
+        logger.info("Database tables created")
+    except Exception as e:
+        logger.warning(f"Database initialization failed: {e}")
+        logger.info("Continuing without database (some features may not work)")
 
     # Get configuration from environment variables
     host = os.environ.get("HOST", "0.0.0.0")
@@ -65,10 +69,12 @@ def run_api():
     reload = os.environ.get("RELOAD", "False").lower() == "true"
 
     logger.info(f"Starting Agentic Fleet API on {host}:{port}")
+    logger.info(f"OpenAPI documentation available at http://{host}:{port}/docs")
+    logger.info(f"ReDoc documentation available at http://{host}:{port}/redoc")
 
     # Run the application
     uvicorn.run(
-        "agentic_fleet.api.app:app",
+        "agentic_fleet.api.main:app",
         host=host,
         port=port,
         reload=reload,
@@ -83,8 +89,8 @@ def main():
     parser.add_argument(
         "--mode",
         choices=["chainlit", "fastapi", "api"],
-        default="chainlit",
-        help="Mode to run the application in (default: chainlit)",
+        default="api",
+        help="Mode to run the application in (default: api)",
     )
     args = parser.parse_args()
 

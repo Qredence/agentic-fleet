@@ -25,9 +25,18 @@ async def list_messages(
 ) -> Dict[str, List[ChatMessage]]:
     """
     List all chat messages for a session.
+    
+    Retrieves the complete chat history for a specific session, including
+    messages from both users and AI agents.
 
     Args:
         session_id: The ID of the session to get messages for
+        
+    Returns:
+        Dict containing a list of chat messages for the session
+        
+    Raises:
+        HTTPException: 500 if retrieval fails
     """
     try:
         messages = await chat_service.get_chat_history(session_id)
@@ -42,6 +51,18 @@ async def create_message(
 ) -> ChatMessage:
     """
     Create a new chat message.
+    
+    Sends a message to the chat system and processes it through the AI agents.
+    The message will be stored and may trigger responses from assigned agents.
+    
+    Args:
+        message: Chat message data including content, sender, and session info
+        
+    Returns:
+        The created message with assigned ID and timestamp
+        
+    Raises:
+        HTTPException: 500 if message processing fails
     """
     try:
         return await chat_service.process_message(message)
@@ -53,6 +74,18 @@ async def create_message(
 async def get_message(message_id: str, chat_service: ChatService = Depends(get_chat_service)) -> ChatMessage:
     """
     Get a specific chat message.
+    
+    Retrieves detailed information about a specific chat message including
+    its content, metadata, and processing status.
+    
+    Args:
+        message_id: The unique identifier of the message
+        
+    Returns:
+        Chat message object with detailed information
+        
+    Raises:
+        HTTPException: 404 if message not found
     """
     try:
         message = await chat_service.get_message(message_id)
@@ -71,6 +104,19 @@ async def update_message(
 ) -> ChatMessage:
     """
     Update a chat message.
+    
+    Updates the content or metadata of an existing chat message.
+    Only provided fields will be updated; others remain unchanged.
+    
+    Args:
+        message_id: The unique identifier of the message to update
+        message: Message update data with fields to modify
+        
+    Returns:
+        The updated message with new content
+        
+    Raises:
+        HTTPException: 404 if message not found, 500 if update fails
     """
     try:
         updated_message = await chat_service.update_message(message_id, message)
@@ -87,6 +133,18 @@ async def update_message(
 async def delete_message(message_id: str, chat_service: ChatService = Depends(get_chat_service)) -> Dict[str, bool]:
     """
     Delete a chat message.
+    
+    Permanently removes a chat message from the system. This action cannot be undone.
+    The message will be removed from the chat history.
+    
+    Args:
+        message_id: The unique identifier of the message to delete
+        
+    Returns:
+        Dict with success status
+        
+    Raises:
+        HTTPException: 404 if message not found, 500 if deletion fails
     """
     try:
         success = await chat_service.delete_message(message_id)
@@ -103,6 +161,20 @@ async def delete_message(message_id: str, chat_service: ChatService = Depends(ge
 async def websocket_endpoint(websocket: WebSocket, chat_service: ChatService = Depends(get_chat_service)):
     """
     WebSocket endpoint for real-time chat.
+    
+    Establishes a WebSocket connection for real-time bidirectional communication
+    with the AI agents. Messages can be sent and received in real-time.
+    
+    The WebSocket accepts JSON messages with the following format:
+    ```json
+    {
+        "content": "Your message here",
+        "session_id": "optional_session_id",
+        "agent_id": "optional_specific_agent"
+    }
+    ```
+    
+    Or plain text messages which will be treated as content.
     """
     await websocket.accept()
 
