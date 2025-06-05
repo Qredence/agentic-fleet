@@ -103,6 +103,20 @@ async def delete_message(message_id: str, chat_service: ChatService = Depends(ge
 async def websocket_endpoint(websocket: WebSocket, chat_service: ChatService = Depends(get_chat_service)):
     """
     WebSocket endpoint for real-time chat.
+    
+    Establishes a WebSocket connection for real-time bidirectional communication
+    with the AI agents. Messages can be sent and received in real-time.
+    
+    The WebSocket accepts JSON messages with the following format:
+    ```json
+    {
+        "content": "Your message here",
+        "session_id": "optional_session_id",
+        "agent_id": "optional_specific_agent"
+    }
+    ```
+    
+    Or plain text messages which will be treated as content.
     """
     await websocket.accept()
 

@@ -19,6 +19,12 @@ router = APIRouter()
 async def list_tasks(task_service: TaskService = Depends(get_task_service)) -> Dict[str, List[Task]]:
     """
     List all tasks.
+    
+    Returns a list of all tasks in the system with their current status,
+    assigned agents, and progress information.
+    
+    Returns:
+        Dict containing a list of all tasks
     """
     try:
         tasks = await task_service.list_tasks()
@@ -90,6 +96,19 @@ async def delete_task(task_id: str, task_service: TaskService = Depends(get_task
 async def assign_task(task_id: str, agent_id: str, task_service: TaskService = Depends(get_task_service)) -> Task:
     """
     Assign a task to an agent.
+    
+    Assigns a specific task to a specific agent. The agent will begin
+    working on the task according to its capabilities and current workload.
+    
+    Args:
+        task_id: The unique identifier of the task to assign
+        agent_id: The unique identifier of the agent to assign the task to
+        
+    Returns:
+        The updated task with assignment information
+        
+    Raises:
+        HTTPException: 404 if task or agent not found
     """
     try:
         task = await task_service.assign_task(task_id, agent_id)

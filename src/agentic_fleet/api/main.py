@@ -1,17 +1,19 @@
 """
-Main FastAPI application for the Agentic Fleet API.
+Main FastAPI application with comprehensive OpenAPI documentation.
+
+This module provides the main FastAPI application that includes all routes
+and proper OpenAPI documentation configuration.
 """
 
 import logging
 import os
-import platform
 import sys
 from datetime import datetime
 from typing import Any, Dict
 
 from fastapi import Depends, FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, RedirectResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from agentic_fleet.api.middleware import LoggingMiddleware
@@ -41,6 +43,13 @@ app = FastAPI(
     * **Real-time Chat**: WebSocket-based chat interface
     * **Multi-model Support**: Support for various AI models and providers
 
+    ### Getting Started
+
+    1. **Explore the API**: Use the interactive documentation below to explore available endpoints
+    2. **Create an Agent**: Start by creating an AI agent using the `/agents` endpoint
+    3. **Create a Task**: Create tasks and assign them to agents using the `/tasks` endpoint
+    4. **Chat Interface**: Use the WebSocket endpoint at `/chat/ws` for real-time communication
+
     ### Authentication
 
     Currently, the API is open for development. Authentication will be added in future versions.
@@ -48,6 +57,10 @@ app = FastAPI(
     ### Rate Limiting
 
     No rate limiting is currently implemented.
+
+    ### Support
+
+    For issues and support, please visit our [GitHub repository](https://github.com/Qredence/AgenticFleet).
     """,
     version="0.1.0",
     contact={
@@ -61,6 +74,10 @@ app = FastAPI(
     },
     openapi_tags=[
         {
+            "name": "health",
+            "description": "Health check and system status endpoints.",
+        },
+        {
             "name": "agents",
             "description": "Operations with AI agents. Create, read, update, and delete agents.",
         },
@@ -72,11 +89,10 @@ app = FastAPI(
             "name": "chat",
             "description": "Real-time chat operations. Send messages and manage chat sessions.",
         },
-        {
-            "name": "health",
-            "description": "Health check and system status endpoints.",
-        },
     ],
+    docs_url="/docs",
+    redoc_url="/redoc",
+    openapi_url="/openapi.json",
 )
 
 # Configure CORS
@@ -129,7 +145,11 @@ async def root() -> Dict[str, Any]:
     Root endpoint that returns API information.
     
     Returns basic information about the API including name, version, and description.
-    This endpoint can be used to verify that the API is running.
+    This endpoint can be used to verify that the API is running and provides
+    links to the interactive documentation.
+    
+    Returns:
+        Dict containing API information and documentation links
     """
     return {
         "name": "Agentic Fleet API",
@@ -138,6 +158,13 @@ async def root() -> Dict[str, Any]:
         "docs_url": "/docs",
         "redoc_url": "/redoc",
         "openapi_url": "/openapi.json",
+        "status": "running",
+        "features": [
+            "Agent Management",
+            "Task Management", 
+            "Real-time Chat",
+            "Multi-model Support"
+        ]
     }
 
 
@@ -147,6 +174,10 @@ async def health_check(db: AsyncSession = Depends(get_db)) -> Dict[str, Any]:
     Health check endpoint.
 
     Checks if the database connection is working and returns system information.
+    This endpoint is useful for monitoring and ensuring the API is functioning properly.
+    
+    Returns:
+        Dict containing health status and system information
     """
     # Check database connection
     try:
@@ -160,7 +191,6 @@ async def health_check(db: AsyncSession = Depends(get_db)) -> Dict[str, Any]:
     # Get system information
     system_info = {
         "python_version": sys.version,
-        "platform": platform.platform(),
         "time": datetime.now().isoformat(),
     }
 
@@ -174,3 +204,37 @@ async def health_check(db: AsyncSession = Depends(get_db)) -> Dict[str, Any]:
         "system": system_info,
         "api_version": app.version,
     }
+
+
+@app.get("/api", include_in_schema=False)
+async def redirect_to_docs():
+    """Redirect /api to /docs for convenience."""
+    return RedirectResponse(url="/docs")
+
+
+@app.get("/documentation", include_in_schema=False)
+async def redirect_to_docs_alt():
+    """Redirect /documentation to /docs for convenience."""
+    return RedirectResponse(url="/docs")
+
+
+if __name__ == "__main__":
+    import uvicorn
+    
+    # Get configuration from environment variables
+    host = os.environ.get("HOST", "0.0.0.0")
+    port = int(os.environ.get("PORT", "8000"))
+    reload = os.environ.get("RELOAD", "False").lower() == "true"
+
+    logger.info(f"Starting Agentic Fleet API on {host}:{port}")
+    logger.info(f"OpenAPI documentation available at http://{host}:{port}/docs")
+    logger.info(f"ReDoc documentation available at http://{host}:{port}/redoc")
+
+    # Run the application
+    uvicorn.run(
+        "agentic_fleet.api.main:app",
+        host=host,
+        port=port,
+        reload=reload,
+        log_level="info",
+    )

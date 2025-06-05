@@ -18,6 +18,12 @@ router = APIRouter()
 async def list_agents(agent_service: AgentService = Depends(get_agent_service)) -> Dict[str, List[Agent]]:
     """
     List all available agents.
+    
+    Returns a list of all agents in the system with their current status,
+    capabilities, and configuration details.
+    
+    Returns:
+        Dict containing a list of all agents
     """
     try:
         agents = await agent_service.list_agents()
@@ -30,6 +36,18 @@ async def list_agents(agent_service: AgentService = Depends(get_agent_service)) 
 async def get_agent(agent_id: str, agent_service: AgentService = Depends(get_agent_service)) -> Agent:
     """
     Get details for a specific agent.
+    
+    Retrieves detailed information about a specific agent including its
+    configuration, current status, and capabilities.
+    
+    Args:
+        agent_id: The unique identifier of the agent
+        
+    Returns:
+        Agent object with detailed information
+        
+    Raises:
+        HTTPException: 404 if agent not found
     """
     try:
         agent = await agent_service.get_agent(agent_id)
@@ -46,6 +64,18 @@ async def get_agent(agent_id: str, agent_service: AgentService = Depends(get_age
 async def create_agent(agent: AgentCreate, agent_service: AgentService = Depends(get_agent_service)) -> Agent:
     """
     Create a new agent.
+    
+    Creates a new AI agent with the specified configuration and capabilities.
+    The agent will be available for task assignment once created.
+    
+    Args:
+        agent: Agent creation data including name, type, and configuration
+        
+    Returns:
+        The created agent with assigned ID and status
+        
+    Raises:
+        HTTPException: 500 if creation fails
     """
     try:
         return await agent_service.create_agent(agent)
