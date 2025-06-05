@@ -28,40 +28,41 @@ logging.basicConfig(
 )
 logger = logging.getLogger("agentic_fleet")
 
-# Create FastAPI app with comprehensive OpenAPI documentation
+# Extracted FastAPI description
+FASTAPI_DESCRIPTION = """
+## Agentic Fleet API
+
+A powerful multi-agent system for adaptive AI reasoning and automation.
+
+### Features
+
+* **Agent Management**: Create, update, and manage AI agents
+* **Task Management**: Assign and track tasks across agents
+* **Real-time Chat**: WebSocket-based chat interface
+* **Multi-model Support**: Support for various AI models and providers
+
+### Getting Started
+
+1. **Explore the API**: Use the interactive documentation below to explore available endpoints
+2. **Create an Agent**: Start by creating an AI agent using the `/agents` endpoint
+3. **Create a Task**: Create tasks and assign them to agents using the `/tasks` endpoint
+4. **Chat Interface**: Use the WebSocket endpoint at `/chat/ws` for real-time communication
+
+### Authentication
+
+Currently, the API is open for development. Authentication will be added in future versions.
+
+### Rate Limiting
+
+No rate limiting is currently implemented.
+
+### Support
+
+For issues and support, please visit our [GitHub repository](https://github.com/Qredence/AgenticFleet).
+"""
 app = FastAPI(
     title="Agentic Fleet API",
-    description="""
-    ## Agentic Fleet API
-
-    A powerful multi-agent system for adaptive AI reasoning and automation.
-
-    ### Features
-
-    * **Agent Management**: Create, update, and manage AI agents
-    * **Task Management**: Assign and track tasks across agents
-    * **Real-time Chat**: WebSocket-based chat interface
-    * **Multi-model Support**: Support for various AI models and providers
-
-    ### Getting Started
-
-    1. **Explore the API**: Use the interactive documentation below to explore available endpoints
-    2. **Create an Agent**: Start by creating an AI agent using the `/agents` endpoint
-    3. **Create a Task**: Create tasks and assign them to agents using the `/tasks` endpoint
-    4. **Chat Interface**: Use the WebSocket endpoint at `/chat/ws` for real-time communication
-
-    ### Authentication
-
-    Currently, the API is open for development. Authentication will be added in future versions.
-
-    ### Rate Limiting
-
-    No rate limiting is currently implemented.
-
-    ### Support
-
-    For issues and support, please visit our [GitHub repository](https://github.com/Qredence/AgenticFleet).
-    """,
+    description=FASTAPI_DESCRIPTION,
     version="0.1.0",
     contact={
         "name": "Qredence",
