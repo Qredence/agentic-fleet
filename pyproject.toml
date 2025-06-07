@@ -51,11 +51,7 @@ dependencies = [
     # AI/ML Infrastructure
     "autogen-agentchat^0.6.1",
     "autogen-core^0.6.1",
-    "autogen-ext[langchain,docker]^0.6.1",
-    "autogen-ext[web-surfer,file-surfer,video-surfer]^0.6.1",
-    "autogen-ext[azure,gemini]^0.6.1",
-    "autogen-ext[mcp,diskcache]^0.6.1",
-    "autogen-ext[grpc]^0.6.1",
+    "autogen-ext[langchain,docker,web-surfer,file-surfer,video-surfer,azure,gemini,mcp,diskcache,grpc,magentic-one,openai]^0.6.1",
     "autogenstudio",
     "dspy>=1.0.0",
     "semantic-kernel>=1.19.0",
