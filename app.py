@@ -15,7 +15,7 @@ async def main(message: cl.Message):
     cl.user_session.set("history", history) # Save user message to history
 
     # Step 1: Acknowledge Input & Start Processing
-    step_input = cl.Step(name="Processing Request", type="run")
+    step_input = cl.Step(name="Processing Request", type=cl.StepType.RUN)
     step_input.input = task_description
     await step_input.send()
     # Send a message associated with this step to confirm receipt
