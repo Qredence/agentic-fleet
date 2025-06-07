@@ -39,10 +39,7 @@ async def main(message: cl.Message):
     # within the current step_workflow context.
 
     try:
-        if asyncio.iscoroutinefunction(run_research_graph):
-            results = await run_research_graph(task_description)
-        else:
-            results = run_research_graph(task_description)
+        results = await run_research_graph(task_description)
 
         step_workflow.output = "Workflow completed. Results are being displayed."
         await step_workflow.update()
