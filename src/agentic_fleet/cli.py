@@ -42,10 +42,12 @@ def start(mode: str, host: Optional[str], port: Optional[int]):
         port: Optional port to bind to
     """
     try:
-        # Load environment variables
-        load_dotenv()
+        # Load environment variables - this is now handled by config_manager import
+        # load_dotenv() # Removed
 
         # Validate environment
+        # config_manager is loaded on import, which loads .env.
+        # The validate_environment function here uses config_manager.
         if error := validate_environment():
             click.echo(f"Environment validation failed: {error}", err=True)
             sys.exit(1)

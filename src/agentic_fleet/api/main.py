@@ -26,11 +26,8 @@ from agentic_fleet.database.session import get_db
 from agentic_fleet.exceptions import AgenticFleetAPIError, AgenticFleetDatabaseError
 from agentic_fleet.config.llm_config_manager import llm_config_manager
 
-# Configure logging
-logging.basicConfig(
-    level=logging.INFO,
-    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
-)
+# Logging is configured globally by setup_global_logging() in main.py or chainlit_app.py
+# No need for basicConfig here.
 logger = logging.getLogger("agentic_fleet")
 
 # Extracted FastAPI description

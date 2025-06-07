@@ -51,15 +51,28 @@ class Settings(ModelConfigSettings, FleetConfigSettings):
 
         load_dotenv()
 
-        # OAuth settings
-        self.USE_OAUTH: bool = os.getenv("USE_OAUTH", "false").lower() == "true"
-        self.OAUTH_PROVIDERS: List[str] = os.getenv("OAUTH_PROVIDERS", "").split(",")
+        from agentic_fleet.config import (
+            config_manager,
+            DEFAULT_TEMPERATURE,
+            DEFAULT_MAX_ROUNDS,
+            DEFAULT_MAX_TIME,
+            DEFAULT_SYSTEM_PROMPT,
+            # DEFAULT_START_PAGE, # Not used in Settings class currently
+            # DEFAULT_MAX_STALLS, # Not used in Settings class currently
+        )
 
-        # Chat settings
-        self.temperature: float = float(os.getenv("DEFAULT_TEMPERATURE", "0.7"))
-        self.max_rounds: int = int(os.getenv("DEFAULT_MAX_ROUNDS", "10"))
-        self.max_time: int = int(os.getenv("DEFAULT_MAX_TIME", "300"))
-        self.system_prompt: str = os.getenv("DEFAULT_SYSTEM_PROMPT", "You are a helpful AI assistant.")
+        # OAuth settings
+        # Default for USE_OAUTH comes from app_settings.yaml via config_manager
+        self.USE_OAUTH: bool = os.getenv("USE_OAUTH", str(config_manager.get_security_settings().use_oauth)).lower() == "true"
+        self.OAUTH_PROVIDERS: List[str] = os.getenv("OAUTH_PROVIDERS", "" if not config_manager.get_security_settings().oauth_providers else ",".join(provider.name for provider in config_manager.get_security_settings().oauth_providers if provider.name)).split(",")
+
+
+        # Chat settings - defaults now come from config_manager via imported constants
+        # These constants (DEFAULT_TEMPERATURE, etc.) are loaded from app_settings.yaml in config/__init__.py
+        self.temperature: float = float(os.getenv("DEFAULT_TEMPERATURE", str(DEFAULT_TEMPERATURE)))
+        self.max_rounds: int = int(os.getenv("DEFAULT_MAX_ROUNDS", str(DEFAULT_MAX_ROUNDS)))
+        self.max_time: int = int(os.getenv("DEFAULT_MAX_TIME", str(DEFAULT_MAX_TIME)))
+        self.system_prompt: str = os.getenv("DEFAULT_SYSTEM_PROMPT", str(DEFAULT_SYSTEM_PROMPT))
 
 
 class ApplicationManager:

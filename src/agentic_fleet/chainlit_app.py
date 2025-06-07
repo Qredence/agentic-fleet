@@ -4,15 +4,18 @@ Chainlit application entry point for AgenticFleet.
 This module serves as the primary entry point for the Chainlit UI application.
 """
 
-# Initialize environment variables first
-from dotenv import load_dotenv
-
-load_dotenv()
-
-# Third-party imports
 # Standard library imports
 import asyncio
-import logging
+import logging # Keep logging import for logger instance
+
+# Local imports
+from agentic_fleet.core.config.logging import setup_global_logging
+
+# Configure global logging using the centralized function
+# load_dotenv() is called centrally via config_manager loading settings
+setup_global_logging() # This needs to be early
+
+# Third-party imports
 import os
 import subprocess
 import sys
@@ -44,7 +47,7 @@ except ImportError:
     pass
 
 # Initialize logging
-logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s")
+# logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s") # Replaced by setup_global_logging()
 logger = logging.getLogger(__name__)
 
 
@@ -101,13 +104,19 @@ async def start_chat() -> None:
         # Store profile type in session
         cl.user_session.set("profile_type", profile_name)
 
-        # Initialize configuration
-        config_manager.load_all()
-        logger.info("Successfully loaded all configurations")
+        # Initialize configuration (config_manager is imported, so it's initialized)
+        # config_manager.load_all() # This is called upon import of config_manager
+        logger.info("Successfully loaded all configurations (on import of config_manager)")
 
-        # Validate environment
-        if error := config_manager.validate_environment():
-            raise ValueError(error)
+        # Validate environment - This is now critical here
+        validation_error = config_manager.validate_environment()
+        if validation_error:
+            # Log visibly in Chainlit UI if possible, then raise to stop further execution
+            error_content = f"CRITICAL: Environment validation failed: {validation_error}. Application cannot start."
+            logger.critical(error_content)
+            await cl.Message(content=error_content).send()
+            raise ValueError(error_content) # Stop further execution
+        logger.info("Environment variables validated successfully.")
 
         # Get environment settings
         env_config: Any = config_manager.get_environment_settings()
@@ -115,12 +124,8 @@ async def start_chat() -> None:
         # Use profile-specific model_config for client creation
         logger.info(f"Creating client for model {model_name} with profile config")
         try:
-            # Check required environment variables
-            required_env_vars = ["AZURE_OPENAI_ENDPOINT", "AZURE_OPENAI_API_KEY", "AZURE_OPENAI_API_VERSION"]
-            missing_vars = [var for var in required_env_vars if not os.getenv(var)]
-            if missing_vars:
-                raise ValueError(f"Missing required Azure OpenAI environment variables: {', '.join(missing_vars)}")
-
+            # Validation of Azure env vars is now handled by config_manager.validate_environment()
+            # The create_client function will also be refactored to remove its specific checks.
             app_context.client = create_client(
                 model_name=model_name,
                 model_config=model_config,
@@ -318,6 +323,15 @@ async def on_chat_stop() -> None:
 
 def main() -> None:
     """Run the Chainlit application."""
+    # Ensure environment is validated before running Chainlit server process
+    # config_manager is loaded at module import, which loads .env
+    # setup_global_logging is also called at module import.
+    validation_error = config_manager.validate_environment()
+    if validation_error:
+        logger.critical(f"Environment validation failed: {validation_error}. Chainlit app will not run.")
+        sys.exit(1) # Exit if validation fails before starting subprocess
+    logger.info("Environment variables validated successfully before starting Chainlit subprocess.")
+
     host: str = os.environ.get("CHAINLIT_HOST", "0.0.0.0")
     port_env: str = os.environ.get("CHAINLIT_PORT", "8080")
 
