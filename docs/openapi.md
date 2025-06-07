@@ -62,20 +62,22 @@ The API is organized into the following main categories:
 - `POST /chat/messages` - Send a message
 - `WebSocket /chat/ws` - Real-time chat connection
 
+### System Configuration
+- `GET /api/models` - Get available LLM models.
+- `GET /api/profiles` - Get available LLM configuration profiles.
+
 ## Running the API
 
 To start the API server with OpenAPI documentation:
 
 ```bash
-# Using the main entry point (default mode is now 'api')
+# Using the main entry point
 python -m agentic_fleet.main
 
-# Or explicitly specify API mode
-python -m agentic_fleet.main --mode api
-
-# Or run directly
+# Or run the API module directly
 python src/agentic_fleet/api/main.py
 ```
+The Chainlit UI will be available at `/ui` and the API documentation at `/docs` and `/redoc`.
 
 The server will start on `http://localhost:8000` by default.
 
