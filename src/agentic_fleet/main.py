@@ -5,11 +5,9 @@ It can start either the Chainlit app directly, the FastAPI app with the Chainlit
 or the original API app.
 """
 
-import argparse
 import logging
 import os
 import sys
-from pathlib import Path
 
 import uvicorn
 from dotenv import load_dotenv
@@ -25,85 +23,52 @@ logging.basicConfig(
 logger = logging.getLogger("agentic_fleet")
 
 
-def run_chainlit():
-    """Run the Chainlit app directly."""
-    logger.info("Starting Chainlit app directly")
-
-    # Import the chainlit_app module
-    from agentic_fleet.chainlit_app import main as chainlit_main
-
-    # Run the Chainlit app
-    chainlit_main()
-
-
-def run_fastapi():
-    """Run the FastAPI app with the Chainlit app mounted."""
-    logger.info("Starting FastAPI app with Chainlit app mounted")
-
-    # Import the fastapi_app module
-    from agentic_fleet.api.fastapi_app import run_server as fastapi_run_server
-
-    # Run the FastAPI server
-    fastapi_run_server()
-
-
-def run_api():
-    """Run the comprehensive API app with OpenAPI documentation."""
-    logger.info("Starting comprehensive API app with OpenAPI documentation")
+def main():
+    """Main entry point for the AgenticFleet application."""
+    logger.info("Starting Agentic Fleet API server with OpenAPI documentation")
 
     # Import necessary modules
-    from agentic_fleet.api.main import app
+    # It's good practice to keep imports at the top, but for app and create_tables,
+    # they are specific to this function's logic of starting the server.
+    # If 'app' was used elsewhere, it would be at the top.
+    from agentic_fleet.api.main import app  # FastAPI app instance
     from agentic_fleet.database.session import create_tables
 
     # Initialize database
     try:
         create_tables()
-        logger.info("Database tables created")
+        logger.info("Database tables created successfully.")
     except Exception as e:
-        logger.warning(f"Database initialization failed: {e}")
-        logger.info("Continuing without database (some features may not work)")
+        logger.error(f"Database initialization failed: {e}", exc_info=True)
+        logger.info(
+            "Continuing without database initialization. Some features may not work as expected."
+        )
 
     # Get configuration from environment variables
     host = os.environ.get("HOST", "0.0.0.0")
-    port = int(os.environ.get("PORT", "8000"))
+    port = int(os.environ.get("PORT", "8000")) # Default to 8000 if not set
     reload = os.environ.get("RELOAD", "False").lower() == "true"
 
-    logger.info(f"Starting Agentic Fleet API on {host}:{port}")
-    logger.info(f"OpenAPI documentation available at http://{host}:{port}/docs")
-    logger.info(f"ReDoc documentation available at http://{host}:{port}/redoc")
+    if reload:
+        logger.info("Auto-reload is enabled. Server will restart on code changes.")
 
-    # Run the application
-    uvicorn.run(
-        "agentic_fleet.api.main:app",
-        host=host,
-        port=port,
-        reload=reload,
-        log_level="info",
-    )
+    logger.info(f"Agentic Fleet API will be available at http://{host}:{port}")
+    logger.info(f"OpenAPI documentation: http://{host}:{port}/docs")
+    logger.info(f"ReDoc documentation: http://{host}:{port}/redoc")
 
-
-def main():
-    """Main entry point for the application."""
-    # Parse command line arguments
-    parser = argparse.ArgumentParser(description="AgenticFleet")
-    parser.add_argument(
-        "--mode",
-        choices=["chainlit", "fastapi", "api"],
-        default="api",
-        help="Mode to run the application in (default: api)",
-    )
-    args = parser.parse_args()
-
-    # Run the application in the specified mode
-    if args.mode == "chainlit":
-        run_chainlit()
-    elif args.mode == "fastapi":
-        run_fastapi()
-    elif args.mode == "api":
-        run_api()
-    else:
-        logger.error(f"Unknown mode: {args.mode}")
+    try:
+        uvicorn.run(
+            "agentic_fleet.api.main:app",  # Path to the FastAPI app instance
+            host=host,
+            port=port,
+            reload=reload,
+            log_level="info", # Uvicorn's own logging level
+        )
+    except Exception as e:
+        logger.critical(f"Failed to start Agentic Fleet API server: {e}", exc_info=True)
         sys.exit(1)
+    finally:
+        logger.info("Agentic Fleet API server has shut down.")
 
 
 if __name__ == "__main__":

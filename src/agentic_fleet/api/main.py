@@ -11,15 +11,20 @@ import sys
 from datetime import datetime
 from typing import Any, Dict
 
+import os
+import sys
+
 from fastapi import Depends, FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse, RedirectResponse
+from chainlit.cli import create_app
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from agentic_fleet.api.middleware import LoggingMiddleware
 from agentic_fleet.api.routes import agents, chat, tasks
 from agentic_fleet.database.session import get_db
 from agentic_fleet.exceptions import AgenticFleetAPIError, AgenticFleetDatabaseError
+from agentic_fleet.config.llm_config_manager import llm_config_manager
 
 # Configure logging
 logging.basicConfig(
@@ -90,6 +95,10 @@ app = FastAPI(
             "name": "chat",
             "description": "Real-time chat operations. Send messages and manage chat sessions.",
         },
+        {
+            "name": "system",
+            "description": "System configuration and information.",
+        },
     ],
     docs_url="/docs",
     redoc_url="/redoc",
@@ -104,6 +113,13 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# Mount Chainlit UI
+# Add the current working directory to sys.path to allow Chainlit to find the app
+# TODO: This is a workaround, explore better ways to make chainlit_app discoverable
+# sys.path.insert(0, os.getcwd()) # This line was already added in the previous attempt
+chainlit_asgi_app = create_app(target="src/agentic_fleet/chainlit_app.py", headless=True)
+app.mount("/ui", chainlit_asgi_app, name="chainlit-ui")
 
 # Add custom middleware
 app.add_middleware(LoggingMiddleware)
@@ -217,6 +233,26 @@ async def redirect_to_docs():
 async def redirect_to_docs_alt():
     """Redirect /documentation to /docs for convenience."""
     return RedirectResponse(url="/docs")
+
+
+@app.get("/api/models", tags=["system"])
+async def get_models_main(): # Renamed to avoid conflict if main.py is ever in same scope as fastapi_app.py during transition
+    """Endpoint to get available models."""
+    # Note: llm_config_manager.get_all_models() was used in the old fastapi_app.py
+    # The subtask description mentioned get_available_models()
+    # Assuming get_all_models() is the intended one from the latest fastapi_app.py content
+    models = llm_config_manager.get_all_models()
+    return JSONResponse(content={"models": models})
+
+
+@app.get("/api/profiles", tags=["system"])
+async def get_profiles_main(): # Renamed to avoid conflict
+    """Endpoint to get available profiles."""
+    # Note: llm_config_manager.get_all_profiles() was used in the old fastapi_app.py
+    # The subtask description mentioned get_available_profiles()
+    # Assuming get_all_profiles() is the intended one from the latest fastapi_app.py content
+    profiles = llm_config_manager.get_all_profiles()
+    return JSONResponse(content={"profiles": profiles})
 
 
 if __name__ == "__main__":
