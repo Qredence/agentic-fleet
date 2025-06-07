@@ -45,57 +45,43 @@ This guide will help you get up and running with AgenticFleet quickly.
 
 ## Running AgenticFleet
 
-### Using CLI (Recommended)
+The primary way to run AgenticFleet is by executing its main module:
 
-1. **Start with Default Settings:**
-   ```bash
-   agenticfleet start
-   ```
+```bash
+python -m agentic_fleet.main
+```
 
-2. **Start Without OAuth:**
-   ```bash
-   agenticfleet start no-oauth
-   ```
+This command starts the FastAPI server. By default:
+- The API will be available at `http://localhost:8000`.
+- The interactive Chainlit UI will be available at `http://localhost:8000/ui`.
+- The OpenAPI documentation can be accessed at `http://localhost:8000/docs` (Swagger UI) and `http://localhost:8000/redoc` (ReDoc).
 
-3. **Custom Host and Port:**
-   ```bash
-   agenticfleet start --host localhost --port 8000
-   ```
-
-### Using Scripts
-
-1. **Shell Script:**
-   ```bash
-   ./scripts/run.sh
-   ```
-
-2. **Python Script:**
-   ```bash
-   python scripts/run_direct.py
-   ```
+You can configure the `HOST` and `PORT` via environment variables (see `.env` file).
 
 ### Using Docker
 
-1. **Pull the Image:**
-   ```bash
-   docker pull qredence/agenticfleet:latest
-   ```
+1.  **Pull the Image:**
+    ```bash
+    docker pull qredence/agenticfleet:latest
+    ```
 
-2. **Run the Container:**
-   ```bash
-   docker run -d -p 8001:8001 \
-     -e AZURE_OPENAI_API_KEY=your_key \
-     -e AZURE_OPENAI_ENDPOINT=your_endpoint \
-     -e AZURE_OPENAI_DEPLOYMENT=your_deployment \
-     -e AZURE_OPENAI_MODEL=your_model \
-     qredence/agenticfleet:latest
-   ```
+2.  **Run the Container:**
+    Ensure you pass the necessary environment variables for your chosen model provider (e.g., Azure OpenAI). The application inside the container listens on port 8000 by default.
+    ```bash
+    docker run -d -p 8001:8000 \
+      -e AZURE_OPENAI_API_KEY=your_key \
+      -e AZURE_OPENAI_ENDPOINT=your_endpoint \
+      -e AZURE_OPENAI_DEPLOYMENT=your_deployment \
+      -e AZURE_OPENAI_MODEL=your_model \
+      qredence/agenticfleet:latest
+    ```
+    You can then access the UI at `http://localhost:8001/ui`.
 
 ## Verifying Installation
 
-1. Start AgenticFleet using any of the methods above
-2. Open your browser to `http://localhost:8000` (or your configured port)
-3. You should see the AgenticFleet interface
+1. Start AgenticFleet using the method above.
+2. Open your browser to `http://localhost:8000/ui` (or `your_host:your_port/ui` if you configured custom host/port).
+3. You should see the AgenticFleet Chainlit interface. The API documentation is available at `http://localhost:8000/docs`.
 
 ## Next Steps
 

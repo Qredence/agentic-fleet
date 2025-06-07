@@ -1,221 +1,62 @@
 # API Reference
 
-This document provides detailed information about AgenticFleet's API endpoints and usage.
-
-## Core Components
-
-### ApplicationManager
-
-The main application manager class that handles the AgenticFleet instance.
-
-```python
-from agentic_fleet.core.application import ApplicationManager
-
-app_manager = ApplicationManager(
-    host="localhost",
-    port=8000,
-    debug=False
-)
-```
-
-#### Methods
-
-- `start()`: Start the application
-- `stop()`: Stop the application
-- `restart()`: Restart the application
-- `status()`: Get application status
-
-### Agent System
-
-#### MagenticOneGroupChat
-
-The core agent coordination system.
-
-```python
-from agentic_fleet.core.agents import MagenticOneGroupChat
-
-chat = MagenticOneGroupChat(
-    model="gpt-4",
-    temperature=0.7,
-    agents=["web_surfer", "file_surfer", "coder", "executor"]
-)
-```
-
-#### Available Agents
-
-1. **WebSurfer**
-   ```python
-   from agentic_fleet.agents import WebSurfer
-   
-   web_surfer = WebSurfer(
-       browser="chromium",
-       headless=True
-   )
-   ```
-
-2. **FileSurfer**
-   ```python
-   from agentic_fleet.agents import FileSurfer
-   
-   file_surfer = FileSurfer(
-       workspace_dir="./workspace"
-   )
-   ```
-
-3. **Coder**
-   ```python
-   from agentic_fleet.agents import Coder
-   
-   coder = Coder(
-       language="python",
-       style_guide="pep8"
-   )
-   ```
-
-4. **Executor**
-   ```python
-   from agentic_fleet.agents import Executor
-   
-   executor = Executor(
-       sandbox=True,
-       timeout=30
-   )
-   ```
+This document provides an overview of AgenticFleet's HTTP API endpoints. For detailed request/response schemas, Pydantic models, and interactive testing, please refer to the auto-generated OpenAPI documentation available at `/docs` (Swagger UI) and `/redoc` (ReDoc) when the server is running.
 
 ## HTTP API Endpoints
 
-### Authentication
+The API is organized into the following categories:
 
-#### OAuth Login
-```http
-POST /api/auth/login
-Content-Type: application/json
+### Health & Status
 
-{
-    "provider": "github",
-    "code": "oauth_code"
-}
-```
+-   **`GET /`**
+    -   Returns basic information about the API, its version, and links to the interactive documentation.
+-   **`GET /health`**
+    -   Provides a detailed health check of the API, including database connectivity status and system information.
 
-#### Logout
-```http
-POST /api/auth/logout
-Authorization: Bearer <token>
-```
+### Agent Management
 
-### Chat
+-   **`GET /agents`**
+    -   Retrieves a list of all available agents.
+-   **`POST /agents`**
+    -   Creates a new agent. The request body should conform to the agent creation schema.
+-   **`GET /agents/{agent_id}`**
+    -   Fetches detailed information for a specific agent identified by `agent_id`.
+-   **`PUT /agents/{agent_id}`**
+    -   Updates an existing agent identified by `agent_id`. The request body should contain the fields to be updated.
+-   **`DELETE /agents/{agent_id}`**
+    -   Deletes a specific agent identified by `agent_id`.
 
-#### Start Chat Session
-```http
-POST /api/chat/start
-Authorization: Bearer <token>
-Content-Type: application/json
+### Task Management
 
-{
-    "model": "gpt-4",
-    "temperature": 0.7,
-    "agents": ["web_surfer", "file_surfer"]
-}
-```
+-   **`GET /tasks`**
+    -   Retrieves a list of all tasks.
+-   **`POST /tasks`**
+    -   Creates a new task. The request body should conform to the task creation schema.
+-   **`GET /tasks/{task_id}`**
+    -   Fetches detailed information for a specific task identified by `task_id`.
+-   **`PUT /tasks/{task_id}`**
+    -   Updates an existing task identified by `task_id`. The request body should contain the fields to be updated.
+-   **`DELETE /tasks/{task_id}`**
+    -   Deletes a specific task identified by `task_id`.
+-   **`POST /tasks/{task_id}/assign/{agent_id}`**
+    -   Assigns a task (identified by `task_id`) to an agent (identified by `agent_id`).
 
-#### Send Message
-```http
-POST /api/chat/message
-Authorization: Bearer <token>
-Content-Type: application/json
+### Chat Interface
 
-{
-    "session_id": "session_uuid",
-    "content": "Your message here",
-    "attachments": []
-}
-```
+-   **`GET /chat/messages`**
+    -   Retrieves chat history, typically requiring a session identifier as a query parameter.
+-   **`POST /chat/messages`**
+    -   Sends a new message to a chat session. The request body should include the message content and session identifier.
+-   **`WebSocket /chat/ws`**
+    -   The WebSocket endpoint for establishing a real-time, bidirectional communication channel for interactive chat.
 
-#### Get Chat History
-```http
-GET /api/chat/history/{session_id}
-Authorization: Bearer <token>
-```
+### System Configuration
 
-### File Operations
-
-#### Upload File
-```http
-POST /api/files/upload
-Authorization: Bearer <token>
-Content-Type: multipart/form-data
-
-file: <file_data>
-```
-
-#### List Files
-```http
-GET /api/files/list
-Authorization: Bearer <token>
-```
-
-### System Status
-
-#### Get System Status
-```http
-GET /api/system/status
-Authorization: Bearer <token>
-```
-
-#### Get Agent Status
-```http
-GET /api/system/agents
-Authorization: Bearer <token>
-```
-
-## WebSocket API
-
-### Chat WebSocket
-
-Connect to real-time chat:
-```javascript
-const ws = new WebSocket('ws://localhost:8000/ws/chat/{session_id}')
-```
-
-#### Message Format
-```json
-{
-    "type": "message",
-    "content": "Message content",
-    "timestamp": "2025-02-24T15:57:56+01:00",
-    "agent": "web_surfer"
-}
-```
+-   **`GET /api/models`**
+    -   Retrieves a list of available Language Learning Models (LLMs) configured in the system.
+-   **`GET /api/profiles`**
+    -   Retrieves a list of available configuration profiles for LLMs.
 
 ## Error Handling
 
-All API endpoints return standard error responses:
-
-```json
-{
-    "error": {
-        "code": "ERROR_CODE",
-        "message": "Error description",
-        "details": {}
-    }
-}
-```
-
-Common error codes:
-- `AUTH_REQUIRED`: Authentication required
-- `INVALID_TOKEN`: Invalid authentication token
-- `SESSION_NOT_FOUND`: Chat session not found
-- `AGENT_ERROR`: Agent execution error
-- `RATE_LIMIT`: Rate limit exceeded
-
-## Rate Limiting
-
-API endpoints are rate-limited by default:
-- 100 requests per minute per IP
-- 1000 requests per hour per user
-- WebSocket connections limited to 5 per user
-
-## Versioning
-
-The API follows semantic versioning. Current version: v1.
-Access specific API versions using the `/api/v1/` prefix.
+The API uses standard HTTP status codes to indicate the success or failure of a request. When an error occurs, the response body will typically contain a JSON object with a "detail" field explaining the error. For more specific error structures, refer to the exception handlers in `src/agentic_fleet/api/main.py`.
