@@ -45,14 +45,14 @@ def create_client(
         An instance of AzureOpenAIChatCompletionClient
 
     Raises:
-        ValueError: If required environment variables are missing
+        ValueError: If required environment variables are missing (though this specific check is removed)
     """
-    # Validate required environment variables
-    required_env_vars = ["AZURE_OPENAI_ENDPOINT", "AZURE_OPENAI_API_KEY", "AZURE_OPENAI_API_VERSION"]
-
-    missing_vars = [var for var in required_env_vars if not os.getenv(var)]
-    if missing_vars:
-        raise ValueError(f"Missing required Azure OpenAI environment variables: {', '.join(missing_vars)}")
+    # Validate required environment variables - This is now handled by config_manager.validate_environment()
+    # required_env_vars = ["AZURE_OPENAI_ENDPOINT", "AZURE_OPENAI_API_KEY", "AZURE_OPENAI_API_VERSION"]
+    #
+    # missing_vars = [var for var in required_env_vars if not os.getenv(var)]
+    # if missing_vars:
+    #     raise ValueError(f"Missing required Azure OpenAI environment variables: {', '.join(missing_vars)}")
 
     # Use model configuration if provided, otherwise use parameters
     if model_config:
@@ -109,8 +109,8 @@ def create_client(
     return client
 
 
-@lru_cache(maxsize=10)
-def get_cached_client(
+# @lru_cache(maxsize=10) # Removed as per subtask instructions due to potential issues with dict parameters
+def get_cached_client( # Functionality remains, but without caching via lru_cache
     model_name: str,
     streaming: bool = True,
     vision: bool = True,

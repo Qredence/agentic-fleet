@@ -71,7 +71,7 @@ from agentic_fleet.message_processing import (
 )
 
 # Initialize logging
-logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s")
+# logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s") # Replaced by global setup
 logger = logging.getLogger(__name__)
 
 # Load environment variables

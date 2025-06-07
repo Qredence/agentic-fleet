@@ -10,21 +10,29 @@ import os
 import sys
 
 import uvicorn
-from dotenv import load_dotenv
+# from dotenv import load_dotenv # load_dotenv is called centrally in config.settings
 
-# Load environment variables from .env file if it exists
-load_dotenv()
+# Import and call the global logging setup
+from agentic_fleet.core.config.logging import setup_global_logging
+setup_global_logging() # This should be early
 
-# Configure logging
-logging.basicConfig(
-    level=logging.INFO,
-    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
-)
+# Import config_manager to trigger its initialization (which includes load_dotenv)
+# and to use for validation.
+from agentic_fleet.config import config_manager
+
 logger = logging.getLogger("agentic_fleet")
 
 
 def main():
     """Main entry point for the AgenticFleet application."""
+
+    # Validate environment variables early
+    validation_error = config_manager.validate_environment()
+    if validation_error:
+        logger.critical(f"Environment validation failed: {validation_error}")
+        sys.exit(1)
+    logger.info("Environment variables validated successfully.")
+
     logger.info("Starting Agentic Fleet API server with OpenAPI documentation")
 
     # Import necessary modules

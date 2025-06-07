@@ -56,18 +56,41 @@ class ApplicationManager:
         self.config = config
         self.model_client = model_client
 
+        if self.model_client is None:
+            logger.info("No model client provided to ApplicationManager, attempting to create a default one.")
+            try:
+                # Ensure config_manager has loaded critical env vars for client_factory
+                # This should have happened upon import of config_manager or by an explicit call
+                # in the application entry point (e.g., main.py, chainlit_app.py)
+                # If validate_environment() fails here, client_factory will likely fail too.
+                validation_error = config_manager.validate_environment()
+                if validation_error:
+                    logger.error(f"Environment validation failed: {validation_error}. Cannot create default model client.")
+                    # Depending on desired behavior, could raise an error or proceed without a client.
+                    # For now, proceed without, matching previous behavior of just warning.
+                else:
+                    from agentic_fleet.services import client_factory
+                    # Attempt to get a default client, e.g., based on a "default" profile
+                    # This assumes a "default" profile is configured in llm_config.yaml
+                    # or create_client can be called with a default model name.
+                    # Using get_client_for_profile("default") is a good convention.
+                    self.model_client = client_factory.get_client_for_profile("default")
+                    logger.info("Successfully created a default model client.")
+            except Exception as e:
+                logger.error(f"Failed to create a default model client: {e}. Agent functionality will be limited.")
+
+        if self.model_client is None: # Check again after attempting to create default
+            logger.warning("Proceeding without a model client. Agent functionality will be limited.")
+
+
         # Initialize components
-        self.team_factory = TeamFactory(model_client=model_client)
+        self.team_factory = TeamFactory(model_client=self.model_client) # Use the potentially updated self.model_client
         self.active_teams: Dict[str, TeamManager] = {}
 
-        # Configure logging
-        logging.basicConfig(
-            level=getattr(logging, config.log_level.upper()),
-            format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
-        )
-
-        if model_client is None:
-            logger.warning("No model client provided. Agent functionality will be limited.")
+        # Logging is configured globally by setup_global_logging()
+        # The log level from ApplicationConfig might still be relevant for specific loggers
+        # or if a more granular control than global basicConfig is needed later.
+        # For now, we rely on the global setup.
 
     async def start(self) -> None:
         """Start the application manager."""
