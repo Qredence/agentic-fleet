@@ -2,7 +2,7 @@ import asyncio
 import chainlit as cl
 
 async def run_research_graph(task_description: str) -> dict:
-    print(f"Placeholder: Running research graph for: {task_description}")
+    await cl.Message(content=f"Placeholder: Running research graph for: {task_description}", author="System").send()
 
     await cl.Message(content="Starting research and summarization phase...", author="System").send()
 
