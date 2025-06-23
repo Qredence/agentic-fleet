@@ -36,7 +36,7 @@ RUN /install/bin/pip install playwright \
     && /install/bin/pip install .
 
 # Production stage
-FROM python:3.13.5-slim
+FROM python@sha256:<digest>
 
 # Set environment variables
 ENV PYTHONDONTWRITEBYTECODE=1 \
