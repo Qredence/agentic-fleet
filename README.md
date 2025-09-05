@@ -11,7 +11,23 @@ A powerful multi-agent system for adaptive AI reasoning and automation. AgenticF
 </div>
 
 
-
+> ⚠️ **Upcoming Major Refactor (Releasing Soon)**
+>
+> A comprehensive refactor will land in the coming days. It will:
+>
+> - Streamline core architecture & module boundaries
+> - Improve agent orchestration & task planning
+> - Unify configuration & environment management
+> - Introduce clearer extension points (custom tools, models, planners)
+> - Refine logging, observability & error handling pathways
+>
+> Breaking changes: Some internal paths and selected public APIs may change. If you depend on the current behavior, pin the version now:
+>
+> ```bash
+> pip install "agentic-fleet==$(pip index versions agentic-fleet 2>/dev/null | head -n 1 | awk '{print $NF}')"
+> ```
+>
+> A migration guide + changelog will be published with the release.
 
 <div align="center">
   <p>
@@ -34,29 +50,6 @@ A powerful multi-agent system for adaptive AI reasoning and automation. AgenticF
   </video>
 </div>
 
-## 🗺️ Short-Term Roadmap
-
-Here's a glimpse into the upcoming features and tasks planned for the near future. This is based on our current open issues:
-
-**🚀 New Features:**
-
-* [#120] NVIDIA Agentiq / NIM / NEMO use
-* [#118] OpenAPI documentation
-* [#116] Provide a chat history feature
-* [#115] LLM model format and handling revamped
-* [#114] MCP support
-* [#113] ✅ Canvas-like interface (Added Canvas View profile)
-
-**✨ Enhancements & Refinements:**
-
-* [#119] Secure Oauth feature enhancement
-* [#117] Simplify entirely the codebase (Review effort: 4)
-
-**🛠️ Tasks & Updates:**
-
-* [#112] ✅ Updating Chainlit version dependency (Updated to >=2.5.0)
-
-*This roadmap is subject to change based on priorities and development progress. Check the [Issues tab](link-to-your-issues-page) for the most up-to-date status.*
 
 
 ## Table of Contents
