@@ -23,27 +23,26 @@ Usage:
     result = await coder.run("Write a function to calculate fibonacci numbers")
 """
 
-from agent_framework import ChatAgent
-from agent_framework.openai import OpenAIResponsesClient
+from azure.ai.agent.client import AzureAIAgentClient
 
 from config.settings import settings
 
 
-def create_coder_agent() -> ChatAgent:
+def create_coder_agent(client: AzureAIAgentClient, context_provider):
     """
     Create the Coder agent with code interpretation capabilities.
 
     This function:
     - Loads configuration from agents/coder_agent/agent_config.yaml
-    - Creates an OpenAI Responses client with coder-specific settings (low temperature)
+    - Creates an agent with the provided AzureAIAgentClient
     - Enables the code_interpreter_tool if configured
-    - Returns a fully configured ChatAgent instance
+    - Returns a fully configured agent instance
 
-    The agent uses a lower temperature (0.2) to ensure deterministic,
-    precise code generation with minimal randomness.
+    Args:
+        client: The AzureAIAgentClient instance.
 
     Returns:
-        ChatAgent: Configured coder agent with code execution tools
+        AIAgent: Configured coder agent with code interpreter tools
 
     Raises:
         ValueError: If required configuration is missing
@@ -53,13 +52,7 @@ def create_coder_agent() -> ChatAgent:
     config = settings.load_agent_config("agents/coder_agent")
     agent_config = config.get("agent", {})
 
-    # Create OpenAI Responses client with coder-specific parameters
-    # API key is read from OPENAI_API_KEY environment variable
-    client = OpenAIResponsesClient(
-        model_id=agent_config.get("model", settings.openai_model),
-    )
-
-    # Import and configure code execution tool
+    # Import and configure tools based on agent configuration
     from .tools.code_interpreter import code_interpreter_tool
 
     # Check which tools are enabled in the configuration
@@ -70,12 +63,12 @@ def create_coder_agent() -> ChatAgent:
         if tool_config.get("name") == "code_interpreter_tool" and tool_config.get("enabled", True):
             enabled_tools.append(code_interpreter_tool)
 
-    # Create the ChatAgent with code execution capabilities
-    agent = ChatAgent(
+    # Create the agent with configured tools
+    agent = client.create_agent(
         name=agent_config.get("name", "coder"),
         instructions=config.get("system_prompt", ""),
-        chat_client=client,
-        tools=enabled_tools,  # Pass tools directly
+        tools=enabled_tools,
+        memory=context_provider,
     )
 
     return agent

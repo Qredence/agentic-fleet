@@ -1,3 +1,4 @@
+import logging
 import os
 from pathlib import Path
 from typing import Any, Dict
@@ -16,10 +17,29 @@ class Settings:
         if not self.openai_api_key:
             raise ValueError("OPENAI_API_KEY environment variable is required")
 
-        self.openai_model = os.getenv("OPENAI_MODEL", "gpt-5")
+        self.azure_ai_project_endpoint = os.getenv("AZURE_AI_PROJECT_ENDPOINT")
+        if not self.azure_ai_project_endpoint:
+            raise ValueError("AZURE_AI_PROJECT_ENDPOINT environment variable is required")
+        self.log_level = os.getenv("LOG_LEVEL", "INFO")
+        self.azure_ai_search_endpoint = os.getenv("AZURE_AI_SEARCH_ENDPOINT")
+        self.azure_openai_chat_completion_deployed_model_name = os.getenv("AZURE_OPENAI_CHAT_COMPLETION_DEPLOYED_MODEL_NAME")
+        self.azure_openai_embedding_deployed_model_name = os.getenv("AZURE_OPENAI_EMBEDDING_DEPLOYED_MODEL_NAME")
+
+        self._setup_logging()
 
         # Load workflow configuration (centralized workflow settings)
         self.workflow_config = self._load_yaml("config/workflow_config.yaml")
+
+    def _setup_logging(self):
+        """Configure application-wide logging."""
+        logging.basicConfig(
+            level=self.log_level,
+            format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+            handlers=[
+                logging.StreamHandler(),
+                logging.FileHandler(self.log_file),
+            ],
+        )
 
     def _load_yaml(self, file_path: str) -> Dict[str, Any]:
         """Load YAML configuration file."""
@@ -27,6 +47,7 @@ class Settings:
             with open(file_path, "r") as f:
                 return yaml.safe_load(f)
         except FileNotFoundError:
+            logging.warning(f"Configuration file not found: {file_path}")
             return {}
 
     def load_agent_config(self, agent_path: str) -> Dict[str, Any]:

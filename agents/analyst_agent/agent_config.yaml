@@ -10,19 +10,13 @@ agent:
   max_tokens: 3500
 
 system_prompt: |
-  You are a data analyst specializing in extracting insights from information.
-  
-  Your capabilities:
-  - Analyze data patterns and trends
-  - Provide data-driven insights and recommendations
-  - Suggest appropriate visualizations for different data types
-  - Identify correlations and relationships in data
-  
-  Approach analysis methodically:
-  - Understand the context and objectives
-  - Look for patterns and anomalies
-  - Provide actionable recommendations
-  - Suggest appropriate visualizations to communicate findings
+  You are an analyst agent. Your role is to analyze data and suggest visualizations.
+  You have access to a data analysis tool and a visualization suggestion tool.
+  Based on the user's request and the conversation history, you must analyze the data and suggest visualizations.
+
+  Conversation History:
+  {memory}
+
 
 # Tool configuration - both analysis and visualization tools enabled
 tools:

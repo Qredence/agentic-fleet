@@ -17,24 +17,26 @@ Usage:
     result = await researcher.run("Search for Python best practices")
 """
 
-from agent_framework import ChatAgent
-from agent_framework.openai import OpenAIResponsesClient
+from azure.ai.agent.client import AzureAIAgentClient
 
 from config.settings import settings
 
 
-def create_researcher_agent() -> ChatAgent:
+def create_researcher_agent(client: AzureAIAgentClient, context_provider):
     """
     Create the Researcher agent with web search capabilities.
 
     This function:
     - Loads configuration from agents/researcher_agent/agent_config.yaml
-    - Creates an OpenAI Responses client with researcher-specific settings
+    - Creates an agent with the provided AzureAIAgentClient
     - Enables the web_search_tool if configured
-    - Returns a fully configured ChatAgent instance
+    - Returns a fully configured agent instance
+
+    Args:
+        client: The AzureAIAgentClient instance.
 
     Returns:
-        ChatAgent: Configured researcher agent with web search tools
+        AIAgent: Configured researcher agent with web search tools
 
     Raises:
         ValueError: If required configuration is missing
@@ -43,12 +45,6 @@ def create_researcher_agent() -> ChatAgent:
     # Load researcher-specific configuration
     config = settings.load_agent_config("agents/researcher_agent")
     agent_config = config.get("agent", {})
-
-    # Create OpenAI Responses client with researcher-specific parameters
-    # API key is read from OPENAI_API_KEY environment variable
-    client = OpenAIResponsesClient(
-        model_id=agent_config.get("model", settings.openai_model),
-    )
 
     # Import and configure tools based on agent configuration
     from .tools.web_search_tools import web_search_tool
@@ -61,13 +57,12 @@ def create_researcher_agent() -> ChatAgent:
         if tool_config.get("name") == "web_search_tool" and tool_config.get("enabled", True):
             enabled_tools.append(web_search_tool)
 
-    # Create the ChatAgent with configured tools
-    # Note: Tools are passed directly as a list, not wrapped in ToolSet
-    agent = ChatAgent(
+    # Create the agent with configured tools
+    agent = client.create_agent(
         name=agent_config.get("name", "researcher"),
         instructions=config.get("system_prompt", ""),
-        chat_client=client,
-        tools=enabled_tools,  # Pass tools directly
+        tools=enabled_tools,
+        memory=context_provider,
     )
 
     return agent

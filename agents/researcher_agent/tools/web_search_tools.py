@@ -2,6 +2,8 @@ from typing import List
 
 from pydantic import BaseModel, Field
 
+from .mock_data import mock_responses
+
 
 class SearchResult(BaseModel):
     """Individual search result with metadata."""
@@ -34,30 +36,6 @@ def web_search_tool(query: str) -> WebSearchResponse:
     """
     # Mock implementation for Phase 1
     # In Phase 2, integrate with actual search APIs (Google, Bing, etc.)
-
-    mock_responses = {
-        "python programming": WebSearchResponse(
-            results=[
-                SearchResult(
-                    title="Python Programming Language - Official Website",
-                    snippet="Python is a high-level, interpreted programming language known for its simplicity and readability. Latest version is Python 3.13 with improved performance and new features.",
-                    url="https://python.org",
-                    relevance_score=0.95,
-                    source_type="official",
-                ),
-                SearchResult(
-                    title="Python Documentation",
-                    snippet="Complete documentation for Python standard library and language reference.",
-                    url="https://docs.python.org",
-                    relevance_score=0.88,
-                    source_type="documentation",
-                ),
-            ],
-            total_results=2,
-            search_query=query,
-            source="mock_search",
-        )
-    }
 
     # Return mock response for known queries, generic for others
     if query.lower() in mock_responses:

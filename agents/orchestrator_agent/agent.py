@@ -1,29 +1,36 @@
-from agent_framework import ChatAgent
-from agent_framework.openai import OpenAIResponsesClient
+from azure.ai.agent.client import AzureAIAgentClient
+
 from config.settings import settings
 
 
-def create_orchestrator_agent() -> ChatAgent:
+def create_orchestrator_agent(client: AzureAIAgentClient, context_provider):
     """
-    Create the Magentic Orchestrator agent using OpenAI Responses API.
+    Create the Orchestrator agent.
+
+    This function:
+    - Loads configuration from agents/orchestrator_agent/agent_config.yaml
+    - Creates an agent with the provided AzureAIAgentClient
+    - Returns a fully configured agent instance
+
+    Args:
+        client: The AzureAIAgentClient instance.
 
     Returns:
-        ChatAgent: Configured orchestrator agent
+        AIAgent: Configured orchestrator agent
+
+    Raises:
+        ValueError: If required configuration is missing
+        FileNotFoundError: If agent_config.yaml is not found
     """
     # Load orchestrator-specific configuration
     config = settings.load_agent_config("agents/orchestrator_agent")
     agent_config = config.get("agent", {})
 
-    # Create OpenAI Responses client
-    # API key is read from OPENAI_API_KEY environment variable
-    client = OpenAIResponsesClient(
-        model_id=agent_config.get("model", settings.openai_model),
-    )
-
-    agent = ChatAgent(
+    # Create the agent
+    agent = client.create_agent(
         name=agent_config.get("name", "orchestrator"),
         instructions=config.get("system_prompt", ""),
-        chat_client=client,
+        memory=context_provider,
     )
 
     return agent

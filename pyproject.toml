@@ -6,8 +6,8 @@ authors = [
     { name = "Qredence", email = "contact@qredence.ai" },
 ]
 dependencies = [
-    "agent-framework>=1.0.0b251007",
-    "openai<=2.3.0",
+    "azure-ai-agent>=0.0.1b1",
+    "azure-identity>=1.16.0",
     "python-dotenv>=1.0.0",
     "pyyaml>=6.0",
     "requests>=2.31.0",
@@ -24,6 +24,9 @@ dev = [
     "ruff>=0.1.0",
     "mypy>=1.8.0",
     "debugpy>=1.0.0",
+]
+azure = [
+    "azure-ai-agent>=0.0.1b1",
 ]
 
 [build-system]
