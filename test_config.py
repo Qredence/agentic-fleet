@@ -207,13 +207,13 @@ def test_workflow_import():
     print(f"\n{BOLD}6. Testing Workflow Import{RESET}")
 
     try:
-        from workflows.magentic_workflow import create_magentic_workflow
+        from workflows.magentic_workflow import workflow
 
-        if callable(create_magentic_workflow):
-            print_test("Workflow import", True, "create_magentic_workflow is callable")
+        if workflow is not None:
+            print_test("Workflow import", True, "workflow instance available")
             return True
         else:
-            print_test("Workflow import", False, "Function not callable")
+            print_test("Workflow import", False, "workflow is None")
             return False
 
     except Exception as e:

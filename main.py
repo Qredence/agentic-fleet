@@ -3,12 +3,12 @@ import logging
 import sys
 
 from config.settings import settings
-from workflows.magentic_workflow import run_workflow
+from workflows.magentic_workflow import workflow
 
 logger = logging.getLogger(__name__)
 
 
-async def run_repl(workflow):
+async def run_repl():
     """
     Run the interactive REPL loop for user interaction.
     """
@@ -40,7 +40,10 @@ async def run_repl(workflow):
 
             except Exception as e:
                 logger.error(f"Workflow execution failed: {e}", exc_info=True)
-                logger.error("This might be due to API rate limits, complex tasks, or agent coordination failures.")
+                logger.error(
+                    "This might be due to API rate limits, complex tasks, "
+                    "or agent coordination failures."
+                )
                 logger.error("Try simplifying your request or checking your API key and quota.")
 
             print("\n" + "=" * 70)
@@ -76,14 +79,9 @@ async def main():
         sys.exit(1)
 
     logger.info("Initializing multi-agent workflow...")
-    try:
-        workflow = create_magentic_workflow()
-        logger.info("Workflow created successfully!")
-        logger.info("Agents: Orchestrator, Researcher, Coder, Analyst")
-        logger.info("Tools: Web search, Code interpreter, Data analysis")
-    except Exception as e:
-        logger.error(f"Failed to create workflow: {e}", exc_info=True)
-        sys.exit(1)
+    logger.info("Workflow ready!")
+    logger.info("Agents: Orchestrator, Researcher, Coder, Analyst")
+    logger.info("Tools: Web search, Code interpreter, Data analysis")
 
     print("\n" + "=" * 70)
     logger.info("AGENTICFLEET READY FOR TASK EXECUTION")
@@ -98,7 +96,7 @@ async def main():
     logger.info("  - Press Ctrl+C to interrupt")
     print()
 
-    await run_repl(workflow)
+    await run_repl()
 
 
 if __name__ == "__main__":

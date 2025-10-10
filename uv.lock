@@ -154,8 +154,15 @@ version = "0.5.0"
 source = { editable = "." }
 dependencies = [
     { name = "agent-framework" },
+    { name = "agent-framework-a2a" },
+    { name = "agent-framework-azure-ai" },
+    { name = "agent-framework-core" },
+    { name = "agent-framework-devui" },
+    { name = "agent-framework-mem0" },
+    { name = "agent-framework-redis" },
+    { name = "azure-ai-agents" },
+    { name = "azure-identity" },
     { name = "mem0ai" },
-    { name = "openai" },
     { name = "pydantic" },
     { name = "python-dotenv" },
     { name = "pyyaml" },
@@ -163,6 +170,9 @@ dependencies = [
 ]
 
 [package.optional-dependencies]
+azure = [
+    { name = "azure-ai-agents" },
+]
 dev = [
     { name = "black" },
     { name = "debugpy" },
@@ -182,28 +192,36 @@ dev = [
 
 [package.metadata]
 requires-dist = [
-    { name = "agent-framework", specifier = ">=1.0.0b251007" },
-    { name = "black", marker = "extra == 'dev'", specifier = ">=24.0.0" },
-    { name = "debugpy", marker = "extra == 'dev'", specifier = ">=1.0.0" },
+    { name = "agent-framework" },
+    { name = "agent-framework-a2a" },
+    { name = "agent-framework-azure-ai" },
+    { name = "agent-framework-core" },
+    { name = "agent-framework-devui" },
+    { name = "agent-framework-mem0" },
+    { name = "agent-framework-redis" },
+    { name = "azure-ai-agents", specifier = ">=1.2.0b5" },
+    { name = "azure-ai-agents", marker = "extra == 'azure'", specifier = ">=1.2.0b5" },
+    { name = "azure-identity", specifier = ">=1.25.1" },
+    { name = "black", marker = "extra == 'dev'", specifier = ">=25.9.0" },
+    { name = "debugpy", marker = "extra == 'dev'", specifier = ">=1.8.17" },
     { name = "mem0ai", specifier = "==1.0.0b0" },
-    { name = "mypy", marker = "extra == 'dev'", specifier = ">=1.8.0" },
-    { name = "openai", specifier = "<=2.3.0" },
-    { name = "pydantic", specifier = ">=2.0.0" },
-    { name = "pytest", marker = "extra == 'dev'", specifier = ">=8.0.0" },
-    { name = "pytest-asyncio", marker = "extra == 'dev'", specifier = ">=0.23.0" },
-    { name = "python-dotenv", specifier = ">=1.0.0" },
-    { name = "pyyaml", specifier = ">=6.0" },
-    { name = "requests", specifier = ">=2.31.0" },
-    { name = "ruff", marker = "extra == 'dev'", specifier = ">=0.1.0" },
+    { name = "mypy", marker = "extra == 'dev'", specifier = ">=1.18.2" },
+    { name = "pydantic", specifier = ">=2.12.0" },
+    { name = "pytest", marker = "extra == 'dev'", specifier = ">=8.4.2" },
+    { name = "pytest-asyncio", marker = "extra == 'dev'", specifier = ">=1.2.0" },
+    { name = "python-dotenv", specifier = ">=1.1.1" },
+    { name = "pyyaml", specifier = ">=6.0.3" },
+    { name = "requests", specifier = ">=2.32.5" },
+    { name = "ruff", marker = "extra == 'dev'", specifier = ">=0.14.0" },
 ]
-provides-extras = ["dev"]
+provides-extras = ["dev", "azure"]
 
 [package.metadata.requires-dev]
 dev = [
-    { name = "black", specifier = ">=24.0.0" },
-    { name = "pytest", specifier = ">=8.0.0" },
-    { name = "pytest-asyncio", specifier = ">=0.23.0" },
-    { name = "ruff", specifier = ">=0.1.0" },
+    { name = "black", specifier = ">=25.9.0" },
+    { name = "pytest", specifier = ">=8.4.2" },
+    { name = "pytest-asyncio", specifier = ">=1.2.0" },
+    { name = "ruff", specifier = ">=0.14.0" },
 ]
 
 [[package]]

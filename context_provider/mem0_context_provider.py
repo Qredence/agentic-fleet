@@ -7,6 +7,7 @@ from config.settings import settings
 
 load_dotenv()
 
+
 class Mem0ContextProvider:
     """A context provider that uses mem0ai for memory management."""
 
