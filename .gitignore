@@ -1,160 +1,3 @@
-# Byte-compiled / optimized / DLL files
-__pycache__/
-*.py[cod]
-*$py.class
-
-# C extensions
-*.so
-
-# Distribution / packaging
-.Python
-build/
-develop-eggs/
-dist/
-downloads/
-eggs/
-.eggs/
-lib/
-lib64/
-parts/
-sdist/
-var/
-wheels/
-share/python-wheels/
-*.egg-info/
-.installed.cfg
-*.egg
-MANIFEST
-debug/
-workspace/
-cline_docs
-# PyInstaller
-#  Usually these files are written by a python script from a template
-#  before PyInstaller builds the exe, so as to inject date/other infos into it.
-*.manifest
-*.spec
-
-# Installer logs
-pip-log.txt
-pip-delete-this-directory.txt
-
-# Unit test / coverage reports
-htmlcov/
-.tox/
-.nox/
-.coverage
-.coverage.*
-.cache
-nosetests.xml
-coverage.xml
-*.cover
-*.py,cover
-.hypothesis/
-.pytest_cache/
-cover/
-
-# Translations
-*.mo
-*.pot
-
-# Django stuff:
-*.log
-local_settings.py
-db.sqlite3
-db.sqlite3-journal
-
-# Flask stuff:
-instance/
-.webassets-cache
-
-# Scrapy stuff:
-.scrapy
-
-# Sphinx documentation
-docs/_build/
-
-# PyBuilder
-.pybuilder/
-target/
-
-# Jupyter Notebook
-.ipynb_checkpoints
-
-# IPython
-profile_default/
-ipython_config.py
-
-# PEP 582; used by e.g. github.com/David-OConnor/pyflow
-__pypackages__/
-
-# Celery stuff
-celerybeat-schedule
-celerybeat.pid
-
-# SageMath parsed files
-*.sage.py
-
-# Environments
-.env
-.venv
-env/
-venv/
-ENV/
-env.bak/
-venv.bak/
-
-# Spyder project settings
-.spyderproject
-.spyproject
-.cursorignore
-# Rope project settings
-.ropeproject
-
-# mkdocs documentation
-/site
-
-# mypy
-.mypy_cache/
-.dmypy.json
-dmypy.json
-
-# Pyre type checker
-.pyre/
-
-# pytype static type analyzer
-.pytype/
-
-# Cython debug symbols
-cython_debug/
-
-# PyCharm
-.idea
-
-# VSCode
-.vscode
-
-# dotenv
-.env
-
-# Poetry
-poetry.lock
-.venv
-.virtualenv
-
-# Fleet
-.fleet
-./archive/
-./archive
-# Backend virtual environment
-src/backend/.venv
-
-# Frontend virtual environment
-src/frontend/.venv
-
-# windsurf rules
-.windsurfrules
-cline_docs/
-files
 # Python
 __pycache__/
 *.py[cod]
@@ -163,6 +6,7 @@ __pycache__/
 .Python
 build/
 develop-eggs/
+dist/
 downloads/
 eggs/
 .eggs/
@@ -177,153 +21,30 @@ wheels/
 *.egg
 
 # Virtual Environment
-venv/
-env/
-ENV/
-.env
 .venv/
+venv/
+ENV/
+env/
 
 # IDE
-.idea/
 .vscode/
+.idea/
 *.swp
 *.swo
-.DS_Store
+*~
 
-# Chainlit
-.chainlit/
-# chainlit.md
-
-# Debug and temp files
-debug/
-*.log
-*.tmp
-dump.rdb
-
-# Project specific
-workspace/
-labs/
-.files/
-uv.lock
-files/
-archive/
-.windsurfrules
-cline_docs/
-archive/
-archive
-.notebooks
-.fake
-.chainlit/translations/gu.json
-.chainlit/translations/he-IL.json
-.chainlit/translations/hi.json
-.chainlit/translations/kn.json
-.chainlit/translations/ml.json
-.chainlit/translations/mr.json
-.chainlit/translations/nl-NL.json
-.chainlit/translations/ta.json
-.chainlit/translations/te.json
-.chainlit/translations/zh-CN.json
-
-memory_bank
-archive
-src/agentic_fleet/.null.py
-.archive
-# Environment Variables
-.env.*
-!.env.example
-
-# Logs
-logs/
-*.log
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
+# Environment variables
+.env
+.env.local
 
 # Testing
+.pytest_cache/
 .coverage
 htmlcov/
-.pytest_cache/
-.tox/
-.nox/
-coverage.xml
-*.cover
-.hypothesis/
 
-# Jupyter Notebooks
-.ipynb_checkpoints
+# Logs
+*.log
 
-# Distribution / packaging
-.Python
-env/
-build/
-develop-eggs/
-dist/
-downloads/
-eggs/
-.eggs/
-lib/
-lib64/
-parts/
-sdist/
-var/
-wheels/
-*.egg-info/
-.installed.cfg
-*.egg
-
-# Chainlit specific
-.chainlit/
-.chainlit.env
-
-# Azure specific
-.azure/
-
-# Credentials and secrets
-*.pem
-*.key
-*.crt
-*.p12
-*.pfx
-credentials.json
-token.json
-secrets.json
-
-# Database
-*.sqlite
-*.sqlite3
-*.db
-
-# Temporary files
-tmp/
-temp/
-.temp/
-.tmp/
-
-# Docker
-.docker/
-docker-compose.override.yml
-
-# Playwright
-node_modules/
-playwright-report/
-test-results/
-
-# Local development settings
-.env.local
-.env.development.local
-.env.test.local
-.env.production.local
-
-# Misc
+# OS
 .DS_Store
-.env.local
-.env.development.local
-.env.test.local
-.env.production.local
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
-
-.qodo
-.cursor/rules.md
-docs/tasks.md
+Thumbs.db

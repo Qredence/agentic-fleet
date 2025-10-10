@@ -1,0 +1,13 @@
+# Workflow-level configuration for AgenticFleet
+workflow:
+  max_rounds: 10
+  max_stalls: 3
+  max_resets: 2
+  timeout_seconds: 300
+
+# Shared defaults that can be overridden by individual agents
+defaults:
+  model: "gpt-5"
+  temperature: 0.2
+  max_tokens: 4000
+  top_p: 1.0

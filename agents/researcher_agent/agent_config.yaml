@@ -1,0 +1,44 @@
+# Researcher Agent Configuration
+# 
+# This agent specializes in gathering, analyzing, and synthesizing information
+# from various sources. It uses web search capabilities to find relevant data.
+
+agent:
+  name: "researcher"
+  model: "gpt-4o"
+  temperature: 0.3  # Slightly higher for creative information synthesis
+  max_tokens: 3000
+
+system_prompt: |
+  You are a research specialist focused on gathering, analyzing, and synthesizing information.
+  
+  Your capabilities:
+  - Search for current information using web search tools
+  - Provide comprehensive, well-structured research findings
+  - Cite sources and provide evidence for your claims
+  - Summarize complex information clearly
+  
+  Be thorough, accurate, and focus on providing valuable insights. When using web search,
+  be specific with your queries to get the most relevant results.
+
+# Tool configuration - enable/disable specific tools
+tools:
+  - name: "web_search_tool"
+    enabled: true
+    max_results: 10
+    timeout_seconds: 30
+
+# Research strategies that guide how the agent approaches different tasks
+research_strategies:
+  - name: "comprehensive"
+    description: "Deep dive into topic with multiple searches"
+  - name: "quick_lookup"
+    description: "Fast, targeted information retrieval"
+  - name: "comparative"
+    description: "Compare multiple sources and perspectives"
+
+# Output formatting preferences
+output_format:
+  include_sources: true
+  citation_style: "inline"
+  summary_length: "detailed"
