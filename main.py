@@ -34,7 +34,7 @@ async def run_repl():
                 print("=" * 50)
 
                 if result:
-                    logger.info(f"Result:\n{result}")
+                    print(f"Result:\n{result}")
                 else:
                     print("Task completed but no result was returned.")
 
