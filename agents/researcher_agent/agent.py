@@ -13,7 +13,7 @@ Usage:
 """
 
 from agent_framework import ChatAgent
-from agent_framework.openai import OpenAIChatClient
+from agent_framework.openai import OpenAIResponsesClient
 
 from config.settings import settings
 
@@ -23,7 +23,7 @@ def create_researcher_agent() -> ChatAgent:
     Create the Researcher agent with web search capabilities.
 
     Uses official Python Agent Framework pattern with ChatAgent and
-    OpenAIChatClient. Tools are plain Python functions passed as a list.
+    OpenAIResponsesClient. Tools are plain Python functions passed as a list.
 
     Returns:
         ChatAgent: Configured researcher agent with web search tools
@@ -37,7 +37,7 @@ def create_researcher_agent() -> ChatAgent:
     agent_config = config.get("agent", {})
 
     # Create OpenAI chat client
-    chat_client = OpenAIChatClient(
+    chat_client = OpenAIResponsesClient(
         model_id=agent_config.get("model", settings.openai_model),
     )
 

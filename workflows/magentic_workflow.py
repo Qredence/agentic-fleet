@@ -91,7 +91,10 @@ class MultiAgentWorkflow:
                 if response_text == self.last_response:
                     self.stall_count += 1
                     if self.stall_count >= self.max_stalls:
-                        return f"Workflow stalled after {self.stall_count} identical responses. Last response:\n{response_text}"
+                        return (
+                            f"Workflow stalled after {self.stall_count} identical responses. "
+                            f"Last response:\n{response_text}"
+                        )
                 else:
                     self.stall_count = 0
 

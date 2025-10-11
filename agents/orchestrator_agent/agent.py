@@ -8,7 +8,7 @@ to specialized agents (researcher, coder, analyst), and synthesizing results.
 """
 
 from agent_framework import ChatAgent
-from agent_framework.openai import OpenAIChatClient
+from agent_framework.openai import OpenAIResponsesClient
 
 from config.settings import settings
 
@@ -18,7 +18,7 @@ def create_orchestrator_agent() -> ChatAgent:
     Create the Orchestrator agent.
 
     Uses official Python Agent Framework pattern with ChatAgent and
-    OpenAIChatClient. Loads configuration from agent_config.yaml.
+    OpenAIResponsesClient. Loads configuration from agent_config.yaml.
 
     Returns:
         ChatAgent: Configured orchestrator agent
@@ -32,7 +32,7 @@ def create_orchestrator_agent() -> ChatAgent:
     agent_config = config.get("agent", {})
 
     # Create OpenAI chat client
-    chat_client = OpenAIChatClient(
+    chat_client = OpenAIResponsesClient(
         model_id=agent_config.get("model", settings.openai_model),
     )
 

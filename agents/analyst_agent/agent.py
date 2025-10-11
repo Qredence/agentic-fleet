@@ -7,7 +7,7 @@ The analyst is responsible for data analysis and generating insights.
 """
 
 from agent_framework import ChatAgent
-from agent_framework.openai import OpenAIChatClient
+from agent_framework.openai import OpenAIResponsesClient
 
 from config.settings import settings
 
@@ -17,7 +17,7 @@ def create_analyst_agent() -> ChatAgent:
     Create the Analyst agent with data analysis capabilities.
 
     Uses official Python Agent Framework pattern with ChatAgent and
-    OpenAIChatClient. Tools are plain Python functions passed as a list.
+    OpenAIResponsesClient. Tools are plain Python functions passed as a list.
 
     Returns:
         ChatAgent: Configured analyst agent with data analysis tools
@@ -31,7 +31,7 @@ def create_analyst_agent() -> ChatAgent:
     agent_config = config.get("agent", {})
 
     # Create OpenAI chat client
-    chat_client = OpenAIChatClient(
+    chat_client = OpenAIResponsesClient(
         model_id=agent_config.get("model", settings.openai_model),
     )
 

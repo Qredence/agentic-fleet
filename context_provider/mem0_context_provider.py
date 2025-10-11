@@ -1,7 +1,7 @@
-import os
+
+from dotenv import load_dotenv
 from mem0 import Memory
 from openai import AzureOpenAI
-from dotenv import load_dotenv
 
 from config.settings import settings
 

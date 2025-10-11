@@ -1,5 +1,3 @@
-from typing import List
-
 from pydantic import BaseModel, Field
 
 
@@ -16,7 +14,7 @@ class SearchResult(BaseModel):
 class WebSearchResponse(BaseModel):
     """Structured response from web search."""
 
-    results: List[SearchResult] = Field(..., description="List of search results")
+    results: list[SearchResult] = Field(..., description="List of search results")
     total_results: int = Field(..., description="Total number of results found")
     search_query: str = Field(..., description="Original search query")
     source: str = Field(..., description="Search source identifier")
@@ -28,14 +26,17 @@ mock_responses = {
         results=[
             SearchResult(
                 title="Python Programming Language - Official Website",
-                snippet="Python is a high-level, interpreted programming language known for its simplicity and readability. Latest version is Python 3.13 with improved performance and new features.",
+                snippet="Python is a high-level, interpreted programming language known for its "
+                "simplicity and readability. Latest version is Python 3.13 with improved "
+                "performance and new features.",
                 url="https://python.org",
                 relevance_score=0.95,
                 source_type="official",
             ),
             SearchResult(
                 title="Python Documentation",
-                snippet="Complete documentation for Python standard library and language reference.",
+                snippet="Complete documentation for Python standard library and language "
+                "reference.",
                 url="https://docs.python.org",
                 relevance_score=0.88,
                 source_type="documentation",
@@ -69,7 +70,9 @@ def web_search_tool(query: str) -> WebSearchResponse:
             results=[
                 SearchResult(
                     title=f"Search Results for: {query}",
-                    snippet="This would return real search results in production implementation. For Phase 1, this is a mock response demonstrating the structured data format.",
+                    snippet="This would return real search results in production implementation. "
+                    "For Phase 1, this is a mock response demonstrating the structured "
+                    "data format.",
                     url="https://example.com/search",
                     relevance_score=0.7,
                     source_type="generic",
