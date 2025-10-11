@@ -36,7 +36,7 @@ async def run_repl():
                 if result:
                     logger.info(f"Result:\n{result}")
                 else:
-                    logger.info("Task completed but no result was returned.")
+                    print("Task completed but no result was returned.")
 
             except Exception as e:
                 logger.error(f"Workflow execution failed: {e}", exc_info=True)
