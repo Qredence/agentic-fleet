@@ -131,14 +131,17 @@ class MultiAgentWorkflow:
         try:
             delegation_lines = [
                 line for line in orchestrator_response.split("\n") if line.startswith("DELEGATE:")
-            ]
-            if not delegation_lines:
-                return "Error: Could not find delegation instruction"
+        delegation_lines = [
+            line for line in orchestrator_response.split("\n") if line.startswith("DELEGATE:")
+        ]
+        if not delegation_lines:
+            return "Error: Could not parse delegation instruction"
+        try:
             delegation_line = delegation_lines[0]
             parts = delegation_line.replace("DELEGATE:", "").strip().split(" - ", 1)
             agent_name = parts[0].strip().lower()
             task = parts[1].strip() if len(parts) > 1 else context["user_query"]
-        except (IndexError, ValueError):
+        except ValueError:
             return "Error: Could not parse delegation instruction"
 
         # Route to appropriate agent
