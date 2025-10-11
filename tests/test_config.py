@@ -111,14 +111,6 @@ def test_workflow_import():
     assert workflow is not None, "workflow instance is None"
 
 
-# Color codes for terminal output (kept for backward compatibility if run as script)
-GREEN = "\033[92m"
-RED = "\033[91m"
-YELLOW = "\033[93m"
-RESET = "\033[0m"
-BOLD = "\033[1m"
-
-
 def print_test(name, passed, message=""):
     """Print test result with color coding."""
     status = f"{GREEN}✓ PASS{RESET}" if passed else f"{RED}✗ FAIL{RESET}"
