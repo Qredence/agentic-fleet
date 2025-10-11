@@ -30,7 +30,7 @@ async def run_repl():
                 result = await workflow.run(user_input)
 
                 print("\n" + "=" * 50)
-                logger.info("TASK COMPLETED!")
+                print("TASK COMPLETED!")
                 print("=" * 50)
 
                 if result:
