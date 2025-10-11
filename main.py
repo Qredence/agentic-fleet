@@ -47,7 +47,7 @@ async def run_repl():
                 logger.error("Try simplifying your request or checking your API key and quota.")
 
             print("\n" + "=" * 70)
-            logger.info("Ready for next task...")
+            print("Ready for next task...")
             print("=" * 70 + "\n")
 
         except KeyboardInterrupt:
