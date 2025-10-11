@@ -17,7 +17,7 @@ async def run_repl():
             user_input = input("🎯 Your task: ").strip()
 
             if user_input.lower() in ["quit", "exit", "q"]:
-                logger.info("Thank you for using AgenticFleet!")
+                print("Thank you for using AgenticFleet!")
                 break
 
             if not user_input:
