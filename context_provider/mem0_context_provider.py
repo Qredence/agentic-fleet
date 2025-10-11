@@ -18,15 +18,14 @@ class Mem0ContextProvider:
             user_id: Default user identifier for memory operations
             agent_id: Default agent identifier for memory operations
         """
-        if settings.azure_ai_project_endpoint is None:
-            raise ValueError("AZURE_AI_PROJECT_ENDPOINT is required but not set in settings.")
-
-        if settings.azure_ai_search_endpoint is None:
-            raise ValueError("AZURE_AI_SEARCH_ENDPOINT is required but not set in settings.")
-
-        if settings.azure_ai_search_key is None:
-            raise ValueError("AZURE_AI_SEARCH_KEY is required but not set in settings.")
-
+        required_settings = [
+            ("azure_ai_project_endpoint", "AZURE_AI_PROJECT_ENDPOINT"),
+            ("azure_ai_search_endpoint", "AZURE_AI_SEARCH_ENDPOINT"),
+            ("azure_ai_search_key", "AZURE_AI_SEARCH_KEY"),
+        ]
+        for attr, env_name in required_settings:
+            if getattr(settings, attr, None) is None:
+                raise ValueError(f"{env_name} is required but not set in settings.")
         # Store identifiers for memory operations
         self.user_id = user_id
         self.agent_id = agent_id
