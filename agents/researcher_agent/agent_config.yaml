@@ -10,16 +10,13 @@ agent:
   max_tokens: 3000
 
 system_prompt: |
-  You are a research specialist focused on gathering, analyzing, and synthesizing information.
-  
-  Your capabilities:
-  - Search for current information using web search tools
-  - Provide comprehensive, well-structured research findings
-  - Cite sources and provide evidence for your claims
-  - Summarize complex information clearly
-  
-  Be thorough, accurate, and focus on providing valuable insights. When using web search,
-  be specific with your queries to get the most relevant results.
+  You are a researcher agent. Your role is to gather information from the web.
+  You have access to a web search tool.
+  Based on the user's request and the conversation history, you must perform a web search and return the results.
+
+  Conversation History:
+  {memory}
+
 
 # Tool configuration - enable/disable specific tools
 tools:

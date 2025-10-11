@@ -1,141 +1,165 @@
 """
-Magentic Workflow Implementation
+Custom multi-agent workflow implementation for coordinating specialized agents.
 
-This module implements the Magentic workflow pattern for coordinating multiple
-specialized agents in the AgenticFleet system. The workflow uses Microsoft's
-Agent Framework to orchestrate agent interactions and manage task delegation.
-
-The Magentic Workflow:
-- Registers multiple specialized agents as participants
-- Manages communication and coordination between agents
-- Handles event streaming for observability
-- Enforces execution limits (max rounds, stalls, resets)
-- Provides a unified interface for task execution
-
-Architecture:
-    User Request → Orchestrator → Specialized Agents → Synthesized Response
-                        ↓
-                   [Researcher, Coder, Analyst]
-
-Key Features:
-- Dynamic agent delegation based on task requirements
-- Event-driven architecture for real-time monitoring
-- Automatic workflow management (retry, reset, termination)
-- Thread-safe conversation context management
-
-Usage:
-    from workflows.magentic_workflow import create_magentic_workflow
-
-    workflow = create_magentic_workflow()
-    result = await workflow.run("Your task here")
+This module defines a custom workflow class to orchestrate multiple agents
+(Orchestrator, Researcher, Coder, Analyst) for complex tasks. The workflow
+logic is implemented independently and does not use the official Microsoft Agent
+Framework's built-in workflow orchestration patterns.
+Agents may be based on the Microsoft Agent Framework, but the orchestration is custom.
 """
 
-from agent_framework import MagenticBuilder
-from agent_framework.openai import OpenAIResponsesClient
+from typing import Any
 
+from agents.analyst_agent import create_analyst_agent
+from agents.coder_agent import create_coder_agent
+from agents.orchestrator_agent import create_orchestrator_agent
+from agents.researcher_agent import create_researcher_agent
 from config.settings import settings
 
 
-def create_magentic_workflow():
+class MultiAgentWorkflow:
     """
-    Create the Magentic workflow with all specialized agents.
+    Sequential multi-agent workflow orchestrator.
 
-    This function builds a complete multi-agent workflow following the
-    Microsoft Agent Framework's Magentic pattern. It:
-
-    1. Imports all agent factory functions
-    2. Creates instances of all specialized agents
-    3. Configures the MagenticBuilder with:
-       - Agent participants (orchestrator, researcher, coder, analyst)
-       - Event handlers for observability
-       - Standard manager with execution limits
-    4. Returns the built workflow ready for execution
-
-    The workflow uses stable identifiers for participants, which is crucial
-    for features like checkpointing and conversation persistence.
-
-    Returns:
-        MagenticWorkflow: Configured workflow ready to execute tasks
-
-    Raises:
-        ValueError: If configuration is invalid or agents fail to initialize
-
-    Example:
-        >>> workflow = create_magentic_workflow()
-        >>> result = await workflow.run("Research Python ML libraries")
-        >>> print(result)
+    Uses the orchestrator agent to coordinate task delegation to specialized
+    agents (researcher, coder, analyst) based on the official Python Agent
+    Framework pattern.
     """
-    # Import agent factory functions
-    # These create fully configured agent instances with their tools
-    from agents.analyst_agent.agent import create_analyst_agent
-    from agents.coder_agent.agent import create_coder_agent
-    from agents.orchestrator_agent.agent import create_orchestrator_agent
-    from agents.researcher_agent.agent import create_researcher_agent
 
-    # Get workflow configuration from centralized config
-    # This includes max_rounds, max_stalls, max_resets, timeout_seconds
-    workflow_config = settings.workflow_config.get("workflow", {})
+    def __init__(self):
+        """Initialize workflow with all agent participants."""
+        self.orchestrator = create_orchestrator_agent()
+        self.researcher = create_researcher_agent()
+        self.coder = create_coder_agent()
+        self.analyst = create_analyst_agent()
 
-    def on_event(event):
+        # Execution limits from config
+        self.max_rounds = settings.workflow_config.get("max_rounds", 10)
+        self.max_stalls = settings.workflow_config.get("max_stalls", 3)
+        self.current_round = 0
+        self.stall_count = 0
+        self.last_response = None
+
+    async def run(self, user_input: str) -> str:
         """
-        Handle workflow events for observability and debugging.
+        Execute workflow by routing user input through orchestrator.
 
-        This function is called for every event in the workflow, including:
-        - Agent responses
-        - Tool invocations
-        - Workflow state changes
-        - Streaming content deltas
+        The orchestrator analyzes the request and delegates to appropriate
+        specialized agents as needed. Uses sequential execution pattern
+        from official Agent Framework.
 
         Args:
-            event: Workflow event object from the agent framework
-                  Contains event type, agent name, message, and other metadata
+            user_input: User's request or query
+
+        Returns:
+            str: Final response from the orchestrator
+
+        Raises:
+            RuntimeError: If max rounds or stalls exceeded
         """
-        # Get the event type for conditional handling
-        event_type = type(event).__name__
+        self.current_round = 0
+        self.stall_count = 0
+        self.last_response = None
 
-        # Handle different types of events with appropriate formatting
-        if hasattr(event, "agent_name") and hasattr(event, "response"):
-            # Agent response event - show which agent responded
-            response_preview = (
-                event.response[:150] + "..." if len(event.response) > 150 else event.response
-            )
-            print(f"🤖 [{event.agent_name}] {response_preview}")
+        # Create context with available agents
+        context = {
+            "available_agents": {
+                "researcher": "Performs web searches and data gathering",
+                "coder": "Writes, executes, and debugs code",
+                "analyst": "Analyzes data and generates insights",
+            },
+            "user_query": user_input,
+        }
 
-        elif hasattr(event, "message") and event.message:
-            # General workflow event - system messages, state changes
-            print(f"📋 [Workflow] {event.message}")
+        while self.current_round < self.max_rounds:
+            self.current_round += 1
 
-        elif hasattr(event, "delta") and event.delta:
-            # Streaming content - print without newline for smooth streaming
-            print(event.delta, end="", flush=True)
+            try:
+                # Orchestrator decides next action
+                result = await self.orchestrator.run(
+                    f"Round {self.current_round}/{self.max_rounds}\n"
+                    f"User Query: {user_input}\n"
+                    f"Context: {context}\n"
+                    f"Previous Response: {self.last_response or 'None'}\n\n"
+                    "Analyze the request and either:\n"
+                    "1. Provide a final answer if no delegation needed\n"
+                    "2. Delegate to researcher/coder/analyst if more work needed\n"
+                    "3. Synthesize results if subtasks complete"
+                )
 
-    # Build the Magentic workflow using the builder pattern
-    workflow = (
-        MagenticBuilder()
-        # Register participants with stable identifiers
-        # These names are used for agent delegation and must be consistent
-        .participants(
-            orchestrator=create_orchestrator_agent(),  # Main coordinator
-            researcher=create_researcher_agent(),  # Information gathering
-            coder=create_coder_agent(),  # Code execution
-            analyst=create_analyst_agent(),  # Data analysis
-        )
-        # Add event handling for real-time observability
-        # This allows monitoring of agent interactions and workflow progress
-        .on_event(on_event)
-        # Configure the standard manager with execution limits
-        # This prevents infinite loops and manages workflow lifecycle
-        # API key is read from OPENAI_API_KEY environment variable
-        .with_standard_manager(
-            chat_client=OpenAIResponsesClient(
-                model_id=settings.openai_model,
-            ),
-            max_round_count=workflow_config.get("max_rounds", 10),  # Max conversation rounds
-            max_stall_count=workflow_config.get("max_stalls", 3),  # Max rounds without progress
-            max_reset_count=workflow_config.get("max_resets", 2),  # Max workflow resets
-        )
-        # Build and return the configured workflow
-        .build()
-    )
+                response_text = result.content if hasattr(result, "content") else str(result)
 
-    return workflow
+                # Check for stalling (identical responses)
+                if response_text == self.last_response:
+                    self.stall_count += 1
+                    if self.stall_count >= self.max_stalls:
+                        return (
+                            f"Workflow stalled after {self.stall_count} identical responses. "
+                            f"Last response:\n{response_text}"
+                        )
+                else:
+                    self.stall_count = 0
+
+                self.last_response = response_text
+
+                # Check if orchestrator delegated to another agent
+                if "DELEGATE:" in response_text:
+                    # Parse delegation instruction
+                    agent_response = await self._handle_delegation(response_text, context)
+                    context["last_delegation_result"] = agent_response
+                    continue
+
+                # Check if orchestrator provided final answer
+                if "FINAL_ANSWER:" in response_text or self.current_round == self.max_rounds:
+                    return response_text
+
+            except Exception as e:
+                return f"Error in workflow round {self.current_round}: {str(e)}"
+
+        return f"Max rounds ({self.max_rounds}) reached. Last response:\n{self.last_response}"
+
+    async def _handle_delegation(self, orchestrator_response: str, context: dict[str, Any]) -> str:
+        """
+        Handle delegation from orchestrator to specialized agent.
+
+        Args:
+            orchestrator_response: Response containing delegation instruction
+            context: Current workflow context
+
+        Returns:
+            str: Response from delegated agent
+        """
+        # Parse delegation (format: "DELEGATE: <agent_name> - <task>")
+        try:
+            delegation_lines = [
+                line for line in orchestrator_response.split("\n") if line.startswith("DELEGATE:")
+        delegation_lines = [
+            line for line in orchestrator_response.split("\n") if line.startswith("DELEGATE:")
+        ]
+        if not delegation_lines:
+            return "Error: Could not parse delegation instruction"
+        try:
+            delegation_line = delegation_lines[0]
+            parts = delegation_line.replace("DELEGATE:", "").strip().split(" - ", 1)
+            agent_name = parts[0].strip().lower()
+            task = parts[1].strip() if len(parts) > 1 else context["user_query"]
+        except ValueError:
+            return "Error: Could not parse delegation instruction"
+
+        # Route to appropriate agent
+        agent_map = {"researcher": self.researcher, "coder": self.coder, "analyst": self.analyst}
+
+        if agent_name not in agent_map:
+            return f"Error: Unknown agent '{agent_name}'"
+
+        agent = agent_map[agent_name]
+        try:
+            result = await agent.run(task)
+        except Exception as e:
+            return f"Error: Agent '{agent_name}' failed to execute task: {str(e)}"
+
+        return result.content if hasattr(result, "content") else str(result)
+
+
+# Create workflow instance
+workflow = MultiAgentWorkflow()

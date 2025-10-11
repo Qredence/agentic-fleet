@@ -1,14 +1,9 @@
-"""
-Researcher Agent Factory
+"""Researcher Agent Factory
 
-This module provides the factory function to create and configure the Researcher agent.
-The agent is responsible for information gathering and web search operations.
+Provides factory function to create the Researcher agent using official
+Microsoft Agent Framework Python APIs (ChatAgent pattern).
 
-The factory:
-1. Loads agent-specific configuration from agent_config.yaml
-2. Creates an OpenAI chat client with appropriate settings
-3. Imports and configures the web search tool
-4. Instantiates a ChatAgent with tools enabled
+The researcher is responsible for information gathering and web search operations.
 
 Usage:
     from agents.researcher_agent.agent import create_researcher_agent
@@ -27,11 +22,8 @@ def create_researcher_agent() -> ChatAgent:
     """
     Create the Researcher agent with web search capabilities.
 
-    This function:
-    - Loads configuration from agents/researcher_agent/agent_config.yaml
-    - Creates an OpenAI Responses client with researcher-specific settings
-    - Enables the web_search_tool if configured
-    - Returns a fully configured ChatAgent instance
+    Uses official Python Agent Framework pattern with ChatAgent and
+    OpenAIResponsesClient. Tools are plain Python functions passed as a list.
 
     Returns:
         ChatAgent: Configured researcher agent with web search tools
@@ -44,9 +36,8 @@ def create_researcher_agent() -> ChatAgent:
     config = settings.load_agent_config("agents/researcher_agent")
     agent_config = config.get("agent", {})
 
-    # Create OpenAI Responses client with researcher-specific parameters
-    # API key is read from OPENAI_API_KEY environment variable
-    client = OpenAIResponsesClient(
+    # Create OpenAI chat client
+    chat_client = OpenAIResponsesClient(
         model_id=agent_config.get("model", settings.openai_model),
     )
 
@@ -61,13 +52,11 @@ def create_researcher_agent() -> ChatAgent:
         if tool_config.get("name") == "web_search_tool" and tool_config.get("enabled", True):
             enabled_tools.append(web_search_tool)
 
-    # Create the ChatAgent with configured tools
-    # Note: Tools are passed directly as a list, not wrapped in ToolSet
-    agent = ChatAgent(
-        name=agent_config.get("name", "researcher"),
+    # Create and return agent with tools
+    return ChatAgent(
+        chat_client=chat_client,
         instructions=config.get("system_prompt", ""),
-        chat_client=client,
-        tools=enabled_tools,  # Pass tools directly
+        name=agent_config.get("name", "researcher"),
+        temperature=agent_config.get("temperature", 0.3),
+        tools=enabled_tools,
     )
-
-    return agent

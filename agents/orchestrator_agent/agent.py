@@ -1,29 +1,45 @@
+"""Orchestrator Agent Factory
+
+Provides factory function to create the Orchestrator agent using official
+Microsoft Agent Framework Python APIs (ChatAgent pattern).
+
+The orchestrator is responsible for analyzing user requests, delegating tasks
+to specialized agents (researcher, coder, analyst), and synthesizing results.
+"""
+
 from agent_framework import ChatAgent
 from agent_framework.openai import OpenAIResponsesClient
+
 from config.settings import settings
 
 
 def create_orchestrator_agent() -> ChatAgent:
     """
-    Create the Magentic Orchestrator agent using OpenAI Responses API.
+    Create the Orchestrator agent.
+
+    Uses official Python Agent Framework pattern with ChatAgent and
+    OpenAIResponsesClient. Loads configuration from agent_config.yaml.
 
     Returns:
         ChatAgent: Configured orchestrator agent
+
+    Raises:
+        ValueError: If required configuration is missing
+        FileNotFoundError: If agent_config.yaml is not found
     """
     # Load orchestrator-specific configuration
     config = settings.load_agent_config("agents/orchestrator_agent")
     agent_config = config.get("agent", {})
 
-    # Create OpenAI Responses client
-    # API key is read from OPENAI_API_KEY environment variable
-    client = OpenAIResponsesClient(
+    # Create OpenAI chat client
+    chat_client = OpenAIResponsesClient(
         model_id=agent_config.get("model", settings.openai_model),
     )
 
-    agent = ChatAgent(
-        name=agent_config.get("name", "orchestrator"),
+    # Create and return agent (orchestrator typically has no tools)
+    return ChatAgent(
+        chat_client=chat_client,
         instructions=config.get("system_prompt", ""),
-        chat_client=client,
+        name=agent_config.get("name", "orchestrator"),
+        temperature=agent_config.get("temperature", 0.1),
     )
-
-    return agent

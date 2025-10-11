@@ -1,8 +1,8 @@
-from typing import Optional
-from pydantic import BaseModel, Field
 import sys
-from io import StringIO
 import time
+from io import StringIO
+
+from pydantic import BaseModel, Field
 
 
 class CodeExecutionResult(BaseModel):
@@ -13,7 +13,7 @@ class CodeExecutionResult(BaseModel):
     error: str = Field(..., description="Error output if any")
     execution_time: float = Field(..., description="Execution time in seconds")
     language: str = Field(..., description="Programming language used")
-    exit_code: Optional[int] = Field(None, description="Exit code if available")
+    exit_code: int | None = Field(None, description="Exit code if available")
 
 
 def code_interpreter_tool(code: str, language: str = "python") -> CodeExecutionResult:
@@ -90,6 +90,7 @@ def code_interpreter_tool(code: str, language: str = "python") -> CodeExecutionR
             error=error,
             execution_time=execution_time,
             language=language,
+            exit_code=0,  # Assuming successful execution has an exit code of 0
         )
 
     except Exception as e:
@@ -105,4 +106,5 @@ def code_interpreter_tool(code: str, language: str = "python") -> CodeExecutionR
             error=f"Execution error: {str(e)}",
             execution_time=execution_time,
             language=language,
+            exit_code=1,  # Assuming failed execution has an exit code of 1
         )

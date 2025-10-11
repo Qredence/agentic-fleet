@@ -2,29 +2,35 @@
 name = "agenticfleet"
 version = "0.5.0"
 description = "A multi-agent system built with Microsoft Agent Framework"
-authors = [
-    { name = "Qredence", email = "contact@qredence.ai" },
-]
+authors = [{ name = "Qredence", email = "contact@qredence.ai" }]
 dependencies = [
-    "agent-framework>=1.0.0b251007",
-    "openai<=2.3.0",
-    "python-dotenv>=1.0.0",
-    "pyyaml>=6.0",
-    "requests>=2.31.0",
-    "pydantic>=2.0.0",
+    "azure-ai-agents>=1.2.0b5",
+    "azure-identity>=1.25.1",
+    "python-dotenv>=1.1.1",
+    "pyyaml>=6.0.3",
+    "requests>=2.32.5",
+    "pydantic>=2.12.0",
+    "agent-framework",
+    "agent-framework-core",
+    "agent-framework-a2a",
+    "agent-framework-azure-ai",
+    "agent-framework-mem0",
+    "agent-framework-redis",
+    "agent-framework-devui",
     "mem0ai==1.0.0b0",
 ]
 requires-python = ">=3.12"
 
 [project.optional-dependencies]
 dev = [
-    "pytest>=8.0.0",
-    "pytest-asyncio>=0.23.0",
-    "black>=24.0.0",
-    "ruff>=0.1.0",
-    "mypy>=1.8.0",
-    "debugpy>=1.0.0",
+    "pytest>=8.4.2",
+    "pytest-asyncio>=1.2.0",
+    "black>=25.9.0",
+    "ruff>=0.14.0",
+    "mypy>=1.18.2",
+    "debugpy>=1.8.17",
 ]
+azure = ["azure-ai-agents>=1.2.0b5"]
 
 [build-system]
 requires = ["hatchling"]
@@ -37,10 +43,10 @@ packages = ["config", "agents", "workflows", "tests"]
 
 [dependency-groups]
 dev = [
-    "pytest>=8.0.0",
-    "pytest-asyncio>=0.23.0",
-    "black>=24.0.0",
-    "ruff>=0.1.0",
+    "pytest>=8.4.2",
+    "pytest-asyncio>=1.2.0",
+    "black>=25.9.0",
+    "ruff>=0.14.0",
 ]
 
 [tool.black]
@@ -51,9 +57,11 @@ line-length = 100
 target-version = "py312"
 line-length = 100
 select = [
-    "E", "F", "W",  # basic codes
+    "E",
+    "F",
+    "W",  # basic codes
     "I",  # import sorting
-    "UP",  # pyupgrade
+    "UP", # pyupgrade
 ]
 ignore = []
 

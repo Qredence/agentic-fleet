@@ -2,253 +2,324 @@
 
 ## Project Overview
 
-AgenticFleet is a multi-agent orchestration system built on **Microsoft Agent Framework 1.0.0b251007**. It implements the **Magentic workflow pattern** where an Orchestrator delegates tasks to specialized agents (Researcher, Coder, Analyst). Each agent has dedicated tools returning **Pydantic-modeled structured responses** via the **OpenAI Responses API**.
+AgenticFleet is a **multi-agent orchestration system** built on Microsoft Agent Framework (official Python SDK). It implements a **sequential coordination pattern** where an Orchestrator agent delegates tasks to specialized agents (Researcher, Coder, Analyst). Each agent is a `ChatAgent` instance with dedicated tools that return **Pydantic-modeled structured responses**.
 
-**Critical Architecture**: This is NOT a simple LLM app—it's a framework-coordinated multi-agent system with specific delegation patterns, event streaming, and execution limits enforced by `MagenticBuilder`.
+**Critical Architecture Note**: This uses the official Microsoft Agent Framework Python implementation (`ChatAgent` + `OpenAIResponsesClient`)—NOT Azure AI Foundry's `AgentsClient` or .NET's `MagenticBuilder`.
+
+### Agent Specializations & Configuration
+
+| Agent            | Temperature | Model       | Tools                                                 | Purpose                                     |
+| ---------------- | ----------- | ----------- | ----------------------------------------------------- | ------------------------------------------- |
+| **Orchestrator** | 0.1         | gpt-5       | None                                                  | Task planning, delegation, result synthesis |
+| **Researcher**   | 0.3         | gpt-4o      | `web_search_tool`                                     | Information gathering, web research         |
+| **Coder**        | 0.2         | gpt-5-codex | `code_interpreter_tool`                               | Code writing, execution, debugging          |
+| **Analyst**      | 0.2         | gpt-4o      | `data_analysis_tool`, `visualization_suggestion_tool` | Data analysis, insights                     |
+
+**Temperature rationale**: Lower = deterministic (orchestration, code), Higher = creative (research synthesis)
 
 ## Essential Commands (ALWAYS use `uv`)
 
 ```bash
-# Install/sync dependencies
+# Install/sync dependencies - run this first
 uv sync
+
+# Validate configuration before running (checks .env, YAML configs, imports)
+uv run python test_config.py    # Must pass 6/6 tests
 
 # Run application
 uv run python main.py
 
-# Validate configuration
-uv run python test_config.py
-
-# Run tests with filters
-uv run pytest -k researcher
-
 # Format and lint (REQUIRED before commits)
 uv run black .
 uv run ruff check .
-uv run mypy agents config
+
+# Quick agent factory validation (smoke test)
+uv run python -c "from agents.orchestrator_agent.agent import create_orchestrator_agent; create_orchestrator_agent()"
 ```
 
-**Never use `pip` or plain `python`—always prefix with `uv run` or work in activated venv.**
+**⚠️ CRITICAL**: Never use `pip` or plain `python`—always prefix with `uv run` or activate `.venv` first. This ensures dependency isolation and correct Python version (3.12+).
 
-## Agent Factory Pattern (Non-Negotiable Structure)
+## Official Framework APIs Reference
 
-Each agent follows this exact structure at `agents/<role>/`:
+### ❌ DO NOT USE (Wrong SDK or non-existent)
 
-```
-<role>_agent/
-├── __init__.py                    # Exports create_<role>_agent
-├── agent.py                       # Factory: create_<role>_agent() -> ChatAgent
-├── agent_config.yaml              # model, temperature, system_prompt, tools config
-└── tools/                         # Optional tool implementations
-    ├── __init__.py
-    └── <tool_name>.py             # Functions returning Pydantic models
-```
+- `MagenticBuilder()` — .NET only, not in Python
+- `from agent_framework.core import ChatAgent` — wrong import path
+- `from azure.ai.agents import AgentsClient` — separate Azure AI SDK
+- `context_provider=` parameter on ChatAgent — not in official API
+- `OpenAIChatClient` — deprecated for this use case
 
-**Factory Function Pattern** (`agent.py`):
+### ✅ CORRECT PATTERNS (Official Python Agent Framework)
+
 ```python
+# Agent creation pattern (see agents/*/agent.py for examples)
 from agent_framework import ChatAgent
 from agent_framework.openai import OpenAIResponsesClient
-from config.settings import settings
 
-def create_<role>_agent() -> ChatAgent:
-    config = settings.load_agent_config("agents/<role>_agent")
-    agent_config = config.get("agent", {})
-    
-    client = OpenAIResponsesClient(
-        model_id=agent_config.get("model", settings.openai_model),
-    )
-    
-    # Import tools conditionally based on config
-    enabled_tools = []
-    for tool_config in config.get("tools", []):
-        if tool_config.get("enabled", True):
-            # Import and append tool function
-            pass
-    
-    return ChatAgent(
-        name=agent_config.get("name", "<role>"),
-        instructions=config.get("system_prompt", ""),
-        chat_client=client,
-        tools=enabled_tools,  # List of functions, NOT ToolSet
-    )
+client = OpenAIResponsesClient(
+    model_id="gpt-4o"  # model_id is the only required param
+)
+
+agent = ChatAgent(
+    chat_client=client,
+    instructions="Your system prompt here",
+    name="agent_name",
+    temperature=0.2,              # Optional
+    tools=[function1, function2]  # Plain Python functions
+)
+
+# Execution
+result = await agent.run("user query")
+response_text = result.content if hasattr(result, "content") else str(result)
 ```
 
-**Key Details**:
-- Tools are **passed as a list of functions**, not wrapped in containers
-- `system_prompt` comes from YAML `system_prompt:` key, not `agent.instructions`
-- Load config via `settings.load_agent_config()`, never direct YAML reads
-- Temperature is agent-specific: Orchestrator=0.1, Coder/Analyst=0.2, Researcher=0.3
+**Key points**:
 
-## Tool Implementation Pattern (Pydantic-First)
+- `OpenAIResponsesClient` (not `OpenAIChatClient`) for structured responses
+- Tools are **plain Python functions** with type hints (auto-converted to tool schemas)
+- `OPENAI_API_KEY` must be in environment (`.env` file)
+- Temperature can be set on agent or overridden per-call
 
-All tools **must** return Pydantic models for structured responses:
+## Configuration Architecture
+
+### Two-Tier Config Pattern
+
+1. **Workflow-level** (`config/workflow_config.yaml`): Execution limits shared across all agents
+
+   ```yaml
+   workflow:
+     max_rounds: 10 # Max orchestration cycles
+     max_stalls: 3 # Max identical responses before abort
+     timeout_seconds: 300 # Overall task timeout
+   ```
+
+2. **Agent-level** (`agents/*/agent_config.yaml`): Agent-specific behavior
+   ```yaml
+   agent:
+     name: "researcher"
+     model: "gpt-4o"
+     temperature: 0.3
+   system_prompt: |
+     Your instructions with {memory} placeholder
+   tools:
+     - name: "web_search_tool"
+       enabled: true
+   ```
+
+**Loading pattern** (see `config/settings.py`):
 
 ```python
+from config.settings import settings
+
+# Workflow config
+max_rounds = settings.workflow_config.get("workflow", {}).get("max_rounds", 10)
+
+# Agent-specific config
+config = settings.load_agent_config("agents/researcher_agent")
+model = config["agent"]["model"]
+```
+
+## Tool Development Pattern
+
+All tools return **Pydantic models** for type safety. Example structure:
+
+```python
+# In agents/*/tools/*.py
 from pydantic import BaseModel, Field
 
 class ToolResponse(BaseModel):
-    """Structured output with explicit fields."""
-    result: str = Field(..., description="Primary result")
-    metadata: dict = Field(default_factory=dict, description="Additional context")
+    """Response schema with validation."""
+    field1: str = Field(..., description="Purpose")
+    field2: float = Field(..., description="Metric")
 
-def my_tool(param: str) -> ToolResponse:
+def my_tool(query: str) -> ToolResponse:
     """
-    Brief tool description for LLM function calling.
-    
+    Tool description for LLM function calling.
+
     Args:
-        param: Description of parameter
-        
+        query: User input description
+
     Returns:
         ToolResponse: Structured result
     """
     # Implementation
-    return ToolResponse(result="...", metadata={})
+    return ToolResponse(field1="result", field2=0.95)
 ```
 
-**Why**: OpenAI Responses API requires structured outputs. Models auto-generate JSON schemas.
+**Enable in agent config**:
 
-**Phase 1 Note**: Web search and data analysis tools return **mock data**. Replace with real APIs in Phase 2, but keep the Pydantic model structure unchanged.
+```yaml
+tools:
+  - name: "my_tool"
+    enabled: true
+    max_results: 10 # Tool-specific params
+```
 
-## Workflow Coordination (workflows/magentic_workflow.py)
-
-The workflow is the system's **brain**—modifying it impacts all agents:
+**Register in agent factory** (`agents/*/agent.py`):
 
 ```python
-workflow = (
-    MagenticBuilder()
-    .participants(
-        orchestrator=create_orchestrator_agent(),  # Names are stable IDs
-        researcher=create_researcher_agent(),
-        coder=create_coder_agent(),
-        analyst=create_analyst_agent(),
-    )
-    .on_event(on_event)  # Event streaming for observability
-    .with_standard_manager(
-        chat_client=OpenAIResponsesClient(model_id=settings.openai_model),
-        max_round_count=10,  # From config/workflow_config.yaml
-        max_stall_count=3,
-        max_reset_count=2,
-    )
-    .build()
-)
+from .tools.my_tools import my_tool
+
+enabled_tools = []
+for tool_config in config.get("tools", []):
+    if tool_config.get("name") == "my_tool" and tool_config.get("enabled", True):
+        enabled_tools.append(my_tool)
+
+return ChatAgent(..., tools=enabled_tools)
 ```
 
-**Critical**:
-- Participant names (`orchestrator`, `researcher`, etc.) are used for delegation—changing them breaks agent coordination
-- `on_event()` handler is the **only** place to add observability/logging without agent framework conflicts
-- Execution limits prevent infinite loops but may need tuning for complex tasks
+## Workflow Orchestration Pattern
 
-## Configuration Hierarchy
+The workflow (`workflows/magentic_workflow.py`) implements **sequential delegation**:
 
-1. **Environment** (`.env`): `OPENAI_API_KEY`, `OPENAI_MODEL` (never commit)
-2. **Workflow** (`config/workflow_config.yaml`): Shared execution limits (`max_rounds`, `max_stalls`)
-3. **Agent-Specific** (`agents/*/agent_config.yaml`): Per-agent `model`, `temperature`, `system_prompt`, `tools`
+1. User input → Orchestrator analyzes request
+2. Orchestrator decides: provide answer OR delegate to specialist
+3. Specialist executes task with tools, returns result
+4. Orchestrator synthesizes final response or continues iteration
 
-**Load with**: `settings.load_agent_config("agents/<role>_agent")` for agent configs, `settings.workflow_config` for workflow config.
+**Delegation protocol** (parsed from orchestrator response):
 
-**When to modify**:
-- Workflow limits: Performance tuning or handling complex multi-step tasks
-- Agent temperature: Balancing creativity (higher) vs determinism (lower)
-- System prompts: Adjusting agent behavior, delegation rules, or response style
-
-## Testing Strategy
-
-**Always run `python test_config.py` after**:
-- Adding/modifying agent configs
-- Creating new tools
-- Changing workflow parameters
-- Environment changes
-
-**For new tools/agents**:
-```python
-# Add to test_config.py
-def test_new_tool_import():
-    from agents.new_agent.tools.new_tool import new_tool_function
-    assert callable(new_tool_function)
+```
+DELEGATE: <agent_name> - <task_description>
 ```
 
-**Mock API clients** in real tests to avoid costs:
-```python
-from unittest.mock import patch
+**Termination conditions**:
 
-@patch('agent_framework.openai.OpenAIResponsesClient')
-def test_agent_creation(mock_client):
-    agent = create_my_agent()
-    assert agent.name == "my_agent"
+- Orchestrator provides `FINAL_ANSWER:` prefix
+- `max_rounds` reached (configured in `workflow_config.yaml`)
+- `max_stalls` identical responses (anti-loop protection)
+
+## Critical Error Patterns & Fixes
+
+### Issue 1: Import Errors
+
+**Symptom**: `ModuleNotFoundError: No module named 'agent_framework'`
+**Fix**: Run `uv sync` and verify `.venv` activated
+
+### Issue 2: API Key Missing
+
+**Symptom**: `ValueError: OPENAI_API_KEY environment variable is required`
+**Fix**: Create `.env` from `.env.example` and add valid OpenAI key
+
+### Issue 3: YAML Parse Errors
+
+**Symptom**: `yaml.scanner.ScannerError` during config load
+**Fix**: Validate YAML syntax with `python -c "import yaml; yaml.safe_load(open('path/to/file.yaml'))"`
+
+### Issue 4: Agent Factory Fails
+
+**Symptom**: `FileNotFoundError: agent_config.yaml`
+**Fix**: Ensure `agent_config.yaml` exists in `agents/<role>/` directory
+
+**Always run `uv run python test_config.py` first** — it validates all common issues (6 test categories).
+
+## File Organization Rules
+
+```
+agents/<role>/
+├── __init__.py              # Exports factory function
+├── agent.py                 # Factory: create_<role>_agent()
+├── agent_config.yaml        # Role-specific config
+└── tools/
+    ├── __init__.py
+    └── <tool_name>.py       # Pydantic models + functions
 ```
 
-## Code Style Enforcement
+**Naming conventions**:
 
-- **Line length**: 100 chars (Black + Ruff configured in `pyproject.toml`)
-- **Docstrings**: Google style (see `agents/coder_agent/agent_config.yaml` reference)
-- **Naming**: `create_<role>_agent()` for factories, `<action>_tool()` for tools, `snake_case` for YAML keys
-- **YAML**: Never use tabs, always 2-space indents
+- Factories: `create_<role>_agent()` (imperative, returns `ChatAgent`)
+- Tools: `<action>_tool(args) -> PydanticModel` (descriptive function name)
+- Config files: snake_case keys (`max_rounds`, `analysis_types`)
+- Models: PascalCase (`WebSearchResponse`, `CodeExecutionResult`)
 
-**Pre-commit checklist**:
+## Testing & Validation Strategy
+
+### Pre-Commit Checks
+
 ```bash
-uv run black .      # Auto-format
-uv run ruff check . # Catch issues
-uv run mypy agents config  # Type checking
-uv run python test_config.py  # Validate configs
+uv run python test_config.py  # Validates env, configs, imports, factories
+uv run black .                # Format code
+uv run ruff check .           # Lint (100-char limit, Python 3.12 target)
 ```
 
-## Common Pitfalls
+### Configuration Test Categories (from `test_config.py`)
 
-1. **"ModuleNotFoundError for agents"**: You're not in project root or venv isn't active. Run `source .venv/bin/activate` from AgenticFleet directory.
+1. Environment (`.env` file, `OPENAI_API_KEY`)
+2. Workflow config (`max_rounds`, `max_stalls`, `max_resets`)
+3. Agent configs (all 4 agents: name, model, temperature)
+4. Tool imports (all 4 tools can be imported)
+5. Agent factories (all 4 factories are callable)
+6. Workflow import (`MultiAgentWorkflow` instantiates)
 
-2. **"OPENAI_API_KEY not found"**: Copy `.env.example` to `.env` and add your key. `settings.py` raises ValueError if missing.
+**All must pass** before deployment.
 
-3. **Agent delegation not working**: Check `system_prompt` in orchestrator's `agent_config.yaml` includes correct agent names (`researcher`, `coder`, `analyst`) and delegation_rules.
+## Mem0 Context Provider Integration
 
-4. **Tool not called by agent**: Verify tool is listed in agent's `tools` config and `enabled: true`. Check function signature matches OpenAI function calling requirements.
+**Purpose**: Persistent memory across conversations using Azure AI Search vector store.
 
-5. **Workflow stalls**: Increase `max_stalls` in `config/workflow_config.yaml` or improve agent prompts to be more directive.
+**Configuration** (see `context_provider/mem0_context_provider.py`):
 
-## Adding New Agents
+```python
+from context_provider.mem0_context_provider import Mem0ContextProvider
 
-1. Create directory structure: `agents/new_agent/{__init__.py,agent.py,agent_config.yaml,tools/}`
-2. Implement factory following pattern above
-3. Register in workflow: `.participants(new_agent=create_new_agent(), ...)`
-4. Update orchestrator's `system_prompt` to include new agent in delegation rules
-5. Add tests to `test_config.py`
+provider = Mem0ContextProvider()  # Auto-configures from settings
 
-## Adding New Tools
+# Usage in workflow
+memory_context = provider.get(user_query)
+provider.add(agent_response)
+```
 
-1. Define Pydantic response model first
-2. Implement function with docstring (LLM reads this for function calling)
-3. Add to agent's `tools/` directory
-4. Enable in agent's `agent_config.yaml` under `tools: [{name: "tool_name", enabled: true}]`
-5. Import and append conditionally in agent factory
-6. Test with `python test_config.py` and manual run
+**Required environment variables** (in `.env`):
 
-## Phase 1 vs Phase 2 Considerations
+```bash
+AZURE_AI_PROJECT_ENDPOINT=your-azure-endpoint
+AZURE_AI_SEARCH_ENDPOINT=your-search-endpoint
+AZURE_AI_SEARCH_KEY=your-search-key
+AZURE_OPENAI_CHAT_COMPLETION_DEPLOYED_MODEL_NAME=gpt-4o
+AZURE_OPENAI_EMBEDDING_DEPLOYED_MODEL_NAME=text-embedding-ada-002
+```
 
-**Current (Phase 1)**: Mock tools, Python-only code execution, no persistence
-**Planned (Phase 2)**: Real APIs, multi-language support, conversation history, Docker deployment
+**System prompts** use `{memory}` placeholder (replaced at runtime).
 
-**When modifying tools**: Keep Pydantic model structure—swap implementation under the hood. Agent code shouldn't need changes when switching from mock to real APIs.
+## Common Workflow Patterns
 
-## Documentation Standards
+### Adding a New Agent
 
-- **Modules**: Docstring at top explaining purpose, key classes/functions
-- **Functions**: Google-style with Args, Returns, Raises
-- **Agents**: `system_prompt` in YAML is self-documentation—keep it updated
-- **Configs**: Inline YAML comments for non-obvious settings
+1. Create directory: `agents/new_agent/`
+2. Add `agent_config.yaml` with `agent`, `system_prompt`, `tools` sections
+3. Create `agent.py` with `create_new_agent()` factory
+4. Implement tools in `agents/new_agent/tools/`
+5. Register in `workflows/magentic_workflow.py`
+6. Add tests in `test_config.py`
 
-## Debugging Workflow Issues
+### Adding a New Tool
 
-1. Check event stream: `on_event()` in `workflows/magentic_workflow.py` logs all interactions
-2. Validate configs: `uv run python test_config.py`
-3. Test agent in isolation: `uv run python -c "from agents.researcher_agent.agent import create_researcher_agent; create_researcher_agent()"`
-4. Enable verbose logging: Add `import logging; logging.basicConfig(level=logging.DEBUG)` in `main.py`
+1. Define Pydantic response model in `agents/<role>/tools/<tool_name>.py`
+2. Implement function: `def my_tool(args) -> MyToolResponse:`
+3. Enable in `agents/<role>/agent_config.yaml` tools list
+4. Register in `agents/<role>/agent.py` factory tool loading logic
+5. Document in agent's system prompt
 
-## Key Files to Know
+### Debugging Workflow Stalls
 
-- `main.py`: Entry point with REPL loop—modify for new UIs
-- `config/settings.py`: Single source of truth for config loading—extend here
-- `workflows/magentic_workflow.py`: Multi-agent coordination—changes affect all agents
-- `agents/orchestrator_agent/agent_config.yaml`: Delegation rules—update when adding agents
-- `pyproject.toml`: Dependencies and tool configs—sync after changes with `uv sync`
+**Symptom**: Workflow exits with "Workflow stalled after X identical responses"
+**Cause**: Orchestrator returning same text repeatedly (potential loop)
+**Fix**:
 
----
+- Check orchestrator system prompt for clear termination instructions
+- Verify `FINAL_ANSWER:` or `DELEGATE:` prefixes in responses
+- Review `max_stalls` in `workflow_config.yaml` (default: 3)
 
-**When in doubt**: Run `uv run python test_config.py` first. It validates the entire configuration chain and imports all agents/tools. If tests pass but execution fails, issue is likely in agent prompts or delegation logic, not code structure.
+## Documentation References
+
+- **Architecture overview**: `README.md`
+- **Agent conventions**: `docs/AGENTS.md`
+- **Implementation status**: `docs/IMPLEMENTATION_SUMMARY.md`
+- **Mem0 integration**: `docs/MEM0_INTEGRATION.md`
+- **Bug fixes history**: `docs/FIXES.md`
+- **Quick reference**: `docs/QUICK_REFERENCE.md`
+
+## Framework Documentation
+
+- **Official SDK**: [Microsoft Agent Framework Python](https://learn.microsoft.com/en-us/agent-framework/)
+- **Examples**: [GitHub microsoft/agent-framework/python/examples](https://github.com/microsoft/agent-framework/tree/main/python/examples)
