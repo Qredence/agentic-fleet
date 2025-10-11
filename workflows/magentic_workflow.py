@@ -1,9 +1,11 @@
 """
-Multi-agent workflow implementation using official Microsoft Agent Framework.
+Custom multi-agent workflow implementation for coordinating specialized agents.
 
-This module defines the workflow for coordinating multiple specialized agents
-(Orchestrator, Researcher, Coder, Analyst) to handle complex tasks using
-sequential orchestration pattern with ChatAgent.
+This module defines a custom workflow class to orchestrate multiple agents
+(Orchestrator, Researcher, Coder, Analyst) for complex tasks. The workflow
+logic is implemented independently and does not use the official Microsoft Agent
+Framework's built-in workflow orchestration patterns.
+Agents may be based on the Microsoft Agent Framework, but the orchestration is custom.
 """
 
 from typing import Any
