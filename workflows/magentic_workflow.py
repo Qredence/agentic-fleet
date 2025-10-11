@@ -153,7 +153,10 @@ class MultiAgentWorkflow:
             return f"Error: Unknown agent '{agent_name}'"
 
         agent = agent_map[agent_name]
-        result = await agent.run(task)
+        try:
+            result = await agent.run(task)
+        except Exception as e:
+            return f"Error: Agent '{agent_name}' failed to execute task: {str(e)}"
 
         return result.content if hasattr(result, "content") else str(result)
 
