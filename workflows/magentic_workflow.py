@@ -129,9 +129,12 @@ class MultiAgentWorkflow:
         """
         # Parse delegation (format: "DELEGATE: <agent_name> - <task>")
         try:
-            delegation_line = [
+            delegation_lines = [
                 line for line in orchestrator_response.split("\n") if line.startswith("DELEGATE:")
-            ][0]
+            ]
+            if not delegation_lines:
+                return "Error: Could not find delegation instruction"
+            delegation_line = delegation_lines[0]
             parts = delegation_line.replace("DELEGATE:", "").strip().split(" - ", 1)
             agent_name = parts[0].strip().lower()
             task = parts[1].strip() if len(parts) > 1 else context["user_query"]
