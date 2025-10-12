@@ -140,7 +140,7 @@ def main():
         try:
             test_func()
             results[test_name] = True
-        except (AssertionError, Exception) as e:
+        except (AssertionError, ImportError) as e:
             results[test_name] = False
             print(f"  {RED}✗{RESET} {test_name}: {str(e)}")
 
