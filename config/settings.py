@@ -12,7 +12,7 @@ load_dotenv()
 class Settings:
     """Application settings with environment variable support."""
 
-    def __init__(self):
+    def __init__(self) -> None:
         self.openai_api_key = os.getenv("OPENAI_API_KEY")
         if not self.openai_api_key:
             raise ValueError("OPENAI_API_KEY environment variable is required")
@@ -40,7 +40,7 @@ class Settings:
         # Load workflow configuration (centralized workflow settings)
         self.workflow_config = self._load_yaml("config/workflow_config.yaml")
 
-    def _setup_logging(self):
+    def _setup_logging(self) -> None:
         """Configure application-wide logging."""
         logging.basicConfig(
             level=self.log_level,

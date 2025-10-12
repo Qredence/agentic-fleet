@@ -8,7 +8,7 @@ from workflows.magentic_workflow import workflow
 logger = logging.getLogger(__name__)
 
 
-async def run_repl():
+async def run_repl() -> None:
     """
     Run the interactive REPL loop for user interaction.
     """
@@ -61,7 +61,7 @@ async def run_repl():
                 continue
 
 
-async def main():
+async def main() -> None:
     """
     Main application entry point.
     """

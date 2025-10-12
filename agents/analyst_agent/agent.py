@@ -6,6 +6,8 @@ Microsoft Agent Framework Python APIs (ChatAgent pattern).
 The analyst is responsible for data analysis and generating insights.
 """
 
+from typing import Any
+
 from agent_framework import ChatAgent
 from agent_framework.openai import OpenAIResponsesClient
 
@@ -43,7 +45,7 @@ def create_analyst_agent() -> ChatAgent:
 
     # Check which tools are enabled in the configuration
     tools_config = config.get("tools", [])
-    enabled_tools = []
+    enabled_tools: list[Any] = []
 
     for tool_config in tools_config:
         if tool_config.get("name") == "data_analysis_tool" and tool_config.get("enabled", True):

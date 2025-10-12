@@ -125,14 +125,24 @@ def main():
     print(f"{BOLD}AgenticFleet Configuration Test Suite{RESET}")
     print(f"{BOLD}{'=' * 60}{RESET}")
 
-    results = {
-        "Environment": test_environment(),
-        "Workflow Config": test_workflow_config(),
-        "Agent Configs": test_agent_configs(),
-        "Tool Imports": test_tool_imports(),
-        "Agent Factories": test_agent_factories(),
-        "Workflow Import": test_workflow_import(),
+    # Run tests and capture results
+    test_functions = {
+        "Environment": test_environment,
+        "Workflow Config": test_workflow_config,
+        "Agent Configs": test_agent_configs,
+        "Tool Imports": test_tool_imports,
+        "Agent Factories": test_agent_factories,
+        "Workflow Import": test_workflow_import,
     }
+
+    results = {}
+    for test_name, test_func in test_functions.items():
+        try:
+            test_func()
+            results[test_name] = True
+        except (AssertionError, Exception) as e:
+            results[test_name] = False
+            print(f"  {RED}✗{RESET} {test_name}: {str(e)}")
 
     # Summary
     print(f"\n{BOLD}{'=' * 60}{RESET}")

@@ -1,5 +1,5 @@
 from dotenv import load_dotenv
-from mem0 import Memory
+from mem0 import Memory  # type: ignore[import-untyped]
 from openai import AzureOpenAI
 
 from config.settings import settings
@@ -30,6 +30,10 @@ class Mem0ContextProvider:
         self.user_id = user_id
         self.agent_id = agent_id
 
+        # Ensure required endpoint is set
+        if not settings.azure_ai_project_endpoint:
+            raise ValueError("AZURE_AI_PROJECT_ENDPOINT is required but not set")
+
         azure_client = AzureOpenAI(
             azure_endpoint=settings.azure_ai_project_endpoint,
             api_key=settings.openai_api_key,
@@ -38,7 +42,7 @@ class Mem0ContextProvider:
 
         # Extract service name from endpoint if it's a full URL
         service_name = settings.azure_ai_search_endpoint
-        if service_name.startswith("https://"):
+        if service_name and service_name.startswith("https://"):
             # Extract service name from URL like https://myservice.search.windows.net
             service_name = service_name.replace("https://", "").split(".")[0]
 
@@ -114,7 +118,7 @@ class Mem0ContextProvider:
         user_id: str | None = None,
         agent_id: str | None = None,
         metadata: dict | None = None,
-    ):
+    ) -> None:
         """
         Add a new memory.
 

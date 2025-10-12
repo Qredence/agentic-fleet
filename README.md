@@ -81,35 +81,60 @@ cp .env.example .env
 # Edit .env and add your keys and endpoints
 ```
 
-### 3. Install Dependencies
-
-Using **uv** (recommended):
+### 3. Install Dependencies (uv-first)
 
 ```bash
-# Create virtual environment and install dependencies
+# Sync (creates .venv automatically if missing)
 uv sync
 
-# Activate virtual environment
+# Optional: activate shell (not required when using `uv run`)
 source .venv/bin/activate  # macOS/Linux
-# or
-.venv\Scripts\activate  # Windows
 ```
 
-Using **pip**:
-
-```bash
-# Create virtual environment
-python -m venv .venv
-source .venv/bin/activate
-
-# Install dependencies
-pip install -e .
-```
+If you must use pip (not recommended), see docs/QUICK_REFERENCE.md.
 
 ### 4. Run the Application
 
 ```bash
-python main.py
+uv run python tests/test_config.py   # Fast config validation (should pass 6/6)
+uv run python main.py                # Launch workflow REPL
+```
+
+### 5. Developer Workflow
+
+**Using Makefile (recommended):**
+
+```bash
+make help          # Show all available commands
+make install       # First-time setup
+make test-config   # Validate configuration (6/6 tests)
+make run           # Launch application
+make check         # Run all quality checks (lint + type-check)
+make format        # Auto-format code
+```
+
+**Using uv directly:**
+
+```bash
+# Format & lint
+uv run ruff check .
+uv run black .
+
+# Type checking
+uv run mypy .
+
+# Tests
+uv run pytest -q
+
+# All-in-one validation
+uv sync && uv run ruff check . && uv run mypy . && uv run pytest -q
+```
+
+**Pre-commit hooks** (automated checks on git commit):
+
+```bash
+make pre-commit-install
+# or: uv run pre-commit install
 ```
 
 ## ⚙️ Configuration
@@ -147,3 +172,29 @@ All documentation is located in the `docs/` folder:
 - **[Implementation Summary](docs/IMPLEMENTATION_SUMMARY.md)** - Technical details
 - **[Migration Guide](docs/MIGRATION_TO_RESPONSES_API.md)** - OpenAI API updates
 - **[Bug Fixes](docs/FIXES.md)** - Issue resolutions and fixes
+
+## 🛠️ Development Tools
+
+- **uv**: Fast Python package manager with lockfile support
+- **Ruff**: Lightning-fast linter and formatter
+- **Black**: Opinionated code formatter
+- **mypy**: Static type checker
+- **pytest**: Testing framework
+- **pre-commit**: Git hooks for automated quality checks
+- **GitHub Actions**: CI/CD with automated testing and linting
+- **Makefile**: Convenient command shortcuts
+
+## 🔄 CI/CD
+
+The project includes automated CI/CD via GitHub Actions (`.github/workflows/ci.yml`):
+
+- ✅ Lint with Ruff
+- ✅ Format check with Black
+- ✅ Type check with mypy
+- ✅ Configuration validation
+- ✅ Test suite execution
+- ✅ Security scanning (optional)
+- ✅ Matrix testing (Python 3.12 & 3.13)
+- ✅ Automated dependency caching
+
+Pre-commit.ci integration provides automatic fixes on pull requests.

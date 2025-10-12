@@ -34,6 +34,7 @@ def code_interpreter_tool(code: str, language: str = "python") -> CodeExecutionR
             error=f"Language {language} not supported yet. Only Python is supported in Phase 1.",
             execution_time=0.0,
             language=language,
+            exit_code=1,
         )
 
     # Simple safe execution for Phase 1

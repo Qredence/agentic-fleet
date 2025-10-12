@@ -26,7 +26,7 @@ class MultiAgentWorkflow:
     Framework pattern.
     """
 
-    def __init__(self):
+    def __init__(self) -> None:
         """Initialize workflow with all agent participants."""
         self.orchestrator = create_orchestrator_agent()
         self.researcher = create_researcher_agent()
@@ -38,7 +38,7 @@ class MultiAgentWorkflow:
         self.max_stalls = settings.workflow_config.get("max_stalls", 3)
         self.current_round = 0
         self.stall_count = 0
-        self.last_response = None
+        self.last_response: str | None = None
 
     async def run(self, user_input: str) -> str:
         """
@@ -130,21 +130,16 @@ class MultiAgentWorkflow:
             str: Response from delegated agent
         """
         # Parse delegation (format: "DELEGATE: <agent_name> - <task>")
-        try:
-            delegation_lines = [
-                line for line in orchestrator_response.split("\n") if line.startswith("DELEGATE:")
         delegation_lines = [
             line for line in orchestrator_response.split("\n") if line.startswith("DELEGATE:")
         ]
         if not delegation_lines:
             return "Error: Could not parse delegation instruction"
-        try:
-            delegation_line = delegation_lines[0]
-            parts = delegation_line.replace("DELEGATE:", "").strip().split(" - ", 1)
-            agent_name = parts[0].strip().lower()
-            task = parts[1].strip() if len(parts) > 1 else context["user_query"]
-        except ValueError:
-            return "Error: Could not parse delegation instruction"
+
+        delegation_line = delegation_lines[0]
+        parts = delegation_line.replace("DELEGATE:", "").strip().split(" - ", 1)
+        agent_name = parts[0].strip().lower() if parts else ""
+        task = parts[1].strip() if len(parts) > 1 else context.get("user_query", "")
 
         # Route to appropriate agent
         agent_map = {"researcher": self.researcher, "coder": self.coder, "analyst": self.analyst}
@@ -157,8 +152,8 @@ class MultiAgentWorkflow:
             result = await agent.run(task)
         except Exception as e:
             return f"Error: Agent '{agent_name}' failed to execute task: {str(e)}"
-
-        return result.content if hasattr(result, "content") else str(result)
+        # Agent framework responses typically expose 'content' or are stringifiable.
+        return getattr(result, "content", str(result))
 
 
 # Create workflow instance
