@@ -4,6 +4,14 @@
 
 This guide will help you set up the PyPI publishing environment for AgenticFleet to enable automated releases through GitHub Actions.
 
+## Quick Checklist
+- [ ] Create a GitHub environment named `pypi` and lock it to tag pattern `v[0-9]+.[0-9]+.[0-9]+*`.
+- [ ] (Optional) Add required reviewers for the environment.
+- [ ] On PyPI, add a pending trusted publisher with project `agentic-fleet`, owner `Qredence`, repo `AgenticFleet`, workflow `release.yml`, environment `pypi`.
+- [ ] Push a tagged build (e.g. `v0.5.0-alpha1`) and approve the deployment if prompted.
+- [ ] Verify the package appears on <https://pypi.org/project/agentic-fleet/> and the GitHub release is created.
+- [ ] If using API tokens instead of trusted publishing, store the token as `PYPI_API_TOKEN` in the `pypi` environment and update `.github/workflows/release.yml` accordingly.
+
 ## ✅ Prerequisites
 
 - [x] GitHub repository admin access

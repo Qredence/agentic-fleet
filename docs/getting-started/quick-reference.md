@@ -276,9 +276,10 @@ The `on_event` handler in `workflows/magentic_workflow.py` logs all workflow eve
 
 ## 📚 Resources
 
-- **Full Documentation**: See `README.md`
-- **Implementation Details**: See `IMPLEMENTATION_SUMMARY.md`
-- **PRD**: See `docs/af-phase-1.md`
+- **Documentation Index**: `docs/README.md`
+- **Implementation Details**: `../overview/implementation-summary.md`
+- **Developer Standards**: `../operations/repository-guidelines.md`
+- **Troubleshooting**: `../runbooks/troubleshooting.md`
 - **Microsoft Agent Framework**: [docs.microsoft.com/agent-framework](https://docs.microsoft.com/agent-framework)
 
 ## 🆘 Get Help

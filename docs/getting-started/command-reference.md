@@ -228,9 +228,9 @@ uv run python -m pytest         # Correct: Project Python
 ## 📖 Additional Resources
 
 - **Main Documentation**: `README.md`
-- **Architecture**: `docs/AGENTS.md`
-- **Migration Guide**: `docs/MIGRATION_SRC_LAYOUT.md`
-- **Quick Reference**: `docs/QUICK_REFERENCE.md`
+- **Architecture**: `docs/overview/implementation-summary.md`
+- **Migration Guide**: `docs/migrations/src-layout-migration.md`
+- **Quick Reference**: `docs/getting-started/quick-reference.md`
 - **GitHub Copilot Instructions**: `.github/copilot-instructions.md`
 
 ---

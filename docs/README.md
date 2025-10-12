@@ -1,200 +1,43 @@
 # AgenticFleet Documentation
 
 **Version:** 0.5.0  
-**Last Updated:** October 10, 2025
+**Last Updated:** October 12, 2025
 
----
+Welcome! The docs are now arranged by intent so you can jump straight to what you need.
 
-## 📚 Documentation Index
+## Directory Map
+- **getting-started/**
+  - [`command-reference.md`](getting-started/command-reference.md) – uv + Makefile command catalogue.
+  - [`quick-reference.md`](getting-started/quick-reference.md) – one-page onboarding checklist.
+- **overview/**
+  - [`implementation-summary.md`](overview/implementation-summary.md) – architecture deep dive + component guide.
+  - [`progress-tracker.md`](overview/progress-tracker.md) – milestone status and roadmap.
+- **operations/**
+  - [`developer-environment.md`](operations/developer-environment.md) – uv workflow, tooling, CI guardrails.
+  - [`github-actions-setup.md`](operations/github-actions-setup.md) – workflow catalogue and protection rules.
+  - [`github-workflows-overview.md`](operations/github-workflows-overview.md) – plain-language description of each workflow.
+  - [`mem0-integration.md`](operations/mem0-integration.md) – persistent memory configuration.
+  - [`pypi-environment-setup.md`](operations/pypi-environment-setup.md) – trusted publishing + API token instructions.
+  - [`repository-guidelines.md`](operations/repository-guidelines.md) – coding standards and review practices.
+  - [`workflows-quick-reference.md`](operations/workflows-quick-reference.md) – job-by-job cheat sheet.
+- **migrations/**
+  - [`responses-api-migration.md`](migrations/responses-api-migration.md) – OpenAI Responses client migration notes.
+  - [`src-layout-migration.md`](migrations/src-layout-migration.md) – summary of the 0.5.0 package restructure.
+- **runbooks/**
+  - [`troubleshooting.md`](runbooks/troubleshooting.md) – recurring issues (tag rules, ChatAgent params, mem0 regression tests).
+- **releases/**
+  - [`2025-10-12-v0.5.0.md`](releases/2025-10-12-v0.5.0.md) – release changelog and validation evidence.
+- **archive/**
+  - Historical clean-up checklists and .github remediation summaries retained for audit.
 
-Welcome to the AgenticFleet documentation! This index provides quick access to all project documentation.
+## Start Here
+1. **New contributor?** Read [`../README.md`](../README.md) then skim the items in `getting-started/`.
+2. **Maintaining pipelines?** Jump to `operations/`.
+3. **Investigating regressions?** Check `runbooks/`.
 
-### 🚀 Getting Started
+## Contributing to Docs
+- Keep new material inside one of the folders above; use kebab-case filenames.
+- Update this index whenever you add, move, or retire a document.
+- Prefer linking to sections rather than duplicating content across guides.
 
-1. **[README](../README.md)** - Start here!
-   - Project overview
-   - Quick start guide
-   - Installation instructions
-   - Usage examples
-
-2. **[Quick Reference](QUICK_REFERENCE.md)**
-   - Command reference
-   - Common workflows
-   - Troubleshooting tips
-
-### 📊 Project Management
-
-3. **[Progress Tracker](ProgressTracker.md)**
-   - Current project status
-   - Completed milestones
-   - Active tasks and todos
-   - Phase roadmap
-   - Recent changes log
-
-4. **[Phase 1 PRD](af-phase-1.md)**
-   - Original product requirements
-   - Feature specifications
-   - Technical architecture
-   - Success criteria
-
-### 🛠️ Technical Documentation
-
-5. **[Implementation Summary](IMPLEMENTATION_SUMMARY.md)**
-   - Architecture deep dive
-   - Component descriptions
-   - Design patterns
-   - Code organization
-
-6. **[Repository Guidelines](AGENTS.md)**
-   - Development rules
-   - Coding conventions
-   - Testing standards
-   - Contribution guidelines
-
-### 🔄 Migration & Updates
-
-7. **[Migration to Responses API](MIGRATION_TO_RESPONSES_API.md)**
-   - OpenAI API updates
-   - Client migration guide
-   - Code examples
-   - Breaking changes
-
-8. **[Bug Fixes](FIXES.md)**
-   - Issue resolutions
-   - Root cause analysis
-   - Fix documentation
-   - Lessons learned
-
----
-
-## 📖 Documentation by Topic
-
-### Configuration
-
-- **Environment Setup:** [README § Installation](../README.md#-quick-start)
-- **Agent Configuration:** [README § Configuration](../README.md#-configuration)
-- **Workflow Configuration:** [Implementation Summary](IMPLEMENTATION_SUMMARY.md)
-
-### Agents
-
-- **Orchestrator Agent:** [Implementation Summary](IMPLEMENTATION_SUMMARY.md)
-- **Researcher Agent:** [Implementation Summary](IMPLEMENTATION_SUMMARY.md)
-- **Coder Agent:** [Implementation Summary](IMPLEMENTATION_SUMMARY.md)
-- **Analyst Agent:** [Implementation Summary](IMPLEMENTATION_SUMMARY.md)
-
-### Tools
-
-- **Web Search Tool:** [Implementation Summary](IMPLEMENTATION_SUMMARY.md)
-- **Code Interpreter:** [Implementation Summary](IMPLEMENTATION_SUMMARY.md)
-- **Data Analysis Tools:** [Implementation Summary](IMPLEMENTATION_SUMMARY.md)
-
-### Development
-
-- **Testing:** [Repository Guidelines](AGENTS.md)
-- **Code Quality:** [Repository Guidelines](AGENTS.md)
-- **Best Practices:** [Repository Guidelines](AGENTS.md)
-
-### Troubleshooting
-
-- **Common Issues:** [Quick Reference](QUICK_REFERENCE.md)
-- **Bug Fixes:** [Bug Fixes](FIXES.md)
-- **Configuration Problems:** [README § Troubleshooting](../README.md#-troubleshooting)
-
----
-
-## 🔍 Quick Search
-
-### By User Role
-
-**New Users:**
-1. [README](../README.md) - Overview and setup
-2. [Quick Reference](QUICK_REFERENCE.md) - Get started fast
-3. [Progress Tracker](ProgressTracker.md) - See what's implemented
-
-**Developers:**
-1. [Repository Guidelines](AGENTS.md) - Development rules
-2. [Implementation Summary](IMPLEMENTATION_SUMMARY.md) - Code structure
-3. [Migration Guide](MIGRATION_TO_RESPONSES_API.md) - API updates
-
-**Project Managers:**
-1. [Progress Tracker](ProgressTracker.md) - Project status
-2. [Phase 1 PRD](af-phase-1.md) - Requirements
-3. [Bug Fixes](FIXES.md) - Issue history
-
-### By Task
-
-**Installing the Project:**
-→ [README § Quick Start](../README.md#-quick-start)
-
-**Running the Application:**
-→ [Quick Reference](QUICK_REFERENCE.md)
-
-**Adding a New Agent:**
-→ [Implementation Summary](IMPLEMENTATION_SUMMARY.md)
-
-**Fixing an Issue:**
-→ [Bug Fixes](FIXES.md)
-
-**Understanding Architecture:**
-→ [Implementation Summary](IMPLEMENTATION_SUMMARY.md)
-
-**Checking Project Status:**
-→ [Progress Tracker](ProgressTracker.md)
-
-**Migrating Code:**
-→ [Migration to Responses API](MIGRATION_TO_RESPONSES_API.md)
-
----
-
-## 📝 Documentation Standards
-
-All documentation follows these standards:
-
-- **Format:** Markdown (.md)
-- **Location:** `/docs` folder
-- **Naming:** PascalCase or kebab-case
-- **Headers:** Clear hierarchy with emoji icons
-- **Code Blocks:** Language-specific syntax highlighting
-- **Links:** Relative paths within repository
-- **Updates:** Document version and date at top
-
----
-
-## 🔄 Keeping Documentation Updated
-
-### When to Update
-
-- **Progress Tracker:** After completing any milestone or significant change
-- **Bug Fixes:** When fixing any issue
-- **Implementation Summary:** When adding/modifying components
-- **Migration Guide:** When updating APIs or dependencies
-- **Quick Reference:** When adding new commands or workflows
-- **README:** When changing installation or usage
-
-### How to Update
-
-1. Edit the appropriate document
-2. Update "Last Updated" date
-3. Add entry to changelog/recent changes if applicable
-4. Update this index if adding new documents
-5. Commit with descriptive message
-
----
-
-## 📬 Feedback
-
-Found an error in the documentation? Have suggestions for improvement?
-
-- Create an issue on GitHub
-- Email: contact@qredence.ai
-- Update the doc yourself and submit a PR
-
----
-
-## 📄 License
-
-All documentation © 2025 Qredence
-
----
-
-**Navigation:** [⬆️ Back to Top](#agenticfleet-documentation) | [📂 Project Root](../)
+For feedback or questions, open an issue or email contact@qredence.ai.
