@@ -34,16 +34,11 @@ def test_environment():
     openai_key_from_env = os.getenv("OPENAI_API_KEY")
 
     if not env_file.exists() and not openai_key_from_env:
-        msg = (
-            ".env file not found and OPENAI_API_KEY not in environment. "
-            "Copy .env.example to .env"
-        )
+        msg = ".env file not found and OPENAI_API_KEY not in environment. Copy .env.example to .env"
         assert False, msg
 
     # Check OpenAI API key is available (from .env or environment)
-    assert (
-        settings.openai_api_key or openai_key_from_env
-    ), "OPENAI_API_KEY not set"
+    assert settings.openai_api_key or openai_key_from_env, "OPENAI_API_KEY not set"
 
 
 def test_workflow_config():
@@ -170,13 +165,13 @@ def main():
     print(f"\n{BOLD}Overall: {passed}/{total} tests passed{RESET}")
 
     if passed == total:
-        print(f"\n{GREEN}✓ All tests passed! System is ready to run.{RESET}")
+        print(f"\n{GREEN}[OK] All tests passed! System is ready to run.{RESET}")
         print("\nNext steps:")
         print("  1. Make sure your .env file has a valid OPENAI_API_KEY")
         print("  2. Run: python main.py")
         return 0
     else:
-        print(f"\n{RED}✗ Some tests failed. Please fix the issues above.{RESET}")
+        print(f"\n{RED}[FAIL] Some tests failed. Please fix the issues above.{RESET}")
         print("\nCommon fixes:")
         print("  - Copy .env.example to .env and add your OpenAI API key")
         print("  - Check YAML files for syntax errors")
