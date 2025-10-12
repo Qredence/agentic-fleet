@@ -82,8 +82,11 @@ jobs:
     needs: build
     runs-on: ubuntu-latest
     if: ${{ github.event_name == 'workflow_dispatch' }}
+    environment:
+      name: testpypi
+      url: https://test.pypi.org/p/agentic-fleet
     permissions:
-      id-token: write
+      id-token: write  # IMPORTANT: mandatory for trusted publishing
 
     steps:
       - name: Download all the dists
