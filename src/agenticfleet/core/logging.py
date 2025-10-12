@@ -27,10 +27,14 @@ def setup_logging(
         # Only allow log files within the default logs directory
         logs_root = Path("logs").resolve()
         candidate_path = Path(log_file)
-        log_path = (logs_root / candidate_path).resolve() if not candidate_path.is_absolute() else candidate_path.resolve()
-        # Check that log_path is inside logs_root
+        # Always treat the log filename as relative to logs_root and forbid absolute paths or parent traversal
+        if candidate_path.is_absolute() or ".." in candidate_path.parts:
+            raise ValueError(f"Log file path '{candidate_path}' is not allowed: must be a simple filename inside '{logs_root}' (no absolute path or parent traversal)")
+        # Restrict to filename only (disallow user-submitted directories)
+        safe_filename = candidate_path.name
+        log_path = (logs_root / safe_filename).resolve()
+        # Final containment check
         try:
-            # Python 3.9+: use is_relative_to, else fallback
             inside_logs = log_path.is_relative_to(logs_root) if hasattr(log_path, "is_relative_to") else str(log_path).startswith(str(logs_root))
         except Exception:
             inside_logs = False
