@@ -88,7 +88,7 @@ Weekly hook updates via automated PRs
 
 ## 📚 Documentation Created
 
-- **Workflows README** (`.github/README.md`) - Complete workflow documentation
+- **Workflows README** (`.github/WORKFLOWS.md`) - Complete workflow documentation
 - **Security Policy** (`SECURITY.md`) - Security reporting guidelines
 
 ## 🔧 Project Updates
