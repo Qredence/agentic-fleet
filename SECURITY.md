@@ -1,37 +1,116 @@
 # Security Policy
 
-## Environment Variable Management
+## Supported Versions
 
-Ensure sensitive information in environment variables is not exposed. Use a `.env` file for local development and avoid committing it to the repository. For example, the `.env` files in `src/backend/.env.example` and `src/backend/agentic-fleet/frontend/.env.example` should be properly managed. 🔒
+We release patches for security vulnerabilities for the following versions:
 
-## Dependency Management
+| Version | Supported          |
+| ------- | ------------------ |
+| 0.5.x   | :white_check_mark: |
+| < 0.5.0 | :x:                |
 
-Regularly update dependencies to patch known vulnerabilities. Use tools like Dependabot, which is already configured in `.github/dependabot.yml`. 🛠️
+## Reporting a Vulnerability
 
-## Access Control
+**Please do not report security vulnerabilities through public GitHub issues.**
 
-Implement strict access control policies. Ensure that only authorized personnel have access to the repository and sensitive information. 🔐
+Instead, please report them via GitHub's Security Advisory feature:
 
-## Code Review
+1. Go to the [Security Advisories](https://github.com/Qredence/AgenticFleet/security/advisories) page
+2. Click "New draft security advisory"
+3. Provide a detailed description of the vulnerability
+4. Include steps to reproduce if applicable
+5. Suggest a fix if you have one
 
-Enforce code reviews for all pull requests to ensure that no malicious code is introduced. 🧐
+Alternatively, you can email security concerns to: <contact@qredence.ai>
 
-## Security Headers
+### What to Include
 
-Add security headers to the FastAPI application in `src/backend/app.py` to protect against common web vulnerabilities. 🛡️
+Please include the following information:
 
-## Telemetry
+- Type of vulnerability
+- Full paths of affected source files
+- Location of the affected code (tag/branch/commit or direct URL)
+- Step-by-step instructions to reproduce the issue
+- Proof-of-concept or exploit code (if possible)
+- Impact of the issue, including how an attacker might exploit it
 
-Review and manage telemetry settings in `src/.chainlit/config.toml` and `src/backend/.chainlit/config.toml` to ensure no sensitive data is being collected or transmitted. 📊
+### Response Timeline
 
-## Session Management
+- We will acknowledge your report within **48 hours**
+- We will provide a detailed response within **7 days**
+- We will keep you updated on our progress
+- Once the vulnerability is fixed, we will notify you and credit you in the release notes (unless you prefer to remain anonymous)
 
-Ensure secure session management practices, such as setting appropriate session timeouts and using secure cookies, as seen in `src/.chainlit/config.toml` and `src/backend/.chainlit/config.toml`. ⏳
+## Security Best Practices
 
-## Input Validation
+When using AgenticFleet:
 
-Implement input validation and sanitization to prevent injection attacks. This is particularly important for user inputs handled in `src/backend/app.py`. 🛡️
+1. **API Keys**: Never commit API keys or secrets to version control
+   - Use `.env` files (which are .gitignored)
+   - Use environment variables in production
+   - Rotate keys regularly
 
-## Logging
+2. **Dependencies**: Keep dependencies up to date
+   - Enable Dependabot alerts
+   - Review and merge security updates promptly
+   - Run `uv sync` regularly to update lockfile
 
-Ensure that logs do not contain sensitive information and are securely stored. The logging configuration in `src/backend/models/logging.py` should be reviewed and updated as necessary. 📜
+3. **Code Execution**: Be cautious with code interpreter tools
+   - Review generated code before execution
+   - Run in isolated environments when possible
+   - Set appropriate timeout limits
+
+4. **Input Validation**: Validate all user inputs
+   - Sanitize inputs before passing to LLMs
+   - Implement rate limiting
+   - Monitor for malicious patterns
+
+## Known Security Considerations
+
+### LLM Security
+
+- **Prompt Injection**: The system uses LLMs which may be susceptible to prompt injection attacks
+- **Data Exposure**: Be careful about sensitive data in prompts and responses
+- **Code Generation**: Generated code should be reviewed before execution
+
+### External Dependencies
+
+- **API Keys**: OpenAI and Azure API keys must be kept secure
+- **Network Requests**: The Researcher agent makes external web requests
+- **Data Storage**: Mem0 context provider stores conversation history
+
+## Security Updates
+
+Security updates will be released as:
+
+- **Critical**: Immediate patch release (0.5.x)
+- **High**: Next minor version (0.x.0)
+- **Medium/Low**: Next regular release
+
+## Disclosure Policy
+
+We follow responsible disclosure:
+
+1. Security issues are fixed in private
+2. CVEs are requested when appropriate
+3. Public disclosure happens after patch release
+4. Credit is given to reporters (with permission)
+
+## Compliance
+
+This project aims to follow:
+
+- OWASP Top 10 security practices
+- Python security best practices
+- Secure development lifecycle principles
+
+## Contact
+
+For security concerns, contact:
+
+- Email: <contact@qredence.ai>
+- GitHub Security Advisory: [Create Advisory](https://github.com/Qredence/AgenticFleet/security/advisories/new)
+
+---
+
+Thank you for helping keep AgenticFleet and its users safe!

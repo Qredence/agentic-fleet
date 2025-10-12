@@ -1,300 +1,106 @@
+[project]
+name = "agentic-fleet"
+version = "0.5.0"
+description = "A multi-agent orchestration system built with Microsoft Agent Framework"
+authors = [{ name = "Qredence", email = "contact@qredence.ai" }]
+readme = "README.md"
+license = { text = "MIT" }
+keywords = ["agents", "ai", "microsoft-agent-framework", "multi-agent", "orchestration"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+]
+dependencies = [
+    "azure-ai-agents>=1.2.0b5",
+    "azure-identity>=1.25.1",
+    "python-dotenv>=1.1.1",
+    "pyyaml>=6.0.3",
+    "requests>=2.32.5",
+    "pydantic>=2.12.0",
+    "agent-framework",
+    "agent-framework-core",
+    "agent-framework-a2a",
+    "agent-framework-azure-ai",
+    "agent-framework-mem0",
+    "agent-framework-redis",
+    "agent-framework-devui",
+    "mem0ai==1.0.0b0",
+]
+requires-python = ">=3.12"
+
+[project.optional-dependencies]
+azure = ["azure-ai-agents>=1.2.0b5"]
+
+[project.scripts]
+agentic-fleet = "agenticfleet.cli.repl:main"
+
+[project.urls]
+Homepage = "https://github.com/Qredence/AgenticFleet"
+Documentation = "https://github.com/Qredence/AgenticFleet/docs"
+Repository = "https://github.com/Qredence/AgenticFleet"
+Issues = "https://github.com/Qredence/AgenticFleet/issues"
+
 [build-system]
 requires = ["hatchling"]
 build-backend = "hatchling.build"
 
-[project]
-name = "agentic-fleet"
-version = "0.4.95"
-description = "A powerful multi-agent system for adaptive AI reasoning and automation"
-readme = "README.md"
-requires-python = ">=3.10"
-license = {text = "Apache-2.0"}
-keywords = ["ai", "agents", "automation", "multi-agent", "adaptive", "AI", "reasoning", "autogen-sample", "autogen", "magentic-one"]
-authors = [
-  { name = "Zachary BENSALEM", email = "contact@qredence.ai" },
-]
+[tool.hatch.build.targets.wheel]
+packages = ["src/agenticfleet"]
 
-classifiers = [
-  "Development Status :: 4 - Beta",
-  "Programming Language :: Python",
-  "Programming Language :: Python :: 3.10",
-  "Programming Language :: Python :: 3.11",
-  "Programming Language :: Python :: 3.12",
-  "Programming Language :: Python :: Implementation :: CPython",
-  "License :: OSI Approved :: Apache Software License",
-  "Operating System :: OS Independent",
-  "Intended Audience :: Developers",
-  "Topic :: Software Development :: Libraries :: Application Frameworks",
-]
+[tool.uv.sources]
 
-dependencies = [
-    # Core Framework
-    "fastapi>=0.109.0",
-    "packaging>=23.2",
-    "psutil>=5.9.8",
-    "pydantic>=2.5.2",
-    "pydantic-settings>=2.2.1",
-    "python-dotenv>=1.0.1",
-    "typing-extensions>=4.8.0",
-    "uvicorn>=0.24.0",
-    "starlette>=0.41.3",
-    # Networking & Async
-    "aiofiles>=23.1.0",
-    "aiohttp>=3.11.11,<4.0.0",
-    "asyncio>=3.4.3",
-    "httpx>=0.25.0",
-    "python-multipart>=0.0.6",
-    "requests>=2.32.3",
-    "websockets>=14.2",
-    "python-socketio>=5.12.1",
-    "sse-starlette>=2.2.1",
-    # AI/ML Infrastructure
-    "autogen-agentchat^0.6.1",
-    "autogen-core^0.6.1",
-    "autogen-ext[langchain,docker,web-surfer,file-surfer,video-surfer,azure,gemini,mcp,diskcache,grpc,magentic-one,openai]^0.6.1",
-    "autogenstudio",
-    "dspy>=1.0.0",
-    "semantic-kernel>=1.19.0",
-    "tiktoken>=0.8.0",
-    # Model Providers
-    "composio-core>=0.6.11.post1",
-    "deepseek>=0.1.0", # For DeepSeek
-    "magentic-one-cli",
-    "ollama>=0.1.5", # For Ollama
-    # Azure Services
-    "azure-ai-inference>=1.0.0b6", # For Azure AI Foundry
-    "azure-ai-ml>=1.12.1", # For Azure AI Foundry
-    "azure-ai-projects>=1.0.0b4", # For Azure AI Foundry
-    "azure-core>=1.32.0",
-    "azure-cosmos>=4.9.0",
-    "azure-identity>=1.19.0",
-    "azure-keyvault-secrets>=4.9.0",
-    "azure-search-documents==11.6.0b4",
-    "azure-storage-blob>=12.24.0",
-    # Data Processing
-    "jsonlines>=4.0.0",
-    "matplotlib>=3.10.0",
-    "numpy>=1.26",
-    "pandas>=2.2.3",
-    "pillow>=11.0.0",
-    "plotly>=5.16.0",
-    "plotly-express>=0.4.1",
-    "pytz>=2024.2",
-    "requests-html>=0.10.0",
-    "seaborn>=0.13.0",
-    "yfinance>=0.2.51",
-    "scikit-learn>=1.6.1",
-    # Web & Utilities
-    "beautifulsoup4>=4.12.0",
-    "bing>=0.31",
-    "chainlit>=2.5.5",
-    "docker>=7.1.0",
-    "markitdown>=0.0.1a3",
-    "opentelemetry-instrumentation-fastapi>=0.44b0",
-    "playwright>=1.20.0",
-    "sqlalchemy[asyncio]>=2.0.28",
-    "psycopg2-binary>=2.9.9",
-    "supabase>=2.3.1",
-    "tenacity>=9.0.0",
-    "dataclasses-json>=0.6.7",
-    "html2text>=2024.2.26",
-    "pyjwt>=2.10.1",
-    "redis>=5.2.1",
-    "pyyaml>=6.0.2",
-    # Developer Tools
-    "aioconsole>=0.8.1",
-    "axios>=0.4.0",
-    "authlib>=1.4.0",
-    "black>=24.10.0",
-    "isort>=5.13.2",
-    "ruff>=0.5.3",
-    "codecov>=2.1.13",
-    "gunicorn>=23.0.0",
-    "ipykernel>=6.29.5",
-    "puremagic>=1.28",
-    "pytest>=8.3.4",
-    "pytest-asyncio>=0.25.2",
-    "pytest-cov>=6.0.0",
-    "pytest-xdist>=3.5.0",
-    "rich>=13.9.4",
-    "typer>=0.15.1",
-    "types-setuptools>=75.8.0.20250110",
-    "setuptools>=75.8.0",
-    "asyncer>=0.0.7",
-    "uptrace>=1.27.0",
-    "syncer>=2.0.3",
-    "nest-asyncio>=1.6.0",
-    "click>=8.1.8",
-    "grpcio>=1.70.0",
-    "grpcio-tools==1.64.0",
-    "absl-py==2.1.0",
-    # macOS specific
-    "modulegraph>=0.19.6",
-    "macholib>=1.16.3",
-    "py2app>=0.28.8",
-    "mem0ai>=0.1.86",
-    "mcp>=1.6.0",
-    "literalai>=0.1.201",
-    "debugpy>=1.8.12",
-]
-
-[project.optional-dependencies]
-test = [
-    "pytest>=7.4.0",
-    "pytest-asyncio>=0.21.0",
-    "pytest-cov>=4.1.0",
-    "pytest-mock>=3.11.1",
-    "pytest-sugar>=0.9.7",
-    "httpx>=0.25.0",
-    "respx>=0.20.2",
-    "coverage>=7.3.0",
-    "mypy>=1.5.0",
-    "ruff>=0.1.0",
-    "black>=23.9.0",
-    "isort>=5.12.0"
-]
-
+# Development dependencies (uv's preferred format)
+[dependency-groups]
 dev = [
-    # Linting and Code Quality
-    "ruff>=0.5.3",
-    "black>=24.1.1",
-    "isort>=5.13.2",
-
-
-    # Testing
-    "pytest>=8.0.2",
-    "pytest-asyncio>=0.23.3",
-    "pytest-cov>=4.1.0",
-    "coverage>=7.4.4",
-
-    # Documentation
-    "mkdocs>=1.5.3",
-    "mkdocstrings[python]>=0.24.0",
-
-    # Debugging
-    "ipdb>=0.13.13",
-    "rich>=10.16.2"
+    "pytest>=8.4.2",
+    "pytest-asyncio>=1.2.0",
+    "pytest-cov>=6.0.0",
+    "black>=25.9.0",
+    "ruff>=0.14.0",
+    "mypy>=1.18.2",
+    "debugpy>=1.8.17",
+    "pre-commit>=3.5.0",
+    "types-PyYAML>=6.0.0",
+    "types-requests>=2.31.0",
 ]
-
-docs = [
-    "mkdocs>=1.5.3",
-    "mkdocstrings[python]>=0.24.0"
-]
-
-models = [
-    "ollama>=0.1.5",
-    "autogen-ext[semantic-kernel-anthropic]",
-    "autogen-ext[semantic-kernel-google]",
-    "autogen-ext[semantic-kernel-ollama]",
-    "autogen-ext[semantic-kernel-aws]",
-    "autogen-ext[semantic-kernel-mistralai]",
-    "autogen-ext[semantic-kernel-hugging-face]"
-]
-
-[tool.pytest.ini_options]
-minversion = "7.4.0"
-addopts = "-ra -q --cov=agentic_fleet --cov-report=term-missing"
-testpaths = ["tests"]
-python_files = "test_*.py"
-
-[tool.coverage.run]
-source = ["agentic_fleet"]
-omit = [
-    "tests/*",
-    "*/__init__.py"
-]
-
-[tool.ruff]
-line-length = 120
-target-version = "py310"
-select = ["E", "F", "W", "I", "N", "UP", "ASYNC"]
-ignore = ["E501"]
 
 [tool.black]
-line-length = 120
-target-version = ['py310']
+target-version = ['py312']
+line-length = 100
 
-[tool.isort]
-profile = "black"
-line_length = 120
+[tool.ruff]
+src = ["src"]
+target-version = "py312"
+line-length = 100
 
-[tool.hatch.build]
-packages = ["src/agentic_fleet"]
-exclude = [
-    # Python
-    "*.pyc",
-    "__pycache__",
-    "*.pyo",
-    "*.pyd",
-    "*.so",
-    "*.dylib",
-    "*.egg",
-    "*.egg-info",
-    # Build
-    "build",
-    "dist",
-    "eggs",
-    "sdist",
-    "develop-eggs",
-    # Directories
-    "tests",
-    "docs",
-    "examples",
-    ".git",
-    ".github",
-    ".pytest_cache",
-    ".mypy_cache",
-    ".ruff_cache",
-    # Config files
-    ".gitignore",
-    ".env*",
-    "*.log",
-    "tox.ini",
-    ".coverage",
-    "coverage.xml",
-    # System
-    ".DS_Store",
-    "Thumbs.db",
+[tool.ruff.lint]
+select = [
+    "E",   # pycodestyle errors
+    "F",   # pyflakes
+    "W",   # pycodestyle warnings
+    "I",   # isort (import sorting)
+    "UP",  # pyupgrade
 ]
+ignore = []
 
-[tool.hatch.version]
-path = "src/agentic_fleet/__init__.py"
-
-[tool.setuptools.packages.find]
-exclude = [
-    "tests*",
-    "docs*",
-    ".github*"
-]
-
-[tool.setuptools]
-# Prevent accidental editable installations
-
-[tool.setuptools.dynamic]
-version = {attr = "agentic_fleet.__version__"}
-
-# Warning for editable installations
-[tool.setuptools.package-data]
-"agentic_fleet" = [
-    "EDITABLE_INSTALL_WARNING.txt"
-]
-
-[project.urls]
-Homepage = "https://github.com/qredence/agentic-fleet"
-Documentation = "https://github.com/qredence/agentic-fleet#readme"
-Issues = "https://github.com/qredence/agentic-fleet/issues"
-Source = "https://github.com/qredence/agentic-fleet"
-
-[project.scripts]
-agentic-fleet = "agentic_fleet.main:main"
-agentic-fleet-chainlit = "agentic_fleet.chainlit_app:main"
-
-[tool.hatch.build.targets.wheel]
-packages = ["src/agentic_fleet"]
+[tool.ruff.lint.per-file-ignores]
+"__init__.py" = ["F401"]
 
 [tool.mypy]
-python_version = "3.10"
-warn_return_any = true
+python_version = "3.12"
+mypy_path = "src"
+strict = false
 warn_unused_configs = true
+warn_unreachable = true
 disallow_untyped_defs = true
 disallow_incomplete_defs = true
+no_implicit_optional = true
+show_error_codes = true
+pretty = true
+exclude = [
+    "tests/.*",  # tests can be looser
+]
+

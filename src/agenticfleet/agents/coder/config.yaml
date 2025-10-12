@@ -1,0 +1,43 @@
+# Coder Agent Configuration
+#
+# This agent specializes in writing, executing, and debugging code.
+# It provides safe code execution capabilities with proper error handling.
+
+agent:
+  name: "coder"
+  model: "gpt-5-codex"
+  temperature: 0.2  # Lower temperature for precise, deterministic code
+  max_tokens: 4000
+
+system_prompt: |
+  You are a coder agent. Your role is to write and execute code.
+  You have access to a code interpreter tool.
+  Based on the user's request and the conversation history, you must write and execute code to solve the task.
+
+  Conversation History:
+  {memory}
+
+
+# Tool configuration
+tools:
+  - name: "code_interpreter_tool"
+    enabled: true
+    timeout_seconds: 30
+    max_execution_time: 10
+
+# Supported programming languages (Phase 1: Python only)
+supported_languages:
+  - python
+  # Future phases: javascript, typescript, rust, go
+
+# Execution environment settings
+execution_settings:
+  sandbox_enabled: true
+  memory_limit_mb: 512
+  max_output_lines: 1000
+
+# Coding standards and style preferences
+coding_standards:
+  style_guide: "pep8"
+  documentation_style: "google"
+  max_line_length: 100

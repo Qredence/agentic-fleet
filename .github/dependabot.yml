@@ -1,26 +1,41 @@
 version: 2
 updates:
-  - package-ecosystem: "devcontainers"
+  # Maintain dependencies for GitHub Actions
+  - package-ecosystem: "github-actions"
     directory: "/"
     schedule:
       interval: "weekly"
+      day: "monday"
+    open-pull-requests-limit: 5
+    labels:
+      - "dependencies"
+      - "github-actions"
 
-  - package-ecosystem: "pip" # For Python dependencies
+  # Maintain Python dependencies
+  - package-ecosystem: "pip"
     directory: "/"
     schedule:
       interval: "weekly"
-
-  - package-ecosystem: "npm" # For Node.js dependencies (package.json)
-    directory: "/"
-    schedule:
-      interval: "weekly"
-
-  - package-ecosystem: "docker" # For Dockerfile dependencies
-    directory: "/"
-    schedule:
-      interval: "weekly"
-
-  - package-ecosystem: "github-actions" # For GitHub Actions workflows
-    directory: "/"
-    schedule:
-      interval: "weekly"
+      day: "monday"
+    open-pull-requests-limit: 10
+    labels:
+      - "dependencies"
+      - "python"
+    groups:
+      # Group Azure packages together
+      azure:
+        patterns:
+          - "azure-*"
+      # Group agent-framework packages together
+      agent-framework:
+        patterns:
+          - "agent-framework*"
+      # Group development dependencies
+      dev-dependencies:
+        dependency-type: "development"
+        patterns:
+          - "pytest*"
+          - "black"
+          - "ruff"
+          - "mypy"
+    versioning-strategy: increase

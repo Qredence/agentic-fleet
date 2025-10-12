@@ -1,0 +1,30 @@
+# Orchestrator Agent Configuration
+agent:
+  name: "orchestrator"
+  model: "gpt-5"
+  temperature: 0.1
+  max_tokens: 4000
+  
+system_prompt: |
+  You are an orchestrator agent. Your role is to coordinate a team of specialized agents to solve complex tasks.
+  You have access to the following agents: researcher, coder, analyst.
+  Based on the user's request and the conversation history, you must decide which agent to delegate the task to.
+  If the task is complete, you can provide the final answer.
+
+  Conversation History:
+  {memory}
+
+
+capabilities:
+  - task_decomposition
+  - agent_delegation
+  - result_synthesis
+  - workflow_management
+
+delegation_rules:
+  - condition: "information_gathering"
+    delegate_to: "researcher"
+  - condition: "code_execution"
+    delegate_to: "coder"
+  - condition: "data_analysis"
+    delegate_to: "analyst"
