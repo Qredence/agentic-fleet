@@ -25,14 +25,25 @@ BOLD = "\033[1m"
 
 def test_environment():
     """Test environment variables and .env file."""
+    import os
+
     from agenticfleet.config import settings
 
-    # Check if .env file exists
+    # Check if .env file exists OR environment variables are set (for CI)
     env_file = Path(".env")
-    assert env_file.exists(), ".env file not found. Copy .env.example to .env"
+    openai_key_from_env = os.getenv("OPENAI_API_KEY")
 
-    # Check OpenAI API key
-    assert settings.openai_api_key, "OPENAI_API_KEY not set in .env"
+    if not env_file.exists() and not openai_key_from_env:
+        msg = (
+            ".env file not found and OPENAI_API_KEY not in environment. "
+            "Copy .env.example to .env"
+        )
+        assert False, msg
+
+    # Check OpenAI API key is available (from .env or environment)
+    assert (
+        settings.openai_api_key or openai_key_from_env
+    ), "OPENAI_API_KEY not set"
 
 
 def test_workflow_config():
