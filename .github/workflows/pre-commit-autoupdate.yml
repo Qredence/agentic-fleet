@@ -28,6 +28,12 @@ jobs:
       - name: Update pre-commit hooks
         run: uv run pre-commit autoupdate
 
+      - name: Validate pre-commit updates
+        run: |
+          uv sync
+          uv run pre-commit run --all-files || true
+        continue-on-error: true
+
       - name: Create Pull Request
         uses: peter-evans/create-pull-request@v7
         with:

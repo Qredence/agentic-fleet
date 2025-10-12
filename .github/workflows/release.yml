@@ -33,6 +33,19 @@ jobs:
       - name: Install dependencies
         run: uv sync --all-extras
 
+      - name: Validate version tag matches package version
+        if: github.event_name == 'push'
+        run: |
+          TAG_VERSION="${GITHUB_REF#refs/tags/v}"
+          PACKAGE_VERSION=$(uv run python -c "import tomllib; print(tomllib.load(open('pyproject.toml', 'rb'))['project']['version'])")
+          echo "Tag version: $TAG_VERSION"
+          echo "Package version: $PACKAGE_VERSION"
+          if [ "$TAG_VERSION" != "$PACKAGE_VERSION" ]; then
+            echo "❌ Version mismatch: tag=$TAG_VERSION, package=$PACKAGE_VERSION"
+            exit 1
+          fi
+          echo "✅ Version validation passed"
+
       - name: Build package
         run: uv build
 
@@ -108,7 +121,7 @@ jobs:
           gh release create \
             '${{ github.ref_name }}' \
             --repo '${{ github.repository }}' \
-            --notes "Release ${{ github.ref_name }}" \
+            --generate-notes \
             --title "AgenticFleet ${{ github.ref_name }}"
 
       - name: Upload artifacts to GitHub Release
