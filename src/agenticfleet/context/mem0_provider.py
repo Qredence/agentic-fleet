@@ -1,5 +1,5 @@
 from dotenv import load_dotenv
-from mem0 import Memory  # type: ignore[import-untyped] - mem0 library lacks type stubs
+from mem0 import Memory  # type: ignore
 from openai import AzureOpenAI
 
 from ..config.settings import settings

@@ -1,5 +1,11 @@
 # AgenticFleet
 
+[![CI](https://github.com/Qredence/AgenticFleet/workflows/CI/badge.svg)](https://github.com/Qredence/AgenticFleet/actions/workflows/ci.yml)
+[![Release](https://github.com/Qredence/AgenticFleet/workflows/Release/badge.svg)](https://github.com/Qredence/AgenticFleet/actions/workflows/release.yml)
+[![CodeQL](https://github.com/Qredence/AgenticFleet/workflows/CodeQL%20Security%20Analysis/badge.svg)](https://github.com/Qredence/AgenticFleet/actions/workflows/codeql.yml)
+[![Python 3.12+](https://img.shields.io/badge/python-3.12+-blue.svg)](https://www.python.org/downloads/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+
 **Version:** 0.5.0
 **Package:** `agentic-fleet` (PyPI) | `agenticfleet` (import)
 

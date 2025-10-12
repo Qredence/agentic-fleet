@@ -33,21 +33,21 @@ Fixes #
 
 <!-- Describe the tests you ran and how to reproduce them -->
 
-- [ ] All existing tests pass (`make test`)
+- [ ] All existing tests pass (`uv run pytest`)
 - [ ] Added new tests for new functionality
-- [ ] Configuration validation passes (`make test-config`)
-- [ ] Linting passes (`make lint`)
-- [ ] Formatting is correct (`make format`)
-- [ ] Type checking passes (`make type-check`)
+- [ ] Configuration validation passes (`uv run python tests/test_config.py`)
+- [ ] Linting passes (`uv run ruff check .`)
+- [ ] Formatting is correct (`uv run black .`)
+- [ ] Type checking passes (`uv run mypy .`)
 
 ### Test Commands Run
 
 ```bash
 # Commands run to validate changes
-make test
-make test-config
-make lint
-make format
+uv run pytest
+uv run python tests/test_config.py
+uv run ruff check .
+uv run black .
 ```
 
 ## Documentation

@@ -12,6 +12,8 @@ updates:
       - "github-actions"
 
   # Maintain Python dependencies
+  # Note: Using "pip" ecosystem (UV doesn't have native Dependabot support yet)
+  # UV is compatible with pip ecosystem and will use these updates
   - package-ecosystem: "pip"
     directory: "/"
     schedule:

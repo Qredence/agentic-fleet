@@ -6,7 +6,7 @@
 
 - ✅ **ci.yml** - Enhanced CI pipeline with matrix testing, coverage, security
 - ✅ **release.yml** - Automated PyPI releases with trusted publishing
-- ✅ **codeql.yml** - GitHub security scanning
+- ✅ **codeql.yml** - GitHub security scanning (CodeQL analysis)
 - ✅ **dependency-review.yml** - PR dependency vulnerability checks
 - ✅ **stale.yml** - Automatic issue/PR cleanup
 - ✅ **pr-labels.yml** - Automatic PR labeling
@@ -25,7 +25,7 @@
 
 ### 3. Documentation (4 files)
 
-- ✅ **.github/README.md** - Comprehensive workflow documentation
+- ✅ **.github/WORKFLOWS.md** - Comprehensive workflow documentation
 - ✅ **SECURITY.md** - Security policy and reporting
 - ✅ **docs/GITHUB_ACTIONS_SETUP.md** - Complete setup guide
 - ✅ **docs/WORKFLOWS_QUICK_REFERENCE.md** - Quick reference card
@@ -36,10 +36,10 @@
 
 ## 📊 Summary Statistics
 
-- **Total Workflows**: 8
+- **Total Workflows**: 8 (including CodeQL)
 - **Total Configuration Files**: 10
 - **Total Documentation Pages**: 4
-- **Total Lines of Code**: ~1,500+
+- **Total Lines of Code**: ~1,600+
 - **Estimated Setup Time**: 30-45 minutes
 
 ## 🎯 Key Features Implemented
@@ -52,6 +52,7 @@
 - ✅ Coverage reports generated during pytest runs
 - ✅ Artifact uploads
 - ✅ Smart caching with UV
+- ✅ Secure secret handling (fork-safe with env blocks)
 
 ### Release Automation
 
@@ -301,7 +302,7 @@ SECURITY.md                        # Security policy
 
 ## 📞 Support
 
-- **Workflow Issues**: Check `.github/README.md`
+- **Workflow Issues**: Check `.github/WORKFLOWS.md`
 - **Setup Help**: See `docs/GITHUB_ACTIONS_SETUP.md`
 - **Quick Reference**: See `docs/WORKFLOWS_QUICK_REFERENCE.md`
 - **Security**: See `SECURITY.md`
