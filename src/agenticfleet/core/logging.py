@@ -1,9 +1,33 @@
 """Logging configuration for AgenticFleet."""
 
 import logging
+import os
+import re
 import sys
 from pathlib import Path
-from werkzeug.utils import secure_filename
+
+
+def _secure_filename(filename: str) -> str:
+    """
+    Sanitize a filename to remove potentially dangerous characters.
+
+    This is a lightweight replacement for werkzeug.utils.secure_filename
+    that removes path separators and other unsafe characters.
+
+    Args:
+        filename: The filename to sanitize
+
+    Returns:
+        A safe filename with only alphanumeric, dash, underscore, and dot
+    """
+    # Remove any path components
+    filename = os.path.basename(filename)
+    # Replace whitespace with underscores
+    filename = re.sub(r"\s+", "_", filename)
+    # Keep only safe characters
+    filename = re.sub(r"[^a-zA-Z0-9._-]", "", filename)
+    return filename
+
 
 def setup_logging(
     level: str = "INFO",
@@ -19,7 +43,9 @@ def setup_logging(
         format_string: Optional custom format string
     """
     if format_string is None:
-        format_string = "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+        format_string = (
+            "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+        )
 
     handlers: list[logging.Handler] = [logging.StreamHandler(sys.stdout)]
 
@@ -27,25 +53,40 @@ def setup_logging(
         # Only allow log files within the default logs directory
         logs_root = Path("logs").resolve()
         candidate_path = Path(log_file)
-        # Always treat the log filename as relative to logs_root and forbid absolute paths or parent traversal
+        # Forbid absolute paths or parent traversal
         if candidate_path.is_absolute() or ".." in candidate_path.parts:
-            raise ValueError(f"Log file path '{candidate_path}' is not allowed: must be a simple filename inside '{logs_root}' (no absolute path or parent traversal)")
-        # Restrict to safe filename only (disallow user-submitted directories and special chars)
-        safe_filename = secure_filename(candidate_path.name)
+            msg = (
+                f"Log file path '{candidate_path}' is not allowed: "
+                f"must be a simple filename inside '{logs_root}' "
+                "(no absolute path or parent traversal)"
+            )
+            raise ValueError(msg)
+        # Restrict to safe filename only
+        safe_filename = _secure_filename(candidate_path.name)
         if not safe_filename:
-            raise ValueError(f"Log file path '{candidate_path}' is not allowed: filename has no valid characters after sanitization")
+            msg = (
+                f"Log file path '{candidate_path}' is not allowed: "
+                "filename has no valid characters after sanitization"
+            )
+            raise ValueError(msg)
         log_path = (logs_root / safe_filename).resolve()
         # Final containment check
         try:
             inside_logs = (
                 log_path.is_relative_to(logs_root)
                 if hasattr(log_path, "is_relative_to")
-                else os.path.commonpath([str(log_path), str(logs_root)]) == str(logs_root)
+                else os.path.commonpath(
+                    [str(log_path), str(logs_root)]
+                ) == str(logs_root)
             )
         except Exception:
             inside_logs = False
         if not inside_logs:
-            raise ValueError(f"Log file path '{log_path}' is not allowed: must be within '{logs_root}'")
+            msg = (
+                f"Log file path '{log_path}' is not allowed: "
+                f"must be within '{logs_root}'"
+            )
+            raise ValueError(msg)
         log_path.parent.mkdir(parents=True, exist_ok=True)
         handlers.append(logging.FileHandler(str(log_path)))
 
