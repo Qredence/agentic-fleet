@@ -49,7 +49,7 @@
 - ✅ Multi-OS testing (Ubuntu, macOS, Windows)
 - ✅ Multi-Python version support (3.12, 3.13)
 - ✅ Separated lint, type-check, test, build, security jobs
-- ✅ Code coverage with Codecov integration
+- ✅ Coverage reports generated during pytest runs
 - ✅ Artifact uploads
 - ✅ Smart caching with UV
 
@@ -145,9 +145,6 @@ AZURE_AI_SEARCH_ENDPOINT
 AZURE_AI_SEARCH_KEY
 AZURE_OPENAI_CHAT_COMPLETION_DEPLOYED_MODEL_NAME
 AZURE_OPENAI_EMBEDDING_DEPLOYED_MODEL_NAME
-
-# Optional - for coverage reports
-CODECOV_TOKEN
 ```
 
 ### PyPI Setup (10 min)
@@ -177,7 +174,7 @@ git push origin test/workflows
 - [ ] CI workflow triggers on push
 - [ ] CI workflow triggers on PR
 - [ ] All CI jobs pass
-- [ ] Coverage report uploads
+- [ ] Coverage report generated (coverage.xml)
 - [ ] PR auto-labels correctly
 - [ ] Stale workflow configured
 - [ ] CodeQL runs successfully
@@ -189,7 +186,7 @@ git push origin test/workflows
 
 ## 📖 Documentation Structure
 
-```
+```text
 docs/
 ├── GITHUB_ACTIONS_SETUP.md      # Complete setup guide
 └── WORKFLOWS_QUICK_REFERENCE.md  # Quick reference
@@ -219,7 +216,7 @@ SECURITY.md                        # Security policy
 - ✅ Automatic PR labeling
 - ✅ Clear contribution guidelines
 
-### For Security
+### Security Tips
 
 - ✅ Weekly CodeQL scans
 - ✅ Dependency vulnerability checks
