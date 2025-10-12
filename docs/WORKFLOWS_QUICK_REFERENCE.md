@@ -266,7 +266,7 @@ Protect `main` and `0.5.0a`:
 
 ## 📖 Documentation
 
-- **Workflow Details**: `.github/README.md`
+- **Workflow Details**: `.github/WORKFLOWS.md`
 - **Setup Guide**: `docs/GITHUB_ACTIONS_SETUP.md`
 - **Security Policy**: `SECURITY.md`
 - **Contributing**: See PR template
