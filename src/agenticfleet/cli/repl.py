@@ -30,7 +30,8 @@ async def run_repl() -> None:
             if not user_input:
                 continue
 
-            logger.info(f"Processing: '{user_input}'")
+            safe_user_input = user_input.replace('\r', '').replace('\n', '')
+            logger.info(f"Processing: '{safe_user_input}'")
             print("-" * 50)
 
             try:
