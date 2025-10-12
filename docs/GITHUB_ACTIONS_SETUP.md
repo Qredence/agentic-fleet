@@ -170,7 +170,8 @@ Go to **Settings → Environments**:
 
 #### Create `pypi` Environment
 
-- **Deployment branches**: Selected tags matching `v*.*.*`
+- **Deployment branches**: Selected tags matching `v[0-9]+.[0-9]+.[0-9]+*`
+  - Note: Use this exact pattern (not `v*.*.*` which causes "Name is invalid" error)
 - **Environment secrets**: (if not using trusted publishing)
   - `PYPI_API_TOKEN`
 
@@ -339,7 +340,7 @@ gh run view <run-id> --job=<job-id> --log
 
 #### Release Failures
 
-- Verify tag format: `v*.*.*`
+- Verify tag format: `v[0-9]+.[0-9]+.[0-9]+*` (not `v*.*.*`)
 - Check PyPI trusted publishing setup
 - Ensure environment configured
 
