@@ -26,7 +26,7 @@ Set up automated PyPI publishing for AgenticFleet releases.
 5. [ ] (Optional) Add yourself as a required reviewer
 6. [ ] Click **"Save protection rules"**
 
-**Verification**: You should see "pypi" environment listed with tag rule `v*.*.*`
+**Verification**: You should see "pypi" environment listed with tag rule `v[0-9]+.[0-9]+.[0-9]+*`
 
 ---
 
