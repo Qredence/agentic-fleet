@@ -160,10 +160,6 @@ Configure these secrets in repository settings for full functionality:
 - `AZURE_OPENAI_CHAT_COMPLETION_DEPLOYED_MODEL_NAME`
 - `AZURE_OPENAI_EMBEDDING_DEPLOYED_MODEL_NAME`
 
-### Code Coverage (Optional)
-
-- `CODECOV_TOKEN`
-
 ## Environments
 
 Configure these environments in repository settings:

@@ -11,7 +11,7 @@ Enhanced continuous integration with:
 - Multi-OS testing (Ubuntu, macOS, Windows)
 - Python 3.12 & 3.13 support
 - Separate jobs for linting, type-checking, testing, building, and security
-- Code coverage with Codecov integration
+- Coverage reports generated during pytest
 - Concurrency controls to cancel outdated runs
 
 ### 2. **Release Workflow** (`.github/workflows/release.yml`)
@@ -113,7 +113,7 @@ Go to **Settings → General**:
 
 Go to **Settings → Branches → Add rule** for `main` and `0.5.0a`:
 
-```
+```text
 Branch name pattern: main (or 0.5.0a)
 ☑ Require pull request before merging
   ☑ Require approvals: 1
@@ -132,7 +132,7 @@ Go to **Settings → Secrets and variables → Actions**:
 
 #### Required for Testing (Optional for Public Repos)
 
-```
+```text
 OPENAI_API_KEY
 AZURE_AI_PROJECT_ENDPOINT
 AZURE_AI_SEARCH_ENDPOINT
@@ -143,9 +143,7 @@ AZURE_OPENAI_EMBEDDING_DEPLOYED_MODEL_NAME
 
 #### Optional Services
 
-```
-CODECOV_TOKEN  # For code coverage reporting
-```
+_None currently required._
 
 ### 3. Configure PyPI Publishing
 
@@ -365,7 +363,7 @@ gh run view <run-id> --job=<job-id> --log
 1. **Separated Jobs**: Lint, type-check, test, build, security run independently
 2. **Matrix Testing**: Multiple Python versions (3.12, 3.13) and OSes
 3. **Better Caching**: UV cache for faster builds
-4. **Coverage**: Integrated code coverage with Codecov
+4. **Coverage**: Integrated code coverage reporting via pytest-cov
 5. **Security**: Added Bandit, CodeQL, dependency review
 6. **Automation**: Auto-labeling, stale management, dependency updates
 7. **Documentation**: Comprehensive READMEs and templates
