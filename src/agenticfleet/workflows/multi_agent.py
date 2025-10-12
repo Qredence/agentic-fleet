@@ -158,6 +158,5 @@ class MultiAgentWorkflow:
         except Exception as e:
             return f"Error: Agent '{agent_name}' failed to execute task: {str(e)}"
 
-
 # Create default workflow instance
 workflow = MultiAgentWorkflow()
