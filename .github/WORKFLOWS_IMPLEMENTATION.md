@@ -25,7 +25,7 @@
 
 ### 3. Documentation (4 files)
 
-- ✅ **.github/README.md** - Comprehensive workflow documentation
+- ✅ **.github/WORKFLOWS.md** - Comprehensive workflow documentation
 - ✅ **SECURITY.md** - Security policy and reporting
 - ✅ **docs/GITHUB_ACTIONS_SETUP.md** - Complete setup guide
 - ✅ **docs/WORKFLOWS_QUICK_REFERENCE.md** - Quick reference card
@@ -302,7 +302,7 @@ SECURITY.md                        # Security policy
 
 ## 📞 Support
 
-- **Workflow Issues**: Check `.github/README.md`
+- **Workflow Issues**: Check `.github/WORKFLOWS.md`
 - **Setup Help**: See `docs/GITHUB_ACTIONS_SETUP.md`
 - **Quick Reference**: See `docs/WORKFLOWS_QUICK_REFERENCE.md`
 - **Security**: See `SECURITY.md`

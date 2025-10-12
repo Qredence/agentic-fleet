@@ -48,7 +48,7 @@ rm .github/copilot-instructions.md.backup
 
 ### 2. 🔴 Fix Missing CodeQL Workflow
 
-**Files**: `.github/README.md`, `.github/WORKFLOWS_IMPLEMENTATION.md`
+**Files**: `.github/WORKFLOWS.md`, `.github/WORKFLOWS_IMPLEMENTATION.md`
 **Issue**: Documentation references CodeQL workflow that doesn't exist
 **Options**:
 
@@ -167,9 +167,9 @@ run: OPENAI_API_KEY=${{ secrets.OPENAI_API_KEY }} ... uv run python tests/test_c
 **Risk**: Low
 **Effort**: 5 minutes
 
-### 6. 🔴 Fix README.md Workflow List
+### 6. 🔴 Fix WORKFLOWS.md Workflow List
 
-**File**: `.github/README.md`
+**File**: `.github/WORKFLOWS.md`
 **Issue**: References non-existent CodeQL workflow
 **Action**: Remove CodeQL section or update after implementing it
 
@@ -322,7 +322,7 @@ exempt-issue-labels: "pinned,security,roadmap,waiting-for-response"  # Added wai
 
 - Move generic prompts to docs/copilot-prompts/
 - Add README.md in prompts folder explaining purpose
-- Keep as-is but document in .github/README.md
+- Keep as-is but document in .github/WORKFLOWS.md
 
 **Recommendation**: Add README.md explaining each prompt's purpose
 
@@ -371,13 +371,13 @@ exempt-issue-labels: "pinned,security,roadmap,waiting-for-response"  # Added wai
 
 ### 16. 🟢 Consolidate Documentation
 
-**Files**: `.github/README.md`, `.github/WORKFLOWS_IMPLEMENTATION.md`
+**Files**: `.github/WORKFLOWS.md`, `.github/WORKFLOWS_IMPLEMENTATION.md`
 **Issue**: Overlapping content between two files
 **Action**: Merge into single authoritative document or clarify purposes
 
 **Recommendation**: Keep both but clarify:
 
-- README.md = User-facing workflow guide
+- WORKFLOWS.md = User-facing workflow guide
 - WORKFLOWS_IMPLEMENTATION.md = Implementation notes/history
 
 **Risk**: Low
