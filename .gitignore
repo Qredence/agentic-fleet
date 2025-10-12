@@ -32,6 +32,8 @@ env/
 *.swp
 *.swo
 *~
+logs
+.serena/
 
 # Environment variables
 .env
