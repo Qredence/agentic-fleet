@@ -3,7 +3,6 @@
 import logging
 import sys
 from pathlib import Path
-import os
 from werkzeug.utils import secure_filename
 
 def setup_logging(
