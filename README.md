@@ -1,4 +1,7 @@
-# AgenticFleet - Phase 1
+# AgenticFleet
+
+**Version:** 0.5.0  
+**Package:** `agentic-fleet` (PyPI) | `agenticfleet` (import)
 
 A sophisticated multi-agent system powered by Microsoft Agent Framework that coordinates specialized AI agents to solve complex tasks through dynamic delegation and collaboration.
 
@@ -13,6 +16,7 @@ AgenticFleet implements a custom orchestration pattern where an orchestrator age
 
 ## ✨ Features
 
+- ✅ **Modern Package Structure**: PyPA-recommended `src/` layout for import safety
 - ✅ **Dynamic Task Decomposition**: Automatic breakdown of complex tasks
 - ✅ **Multi-Agent Coordination**: Seamless collaboration between specialized agents
 - ✅ **Event-Driven Architecture**: Real-time monitoring and observability
@@ -20,12 +24,14 @@ AgenticFleet implements a custom orchestration pattern where an orchestrator age
 - ✅ **Configurable Execution**: Safety controls and execution limits
 - ✅ **Individual Agent Configs**: Dedicated configuration per agent
 - ✅ **Persistent Memory**: `mem0` integration for long-term memory
+- ✅ **Console Script**: Easy CLI access via `agentic-fleet` command
 
 ## 🏗️ Architecture
 
-```
+```text
 ┌─────────────────────────────────────────┐
-│         User Interface (REPL)           │
+│         User Interface (CLI)            │
+│     Console: agentic-fleet              │
 └──────────────┬──────────────────────────┘
                │
                ▼
@@ -57,6 +63,60 @@ AgenticFleet implements a custom orchestration pattern where an orchestrator age
 └─────────────┘
 ```
 
+### Package Structure (src/ Layout)
+
+```text
+src/agenticfleet/           # Main package (import: agenticfleet)
+├── __init__.py            # Package entry, version, exports
+├── __main__.py            # Module entry (python -m agenticfleet)
+├── agents/                # All agent factories + tools
+│   ├── orchestrator/      # Orchestrator agent
+│   │   ├── agent.py       # Factory: create_orchestrator_agent()
+│   │   ├── config.yaml    # Agent-specific configuration
+│   │   └── tools/         # Agent tools (if any)
+│   ├── researcher/        # Researcher agent with web search
+│   │   ├── agent.py       # Factory: create_researcher_agent()
+│   │   ├── config.yaml
+│   │   └── tools/
+│   │       └── web_search_tools.py
+│   ├── coder/             # Coder agent with code execution
+│   │   ├── agent.py       # Factory: create_coder_agent()
+│   │   ├── config.yaml
+│   │   └── tools/
+│   │       └── code_interpreter.py
+│   └── analyst/           # Analyst agent with data analysis
+│       ├── agent.py       # Factory: create_analyst_agent()
+│       ├── config.yaml
+│       └── tools/
+│           └── data_analysis_tools.py
+├── workflows/             # Multi-agent orchestration
+│   └── multi_agent.py     # MultiAgentWorkflow class
+├── config/                # Configuration management
+│   ├── settings.py        # Settings class (loads env vars)
+│   └── workflow.yaml      # Workflow-level config
+├── context/               # Long-term memory providers
+│   └── mem0_provider.py   # Mem0 integration
+├── core/                  # Core utilities
+│   ├── exceptions.py      # Custom exceptions
+│   ├── logging.py         # Logging configuration
+│   └── types.py           # Type definitions, enums
+└── cli/                   # CLI interface
+    └── repl.py            # Interactive REPL
+
+tests/                     # All tests
+├── test_config.py         # Configuration validation
+├── test_mem0_context_provider.py  # Memory tests
+└── test_hello.py          # Sanity check
+
+docs/                      # Documentation
+├── AGENTS.md              # Agent development guidelines
+├── MEM0_INTEGRATION.md    # Memory integration docs
+├── MIGRATION_COMPLETE.md  # Migration report
+├── TEMPERATURE_FIX.md     # API compliance fixes
+├── COMMANDS.md            # Command reference
+└── ...
+```
+
 ## 📋 Prerequisites
 
 - **Python**: 3.12 or higher
@@ -69,6 +129,7 @@ AgenticFleet implements a custom orchestration pattern where an orchestrator age
 ### 1. Clone and Navigate
 
 ```bash
+git clone https://github.com/Qredence/AgenticFleet.git
 cd AgenticFleet
 ```
 
@@ -79,25 +140,60 @@ cd AgenticFleet
 cp .env.example .env
 
 # Edit .env and add your keys and endpoints
+# Required:
+#   - OPENAI_API_KEY
+#   - AZURE_AI_PROJECT_ENDPOINT
+#   - AZURE_AI_SEARCH_ENDPOINT
+#   - AZURE_AI_SEARCH_KEY
+#   - AZURE_OPENAI_CHAT_COMPLETION_DEPLOYED_MODEL_NAME
+#   - AZURE_OPENAI_EMBEDDING_DEPLOYED_MODEL_NAME
 ```
 
-### 3. Install Dependencies (uv-first)
+### 3. Install Dependencies (uv-first approach)
+
+**Using uv (recommended):**
 
 ```bash
-# Sync (creates .venv automatically if missing)
+# Install uv if not already installed
+curl -LsSf https://astral.sh/uv/install.sh | sh
+
+# Sync dependencies (creates .venv automatically)
 uv sync
 
 # Optional: activate shell (not required when using `uv run`)
 source .venv/bin/activate  # macOS/Linux
+.venv\Scripts\activate     # Windows
 ```
 
-If you must use pip (not recommended), see docs/QUICK_REFERENCE.md.
+**Using pip (not recommended):**
 
-### 4. Run the Application
+See `docs/COMMANDS.md` for pip-based installation.
+
+### 4. Validate Configuration
 
 ```bash
-uv run python tests/test_config.py   # Fast config validation (should pass 6/6)
-uv run python main.py                # Launch workflow REPL
+# Run configuration tests (should pass 6/6)
+uv run pytest tests/test_config.py -v
+```
+
+### 5. Run the Application
+
+**Method 1: Console script (easiest)**
+
+```bash
+uv run agentic-fleet
+```
+
+**Method 2: Module execution**
+
+```bash
+uv run python -m agenticfleet
+```
+
+**Method 3: Direct REPL file (legacy)**
+
+```bash
+uv run python src/agenticfleet/cli/repl.py
 ```
 
 ### 5. Developer Workflow
@@ -116,18 +212,23 @@ make format        # Auto-format code
 **Using uv directly:**
 
 ```bash
-# Format & lint
-uv run ruff check .
+# Format code
 uv run black .
 
-# Type checking
-uv run mypy .
+# Lint code
+uv run ruff check .
+uv run ruff check --fix .    # Auto-fix issues
 
-# Tests
-uv run pytest -q
+# Type checking
+uv run mypy src/agenticfleet
+
+# Run tests
+uv run pytest                # All tests
+uv run pytest -v             # Verbose
+uv run pytest tests/test_config.py  # Specific file
 
 # All-in-one validation
-uv sync && uv run ruff check . && uv run mypy . && uv run pytest -q
+uv sync && uv run black . && uv run ruff check . && uv run mypy src/agenticfleet && uv run pytest
 ```
 
 **Pre-commit hooks** (automated checks on git commit):
@@ -135,6 +236,71 @@ uv sync && uv run ruff check . && uv run mypy . && uv run pytest -q
 ```bash
 make pre-commit-install
 # or: uv run pre-commit install
+```
+
+## 💡 Usage Examples
+
+### Basic Import
+
+```python
+# Import package version
+from agenticfleet import __version__
+print(f"AgenticFleet v{__version__}")
+
+# Import workflow
+from agenticfleet.workflows import workflow
+
+# Run a task
+result = await workflow.run("Research Python best practices")
+```
+
+### Creating Individual Agents
+
+```python
+from agenticfleet.agents import (
+    create_orchestrator_agent,
+    create_researcher_agent,
+    create_coder_agent,
+    create_analyst_agent,
+)
+
+# Create agents
+orchestrator = create_orchestrator_agent()
+researcher = create_researcher_agent()
+coder = create_coder_agent()
+analyst = create_analyst_agent()
+
+# Use individual agent
+result = await researcher.run("Search for Python ML libraries")
+```
+
+### Using Configuration
+
+```python
+from agenticfleet.config import settings
+
+# Access settings
+api_key = settings.openai_api_key
+model = settings.openai_model
+
+# Load agent-specific config
+agent_cfg = settings.load_agent_config("orchestrator")
+print(agent_cfg["agent"]["name"])  # "orchestrator"
+```
+
+### Custom Workflow
+
+```python
+from agenticfleet.workflows import MultiAgentWorkflow
+
+# Create workflow instance
+workflow = MultiAgentWorkflow()
+
+# Run task with automatic agent coordination
+result = await workflow.run(
+    "Analyze sales data and create visualizations"
+)
+print(result)
 ```
 
 ## ⚙️ Configuration
@@ -164,14 +330,31 @@ LOG_LEVEL=INFO
 
 All documentation is located in the `docs/` folder:
 
-- **[Mem0 Integration](docs/MEM0_INTEGRATION.md)** - How `mem0` is integrated for persistent memory.
-- **[Progress Tracker](docs/ProgressTracker.md)** - Project status and milestones
+### Core Documentation
+
+- **[Quick Reference](docs/QUICK_REFERENCE.md)** - Getting started guide and common commands
+- **[Commands Reference](docs/COMMANDS.md)** - Complete command reference for all operations
+- **[Agent Guidelines](docs/AGENTS.md)** - Development rules and agent conventions
+- **[Implementation Summary](docs/IMPLEMENTATION_SUMMARY.md)** - Technical architecture details
+
+### Migration & Updates
+
+- **[Migration Complete](docs/MIGRATION_COMPLETE.md)** - Full src/ layout migration report
+- **[Migration Summary](docs/MIGRATION_SRC_LAYOUT.md)** - Quick migration overview
+- **[Temperature Fix](docs/TEMPERATURE_FIX.md)** - API compliance fixes
+- **[OpenAI API Migration](docs/MIGRATION_TO_RESPONSES_API.md)** - Responses API updates
+
+### Features & Integration
+
+- **[Mem0 Integration](docs/MEM0_INTEGRATION.md)** - Persistent memory with mem0
+- **[Progress Tracker](docs/ProgressTracker.md)** - Project milestones and status
+- **[Bug Fixes](docs/FIXES.md)** - Issue resolutions and patches
 - **[Phase 1 PRD](docs/af-phase-1.md)** - Original product requirements
-- **[Repository Guidelines](docs/AGENTS.md)** - Development rules and conventions
-- **[Quick Reference](docs/QUICK_REFERENCE.md)** - Getting started guide
-- **[Implementation Summary](docs/IMPLEMENTATION_SUMMARY.md)** - Technical details
-- **[Migration Guide](docs/MIGRATION_TO_RESPONSES_API.md)** - OpenAI API updates
-- **[Bug Fixes](docs/FIXES.md)** - Issue resolutions and fixes
+
+### Additional Resources
+
+- **[Cleanup Checklist](docs/CLEANUP_CHECKLIST.md)** - Post-migration validation
+- **[Test Summary](docs/TEST_SUMMARY.md)** - Test coverage and results
 
 ## 🛠️ Development Tools
 
@@ -191,10 +374,65 @@ The project includes automated CI/CD via GitHub Actions (`.github/workflows/ci.y
 - ✅ Lint with Ruff
 - ✅ Format check with Black
 - ✅ Type check with mypy
-- ✅ Configuration validation
-- ✅ Test suite execution
+- ✅ Configuration validation (6 tests)
+- ✅ Full test suite execution (28 tests)
 - ✅ Security scanning (optional)
 - ✅ Matrix testing (Python 3.12 & 3.13)
 - ✅ Automated dependency caching
+- ✅ Pre-commit.ci integration for automatic fixes
 
-Pre-commit.ci integration provides automatic fixes on pull requests.
+## 🚢 Installation (Future PyPI)
+
+Once published to PyPI, users can install AgenticFleet:
+
+```bash
+# Using pip
+pip install agentic-fleet
+
+# Using uv (recommended)
+uv pip install agentic-fleet
+```
+
+Then import and use:
+
+```python
+from agenticfleet import __version__, MultiAgentWorkflow
+
+print(f"AgenticFleet v{__version__}")
+
+workflow = MultiAgentWorkflow()
+result = await workflow.run("Your task here")
+```
+
+## 🤝 Contributing
+
+1. Fork the repository
+2. Create a feature branch (`git checkout -b feature/amazing-feature`)
+3. Make your changes following the coding standards
+4. Run tests: `uv run pytest`
+5. Run quality checks: `make check` or `uv run black . && uv run ruff check . && uv run mypy src/agenticfleet`
+6. Commit your changes (`git commit -m 'feat: add amazing feature'`)
+7. Push to the branch (`git push origin feature/amazing-feature`)
+8. Open a Pull Request
+
+## 📄 License
+
+This project is licensed under the MIT License - see the LICENSE file for details.
+
+## 🙏 Acknowledgments
+
+- **Microsoft Agent Framework** - Core agent orchestration framework
+- **OpenAI** - Language model APIs
+- **mem0** - Persistent memory management
+- **uv** - Fast Python package manager
+- **Ruff** - Lightning-fast linter and formatter
+
+## 📞 Support
+
+- **Issues**: [GitHub Issues](https://github.com/Qredence/AgenticFleet/issues)
+- **Documentation**: [docs/](docs/)
+- **Email**: contact@qredence.ai
+
+---
+
+**Built with ❤️ by Qredence**

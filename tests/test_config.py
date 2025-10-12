@@ -25,7 +25,7 @@ BOLD = "\033[1m"
 
 def test_environment():
     """Test environment variables and .env file."""
-    from config.settings import settings
+    from agenticfleet.config import settings
 
     # Check if .env file exists
     env_file = Path(".env")
@@ -37,7 +37,7 @@ def test_environment():
 
 def test_workflow_config():
     """Test workflow configuration file."""
-    from config.settings import settings
+    from agenticfleet.config import settings
 
     config = settings.workflow_config
 
@@ -54,12 +54,12 @@ def test_workflow_config():
 
 def test_agent_configs():
     """Test agent configuration files."""
-    agents = ["orchestrator_agent", "researcher_agent", "coder_agent", "analyst_agent"]
+    agents = ["orchestrator", "researcher", "coder", "analyst"]
 
-    from config.settings import settings
+    from agenticfleet.config import settings
 
     for agent_name in agents:
-        config = settings.load_agent_config(f"agents/{agent_name}")
+        config = settings.load_agent_config(agent_name)
 
         # Check if agent section exists
         assert "agent" in config, f"Missing 'agent' section for {agent_name}"
@@ -74,10 +74,10 @@ def test_agent_configs():
 def test_tool_imports():
     """Test that all tools can be imported."""
     tools = [
-        ("agents.researcher_agent.tools.web_search_tools", "web_search_tool"),
-        ("agents.coder_agent.tools.code_interpreter", "code_interpreter_tool"),
-        ("agents.analyst_agent.tools.data_analysis_tools", "data_analysis_tool"),
-        ("agents.analyst_agent.tools.data_analysis_tools", "visualization_suggestion_tool"),
+        ("agenticfleet.agents.researcher.tools.web_search_tools", "web_search_tool"),
+        ("agenticfleet.agents.coder.tools.code_interpreter", "code_interpreter_tool"),
+        ("agenticfleet.agents.analyst.tools.data_analysis_tools", "data_analysis_tool"),
+        ("agenticfleet.agents.analyst.tools.data_analysis_tools", "visualization_suggestion_tool"),
     ]
 
     for module_name, tool_name in tools:
@@ -89,10 +89,10 @@ def test_tool_imports():
 def test_agent_factories():
     """Test that all agent factory functions work."""
     factories = [
-        ("agents.orchestrator_agent.agent", "create_orchestrator_agent"),
-        ("agents.researcher_agent.agent", "create_researcher_agent"),
-        ("agents.coder_agent.agent", "create_coder_agent"),
-        ("agents.analyst_agent.agent", "create_analyst_agent"),
+        ("agenticfleet.agents.orchestrator.agent", "create_orchestrator_agent"),
+        ("agenticfleet.agents.researcher.agent", "create_researcher_agent"),
+        ("agenticfleet.agents.coder.agent", "create_coder_agent"),
+        ("agenticfleet.agents.analyst.agent", "create_analyst_agent"),
     ]
 
     for module_name, factory_name in factories:
@@ -106,7 +106,7 @@ def test_agent_factories():
 
 def test_workflow_import():
     """Test that workflow can be imported."""
-    from workflows.magentic_workflow import workflow
+    from agenticfleet.workflows import workflow
 
     assert workflow is not None, "workflow instance is None"
 

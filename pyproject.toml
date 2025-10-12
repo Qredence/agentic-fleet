@@ -1,8 +1,18 @@
 [project]
-name = "agenticfleet"
+name = "agentic-fleet"
 version = "0.5.0"
-description = "A multi-agent system built with Microsoft Agent Framework"
+description = "A multi-agent orchestration system built with Microsoft Agent Framework"
 authors = [{ name = "Qredence", email = "contact@qredence.ai" }]
+readme = "README.md"
+license = { text = "MIT" }
+keywords = ["agents", "ai", "microsoft-agent-framework", "multi-agent", "orchestration"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+]
 dependencies = [
     "azure-ai-agents>=1.2.0b5",
     "azure-identity>=1.25.1",
@@ -24,12 +34,21 @@ requires-python = ">=3.12"
 [project.optional-dependencies]
 azure = ["azure-ai-agents>=1.2.0b5"]
 
+[project.scripts]
+agentic-fleet = "agenticfleet.cli.repl:main"
+
+[project.urls]
+Homepage = "https://github.com/Qredence/AgenticFleet"
+Documentation = "https://github.com/Qredence/AgenticFleet/docs"
+Repository = "https://github.com/Qredence/AgenticFleet"
+Issues = "https://github.com/Qredence/AgenticFleet/issues"
+
 [build-system]
 requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [tool.hatch.build.targets.wheel]
-packages = ["config", "agents", "workflows", "tests"]
+packages = ["src/agenticfleet"]
 
 [tool.uv.sources]
 
@@ -52,6 +71,7 @@ target-version = ['py312']
 line-length = 100
 
 [tool.ruff]
+src = ["src"]
 target-version = "py312"
 line-length = 100
 
@@ -70,6 +90,7 @@ ignore = []
 
 [tool.mypy]
 python_version = "3.12"
+mypy_path = "src"
 strict = false
 warn_unused_configs = true
 warn_unreachable = true
