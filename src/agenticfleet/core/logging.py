@@ -43,9 +43,7 @@ def setup_logging(
         format_string: Optional custom format string
     """
     if format_string is None:
-        format_string = (
-            "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
-        )
+        format_string = "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
 
     handlers: list[logging.Handler] = [logging.StreamHandler(sys.stdout)]
 
@@ -75,17 +73,12 @@ def setup_logging(
             inside_logs = (
                 log_path.is_relative_to(logs_root)
                 if hasattr(log_path, "is_relative_to")
-                else os.path.commonpath(
-                    [str(log_path), str(logs_root)]
-                ) == str(logs_root)
+                else os.path.commonpath([str(log_path), str(logs_root)]) == str(logs_root)
             )
         except Exception:
             inside_logs = False
         if not inside_logs:
-            msg = (
-                f"Log file path '{log_path}' is not allowed: "
-                f"must be within '{logs_root}'"
-            )
+            msg = f"Log file path '{log_path}' is not allowed: " f"must be within '{logs_root}'"
             raise ValueError(msg)
         log_path.parent.mkdir(parents=True, exist_ok=True)
         handlers.append(logging.FileHandler(str(log_path)))
