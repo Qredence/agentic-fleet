@@ -8,7 +8,7 @@ Framework's built-in workflow orchestration patterns.
 Agents may be based on the Microsoft Agent Framework, but the orchestration is custom.
 """
 
-from typing import Any
+from typing import Any, ClassVar
 
 from agenticfleet.agents import (
     create_analyst_agent,
@@ -28,6 +28,9 @@ class MultiAgentWorkflow:
     agents (researcher, coder, analyst) based on the official Python Agent
     Framework pattern.
     """
+
+    DELEGATE_PREFIX: ClassVar[str] = "DELEGATE:"
+    FINAL_ANSWER_PREFIX: ClassVar[str] = "FINAL_ANSWER:"
 
     def __init__(self) -> None:
         """Initialize workflow with all agent participants."""
@@ -91,7 +94,7 @@ class MultiAgentWorkflow:
                     "3. Synthesize results if subtasks complete"
                 )
 
-                response_text = result.content if hasattr(result, "content") else str(result)
+                response_text = self._extract_response_text(result)
 
                 # Check for stalling (identical responses)
                 if response_text == self.last_response:
@@ -107,14 +110,17 @@ class MultiAgentWorkflow:
                 self.last_response = response_text
 
                 # Check if orchestrator delegated to another agent
-                if "DELEGATE:" in response_text:
+                if self.DELEGATE_PREFIX in response_text:
                     # Parse delegation instruction
                     agent_response = await self._handle_delegation(response_text, context)
                     context["last_delegation_result"] = agent_response
                     continue
 
                 # Check if orchestrator provided final answer
-                if "FINAL_ANSWER:" in response_text or self.current_round == self.max_rounds:
+                if (
+                    self.FINAL_ANSWER_PREFIX in response_text
+                    or self.current_round == self.max_rounds
+                ):
                     return response_text
 
             except Exception as e:
@@ -135,13 +141,15 @@ class MultiAgentWorkflow:
         """
         # Parse delegation (format: "DELEGATE: <agent_name> - <task>")
         delegation_lines = [
-            line for line in orchestrator_response.split("\n") if line.startswith("DELEGATE:")
+            line
+            for line in orchestrator_response.split("\n")
+            if line.startswith(self.DELEGATE_PREFIX)
         ]
         if not delegation_lines:
             return "Error: Could not parse delegation instruction"
 
         delegation_line = delegation_lines[0]
-        parts = delegation_line.replace("DELEGATE:", "").strip().split(" - ", 1)
+        parts = delegation_line.replace(self.DELEGATE_PREFIX, "", 1).strip().split(" - ", 1)
         agent_name = parts[0].strip().lower() if parts else ""
         task = parts[1].strip() if len(parts) > 1 else context.get("user_query", "")
 
@@ -154,9 +162,23 @@ class MultiAgentWorkflow:
         agent = agent_map[agent_name]
         try:
             result = await agent.run(task)
-            return getattr(result, "content", str(result))
+            return self._extract_response_text(result)
         except Exception as e:
             return f"Error: Agent '{agent_name}' failed to execute task: {str(e)}"
+
+    @staticmethod
+    def _extract_response_text(result: Any) -> str:
+        """Normalize agent responses to text across varying response types."""
+        for attr in ("content", "output_text", "text", "response"):
+            value: Any = getattr(result, attr, None)
+            if value is None:
+                continue
+            if callable(value):
+                value = value()
+            if isinstance(value, str):
+                return value
+        return str(result)
+
 
 # Create default workflow instance
 workflow = MultiAgentWorkflow()

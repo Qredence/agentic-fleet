@@ -165,7 +165,7 @@ source .venv/bin/activate  # macOS/Linux
 .venv\Scripts\activate     # Windows
 ```
 
-**Using pip (not recommended):**
+#### Using pip (not recommended)
 
 See `docs/COMMANDS.md` for pip-based installation.
 
@@ -178,19 +178,19 @@ uv run pytest tests/test_config.py -v
 
 ### 5. Run the Application
 
-**Method 1: Console script (easiest)**
+#### Method 1: Console script (easiest)
 
 ```bash
 uv run agentic-fleet
 ```
 
-**Method 2: Module execution**
+#### Method 2: Module execution
 
 ```bash
 uv run python -m agenticfleet
 ```
 
-**Method 3: Direct REPL file (legacy)**
+#### Method 3: Direct REPL file (legacy)
 
 ```bash
 uv run python src/agenticfleet/cli/repl.py
@@ -198,7 +198,7 @@ uv run python src/agenticfleet/cli/repl.py
 
 ### 5. Developer Workflow
 
-**Using Makefile (recommended):**
+#### Using Makefile (recommended)
 
 ```bash
 make help          # Show all available commands
@@ -435,4 +435,4 @@ This project is licensed under the MIT License - see the LICENSE file for detail
 
 ---
 
-**Built with ❤️ by Qredence**
+### Built with ❤️ by Qredence

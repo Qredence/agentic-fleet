@@ -113,7 +113,7 @@ Go to **Settings → General**:
 
 Go to **Settings → Branches → Add rule** for `main` and `0.5.0a`:
 
-```
+```text
 Branch name pattern: main (or 0.5.0a)
 ☑ Require pull request before merging
   ☑ Require approvals: 1
@@ -132,7 +132,7 @@ Go to **Settings → Secrets and variables → Actions**:
 
 #### Required for Testing (Optional for Public Repos)
 
-```
+```text
 OPENAI_API_KEY
 AZURE_AI_PROJECT_ENDPOINT
 AZURE_AI_SEARCH_ENDPOINT
