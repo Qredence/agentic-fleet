@@ -1,8 +1,18 @@
 [project]
-name = "agenticfleet"
+name = "agentic-fleet"
 version = "0.5.0"
-description = "A multi-agent system built with Microsoft Agent Framework"
+description = "A multi-agent orchestration system built with Microsoft Agent Framework"
 authors = [{ name = "Qredence", email = "contact@qredence.ai" }]
+readme = "README.md"
+license = { text = "MIT" }
+keywords = ["agents", "ai", "microsoft-agent-framework", "multi-agent", "orchestration"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+]
 dependencies = [
     "azure-ai-agents>=1.2.0b5",
     "azure-identity>=1.25.1",
@@ -22,6 +32,28 @@ dependencies = [
 requires-python = ">=3.12"
 
 [project.optional-dependencies]
+azure = ["azure-ai-agents>=1.2.0b5"]
+
+[project.scripts]
+agentic-fleet = "agenticfleet.cli.repl:main"
+
+[project.urls]
+Homepage = "https://github.com/Qredence/AgenticFleet"
+Documentation = "https://github.com/Qredence/AgenticFleet/docs"
+Repository = "https://github.com/Qredence/AgenticFleet"
+Issues = "https://github.com/Qredence/AgenticFleet/issues"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/agenticfleet"]
+
+[tool.uv.sources]
+
+# Development dependencies (uv's preferred format)
+[dependency-groups]
 dev = [
     "pytest>=8.4.2",
     "pytest-asyncio>=1.2.0",
@@ -29,24 +61,9 @@ dev = [
     "ruff>=0.14.0",
     "mypy>=1.18.2",
     "debugpy>=1.8.17",
-]
-azure = ["azure-ai-agents>=1.2.0b5"]
-
-[build-system]
-requires = ["hatchling"]
-build-backend = "hatchling.build"
-
-[tool.hatch.build.targets.wheel]
-packages = ["config", "agents", "workflows", "tests"]
-
-[tool.uv.sources]
-
-[dependency-groups]
-dev = [
-    "pytest>=8.4.2",
-    "pytest-asyncio>=1.2.0",
-    "black>=25.9.0",
-    "ruff>=0.14.0",
+    "pre-commit>=3.5.0",
+    "types-PyYAML>=6.0.0",
+    "types-requests>=2.31.0",
 ]
 
 [tool.black]
@@ -54,16 +71,35 @@ target-version = ['py312']
 line-length = 100
 
 [tool.ruff]
+src = ["src"]
 target-version = "py312"
 line-length = 100
+
+[tool.ruff.lint]
 select = [
-    "E",
-    "F",
-    "W",  # basic codes
-    "I",  # import sorting
-    "UP", # pyupgrade
+    "E",   # pycodestyle errors
+    "F",   # pyflakes
+    "W",   # pycodestyle warnings
+    "I",   # isort (import sorting)
+    "UP",  # pyupgrade
 ]
 ignore = []
 
-[tool.ruff.per-file-ignores]
+[tool.ruff.lint.per-file-ignores]
 "__init__.py" = ["F401"]
+
+[tool.mypy]
+python_version = "3.12"
+mypy_path = "src"
+strict = false
+warn_unused_configs = true
+warn_unreachable = true
+disallow_untyped_defs = true
+disallow_incomplete_defs = true
+no_implicit_optional = true
+show_error_codes = true
+pretty = true
+exclude = [
+    "tests/.*",  # tests can be looser
+]
+

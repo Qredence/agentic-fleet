@@ -1,0 +1,83 @@
+name: CI
+
+on:
+  push:
+    branches: [main, 0.5.0a]
+  pull_request:
+    branches: [main, 0.5.0a]
+
+jobs:
+  lint-and-test:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ["3.12", "3.13"]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v3
+        with:
+          enable-cache: true
+          cache-dependency-glob: "uv.lock"
+
+      - name: Set up Python ${{ matrix.python-version }}
+        run: uv python install ${{ matrix.python-version }}
+
+      - name: Install dependencies
+        run: uv sync --all-extras --dev
+
+      - name: Run Ruff linter
+        run: uv run ruff check .
+
+      - name: Run Black formatter check
+        run: uv run black --check .
+
+      - name: Run mypy type checker
+        run: uv run mypy .
+        continue-on-error: true  # Don't fail CI on type errors yet
+
+      - name: Run configuration tests
+        run: uv run python tests/test_config.py
+        env:
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          AZURE_AI_PROJECT_ENDPOINT: ${{ secrets.AZURE_AI_PROJECT_ENDPOINT }}
+          AZURE_AI_SEARCH_ENDPOINT: ${{ secrets.AZURE_AI_SEARCH_ENDPOINT }}
+          AZURE_AI_SEARCH_KEY: ${{ secrets.AZURE_AI_SEARCH_KEY }}
+          AZURE_OPENAI_CHAT_COMPLETION_DEPLOYED_MODEL_NAME: ${{ secrets.AZURE_OPENAI_CHAT_COMPLETION_DEPLOYED_MODEL_NAME }}
+          AZURE_OPENAI_EMBEDDING_DEPLOYED_MODEL_NAME: ${{ secrets.AZURE_OPENAI_EMBEDDING_DEPLOYED_MODEL_NAME }}
+
+      - name: Run pytest
+        run: uv run pytest -v --tb=short
+        continue-on-error: true  # Don't fail CI if tests are incomplete
+        env:
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          AZURE_AI_PROJECT_ENDPOINT: ${{ secrets.AZURE_AI_PROJECT_ENDPOINT }}
+          AZURE_AI_SEARCH_ENDPOINT: ${{ secrets.AZURE_AI_SEARCH_ENDPOINT }}
+          AZURE_AI_SEARCH_KEY: ${{ secrets.AZURE_AI_SEARCH_KEY }}
+          AZURE_OPENAI_CHAT_COMPLETION_DEPLOYED_MODEL_NAME: ${{ secrets.AZURE_OPENAI_CHAT_COMPLETION_DEPLOYED_MODEL_NAME }}
+          AZURE_OPENAI_EMBEDDING_DEPLOYED_MODEL_NAME: ${{ secrets.AZURE_OPENAI_EMBEDDING_DEPLOYED_MODEL_NAME }}
+
+  security-scan:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v3
+
+      - name: Set up Python
+        run: uv python install 3.12
+
+      - name: Install dependencies
+        run: uv sync --all-extras --dev
+
+      - name: Run safety check (if available)
+        run: |
+          if uv pip list | grep -q safety; then
+            uv run safety check
+          else
+            echo "Safety not installed, skipping security scan"
+          fi
+        continue-on-error: true

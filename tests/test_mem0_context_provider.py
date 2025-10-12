@@ -4,7 +4,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from context_provider.mem0_context_provider import Mem0ContextProvider
+from agenticfleet.context.mem0_provider import Mem0ContextProvider
 
 
 @pytest.fixture
@@ -21,7 +21,7 @@ def mock_env_vars(monkeypatch):
 @pytest.fixture
 def mock_memory():
     """Create a mock Memory object."""
-    with patch("context_provider.mem0_context_provider.Memory") as mock_mem:
+    with patch("agenticfleet.context.mem0_provider.Memory") as mock_mem:
         mock_instance = MagicMock()
         mock_mem.from_config.return_value = mock_instance
         yield mock_instance
@@ -30,7 +30,7 @@ def mock_memory():
 @pytest.fixture
 def mock_azure_client():
     """Create a mock AzureOpenAI client."""
-    with patch("context_provider.mem0_context_provider.AzureOpenAI") as mock_azure:
+    with patch("agenticfleet.context.mem0_provider.AzureOpenAI") as mock_azure:
         yield mock_azure
 
 
@@ -55,7 +55,7 @@ class TestMem0ContextProviderInitialization:
     def test_init_missing_azure_project_endpoint(self, mock_memory, mock_azure_client):
         """Test initialization fails when AZURE_AI_PROJECT_ENDPOINT is missing."""
         # Mock settings with None for project endpoint
-        with patch("context_provider.mem0_context_provider.settings") as mock_settings:
+        with patch("agenticfleet.context.mem0_provider.settings") as mock_settings:
             mock_settings.azure_ai_project_endpoint = None
             mock_settings.azure_ai_search_endpoint = "https://test.search.windows.net"
             mock_settings.azure_ai_search_key = "test-key"
@@ -67,7 +67,7 @@ class TestMem0ContextProviderInitialization:
     def test_init_missing_azure_search_endpoint(self, mock_memory, mock_azure_client):
         """Test initialization fails when AZURE_AI_SEARCH_ENDPOINT is missing."""
         # Mock settings with None for search endpoint
-        with patch("context_provider.mem0_context_provider.settings") as mock_settings:
+        with patch("agenticfleet.context.mem0_provider.settings") as mock_settings:
             mock_settings.azure_ai_project_endpoint = "https://test.openai.azure.com"
             mock_settings.azure_ai_search_endpoint = None
             mock_settings.azure_ai_search_key = "test-key"
@@ -78,8 +78,8 @@ class TestMem0ContextProviderInitialization:
 
     def test_service_name_extraction_from_url(self, mock_env_vars, mock_azure_client):
         """Test that service name is correctly extracted from full URL."""
-        with patch("context_provider.mem0_context_provider.Memory") as patched_memory:
-            with patch("context_provider.mem0_context_provider.settings") as mock_settings:
+        with patch("agenticfleet.context.mem0_provider.Memory") as patched_memory:
+            with patch("agenticfleet.context.mem0_provider.settings") as mock_settings:
                 mock_settings.azure_ai_project_endpoint = "https://test-project.openai.azure.com"
                 mock_settings.azure_ai_search_endpoint = "https://test-service.search.windows.net"
                 mock_settings.azure_ai_search_key = "test-search-key"
@@ -99,7 +99,7 @@ class TestMem0ContextProviderInitialization:
     def test_service_name_without_https(self, mock_azure_client):
         """Test that service name is used as-is when not a full URL."""
         # Mock settings with non-URL service name
-        with patch("context_provider.mem0_context_provider.settings") as mock_settings:
+        with patch("agenticfleet.context.mem0_provider.settings") as mock_settings:
             mock_settings.azure_ai_project_endpoint = "https://test.openai.azure.com"
             mock_settings.azure_ai_search_endpoint = "my-service-name"
             mock_settings.azure_ai_search_key = "test-key"
@@ -107,7 +107,7 @@ class TestMem0ContextProviderInitialization:
             mock_settings.azure_openai_chat_completion_deployed_model_name = "gpt-4o"
             mock_settings.azure_openai_embedding_deployed_model_name = "text-embedding"
 
-            with patch("context_provider.mem0_context_provider.Memory") as patched_memory:
+            with patch("agenticfleet.context.mem0_provider.Memory") as patched_memory:
                 patched_memory.from_config.return_value = MagicMock()
 
                 _ = Mem0ContextProvider()
@@ -277,8 +277,8 @@ class TestMem0ContextProviderConfiguration:
 
     def test_memory_config_structure(self, mock_env_vars, mock_azure_client):
         """Test that Memory.from_config is called with correct structure."""
-        with patch("context_provider.mem0_context_provider.Memory") as patched_memory:
-            with patch("context_provider.mem0_context_provider.settings") as mock_settings:
+        with patch("agenticfleet.context.mem0_provider.Memory") as patched_memory:
+            with patch("agenticfleet.context.mem0_provider.settings") as mock_settings:
                 mock_settings.azure_ai_project_endpoint = "https://test-project.openai.azure.com"
                 mock_settings.azure_ai_search_endpoint = "https://test-service.search.windows.net"
                 mock_settings.azure_ai_search_key = "test-search-key"
@@ -321,8 +321,8 @@ class TestMem0ContextProviderConfiguration:
 
     def test_azure_client_initialization(self, mock_env_vars, mock_azure_client):
         """Test that AzureOpenAI client is initialized correctly."""
-        with patch("context_provider.mem0_context_provider.Memory") as patched_memory:
-            with patch("context_provider.mem0_context_provider.settings") as mock_settings:
+        with patch("agenticfleet.context.mem0_provider.Memory") as patched_memory:
+            with patch("agenticfleet.context.mem0_provider.settings") as mock_settings:
                 mock_settings.azure_ai_project_endpoint = "https://test-project.openai.azure.com"
                 mock_settings.azure_ai_search_endpoint = "https://test-service.search.windows.net"
                 mock_settings.azure_ai_search_key = "test-search-key"
