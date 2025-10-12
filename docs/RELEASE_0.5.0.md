@@ -1,0 +1,191 @@
+# AgenticFleet v0.5.0 Release Summary
+
+**Release Date**: October 12, 2025
+
+## 🎉 Release Status: SUCCESS
+
+### Published Locations
+
+| Platform | Status | URL |
+|----------|--------|-----|
+| **PyPI** | ✅ Published | <https://pypi.org/project/agentic-fleet/0.5.0/> |
+| **GitHub Release** | ✅ Published | <https://github.com/Qredence/AgenticFleet/releases/tag/v0.5.0> |
+| **Source Code** | ✅ Tagged | <https://github.com/Qredence/AgenticFleet/tree/v0.5.0> |
+
+### Release Artifacts
+
+- **Wheel**: `agentic_fleet-0.5.0-py3-none-any.whl` (33 KB)
+- **Source Distribution**: `agentic_fleet-0.5.0.tar.gz` (262 KB)
+
+## 📦 Installation
+
+### From PyPI
+
+```bash
+# Install latest version
+pip install agentic-fleet
+
+# Install specific version
+pip install agentic-fleet==0.5.0
+
+# Using uv (recommended)
+uv pip install agentic-fleet
+```
+
+### Verify Installation
+
+```bash
+# Check installed version
+pip show agentic-fleet
+
+# Test CLI
+agentic-fleet --help
+```
+
+## ✨ Key Features (v0.5.0)
+
+### Multi-Agent Orchestration
+
+- **Microsoft Agent Framework Integration**: Official Python SDK implementation
+- **Sequential Coordination Pattern**: Orchestrator delegates to specialist agents
+- **ChatAgent Architecture**: Each agent is a `ChatAgent` instance with dedicated tools
+
+### Specialized Agents
+
+| Agent | Model | Temperature | Tools | Purpose |
+|-------|-------|-------------|-------|---------|
+| **Orchestrator** | gpt-4o | 0.1 | None | Task planning, delegation, synthesis |
+| **Researcher** | gpt-4o | 0.3 | web_search_tool | Information gathering, research |
+| **Coder** | gpt-4o | 0.2 | code_interpreter_tool | Code writing, execution |
+| **Analyst** | gpt-4o | 0.2 | data_analysis_tool, visualization_suggestion_tool | Data analysis, insights |
+
+### Advanced Features
+
+- **Pydantic-Modeled Responses**: Type-safe tool responses with validation
+- **Mem0 Context Provider**: Persistent memory across conversations
+- **Azure AI Search Integration**: Vector store for semantic memory
+- **REPL Interface**: Interactive command-line interface (`agentic-fleet` command)
+- **Comprehensive Configuration**: YAML-based agent and workflow configuration
+
+### Development & Quality
+
+- **Source Layout**: Modern `src/` layout following PyPA standards
+- **Build System**: UV package manager with Hatchling backend
+- **CI/CD Pipeline**: Multi-platform GitHub Actions (Ubuntu, macOS, Windows)
+- **Testing**: Pytest test suite with 28 tests, all passing
+- **Code Quality**: Black formatting, Ruff linting, MyPy type checking
+- **Documentation**: Comprehensive guides and API documentation
+
+## 🔧 Release Process Issues & Resolutions
+
+### Issue 1: GitHub Environment Protection
+
+**Problem**: Tag-based deployments blocked by environment protection rules
+
+**Solution**: Configured `pypi` environment to allow tag deployments with pattern `v*`
+
+### Issue 2: PyPI Trusted Publishing Configuration
+
+**Problem**: Environment claim missing in trusted publishing token
+
+**Solution**:
+
+1. Restored `environment: pypi` section in workflow
+2. Configured PyPI trusted publisher with matching environment name
+3. Ensured GitHub environment allows tag-based deployments
+
+### Workflow Runs
+
+- **Failed Attempts**: 2 (environment configuration issues)
+- **Successful Run**: [#18447555893](https://github.com/Qredence/AgenticFleet/actions/runs/18447555893)
+- **Total Time**: ~5 minutes for successful release
+
+## 📊 Repository Statistics (at release)
+
+- **Stars**: Check current count on GitHub
+- **Forks**: 9
+- **CI Status**: All green (7/7 jobs passed)
+- **Test Coverage**: All 28 tests passing
+- **Python Support**: 3.12+
+- **Package Size**: 33 KB (wheel), 262 KB (source)
+
+## 🔄 Migration Notes
+
+### Breaking Changes
+
+None. This is a major feature release with full backward compatibility for v0.4.x users.
+
+### Upgrading from v0.4.x
+
+```bash
+# Upgrade via pip
+pip install --upgrade agentic-fleet
+
+# Upgrade via uv
+uv pip install --upgrade agentic-fleet
+```
+
+### Configuration Changes
+
+- Agent configurations moved to individual `config.yaml` files
+- Workflow configuration in `config/workflow.yaml`
+- Environment variables required for Azure AI features (see `.env.example`)
+
+## 🎯 Next Steps
+
+### For Users
+
+1. Install from PyPI: `pip install agentic-fleet`
+2. Set up environment variables (copy `.env.example` to `.env`)
+3. Run the REPL: `agentic-fleet`
+4. Check documentation: <https://github.com/Qredence/AgenticFleet/tree/v0.5.0/docs>
+
+### For Contributors
+
+1. Clone repository: `git clone https://github.com/Qredence/AgenticFleet.git`
+2. Install with uv: `uv sync --all-extras`
+3. Run tests: `uv run pytest`
+4. Check contribution guidelines: `CONTRIBUTING.md`
+
+## 📚 Documentation
+
+- **Quick Start**: [README.md](../README.md)
+- **Agent Development**: [AGENTS.md](AGENTS.md)
+- **Configuration Guide**: [QUICK_REFERENCE.md](QUICK_REFERENCE.md)
+- **API Reference**: [Implementation Summary](IMPLEMENTATION_SUMMARY.md)
+- **Memory Integration**: [MEM0_INTEGRATION.md](MEM0_INTEGRATION.md)
+
+## 🙏 Acknowledgments
+
+- Microsoft Agent Framework team for the official Python SDK
+- Contributors and community members
+- All testers and early adopters
+
+## 📝 Release Checklist
+
+- [x] Version bumped to 0.5.0 in pyproject.toml
+- [x] All tests passing (28/28)
+- [x] CI/CD pipeline green (7/7 jobs)
+- [x] Documentation updated
+- [x] Distribution packages built
+- [x] GitHub environment configured
+- [x] PyPI trusted publishing configured
+- [x] Tag created and pushed (v0.5.0)
+- [x] Published to PyPI
+- [x] GitHub release created with artifacts
+- [x] Release notes generated
+
+## 🔗 Links
+
+- **PyPI**: <https://pypi.org/project/agentic-fleet/0.5.0/>
+- **GitHub Release**: <https://github.com/Qredence/AgenticFleet/releases/tag/v0.5.0>
+- **Documentation**: <https://github.com/Qredence/AgenticFleet/tree/v0.5.0/docs>
+- **Issues**: <https://github.com/Qredence/AgenticFleet/issues>
+- **Discussions**: <https://github.com/Qredence/AgenticFleet/discussions>
+
+---
+
+**Version**: 0.5.0
+**Released**: October 12, 2025
+**License**: MIT
+**Status**: ✅ Production Ready
