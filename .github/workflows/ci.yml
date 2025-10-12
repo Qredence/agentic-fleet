@@ -92,6 +92,7 @@ jobs:
         run: uv sync --all-extras
 
       - name: Run configuration tests
+        if: ${{ github.event_name != 'pull_request' || github.event.pull_request.head.repo.fork == false }}
         run: uv run python tests/test_config.py
         env:
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
@@ -102,6 +103,7 @@ jobs:
           AZURE_OPENAI_EMBEDDING_DEPLOYED_MODEL_NAME: ${{ secrets.AZURE_OPENAI_EMBEDDING_DEPLOYED_MODEL_NAME }}
 
       - name: Run pytest with coverage
+        if: ${{ github.event_name != 'pull_request' || github.event.pull_request.head.repo.fork == false }}
         run: uv run pytest -v --tb=short --cov=src/agenticfleet --cov-report=xml --cov-report=term-missing
         env:
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
