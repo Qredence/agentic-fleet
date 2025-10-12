@@ -37,7 +37,11 @@ def setup_logging(
         log_path = (logs_root / safe_filename).resolve()
         # Final containment check
         try:
-            inside_logs = log_path.is_relative_to(logs_root) if hasattr(log_path, "is_relative_to") else str(log_path).startswith(str(logs_root))
+            inside_logs = (
+                log_path.is_relative_to(logs_root)
+                if hasattr(log_path, "is_relative_to")
+                else os.path.commonpath([str(log_path), str(logs_root)]) == str(logs_root)
+            )
         except Exception:
             inside_logs = False
         if not inside_logs:
