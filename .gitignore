@@ -32,6 +32,7 @@ env/
 *.swp
 *.swo
 *~
+logs
 
 # Environment variables
 .env

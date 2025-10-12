@@ -92,24 +92,12 @@ jobs:
         run: uv sync --all-extras
 
       - name: Run configuration tests
-        run: uv run python tests/test_config.py
-        env:
-          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
-          AZURE_AI_PROJECT_ENDPOINT: ${{ secrets.AZURE_AI_PROJECT_ENDPOINT }}
-          AZURE_AI_SEARCH_ENDPOINT: ${{ secrets.AZURE_AI_SEARCH_ENDPOINT }}
-          AZURE_AI_SEARCH_KEY: ${{ secrets.AZURE_AI_SEARCH_KEY }}
-          AZURE_OPENAI_CHAT_COMPLETION_DEPLOYED_MODEL_NAME: ${{ secrets.AZURE_OPENAI_CHAT_COMPLETION_DEPLOYED_MODEL_NAME }}
-          AZURE_OPENAI_EMBEDDING_DEPLOYED_MODEL_NAME: ${{ secrets.AZURE_OPENAI_EMBEDDING_DEPLOYED_MODEL_NAME }}
+        if: ${{ github.event_name != 'pull_request' || github.event.pull_request.head.repo.fork == false }}
+        run: OPENAI_API_KEY=${{ secrets.OPENAI_API_KEY }} AZURE_AI_PROJECT_ENDPOINT=${{ secrets.AZURE_AI_PROJECT_ENDPOINT }} AZURE_AI_SEARCH_ENDPOINT=${{ secrets.AZURE_AI_SEARCH_ENDPOINT }} AZURE_AI_SEARCH_KEY=${{ secrets.AZURE_AI_SEARCH_KEY }} AZURE_OPENAI_CHAT_COMPLETION_DEPLOYED_MODEL_NAME=${{ secrets.AZURE_OPENAI_CHAT_COMPLETION_DEPLOYED_MODEL_NAME }} AZURE_OPENAI_EMBEDDING_DEPLOYED_MODEL_NAME=${{ secrets.AZURE_OPENAI_EMBEDDING_DEPLOYED_MODEL_NAME }} uv run python tests/test_config.py
 
       - name: Run pytest with coverage
-        run: uv run pytest -v --tb=short --cov=src/agenticfleet --cov-report=xml --cov-report=term-missing
-        env:
-          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
-          AZURE_AI_PROJECT_ENDPOINT: ${{ secrets.AZURE_AI_PROJECT_ENDPOINT }}
-          AZURE_AI_SEARCH_ENDPOINT: ${{ secrets.AZURE_AI_SEARCH_ENDPOINT }}
-          AZURE_AI_SEARCH_KEY: ${{ secrets.AZURE_AI_SEARCH_KEY }}
-          AZURE_OPENAI_CHAT_COMPLETION_DEPLOYED_MODEL_NAME: ${{ secrets.AZURE_OPENAI_CHAT_COMPLETION_DEPLOYED_MODEL_NAME }}
-          AZURE_OPENAI_EMBEDDING_DEPLOYED_MODEL_NAME: ${{ secrets.AZURE_OPENAI_EMBEDDING_DEPLOYED_MODEL_NAME }}
+        if: ${{ github.event_name != 'pull_request' || github.event.pull_request.head.repo.fork == false }}
+        run: OPENAI_API_KEY=${{ secrets.OPENAI_API_KEY }} AZURE_AI_PROJECT_ENDPOINT=${{ secrets.AZURE_AI_PROJECT_ENDPOINT }} AZURE_AI_SEARCH_ENDPOINT=${{ secrets.AZURE_AI_SEARCH_ENDPOINT }} AZURE_AI_SEARCH_KEY=${{ secrets.AZURE_AI_SEARCH_KEY }} AZURE_OPENAI_CHAT_COMPLETION_DEPLOYED_MODEL_NAME=${{ secrets.AZURE_OPENAI_CHAT_COMPLETION_DEPLOYED_MODEL_NAME }} AZURE_OPENAI_EMBEDDING_DEPLOYED_MODEL_NAME=${{ secrets.AZURE_OPENAI_EMBEDDING_DEPLOYED_MODEL_NAME }} uv run pytest -v --tb=short --cov=src/agenticfleet --cov-report=xml --cov-report=term-missing
 
   build:
     name: Build Package
