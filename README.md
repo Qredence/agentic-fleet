@@ -5,6 +5,7 @@
 [![CodeQL](https://github.com/Qredence/AgenticFleet/workflows/CodeQL%20Security%20Analysis/badge.svg)](https://github.com/Qredence/AgenticFleet/actions/workflows/codeql.yml)
 [![Python 3.12+](https://img.shields.io/badge/python-3.12+-blue.svg)](https://www.python.org/downloads/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![PyPI Downloads](https://static.pepy.tech/personalized-badge/agentic-fleet?period=total&units=INTERNATIONAL_SYSTEM&left_color=BLACK&right_color=MAGENTA&left_text=downloads)](https://pepy.tech/projects/agentic-fleet)
 
 **Version:** 0.5.0
 **Package:** `agentic-fleet` (PyPI) | `agenticfleet` (import)
@@ -173,7 +174,7 @@ source .venv/bin/activate  # macOS/Linux
 
 #### Using pip (not recommended)
 
-See `docs/COMMANDS.md` for pip-based installation.
+See `docs/getting-started/command-reference.md` for pip-based installation.
 
 ### 4. Validate Configuration
 
@@ -334,33 +335,29 @@ LOG_LEVEL=INFO
 
 ## 📖 Documentation
 
-All documentation is located in the `docs/` folder:
+All documentation lives in `docs/` and is organised by topic:
 
-### Core Documentation
-
-- **[Quick Reference](docs/QUICK_REFERENCE.md)** - Getting started guide and common commands
-- **[Commands Reference](docs/COMMANDS.md)** - Complete command reference for all operations
-- **[Agent Guidelines](docs/AGENTS.md)** - Development rules and agent conventions
-- **[Implementation Summary](docs/IMPLEMENTATION_SUMMARY.md)** - Technical architecture details
-
-### Migration & Updates
-
-- **[Migration Complete](docs/MIGRATION_COMPLETE.md)** - Full src/ layout migration report
-- **[Migration Summary](docs/MIGRATION_SRC_LAYOUT.md)** - Quick migration overview
-- **[Temperature Fix](docs/TEMPERATURE_FIX.md)** - API compliance fixes
-- **[OpenAI API Migration](docs/MIGRATION_TO_RESPONSES_API.md)** - Responses API updates
-
-### Features & Integration
-
-- **[Mem0 Integration](docs/MEM0_INTEGRATION.md)** - Persistent memory with mem0
-- **[Progress Tracker](docs/ProgressTracker.md)** - Project milestones and status
-- **[Bug Fixes](docs/FIXES.md)** - Issue resolutions and patches
-- **[Phase 1 PRD](docs/af-phase-1.md)** - Original product requirements
-
-### Additional Resources
-
-- **[Cleanup Checklist](docs/CLEANUP_CHECKLIST.md)** - Post-migration validation
-- **[Test Summary](docs/TEST_SUMMARY.md)** - Test coverage and results
+- `getting-started/`
+  - [quick-reference](docs/getting-started/quick-reference.md) – one-page onboarding.
+  - [command-reference](docs/getting-started/command-reference.md) – uv + Makefile cheat sheet.
+- `overview/`
+  - [implementation-summary](docs/overview/implementation-summary.md) – architecture deep dive.
+  - [progress-tracker](docs/overview/progress-tracker.md) – milestone and roadmap log.
+- `operations/`
+  - [repository-guidelines](docs/operations/repository-guidelines.md) – coding standards.
+  - [developer-environment](docs/operations/developer-environment.md) – uv workflows, VS Code tasks, CI gates.
+  - [github-actions-setup](docs/operations/github-actions-setup.md) & [workflows-overview](docs/operations/github-workflows-overview.md) – automation reference.
+  - [mem0-integration](docs/operations/mem0-integration.md) – persistent memory configuration.
+  - [pypi-environment-setup](docs/operations/pypi-environment-setup.md) – trusted publishing checklist.
+- `migrations/`
+  - [responses-api-migration](docs/migrations/responses-api-migration.md).
+  - [src-layout-migration](docs/migrations/src-layout-migration.md).
+- `runbooks/`
+  - [troubleshooting](docs/runbooks/troubleshooting.md) – recurring fixes (tag rules, ChatAgent params, mem0 tests).
+- `releases/`
+  - [2025-10-12-v0.5.0](docs/releases/2025-10-12-v0.5.0.md).
+- `archive/`
+  - Historical clean-up checklists and `.github` remediation summaries retained for audit.
 
 ## 🛠️ Development Tools
 

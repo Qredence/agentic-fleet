@@ -94,13 +94,13 @@
 ### ✅ 7. Documentation
 
 - [x] README.md - Project overview
-- [x] AGENTS.md - Repository guidelines
-- [x] QUICK_REFERENCE.md - Quick start guide
-- [x] IMPLEMENTATION_SUMMARY.md - Technical details
-- [x] FIXES.md - Bug fixes documentation
-- [x] MIGRATION_TO_RESPONSES_API.md - API migration guide
-- [x] af-phase-1.md - Original PRD
-- [x] ProgressTracker.md - This file
+- [x] docs/operations/repository-guidelines.md - Repository guidelines
+- [x] docs/getting-started/quick-reference.md - Quick start guide
+- [x] docs/overview/implementation-summary.md - Technical details
+- [x] docs/runbooks/troubleshooting.md - Bug fix runbooks
+- [x] docs/migrations/responses-api-migration.md - API migration guide
+- [x] docs/archive/cleanup-checklist.md - Legacy PRD
+- [x] docs/overview/progress-tracker.md - This file
 
 ### ✅ 8. Bug Fixes & Optimizations
 
@@ -141,47 +141,18 @@
 
 ```
 AgenticFleet/
-├── agents/
-│   ├── orchestrator_agent/
-│   │   ├── agent.py (factory)
-│   │   ├── agent_config.yaml
-│   │   └── tools/
-│   ├── researcher_agent/
-│   │   ├── agent.py (factory)
-│   │   ├── agent_config.yaml
-│   │   └── tools/
-│   │       └── web_search_tools.py
-│   ├── coder_agent/
-│   │   ├── agent.py (factory)
-│   │   ├── agent_config.yaml
-│   │   └── tools/
-│   │       └── code_interpreter.py
-│   └── analyst_agent/
-│       ├── agent.py (factory)
-│       ├── agent_config.yaml
-│       └── tools/
-│           └── data_analysis_tools.py
-├── config/
-│   ├── settings.py
-│   └── workflow_config.yaml
-├── workflows/
-│   └── magentic_workflow.py
+├── src/agenticfleet/
+│   ├── agents/               # orchestrator, researcher, coder, analyst
+│   ├── workflows/
+│   ├── config/
+│   ├── context/
+│   ├── core/
+│   └── cli/
+├── docs/                     # reorganised as getting-started/, overview/, operations/, etc.
+├── scripts/
 ├── tests/
-│   └── __init__.py
-├── docs/
-│   ├── af-phase-1.md
-│   ├── AGENTS.md
-│   ├── FIXES.md
-│   ├── IMPLEMENTATION_SUMMARY.md
-│   ├── MIGRATION_TO_RESPONSES_API.md
-│   ├── QUICK_REFERENCE.md
-│   └── ProgressTracker.md
-├── main.py
-├── test_config.py
 ├── pyproject.toml
-├── .env
-├── .env.example
-└── README.md
+└── uv.lock
 ```
 
 ---
@@ -205,9 +176,9 @@ AgenticFleet/
 
 3. **Documentation Organization**
 
-   - Moved all .md files to docs/ folder
-   - Created ProgressTracker.md
-   - Updated references in AGENTS.md
+   - Reorganised `docs/` into getting-started/, overview/, operations/, migrations/, runbooks/
+   - Captured work logs under docs/archive/
+   - Updated references in repository-guidelines.md
 
 4. **Verification**
    - All configuration tests passing (6/6)
