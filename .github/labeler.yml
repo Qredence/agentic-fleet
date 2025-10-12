@@ -1,0 +1,58 @@
+# Labeler Configuration
+# Automatically label pull requests based on changed files
+
+"area: agents":
+  - changed-files:
+    - any-glob-to-any-file: "src/agenticfleet/agents/**/*"
+
+"area: workflow":
+  - changed-files:
+    - any-glob-to-any-file: "src/agenticfleet/workflows/**/*"
+
+"area: tools":
+  - changed-files:
+    - any-glob-to-any-file: "src/agenticfleet/agents/*/tools/**/*"
+
+"area: config":
+  - changed-files:
+    - any-glob-to-any-file:
+      - "src/agenticfleet/config/**/*"
+      - "**/*.yaml"
+      - "**/*.yml"
+      - ".env*"
+
+"area: memory":
+  - changed-files:
+    - any-glob-to-any-file: "src/agenticfleet/context/**/*"
+
+"area: cli":
+  - changed-files:
+    - any-glob-to-any-file: "src/agenticfleet/cli/**/*"
+
+"type: documentation":
+  - changed-files:
+    - any-glob-to-any-file:
+      - "docs/**/*"
+      - "**/*.md"
+      - "README*"
+
+"type: test":
+  - changed-files:
+    - any-glob-to-any-file:
+      - "tests/**/*"
+      - "**/*test*.py"
+
+"dependencies":
+  - changed-files:
+    - any-glob-to-any-file:
+      - "pyproject.toml"
+      - "uv.lock"
+      - "requirements*.txt"
+
+"github-actions":
+  - changed-files:
+    - any-glob-to-any-file: ".github/workflows/**/*"
+
+"python":
+  - changed-files:
+    - any-glob-to-any-file: "**/*.py"

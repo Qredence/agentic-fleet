@@ -1,0 +1,139 @@
+# GitHub Labels Configuration
+# This file defines the labels used in the repository
+
+# Type labels
+- name: "type: bug"
+  color: "d73a4a"
+  description: "Something isn't working"
+
+- name: "type: feature"
+  color: "0e8a16"
+  description: "New feature or request"
+
+- name: "type: enhancement"
+  color: "a2eeef"
+  description: "Enhancement to existing functionality"
+
+- name: "type: documentation"
+  color: "0075ca"
+  description: "Improvements or additions to documentation"
+
+- name: "type: refactor"
+  color: "fbca04"
+  description: "Code refactoring"
+
+- name: "type: test"
+  color: "bfd4f2"
+  description: "Test-related changes"
+
+# Priority labels
+- name: "priority: critical"
+  color: "b60205"
+  description: "Critical priority - must be addressed immediately"
+
+- name: "priority: high"
+  color: "d93f0b"
+  description: "High priority"
+
+- name: "priority: medium"
+  color: "fbca04"
+  description: "Medium priority"
+
+- name: "priority: low"
+  color: "c5def5"
+  description: "Low priority"
+
+# Status labels
+- name: "status: in-progress"
+  color: "0e8a16"
+  description: "Work in progress"
+
+- name: "status: blocked"
+  color: "b60205"
+  description: "Blocked by another issue or dependency"
+
+- name: "status: needs-review"
+  color: "fbca04"
+  description: "Needs review from maintainers"
+
+- name: "status: needs-info"
+  color: "d876e3"
+  description: "Needs more information"
+
+# Area labels
+- name: "area: agents"
+  color: "5319e7"
+  description: "Agent-related code"
+
+- name: "area: workflow"
+  color: "5319e7"
+  description: "Workflow orchestration"
+
+- name: "area: tools"
+  color: "5319e7"
+  description: "Tool implementations"
+
+- name: "area: config"
+  color: "5319e7"
+  description: "Configuration system"
+
+- name: "area: memory"
+  color: "5319e7"
+  description: "Memory/context provider"
+
+- name: "area: cli"
+  color: "5319e7"
+  description: "Command-line interface"
+
+# Special labels
+- name: "dependencies"
+  color: "0366d6"
+  description: "Dependency updates"
+
+- name: "security"
+  color: "b60205"
+  description: "Security-related issue"
+
+- name: "good first issue"
+  color: "7057ff"
+  description: "Good for newcomers"
+
+- name: "help wanted"
+  color: "008672"
+  description: "Extra attention is needed"
+
+- name: "question"
+  color: "d876e3"
+  description: "Further information is requested"
+
+- name: "duplicate"
+  color: "cfd3d7"
+  description: "This issue or pull request already exists"
+
+- name: "wontfix"
+  color: "ffffff"
+  description: "This will not be worked on"
+
+- name: "stale"
+  color: "ededed"
+  description: "No recent activity"
+
+- name: "pinned"
+  color: "fef2c0"
+  description: "Should not be automatically closed"
+
+- name: "roadmap"
+  color: "fef2c0"
+  description: "Part of the project roadmap"
+
+- name: "breaking-change"
+  color: "b60205"
+  description: "Introduces a breaking change"
+
+- name: "python"
+  color: "2b67c6"
+  description: "Python-related changes"
+
+- name: "github-actions"
+  color: "000000"
+  description: "GitHub Actions workflow changes"
