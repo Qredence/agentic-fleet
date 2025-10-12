@@ -8,9 +8,9 @@
 
 | Platform | Status | URL |
 |----------|--------|-----|
-| **PyPI** | ✅ Published | https://pypi.org/project/agentic-fleet/0.5.0/ |
-| **GitHub Release** | ✅ Published | https://github.com/Qredence/AgenticFleet/releases/tag/v0.5.0 |
-| **Source Code** | ✅ Tagged | https://github.com/Qredence/AgenticFleet/tree/v0.5.0 |
+| **PyPI** | ✅ Published | <https://pypi.org/project/agentic-fleet/0.5.0/> |
+| **GitHub Release** | ✅ Published | <https://github.com/Qredence/AgenticFleet/releases/tag/v0.5.0> |
+| **Source Code** | ✅ Tagged | <https://github.com/Qredence/AgenticFleet/tree/v0.5.0> |
 
 ### Release Artifacts
 
@@ -45,6 +45,7 @@ agentic-fleet --help
 ## ✨ Key Features (v0.5.0)
 
 ### Multi-Agent Orchestration
+
 - **Microsoft Agent Framework Integration**: Official Python SDK implementation
 - **Sequential Coordination Pattern**: Orchestrator delegates to specialist agents
 - **ChatAgent Architecture**: Each agent is a `ChatAgent` instance with dedicated tools
@@ -59,6 +60,7 @@ agentic-fleet --help
 | **Analyst** | gpt-4o | 0.2 | data_analysis_tool, visualization_suggestion_tool | Data analysis, insights |
 
 ### Advanced Features
+
 - **Pydantic-Modeled Responses**: Type-safe tool responses with validation
 - **Mem0 Context Provider**: Persistent memory across conversations
 - **Azure AI Search Integration**: Vector store for semantic memory
@@ -66,6 +68,7 @@ agentic-fleet --help
 - **Comprehensive Configuration**: YAML-based agent and workflow configuration
 
 ### Development & Quality
+
 - **Source Layout**: Modern `src/` layout following PyPA standards
 - **Build System**: UV package manager with Hatchling backend
 - **CI/CD Pipeline**: Multi-platform GitHub Actions (Ubuntu, macOS, Windows)
@@ -76,19 +79,23 @@ agentic-fleet --help
 ## 🔧 Release Process Issues & Resolutions
 
 ### Issue 1: GitHub Environment Protection
+
 **Problem**: Tag-based deployments blocked by environment protection rules
 
 **Solution**: Configured `pypi` environment to allow tag deployments with pattern `v*`
 
 ### Issue 2: PyPI Trusted Publishing Configuration
+
 **Problem**: Environment claim missing in trusted publishing token
 
-**Solution**: 
+**Solution**:
+
 1. Restored `environment: pypi` section in workflow
 2. Configured PyPI trusted publisher with matching environment name
 3. Ensured GitHub environment allows tag-based deployments
 
 ### Workflow Runs
+
 - **Failed Attempts**: 2 (environment configuration issues)
 - **Successful Run**: [#18447555893](https://github.com/Qredence/AgenticFleet/actions/runs/18447555893)
 - **Total Time**: ~5 minutes for successful release
@@ -105,6 +112,7 @@ agentic-fleet --help
 ## 🔄 Migration Notes
 
 ### Breaking Changes
+
 None. This is a major feature release with full backward compatibility for v0.4.x users.
 
 ### Upgrading from v0.4.x
@@ -118,6 +126,7 @@ uv pip install --upgrade agentic-fleet
 ```
 
 ### Configuration Changes
+
 - Agent configurations moved to individual `config.yaml` files
 - Workflow configuration in `config/workflow.yaml`
 - Environment variables required for Azure AI features (see `.env.example`)
@@ -125,12 +134,14 @@ uv pip install --upgrade agentic-fleet
 ## 🎯 Next Steps
 
 ### For Users
+
 1. Install from PyPI: `pip install agentic-fleet`
 2. Set up environment variables (copy `.env.example` to `.env`)
 3. Run the REPL: `agentic-fleet`
-4. Check documentation: https://github.com/Qredence/AgenticFleet/tree/v0.5.0/docs
+4. Check documentation: <https://github.com/Qredence/AgenticFleet/tree/v0.5.0/docs>
 
 ### For Contributors
+
 1. Clone repository: `git clone https://github.com/Qredence/AgenticFleet.git`
 2. Install with uv: `uv sync --all-extras`
 3. Run tests: `uv run pytest`
@@ -166,15 +177,15 @@ uv pip install --upgrade agentic-fleet
 
 ## 🔗 Links
 
-- **PyPI**: https://pypi.org/project/agentic-fleet/0.5.0/
-- **GitHub Release**: https://github.com/Qredence/AgenticFleet/releases/tag/v0.5.0
-- **Documentation**: https://github.com/Qredence/AgenticFleet/tree/v0.5.0/docs
-- **Issues**: https://github.com/Qredence/AgenticFleet/issues
-- **Discussions**: https://github.com/Qredence/AgenticFleet/discussions
+- **PyPI**: <https://pypi.org/project/agentic-fleet/0.5.0/>
+- **GitHub Release**: <https://github.com/Qredence/AgenticFleet/releases/tag/v0.5.0>
+- **Documentation**: <https://github.com/Qredence/AgenticFleet/tree/v0.5.0/docs>
+- **Issues**: <https://github.com/Qredence/AgenticFleet/issues>
+- **Discussions**: <https://github.com/Qredence/AgenticFleet/discussions>
 
 ---
 
-**Version**: 0.5.0  
-**Released**: October 12, 2025  
-**License**: MIT  
+**Version**: 0.5.0
+**Released**: October 12, 2025
+**License**: MIT
 **Status**: ✅ Production Ready
