@@ -34,7 +34,7 @@ sync:
 
 # Run application
 run:
-	uv run python main.py
+	uv run python -m agenticfleet
 
 # Testing
 test:
