@@ -1,6 +1,6 @@
 # AgenticFleet
 
-**Version:** 0.5.0  
+**Version:** 0.5.0
 **Package:** `agentic-fleet` (PyPI) | `agenticfleet` (import)
 
 A sophisticated multi-agent system powered by Microsoft Agent Framework that coordinates specialized AI agents to solve complex tasks through dynamic delegation and collaboration.
@@ -431,7 +431,7 @@ This project is licensed under the MIT License - see the LICENSE file for detail
 
 - **Issues**: [GitHub Issues](https://github.com/Qredence/AgenticFleet/issues)
 - **Documentation**: [docs/](docs/)
-- **Email**: contact@qredence.ai
+- **Email**: <contact@qredence.ai>
 
 ---
 
