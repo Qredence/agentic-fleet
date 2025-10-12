@@ -19,7 +19,7 @@ jobs:
           repo-token: ${{ secrets.GITHUB_TOKEN }}
 
           # Issue settings
-          days-before-stale: 60
+          days-before-stale: 45
           days-before-close: 14
           stale-issue-message: |
             This issue has been automatically marked as stale because it has not had
@@ -29,7 +29,7 @@ jobs:
             This issue has been automatically closed due to inactivity.
             If you believe this is still relevant, please reopen the issue or create a new one.
           stale-issue-label: "stale"
-          exempt-issue-labels: "pinned,security,roadmap"
+          exempt-issue-labels: "pinned,security,roadmap,waiting-for-response"
 
           # PR settings
           days-before-pr-stale: 30

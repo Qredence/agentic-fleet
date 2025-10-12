@@ -137,3 +137,15 @@
 - name: "github-actions"
   color: "000000"
   description: "GitHub Actions workflow changes"
+
+- name: "ci/cd"
+  color: "0e8a16"
+  description: "CI/CD pipeline changes"
+
+- name: "performance"
+  color: "fbca04"
+  description: "Performance improvements"
+
+- name: "waiting-for-response"
+  color: "d876e3"
+  description: "Waiting for issue author response"

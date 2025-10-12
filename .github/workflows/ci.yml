@@ -59,7 +59,7 @@ jobs:
 
       - name: Run mypy type checker
         run: uv run mypy .
-        continue-on-error: true  # Don't fail CI on type errors yet
+        continue-on-error: true  # TODO: Remove continue-on-error once type coverage improves
 
   test:
     name: Test (Python ${{ matrix.python-version }})
@@ -93,11 +93,25 @@ jobs:
 
       - name: Run configuration tests
         if: ${{ github.event_name != 'pull_request' || github.event.pull_request.head.repo.fork == false }}
-        run: OPENAI_API_KEY=${{ secrets.OPENAI_API_KEY }} AZURE_AI_PROJECT_ENDPOINT=${{ secrets.AZURE_AI_PROJECT_ENDPOINT }} AZURE_AI_SEARCH_ENDPOINT=${{ secrets.AZURE_AI_SEARCH_ENDPOINT }} AZURE_AI_SEARCH_KEY=${{ secrets.AZURE_AI_SEARCH_KEY }} AZURE_OPENAI_CHAT_COMPLETION_DEPLOYED_MODEL_NAME=${{ secrets.AZURE_OPENAI_CHAT_COMPLETION_DEPLOYED_MODEL_NAME }} AZURE_OPENAI_EMBEDDING_DEPLOYED_MODEL_NAME=${{ secrets.AZURE_OPENAI_EMBEDDING_DEPLOYED_MODEL_NAME }} uv run python tests/test_config.py
+        env:
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          AZURE_AI_PROJECT_ENDPOINT: ${{ secrets.AZURE_AI_PROJECT_ENDPOINT }}
+          AZURE_AI_SEARCH_ENDPOINT: ${{ secrets.AZURE_AI_SEARCH_ENDPOINT }}
+          AZURE_AI_SEARCH_KEY: ${{ secrets.AZURE_AI_SEARCH_KEY }}
+          AZURE_OPENAI_CHAT_COMPLETION_DEPLOYED_MODEL_NAME: ${{ secrets.AZURE_OPENAI_CHAT_COMPLETION_DEPLOYED_MODEL_NAME }}
+          AZURE_OPENAI_EMBEDDING_DEPLOYED_MODEL_NAME: ${{ secrets.AZURE_OPENAI_EMBEDDING_DEPLOYED_MODEL_NAME }}
+        run: uv run python tests/test_config.py
 
       - name: Run pytest with coverage
         if: ${{ github.event_name != 'pull_request' || github.event.pull_request.head.repo.fork == false }}
-        run: OPENAI_API_KEY=${{ secrets.OPENAI_API_KEY }} AZURE_AI_PROJECT_ENDPOINT=${{ secrets.AZURE_AI_PROJECT_ENDPOINT }} AZURE_AI_SEARCH_ENDPOINT=${{ secrets.AZURE_AI_SEARCH_ENDPOINT }} AZURE_AI_SEARCH_KEY=${{ secrets.AZURE_AI_SEARCH_KEY }} AZURE_OPENAI_CHAT_COMPLETION_DEPLOYED_MODEL_NAME=${{ secrets.AZURE_OPENAI_CHAT_COMPLETION_DEPLOYED_MODEL_NAME }} AZURE_OPENAI_EMBEDDING_DEPLOYED_MODEL_NAME=${{ secrets.AZURE_OPENAI_EMBEDDING_DEPLOYED_MODEL_NAME }} uv run pytest -v --tb=short --cov=src/agenticfleet --cov-report=xml --cov-report=term-missing
+        env:
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          AZURE_AI_PROJECT_ENDPOINT: ${{ secrets.AZURE_AI_PROJECT_ENDPOINT }}
+          AZURE_AI_SEARCH_ENDPOINT: ${{ secrets.AZURE_AI_SEARCH_ENDPOINT }}
+          AZURE_AI_SEARCH_KEY: ${{ secrets.AZURE_AI_SEARCH_KEY }}
+          AZURE_OPENAI_CHAT_COMPLETION_DEPLOYED_MODEL_NAME: ${{ secrets.AZURE_OPENAI_CHAT_COMPLETION_DEPLOYED_MODEL_NAME }}
+          AZURE_OPENAI_EMBEDDING_DEPLOYED_MODEL_NAME: ${{ secrets.AZURE_OPENAI_EMBEDDING_DEPLOYED_MODEL_NAME }}
+        run: uv run pytest -v --tb=short --cov=src/agenticfleet --cov-report=xml --cov-report=term-missing
 
   build:
     name: Build Package
