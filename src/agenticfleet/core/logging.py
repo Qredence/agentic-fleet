@@ -4,6 +4,7 @@ import logging
 import sys
 from pathlib import Path
 import os
+from werkzeug.utils import secure_filename
 
 def setup_logging(
     level: str = "INFO",
@@ -30,8 +31,10 @@ def setup_logging(
         # Always treat the log filename as relative to logs_root and forbid absolute paths or parent traversal
         if candidate_path.is_absolute() or ".." in candidate_path.parts:
             raise ValueError(f"Log file path '{candidate_path}' is not allowed: must be a simple filename inside '{logs_root}' (no absolute path or parent traversal)")
-        # Restrict to filename only (disallow user-submitted directories)
-        safe_filename = candidate_path.name
+        # Restrict to safe filename only (disallow user-submitted directories and special chars)
+        safe_filename = secure_filename(candidate_path.name)
+        if not safe_filename:
+            raise ValueError(f"Log file path '{candidate_path}' is not allowed: filename has no valid characters after sanitization")
         log_path = (logs_root / safe_filename).resolve()
         # Final containment check
         try:
