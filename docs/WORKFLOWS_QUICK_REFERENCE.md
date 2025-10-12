@@ -2,7 +2,7 @@
 
 ## 📋 Workflows Overview
 
-```
+```text
 .github/
 ├── workflows/
 │   ├── ci.yml                      # Main CI pipeline
@@ -214,7 +214,7 @@ Add to README.md:
 
 ### Repository Secrets (Optional)
 
-```
+```text
 OPENAI_API_KEY
 AZURE_AI_PROJECT_ENDPOINT
 AZURE_AI_SEARCH_ENDPOINT

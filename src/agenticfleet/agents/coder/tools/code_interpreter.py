@@ -45,10 +45,14 @@ def code_interpreter_tool(code: str, language: str = "python") -> CodeExecutionR
     output_capture = StringIO()
     error_capture = StringIO()
 
+    old_stdout = sys.stdout
+    old_stderr = sys.stderr
+    success = True
+    execution_error = ""
+    exit_code = 0
+
     try:
         # Redirect stdout and stderr
-        old_stdout = sys.stdout
-        old_stderr = sys.stderr
         sys.stdout = output_capture
         sys.stderr = error_capture
 
@@ -77,35 +81,29 @@ def code_interpreter_tool(code: str, language: str = "python") -> CodeExecutionR
 
         exec(code, restricted_globals)
 
-        # Restore stdout/stderr
+    except Exception as exc:
+        success = False
+        execution_error = f"Execution error: {exc}"
+        exit_code = 1
+
+    finally:
         sys.stdout = old_stdout
         sys.stderr = old_stderr
 
-        output = output_capture.getvalue()
-        error = error_capture.getvalue()
-        execution_time = time.time() - start_time
+    output = output_capture.getvalue()
+    error_output = error_capture.getvalue().strip()
+    execution_time = time.time() - start_time
 
-        return CodeExecutionResult(
-            success=True,
-            output=output,
-            error=error,
-            execution_time=execution_time,
-            language=language,
-            exit_code=0,  # Assuming successful execution has an exit code of 0
-        )
+    if execution_error:
+        combined_error = "\n".join(part for part in [error_output, execution_error] if part).strip()
+    else:
+        combined_error = error_output
 
-    except Exception as e:
-        # Restore stdout/stderr in case of error
-        sys.stdout = old_stdout
-        sys.stderr = old_stderr
-
-        execution_time = time.time() - start_time
-
-        return CodeExecutionResult(
-            success=False,
-            output=output_capture.getvalue(),
-            error=f"Execution error: {str(e)}",
-            execution_time=execution_time,
-            language=language,
-            exit_code=1,  # Assuming failed execution has an exit code of 1
-        )
+    return CodeExecutionResult(
+        success=success,
+        output=output,
+        error=combined_error,
+        execution_time=execution_time,
+        language=language,
+        exit_code=exit_code,
+    )
