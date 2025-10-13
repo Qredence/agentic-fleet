@@ -38,9 +38,13 @@ Orchestrator ←→ Researcher
 
 #### 1. Conditional Edge Functions
 ```python
-def _should_delegate_to_researcher(context: WorkflowContext) -> bool:
-    """Check if orchestrator wants to delegate to researcher."""
-    response_text = _extract_response_text(context.last_output)
+def _should_delegate_to_researcher(message: Any) -> bool:
+    """Check if orchestrator wants to delegate to researcher.
+
+    Args:
+        message: The last output or message passed by the workflow framework.
+    """
+    response_text = _extract_response_text(message)
     return "DELEGATE: researcher" in response_text
 ```
 
