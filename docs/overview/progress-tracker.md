@@ -280,7 +280,7 @@ All Phase 1 objectives have been completed and verified.
 ### Documentation
 
 - [README](../README.md) - Project overview
-- [Repository Guidelines](AGENTS.md) - Development rules
+- [Repository Guidelines](../AGENTS.md) - Development rules
 - [Quick Reference](QUICK_REFERENCE.md) - Getting started
 - [Implementation Summary](IMPLEMENTATION_SUMMARY.md) - Technical details
 - [Migration Guide](MIGRATION_TO_RESPONSES_API.md) - API updates
@@ -335,7 +335,7 @@ uv run pytest
 
 ### Development Guidelines
 
-- Follow repository guidelines in AGENTS.md
+- Follow repository guidelines in ../AGENTS.md
 - Use `uv` for all Python operations
 - Keep commits focused and well-documented
 - Test before committing
