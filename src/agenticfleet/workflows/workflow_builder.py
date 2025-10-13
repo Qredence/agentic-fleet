@@ -50,15 +50,39 @@ def _should_delegate_to_analyst(message: Any) -> bool:
 
 
 def _extract_response_text(result: Any) -> str:
-    """Normalize agent responses to text across varying response types."""
-    for attr in ("content", "output_text", "text", "response"):
-        value: Any = getattr(result, attr, None)
-        if value is None:
-            continue
-        if callable(value):
-            value = value()
-        if isinstance(value, str):
-            return value
+    """
+    Normalize agent responses to text across varying response types.
+
+    Expected types:
+        - dict: with one of the keys "content", "output_text", "text", "response"
+        - object: with one of the attributes "content", "output_text", "text", "response"
+        - str: returned as is
+        - other: fallback to str(result)
+    """
+    # If result is a string, return it directly
+    if isinstance(result, str):
+        return result
+    # If result is a dict, check for known keys
+    if isinstance(result, dict):
+        for key in ("content", "output_text", "text", "response"):
+            value = result.get(key)
+            if value is None:
+                continue
+            if callable(value):
+                value = value()
+            if isinstance(value, str):
+                return value
+    else:
+        # Otherwise, check for known attributes
+        for attr in ("content", "output_text", "text", "response"):
+            value = getattr(result, attr, None)
+            if value is None:
+                continue
+            if callable(value):
+                value = value()
+            if isinstance(value, str):
+                return value
+    # Fallback: return string representation
     return str(result)
 
 
