@@ -112,11 +112,14 @@ def code_interpreter_tool(code: str, language: str = "python") -> "CodeExecution
         language: Programming language (currently supports python)
 
     Returns:
-    from agenticfleet.agents.coder.tools.code_interpreter import (
-        CodeExecutionResult,
-        code_interpreter_tool as _original_code_interpreter,
-    )
         CodeExecutionResult: Structured execution results
+
+    Note:
+        Imports required for type annotations:
+        from agenticfleet.agents.coder.tools.code_interpreter import (
+            CodeExecutionResult,
+            code_interpreter_tool as _original_code_interpreter,
+        )
     """
     import asyncio
 
