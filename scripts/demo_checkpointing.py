@@ -12,7 +12,7 @@ This script demonstrates:
 import asyncio
 import json
 from pathlib import Path
-from unittest.mock import AsyncMock, Mock, patch
+from unittest.mock import patch
 
 
 async def demo_checkpointing():
