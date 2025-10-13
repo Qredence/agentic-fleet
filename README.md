@@ -117,7 +117,7 @@ tests/                     # All tests
 └── test_hello.py          # Sanity check
 
 docs/                      # Documentation
-├── AGENTS.md              # Agent development guidelines
+├── AGENTS.md              # Agent catalog & orchestration guide
 ├── MEM0_INTEGRATION.md    # Memory integration docs
 ├── MIGRATION_COMPLETE.md  # Migration report
 ├── TEMPERATURE_FIX.md     # API compliance fixes
@@ -338,6 +338,7 @@ LOG_LEVEL=INFO
 
 All documentation lives in `docs/` and is organised by topic:
 
+- [AGENTS.md](docs/AGENTS.md) – end-to-end guide to every agent, workflows, tools, and extension patterns.
 - `getting-started/`
   - [quick-reference](docs/getting-started/quick-reference.md) – one-page onboarding.
   - [command-reference](docs/getting-started/command-reference.md) – uv + Makefile cheat sheet.
