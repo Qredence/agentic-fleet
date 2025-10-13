@@ -3,18 +3,7 @@ import time
 from io import StringIO
 
 from pydantic import BaseModel, Field
-
-
-class CodeExecutionResult(BaseModel):
-    """Structured result from code execution."""
-
-    success: bool = Field(..., description="Whether execution completed successfully")
-    output: str = Field(..., description="Standard output from execution")
-    error: str = Field(..., description="Error output if any")
-    execution_time: float = Field(..., description="Execution time in seconds")
-    language: str = Field(..., description="Programming language used")
-    exit_code: int | None = Field(None, description="Exit code if available")
-
+from agenticfleet.core.code_types import CodeExecutionResult
 
 def _execute_python_code(code: str) -> CodeExecutionResult:
     """
