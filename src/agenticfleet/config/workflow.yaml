@@ -10,6 +10,18 @@ workflow:
     storage_path: ./checkpoints
     cleanup_after_days: 30
     auto_resume_on_failure: false
+  human_in_the_loop:
+    enabled: true
+    approval_timeout_seconds: 300  # 5 minutes
+    auto_reject_on_timeout: false
+    require_approval_for:
+      - code_execution
+      - file_operations
+      - external_api_calls
+      - sensitive_data_access
+    trusted_operations:
+      - web_search
+      - data_analysis
 
 # Shared defaults that can be overridden by individual agents
 defaults:

@@ -26,6 +26,7 @@ AgenticFleet implements a custom orchestration pattern where an orchestrator age
 - ✅ **Modern Package Structure**: PyPA-recommended `src/` layout for import safety
 - ✅ **Dynamic Task Decomposition**: Automatic breakdown of complex tasks
 - ✅ **Multi-Agent Coordination**: Seamless collaboration between specialized agents
+- ✅ **Human-in-the-Loop**: Review and approve sensitive operations before execution
 - ✅ **Event-Driven Architecture**: Real-time monitoring and observability
 - ✅ **Structured Responses**: Type-safe tool outputs with Pydantic models
 - ✅ **Configurable Execution**: Safety controls and execution limits
@@ -341,6 +342,8 @@ All documentation lives in `docs/` and is organised by topic:
 - `getting-started/`
   - [quick-reference](docs/getting-started/quick-reference.md) – one-page onboarding.
   - [command-reference](docs/getting-started/command-reference.md) – uv + Makefile cheat sheet.
+- `guides/`
+  - [human-in-the-loop](docs/guides/human-in-the-loop.md) – HITL approval system guide.
 - `overview/`
   - [implementation-summary](docs/overview/implementation-summary.md) – architecture deep dive.
   - [progress-tracker](docs/overview/progress-tracker.md) – milestone and roadmap log.

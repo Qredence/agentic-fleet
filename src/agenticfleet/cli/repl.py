@@ -197,6 +197,16 @@ def run_repl_main() -> int:
         print(f"\n✓ Checkpointing enabled (storage: {storage_path})")
     else:
         print("\n⚠ Checkpointing disabled")
+
+    # Show HITL status
+    hitl_config = settings.workflow_config.get("workflow", {}).get("human_in_the_loop", {})
+    if hitl_config.get("enabled", False):
+        timeout = hitl_config.get("approval_timeout_seconds", 300)
+        operations = hitl_config.get("require_approval_for", [])
+        print(f"✓ Human-in-the-Loop enabled (timeout: {timeout}s)")
+        print(f"  Operations requiring approval: {', '.join(operations)}")
+    else:
+        print("⚠ Human-in-the-Loop disabled")
     print()
 
     try:

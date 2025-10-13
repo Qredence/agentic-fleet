@@ -3,40 +3,15 @@ import time
 from io import StringIO
 
 from pydantic import BaseModel, Field
+from agenticfleet.core.code_types import CodeExecutionResult
 
-
-class CodeExecutionResult(BaseModel):
-    """Structured result from code execution."""
-
-    success: bool = Field(..., description="Whether execution completed successfully")
-    output: str = Field(..., description="Standard output from execution")
-    error: str = Field(..., description="Error output if any")
-    execution_time: float = Field(..., description="Execution time in seconds")
-    language: str = Field(..., description="Programming language used")
-    exit_code: int | None = Field(None, description="Exit code if available")
-
-
-def code_interpreter_tool(code: str, language: str = "python") -> CodeExecutionResult:
+def _execute_python_code(code: str) -> CodeExecutionResult:
     """
-    Execute code in a safe environment and return structured results.
+    Internal function to execute Python code.
 
-    Args:
-        code: The code to execute
-        language: Programming language (currently supports python)
-
-    Returns:
-        CodeExecutionResult: Structured execution results with success status and outputs
+    This is separated out so it can be called from both the original tool
+    and the approval-wrapped version.
     """
-    if language != "python":
-        return CodeExecutionResult(
-            success=False,
-            output="",
-            error=f"Language {language} not supported yet. Only Python is supported in Phase 1.",
-            execution_time=0.0,
-            language=language,
-            exit_code=1,
-        )
-
     # Simple safe execution for Phase 1
     # In Phase 2, implement proper sandboxing with Docker
     start_time = time.time()
@@ -104,6 +79,41 @@ def code_interpreter_tool(code: str, language: str = "python") -> CodeExecutionR
         output=output,
         error=combined_error,
         execution_time=execution_time,
-        language=language,
+        language="python",
         exit_code=exit_code,
     )
+
+
+def code_interpreter_tool(code: str, language: str = "python") -> CodeExecutionResult:
+    """
+    Execute code in a safe environment and return structured results.
+
+    This tool checks for an approval handler and requests approval if configured.
+
+    Args:
+        code: The code to execute
+        language: Programming language (currently supports python)
+
+    Returns:
+        CodeExecutionResult: Structured execution results with success status and outputs
+    """
+    if language != "python":
+        return CodeExecutionResult(
+            success=False,
+            output="",
+            error=f"Language {language} not supported yet. Only Python is supported in Phase 1.",
+            execution_time=0.0,
+            language=language,
+            exit_code=1,
+        )
+
+    # Check if approval is required
+    from agenticfleet.core.approved_tools import maybe_request_approval_for_code_execution
+    approval_result = maybe_request_approval_for_code_execution(code, language)
+    if approval_result is not None:
+        if isinstance(approval_result, CodeExecutionResult):
+            return approval_result
+        else:
+            code = approval_result  # modified code from approval handler
+    # Execute the (possibly modified) code
+    return _execute_python_code(code)
