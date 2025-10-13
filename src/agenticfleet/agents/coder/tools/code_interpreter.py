@@ -119,7 +119,7 @@ def code_interpreter_tool(code: str, language: str = "python") -> CodeExecutionR
         )
 
     # Check if approval is required
-    from agenticfleet.core.code_execution_approval import maybe_request_approval_for_code_execution
+    from agenticfleet.core.approved_tools import maybe_request_approval_for_code_execution
     approval_result = maybe_request_approval_for_code_execution(code, language)
     if approval_result is not None:
         if isinstance(approval_result, CodeExecutionResult):
