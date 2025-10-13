@@ -1,5 +1,12 @@
 """Core utilities for AgenticFleet."""
 
+from agenticfleet.core.approval import (
+    ApprovalDecision,
+    ApprovalHandler,
+    ApprovalRequest,
+    ApprovalResponse,
+)
+from agenticfleet.core.cli_approval import CLIApprovalHandler, create_approval_request
 from agenticfleet.core.exceptions import (
     AgentConfigurationError,
     AgenticFleetError,
@@ -15,4 +22,10 @@ __all__ = [
     "setup_logging",
     "AgentRole",
     "AgentResponse",
+    "ApprovalHandler",
+    "ApprovalRequest",
+    "ApprovalResponse",
+    "ApprovalDecision",
+    "CLIApprovalHandler",
+    "create_approval_request",
 ]

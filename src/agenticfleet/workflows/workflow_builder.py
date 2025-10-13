@@ -104,6 +104,7 @@ def create_workflow(checkpoint_storage: CheckpointStorage | None = None) -> Any:
 
     Args:
         checkpoint_storage: Optional checkpoint storage for workflow state persistence
+                            Note: Checkpoint storage is managed separately in MultiAgentWorkflow
 
     Returns:
         Workflow: Configured workflow with orchestrator and specialized agents
@@ -118,13 +119,9 @@ def create_workflow(checkpoint_storage: CheckpointStorage | None = None) -> Any:
     coder = create_coder_agent()
     analyst = create_analyst_agent()
 
-    builder_kwargs: dict[str, Any] = {"max_iterations": max_rounds}
-    if checkpoint_storage is not None:
-        builder_kwargs["checkpoint_storage"] = checkpoint_storage
+    # Build workflow graph (checkpoint storage managed separately)
+    builder = WorkflowBuilder(max_iterations=max_rounds)
 
-    # Build workflow graph with optional checkpointing
-    builder = WorkflowBuilder(**builder_kwargs)
-    
     workflow = (
         builder
         # Add all agents as executors
@@ -157,15 +154,25 @@ class MultiAgentWorkflow:
     for graph-based orchestration.
     """
 
-    def __init__(self, checkpoint_storage: CheckpointStorage | None = None) -> None:
-        """Initialize workflow with WorkflowBuilder pattern."""
+    def __init__(
+        self,
+        checkpoint_storage: CheckpointStorage | None = None,
+        approval_handler: Any | None = None,
+    ) -> None:
+        """
+        Initialize workflow with WorkflowBuilder pattern.
 
+        Args:
+            checkpoint_storage: Optional checkpoint storage for workflow state
+            approval_handler: Optional approval handler for human-in-the-loop operations
+        """
         workflow_config = settings.workflow_config.get("workflow", {})
 
         self.max_rounds = workflow_config.get("max_rounds", 10)
         self.max_stalls = workflow_config.get("max_stalls", 3)
 
         self.checkpoint_storage = checkpoint_storage
+        self.approval_handler = approval_handler
         self.workflow_id: str | None = None
         self.current_checkpoint_id: str | None = None
         self.current_round = 0
@@ -174,6 +181,13 @@ class MultiAgentWorkflow:
         self.context: dict[str, Any] = {}
 
         self.workflow = create_workflow(checkpoint_storage)
+
+        # Set up approval handler for tools if provided
+        if approval_handler is not None:
+            from agenticfleet.core.approved_tools import set_approval_handler
+
+            set_approval_handler(approval_handler)
+            logger.info("HITL approval handler configured for workflow")
 
     def set_workflow_id(self, workflow_id: str) -> None:
         """Set the workflow ID for checkpoint management."""
@@ -331,6 +345,22 @@ class MultiAgentWorkflow:
         return response_text
 
 
-# Create default workflow instance with checkpoint storage
+# Create default workflow instance with checkpoint storage and HITL if enabled
 _checkpoint_storage = settings.create_checkpoint_storage()
-workflow = MultiAgentWorkflow(checkpoint_storage=_checkpoint_storage)
+
+# Initialize approval handler if HITL is enabled
+_approval_handler = None
+hitl_config = settings.workflow_config.get("workflow", {}).get("human_in_the_loop", {})
+if hitl_config.get("enabled", False):
+    from agenticfleet.core.cli_approval import CLIApprovalHandler
+
+    timeout_seconds = hitl_config.get("approval_timeout_seconds", 300)
+    auto_reject = hitl_config.get("auto_reject_on_timeout", False)
+    _approval_handler = CLIApprovalHandler(
+        timeout_seconds=timeout_seconds, auto_reject_on_timeout=auto_reject
+    )
+    logger.info(f"HITL enabled with timeout={timeout_seconds}s, auto_reject={auto_reject}")
+
+workflow = MultiAgentWorkflow(
+    checkpoint_storage=_checkpoint_storage, approval_handler=_approval_handler
+)

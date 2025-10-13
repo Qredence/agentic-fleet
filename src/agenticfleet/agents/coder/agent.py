@@ -46,7 +46,7 @@ def create_coder_agent() -> ChatAgent:
         model_id=agent_config.get("model", settings.openai_model),
     )
 
-    # Import and configure tools based on agent configuration
+    # Import tool - use the original tool which will be wrapped at runtime
     from agenticfleet.agents.coder.tools.code_interpreter import code_interpreter_tool
 
     # Check which tools are enabled in the configuration
