@@ -1,6 +1,5 @@
 """Code interpreter tool with human-in-the-loop approval support."""
 
-from typing import Any
 
 # (Import removed to break cyclic import. See function-local imports below.)
 from agenticfleet.core.approval import ApprovalDecision, ApprovalHandler
