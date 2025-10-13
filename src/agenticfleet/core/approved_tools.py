@@ -2,10 +2,7 @@
 
 from typing import Any
 
-from agenticfleet.agents.coder.tools.code_interpreter import (
-    CodeExecutionResult,
-    code_interpreter_tool as _original_code_interpreter,
-)
+# (Import removed to break cyclic import. See function-local imports below.)
 from agenticfleet.core.approval import ApprovalDecision, ApprovalHandler
 from agenticfleet.core.cli_approval import create_approval_request
 from agenticfleet.core.logging import get_logger
@@ -42,10 +39,14 @@ def get_approval_handler() -> ApprovalHandler | None:
 
 async def code_interpreter_tool_with_approval(
     code: str, language: str = "python"
-) -> CodeExecutionResult:
+) -> "CodeExecutionResult":
     """
     Execute code with human-in-the-loop approval if enabled.
 
+    from agenticfleet.agents.coder.tools.code_interpreter import (
+        CodeExecutionResult,
+        code_interpreter_tool as _original_code_interpreter,
+    )
     Args:
         code: The code to execute
         language: Programming language (currently supports python)
@@ -100,7 +101,7 @@ async def code_interpreter_tool_with_approval(
 
 
 # For synchronous contexts, provide a sync wrapper
-def code_interpreter_tool(code: str, language: str = "python") -> CodeExecutionResult:
+def code_interpreter_tool(code: str, language: str = "python") -> "CodeExecutionResult":
     """
     Synchronous wrapper for code execution with approval.
 
@@ -112,6 +113,10 @@ def code_interpreter_tool(code: str, language: str = "python") -> CodeExecutionR
         language: Programming language (currently supports python)
 
     Returns:
+    from agenticfleet.agents.coder.tools.code_interpreter import (
+        CodeExecutionResult,
+        code_interpreter_tool as _original_code_interpreter,
+    )
         CodeExecutionResult: Structured execution results
     """
     import asyncio
