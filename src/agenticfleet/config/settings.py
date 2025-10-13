@@ -6,6 +6,7 @@ from pathlib import Path
 from typing import Any
 
 import yaml
+from agent_framework import CheckpointStorage, FileCheckpointStorage, InMemoryCheckpointStorage
 from dotenv import load_dotenv
 
 from agenticfleet.core.exceptions import AgentConfigurationError
@@ -98,6 +99,34 @@ class Settings:
         config_path = agents_path / agent_name / "config.yaml"
 
         return self._load_yaml(config_path)
+
+    def create_checkpoint_storage(self) -> CheckpointStorage | None:
+        """
+        Create checkpoint storage based on workflow configuration.
+
+        Returns:
+            CheckpointStorage instance or None if checkpointing is disabled
+        """
+        workflow_config = self.workflow_config.get("workflow", {})
+        checkpoint_config = workflow_config.get("checkpointing", {})
+
+        if not checkpoint_config.get("enabled", False):
+            return None
+
+        storage_type = checkpoint_config.get("storage_type", "file")
+
+        if storage_type == "memory":
+            return InMemoryCheckpointStorage()
+        elif storage_type == "file":
+            storage_path = checkpoint_config.get("storage_path", "./checkpoints")
+            # Ensure the checkpoints directory exists
+            Path(storage_path).mkdir(parents=True, exist_ok=True)
+            return FileCheckpointStorage(storage_path)
+        else:
+            logging.warning(
+                f"Unknown checkpoint storage type: {storage_type}. Checkpointing disabled."
+            )
+            return None
 
 
 # Global settings instance

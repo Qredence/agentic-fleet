@@ -8,7 +8,13 @@ Framework's built-in workflow orchestration patterns.
 Agents may be based on the Microsoft Agent Framework, but the orchestration is custom.
 """
 
+import json
+import uuid
+from datetime import datetime, timezone
+from pathlib import Path
 from typing import Any, ClassVar
+
+from agent_framework import CheckpointStorage
 
 from agenticfleet.agents import (
     create_analyst_agent,
@@ -18,6 +24,9 @@ from agenticfleet.agents import (
 )
 from agenticfleet.config import settings
 from agenticfleet.core.exceptions import WorkflowError
+from agenticfleet.core.logging import get_logger
+
+logger = get_logger(__name__)
 
 
 class MultiAgentWorkflow:
@@ -32,8 +41,13 @@ class MultiAgentWorkflow:
     DELEGATE_PREFIX: ClassVar[str] = "DELEGATE:"
     FINAL_ANSWER_PREFIX: ClassVar[str] = "FINAL_ANSWER:"
 
-    def __init__(self) -> None:
-        """Initialize workflow with all agent participants."""
+    def __init__(self, checkpoint_storage: CheckpointStorage | None = None) -> None:
+        """
+        Initialize workflow with all agent participants.
+
+        Args:
+            checkpoint_storage: Optional checkpoint storage for workflow state persistence
+        """
         self.orchestrator = create_orchestrator_agent()
         self.researcher = create_researcher_agent()
         self.coder = create_coder_agent()
@@ -43,11 +57,145 @@ class MultiAgentWorkflow:
         workflow_config = settings.workflow_config.get("workflow", {})
         self.max_rounds = workflow_config.get("max_rounds", 10)
         self.max_stalls = workflow_config.get("max_stalls", 3)
+
+        # Checkpointing support
+        self.checkpoint_storage = checkpoint_storage
+        self.workflow_id: str | None = None
+        self.current_checkpoint_id: str | None = None
+
+        # Workflow state
         self.current_round = 0
         self.stall_count = 0
         self.last_response: str | None = None
+        self.context: dict[str, Any] = {}
 
-    async def run(self, user_input: str) -> str:
+    def set_workflow_id(self, workflow_id: str) -> None:
+        """
+        Set the workflow ID for checkpoint management.
+
+        Args:
+            workflow_id: Unique identifier for this workflow execution
+        """
+        self.workflow_id = workflow_id
+
+    async def create_checkpoint(self, metadata: dict[str, Any] | None = None) -> str | None:
+        """
+        Create a checkpoint of the current workflow state.
+
+        Args:
+            metadata: Optional metadata to include in the checkpoint
+
+        Returns:
+            Checkpoint ID or None if checkpointing is disabled
+        """
+        if not self.checkpoint_storage:
+            return None
+
+        checkpoint_id = str(uuid.uuid4())
+
+        checkpoint_data = {
+            "checkpoint_id": checkpoint_id,
+            "workflow_id": self.workflow_id or "default",
+            "timestamp": datetime.now(timezone.utc).isoformat(),
+            "current_round": self.current_round,
+            "stall_count": self.stall_count,
+            "last_response": self.last_response,
+            "context": self.context,
+            "metadata": metadata or {},
+        }
+
+        # Save checkpoint as JSON file in the storage directory
+        checkpoint_path = Path(self.checkpoint_storage.storage_path) / f"{checkpoint_id}.json"
+        with open(checkpoint_path, "w") as f:
+            json.dump(checkpoint_data, f, indent=2)
+
+        self.current_checkpoint_id = checkpoint_id
+        logger.info(f"Created checkpoint: {checkpoint_id}")
+        return checkpoint_id
+
+    async def restore_from_checkpoint(self, checkpoint_id: str) -> bool:
+        """
+        Restore workflow state from a checkpoint.
+
+        Args:
+            checkpoint_id: ID of the checkpoint to restore
+
+        Returns:
+            True if restoration was successful, False otherwise
+        """
+        if not self.checkpoint_storage:
+            logger.warning("Checkpointing is disabled, cannot restore")
+            return False
+
+        try:
+            # Load checkpoint from storage
+            checkpoint_path = Path(self.checkpoint_storage.storage_path) / f"{checkpoint_id}.json"
+            if not checkpoint_path.exists():
+                logger.error(f"Checkpoint not found: {checkpoint_id}")
+                return False
+
+            with open(checkpoint_path) as f:
+                checkpoint_data = json.load(f)
+
+            # Restore state
+            self.workflow_id = checkpoint_data.get("workflow_id")
+            self.current_round = checkpoint_data.get("current_round", 0)
+            self.stall_count = checkpoint_data.get("stall_count", 0)
+            self.last_response = checkpoint_data.get("last_response")
+            self.context = checkpoint_data.get("context", {})
+            self.current_checkpoint_id = checkpoint_id
+
+            logger.info(f"Restored workflow from checkpoint: {checkpoint_id}")
+            logger.info(f"  Round: {self.current_round}/{self.max_rounds}")
+            logger.info(f"  Stall count: {self.stall_count}")
+            return True
+
+        except Exception as e:
+            logger.error(f"Failed to restore checkpoint {checkpoint_id}: {e}")
+            return False
+
+    async def list_checkpoints(self, workflow_id: str | None = None) -> list[dict[str, Any]]:
+        """
+        List all checkpoints, optionally filtered by workflow_id.
+
+        Args:
+            workflow_id: Optional workflow ID to filter by
+
+        Returns:
+            List of checkpoint metadata dicts
+        """
+        if not self.checkpoint_storage:
+            return []
+
+        checkpoints = []
+        checkpoint_dir = Path(self.checkpoint_storage.storage_path)
+
+        if not checkpoint_dir.exists():
+            return []
+
+        for checkpoint_file in checkpoint_dir.glob("*.json"):
+            try:
+                with open(checkpoint_file) as f:
+                    data = json.load(f)
+
+                if workflow_id is None or data.get("workflow_id") == workflow_id:
+                    checkpoints.append(
+                        {
+                            "checkpoint_id": data.get("checkpoint_id"),
+                            "workflow_id": data.get("workflow_id"),
+                            "timestamp": data.get("timestamp"),
+                            "current_round": data.get("current_round"),
+                            "metadata": data.get("metadata", {}),
+                        }
+                    )
+            except Exception as e:
+                logger.warning(f"Failed to load checkpoint {checkpoint_file}: {e}")
+
+        # Sort by timestamp, newest first
+        checkpoints.sort(key=lambda x: x.get("timestamp", ""), reverse=True)
+        return checkpoints
+
+    async def run(self, user_input: str, resume_from_checkpoint: str | None = None) -> str:
         """
         Execute workflow by routing user input through orchestrator.
 
@@ -57,6 +205,7 @@ class MultiAgentWorkflow:
 
         Args:
             user_input: User's request or query
+            resume_from_checkpoint: Optional checkpoint ID to resume from
 
         Returns:
             str: Final response from the orchestrator
@@ -64,19 +213,31 @@ class MultiAgentWorkflow:
         Raises:
             WorkflowError: If max rounds or stalls exceeded
         """
-        self.current_round = 0
-        self.stall_count = 0
-        self.last_response = None
+        # Generate workflow ID if not set
+        if not self.workflow_id:
+            self.workflow_id = f"workflow_{uuid.uuid4().hex[:8]}"
 
-        # Create context with available agents
-        context = {
-            "available_agents": {
-                "researcher": "Performs web searches and data gathering",
-                "coder": "Writes, executes, and debugs code",
-                "analyst": "Analyzes data and generates insights",
-            },
-            "user_query": user_input,
-        }
+        # Restore from checkpoint if requested
+        if resume_from_checkpoint:
+            restored = await self.restore_from_checkpoint(resume_from_checkpoint)
+            if not restored:
+                raise WorkflowError(f"Failed to restore from checkpoint: {resume_from_checkpoint}")
+            logger.info(f"Resuming workflow from round {self.current_round}")
+        else:
+            # Reset state for new execution
+            self.current_round = 0
+            self.stall_count = 0
+            self.last_response = None
+
+            # Create context with available agents
+            self.context = {
+                "available_agents": {
+                    "researcher": "Performs web searches and data gathering",
+                    "coder": "Writes, executes, and debugs code",
+                    "analyst": "Analyzes data and generates insights",
+                },
+                "user_query": user_input,
+            }
 
         while self.current_round < self.max_rounds:
             self.current_round += 1
@@ -86,7 +247,7 @@ class MultiAgentWorkflow:
                 result = await self.orchestrator.run(
                     f"Round {self.current_round}/{self.max_rounds}\n"
                     f"User Query: {user_input}\n"
-                    f"Context: {context}\n"
+                    f"Context: {self.context}\n"
                     f"Previous Response: {self.last_response or 'None'}\n\n"
                     "Analyze the request and either:\n"
                     "1. Provide a final answer if no delegation needed\n"
@@ -100,20 +261,34 @@ class MultiAgentWorkflow:
                 if response_text == self.last_response:
                     self.stall_count += 1
                     if self.stall_count >= self.max_stalls:
-                        return (
+                        final_response = (
                             f"Workflow stalled after {self.stall_count} identical responses. "
                             f"Last response:\n{response_text}"
                         )
+                        # Save final checkpoint before returning
+                        if self.checkpoint_storage:
+                            await self.create_checkpoint({"status": "stalled"})
+                        return final_response
                 else:
                     self.stall_count = 0
 
                 self.last_response = response_text
 
+                # Create checkpoint after each round
+                if self.checkpoint_storage:
+                    await self.create_checkpoint(
+                        {
+                            "round": self.current_round,
+                            "status": "in_progress",
+                            "user_input": user_input,
+                        }
+                    )
+
                 # Check if orchestrator delegated to another agent
                 if self.DELEGATE_PREFIX in response_text:
                     # Parse delegation instruction
-                    agent_response = await self._handle_delegation(response_text, context)
-                    context["last_delegation_result"] = agent_response
+                    agent_response = await self._handle_delegation(response_text, self.context)
+                    self.context["last_delegation_result"] = agent_response
                     continue
 
                 # Check if orchestrator provided final answer
@@ -121,12 +296,40 @@ class MultiAgentWorkflow:
                     self.FINAL_ANSWER_PREFIX in response_text
                     or self.current_round == self.max_rounds
                 ):
+                    # Save final checkpoint
+                    if self.checkpoint_storage:
+                        await self.create_checkpoint(
+                            {
+                                "status": "completed",
+                                "user_input": user_input,
+                            }
+                        )
                     return response_text
 
             except Exception as e:
+                # Save checkpoint on error
+                if self.checkpoint_storage:
+                    await self.create_checkpoint(
+                        {
+                            "status": "error",
+                            "error": str(e),
+                            "user_input": user_input,
+                        }
+                    )
                 raise WorkflowError(f"Error in workflow round {self.current_round}: {str(e)}")
 
-        return f"Max rounds ({self.max_rounds}) reached. Last response:\n{self.last_response}"
+        final_response = (
+            f"Max rounds ({self.max_rounds}) reached. Last response:\n{self.last_response}"
+        )
+        # Save final checkpoint
+        if self.checkpoint_storage:
+            await self.create_checkpoint(
+                {
+                    "status": "max_rounds_reached",
+                    "user_input": user_input,
+                }
+            )
+        return final_response
 
     async def _handle_delegation(self, orchestrator_response: str, context: dict[str, Any]) -> str:
         """
@@ -180,5 +383,6 @@ class MultiAgentWorkflow:
         return str(result)
 
 
-# Create default workflow instance
-workflow = MultiAgentWorkflow()
+# Create default workflow instance with checkpoint storage
+_checkpoint_storage = settings.create_checkpoint_storage()
+workflow = MultiAgentWorkflow(checkpoint_storage=_checkpoint_storage)

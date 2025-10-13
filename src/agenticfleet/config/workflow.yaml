@@ -4,6 +4,12 @@ workflow:
   max_stalls: 3
   max_resets: 2
   timeout_seconds: 300
+  checkpointing:
+    enabled: true
+    storage_type: file  # Options: file, memory
+    storage_path: ./checkpoints
+    cleanup_after_days: 30
+    auto_resume_on_failure: false
 
 # Shared defaults that can be overridden by individual agents
 defaults:
