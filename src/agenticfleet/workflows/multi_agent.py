@@ -104,8 +104,10 @@ class MultiAgentWorkflow:
             "metadata": metadata or {},
         }
 
-        # Save checkpoint using the CheckpointStorage abstraction
-        await self.checkpoint_storage.save_checkpoint(checkpoint_id, checkpoint_data)
+        # Save checkpoint as JSON file in the storage directory
+        checkpoint_path = Path(self.checkpoint_storage.storage_path) / f"{checkpoint_id}.json"
+        with open(checkpoint_path, "w") as f:
+            json.dump(checkpoint_data, f, indent=2)
 
         self.current_checkpoint_id = checkpoint_id
         logger.info(f"Created checkpoint: {checkpoint_id}")
@@ -126,11 +128,17 @@ class MultiAgentWorkflow:
             return False
 
         try:
-            # Load checkpoint from storage using the CheckpointStorage interface
-            checkpoint_data = self.checkpoint_storage.load_checkpoint(checkpoint_id)
-            if not checkpoint_data:
+            # Load checkpoint from storage
+            checkpoint_path = (
+                Path(self.checkpoint_storage.storage_path) / f"{checkpoint_id}.json"
+            )
+            if not checkpoint_path.exists():
                 logger.error(f"Checkpoint not found: {checkpoint_id}")
                 return False
+
+            with open(checkpoint_path) as f:
+                checkpoint_data = json.load(f)
+
             # Restore state
             self.workflow_id = checkpoint_data.get("workflow_id")
             self.current_round = checkpoint_data.get("current_round", 0)
