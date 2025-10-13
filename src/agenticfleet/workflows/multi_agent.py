@@ -104,10 +104,8 @@ class MultiAgentWorkflow:
             "metadata": metadata or {},
         }
 
-        # Save checkpoint as JSON file in the storage directory
-        checkpoint_path = Path(self.checkpoint_storage.storage_path) / f"{checkpoint_id}.json"
-        with open(checkpoint_path, "w") as f:
-            json.dump(checkpoint_data, f, indent=2)
+        # Save checkpoint using the CheckpointStorage abstraction
+        await self.checkpoint_storage.save_checkpoint(checkpoint_id, checkpoint_data)
 
         self.current_checkpoint_id = checkpoint_id
         logger.info(f"Created checkpoint: {checkpoint_id}")
