@@ -19,34 +19,42 @@ from agenticfleet.agents import (
 from agenticfleet.config import settings
 
 
-def _should_delegate_to_researcher(message: Any) -> bool:
+def _should_delegate_to_researcher(context: Any) -> bool:
     """Check if orchestrator wants to delegate to researcher."""
-    if not message:
-        return False
-
-    # Extract text from message
-    response_text = _extract_response_text(message)
+    response_text = _extract_last_output_text(context)
 
     # Check for delegation to researcher
     return "DELEGATE: researcher" in response_text or "DELEGATE:researcher" in response_text
 
 
-def _should_delegate_to_coder(message: Any) -> bool:
+def _should_delegate_to_coder(context: Any) -> bool:
     """Check if orchestrator wants to delegate to coder."""
-    if not message:
-        return False
-
-    response_text = _extract_response_text(message)
+    response_text = _extract_last_output_text(context)
     return "DELEGATE: coder" in response_text or "DELEGATE:coder" in response_text
 
 
-def _should_delegate_to_analyst(message: Any) -> bool:
+def _should_delegate_to_analyst(context: Any) -> bool:
     """Check if orchestrator wants to delegate to analyst."""
-    if not message:
-        return False
-
-    response_text = _extract_response_text(message)
+    response_text = _extract_last_output_text(context)
     return "DELEGATE: analyst" in response_text or "DELEGATE:analyst" in response_text
+
+
+def _extract_last_output_text(context: Any) -> str:
+    """Extract the latest executor output text from a workflow context."""
+    if not context:
+        return ""
+
+    last_output = getattr(context, "last_output", None)
+    if not last_output:
+        return ""
+
+    # Prefer the payload stored on the workflow event if available
+    payload = getattr(last_output, "output", last_output)
+
+    if payload is None:
+        return ""
+
+    return _extract_response_text(payload)
 
 
 def _extract_response_text(result: Any) -> str:
