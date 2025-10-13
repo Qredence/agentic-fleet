@@ -104,8 +104,9 @@ def create_workflow(checkpoint_storage: CheckpointStorage | None = None) -> Any:
 
     Args:
         checkpoint_storage: Optional checkpoint storage for workflow state persistence
-                            Note: Checkpoint storage is managed separately in MultiAgentWorkflow
 
+    Notes:
+        Checkpoint storage is managed separately in MultiAgentWorkflow.
     Returns:
         Workflow: Configured workflow with orchestrator and specialized agents
     """
