@@ -1,7 +1,6 @@
 """Tests for human-in-the-loop approval system."""
 
 import asyncio
-import uuid
 
 import pytest
 
