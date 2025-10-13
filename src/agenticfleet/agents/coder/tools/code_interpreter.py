@@ -119,72 +119,12 @@ def code_interpreter_tool(code: str, language: str = "python") -> CodeExecutionR
         )
 
     # Check if approval is required
-    try:
-        from agenticfleet.core.approved_tools import get_approval_handler
-        from agenticfleet.core.approval import ApprovalDecision
-        from agenticfleet.core.cli_approval import create_approval_request
-        import asyncio
-
-        handler = get_approval_handler()
-
-        if handler is not None:
-            # Create approval request
-            request = create_approval_request(
-                operation_type="code_execution",
-                agent_name="coder",
-                operation="Execute Python code",
-                details={"language": language, "code_length": len(code)},
-                code=code,
-            )
-
-            # Request approval (handle async)
-            try:
-                loop = asyncio.get_event_loop()
-                if loop.is_running():
-                    # Cannot use asyncio.run in running loop
-                    # Fall back to direct execution with warning
-                    pass  # Will execute directly below
-                else:
-                    response = loop.run_until_complete(handler.request_approval(request))
-                    
-                    # Handle approval decision
-                    if response.decision == ApprovalDecision.APPROVED:
-                        pass  # Continue to execution
-                    elif response.decision == ApprovalDecision.MODIFIED:
-                        code = response.modified_code or code
-                    else:  # REJECTED or TIMEOUT
-                        reason = response.reason or f"Operation {response.decision.value}"
-                        return CodeExecutionResult(
-                            success=False,
-                            output="",
-                            error=f"Code execution was {response.decision.value}: {reason}",
-                            execution_time=0.0,
-                            language=language,
-                            exit_code=1,
-                        )
-            except RuntimeError:
-                # No event loop, create one
-                response = asyncio.run(handler.request_approval(request))
-                
-                # Handle approval decision
-                if response.decision == ApprovalDecision.APPROVED:
-                    pass  # Continue to execution
-                elif response.decision == ApprovalDecision.MODIFIED:
-                    code = response.modified_code or code
-                else:  # REJECTED or TIMEOUT
-                    reason = response.reason or f"Operation {response.decision.value}"
-                    return CodeExecutionResult(
-                        success=False,
-                        output="",
-                        error=f"Code execution was {response.decision.value}: {reason}",
-                        execution_time=0.0,
-                        language=language,
-                        exit_code=1,
-                    )
-
-    except ImportError:
-        # Approval module not available, execute directly
-        pass
-
+    from agenticfleet.core.code_execution_approval import maybe_request_approval_for_code_execution
+    approval_result = maybe_request_approval_for_code_execution(code, language)
+    if approval_result is not None:
+        if isinstance(approval_result, CodeExecutionResult):
+            return approval_result
+        else:
+            code = approval_result  # modified code from approval handler
     # Execute the (possibly modified) code
     return _execute_python_code(code)
