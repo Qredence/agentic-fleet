@@ -126,15 +126,11 @@ class MultiAgentWorkflow:
             return False
 
         try:
-            # Load checkpoint from storage
-            checkpoint_path = Path(self.checkpoint_storage.storage_path) / f"{checkpoint_id}.json"
-            if not checkpoint_path.exists():
+            # Load checkpoint from storage using the CheckpointStorage interface
+            checkpoint_data = self.checkpoint_storage.load_checkpoint(checkpoint_id)
+            if not checkpoint_data:
                 logger.error(f"Checkpoint not found: {checkpoint_id}")
                 return False
-
-            with open(checkpoint_path) as f:
-                checkpoint_data = json.load(f)
-
             # Restore state
             self.workflow_id = checkpoint_data.get("workflow_id")
             self.current_round = checkpoint_data.get("current_round", 0)
