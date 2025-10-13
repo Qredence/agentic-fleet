@@ -138,7 +138,7 @@ def test_approval_history():
 
     # Run async request
     loop = asyncio.get_event_loop()
-    response = loop.run_until_complete(handler.request_approval(request))
+    loop.run_until_complete(handler.request_approval(request))
 
     # Check history
     history = handler.get_approval_history()
