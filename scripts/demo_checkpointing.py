@@ -11,7 +11,6 @@ This script demonstrates:
 
 import asyncio
 import json
-import sys
 from pathlib import Path
 from unittest.mock import AsyncMock, Mock, patch
 
