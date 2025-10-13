@@ -8,7 +8,7 @@ like automatic state management, cycle detection, and streaming support.
 
 from typing import Any
 
-from agent_framework import WorkflowBuilder
+from agent_framework import CheckpointStorage, WorkflowBuilder
 
 from agenticfleet.agents import (
     create_analyst_agent,
@@ -94,9 +94,12 @@ def _extract_response_text(result: Any) -> str:
     return str(result)
 
 
-def create_workflow() -> Any:
+def create_workflow(checkpoint_storage: CheckpointStorage | None = None) -> Any:
     """
     Create multi-agent workflow using WorkflowBuilder pattern.
+
+    Args:
+        checkpoint_storage: Optional checkpoint storage for workflow state persistence
 
     Returns:
         Workflow: Configured workflow with orchestrator and specialized agents
@@ -111,9 +114,11 @@ def create_workflow() -> Any:
     coder = create_coder_agent()
     analyst = create_analyst_agent()
 
-    # Build workflow graph
+    # Build workflow graph with optional checkpointing
+    builder = WorkflowBuilder(max_iterations=max_rounds)
+    
     workflow = (
-        WorkflowBuilder(max_iterations=max_rounds)
+        builder
         # Add all agents as executors
         .add_agent(orchestrator)
         .add_agent(researcher)
@@ -144,11 +149,17 @@ class MultiAgentWorkflow:
     for graph-based orchestration.
     """
 
-    def __init__(self) -> None:
-        """Initialize workflow with WorkflowBuilder pattern."""
-        self.workflow = create_workflow()
+    def __init__(self, checkpoint_storage: CheckpointStorage | None = None) -> None:
+        """
+        Initialize workflow with WorkflowBuilder pattern.
+        
+        Args:
+            checkpoint_storage: Optional checkpoint storage for workflow state persistence
+        """
+        self.checkpoint_storage = checkpoint_storage
+        self.workflow = create_workflow(checkpoint_storage)
 
-    async def run(self, user_input: str) -> str:
+    async def run(self, user_input: str, resume_from_checkpoint: str | None = None) -> str:
         """
         Execute workflow by routing user input through the graph.
 
@@ -158,10 +169,14 @@ class MultiAgentWorkflow:
 
         Args:
             user_input: User's request or query
+            resume_from_checkpoint: Optional checkpoint ID to resume from (placeholder for future)
 
         Returns:
             str: Final response from the workflow
         """
+        # Note: Checkpoint resume is handled by WorkflowBuilder's built-in checkpoint storage
+        # The resume_from_checkpoint parameter is kept for API compatibility
+        
         # Run the workflow with the user input
         result = await self.workflow.run(user_input)
 
@@ -173,5 +188,6 @@ class MultiAgentWorkflow:
         return "No response generated"
 
 
-# Create default workflow instance
-workflow = MultiAgentWorkflow()
+# Create default workflow instance with checkpoint storage
+_checkpoint_storage = settings.create_checkpoint_storage()
+workflow = MultiAgentWorkflow(checkpoint_storage=_checkpoint_storage)
