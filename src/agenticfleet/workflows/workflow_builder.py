@@ -8,7 +8,7 @@ like automatic state management, cycle detection, and streaming support.
 
 from typing import Any
 
-from agent_framework import WorkflowBuilder, WorkflowContext
+from agent_framework import WorkflowBuilder
 
 from agenticfleet.agents import (
     create_analyst_agent,
@@ -19,36 +19,33 @@ from agenticfleet.agents import (
 from agenticfleet.config import settings
 
 
-def _should_delegate_to_researcher(context: WorkflowContext) -> bool:
+def _should_delegate_to_researcher(message: Any) -> bool:
     """Check if orchestrator wants to delegate to researcher."""
-    last_output = context.last_output
-    if not last_output:
+    if not message:
         return False
 
-    # Extract text from last output
-    response_text = _extract_response_text(last_output)
+    # Extract text from message
+    response_text = _extract_response_text(message)
 
     # Check for delegation to researcher
     return "DELEGATE: researcher" in response_text or "DELEGATE:researcher" in response_text
 
 
-def _should_delegate_to_coder(context: WorkflowContext) -> bool:
+def _should_delegate_to_coder(message: Any) -> bool:
     """Check if orchestrator wants to delegate to coder."""
-    last_output = context.last_output
-    if not last_output:
+    if not message:
         return False
 
-    response_text = _extract_response_text(last_output)
+    response_text = _extract_response_text(message)
     return "DELEGATE: coder" in response_text or "DELEGATE:coder" in response_text
 
 
-def _should_delegate_to_analyst(context: WorkflowContext) -> bool:
+def _should_delegate_to_analyst(message: Any) -> bool:
     """Check if orchestrator wants to delegate to analyst."""
-    last_output = context.last_output
-    if not last_output:
+    if not message:
         return False
 
-    response_text = _extract_response_text(last_output)
+    response_text = _extract_response_text(message)
     return "DELEGATE: analyst" in response_text or "DELEGATE:analyst" in response_text
 
 
