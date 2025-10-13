@@ -43,7 +43,8 @@ async def handle_checkpoint_command(command: str) -> bool:
                 try:
                     dt = datetime.fromisoformat(timestamp.replace("Z", "+00:00"))
                     timestamp = dt.strftime("%Y-%m-%d %H:%M:%S")
-                except:
+                except ValueError:
+                    # If timestamp is not valid ISO format, use as-is
                     pass
 
                 print(f"\nCheckpoint ID: {cp.get('checkpoint_id')}")
