@@ -42,7 +42,7 @@ async def code_interpreter_tool_with_approval(
     """
     Execute code with human-in-the-loop approval if enabled.
 
-    from agenticfleet.agents.coder.tools.code_interpreter import (
+    from agenticfleet.agents.coder.tools.code_execution_core import (
         CodeExecutionResult,
         code_interpreter_tool as _original_code_interpreter,
     )
@@ -114,7 +114,7 @@ def code_interpreter_tool(code: str, language: str = "python") -> "CodeExecution
     Returns:
         CodeExecutionResult: Structured execution results
     """
-    from agenticfleet.agents.coder.tools.code_interpreter import (
+    from agenticfleet.agents.coder.tools.code_execution_core import (
         CodeExecutionResult,
         code_interpreter_tool as _original_code_interpreter,
     )
