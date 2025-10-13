@@ -11,7 +11,7 @@ from agenticfleet.core.cli_approval import create_approval_request
 from agenticfleet.core.logging import get_logger
 
 if TYPE_CHECKING:  # pragma: no cover - import only for type checking
-    from agenticfleet.agents.coder.tools.code_interpreter import CodeExecutionResult
+    pass
 
 logger = get_logger(__name__)
 
