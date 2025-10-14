@@ -29,12 +29,12 @@ Replace the custom `MultiAgentWorkflow` class with the official Microsoft Agent 
 ## Implemented Solution
 
 ### New Implementation
-- WorkflowBuilder-based workflow in `src/agenticfleet/workflows/workflow_builder.py`
-- Graph-based orchestration with conditional edges
-- Automatic cycle detection and validation
-- Native framework state management via WorkflowContext
-- Maintains backward compatibility via MultiAgentWorkflow wrapper class
-- Old implementation preserved as `multi_agent.py.old` for reference
+- Magentic-based workflow in `src/agenticfleet/fleet/magentic_fleet.py`
+- Graph-based orchestration with conditional edges via Microsoft Agent Framework
+- Automatic cycle detection and validation provided by StandardMagenticManager
+- Native framework state management via Magentic ledgers
+- Legacy MultiAgentWorkflow removed after migration
+- Historical source preserved in documentation for reference
 
 ## Benefits
 - ✅ Native graph validation with cycle detection

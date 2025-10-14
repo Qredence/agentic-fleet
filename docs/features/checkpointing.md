@@ -90,20 +90,16 @@ The workflow will restore its state (round number, context, last response) and c
 ### Programmatic Usage
 
 ```python
-from agenticfleet.workflows import workflow
+from agenticfleet.fleet import create_default_fleet
 
-# Workflows automatically create checkpoints after each round
-result = await workflow.run("Analyze sales data")
+fleet = create_default_fleet()
+result = await fleet.run("Analyze sales data")
 
-# List checkpoints
-checkpoints = await workflow.list_checkpoints()
-for cp in checkpoints:
-    print(f"Checkpoint {cp['checkpoint_id']} at round {cp['current_round']}")
-
-# Resume from a specific checkpoint
-result = await workflow.run(
+# Checkpoint restoration is handled by the Magentic workflow's
+# CheckpointStorage integration. Pass a checkpoint ID to resume:
+result = await fleet.run(
     "Continue analysis",
-    resume_from_checkpoint="a1b2c3d4-5e6f-7890-abcd-ef1234567890"
+    resume_from_checkpoint="a1b2c3d4-5e6f-7890-abcd-ef1234567890",
 )
 ```
 
@@ -190,18 +186,15 @@ await workflow.run(
 
 ## Testing
 
-Run the checkpoint tests:
+Run the checkpoint-related tests:
 
 ```bash
-python -m pytest tests/test_checkpointing.py -v
+python -m pytest tests/test_configuration.py -v
 ```
 
 Test coverage includes:
 - Checkpoint storage creation (file, memory, disabled)
-- Checkpoint save/load operations
-- Workflow state restoration
-- Checkpoint listing and filtering
-- Error handling for missing checkpoints
+- Default Magentic fleet wiring with checkpoint storage
 
 ## Architecture
 
@@ -209,11 +202,11 @@ The checkpointing system integrates with Microsoft Agent Framework's checkpoint 
 
 ```
 ┌─────────────────────────────────────┐
-│   MultiAgentWorkflow                │
+│   MagenticFleet                     │
+│   (via FleetBuilder)                │
 │                                     │
-│  - create_checkpoint()              │
-│  - restore_from_checkpoint()        │
-│  - list_checkpoints()               │
+│  - run(..., resume_from_checkpoint) │
+│  - with_checkpointing(storage)      │
 └──────────────┬──────────────────────┘
                │
                ▼
@@ -272,5 +265,5 @@ cat ./checkpoints/<checkpoint-id>.json | python -m json.tool
 
 - [OPT-02 Issue](../../analysis/issues/opt-02-checkpointing.md) - Original proposal
 - [State Management Guide](../../analysis/TODOS/STATE_MANAGEMENT.md) - Framework patterns
-- [Workflow Implementation](../../../src/agenticfleet/workflows/multi_agent.py) - Code
-- [Test Suite](../../../tests/test_checkpointing.py) - Test coverage
+- [Workflow Implementation](../../../src/agenticfleet/fleet/magentic_fleet.py) - Code
+- [Test Suite](../../../tests/test_configuration.py) - Test coverage

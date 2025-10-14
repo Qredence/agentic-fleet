@@ -282,7 +282,7 @@ All Phase 1 objectives have been completed and verified.
 - [README](../README.md) - Project overview
 - [Repository Guidelines](../AGENTS.md) - Development rules
 - [Quick Reference](QUICK_REFERENCE.md) - Getting started
-- [Implementation Summary](IMPLEMENTATION_SUMMARY.md) - Technical details
+- [Checkpointing Implementation Summary](../features/checkpointing-summary.md) - Technical details
 - [Migration Guide](MIGRATION_TO_RESPONSES_API.md) - API updates
 - [Bug Fixes](FIXES.md) - Issue resolutions
 

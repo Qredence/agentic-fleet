@@ -23,7 +23,7 @@ Integrate the official Agent Framework DevUI package to provide a visual interfa
 ```python
 # File: src/agenticfleet/cli/devui_server.py
 from agent_framework_devui import start_devui
-from agenticfleet.workflows import create_workflow
+from agenticfleet.fleet import create_default_fleet
 from agenticfleet.agents import (
     create_orchestrator_agent,
     create_researcher_agent,
@@ -35,7 +35,7 @@ def start_development_ui(port=8000):
     """Start the Agent Framework DevUI server."""
     
     # Create workflow and agents
-    workflow = create_workflow()
+    workflow = create_default_fleet()
     agents = {
         "orchestrator": create_orchestrator_agent(),
         "researcher": create_researcher_agent(),

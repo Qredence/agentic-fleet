@@ -1,8 +1,14 @@
-# WorkflowBuilder Implementation Guide
+# WorkflowBuilder Implementation Guide *(Legacy)*
+
+> **Status:** Archived. AgenticFleet now uses the Magentic fleet orchestrator in
+> `src/agenticfleet/fleet/magentic_fleet.py`. This document is retained for
+> historical context on the deprecated `MultiAgentWorkflow` implementation.
 
 ## Overview
 
-AgenticFleet now uses the Microsoft Agent Framework's `WorkflowBuilder` pattern for graph-based orchestration. This replaces the previous custom `MultiAgentWorkflow` implementation with native framework features.
+> **Note:** The legacy `MultiAgentWorkflow` implementation described in this
+> document has been removed in favour of the Magentic-based fleet. The guide is
+> retained for historical reference only.
 
 ## Architecture
 

@@ -40,7 +40,7 @@ Successfully implemented Human-in-the-Loop (HITL) approval capabilities for Agen
    - Seamless fallback when no handler configured
 
 3. **Workflow Integration**
-   - Modified `workflow_builder.py` to accept approval_handler
+   - Updated `magentic_fleet.py` to accept an `approval_handler`
    - Automatic handler initialization from config
    - Handler registration with tools
 
@@ -79,10 +79,11 @@ Successfully implemented Human-in-the-Loop (HITL) approval capabilities for Agen
      - History tracking
 
 2. **Demo Script**
-   - `demo_hitl.py` - Interactive demonstration
+   - `examples/demo_hitl.py` - Interactive demonstration
    - Shows approval prompt UI
    - Demonstrates auto-approval for testing
    - Usage examples included
+   - Quick command: `make demo-hitl`
 
 ### Documentation
 
@@ -212,7 +213,7 @@ Approve? (yes/no/edit):
 - `src/agenticfleet/core/approved_tools.py`
 - `tests/test_hitl.py`
 - `tests/test_hitl_manual.py`
-- `demo_hitl.py`
+- `examples/demo_hitl.py`
 - `docs/guides/human-in-the-loop.md`
 - `docs/releases/2025-10-13-hitl-implementation.md`
 - `docs/releases/hitl-visual-summary.md`
@@ -220,7 +221,7 @@ Approve? (yes/no/edit):
 ### Modified (5 files)
 - `src/agenticfleet/config/workflow.yaml`
 - `src/agenticfleet/agents/coder/tools/code_interpreter.py`
-- `src/agenticfleet/workflows/workflow_builder.py`
+- `src/agenticfleet/fleet/magentic_fleet.py`
 - `src/agenticfleet/cli/repl.py`
 - `src/agenticfleet/core/__init__.py`
 - `README.md`
