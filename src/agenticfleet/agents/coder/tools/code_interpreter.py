@@ -108,20 +108,5 @@ def code_interpreter_tool(code: str, language: str = "python") -> CodeExecutionR
             exit_code=1,
         )
 
-    # Check if approval is required
-    from agenticfleet.core.code_execution_approval import (
-        maybe_request_approval_for_code_execution,
-    )
-    from agenticfleet.core.code_execution_approval import CodeApprovalOutcome
-
-    approval_result = maybe_request_approval_for_code_execution(code, language)
-    if approval_result.outcome == CodeApprovalOutcome.REJECTED:
-        if approval_result.execution_result is not None:
-            return approval_result.execution_result
-        # If no execution result, fall through to execute anyway (shouldn't happen)
-
-    # Use modified code if provided, otherwise original code
-    code_to_execute = approval_result.modified_code or code
-
-    # Execute the (possibly modified) code
-    return _execute_python_code(code_to_execute)
+    # Execute the code without approval handling
+    return _execute_python_code(code)
