@@ -18,14 +18,15 @@
 | Console script | `uv run agentic-fleet` |
 | Module execution | `uv run python -m agenticfleet` |
 | Programmatic | See examples below |
+| HITL demo | `make demo-hitl` |
 
 ### Programmatic Usage
 
 ```python
 # In your Python script
-from agenticfleet import MultiAgentWorkflow
+from agenticfleet import create_default_fleet
 
-workflow = MultiAgentWorkflow()
+workflow = create_default_fleet()
 result = await workflow.run("Your task here")
 ```
 
@@ -175,10 +176,11 @@ uv run python
 ```bash
 uv run python -c "
 import asyncio
-from agenticfleet.workflows import workflow
+from agenticfleet.fleet import create_default_fleet
 
 async def test():
-    result = await workflow.run('What is 2+2?')
+    fleet = create_default_fleet()
+    result = await fleet.run('What is 2+2?')
     print(result)
 
 asyncio.run(test())

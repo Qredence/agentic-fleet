@@ -1,21 +1,34 @@
 # AgenticFleet Documentation
 
-**Version:** 0.5.0  
-**Last Updated:** October 12, 2025
+**Version:** 0.5.1  
+**Last Updated:** October 14, 2025
 
 Welcome! The docs are now arranged by intent so you can jump straight to what you need.
 
 ## Directory Map
+- **architecture/**
+  - [`magentic-fleet.md`](architecture/magentic-fleet.md) – end-to-end view of the fleet orchestration stack.
+  - [`README`](architecture/README.md) *(if present)* summarises patterns used across diagrams.
+- **features/**
+  - [`magentic-fleet.md`](features/magentic-fleet.md) – feature overview and usage guidance.
+  - [`magentic-fleet-implementation.md`](features/magentic-fleet-implementation.md) – implementation deep dive.
+  - [`checkpointing-summary.md`](features/checkpointing-summary.md) – checkpointing rollout notes and API surface.
+  - [`hitl-implementation-summary.md`](features/hitl-implementation-summary.md) – HITL enablement timeline and artifacts.
 - **getting-started/**
   - [`command-reference.md`](getting-started/command-reference.md) – uv + Makefile command catalogue.
   - [`quick-reference.md`](getting-started/quick-reference.md) – one-page onboarding checklist.
 - **overview/**
   - [`implementation-summary.md`](overview/implementation-summary.md) – architecture deep dive + component guide.
   - [`progress-tracker.md`](overview/progress-tracker.md) – milestone status and roadmap.
+- **guides/**
+  - [`human-in-the-loop.md`](guides/human-in-the-loop.md) – configuring approval flows and policies.
+- **analysis/**
+  - [`issues/`](analysis/issues/) – optimization proposals and decision records.
 - **operations/**
   - [`developer-environment.md`](operations/developer-environment.md) – uv workflow, tooling, CI guardrails.
   - [`github-actions-setup.md`](operations/github-actions-setup.md) – workflow catalogue and protection rules.
   - [`github-workflows-overview.md`](operations/github-workflows-overview.md) – plain-language description of each workflow.
+  - [`backlog.md`](operations/backlog.md) – active engineering backlog and cleanup plan.
   - [`mem0-integration.md`](operations/mem0-integration.md) – persistent memory configuration.
   - [`pypi-environment-setup.md`](operations/pypi-environment-setup.md) – trusted publishing + API token instructions.
   - [`repository-guidelines.md`](operations/repository-guidelines.md) – coding standards and review practices.
@@ -27,6 +40,8 @@ Welcome! The docs are now arranged by intent so you can jump straight to what yo
   - [`troubleshooting.md`](runbooks/troubleshooting.md) – recurring issues (tag rules, ChatAgent params, mem0 regression tests).
 - **releases/**
   - [`2025-10-12-v0.5.0.md`](releases/2025-10-12-v0.5.0.md) – release changelog and validation evidence.
+- **runbooks/**
+  - [`troubleshooting.md`](runbooks/troubleshooting.md) – recurring issues (tag rules, ChatAgent params, mem0 regression tests).
 - **archive/**
   - Historical clean-up checklists and .github remediation summaries retained for audit.
 

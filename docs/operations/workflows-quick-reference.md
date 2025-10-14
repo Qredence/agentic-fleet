@@ -182,7 +182,7 @@ gh workflow run release.yml -f version=v0.5.1
 Automatically labels PRs based on changed files:
 
 - `src/agenticfleet/agents/**` → `area: agents`
-- `src/agenticfleet/workflows/**` → `area: workflow`
+- `src/agenticfleet/fleet/**` → `area: workflow`
 - `**/*.md` → `type: documentation`
 - `tests/**` → `type: test`
 

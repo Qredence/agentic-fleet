@@ -315,12 +315,12 @@ class MyApprovalHandler(ApprovalHandler):
 ### Integrating with Workflows
 
 ```python
-from agenticfleet.workflows import MultiAgentWorkflow
+from agenticfleet.fleet import MagenticFleet
 from my_module import MyApprovalHandler
 
-# Create workflow with custom handler
+# Create Magentic fleet with custom handler
 handler = MyApprovalHandler()
-workflow = MultiAgentWorkflow(approval_handler=handler)
+workflow = MagenticFleet(approval_handler=handler)
 
 # Run workflow
 result = await workflow.run("Your task here")

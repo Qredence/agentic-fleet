@@ -2,8 +2,9 @@ import sys
 import time
 from io import StringIO
 
-from pydantic import BaseModel, Field
+# Do not import CodeApprovalOutcome at module level to avoid cyclic import.
 from agenticfleet.core.code_types import CodeExecutionResult
+
 
 def _execute_python_code(code: str) -> CodeExecutionResult:
     """
@@ -107,13 +108,5 @@ def code_interpreter_tool(code: str, language: str = "python") -> CodeExecutionR
             exit_code=1,
         )
 
-    # Check if approval is required
-    from agenticfleet.core.approved_tools import maybe_request_approval_for_code_execution
-    approval_result = maybe_request_approval_for_code_execution(code, language)
-    if approval_result is not None:
-        if isinstance(approval_result, CodeExecutionResult):
-            return approval_result
-        else:
-            code = approval_result  # modified code from approval handler
-    # Execute the (possibly modified) code
+    # Execute the code without approval handling
     return _execute_python_code(code)

@@ -1,14 +1,28 @@
-"""Type definitions for code execution results."""
+"""Core type definitions for code execution results."""
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 
 class CodeExecutionResult(BaseModel):
-    """Result of code execution."""
+    """Structured payload describing the outcome of executing a code snippet."""
 
-    success: bool = Field(..., description="Whether the code executed successfully")
-    output: str = Field(default="", description="Standard output from the execution")
-    error: str = Field(default="", description="Error output from the execution")
-    execution_time: float = Field(..., description="Execution time in seconds")
-    language: str = Field(..., description="Programming language used")
-    exit_code: int = Field(default=0, description="Exit code from execution")
+    success: bool = Field(
+        ..., description="True when the code finished without raising an exception."
+    )
+    output: str = Field(
+        "",
+        description="Captured standard output produced while running the snippet.",
+    )
+    error: str = Field(
+        "",
+        description="Combined standard error stream and any synthesized error message.",
+    )
+    execution_time: float = Field(
+        0.0,
+        ge=0.0,
+        description="Elapsed runtime in seconds for the execution attempt.",
+    )
+    language: str = Field(..., description="Programming language the snippet was executed with.")
+    exit_code: int = Field(..., description="Process-style exit code; zero indicates success.")
+
+    model_config = ConfigDict(extra="forbid", populate_by_name=True)

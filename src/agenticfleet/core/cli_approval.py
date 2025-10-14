@@ -40,9 +40,7 @@ class CLIApprovalHandler(ApprovalHandler):
         Returns:
             ApprovalResponse: The user's decision and any modifications
         """
-        logger.info(
-            f"Approval requested for {request.operation_type} by {request.agent_name}"
-        )
+        logger.info(f"Approval requested for {request.operation_type} by {request.agent_name}")
 
         # Display approval prompt
         self._display_approval_request(request)
@@ -52,7 +50,7 @@ class CLIApprovalHandler(ApprovalHandler):
             response = await asyncio.wait_for(
                 self._get_user_input(request), timeout=self.timeout_seconds
             )
-        except asyncio.TimeoutError:
+        except TimeoutError:
             logger.warning(
                 f"Approval request {request.request_id} timed out after {self.timeout_seconds}s"
             )
@@ -64,11 +62,12 @@ class CLIApprovalHandler(ApprovalHandler):
             response = ApprovalResponse(
                 request_id=request.request_id,
                 decision=decision,
+                modified_code=None,
                 reason="Approval request timed out",
             )
 
         # Store in history
-        self.approval_history.append((request, response))
+        self._record_approval_history(request, response)
 
         return response
 
@@ -109,14 +108,15 @@ class CLIApprovalHandler(ApprovalHandler):
 
         while True:
             # Run input in executor to avoid blocking
-            user_input = await loop.run_in_executor(
-                None, input, "\nApprove? (yes/no/edit): "
-            )
+            user_input = await loop.run_in_executor(None, input, "\nApprove? (yes/no/edit): ")
             response_text = user_input.strip().lower()
 
             if response_text in ["yes", "y", "approve"]:
                 return ApprovalResponse(
-                    request_id=request.request_id, decision=ApprovalDecision.APPROVED
+                    request_id=request.request_id,
+                    decision=ApprovalDecision.APPROVED,
+                    modified_code=None,
+                    reason=None,
                 )
 
             elif response_text in ["no", "n", "reject", "deny"]:
@@ -126,6 +126,7 @@ class CLIApprovalHandler(ApprovalHandler):
                 return ApprovalResponse(
                     request_id=request.request_id,
                     decision=ApprovalDecision.REJECTED,
+                    modified_code=None,
                     reason=reason.strip() or "User rejected the operation",
                 )
 
@@ -156,9 +157,7 @@ class CLIApprovalHandler(ApprovalHandler):
                     continue
 
             else:
-                print(
-                    "⚠️  Invalid input. Please enter 'yes', 'no', or 'edit' (or 'y', 'n', 'e')"
-                )
+                print("⚠️  Invalid input. Please enter 'yes', 'no', or 'edit' (or 'y', 'n', 'e')")
                 continue
 
     def get_approval_history(self) -> list[tuple[ApprovalRequest, ApprovalResponse]]:
@@ -169,6 +168,15 @@ class CLIApprovalHandler(ApprovalHandler):
             List of (request, response) tuples
         """
         return self.approval_history.copy()
+
+    def _record_approval_history(
+        self, request: ApprovalRequest, response: ApprovalResponse
+    ) -> None:
+        """Record approval interactions, avoiding duplicate entries."""
+
+        entry = (request, response)
+        if not self.approval_history or self.approval_history[-1] != entry:
+            self.approval_history.append(entry)
 
 
 def create_approval_request(

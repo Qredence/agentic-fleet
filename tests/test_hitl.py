@@ -24,12 +24,14 @@ class MockApprovalHandler(CLIApprovalHandler):
     async def request_approval(self, request: ApprovalRequest) -> ApprovalResponse:
         """Mock approval that returns predefined decision."""
         self.requests_received.append(request)
-        return ApprovalResponse(
+        response = ApprovalResponse(
             request_id=request.request_id,
             decision=self.decision,
             modified_code=self.modified_code,
             reason=f"Mock {self.decision.value}",
         )
+        self._record_approval_history(request, response)
+        return response
 
 
 def test_create_approval_request():
@@ -91,9 +93,7 @@ async def test_mock_approval_handler_reject():
 async def test_mock_approval_handler_modify():
     """Test mock approval handler with modification decision."""
     modified_code = "print('modified')"
-    handler = MockApprovalHandler(
-        decision=ApprovalDecision.MODIFIED, modified_code=modified_code
-    )
+    handler = MockApprovalHandler(decision=ApprovalDecision.MODIFIED, modified_code=modified_code)
 
     request = create_approval_request(
         operation_type="code_execution",
@@ -113,12 +113,8 @@ def test_approval_handler_should_require_approval():
     handler = MockApprovalHandler(decision=ApprovalDecision.APPROVED)
 
     # Should require approval for configured operations
-    assert handler.should_require_approval(
-        "code_execution", ["code_execution", "file_operations"]
-    )
-    assert handler.should_require_approval(
-        "file_operations", ["code_execution", "file_operations"]
-    )
+    assert handler.should_require_approval("code_execution", ["code_execution", "file_operations"])
+    assert handler.should_require_approval("file_operations", ["code_execution", "file_operations"])
 
     # Should not require approval for non-configured operations
     assert not handler.should_require_approval("web_search", ["code_execution"])
@@ -132,9 +128,7 @@ def test_approval_history():
     assert len(handler.get_approval_history()) == 0
 
     # Add a request
-    request = create_approval_request(
-        operation_type="test", agent_name="test", operation="test"
-    )
+    request = create_approval_request(operation_type="test", agent_name="test", operation="test")
 
     # Run async request
     loop = asyncio.get_event_loop()
@@ -150,7 +144,6 @@ def test_approval_history():
 def test_code_execution_with_approval():
     """Test code execution with approval integration."""
     from agenticfleet.agents.coder.tools.code_interpreter import (
-        CodeExecutionResult,
         code_interpreter_tool,
     )
     from agenticfleet.core.approved_tools import set_approval_handler

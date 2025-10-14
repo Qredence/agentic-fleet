@@ -337,5 +337,5 @@ class TestMem0ContextProviderConfiguration:
                 mock_azure_client.assert_called_once_with(
                     azure_endpoint="https://test-project.openai.azure.com",
                     api_key="test-openai-key",
-                    api_version="2024-02-01",
+                    api_version="2025-05-01",
                 )

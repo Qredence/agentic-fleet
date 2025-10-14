@@ -6,7 +6,7 @@ This document explains how the multi-agent system in AgenticFleet is assembled, 
 
 - All agent factories live under `src/agenticfleet/agents/` with one subdirectory per agent (`orchestrator`, `researcher`, `coder`, `analyst`).
 - Agents are instantiated through factory helpers that wrap Microsoft Agent Framework constructs (`ChatAgent`, `WorkflowBuilder`) and share configuration via `src/agenticfleet/config/settings.py`.
-- The runtime workflow is defined in `src/agenticfleet/workflows/workflow_builder.py`; it links the orchestrator to the three specialist agents and controls delegation.
+- The runtime workflow is defined in `src/agenticfleet/fleet/magentic_fleet.py`; it links the orchestrator to the three specialist agents and controls delegation through Magentic.
 
 | Agent        | Factory Helper                                   | Config File                                             | Key Tools / Capabilities                                                | Primary Role                                             |
 |--------------|--------------------------------------------------|---------------------------------------------------------|--------------------------------------------------------------------------|----------------------------------------------------------|
@@ -17,7 +17,8 @@ This document explains how the multi-agent system in AgenticFleet is assembled, 
 
 ## Orchestration Flow
 
-- `workflow = MultiAgentWorkflow()` is instantiated at import time in `src/agenticfleet/workflows/__init__.py`. The underlying graph is built in `workflow_builder.create_workflow()`.
+- Use `agenticfleet.fleet.create_default_fleet()` to instantiate the Magentic
+  orchestration pipeline configured via `fleet/fleet_builder.py`.
 - The builder attaches all four agents to a `WorkflowBuilder` and wires conditional edges based on tokens emitted by the orchestrator. When the orchestrator output contains `DELEGATE: researcher`, `DELEGATE: coder`, or `DELEGATE: analyst`, the corresponding predicate (`_should_delegate_to_*`) returns `True` and the workflow routes execution to that agent.
 - After a specialist agent finishes, the workflow automatically returns control to the orchestrator via unconditional edges back to the orchestrator node. The orchestrator ultimately produces the final response.
 - Workflow-level safeguards (e.g., `max_rounds`, `max_stalls`, `max_resets`) are read from `src/agenticfleet/config/workflow.yaml`.

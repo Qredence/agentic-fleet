@@ -58,12 +58,12 @@ human_in_the_loop:
 ### 4. Workflow Integration
 
 **File Modified:**
-- `src/agenticfleet/workflows/workflow_builder.py`
+- `src/agenticfleet/fleet/magentic_fleet.py`
 
 **Changes:**
-- Added `approval_handler` parameter to `MultiAgentWorkflow.__init__()`
-- Automatic handler registration with tools when configured
-- HITL initialization based on workflow configuration
+- Wire optional `approval_handler` directly into the Magentic fleet constructor
+- Ensure the global approval handler registration happens when HITL is enabled
+- Leverage configuration flags to toggle plan review and timeouts
 
 ### 5. CLI Updates
 
@@ -88,7 +88,7 @@ human_in_the_loop:
 **Files Created:**
 - `tests/test_hitl.py` - Pytest test suite (requires pytest)
 - `tests/test_hitl_manual.py` - Manual test script (no dependencies)
-- `demo_hitl.py` - Interactive demo script
+- `examples/demo_hitl.py` - Interactive demo script
 
 **Test Coverage:**
 - Approval request creation

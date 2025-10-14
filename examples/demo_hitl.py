@@ -4,13 +4,13 @@
 import asyncio
 import sys
 
-from agenticfleet.core.approval import ApprovalDecision
-from agenticfleet.core.cli_approval import CLIApprovalHandler, create_approval_request
 from agenticfleet.agents.coder.tools.code_interpreter import code_interpreter_tool
+from agenticfleet.core.approval import ApprovalDecision, ApprovalRequest, ApprovalResponse
 from agenticfleet.core.approved_tools import set_approval_handler
+from agenticfleet.core.cli_approval import CLIApprovalHandler, create_approval_request
 
 
-async def demo_approval_prompt():
+async def demo_approval_prompt() -> None:
     """Demo the approval prompt interface."""
     print("\n" + "=" * 70)
     print("DEMO: HITL Approval Prompt")
@@ -51,7 +51,7 @@ fib(10)""",
     print("=" * 70)
 
 
-def demo_code_execution_with_approval():
+def demo_code_execution_with_approval() -> None:
     """Demo code execution with approval."""
     print("\n" + "=" * 70)
     print("DEMO: Code Execution with Approval")
@@ -59,13 +59,14 @@ def demo_code_execution_with_approval():
 
     # Simple approval handler that auto-approves for demo
     class AutoApproveHandler(CLIApprovalHandler):
-        async def request_approval(self, request):
+        async def request_approval(self, request: ApprovalRequest) -> ApprovalResponse:
             from agenticfleet.core.approval import ApprovalResponse
 
             print(f"\n[Auto-Approved] {request.operation}")
             return ApprovalResponse(
                 request_id=request.request_id,
                 decision=ApprovalDecision.APPROVED,
+                modified_code=None,
                 reason="Demo auto-approval",
             )
 
@@ -87,7 +88,7 @@ def demo_code_execution_with_approval():
     print("=" * 70)
 
 
-def main():
+def main() -> None:
     """Run demos."""
     print("\n" + "=" * 70)
     print("AgenticFleet - Human-in-the-Loop Demo")
