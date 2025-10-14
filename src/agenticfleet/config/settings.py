@@ -25,11 +25,8 @@ class Settings:
         if not self.openai_api_key:
             raise AgentConfigurationError("OPENAI_API_KEY environment variable is required")
 
+        # Azure AI Project endpoint (optional - required only for certain features like Mem0)
         self.azure_ai_project_endpoint = os.getenv("AZURE_AI_PROJECT_ENDPOINT")
-        if not self.azure_ai_project_endpoint:
-            raise AgentConfigurationError(
-                "AZURE_AI_PROJECT_ENDPOINT environment variable is required"
-            )
 
         # Optional environment variables with defaults
         self.openai_model = os.getenv("OPENAI_MODEL", "gpt-4o-mini")
