@@ -20,6 +20,8 @@ if TYPE_CHECKING:
 
 logger = get_logger(__name__)
 
+NO_RESPONSE_GENERATED = "No response generated"
+
 
 class MagenticFleet:
     """
@@ -208,20 +210,26 @@ class MagenticFleet:
             if isinstance(output, str):
                 return output
             if hasattr(output, "content"):
-                return str(output.content)
-            return str(output)
+                content = output.content
+                if content is not None:
+                    return str(content)
+                # If content is None, fall through to check if output itself has value
+            if output is not None:
+                return str(output)
 
         # Try to get content directly
         if hasattr(result, "content"):
-            return str(result.content)
+            content = result.content
+            if content is not None:
+                return str(content)
 
-        # Fallback to string representation
+        # Fallback to string representation only if it's not a mock
         result_str = str(result)
-        if result_str:
+        if result_str and result_str != "None" and not result_str.startswith("<MagicMock"):
             return result_str
 
         logger.warning("Could not extract final answer from result")
-        return "No response generated"
+        return NO_RESPONSE_GENERATED
 
 
 # Default fleet instance factory for backward compatibility

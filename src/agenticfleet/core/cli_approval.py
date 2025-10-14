@@ -2,7 +2,6 @@
 
 import asyncio
 import uuid
-from functools import wraps
 from typing import Any
 
 from agenticfleet.core.approval import (
@@ -18,25 +17,6 @@ logger = get_logger(__name__)
 
 class CLIApprovalHandler(ApprovalHandler):
     """CLI-based approval handler that prompts users in the terminal."""
-
-    def __init_subclass__(cls, **kwargs: Any) -> None:  # pragma: no cover - class decoration logic
-        super().__init_subclass__(**kwargs)
-
-        base_request = CLIApprovalHandler.request_approval
-        subclass_request = cls.request_approval
-
-        if subclass_request is base_request:
-            return
-
-        @wraps(subclass_request)
-        async def _wrapped_request(
-            self: "CLIApprovalHandler", request: ApprovalRequest
-        ) -> ApprovalResponse:
-            response = await subclass_request(self, request)  # type: ignore[arg-type]
-            self._record_approval_history(request, response)
-            return response
-
-        cls.request_approval = _wrapped_request  # type: ignore[assignment]
 
     def __init__(self, timeout_seconds: int = 300, auto_reject_on_timeout: bool = False):
         """

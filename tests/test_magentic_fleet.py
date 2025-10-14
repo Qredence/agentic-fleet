@@ -13,7 +13,11 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
-from agenticfleet.fleet.magentic_fleet import MagenticFleet, create_default_fleet
+from agenticfleet.fleet.magentic_fleet import (
+    NO_RESPONSE_GENERATED,
+    MagenticFleet,
+    create_default_fleet,
+)
 
 
 @pytest.fixture
@@ -185,10 +189,10 @@ class TestMagenticFleetExecution:
         """Test handling workflow with no output."""
         mock_build.return_value = mock_workflow_runner
 
-        # Mock workflow result with no output
+        # Mock workflow result with no output and no content
         mock_result = MagicMock()
         mock_result.output = None
-        del mock_result.content  # Remove content attribute
+        mock_result.content = None  # Set content attribute to None
         mock_workflow_runner.run.return_value = mock_result
 
         # Create and run fleet
@@ -196,7 +200,47 @@ class TestMagenticFleetExecution:
         result = await fleet.run("Test task")
 
         # Verify fallback message
-        assert result == "None"
+        assert result == NO_RESPONSE_GENERATED
+
+    @patch("agenticfleet.fleet.fleet_builder.FleetBuilder.build")
+    @pytest.mark.asyncio
+    async def test_run_with_output_none_content_value(
+        self, mock_build, mock_agents, mock_workflow_runner
+    ):
+        """Test handling workflow with output None but content has a value."""
+        mock_build.return_value = mock_workflow_runner
+
+        # Mock workflow result with output None, content has value
+        mock_result = MagicMock()
+        mock_result.output = None
+        mock_result.content = "Content fallback value"
+        mock_workflow_runner.run.return_value = mock_result
+
+        fleet = MagenticFleet(agents=mock_agents)
+        result = await fleet.run("Test task")
+
+        # Should fallback to content value
+        assert result == "Content fallback value"
+
+    @patch("agenticfleet.fleet.fleet_builder.FleetBuilder.build")
+    @pytest.mark.asyncio
+    async def test_run_with_output_value_content_none(
+        self, mock_build, mock_agents, mock_workflow_runner
+    ):
+        """Test handling workflow with output has value but content is None."""
+        mock_build.return_value = mock_workflow_runner
+
+        # Mock workflow result with output has value, content is None
+        mock_result = MagicMock()
+        mock_result.output = "Output value"
+        mock_result.content = None
+        mock_workflow_runner.run.return_value = mock_result
+
+        fleet = MagenticFleet(agents=mock_agents)
+        result = await fleet.run("Test task")
+
+        # Should use output value
+        assert result == "Output value"
 
     @patch("agenticfleet.fleet.fleet_builder.FleetBuilder.build")
     @pytest.mark.asyncio

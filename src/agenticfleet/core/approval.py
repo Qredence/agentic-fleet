@@ -45,9 +45,7 @@ class ApprovalResponse(BaseModel):
 
     request_id: str = Field(..., description="ID of the request being responded to")
     decision: ApprovalDecision = Field(..., description="Approval decision")
-    modified_code: str | None = Field(
-        None, description="Modified code if decision is MODIFIED"
-    )
+    modified_code: str | None = Field(None, description="Modified code if decision is MODIFIED")
     reason: str | None = Field(None, description="Reason for rejection or modification")
     timestamp: str = Field(
         default_factory=lambda: datetime.now(UTC).isoformat(),

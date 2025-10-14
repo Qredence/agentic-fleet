@@ -105,11 +105,9 @@ def code_interpreter_tool(code: str, language: str = "python") -> CodeExecutionR
         return _execute_without_approval(code, language)
 
     try:
-        loop = asyncio.get_event_loop()
+        loop = asyncio.get_running_loop()
     except RuntimeError:
-        loop = None
-
-    if loop is None:
+        # No running loop, safe to create a new one
         return asyncio.run(code_interpreter_tool_with_approval(code, language))
 
     if loop.is_running():

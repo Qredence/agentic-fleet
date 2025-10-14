@@ -4,14 +4,17 @@ labels: ['enhancement', 'optimization', 'agent-framework', 'developer-experience
 ---
 
 ## Priority Level
+
 🟡 **Medium Priority** - Developer Productivity
 
 ## Overview
+
 Integrate the official Agent Framework DevUI package to provide a visual interface for workflow debugging, agent testing, and interactive development.
 
 ## Current State
 
 ### Limitations
+
 - CLI-only interface for testing
 - No visual workflow representation
 - Difficult to debug multi-agent interactions
@@ -33,7 +36,7 @@ from agenticfleet.agents import (
 
 def start_development_ui(port=8000):
     """Start the Agent Framework DevUI server."""
-    
+
     # Create workflow and agents
     workflow = create_default_fleet()
     agents = {
@@ -42,7 +45,7 @@ def start_development_ui(port=8000):
         "coder": create_coder_agent(),
         "analyst": create_analyst_agent(),
     }
-    
+
     # Start DevUI server
     start_devui(
         workflow=workflow,
@@ -55,7 +58,7 @@ def start_development_ui(port=8000):
             "enable_agent_inspector": True,
         }
     )
-    
+
     print(f"DevUI running at http://localhost:{port}")
 
 # Add CLI command
@@ -67,6 +70,7 @@ if __name__ == "__main__":
 ## Benefits
 
 ### Developer Experience
+
 - ✅ **Visual Workflow**: See agent interactions in real-time
 - ✅ **Interactive Testing**: Test agents without writing code
 - ✅ **Debug Inspector**: View agent state, context, and decisions
@@ -74,12 +78,14 @@ if __name__ == "__main__":
 - ✅ **Better Onboarding**: New developers understand system visually
 
 ### Debugging
+
 - ✅ **Trace Execution**: Follow workflow execution step-by-step
 - ✅ **Inspect Messages**: See all agent messages and tool calls
 - ✅ **View Context**: Inspect workflow context at any point
 - ✅ **Error Analysis**: Visual error messages with stack traces
 
 ### Collaboration
+
 - ✅ **Share Sessions**: Demo workflows to stakeholders
 - ✅ **Record Sessions**: Save and replay workflows
 - ✅ **Export Data**: Download logs and execution traces
@@ -87,24 +93,28 @@ if __name__ == "__main__":
 ## Features
 
 ### Workflow Visualization
+
 - Graph view of agent connections
 - Real-time execution highlighting
 - Edge conditions displayed
 - Execution path history
 
 ### Agent Inspector
+
 - View agent configuration
 - Inspect current state
 - See tool availability
 - Monitor token usage
 
 ### Interactive Testing
+
 - Input panel for queries
 - Real-time response streaming
 - Manual approval controls
 - Context editor
 
 ### Logs & Metrics
+
 - Structured log viewer
 - Performance metrics
 - Token cost tracking
@@ -113,6 +123,7 @@ if __name__ == "__main__":
 ## Implementation Steps
 
 ### Phase 1: Basic Integration (Week 1)
+
 - [ ] Install agent-framework-devui package
 - [ ] Create devui_server.py module
 - [ ] Wire up workflow and agents
@@ -120,6 +131,7 @@ if __name__ == "__main__":
 - [ ] Test basic functionality
 
 ### Phase 2: Configuration (Week 1)
+
 - [ ] Add DevUI configuration options
 - [ ] Enable/disable features in config
 - [ ] Add authentication (optional)
@@ -127,6 +139,7 @@ if __name__ == "__main__":
 - [ ] Add custom branding
 
 ### Phase 3: Advanced Features (Week 2)
+
 - [ ] Integrate with checkpointing
 - [ ] Add session recording
 - [ ] Enable workflow export
@@ -176,6 +189,7 @@ agentic-fleet devui start --open
 ## Testing Requirements
 
 ### Unit Tests
+
 ```python
 def test_devui_starts():
     """Test DevUI server starts successfully."""
@@ -191,14 +205,16 @@ def test_devui_workflow_loaded():
 ```
 
 ### Integration Tests
+
 - Test DevUI with real workflow
 - Test agent inspection
 - Test interactive execution
 - Test session recording
 
 ### Manual Verification
+
 1. Start DevUI server
-2. Open http://localhost:8000 in browser
+2. Open <http://localhost:8000> in browser
 3. Verify workflow graph displays
 4. Test running a query through UI
 5. Inspect agent details
@@ -207,6 +223,7 @@ def test_devui_workflow_loaded():
 ## Documentation Updates
 
 ### README.md
+
 ```markdown
 ## Development UI
 
@@ -227,6 +244,7 @@ Features:
 ```
 
 ### New Guide: docs/guides/using-devui.md
+
 ```markdown
 # Using the Development UI
 
@@ -264,20 +282,24 @@ Navigate to http://localhost:8000
 ```
 
 ## Estimated Effort
+
 🔨 **Low** (3-5 days)
 
 The agent-framework-devui package handles most functionality. We just need to integrate it with our workflow.
 
 ## Dependencies
+
 - agent-framework-devui package
 - WorkflowBuilder implementation (#OPT-01) preferred but not required
 - Web browser for UI access
 
 ## Related Resources
+
 - [DevUI Documentation](https://github.com/microsoft/agent-framework/tree/main/python/packages/devui)
 - [DevUI Demo Video](https://www.youtube.com/watch?v=mOAaGY4WPvc)
 
 ## Success Criteria
+
 - ✅ DevUI server starts without errors
 - ✅ Workflow visualizes correctly
 - ✅ Can execute queries through UI
