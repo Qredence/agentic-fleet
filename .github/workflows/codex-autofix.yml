@@ -44,7 +44,7 @@ jobs:
       - name: Ensure Codex server info file exists
         run: |
           mkdir -p /home/runner/.codex
-          echo '{}' > /home/runner/.codex/18506183385.json
+          echo '{}' > /home/runner/.codex/${{ github.event.workflow_run.run_id }}.json
       - name: Run Codex
         uses: openai/codex-action@main
         id: codex
