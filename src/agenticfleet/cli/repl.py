@@ -8,20 +8,42 @@ to interact with the multi-agent system.
 import asyncio
 import sys
 from datetime import datetime
+from typing import TYPE_CHECKING
 
 from agenticfleet.config import settings
 from agenticfleet.core.logging import get_logger
-from agenticfleet.workflows import workflow
+
+if TYPE_CHECKING:
+    from agenticfleet.fleet.magentic_fleet import MagenticFleet
 
 logger = get_logger(__name__)
 
+# Workflow instance cache
+_workflow_instance = None
 
-async def handle_checkpoint_command(command: str) -> bool:
+
+def get_workflow() -> "MagenticFleet":
+    """
+    Get the Magentic Fleet workflow instance, creating it on first use.
+    """
+    global _workflow_instance
+
+    if _workflow_instance is None:
+        logger.info("Using Magentic Fleet workflow")
+        from agenticfleet.fleet import create_default_fleet
+
+        _workflow_instance = create_default_fleet()
+
+    return _workflow_instance
+
+
+async def handle_checkpoint_command(command: str, workflow_instance: "MagenticFleet") -> bool:
     """
     Handle checkpoint-related commands.
 
     Args:
         command: The command string to handle
+        workflow_instance: The workflow instance to use
 
     Returns:
         True if command was handled, False otherwise
@@ -29,8 +51,11 @@ async def handle_checkpoint_command(command: str) -> bool:
     parts = command.split()
 
     if parts[0] == "checkpoints" or parts[0] == "list-checkpoints":
-        # List all checkpoints
-        checkpoints = await workflow.list_checkpoints()
+        if not hasattr(workflow_instance, "list_checkpoints"):
+            print("Checkpoint listing is not available for this workflow.")
+            return True
+
+        checkpoints = await workflow_instance.list_checkpoints()
         if not checkpoints:
             print("No checkpoints found.")
         else:
@@ -62,6 +87,10 @@ async def handle_checkpoint_command(command: str) -> bool:
         checkpoint_id = parts[1]
         print(f"\nAttempting to resume from checkpoint: {checkpoint_id}")
 
+        if not hasattr(workflow_instance, "run"):
+            print("Current workflow cannot resume from checkpoints.")
+            return True
+
         # User needs to provide new input after resuming
         user_input = input("🎯 Your task (continuing from checkpoint): ").strip()
         if not user_input:
@@ -71,7 +100,7 @@ async def handle_checkpoint_command(command: str) -> bool:
         print("-" * 50)
 
         try:
-            result = await workflow.run(user_input, resume_from_checkpoint=checkpoint_id)
+            result = await workflow_instance.run(user_input, resume_from_checkpoint=checkpoint_id)
 
             print("\n" + "=" * 50)
             print("TASK COMPLETED (RESUMED FROM CHECKPOINT)!")
@@ -91,9 +120,12 @@ async def handle_checkpoint_command(command: str) -> bool:
     return False
 
 
-async def run_repl() -> None:
+async def run_repl(workflow_instance: "MagenticFleet") -> None:
     """
     Run the interactive REPL loop for user interaction.
+
+    Args:
+        workflow_instance: The workflow instance to use for task execution
     """
     while True:
         try:
@@ -108,7 +140,7 @@ async def run_repl() -> None:
 
             # Handle checkpoint commands
             if user_input.startswith(("checkpoints", "list-checkpoints", "resume")):
-                handled = await handle_checkpoint_command(user_input)
+                handled = await handle_checkpoint_command(user_input, workflow_instance)
                 if handled:
                     continue
 
@@ -117,7 +149,7 @@ async def run_repl() -> None:
             print("-" * 50)
 
             try:
-                result = await workflow.run(user_input)
+                result = await workflow_instance.run(user_input)
 
                 print("\n" + "=" * 50)
                 print("TASK COMPLETED!")
@@ -171,13 +203,16 @@ def run_repl_main() -> int:
         logger.error(f"Configuration Error: {e}", exc_info=True)
         return 1
 
-    logger.info("Initializing multi-agent workflow...")
+    # Get the workflow instance based on mode
+    workflow_instance = get_workflow()
+
+    logger.info("Initializing Magentic workflow...")
     logger.info("Workflow ready!")
     logger.info("Agents: Orchestrator, Researcher, Coder, Analyst")
     logger.info("Tools: Web search, Code interpreter, Data analysis")
 
     print("\n" + "=" * 70)
-    print("AGENTICFLEET READY FOR TASK EXECUTION")
+    print("AGENTICFLEET READY (MAGENTIC MODE)")
     print("=" * 70)
     print("\nExample tasks to try:")
     print("  • 'Research Python machine learning libraries and write example code'")
@@ -189,6 +224,10 @@ def run_repl_main() -> int:
     print("  - Type 'resume <checkpoint_id>' to resume from a checkpoint")
     print("  - Type 'quit', 'exit', or 'q' to exit")
     print("  - Press Ctrl+C to interrupt")
+
+    # Show workflow mode
+    print("\n📊 Workflow Mode: MAGENTIC")
+    print("   Using Microsoft Agent Framework Magentic orchestration")
 
     # Show checkpoint status
     checkpoint_config = settings.workflow_config.get("workflow", {}).get("checkpointing", {})
@@ -210,7 +249,7 @@ def run_repl_main() -> int:
     print()
 
     try:
-        asyncio.run(run_repl())
+        asyncio.run(run_repl(workflow_instance))
         return 0
     except Exception as e:
         logger.error(f"Fatal error: {e}", exc_info=True)
@@ -222,7 +261,30 @@ def main() -> None:
     Console script entry point.
 
     This is called when running: uv run agentic-fleet
+
+    Accepts an optional --workflow flag for backwards compatibility; all values
+    resolve to the Magentic implementation.
     """
+    import argparse
+
+    parser = argparse.ArgumentParser(
+        description="AgenticFleet - Multi-agent AI system",
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+    )
+    parser.add_argument(
+        "--workflow",
+        default="magentic",
+        help="Workflow mode to use (legacy option is deprecated)",
+    )
+
+    args = parser.parse_args()
+
+    if args.workflow != "magentic":
+        logger.warning(
+            "Legacy workflow mode '%s' is no longer available; falling back to Magentic.",
+            args.workflow,
+        )
+
     sys.exit(run_repl_main())
 
 

@@ -7,7 +7,7 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![PyPI Downloads](https://static.pepy.tech/personalized-badge/agentic-fleet?period=total&units=INTERNATIONAL_SYSTEM&left_color=BLACK&right_color=MAGENTA&left_text=downloads)](https://pepy.tech/projects/agentic-fleet)
 
-**Version:** 0.5.0
+**Version:** 0.5.1
 **Package:** `agentic-fleet` (PyPI) | `agenticfleet` (import)
 
 A sophisticated multi-agent system powered by Microsoft Agent Framework that coordinates specialized AI agents to solve complex tasks through dynamic delegation and collaboration.
@@ -21,18 +21,25 @@ AgenticFleet implements a custom orchestration pattern where an orchestrator age
 - **💻 Coder Agent**: Writes and executes Python code
 - **📊 Analyst Agent**: Analyzes data and suggests visualizations
 
+AgenticFleet standardizes on the **🚀 Magentic Fleet** orchestration pattern from Microsoft Agent Framework, pairing a planner with specialist agents for reliable delegation. The legacy workflow has been archived for reference inside `docs/archive/`.
+
 ## ✨ Features
 
 - ✅ **Modern Package Structure**: PyPA-recommended `src/` layout for import safety
-- ✅ **Dynamic Task Decomposition**: Automatic breakdown of complex tasks
+- ✅ **Magentic-First Orchestration**: Official fleet builder with managed planner/participant loop
+- ✅ **Intelligent Planning**: Magentic Manager creates structured plans with facts and action steps
+- ✅ **Dynamic Delegation**: Smart agent selection based on current needs and progress
 - ✅ **Multi-Agent Coordination**: Seamless collaboration between specialized agents
-- ✅ **Human-in-the-Loop**: Review and approve sensitive operations before execution
+- ✅ **Human-in-the-Loop**: Review and approve plans/code before execution
+- ✅ **Checkpointing**: Workflow state persistence and resumption
 - ✅ **Event-Driven Architecture**: Real-time monitoring and observability
 - ✅ **Structured Responses**: Type-safe tool outputs with Pydantic models
 - ✅ **Configurable Execution**: Safety controls and execution limits
 - ✅ **Individual Agent Configs**: Dedicated configuration per agent
 - ✅ **Persistent Memory**: `mem0` integration for long-term memory
 - ✅ **Console Script**: Easy CLI access via `agentic-fleet` command
+- ✅ **Curated Documentation Hub**: Topic-focused directories with a maintained index in `docs/README.md`
+- ✅ **Executable Examples**: `examples/` contains ready-to-run walkthroughs (e.g., human-in-the-loop demo)
 
 ## 🏗️ Architecture
 
@@ -44,8 +51,8 @@ AgenticFleet implements a custom orchestration pattern where an orchestrator age
                │
                ▼
 ┌─────────────────────────────────────────┐
-│      Custom Workflow Orchestrator       │
-│   (Coordination & State Management)     │
+│        Magentic Fleet Orchestrator      │
+│   (Planning, Delegation, Checkpointing) │
 └──────────────┬──────────────────────────┘
                │
     ┌──────────┴──────────┐
@@ -97,8 +104,10 @@ src/agenticfleet/           # Main package (import: agenticfleet)
 │       ├── config.yaml
 │       └── tools/
 │           └── data_analysis_tools.py
-├── workflows/             # Multi-agent orchestration
-│   └── multi_agent.py     # MultiAgentWorkflow class
+├── fleet/                 # Magentic-based orchestration
+│   ├── magentic_fleet.py  # MagenticFleet orchestrator
+│   ├── fleet_builder.py   # Fluent builder for Magentic workflows
+│   └── callbacks.py       # Streaming and logging callbacks
 ├── config/                # Configuration management
 │   ├── settings.py        # Settings class (loads env vars)
 │   └── workflow.yaml      # Workflow-level config
@@ -116,13 +125,19 @@ tests/                     # All tests
 ├── test_mem0_context_provider.py  # Memory tests
 └── test_hello.py          # Sanity check
 
-docs/                      # Documentation
-├── AGENTS.md              # Agent catalog & orchestration guide
-├── MEM0_INTEGRATION.md    # Memory integration docs
-├── MIGRATION_COMPLETE.md  # Migration report
-├── TEMPERATURE_FIX.md     # API compliance fixes
-├── COMMANDS.md            # Command reference
-└── ...
+examples/                 # Executable demos and walkthroughs
+└── demo_hitl.py          # Human-in-the-loop showcase script
+
+docs/                     # Documentation hub (see docs/README.md)
+├── README.md             # Index + contribution guidance
+├── architecture/         # System design and topology references
+├── features/             # Feature briefs (checkpointing, HITL, fleet)
+├── getting-started/      # Quick start and onboarding guides
+├── guides/               # Task-based walk-throughs
+├── operations/           # Runbooks, workflows, and backlog
+├── overview/             # Project-wide summaries and progress trackers
+├── releases/             # Versioned changelogs
+└── archive/              # Legacy and historical material
 ```
 
 ## 📋 Prerequisites
@@ -149,7 +164,8 @@ cp .env.example .env
 
 # Edit .env and add your keys and endpoints
 # Required:
-#   - OPENAI_API_KEY
+#   - OPENAI_API_KEY (always required)
+# Optional (required for Mem0 context provider):
 #   - AZURE_AI_PROJECT_ENDPOINT
 #   - AZURE_AI_SEARCH_ENDPOINT
 #   - AZURE_AI_SEARCH_KEY
@@ -255,11 +271,11 @@ make pre-commit-install
 from agenticfleet import __version__
 print(f"AgenticFleet v{__version__}")
 
-# Import workflow
-from agenticfleet.workflows import workflow
+# Create workflow instance
+from agenticfleet.fleet import create_default_fleet
 
-# Run a task
-result = await workflow.run("Research Python best practices")
+fleet = create_default_fleet()
+result = await fleet.run("Research Python best practices")
 ```
 
 ### Creating Individual Agents
@@ -299,15 +315,13 @@ print(agent_cfg["agent"]["name"])  # "orchestrator"
 ### Custom Workflow
 
 ```python
-from agenticfleet.workflows import MultiAgentWorkflow
+from agenticfleet.fleet import create_default_fleet
 
-# Create workflow instance
-workflow = MultiAgentWorkflow()
+# Create Magentic-based workflow instance
+workflow = create_default_fleet()
 
 # Run task with automatic agent coordination
-result = await workflow.run(
-    "Analyze sales data and create visualizations"
-)
+result = await workflow.run("Analyze sales data and create visualizations")
 print(result)
 ```
 
@@ -403,11 +417,11 @@ uv pip install agentic-fleet
 Then import and use:
 
 ```python
-from agenticfleet import __version__, MultiAgentWorkflow
+from agenticfleet import __version__, create_default_fleet
 
 print(f"AgenticFleet v{__version__}")
 
-workflow = MultiAgentWorkflow()
+workflow = create_default_fleet()
 result = await workflow.run("Your task here")
 ```
 

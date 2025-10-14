@@ -109,11 +109,12 @@ def test_agent_factories():
         assert callable(factory), f"Factory {factory_name} is not callable"
 
 
-def test_workflow_import():
-    """Test that workflow can be imported."""
-    from agenticfleet.workflows import workflow
+def test_fleet_import():
+    """Test that fleet factory can be imported."""
+    from agenticfleet.fleet import MagenticFleet, create_default_fleet
 
-    assert workflow is not None, "workflow instance is None"
+    assert callable(create_default_fleet)
+    assert MagenticFleet is not None
 
 
 def print_test(name, passed, message=""):
@@ -137,7 +138,7 @@ def main():
         "Agent Configs": test_agent_configs,
         "Tool Imports": test_tool_imports,
         "Agent Factories": test_agent_factories,
-        "Workflow Import": test_workflow_import,
+        "Fleet Import": test_fleet_import,
     }
 
     results = {}

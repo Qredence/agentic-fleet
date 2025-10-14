@@ -30,7 +30,7 @@ class MockApprovalHandler(CLIApprovalHandler):
             modified_code=self.modified_code,
             reason=f"Mock {self.decision.value}",
         )
-        self.approval_history.append((request, response))
+        self._record_approval_history(request, response)
         return response
 
 
@@ -93,9 +93,7 @@ async def test_mock_approval_handler_reject():
 async def test_mock_approval_handler_modify():
     """Test mock approval handler with modification decision."""
     modified_code = "print('modified')"
-    handler = MockApprovalHandler(
-        decision=ApprovalDecision.MODIFIED, modified_code=modified_code
-    )
+    handler = MockApprovalHandler(decision=ApprovalDecision.MODIFIED, modified_code=modified_code)
 
     request = create_approval_request(
         operation_type="code_execution",
@@ -115,12 +113,8 @@ def test_approval_handler_should_require_approval():
     handler = MockApprovalHandler(decision=ApprovalDecision.APPROVED)
 
     # Should require approval for configured operations
-    assert handler.should_require_approval(
-        "code_execution", ["code_execution", "file_operations"]
-    )
-    assert handler.should_require_approval(
-        "file_operations", ["code_execution", "file_operations"]
-    )
+    assert handler.should_require_approval("code_execution", ["code_execution", "file_operations"])
+    assert handler.should_require_approval("file_operations", ["code_execution", "file_operations"])
 
     # Should not require approval for non-configured operations
     assert not handler.should_require_approval("web_search", ["code_execution"])
@@ -134,9 +128,7 @@ def test_approval_history():
     assert len(handler.get_approval_history()) == 0
 
     # Add a request
-    request = create_approval_request(
-        operation_type="test", agent_name="test", operation="test"
-    )
+    request = create_approval_request(operation_type="test", agent_name="test", operation="test")
 
     # Run async request
     loop = asyncio.get_event_loop()

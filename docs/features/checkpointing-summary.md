@@ -22,11 +22,11 @@ Successfully implemented workflow checkpointing for AgenticFleet, enabling workf
 |-----------|------|---------|
 | Configuration | `src/agenticfleet/config/workflow.yaml` | Added checkpointing config section |
 | Settings | `src/agenticfleet/config/settings.py` | Added `create_checkpoint_storage()` factory |
-| Workflow | `src/agenticfleet/workflows/multi_agent.py` | Added checkpoint create/restore/list methods |
+| Workflow | `src/agenticfleet/fleet/magentic_fleet.py` | Integrates checkpointing via Magentic builder |
 | REPL | `src/agenticfleet/cli/repl.py` | Added checkpoint commands |
-| Tests | `tests/test_checkpointing.py` | 8 comprehensive tests |
+| Tests | `tests/test_configuration.py` | Validates checkpoint storage factory and fleet wiring |
 | Docs | `docs/features/checkpointing.md` | Complete user guide |
-| Demo | `scripts/demo_checkpointing.py` | Working demonstration |
+| Demo | *(removed)* | Legacy script replaced by Magentic workflow |
 
 **Total Changes:** 8 files, 1,059 insertions (+), 23 deletions (-)
 
@@ -144,18 +144,17 @@ result = await workflow.run(
 
 ```
 ┌─────────────────────────────────────┐
-│   MultiAgentWorkflow                │
+│   MagenticFleet                     │
 │  ┌───────────────────────────────┐  │
-│  │ Orchestrator Agent            │  │
-│  │ Researcher Agent              │  │
-│  │ Coder Agent                   │  │
-│  │ Analyst Agent                 │  │
+│  │ StandardMagenticManager       │  │
+│  │ MagenticAgentExecutors        │  │
+│  │ (researcher / coder / analyst)│  │
 │  └───────────────────────────────┘  │
 │                                     │
 │  Checkpointing:                     │
-│  - create_checkpoint()              │
-│  - restore_from_checkpoint()        │
-│  - list_checkpoints()               │
+│  - Managed via FleetBuilder         │
+│  - Uses agent_framework storage     │
+│  - Resumed with resume_from_checkpoint │
 └──────────────┬──────────────────────┘
                │
                ▼
@@ -249,13 +248,13 @@ result = await workflow.run(
 1. **.gitignore** - Added checkpoint directory exclusion
 2. **src/agenticfleet/config/workflow.yaml** - Added checkpoint configuration
 3. **src/agenticfleet/config/settings.py** - Added checkpoint storage factory
-4. **src/agenticfleet/workflows/multi_agent.py** - Core checkpointing implementation
+4. **src/agenticfleet/fleet/magentic_fleet.py** - Core checkpointing integration
 5. **src/agenticfleet/cli/repl.py** - REPL command support
 
 ### New Files
-6. **tests/test_checkpointing.py** - Comprehensive test suite (307 lines)
+6. **tests/test_configuration.py** - Configuration and factory tests
 7. **docs/features/checkpointing.md** - User documentation (276 lines)
-8. **scripts/demo_checkpointing.py** - Working demo (118 lines)
+8. *(removed)* Legacy demo script superseded by Magentic workflow
 
 ---
 
@@ -295,11 +294,8 @@ This returns the system to pre-checkpoint behavior with zero impact.
 # Run all tests
 python -m pytest tests/ -v
 
-# Run checkpoint tests only
-python -m pytest tests/test_checkpointing.py -v
-
-# Run demo
-python scripts/demo_checkpointing.py
+# Run configuration tests only
+python -m pytest tests/test_configuration.py -v
 
 # Start REPL and test commands
 python -m agenticfleet

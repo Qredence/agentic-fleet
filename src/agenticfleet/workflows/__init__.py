@@ -1,5 +1,10 @@
-"""Workflows module for AgenticFleet."""
+"""
+Workflow compatibility layer.
 
-from agenticfleet.workflows.workflow_builder import MultiAgentWorkflow, workflow
+The legacy MultiAgentWorkflow has been removed in favour of the Magentic-based
+fleet orchestrator. Import from agenticfleet.fleet instead.
+"""
 
-__all__ = ["MultiAgentWorkflow", "workflow"]
+from agenticfleet.fleet.magentic_fleet import MagenticFleet, create_default_fleet
+
+__all__ = ["MagenticFleet", "create_default_fleet"]

@@ -28,7 +28,7 @@ cp .env.example .env  # then edit with your credentials
 
 1. Create a feature branch from `main` (`git checkout -b feat/short-description`).
 2. Make focused changes; keep prompts in `agents/<role>/config.yaml`, not in Python files.
-3. Respect the orchestration contract in `src/agenticfleet/workflows/multi_agent.py`
+3. Respect the orchestration contract in `src/agenticfleet/fleet/magentic_fleet.py`
    (`DELEGATE:` / `FINAL_ANSWER:` markers, stall counters, etc.).
 4. Update or add documentation under `docs/` when patterns or workflows change.
 
@@ -53,7 +53,8 @@ services (`OpenAIResponsesClient`, tool functions) in tests to keep suites deter
   `ChatAgent` + `OpenAIResponsesClient`.
 - Tools live in `agents/<role>/tools/`, return Pydantic models, and are toggled via each
   `config.yaml`.
-- Workflow state lives on `MultiAgentWorkflow`; extend the `context` dict instead of introducing
+- Workflow orchestration runs through `MagenticFleet`; prefer enhancing the
+  Magentic callbacks or builder configuration over reintroducing custom context
   globals.
 - Follow naming conventions outlined in `docs/operations/repository-guidelines.md`.
 

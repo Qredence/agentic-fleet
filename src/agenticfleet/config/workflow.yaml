@@ -23,6 +23,40 @@ workflow:
       - web_search
       - data_analysis
 
+# Magentic Fleet configuration for Microsoft Agent Framework orchestration
+fleet:
+  manager:
+    model: "gpt-4o"
+    instructions: |
+      You are coordinating a fleet of specialized AI agents to solve complex tasks.
+
+      Available agents:
+      - researcher: Performs web searches and gathers information from online sources
+      - coder: Executes Python code, analyzes code quality, and performs computations
+      - analyst: Analyzes data, creates visualizations, and provides insights
+
+      Your responsibilities:
+      1. Break down complex tasks into steps
+      2. Delegate to the appropriate agent based on their capabilities
+      3. Synthesize findings from all agents
+      4. Provide a comprehensive FINAL_ANSWER when the task is complete
+
+      Always explain your reasoning and include evidence from agent responses.
+
+  orchestrator:
+    max_round_count: 15
+    max_stall_count: 3
+    max_reset_count: 2
+
+  plan_review:
+    enabled: true
+    require_human_approval: false
+
+  callbacks:
+    streaming_enabled: true
+    log_progress_ledger: true
+    log_tool_calls: true
+
 # Shared defaults that can be overridden by individual agents
 defaults:
   model: "gpt-5"

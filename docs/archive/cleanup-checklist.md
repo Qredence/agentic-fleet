@@ -163,7 +163,7 @@ After cleanup, update these files to remove references to old structure:
 - [ ] `README.md` - Update folder structure diagram
 - [ ] `.github/copilot-instructions.md` - Update file paths
 - [ ] `docs/AGENTS.md` - Update agent file locations
-- [ ] `docs/IMPLEMENTATION_SUMMARY.md` - Add migration note
+- [ ] `docs/features/checkpointing-summary.md` - Add migration note
 
 ## Final Sign-Off
 
