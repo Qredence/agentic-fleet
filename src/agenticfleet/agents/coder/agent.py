@@ -46,16 +46,8 @@ def create_coder_agent() -> ChatAgent:
         model_id=agent_config.get("model", settings.openai_model),
     )
 
-    # Import tool - use the original tool which will be wrapped at runtime
-    from agenticfleet.agents.coder.tools.code_interpreter import code_interpreter_tool
-
-    # Check which tools are enabled in the configuration
-    tools_config = config.get("tools", [])
-    enabled_tools = []
-
-    for tool_config in tools_config:
-        if tool_config.get("name") == "code_interpreter_tool" and tool_config.get("enabled", True):
-            enabled_tools.append(code_interpreter_tool)
+    # No tools currently enabled for coder agent
+    enabled_tools: list = []
 
     # Create and return agent with tools
     # Note: temperature is not a ChatAgent parameter in Microsoft Agent Framework

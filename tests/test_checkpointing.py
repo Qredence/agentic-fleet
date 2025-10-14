@@ -14,6 +14,7 @@ from pathlib import Path
 from unittest.mock import Mock, patch
 
 import pytest
+from agent_framework import AgentProtocol
 
 from agenticfleet.config.settings import Settings
 from agenticfleet.workflows import MultiAgentWorkflow
@@ -107,12 +108,15 @@ async def test_workflow_checkpoint_creation(temp_checkpoint_dir):
 
     # Mock the agents to avoid actual API calls
     with (
-        patch("agenticfleet.workflows.workflow_builder.create_orchestrator_agent"),
-        patch("agenticfleet.workflows.workflow_builder.create_researcher_agent"),
-        patch("agenticfleet.workflows.workflow_builder.create_coder_agent"),
-        patch("agenticfleet.workflows.workflow_builder.create_analyst_agent"),
+        patch("agenticfleet.workflows.workflow_builder.create_orchestrator_agent") as mock_orchestrator,
+        patch("agenticfleet.workflows.workflow_builder.create_researcher_agent") as mock_researcher,
+        patch("agenticfleet.workflows.workflow_builder.create_coder_agent") as mock_coder,
+        patch("agenticfleet.workflows.workflow_builder.create_analyst_agent") as mock_analyst,
         patch("agenticfleet.config.settings.settings") as mock_settings,
     ):
+
+        for agent_mock in (mock_orchestrator, mock_researcher, mock_coder, mock_analyst):
+            agent_mock.return_value = Mock(spec=AgentProtocol)
 
         mock_settings.workflow_config = {
             "workflow": {
@@ -161,12 +165,15 @@ async def test_workflow_checkpoint_restoration(temp_checkpoint_dir):
     checkpoint_storage = FileCheckpointStorage(temp_checkpoint_dir)
 
     with (
-        patch("agenticfleet.workflows.workflow_builder.create_orchestrator_agent"),
-        patch("agenticfleet.workflows.workflow_builder.create_researcher_agent"),
-        patch("agenticfleet.workflows.workflow_builder.create_coder_agent"),
-        patch("agenticfleet.workflows.workflow_builder.create_analyst_agent"),
+        patch("agenticfleet.workflows.workflow_builder.create_orchestrator_agent") as mock_orchestrator,
+        patch("agenticfleet.workflows.workflow_builder.create_researcher_agent") as mock_researcher,
+        patch("agenticfleet.workflows.workflow_builder.create_coder_agent") as mock_coder,
+        patch("agenticfleet.workflows.workflow_builder.create_analyst_agent") as mock_analyst,
         patch("agenticfleet.config.settings.settings") as mock_settings,
     ):
+
+        for agent_mock in (mock_orchestrator, mock_researcher, mock_coder, mock_analyst):
+            agent_mock.return_value = Mock(spec=AgentProtocol)
 
         mock_settings.workflow_config = {
             "workflow": {
@@ -184,6 +191,7 @@ async def test_workflow_checkpoint_restoration(temp_checkpoint_dir):
         workflow1.context = {"important": "state"}
 
         checkpoint_id = await workflow1.create_checkpoint({"phase": "middle"})
+        assert checkpoint_id is not None
 
         # Create new workflow and restore
         workflow2 = MultiAgentWorkflow(checkpoint_storage=checkpoint_storage)
@@ -206,12 +214,15 @@ async def test_workflow_checkpoint_restoration_missing(temp_checkpoint_dir):
     checkpoint_storage = FileCheckpointStorage(temp_checkpoint_dir)
 
     with (
-        patch("agenticfleet.workflows.workflow_builder.create_orchestrator_agent"),
-        patch("agenticfleet.workflows.workflow_builder.create_researcher_agent"),
-        patch("agenticfleet.workflows.workflow_builder.create_coder_agent"),
-        patch("agenticfleet.workflows.workflow_builder.create_analyst_agent"),
+        patch("agenticfleet.workflows.workflow_builder.create_orchestrator_agent") as mock_orchestrator,
+        patch("agenticfleet.workflows.workflow_builder.create_researcher_agent") as mock_researcher,
+        patch("agenticfleet.workflows.workflow_builder.create_coder_agent") as mock_coder,
+        patch("agenticfleet.workflows.workflow_builder.create_analyst_agent") as mock_analyst,
         patch("agenticfleet.config.settings.settings") as mock_settings,
     ):
+
+        for agent_mock in (mock_orchestrator, mock_researcher, mock_coder, mock_analyst):
+            agent_mock.return_value = Mock(spec=AgentProtocol)
 
         mock_settings.workflow_config = {
             "workflow": {
@@ -234,12 +245,15 @@ async def test_workflow_list_checkpoints(temp_checkpoint_dir):
     checkpoint_storage = FileCheckpointStorage(temp_checkpoint_dir)
 
     with (
-        patch("agenticfleet.workflows.workflow_builder.create_orchestrator_agent"),
-        patch("agenticfleet.workflows.workflow_builder.create_researcher_agent"),
-        patch("agenticfleet.workflows.workflow_builder.create_coder_agent"),
-        patch("agenticfleet.workflows.workflow_builder.create_analyst_agent"),
+        patch("agenticfleet.workflows.workflow_builder.create_orchestrator_agent") as mock_orchestrator,
+        patch("agenticfleet.workflows.workflow_builder.create_researcher_agent") as mock_researcher,
+        patch("agenticfleet.workflows.workflow_builder.create_coder_agent") as mock_coder,
+        patch("agenticfleet.workflows.workflow_builder.create_analyst_agent") as mock_analyst,
         patch("agenticfleet.config.settings.settings") as mock_settings,
     ):
+
+        for agent_mock in (mock_orchestrator, mock_researcher, mock_coder, mock_analyst):
+            agent_mock.return_value = Mock(spec=AgentProtocol)
 
         mock_settings.workflow_config = {
             "workflow": {
@@ -253,8 +267,10 @@ async def test_workflow_list_checkpoints(temp_checkpoint_dir):
 
         # Create multiple checkpoints
         cp1 = await workflow.create_checkpoint({"status": "checkpoint_1"})
+        assert cp1 is not None
         workflow.current_round += 1
         cp2 = await workflow.create_checkpoint({"status": "checkpoint_2"})
+        assert cp2 is not None
 
         # List all checkpoints
         checkpoints = await workflow.list_checkpoints()
@@ -274,12 +290,15 @@ async def test_workflow_list_checkpoints(temp_checkpoint_dir):
 async def test_workflow_no_checkpoint_storage():
     """Test that workflow works without checkpoint storage."""
     with (
-        patch("agenticfleet.workflows.workflow_builder.create_orchestrator_agent"),
-        patch("agenticfleet.workflows.workflow_builder.create_researcher_agent"),
-        patch("agenticfleet.workflows.workflow_builder.create_coder_agent"),
-        patch("agenticfleet.workflows.workflow_builder.create_analyst_agent"),
+        patch("agenticfleet.workflows.workflow_builder.create_orchestrator_agent") as mock_orchestrator,
+        patch("agenticfleet.workflows.workflow_builder.create_researcher_agent") as mock_researcher,
+        patch("agenticfleet.workflows.workflow_builder.create_coder_agent") as mock_coder,
+        patch("agenticfleet.workflows.workflow_builder.create_analyst_agent") as mock_analyst,
         patch("agenticfleet.config.settings.settings") as mock_settings,
     ):
+
+        for agent_mock in (mock_orchestrator, mock_researcher, mock_coder, mock_analyst):
+            agent_mock.return_value = Mock(spec=AgentProtocol)
 
         mock_settings.workflow_config = {
             "workflow": {

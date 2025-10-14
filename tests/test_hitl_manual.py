@@ -2,6 +2,8 @@
 
 import asyncio
 
+import pytest
+
 from agenticfleet.core.approval import ApprovalDecision
 from agenticfleet.core.cli_approval import create_approval_request
 
@@ -43,7 +45,7 @@ def test_create_approval_request():
     assert request.code == "print('hello')"
     print("  ✓ Request created successfully")
 
-
+@pytest.mark.asyncio
 async def test_mock_approval_handler():
     """Test mock approval handler."""
     print("\nTest: mock_approval_handler")
@@ -77,54 +79,6 @@ async def test_mock_approval_handler():
     print("  ✓ Modification works")
 
 
-def test_code_execution_integration():
-    """Test code execution with approval integration."""
-    print("\nTest: code_execution_integration")
-
-    from agenticfleet.agents.coder.tools.code_interpreter import code_interpreter_tool
-    from agenticfleet.core.approved_tools import set_approval_handler
-
-    # Test without approval handler
-    set_approval_handler(None)
-    result = code_interpreter_tool("print('no approval')", "python")
-    assert result.success
-    assert "no approval" in result.output
-    print("  ✓ Direct execution (no handler)")
-
-    # Test with approval handler that approves
-    handler = MockApprovalHandler(decision=ApprovalDecision.APPROVED)
-    set_approval_handler(handler)
-
-    result = code_interpreter_tool("print('with approval')", "python")
-    assert result.success
-    assert "with approval" in result.output
-    assert len(handler.requests_received) == 1
-    print("  ✓ Execution with approval")
-
-    # Test with approval handler that rejects
-    handler = MockApprovalHandler(decision=ApprovalDecision.REJECTED)
-    set_approval_handler(handler)
-
-    result = code_interpreter_tool("print('rejected')", "python")
-    assert not result.success
-    assert "rejected" in result.error.lower()
-    print("  ✓ Rejection blocks execution")
-
-    # Test with approval handler that modifies
-    handler = MockApprovalHandler(
-        decision=ApprovalDecision.MODIFIED, modified_code="print('modified output')"
-    )
-    set_approval_handler(handler)
-
-    result = code_interpreter_tool("print('original')", "python")
-    assert result.success
-    assert "modified output" in result.output
-    print("  ✓ Modification changes code")
-
-    # Clean up
-    set_approval_handler(None)
-
-
 def main():
     """Run all tests."""
     print("=" * 60)
@@ -134,7 +88,6 @@ def main():
     try:
         test_create_approval_request()
         asyncio.run(test_mock_approval_handler())
-        test_code_execution_integration()
 
         print("\n" + "=" * 60)
         print("✓ All tests passed!")

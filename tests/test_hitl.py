@@ -24,12 +24,14 @@ class MockApprovalHandler(CLIApprovalHandler):
     async def request_approval(self, request: ApprovalRequest) -> ApprovalResponse:
         """Mock approval that returns predefined decision."""
         self.requests_received.append(request)
-        return ApprovalResponse(
+        response = ApprovalResponse(
             request_id=request.request_id,
             decision=self.decision,
             modified_code=self.modified_code,
             reason=f"Mock {self.decision.value}",
         )
+        self.approval_history.append((request, response))
+        return response
 
 
 def test_create_approval_request():
@@ -145,53 +147,6 @@ def test_approval_history():
     assert len(history) == 1
     assert history[0][0] == request
     assert history[0][1].decision == ApprovalDecision.APPROVED
-
-
-def test_code_execution_with_approval():
-    """Test code execution with approval integration."""
-    from agenticfleet.agents.coder.tools.code_interpreter import (
-        CodeExecutionResult,
-        code_interpreter_tool,
-    )
-    from agenticfleet.core.approved_tools import set_approval_handler
-
-    # Test without approval handler (should execute directly)
-    set_approval_handler(None)
-    result = code_interpreter_tool("print('no approval')", "python")
-    assert result.success
-    assert "no approval" in result.output
-
-    # Test with approval handler that approves
-    handler = MockApprovalHandler(decision=ApprovalDecision.APPROVED)
-    set_approval_handler(handler)
-
-    result = code_interpreter_tool("print('with approval')", "python")
-    assert result.success
-    assert "with approval" in result.output
-    assert len(handler.requests_received) == 1
-
-    # Test with approval handler that rejects
-    handler = MockApprovalHandler(decision=ApprovalDecision.REJECTED)
-    set_approval_handler(handler)
-
-    result = code_interpreter_tool("print('rejected')", "python")
-    assert not result.success
-    assert "rejected" in result.error.lower()
-
-    # Test with approval handler that modifies
-    handler = MockApprovalHandler(
-        decision=ApprovalDecision.MODIFIED, modified_code="print('modified output')"
-    )
-    set_approval_handler(handler)
-
-    result = code_interpreter_tool("print('original')", "python")
-    assert result.success
-    assert "modified output" in result.output
-    assert "original" not in result.output
-
-    # Clean up
-    set_approval_handler(None)
-
 
 if __name__ == "__main__":
     pytest.main([__file__, "-v"])

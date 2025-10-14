@@ -81,7 +81,6 @@ def test_tool_imports():
     """Test that all tools can be imported."""
     tools = [
         ("agenticfleet.agents.researcher.tools.web_search_tools", "web_search_tool"),
-        ("agenticfleet.agents.coder.tools.code_interpreter", "code_interpreter_tool"),
         ("agenticfleet.agents.analyst.tools.data_analysis_tools", "data_analysis_tool"),
         ("agenticfleet.agents.analyst.tools.data_analysis_tools", "visualization_suggestion_tool"),
     ]
