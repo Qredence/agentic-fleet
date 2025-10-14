@@ -11,6 +11,9 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
+env:
+  OPENAI_RESPONSES_MODEL_ID: gpt-5-codex
+
 jobs:
   lint:
     name: Lint & Format Check
