@@ -150,7 +150,6 @@ def test_approval_history():
 def test_code_execution_with_approval():
     """Test code execution with approval integration."""
     from agenticfleet.agents.coder.tools.code_interpreter import (
-        CodeExecutionResult,
         code_interpreter_tool,
     )
     from agenticfleet.core.approved_tools import set_approval_handler

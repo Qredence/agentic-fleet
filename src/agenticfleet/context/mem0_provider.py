@@ -37,7 +37,7 @@ class Mem0ContextProvider:
         azure_client = AzureOpenAI(
             azure_endpoint=settings.azure_ai_project_endpoint,
             api_key=settings.openai_api_key,
-            api_version="2024-02-01",
+            api_version="2025-05-01",
         )
 
         # Extract service name from endpoint if it's a full URL

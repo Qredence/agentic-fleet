@@ -16,7 +16,7 @@ from agenticfleet.agents import (
     create_orchestrator_agent,
     create_researcher_agent,
 )
-from agenticfleet.workflows import MultiAgentWorkflow
+from agenticfleet.fleet.magentic_fleet import MagenticFleet, create_default_fleet
 
 __all__ = [
     "__version__",
@@ -26,5 +26,6 @@ __all__ = [
     "create_researcher_agent",
     "create_coder_agent",
     "create_analyst_agent",
-    "MultiAgentWorkflow",
+    "MagenticFleet",
+    "create_default_fleet",
 ]

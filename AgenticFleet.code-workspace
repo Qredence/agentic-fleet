@@ -10,8 +10,8 @@
     "python.terminal.activateEnvironment": true,
     "python.terminal.activateEnvInCurrentTerminal": true,
     // Disable automatic environment discovery to prevent loops
-    "python.interpreter.infoVisibility": "never",
-    "python.experiments.enabled": false,
+    //"python.interpreter.infoVisibility": "never",
+    //"python.experiments.enabled": false,
     // Python analysis settings
     "python.analysis.typeCheckingMode": "basic",
     "python.analysis.autoImportCompletions": true,

@@ -11,14 +11,14 @@ from agenticfleet.core.cli_approval import create_approval_request
 from agenticfleet.core.logging import get_logger
 
 if TYPE_CHECKING:  # pragma: no cover - import only for type checking
-    pass
+    from agenticfleet.core.code_types import CodeExecutionResult
 
 logger = get_logger(__name__)
 
 
 def maybe_request_approval_for_code_execution(
     code: str, language: str
-) -> str | "CodeExecutionResult" | None:
+) -> str | CodeExecutionResult | None:
     """Request approval for executing code if an approval handler is configured.
 
     Args:
@@ -46,7 +46,7 @@ def maybe_request_approval_for_code_execution(
         code=code,
     )
 
-    async def _request_approval() -> str | "CodeExecutionResult" | None:
+    async def _request_approval() -> str | CodeExecutionResult | None:
         response = await handler.request_approval(request)
 
         if response.decision == ApprovalDecision.APPROVED:
@@ -54,9 +54,7 @@ def maybe_request_approval_for_code_execution(
             return None
 
         if response.decision == ApprovalDecision.MODIFIED:
-            logger.info(
-                "Code execution approved with modifications: %s", request.request_id
-            )
+            logger.info("Code execution approved with modifications: %s", request.request_id)
             return response.modified_code or code
 
         logger.warning(
@@ -65,7 +63,7 @@ def maybe_request_approval_for_code_execution(
             request.request_id,
         )
         reason = response.reason or f"Operation {response.decision.value}"
-        from agenticfleet.agents.coder.tools.code_interpreter import CodeExecutionResult
+        from agenticfleet.core.code_types import CodeExecutionResult
 
         return CodeExecutionResult(
             success=False,

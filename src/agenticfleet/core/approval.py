@@ -7,7 +7,7 @@ for sensitive operations like code execution and data modifications.
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from enum import Enum
 from typing import Any
 
@@ -35,7 +35,7 @@ class ApprovalRequest(BaseModel):
     )
     code: str | None = Field(None, description="Code to be executed (if applicable)")
     timestamp: str = Field(
-        default_factory=lambda: datetime.now(timezone.utc).isoformat(),
+        default_factory=lambda: datetime.now(UTC).isoformat(),
         description="ISO timestamp of request",
     )
 
@@ -50,7 +50,7 @@ class ApprovalResponse(BaseModel):
     )
     reason: str | None = Field(None, description="Reason for rejection or modification")
     timestamp: str = Field(
-        default_factory=lambda: datetime.now(timezone.utc).isoformat(),
+        default_factory=lambda: datetime.now(UTC).isoformat(),
         description="ISO timestamp of response",
     )
 

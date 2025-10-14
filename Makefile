@@ -1,4 +1,4 @@
-.PHONY: help install sync clean test test-config lint format type-check check run pre-commit-install
+.PHONY: help install sync clean test test-config lint format type-check check run demo-hitl pre-commit-install
 
 # Default target
 help:
@@ -23,6 +23,7 @@ help:
 	@echo "Tools:"
 	@echo "  make pre-commit-install  Install pre-commit hooks"
 	@echo "  make clean             Remove cache and build artifacts"
+	@echo "  make demo-hitl         Run the HITL walkthrough example"
 	@echo ""
 
 # Setup commands
@@ -35,6 +36,10 @@ sync:
 # Run application
 run:
 	uv run python -m agenticfleet
+
+# Examples
+demo-hitl:
+	uv run python examples/demo_hitl.py
 
 # Testing
 test:
