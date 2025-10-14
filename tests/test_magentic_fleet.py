@@ -182,6 +182,9 @@ class TestMagenticFleetExecution:
 
         # Verify execution (checkpoint restoration is handled internally)
         assert result == "Resumed and completed"
+        mock_workflow_runner.run.assert_called_once_with(
+            "Continue task", resume_from_checkpoint="test-checkpoint-123"
+        )
 
     @patch("agenticfleet.fleet.fleet_builder.FleetBuilder.build")
     @pytest.mark.asyncio

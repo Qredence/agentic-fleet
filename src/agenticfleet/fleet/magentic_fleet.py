@@ -182,7 +182,11 @@ class MagenticFleet:
 
             # Execute the Magentic workflow
             # The workflow returns a result object with the final ChatMessage
-            result = await self.workflow.run(user_input)
+            run_kwargs: dict[str, Any] = {}
+            if resume_from_checkpoint is not None:
+                run_kwargs["resume_from_checkpoint"] = resume_from_checkpoint
+
+            result = await self.workflow.run(user_input, **run_kwargs)
 
             # Extract the final answer from the result
             response_text = self._extract_final_answer(result)

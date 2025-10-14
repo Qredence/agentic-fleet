@@ -46,7 +46,7 @@ def _execute_without_approval(code: str, language: str) -> CodeExecutionResult:
             exit_code=1,
         )
 
-    from agenticfleet.core.code_execution import _execute_python_code
+    from agenticfleet.agents.coder.tools.code_interpreter import _execute_python_code
 
     return _execute_python_code(code)
 
