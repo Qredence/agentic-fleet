@@ -2,7 +2,7 @@ import sys
 import time
 from io import StringIO
 
-from agenticfleet.core.code_execution_approval import CodeApprovalOutcome
+# Import of CodeApprovalOutcome moved to local scope to avoid cyclic import.
 from agenticfleet.core.code_types import CodeExecutionResult
 
 
