@@ -2,7 +2,7 @@ import sys
 import time
 from io import StringIO
 
-# Import of CodeApprovalOutcome moved to local scope to avoid cyclic import.
+# Do not import CodeApprovalOutcome at module level to avoid cyclic import.
 from agenticfleet.core.code_types import CodeExecutionResult
 
 
@@ -112,6 +112,7 @@ def code_interpreter_tool(code: str, language: str = "python") -> CodeExecutionR
     from agenticfleet.core.code_execution_approval import (
         maybe_request_approval_for_code_execution,
     )
+    from agenticfleet.core.code_execution_approval import CodeApprovalOutcome
 
     approval_result = maybe_request_approval_for_code_execution(code, language)
     if approval_result.outcome == CodeApprovalOutcome.REJECTED:
