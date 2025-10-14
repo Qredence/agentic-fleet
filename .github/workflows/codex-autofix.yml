@@ -41,6 +41,10 @@ jobs:
       - name: Install dependencies
         run: |
           if [ -f package-lock.json ]; then npm ci; else npm i; fi
+      - name: Ensure Codex server info file exists
+        run: |
+          mkdir -p /home/runner/.codex
+          echo '{}' > /home/runner/.codex/18506183385.json
       - name: Run Codex
         uses: openai/codex-action@main
         id: codex
