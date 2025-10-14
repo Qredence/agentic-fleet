@@ -149,7 +149,8 @@ cp .env.example .env
 
 # Edit .env and add your keys and endpoints
 # Required:
-#   - OPENAI_API_KEY
+#   - OPENAI_API_KEY (always required)
+# Optional (required for Mem0 context provider):
 #   - AZURE_AI_PROJECT_ENDPOINT
 #   - AZURE_AI_SEARCH_ENDPOINT
 #   - AZURE_AI_SEARCH_KEY
