@@ -193,7 +193,7 @@ class ConsoleUI:
         sections: list[tuple[str, list[str]]] = []
 
         facts_value = self._get_first_attribute(payload, ["facts", "facts_text", "facts_list"])
-        facts_lines = [ln for ln in self._format_lines(facts_value) if ln != "(none)"] if facts_value else []
+        facts_lines = [ln for ln in self._format_lines(facts_value) if ln != "(none)"]
         if facts_lines:
             sections.append(("Facts", facts_lines))
 
