@@ -1,6 +1,6 @@
 [project]
 name = "agentic-fleet"
-version = "0.5.0"
+version = "0.5.1"
 description = "A multi-agent orchestration system built with Microsoft Agent Framework"
 authors = [{ name = "Qredence", email = "contact@qredence.ai" }]
 readme = "README.md"
@@ -28,6 +28,8 @@ dependencies = [
     "agent-framework-redis",
     "agent-framework-devui",
     "mem0ai==1.0.0b0",
+    "rich>=13.7.0",
+    "prompt-toolkit>=3.0.47",
 ]
 requires-python = ">=3.12"
 
@@ -36,6 +38,7 @@ azure = ["azure-ai-agents>=1.2.0b5"]
 
 [project.scripts]
 agentic-fleet = "agenticfleet.cli.repl:main"
+fleet = "agenticfleet.cli.repl:main"
 
 [project.urls]
 Homepage = "https://github.com/Qredence/AgenticFleet"
@@ -103,4 +106,3 @@ pretty = true
 exclude = [
     "tests/.*",  # tests can be looser
 ]
-

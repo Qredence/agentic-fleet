@@ -1,6 +1,14 @@
+from __future__ import annotations
+
+from pathlib import Path
+
 from dotenv import load_dotenv
 from mem0 import Memory  # type: ignore
-from openai import AzureOpenAI
+from mem0.configs.base import (  # type: ignore[import-untyped]
+    EmbedderConfig,
+    LlmConfig,
+    MemoryConfig,
+)
 
 from ..config.settings import settings
 
@@ -18,64 +26,39 @@ class Mem0ContextProvider:
             user_id: Default user identifier for memory operations
             agent_id: Default agent identifier for memory operations
         """
-        required_settings = [
-            ("azure_ai_project_endpoint", "AZURE_AI_PROJECT_ENDPOINT"),
-            ("azure_ai_search_endpoint", "AZURE_AI_SEARCH_ENDPOINT"),
-            ("azure_ai_search_key", "AZURE_AI_SEARCH_KEY"),
-        ]
-        for attr, env_name in required_settings:
-            if getattr(settings, attr, None) is None:
-                raise ValueError(f"{env_name} is required but not set in settings.")
         # Store identifiers for memory operations
         self.user_id = user_id
         self.agent_id = agent_id
 
-        # Ensure required endpoint is set
-        if not settings.azure_ai_project_endpoint:
-            raise ValueError("AZURE_AI_PROJECT_ENDPOINT is required but not set")
-
-        azure_client = AzureOpenAI(
-            azure_endpoint=settings.azure_ai_project_endpoint,
-            api_key=settings.openai_api_key,
-            api_version="2025-05-01",
+        # Configure Mem0 to use OpenAI for both LLM responses and embeddings
+        llm_config = LlmConfig(
+            provider="openai",
+            config={
+                "api_key": settings.openai_api_key,
+                "model": settings.openai_model,
+                "temperature": 0,
+                "max_tokens": 1000,
+            },
+        )
+        embedder_config = EmbedderConfig(
+            provider="openai",
+            config={
+                "api_key": settings.openai_api_key,
+                "model": settings.openai_embedding_model,
+            },
         )
 
-        # Extract service name from endpoint if it's a full URL
-        service_name = settings.azure_ai_search_endpoint
-        if service_name and service_name.startswith("https://"):
-            # Extract service name from URL like https://myservice.search.windows.net
-            service_name = service_name.replace("https://", "").split(".")[0]
+        history_db_path = Path(settings.mem0_history_db_path).resolve()
+        history_db_path.parent.mkdir(parents=True, exist_ok=True)
 
-        config = {
-            "vector_store": {
-                "provider": "azure_ai_search",
-                "config": {
-                    "service_name": service_name,
-                    "api_key": settings.azure_ai_search_key,
-                    "collection_name": "agenticfleet-memories",
-                    "embedding_model_dims": 1536,
-                },
-            },
-            "llm": {
-                "provider": "azure_openai",
-                "config": {
-                    "azure_client": azure_client,
-                    "model": settings.azure_openai_chat_completion_deployed_model_name,
-                    "temperature": 0,
-                    "max_tokens": 1000,
-                },
-            },
-            "embedder": {
-                "provider": "azure_openai",
-                "config": {
-                    "azure_client": azure_client,
-                    "model": settings.azure_openai_embedding_deployed_model_name,
-                },
-            },
-        }
+        mem0_config = MemoryConfig(
+            llm=llm_config,
+            embedder=embedder_config,
+            history_db_path=str(history_db_path),
+        )
 
-        # Initialize memory using from_config method
-        self.memory = Memory.from_config(config)
+        # Initialize memory with the configured providers
+        self.memory = Memory(config=mem0_config)
 
     def get(self, query: str, user_id: str | None = None, agent_id: str | None = None) -> str:
         """

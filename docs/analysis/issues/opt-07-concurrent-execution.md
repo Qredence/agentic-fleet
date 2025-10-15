@@ -25,13 +25,13 @@ workflow = (
     .add_agent(researcher, "researcher")
     .add_agent(coder, "coder")
     .add_agent(analyst, "analyst")
-    
+
     # Fan-out: Execute multiple agents in parallel
     .add_fan_out_edges("orchestrator", ["researcher", "coder", "analyst"])
-    
+
     # Fan-in: Synthesize results
     .add_fan_in_edges(["researcher", "coder", "analyst"], "synthesizer")
-    
+
     .build()
 )
 ```

@@ -67,6 +67,13 @@
       "**/.pytest_cache/**": true,
       "**/.ruff_cache/**": true,
       "**/logs/**": true
-    }
+    },
+    "python.terminal.useEnvFile": true,
+    "python-envs.defaultPackageManager": "ms-python.python:uv",
+    "python.useEnvironmentsExtension": true,
+    "claude-code.selectedModel": "glm-4.6",
+    "claude-code.environmentVariables": [
+
+    ]
   }
 }

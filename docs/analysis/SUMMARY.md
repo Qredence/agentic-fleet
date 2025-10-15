@@ -1,7 +1,7 @@
 # Codebase Analysis Summary
 
-**Analysis Date:** October 13, 2025  
-**AgenticFleet Version:** 0.5.0  
+**Analysis Date:** October 13, 2025
+**AgenticFleet Version:** 0.5.0
 **Microsoft Agent Framework:** 1.0.0b251007
 
 ## Executive Summary
@@ -17,6 +17,7 @@ This analysis identified **15 optimization opportunities** to enhance AgenticFle
 ## Key Findings
 
 ### ✅ Strengths of Current Implementation
+
 - Modern `src/` package layout
 - Successfully migrated to OpenAIResponsesClient
 - Consistent agent factory pattern
@@ -25,6 +26,7 @@ This analysis identified **15 optimization opportunities** to enhance AgenticFle
 - Type-safe tool responses with Pydantic
 
 ### 🔴 Critical Gaps
+
 1. **Custom Orchestration**: Not using WorkflowBuilder (reinventing the wheel)
 2. **No Checkpointing**: Cannot resume failed workflows (costs money)
 3. **No HITL**: No human approval for sensitive operations (safety risk)
@@ -42,11 +44,13 @@ This analysis identified **15 optimization opportunities** to enhance AgenticFle
 ## High Priority Optimizations (Start Here)
 
 ### 1. WorkflowBuilder Migration [OPT-01]
+
 **Impact:** 🔥 High | **Effort:** 🔨 Medium (2-3 weeks)
 
 Replace custom `MultiAgentWorkflow` with framework's graph-based orchestration.
 
 **Why Critical:**
+
 - Foundational for other optimizations
 - Eliminates custom orchestration code
 - Enables streaming, checkpointing, visualization
@@ -57,11 +61,13 @@ Replace custom `MultiAgentWorkflow` with framework's graph-based orchestration.
 ---
 
 ### 2. Workflow Checkpointing [OPT-02]
+
 **Impact:** 🔥 High | **Effort:** 🔨 Low (1 week)
 
 Add state persistence to resume failed workflows.
 
 **Why Critical:**
+
 - **Cost Savings**: 50-80% reduction on retry costs
 - **Reliability**: Users don't lose progress
 - **Compliance**: Audit trail required for regulated industries
@@ -71,11 +77,13 @@ Add state persistence to resume failed workflows.
 ---
 
 ### 3. Human-in-the-Loop [OPT-03]
+
 **Impact:** 🔥 High | **Effort:** 🔨 Medium (2-3 weeks)
 
 Add approval mechanisms for code execution and sensitive operations.
 
 **Why Critical:**
+
 - **Safety**: Prevents harmful code execution
 - **Trust**: Users see what agents plan to do
 - **Compliance**: Required for production use
@@ -105,6 +113,7 @@ Add approval mechanisms for code execution and sensitive operations.
 ## Recommended Implementation Plan
 
 ### Phase 1: Foundation (Weeks 1-2)
+
 **Goal:** Modernize core architecture
 
 - ✅ OPT-01: WorkflowBuilder migration
@@ -112,6 +121,7 @@ Add approval mechanisms for code execution and sensitive operations.
 - ✅ OPT-05: Basic observability
 
 **Deliverables:**
+
 - Graph-based workflow
 - Checkpoint storage configured
 - OpenTelemetry integrated
@@ -119,6 +129,7 @@ Add approval mechanisms for code execution and sensitive operations.
 ---
 
 ### Phase 2: Safety & UX (Weeks 3-4)
+
 **Goal:** Production-ready safety and developer experience
 
 - ✅ OPT-03: Human-in-the-loop
@@ -126,6 +137,7 @@ Add approval mechanisms for code execution and sensitive operations.
 - ✅ OPT-06: Middleware system
 
 **Deliverables:**
+
 - Approval UI for sensitive ops
 - Visual debugging interface
 - Request validation middleware
@@ -133,6 +145,7 @@ Add approval mechanisms for code execution and sensitive operations.
 ---
 
 ### Phase 3: Optimization (Weeks 5-6)
+
 **Goal:** Performance and scalability
 
 - ✅ OPT-07: Concurrent execution
@@ -140,6 +153,7 @@ Add approval mechanisms for code execution and sensitive operations.
 - ✅ OPT-10: Magentic pattern
 
 **Deliverables:**
+
 - Parallel agent execution
 - Type-safe state
 - Advanced orchestration
@@ -147,6 +161,7 @@ Add approval mechanisms for code execution and sensitive operations.
 ---
 
 ### Phase 4: Ecosystem (Weeks 7-8)
+
 **Goal:** Broader integration
 
 - ✅ OPT-09: MCP tools
@@ -154,6 +169,7 @@ Add approval mechanisms for code execution and sensitive operations.
 - ✅ OPT-12: Visualization
 
 **Deliverables:**
+
 - MCP server integration
 - Workflow diagrams
 - Extended ecosystem support
@@ -174,24 +190,28 @@ If time is limited, prioritize these high-impact, low-effort items:
 ## Expected Outcomes
 
 ### After Phase 1 (Foundation)
+
 - Modern, maintainable architecture
 - Framework-aligned implementation
 - Basic production monitoring
 - Cost savings from checkpointing
 
 ### After Phase 2 (Safety & UX)
+
 - Production-ready safety controls
 - Visual debugging capabilities
 - Better developer productivity
 - Centralized validation
 
 ### After Phase 3 (Optimization)
+
 - 2-3x performance improvement
 - Type-safe state management
 - Advanced orchestration patterns
 - Better scalability
 
 ### After Phase 4 (Ecosystem)
+
 - Broader tool ecosystem
 - Visual workflow documentation
 - Extended protocol support
@@ -199,11 +219,13 @@ If time is limited, prioritize these high-impact, low-effort items:
 ## Cost-Benefit Analysis
 
 ### Development Investment
+
 - **Total Effort**: 17-26 weeks (full implementation)
 - **Quick Wins**: 2 weeks (high-impact subset)
 - **Phased Approach**: 2-week sprints with validation
 
 ### Expected Returns
+
 - **Cost Savings**: 50-80% reduction in retry costs (checkpointing)
 - **Performance**: 2-3x speedup for parallel workflows
 - **Developer Productivity**: 30-50% faster development (DevUI)
@@ -211,6 +233,7 @@ If time is limited, prioritize these high-impact, low-effort items:
 - **Maintenance**: 40-60% less custom code to maintain
 
 ### ROI Timeline
+
 - **Immediate** (Phase 1): Cost savings, better architecture
 - **Short-term** (Phase 2): Production readiness
 - **Medium-term** (Phase 3): Performance gains
@@ -219,16 +242,19 @@ If time is limited, prioritize these high-impact, low-effort items:
 ## Risk Assessment
 
 ### Low Risk
+
 - OPT-02 (Checkpointing) - Framework provides built-in support
 - OPT-04 (DevUI) - Simple integration
 - OPT-05 (Observability) - Additive feature
 
 ### Medium Risk
+
 - OPT-01 (WorkflowBuilder) - Requires refactoring but well-documented
 - OPT-03 (HITL) - UI/UX considerations
 - OPT-06 (Middleware) - Design decisions needed
 
 ### Higher Risk (Defer to Phase 3-4)
+
 - OPT-10 (Magentic) - Complex pattern
 - OPT-11 (A2A) - New protocol
 - OPT-14 (Labs) - Experimental features
@@ -262,6 +288,6 @@ All analysis documents are in `docs/analysis/`:
 
 ---
 
-**Analysis Status:** ✅ Complete  
-**Next Action:** Review → Prioritize → Implement  
+**Analysis Status:** ✅ Complete
+**Next Action:** Review → Prioritize → Implement
 **Target Version:** v0.6.0 and beyond

@@ -78,7 +78,7 @@ def demo_code_execution_with_approval() -> None:
     print("Approval system would have prompted here.")
 
     # Mock result for demo
-    from agenticfleet.core.types import CodeExecutionResult
+    from agenticfleet.core.code_types import CodeExecutionResult
 
     result = CodeExecutionResult(
         success=False,

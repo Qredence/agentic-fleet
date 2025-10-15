@@ -4,7 +4,6 @@ from agenticfleet.core.approval import ApprovalDecision, ApprovalHandler
 from agenticfleet.core.cli_approval import create_approval_request
 from agenticfleet.core.code_types import CodeExecutionResult
 from agenticfleet.core.logging import get_logger
-from agenticfleet.core.types import CodeExecutionResult
 
 logger = get_logger(__name__)
 

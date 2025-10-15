@@ -226,6 +226,8 @@ class MagenticFleet:
             content = result.content
             if content is not None:
                 return str(content)
+            # If content is explicitly None, no response was generated
+            return NO_RESPONSE_GENERATED
 
         # Fallback to string representation only if it's not a mock
         result_str = str(result)
@@ -234,6 +236,91 @@ class MagenticFleet:
 
         logger.warning("Could not extract final answer from result")
         return NO_RESPONSE_GENERATED
+
+    async def list_checkpoints(self) -> list[Any]:
+        """
+        List all available checkpoints.
+
+        Returns:
+            List of checkpoint metadata dictionaries. Each dictionary contains:
+                - checkpoint_id (str): Unique identifier for the checkpoint.
+                - workflow_id (str): Identifier for the associated workflow.
+                - timestamp (str): Timestamp when the checkpoint was created.
+                - current_round (int): The current round or step in the workflow.
+                - metadata (dict): Additional metadata about the checkpoint.
+                - id (str): Alias for checkpoint_id (for backward compatibility).
+        """
+        import json
+        from collections.abc import Mapping
+        from pathlib import Path
+
+        checkpoints: list[Any] = []
+
+        # If we have checkpoint storage, try to use it
+        if self.checkpoint_storage and hasattr(self.checkpoint_storage, "list_checkpoints"):
+            # If the storage has a list method, use it
+            storage_checkpoints = await self.checkpoint_storage.list_checkpoints()
+            for checkpoint in storage_checkpoints:
+                # Convert WorkflowCheckpoint to dict ensuring REPL-compatible keys
+                if isinstance(checkpoint, Mapping):
+                    checkpoint_id = checkpoint.get("checkpoint_id") or checkpoint.get("id")
+                    workflow_id = checkpoint.get("workflow_id")
+                    timestamp = checkpoint.get("timestamp", "")
+                    current_round = checkpoint.get("current_round", 0)
+                    metadata = checkpoint.get("metadata", {})
+                else:
+                    checkpoint_id = getattr(
+                        checkpoint,
+                        "checkpoint_id",
+                        getattr(checkpoint, "id", None),
+                    )
+                    workflow_id = getattr(checkpoint, "workflow_id", None)
+                    timestamp = getattr(checkpoint, "timestamp", "")
+                    current_round = getattr(checkpoint, "current_round", 0)
+                    metadata = getattr(checkpoint, "metadata", {})
+
+                checkpoint_dict = {
+                    "checkpoint_id": checkpoint_id,
+                    "workflow_id": workflow_id,
+                    # Retain "id" as a backwards compatible alias if callers relied on it
+                    "id": checkpoint_id,
+                    "timestamp": timestamp,
+                    "current_round": current_round,
+                    "metadata": metadata,
+                }
+                checkpoints.append(checkpoint_dict)
+        else:
+            # Fallback: scan the checkpoints directory
+            checkpoint_dir = Path("./checkpoints")
+            if checkpoint_dir.exists():
+                for checkpoint_file in checkpoint_dir.glob("*.json"):
+                    try:
+                        with open(checkpoint_file) as f:
+                            checkpoint_data = json.load(f)
+
+                        # Extract the expected fields
+                        checkpoint_info = {
+                            "checkpoint_id": checkpoint_data.get("checkpoint_id"),
+                            "workflow_id": checkpoint_data.get("workflow_id"),
+                            "timestamp": checkpoint_data.get("timestamp"),
+                            "current_round": checkpoint_data.get("executor_states", {})
+                            .get("magentic_orchestrator", {})
+                            .get("plan_review_round", 0),
+                            "metadata": {
+                                "status": checkpoint_data.get("metadata", {}).get(
+                                    "checkpoint_type", "unknown"
+                                )
+                            },
+                        }
+                        checkpoints.append(checkpoint_info)
+                    except (json.JSONDecodeError, KeyError) as e:
+                        logger.warning(f"Failed to parse checkpoint file {checkpoint_file}: {e}")
+                        continue
+
+        # Sort by timestamp descending (newest first)
+        checkpoints.sort(key=lambda x: x.get("timestamp", ""), reverse=True)
+
+        return checkpoints
 
 
 # Default fleet instance factory for backward compatibility

@@ -21,7 +21,7 @@ Commands:
 
 ✓ Checkpointing enabled (storage: ./checkpoints)
 ✓ Human-in-the-Loop enabled (timeout: 300s)
-  Operations requiring approval: code_execution, file_operations, 
+  Operations requiring approval: code_execution, file_operations,
                                  external_api_calls, sensitive_data_access
 
 🎯 Your task:
@@ -56,6 +56,7 @@ Approve? (yes/no/edit):
 ## User Response Options
 
 ### 1. Approve
+
 ```
 Approve? (yes/no/edit): yes
 
@@ -64,6 +65,7 @@ Hello, World!
 ```
 
 ### 2. Reject
+
 ```
 Approve? (yes/no/edit): no
 Reason for rejection (optional): Not needed
@@ -72,6 +74,7 @@ Reason for rejection (optional): Not needed
 ```
 
 ### 3. Modify
+
 ```
 Approve? (yes/no/edit): edit
 
@@ -116,7 +119,7 @@ Hello, Modified World!
         │              │              │
    Execute        Return           Execute
    Original       Error         Modified Code
-   Code                              
+   Code
         │              │              │
         └──────────────┴──────────────┘
                        │
@@ -198,18 +201,23 @@ Test: code_execution_integration
 ## Use Cases
 
 ### ✅ Safe: Code Execution
+
 User can review and approve/modify/reject all code before execution
 
 ### ✅ Safe: File Operations
+
 Prevent accidental file deletion or modification
 
 ### ✅ Safe: API Calls
+
 Review data being sent to external services
 
 ### ✅ Trusted: Web Search
+
 No approval needed for information gathering
 
 ### ✅ Trusted: Data Analysis
+
 Read-only analysis proceeds without approval
 
 ---

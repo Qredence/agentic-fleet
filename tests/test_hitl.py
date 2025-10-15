@@ -140,5 +140,6 @@ def test_approval_history():
     assert history[0][0] == request
     assert history[0][1].decision == ApprovalDecision.APPROVED
 
+
 if __name__ == "__main__":
     pytest.main([__file__, "-v"])

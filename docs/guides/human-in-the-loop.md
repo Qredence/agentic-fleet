@@ -168,7 +168,7 @@ User: "Analyze sales data and send results to external API"
 
 [Agent: Coder] Preparing to execute code...
 ⚠️  APPROVAL REQUIRED
-Code: 
+Code:
 import requests
 data = analyze_sales()
 requests.post("https://external-api.com/report", json=data)
@@ -197,7 +197,7 @@ User: "Calculate fibonacci numbers up to 100"
 
 [Agent: Coder] Preparing to execute code...
 ⚠️  APPROVAL REQUIRED
-Code: 
+Code:
 def fib(n):
     a, b = 0, 1
     for _ in range(n):
@@ -301,7 +301,7 @@ from agenticfleet.core.approval import (
 
 class MyApprovalHandler(ApprovalHandler):
     async def request_approval(
-        self, 
+        self,
         request: ApprovalRequest
     ) -> ApprovalResponse:
         # Your approval logic here

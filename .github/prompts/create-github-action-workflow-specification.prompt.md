@@ -45,10 +45,10 @@ graph TD
     B --> C[Job 2]
     C --> D[Job 3]
     D --> E[End]
-    
+
     B --> F[Parallel Job]
     F --> D
-    
+
     style A fill:#e1f5fe
     style E fill:#e8f5e8
 ```
@@ -259,7 +259,7 @@ graph TD
     subgraph "Build Phase"
         A[Lint] --> B[Test] --> C[Build]
     end
-    subgraph "Deploy Phase"  
+    subgraph "Deploy Phase"
         D[Staging] --> E[Production]
     end
     C --> D

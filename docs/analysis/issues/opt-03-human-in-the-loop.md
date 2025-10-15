@@ -4,14 +4,17 @@ labels: ['enhancement', 'optimization', 'agent-framework', 'high-priority', 'saf
 ---
 
 ## Priority Level
+
 🔥 **High Priority** - Safety & Compliance
 
 ## Overview
+
 Implement human-in-the-loop (HITL) capabilities to allow human approval/intervention for sensitive operations like code execution and data analysis, ensuring safety and building user trust.
 
 ## Current State
 
 ### Limitations
+
 - Agents execute autonomously without human oversight
 - No approval mechanism for sensitive operations
 - Cannot pause workflow for human input
@@ -49,7 +52,7 @@ async def approval_handler(request: FunctionApprovalRequestContent):
     print(f"Operation: {request.operation}")
     print(f"Details: {request.details}")
     print(f"{'=' * 60}")
-    
+
     while True:
         response = input("Approve? (yes/no/edit): ").strip().lower()
         if response in ["yes", "y"]:
@@ -66,18 +69,21 @@ workflow.set_approval_handler(approval_handler)
 ## Benefits
 
 ### Safety
+
 - ✅ **Prevent Harmful Actions**: Human reviews code before execution
 - ✅ **Data Protection**: Approve before modifying sensitive data
 - ✅ **Compliance**: Meet regulatory requirements for human oversight
 - ✅ **Risk Mitigation**: Catch errors before they cause damage
 
 ### User Experience
+
 - ✅ **Transparency**: Users see what agents plan to do
 - ✅ **Trust**: Users feel in control of the system
 - ✅ **Learning**: Users learn from agent reasoning
 - ✅ **Customization**: Users can modify agent outputs
 
 ### Quality
+
 - ✅ **Error Detection**: Humans catch agent mistakes
 - ✅ **Alignment**: Ensure outputs match user intent
 - ✅ **Feedback Loop**: Improve agents based on human input
@@ -85,6 +91,7 @@ workflow.set_approval_handler(approval_handler)
 ## Implementation Steps
 
 ### Phase 1: Basic Approval (Week 1)
+
 - [ ] Implement approval_handler interface
 - [ ] Add CLI approval prompt
 - [ ] Wire approval to code execution tool
@@ -92,6 +99,7 @@ workflow.set_approval_handler(approval_handler)
 - [ ] Test basic approve/reject flows
 
 ### Phase 2: Advanced Features (Week 2)
+
 - [ ] Add approval timeout handling
 - [ ] Implement approval queuing system
 - [ ] Add approval history/audit log
@@ -99,6 +107,7 @@ workflow.set_approval_handler(approval_handler)
 - [ ] Add bypass for trusted operations
 
 ### Phase 3: UI Integration (Week 3)
+
 - [ ] Create web UI for approvals
 - [ ] Add mobile notification support
 - [ ] Implement approval delegation
@@ -127,6 +136,7 @@ workflow:
 ## Use Cases
 
 ### 1. Code Execution Safety
+
 ```
 User: "Write a script to clean up my files"
 Agent: Plans to run: rm -rf /home/user/*
@@ -135,6 +145,7 @@ User: Rejects → No files deleted ✅
 ```
 
 ### 2. Data Analysis Review
+
 ```
 User: "Analyze sales data and share insights"
 Agent: Plans to send data to external API
@@ -143,6 +154,7 @@ User: Modifies to use local analysis only ✅
 ```
 
 ### 3. Multi-Step Workflows
+
 ```
 User: "Research, write code, and deploy"
 System: Pauses at each critical step
@@ -152,6 +164,7 @@ User: Reviews and approves each phase ✅
 ## Testing Requirements
 
 ### Unit Tests
+
 ```python
 def test_approval_required():
     """Test approval is requested for sensitive ops."""
@@ -176,12 +189,14 @@ def test_approval_denied():
 ```
 
 ### Integration Tests
+
 - Test approval timeout handling
 - Test approval modification flow
 - Test multiple approvals in one workflow
 - Test approval history recording
 
 ### Manual Verification
+
 1. Start workflow that requires approval
 2. Verify approval prompt appears
 3. Test approve → workflow continues
@@ -192,6 +207,7 @@ def test_approval_denied():
 ## UI/UX Considerations
 
 ### CLI Approval Prompt
+
 ```
 ════════════════════════════════════════════════════════
 ⚠️  HUMAN APPROVAL REQUIRED ⚠️
@@ -220,6 +236,7 @@ Your choice:
 ```
 
 ### Web UI Approval (Future)
+
 - Real-time notifications
 - Code diff viewer
 - Approval history
@@ -229,6 +246,7 @@ Your choice:
 ## Documentation Updates
 
 ### User Guide
+
 ```markdown
 # Human-in-the-Loop
 
@@ -274,23 +292,28 @@ Approve? (yes/no/edit): yes
 ```
 
 ## Estimated Effort
+
 🔨 **Medium** (2-3 weeks)
 
 ### Breakdown
+
 - Basic CLI approval: 3-5 days
 - Advanced features: 3-5 days
 - Web UI (optional): 5-7 days
 - Testing & docs: 2-3 days
 
 ## Dependencies
+
 - Works best with WorkflowBuilder (#OPT-01)
 - May integrate with DevUI (#OPT-04)
 
 ## Related Resources
+
 - [HITL Examples](https://github.com/microsoft/agent-framework/tree/main/python/samples/getting_started/workflows/human-in-the-loop)
 - [Function Approval API](https://learn.microsoft.com/agent-framework/user-guide/workflows/human-in-the-loop)
 
 ## Success Criteria
+
 - ✅ Approval prompts appear for sensitive operations
 - ✅ Users can approve/reject/modify actions
 - ✅ Workflow continues after approval

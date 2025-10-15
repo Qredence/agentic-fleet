@@ -1,8 +1,8 @@
 # AgenticFleet Progress Tracker
 
-**Project:** AgenticFleet - Multi-Agent System with Microsoft Agent Framework  
-**Version:** 0.5.0  
-**Branch:** 0.5  
+**Project:** AgenticFleet - Multi-Agent System with Microsoft Agent Framework
+**Version:** 0.5.0
+**Branch:** 0.5
 **Last Updated:** October 10, 2025
 
 ---
@@ -48,8 +48,8 @@
   - [x] Configuration loading
 - [x] Coder Agent
   - [x] Factory function implementation
-  - [x] Code interpreter tool
-  - [x] Safe execution environment
+  - [x] Draft-only prompt configuration
+  - [ ] Execution tool integration (paused for sandbox hardening)
 - [x] Analyst Agent
   - [x] Factory function implementation
   - [x] Data analysis tools
@@ -61,10 +61,10 @@
   - [x] Search query formulation
   - [x] Results parsing and formatting
   - [x] Error handling
-- [x] Code Interpreter Tool (Coder)
-  - [x] Python code execution
-  - [x] Output capture
-  - [x] Security restrictions
+- [ ] Code Execution Tool (Coder)
+  - [x] Response schema (CodeExecutionResult)
+  - [ ] Hardened execution runtime
+  - [ ] Output capture & security guardrails
 - [x] Data Analysis Tools (Analyst)
   - [x] Multiple analysis types (summary, trends, patterns, etc.)
   - [x] Confidence scoring
@@ -124,9 +124,8 @@
 
 - **OpenAI API:** OpenAIResponsesClient
 - **Models Configured:**
-  - gpt-5 (orchestrator, analyst)
-  - gpt-4o (researcher)
-  - gpt-5-codex (coder)
+  - gpt-5-chat (Magentic manager, high reasoning)
+  - gpt-5 (orchestrator, researcher, coder, analyst)
 
 ### Development Tools
 
