@@ -231,7 +231,7 @@ class MagenticFleet:
 
         # Fallback to string representation only if it's not a mock
         result_str = str(result)
-        if result_str and result_str != "None":
+        if result_str and result_str != "None" and not result_str.startswith("<MagicMock"):
             return result_str
 
         logger.warning("Could not extract final answer from result")
