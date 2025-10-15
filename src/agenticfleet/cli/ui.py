@@ -5,7 +5,7 @@ import threading
 import time
 from collections.abc import Iterable, Iterator
 from contextlib import contextmanager
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
@@ -25,6 +25,12 @@ class AgentMessage:
     agent_name: str
     content: str
     mode: str = "response"
+
+
+@dataclass
+class FinalRenderData:
+    sections: list[tuple[str, list[str]]] = field(default_factory=list)
+    raw_text: str | None = None
 
 
 class ConsoleUI:
@@ -129,16 +135,24 @@ class ConsoleUI:
     def log_notice(self, text: str, *, style: str = "blue") -> None:
         self._print_section("Notice", [f"  {text}"])
 
-    def log_final(self, result: Any) -> None:
-        sections, raw_text = self._format_final_sections(result)
-        for title, lines in sections:
+    def log_final(self, result: FinalRenderData | str | None) -> None:
+        if isinstance(result, FinalRenderData):
+            sections = result.sections or [("Result", ["(none)"])]
+            raw_output = result.raw_text or ""
+        else:
+            normalized = (result or "") if result else ""
+            lines = [line.strip() for line in normalized.splitlines() if line.strip()]
+            sections = [("Result", lines or ["(none)"])]
+            raw_output = normalized
+
+        for index, (title, lines) in enumerate(sections):
             pretty = [f"  {line}" for line in lines] if lines else ["  (none)"]
-            self._print_section(title, pretty)
-        display_text = raw_text.strip("\n")
-        if display_text:
+            self._print_section(title, pretty, pre_blank=index != 0)
+
+        if raw_output and raw_output.strip():
             self.console.print(Text("Raw Output", style="bold"))
             self.console.print(Text(self._divider, style="dim"))
-            self.console.print(display_text)
+            self.console.print(raw_output)
             self.console.print()
 
     @staticmethod
@@ -172,138 +186,3 @@ class ConsoleUI:
         for line in lines:
             self.console.print(line)
         self.console.print()
-
-    def _format_final_sections(self, result: Any) -> tuple[list[tuple[str, list[str]]], str]:
-        raw_text = self._coerce_raw_text(result)
-        structured_sections = self._extract_structured_sections(result)
-        if structured_sections:
-            return structured_sections, raw_text
-
-        raw_for_lines = raw_text.strip()
-        lines = [line.strip() for line in raw_for_lines.splitlines() if line.strip()]
-        if not lines:
-            return [("Result", ["(no response)"])], ""
-        return [("Result", lines)], raw_text
-
-    def _extract_structured_sections(self, result: Any) -> list[tuple[str, list[str]]]:
-        payload = self._find_structured_payload(result)
-        if payload is None:
-            return []
-
-        sections: list[tuple[str, list[str]]] = []
-
-        facts_value = self._get_first_attribute(payload, ["facts", "facts_text", "facts_list"])
-        facts_lines = [ln for ln in self._format_lines(facts_value) if ln != "(none)"]
-        if facts_lines:
-            sections.append(("Facts", facts_lines))
-
-        plan_value = self._get_first_attribute(payload, ["plan", "plan_text", "plan_steps"])
-        plan_lines = [ln for ln in self._format_lines(plan_value) if ln != "(none)"] if plan_value else []
-        if plan_lines:
-            sections.append(("Plan", plan_lines))
-
-        deliverable_value = self._get_first_attribute(
-            payload,
-            ["deliverable", "deliverables", "deliverable_text", "deliverable_notes"],
-        )
-        deliverable_lines = (
-            [ln for ln in self._format_lines(deliverable_value) if ln != "(none)"]
-            if deliverable_value
-            else []
-        )
-        if not deliverable_lines and plan_lines:
-            for idx, line in enumerate(plan_lines):
-                if line.lower().startswith("deliverable"):
-                    deliverable_lines = plan_lines[idx:]
-                    break
-        if deliverable_lines:
-            sections.append(("Deliverable", deliverable_lines))
-
-        status_value = self._get_first_attribute(payload, ["status", "state"])
-        status_text: str | None = None
-        if status_value is not None:
-            if isinstance(status_value, str):
-                status_text = status_value
-            elif hasattr(status_value, "value"):
-                status_candidate = getattr(status_value, "value")
-                if isinstance(status_candidate, str):
-                    status_text = status_candidate
-            if status_text is None:
-                status_text = str(status_value)
-        if status_text:
-            sections.append(("Status", [status_text]))
-
-        return sections
-
-    def _coerce_raw_text(self, result: Any) -> str:
-        if isinstance(result, str):
-            return result
-
-        candidates = [result]
-        seen: set[int] = set()
-        while candidates:
-            current = candidates.pop()
-            if current is None:
-                continue
-            if isinstance(current, str):
-                return current
-            obj_id = id(current)
-            if obj_id in seen:
-                continue
-            seen.add(obj_id)
-            for attr in ("content", "text", "message", "output", "value"):
-                if hasattr(current, attr):
-                    candidate = getattr(current, attr)
-                    if candidate is None:
-                        continue
-                    if isinstance(candidate, str):
-                        return candidate
-                    candidates.append(candidate)
-
-        return str(result)
-
-    def _find_structured_payload(self, result: Any) -> Any | None:
-        if isinstance(result, str) or result is None:
-            return None
-
-        to_visit = [result]
-        seen: set[int] = set()
-        while to_visit:
-            current = to_visit.pop()
-            if current is None or isinstance(current, str):
-                continue
-            obj_id = id(current)
-            if obj_id in seen:
-                continue
-            seen.add(obj_id)
-
-            if any(hasattr(current, attr) for attr in ("facts", "facts_text", "plan", "plan_text")):
-                return current
-
-            for attr in ("message", "output", "result", "data", "value", "payload", "response"):
-                if hasattr(current, attr):
-                    candidate = getattr(current, attr)
-                    if candidate is not None:
-                        to_visit.append(candidate)
-
-        return None
-
-    @staticmethod
-    def _get_first_attribute(obj: Any, names: Iterable[str]) -> Any:
-        for name in names:
-            if hasattr(obj, name):
-                value = getattr(obj, name)
-                if value is not None:
-                    return value
-        return None
-
-# Registry helpers so callbacks can output to the active UI.
-_CURRENT_UI = threading.local()
-
-
-def register_console_ui(ui: ConsoleUI | None) -> None:
-    _CURRENT_UI.value = ui
-
-
-def get_console_ui() -> ConsoleUI | None:
-    return getattr(_CURRENT_UI, "value", None)

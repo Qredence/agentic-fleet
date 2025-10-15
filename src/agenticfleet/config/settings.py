@@ -6,9 +6,10 @@ from pathlib import Path
 from typing import Any
 
 import yaml
-from agent_framework import CheckpointStorage, FileCheckpointStorage, InMemoryCheckpointStorage
+from agent_framework import CheckpointStorage, InMemoryCheckpointStorage
 from dotenv import load_dotenv
 
+from agenticfleet.core.checkpoints import AgenticFleetFileCheckpointStorage
 from agenticfleet.core.exceptions import AgentConfigurationError
 from agenticfleet.core.logging import setup_logging
 
@@ -126,7 +127,7 @@ class Settings:
             storage_path = checkpoint_config.get("storage_path", "./checkpoints")
             # Ensure the checkpoints directory exists
             Path(storage_path).mkdir(parents=True, exist_ok=True)
-            return FileCheckpointStorage(storage_path)
+            return AgenticFleetFileCheckpointStorage(storage_path)
         else:
             logging.warning(
                 f"Unknown checkpoint storage type: {storage_type}. Checkpointing disabled."

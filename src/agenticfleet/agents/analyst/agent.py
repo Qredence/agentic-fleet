@@ -8,13 +8,13 @@ The analyst is responsible for data analysis and generating insights.
 
 from typing import Any
 
-from agent_framework import ChatAgent
 from agent_framework.openai import OpenAIResponsesClient
 
+from agenticfleet.agents.base import AgenticFleetChatAgent
 from agenticfleet.config import settings
 
 
-def create_analyst_agent() -> ChatAgent:
+def create_analyst_agent() -> AgenticFleetChatAgent:
     """
     Create the Analyst agent with data analysis capabilities.
 
@@ -22,10 +22,7 @@ def create_analyst_agent() -> ChatAgent:
     OpenAIResponsesClient. Tools are plain Python functions passed as a list.
 
     Returns:
-        ChatAgent: Configured analyst agent with data analysis tools
-
-    Raises:
-        AgentConfigurationError: If required configuration is missing
+        AgenticFleetChatAgent: Configured analyst agent with data analysis tools
     """
     # Load analyst-specific configuration
     config = settings.load_agent_config("analyst")
@@ -56,14 +53,12 @@ def create_analyst_agent() -> ChatAgent:
 
     # Create and return agent with tools
     # Note: temperature is not a ChatAgent parameter in Microsoft Agent Framework
-    agent = ChatAgent(
+    agent = AgenticFleetChatAgent(
         chat_client=chat_client,
         instructions=config.get("system_prompt", ""),
         name=agent_config.get("name", "analyst"),
         tools=enabled_tools,
+        runtime_config=config.get("runtime", {}),
     )
-
-    runtime_config = config.get("runtime", {})
-    setattr(agent, "runtime_config", runtime_config)
 
     return agent

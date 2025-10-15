@@ -1,8 +1,8 @@
+![AgenticFleet Architecture](docs/afleet-preview.png)
 # AgenticFleet
 
 > Multi-agent orchestration built on the Microsoft Agent Framework.
 
-[![CI](https://github.com/Qredence/AgenticFleet/workflows/CI/badge.svg)](https://github.com/Qredence/AgenticFleet/actions/workflows/ci.yml)
 [![Python 3.12+](https://img.shields.io/badge/python-3.12+-blue.svg)](https://www.python.org/downloads/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](./LICENSE)
 
@@ -27,6 +27,7 @@ AgenticFleet coordinates specialised researcher, coder, and analyst agents throu
 - Python 3.12+
 - [uv](https://docs.astral.sh/uv/) package manager (`curl -LsSf https://astral.sh/uv/install.sh | sh`)
 - OpenAI API key (`OPENAI_API_KEY`)
+- Microsoft Agent Framework packages (`agent-framework`, its core/azure/mem0 extras); install them with `uv pip install "agent-framework[azure-ai,mem0]"` to enable full Magentic execution
 
 ### Install & Configure
 

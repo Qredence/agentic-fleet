@@ -355,9 +355,7 @@ class TestMagenticFleetCallbacks:
     @pytest.mark.asyncio
     async def test_streaming_agent_response_callback(self):
         """Test streaming agent response callback."""
-        from agenticfleet.fleet.callbacks import (
-            agent_delta_callback,
-        )
+        from agenticfleet.fleet.callbacks import ConsoleCallbacks
 
         # Mock message with agent_name and content attributes
         message = MagicMock()
@@ -365,7 +363,8 @@ class TestMagenticFleetCallbacks:
         message.content = "Response chunk from researcher"
 
         # Call callback (should not raise)
-        await agent_delta_callback(message)
+        handler = ConsoleCallbacks()
+        await handler.agent_delta_callback(message)
 
         # If we get here, callback succeeded
         assert True
@@ -373,26 +372,28 @@ class TestMagenticFleetCallbacks:
     @pytest.mark.asyncio
     async def test_plan_creation_callback(self):
         """Test plan creation callback."""
-        from agenticfleet.fleet.callbacks import plan_creation_callback
+        from agenticfleet.fleet.callbacks import ConsoleCallbacks
 
         # Mock plan
         plan = MagicMock()
         plan.steps = ["Step 1", "Step 2"]
 
         # Call callback (should not raise)
-        await plan_creation_callback(plan)
+        handler = ConsoleCallbacks()
+        await handler.plan_creation_callback(plan)
         assert True
 
     @pytest.mark.asyncio
     async def test_progress_ledger_callback(self):
         """Test progress ledger callback."""
-        from agenticfleet.fleet.callbacks import progress_ledger_callback
+        from agenticfleet.fleet.callbacks import ConsoleCallbacks
 
         # Mock ledger
         ledger = MagicMock()
 
         # Call callback (should not raise)
-        await progress_ledger_callback(ledger)
+        handler = ConsoleCallbacks()
+        await handler.progress_ledger_callback(ledger)
         assert True
 
 

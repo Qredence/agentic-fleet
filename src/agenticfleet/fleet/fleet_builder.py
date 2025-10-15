@@ -2,18 +2,72 @@
 
 from __future__ import annotations
 
-import inspect
 from typing import TYPE_CHECKING, Any
 
-from agent_framework import MagenticBuilder
-from agent_framework.openai import OpenAIResponsesClient
-
 from agenticfleet.config import settings
+from agenticfleet.core.exceptions import AgentConfigurationError
 from agenticfleet.core.logging import get_logger
 from agenticfleet.fleet import callbacks
 
+try:  # pragma: no cover - runtime import guard
+    from agent_framework import MagenticBuilder as _RealMagenticBuilder
+    from agent_framework.openai import OpenAIResponsesClient as _RealOpenAIResponsesClient
+except ModuleNotFoundError:  # pragma: no cover - fallback for test environments
+    _RealMagenticBuilder = None
+    _RealOpenAIResponsesClient = None
+
+
 if TYPE_CHECKING:
     from agent_framework import AgentProtocol, CheckpointStorage, Workflow
+
+
+class _FallbackOpenAIResponsesClient:
+    """Minimal stand-in when Microsoft Agent Framework is not installed."""
+
+    def __init__(self, **kwargs: Any) -> None:
+        self.kwargs = kwargs
+
+
+class _FallbackWorkflow:
+    """Workflow placeholder that raises if execution is attempted without dependency."""
+
+    async def run(self, *_: Any, **__: Any) -> Any:
+        raise AgentConfigurationError(
+            "agent_framework is required to execute workflows. Install 'agent-framework' to "
+            "enable Magentic orchestration."
+        )
+
+
+class _FallbackMagenticBuilder:
+    """No-op MagenticBuilder replacement for test environments."""
+
+    def __init__(self) -> None:
+        self._workflow = _FallbackWorkflow()
+
+    def participants(self, **kwargs: Any) -> _FallbackMagenticBuilder:
+        self.participants_kwargs = kwargs
+        return self
+
+    def with_standard_manager(self, **kwargs: Any) -> _FallbackMagenticBuilder:
+        self.manager_kwargs = kwargs
+        return self
+
+    def on_event(self, *_: Any, **__: Any) -> _FallbackMagenticBuilder:
+        return self
+
+    def with_checkpointing(self, *_: Any, **__: Any) -> _FallbackMagenticBuilder:
+        return self
+
+    def with_plan_review(self, *_: Any, **__: Any) -> _FallbackMagenticBuilder:
+        return self
+
+    def build(self) -> _FallbackWorkflow:
+        return self._workflow
+
+
+MagenticBuilder = _RealMagenticBuilder or _FallbackMagenticBuilder
+OpenAIResponsesClient = _RealOpenAIResponsesClient or _FallbackOpenAIResponsesClient
+_AGENT_FRAMEWORK_AVAILABLE = _RealMagenticBuilder is not None
 
 logger = get_logger(__name__)
 
@@ -27,10 +81,11 @@ class FleetBuilder:
     specialist agents (participants).
     """
 
-    def __init__(self) -> None:
+    def __init__(self, console_callbacks: callbacks.ConsoleCallbacks | None = None) -> None:
         """Initialize the fleet builder with default configuration."""
         fleet_config = settings.workflow_config.get("fleet", {})
         self.config = fleet_config
+        self.console_callbacks = console_callbacks or callbacks.ConsoleCallbacks()
 
         # Extract orchestrator settings
         orchestrator_config = fleet_config.get("orchestrator", {})
@@ -55,6 +110,13 @@ class FleetBuilder:
         callback_config = fleet_config.get("callbacks", {})
         self.streaming_enabled = callback_config.get("streaming_enabled", True)
         self.log_progress = callback_config.get("log_progress_ledger", True)
+
+        self._using_fallback_builder = not _AGENT_FRAMEWORK_AVAILABLE
+        if self._using_fallback_builder:
+            logger.warning(
+                "agent_framework package not available; using fallback MagenticBuilder stub. "
+                "Install 'agent-framework' to enable full workflow execution."
+            )
 
         self.builder = MagenticBuilder()
 
@@ -111,7 +173,7 @@ Always explain your reasoning and include evidence from agent responses."""
 
         # Create OpenAI client for the manager
         client_kwargs: dict[str, Any] = {
-            "model": manager_model,
+            "model_id": manager_model,
             "api_key": settings.openai_api_key,
         }
         if self.manager_reasoning:
@@ -141,6 +203,13 @@ Always explain your reasoning and include evidence from agent responses."""
             logger.debug("Observability callbacks disabled")
             return self
 
+        if not _AGENT_FRAMEWORK_AVAILABLE:
+            logger.warning(
+                "agent_framework not available; skipping observability callbacks. "
+                "Install 'agent-framework' to enable streaming telemetry."
+            )
+            return self
+
         logger.info("Enabling observability callbacks")
 
         # Import unified callback event types
@@ -157,32 +226,27 @@ Always explain your reasoning and include evidence from agent responses."""
         async def unified_callback(event: MagenticCallbackEvent) -> None:
             """Route MagenticCallbackEvents to appropriate handlers."""
             if isinstance(event, MagenticOrchestratorMessageEvent):
-                # Dispatch dictionary for orchestrator message kinds
-                orchestrator_handlers = {
-                    "task_ledger": lambda msg: self.log_progress
-                    and callbacks.plan_creation_callback(msg),
-                    "progress_ledger": lambda msg: self.log_progress
-                    and callbacks.progress_ledger_callback(msg),
-                    "notice": lambda msg: msg and callbacks.notice_callback(str(msg)),
-                }
-                handler = orchestrator_handlers.get(event.kind)
-                if handler:
-                    result = handler(event.message)
-                    if inspect.isawaitable(result):
-                        await result
+                # Handle orchestrator messages (plan, instructions, etc.)
+                if event.kind == "task_ledger" and self.log_progress:
+                    await self.console_callbacks.plan_creation_callback(event.message)
+                elif event.kind == "progress_ledger" and self.log_progress:
+                    await self.console_callbacks.progress_ledger_callback(event.message)
+                elif event.kind == "notice" and event.message:
+                    await self.console_callbacks.notice_callback(str(event.message))
                 # Could log other kinds: user_task, instruction, notice
             elif isinstance(event, MagenticAgentDeltaEvent):
                 # Handle streaming agent deltas (buffered; no immediate console output)
                 if self.streaming_enabled:
-                    await callbacks.agent_delta_callback(event)
+                    await self.console_callbacks.agent_delta_callback(event)
             elif isinstance(event, MagenticAgentMessageEvent):
                 # Handle final agent messages
                 if self.streaming_enabled and event.message:
-                    await callbacks.agent_message_callback(event.message)
+                    await self.console_callbacks.agent_message_callback(event.message)
             elif isinstance(event, MagenticFinalResultEvent):
                 # Handle final result
                 if event.message and self.log_progress:
                     logger.info(f"[Fleet] Final result: {event.message.text[:200]}...")
+                    await self.console_callbacks.final_answer_callback(event.message)
 
         # Register unified callback with appropriate mode
         mode = (
@@ -248,5 +312,10 @@ Always explain your reasoning and include evidence from agent responses."""
         """
         logger.info("Building Magentic workflow")
         workflow = self.builder.build()
+        if self._using_fallback_builder:
+            logger.warning(
+                "agent_framework is not installed; returning fallback workflow stub. "
+                "Install 'agent-framework' to enable Magentic execution."
+            )
         logger.info("Magentic workflow built successfully")
         return workflow  # type: ignore[return-value]

@@ -2,11 +2,16 @@
 
 from __future__ import annotations
 
-import threading
+from contextvars import ContextVar
 from typing import TYPE_CHECKING, Any
 
-from agenticfleet.cli.ui import AgentMessage, get_console_ui
+from agenticfleet.cli.ui import AgentMessage, ConsoleUI, FinalRenderData
 from agenticfleet.core.logging import get_logger
+
+if TYPE_CHECKING:
+    from agent_framework import ChatMessage
+
+logger = get_logger(__name__)
 
 
 def _coerce_lines(value: Any) -> list[str]:
@@ -41,14 +46,6 @@ def _coerce_lines(value: Any) -> list[str]:
     return lines
 
 
-if TYPE_CHECKING:
-    from agent_framework import ChatMessage
-
-logger = get_logger(__name__)
-
-_AGENT_STREAM_CACHE_LOCAL = threading.local()
-
-
 def _extract_agent_name(message: Any) -> str:
     for attr in ("agent_name", "participant_id", "name", "role"):
         if hasattr(message, attr):
@@ -73,125 +70,179 @@ def _extract_text(message: Any) -> str:
     return str(message)
 
 
-async def agent_delta_callback(event: Any) -> None:
-    """Buffer streaming deltas without flooding the console."""
-
-    agent_name = _extract_agent_name(event)
-    text = _extract_text(event).strip()
-    if not text:
-        return
-    if not hasattr(_AGENT_STREAM_CACHE_LOCAL, "cache"):
-        _AGENT_STREAM_CACHE_LOCAL.cache = {}
-    cache = _AGENT_STREAM_CACHE_LOCAL.cache
-    cache.setdefault(agent_name, []).append(text)
-
-
-async def agent_message_callback(message: Any) -> None:
-    """Display the final aggregated agent response."""
-
-    agent_name = _extract_agent_name(message)
-    final_text = _extract_text(message).strip()
-    cache = getattr(_AGENT_STREAM_CACHE_LOCAL, "cache", {})
-    buffered = cache.pop(agent_name, []) if cache else []
-    if buffered:
-        buffered.append(final_text)
-        combined = "\n".join(part for part in buffered if part)
-    else:
-        combined = final_text
-
-    if not combined:
-        return
-
-    logger.info(f"[Fleet] Agent '{agent_name}' response: {combined[:200]}...")
-    ui = get_console_ui()
-    if ui:
-        ui.log_agent_message(AgentMessage(agent_name=agent_name, content=combined, mode="response"))
+def _first_available(source: Any, *names: str) -> Any:
+    for name in names:
+        if isinstance(source, dict) and name in source:
+            value = source[name]
+            if value is not None:
+                return value
+        if hasattr(source, name):
+            value = getattr(source, name)
+            if value is not None:
+                return value
+    return None
 
 
-async def plan_creation_callback(ledger: Any) -> None:
-    """
-    Log plan creation and facts gathered by the manager.
+class ConsoleCallbacks:
+    """Adapter that relays Magentic events to the active console UI."""
 
-    Args:
-        ledger: MagenticTaskLedger with plan and facts.
-    """
-    plan_lines = _coerce_lines(getattr(ledger, "plan", None))
-    facts_lines = _coerce_lines(getattr(ledger, "facts", None))
-
-    logger.info("[Fleet] Plan created:")
-    for fact in facts_lines or ["(none)"]:
-        logger.info(f"  Fact: {fact}")
-    for step in plan_lines or ["(none)"]:
-        logger.info(f"  Step: {step}")
-
-    ui = get_console_ui()
-    if ui:
-        ui.log_plan(facts_lines or ["(none)"], plan_lines or ["(none)"])
-
-
-async def progress_ledger_callback(ledger: Any) -> None:
-    """
-    Track progress evaluation and next actions.
-
-    Args:
-        ledger: MagenticProgressLedger with status and next speaker.
-    """
-    is_satisfied = getattr(ledger, "is_request_satisfied", False)
-    is_loop = getattr(ledger, "is_in_loop", False)
-    next_speaker = getattr(ledger, "next_speaker", "unknown")
-    instruction_lines = _coerce_lines(getattr(ledger, "instruction", None))
-
-    logger.info("[Fleet] Progress evaluation:")
-    logger.info(f"  Request satisfied: {is_satisfied}")
-    logger.info(f"  In loop: {is_loop}")
-    logger.info(f"  Next speaker: {next_speaker}")
-    if instruction_lines:
-        for line in instruction_lines:
-            logger.info(f"  Instruction: {line[:100]}")
-
-    ui = get_console_ui()
-    if ui:
-        status = (
-            "Satisfied" if bool(is_satisfied) else ("Looping" if bool(is_loop) else "In progress")
+    def __init__(self, ui: ConsoleUI | None = None) -> None:
+        self._ui = ui
+        self._agent_stream_cache: ContextVar[dict[str, list[str]] | None] = ContextVar(
+            f"agent_stream_cache_{id(self)}",
+            default=None,
         )
-        instruction_text = "\n".join(instruction_lines) if instruction_lines else None
-        ui.log_progress(status=status, next_speaker=next_speaker, instruction=instruction_text)
+        self._final_render: ContextVar[FinalRenderData | None] = ContextVar(
+            f"final_render_{id(self)}",
+            default=None,
+        )
 
+    def bind_ui(self, ui: ConsoleUI | None) -> None:
+        """Update the UI target at runtime."""
 
-async def notice_callback(message: str) -> None:
-    """
-    Log notice messages from the orchestrator.
+        self._ui = ui
 
-    Args:
-        message: Notice message string.
-    """
-    logger.info(f"[Fleet] Notice: {message}")
+    def _get_ui(self) -> ConsoleUI | None:
+        return self._ui
+
+    def _get_stream_cache(self) -> dict[str, list[str]]:
+        cache = self._agent_stream_cache.get()
+        if cache is None:
+            cache = {}
+            self._agent_stream_cache.set(cache)
+        return cache
+
+    async def agent_delta_callback(self, event: Any) -> None:
+        """Buffer streaming deltas without flooding the console."""
+
+        agent_name = _extract_agent_name(event)
+        text = _extract_text(event).strip()
+        if not text:
+            return
+        cache = self._get_stream_cache()
+        cache.setdefault(agent_name, []).append(text)
+
+    async def agent_message_callback(self, message: Any) -> None:
+        """Display the final aggregated agent response."""
+
+        agent_name = _extract_agent_name(message)
+        final_text = _extract_text(message).strip()
+        cache = self._get_stream_cache()
+        buffered = cache.pop(agent_name, []) if cache else []
+        if buffered:
+            buffered.append(final_text)
+            combined = "\n".join(part for part in buffered if part)
+        else:
+            combined = final_text
+
+        if not combined:
+            return
+
+        logger.info("[Fleet] Agent '%s' response: %s", agent_name, combined[:200])
+        ui = self._get_ui()
+        if ui:
+            ui.log_agent_message(
+                AgentMessage(agent_name=agent_name, content=combined, mode="response")
+            )
+
+    async def plan_creation_callback(self, ledger: Any) -> None:
+        """Log plan creation and facts gathered by the manager."""
+
+        plan_lines = _coerce_lines(getattr(ledger, "plan", None))
+        facts_lines = _coerce_lines(getattr(ledger, "facts", None))
+
+        logger.info("[Fleet] Plan created:")
+        for fact in facts_lines or ["(none)"]:
+            logger.info("  Fact: %s", fact)
+        for step in plan_lines or ["(none)"]:
+            logger.info("  Step: %s", step)
+
+        if ui := self._get_ui():
+            ui.log_plan(facts_lines or ["(none)"], plan_lines or ["(none)"])
+
+    async def progress_ledger_callback(self, ledger: Any) -> None:
+        """Track progress evaluation and next actions."""
+
+        is_satisfied = getattr(ledger, "is_request_satisfied", False)
+        is_loop = getattr(ledger, "is_in_loop", False)
+        next_speaker = getattr(ledger, "next_speaker", "unknown")
+        instruction_lines = _coerce_lines(getattr(ledger, "instruction", None))
+
+        logger.info("[Fleet] Progress evaluation:")
+        logger.info("  Request satisfied: %s", is_satisfied)
+        logger.info("  In loop: %s", is_loop)
+        logger.info("  Next speaker: %s", next_speaker)
+        if instruction_lines:
+            for line in instruction_lines:
+                logger.info("  Instruction: %s", line[:100])
+
+        if ui := self._get_ui():
+            status = (
+                "Satisfied"
+                if bool(is_satisfied)
+                else ("Looping" if bool(is_loop) else "In progress")
+            )
+            instruction_text = "\n".join(instruction_lines) if instruction_lines else None
+            ui.log_progress(status=status, next_speaker=next_speaker, instruction=instruction_text)
+
+    async def notice_callback(self, message: str) -> None:
+        """Display orchestration notices in the CLI."""
+
+        if ui := self._get_ui():
+            ui.log_notice(message)
+
+    async def final_answer_callback(self, message: ChatMessage) -> None:
+        """Log the final answer being returned to the user."""
+
+        content = _extract_text(message)
+        logger.info("[Fleet] Final answer: %s", content[:300])
+
+        render_data = self._build_final_render_data(message, content)
+        self._final_render.set(render_data)
+
+        if ui := self._get_ui():
+            ui.log_final(render_data)
+
+    def consume_final_render(self) -> FinalRenderData | None:
+        """Return and clear the most recent final render payload."""
+
+        render = self._final_render.get()
+        self._final_render.set(None)
+        return render
+
+    def _build_final_render_data(self, message: Any, content: str) -> FinalRenderData:
+        sections: list[tuple[str, list[str]]] = []
+
+        facts = _coerce_lines(_first_available(message, "facts", "facts_text"))
+        if facts:
+            sections.append(("Facts", facts))
+
+        plan = _coerce_lines(_first_available(message, "plan", "plan_text"))
+        if plan:
+            sections.append(("Plan", plan))
+            deliverable_lines: list[str] = []
+            for index, line in enumerate(plan):
+                if line.lower().startswith("deliverable"):
+                    deliverable_lines = plan[index:]
+                    break
+            if deliverable_lines:
+                sections.append(("Deliverable", deliverable_lines))
+
+        status_value = _first_available(message, "state", "status")
+        if status_value:
+            sections.append(("Status", [str(status_value)]))
+
+        result_lines = _coerce_lines(content)
+        if result_lines:
+            sections.append(("Result", result_lines))
+
+        raw_output = content or getattr(message, "raw_text", "")
+        return FinalRenderData(sections=sections or [("Result", ["(none)"])], raw_text=raw_output)
 
 
 async def tool_call_callback(tool_name: str, tool_args: dict[str, Any], result: Any) -> None:
-    """
-    Log tool calls and results for debugging.
+    """Log tool calls and results for debugging."""
 
-    Args:
-        tool_name: Name of the tool being called.
-        tool_args: Arguments passed to the tool.
-        result: Result returned by the tool.
-    """
-    logger.debug(f"[Fleet] Tool call: {tool_name}")
-    logger.debug(f"  Args: {tool_args}")
-    logger.debug(f"  Result: {str(result)[:200]}...")
-
-
-async def final_answer_callback(message: ChatMessage) -> None:
-    """
-    Log the final answer being returned to the user.
-
-    Args:
-        message: Final ChatMessage from the manager.
-    """
-    content = getattr(message, "content", str(message))
-    logger.info(f"[Fleet] Final answer: {str(content)[:300]}...")
-
-    ui = get_console_ui()
-    if ui:
-        ui.log_final(message)
+    logger.debug("[Fleet] Tool call: %s", tool_name)
+    logger.debug("  Args: %s", tool_args)
+    logger.debug("  Result: %s", str(result)[:200])

@@ -12,13 +12,13 @@ Usage:
     result = await researcher.run("Search for Python best practices")
 """
 
-from agent_framework import ChatAgent
 from agent_framework.openai import OpenAIResponsesClient
 
+from agenticfleet.agents.base import AgenticFleetChatAgent
 from agenticfleet.config import settings
 
 
-def create_researcher_agent() -> ChatAgent:
+def create_researcher_agent() -> AgenticFleetChatAgent:
     """
     Create the Researcher agent with web search capabilities.
 
@@ -26,10 +26,7 @@ def create_researcher_agent() -> ChatAgent:
     OpenAIResponsesClient. Tools are plain Python functions passed as a list.
 
     Returns:
-        ChatAgent: Configured researcher agent with web search tools
-
-    Raises:
-        AgentConfigurationError: If required configuration is missing
+        AgenticFleetChatAgent: Configured researcher agent with web search tools
     """
     # Load researcher-specific configuration
     config = settings.load_agent_config("researcher")
@@ -53,14 +50,12 @@ def create_researcher_agent() -> ChatAgent:
 
     # Create and return agent with tools
     # Note: temperature is not a ChatAgent parameter in Microsoft Agent Framework
-    agent = ChatAgent(
+    agent = AgenticFleetChatAgent(
         chat_client=chat_client,
         instructions=config.get("system_prompt", ""),
         name=agent_config.get("name", "researcher"),
         tools=enabled_tools,
+        runtime_config=config.get("runtime", {}),
     )
-
-    runtime_config = config.get("runtime", {})
-    setattr(agent, "runtime_config", runtime_config)
 
     return agent

@@ -3,8 +3,8 @@
 import pytest
 from rich.console import Console
 
-from agenticfleet.cli.ui import AgentMessage, ConsoleUI, register_console_ui
-from agenticfleet.fleet import callbacks
+from agenticfleet.cli.ui import AgentMessage, ConsoleUI
+from agenticfleet.fleet.callbacks import ConsoleCallbacks
 
 
 def _record_output(action) -> str:
@@ -90,12 +90,9 @@ async def test_agent_deltas_are_buffered(monkeypatch) -> None:
 
     console = Console(record=True, width=80)
     ui = ConsoleUI(console=console)
-    register_console_ui(ui)
-    try:
-        await callbacks.agent_delta_callback(Delta())
-        await callbacks.agent_message_callback(Final())
-    finally:
-        register_console_ui(None)
+    handler = ConsoleCallbacks(ui)
+    await handler.agent_delta_callback(Delta())
+    await handler.agent_message_callback(Final())
 
     text = console.export_text(clear=False)
     assert text.count("First chunk") == 1
