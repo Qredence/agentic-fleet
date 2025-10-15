@@ -298,13 +298,12 @@ class ConsoleUI:
         return None
 
 # Registry helpers so callbacks can output to the active UI.
-_CURRENT_UI: ConsoleUI | None = None
+_CURRENT_UI = threading.local()
 
 
 def register_console_ui(ui: ConsoleUI | None) -> None:
-    global _CURRENT_UI
-    _CURRENT_UI = ui
+    _CURRENT_UI.value = ui
 
 
 def get_console_ui() -> ConsoleUI | None:
-    return _CURRENT_UI
+    return getattr(_CURRENT_UI, "value", None)
