@@ -2,11 +2,11 @@
 
 from __future__ import annotations
 
+import inspect
 from typing import TYPE_CHECKING, Any
 
 from agent_framework import MagenticBuilder
 from agent_framework.openai import OpenAIResponsesClient
-import inspect
 
 from agenticfleet.config import settings
 from agenticfleet.core.logging import get_logger
@@ -159,8 +159,10 @@ Always explain your reasoning and include evidence from agent responses."""
             if isinstance(event, MagenticOrchestratorMessageEvent):
                 # Dispatch dictionary for orchestrator message kinds
                 orchestrator_handlers = {
-                    "task_ledger": lambda msg: self.log_progress and callbacks.plan_creation_callback(msg),
-                    "progress_ledger": lambda msg: self.log_progress and callbacks.progress_ledger_callback(msg),
+                    "task_ledger": lambda msg: self.log_progress
+                    and callbacks.plan_creation_callback(msg),
+                    "progress_ledger": lambda msg: self.log_progress
+                    and callbacks.progress_ledger_callback(msg),
                     "notice": lambda msg: msg and callbacks.notice_callback(str(msg)),
                 }
                 handler = orchestrator_handlers.get(event.kind)
