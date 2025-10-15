@@ -135,15 +135,51 @@ class ConsoleUI:
     def log_notice(self, text: str, *, style: str = "blue") -> None:
         self._print_section("Notice", [f"  {text}"])
 
-    def log_final(self, result: FinalRenderData | str | None) -> None:
+    def log_final(self, result: FinalRenderData | str | Any | None) -> None:
         if isinstance(result, FinalRenderData):
             sections = result.sections or [("Result", ["(none)"])]
             raw_output = result.raw_text or ""
-        else:
-            normalized = (result or "") if result else ""
+        elif isinstance(result, str):
+            normalized = result or ""
             lines = [line.strip() for line in normalized.splitlines() if line.strip()]
             sections = [("Result", lines or ["(none)"])]
             raw_output = normalized
+        elif result is None:
+            sections = [("Result", ["(none)"])]
+            raw_output = ""
+        else:
+            # Handle structured objects (e.g., FinalEvent with message attribute)
+            sections = []
+            raw_output = ""
+
+            # Try to extract message content
+            if hasattr(result, "message"):
+                msg = result.message
+
+                # Extract facts
+                if hasattr(msg, "facts") and msg.facts:
+                    facts_lines = self._format_lines(msg.facts)
+                    sections.append(("Facts", facts_lines))
+
+                # Extract plan
+                if hasattr(msg, "plan") and msg.plan:
+                    plan_lines = self._format_lines(msg.plan)
+                    sections.append(("Plan", plan_lines))
+
+                # Extract status
+                if hasattr(msg, "status") and msg.status:
+                    sections.append(("Status", [str(msg.status)]))
+
+                # Extract content for raw output
+                if hasattr(msg, "content"):
+                    raw_output = str(msg.content) if msg.content else ""
+
+            # Fallback if no structured data was found
+            if not sections:
+                content = str(result)
+                lines = [line.strip() for line in content.splitlines() if line.strip()]
+                sections = [("Result", lines or ["(none)"])]
+                raw_output = content
 
         for index, (title, lines) in enumerate(sections):
             pretty = [f"  {line}" for line in lines] if lines else ["  (none)"]
