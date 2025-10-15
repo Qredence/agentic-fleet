@@ -129,16 +129,16 @@ class ConsoleUI:
     def log_notice(self, text: str, *, style: str = "blue") -> None:
         self._print_section("Notice", [f"  {text}"])
 
-    def log_final(self, result: str) -> None:
-        sections = self._format_final_sections(result)
+    def log_final(self, result: Any) -> None:
+        sections, raw_text = self._format_final_sections(result)
         for title, lines in sections:
             pretty = [f"  {line}" for line in lines] if lines else ["  (none)"]
             self._print_section(title, pretty)
-        parsed_text = "\n".join(line for _, lines in sections for line in lines)
-        if parsed_text:
+        display_text = raw_text.strip("\n")
+        if display_text:
             self.console.print(Text("Raw Output", style="bold"))
             self.console.print(Text(self._divider, style="dim"))
-            self.console.print(parsed_text)
+            self.console.print(display_text)
             self.console.print()
 
     @staticmethod
@@ -173,86 +173,129 @@ class ConsoleUI:
             self.console.print(line)
         self.console.print()
 
-    def _format_final_sections(self, text: str) -> list[tuple[str, list[str]]]:
-        raw = (text or "").strip()
-        if not raw:
-            return [("Result", ["(no response)"])]
+    def _format_final_sections(self, result: Any) -> tuple[list[tuple[str, list[str]]], str]:
+        raw_text = self._coerce_raw_text(result)
+        structured_sections = self._extract_structured_sections(result)
+        if structured_sections:
+            return structured_sections, raw_text
 
-        has_structured = any(
-            key in raw for key in ("facts_text=", "plan_text=", "WorkflowStatusEvent")
-        )
-        if not has_structured:
-            lines = [line.strip() for line in raw.splitlines() if line.strip()]
-            return [("Result", lines or ["(none)"])]
+        raw_for_lines = raw_text.strip()
+        lines = [line.strip() for line in raw_for_lines.splitlines() if line.strip()]
+        if not lines:
+            return [("Result", ["(no response)"])], ""
+        return [("Result", lines)], raw_text
+
+    def _extract_structured_sections(self, result: Any) -> list[tuple[str, list[str]]]:
+        payload = self._find_structured_payload(result)
+        if payload is None:
+            return []
 
         sections: list[tuple[str, list[str]]] = []
-        facts = self._extract_field(raw, "facts_text")
-        if facts:
-            sections.append(("Facts", [ln for ln in self._format_lines(facts) if ln != "(none)"]))
-        plan = self._extract_field(raw, "plan_text")
-        if plan:
-            sections.append(("Plan", [ln for ln in self._format_lines(plan) if ln != "(none)"]))
 
-        # Extract deliverable guidance embedded within the plan text
-        deliverable_lines: list[str] = []
-        for _, lines in sections:
-            for idx, line in enumerate(lines):
+        facts_value = self._get_first_attribute(payload, ["facts", "facts_text", "facts_list"])
+        facts_lines = [ln for ln in self._format_lines(facts_value) if ln != "(none)"]
+        if facts_lines:
+            sections.append(("Facts", facts_lines))
+
+        plan_value = self._get_first_attribute(payload, ["plan", "plan_text", "plan_steps"])
+        plan_lines = [ln for ln in self._format_lines(plan_value) if ln != "(none)"] if plan_value else []
+        if plan_lines:
+            sections.append(("Plan", plan_lines))
+
+        deliverable_value = self._get_first_attribute(
+            payload,
+            ["deliverable", "deliverables", "deliverable_text", "deliverable_notes"],
+        )
+        deliverable_lines = (
+            [ln for ln in self._format_lines(deliverable_value) if ln != "(none)"]
+            if deliverable_value
+            else []
+        )
+        if not deliverable_lines and plan_lines:
+            for idx, line in enumerate(plan_lines):
                 if line.lower().startswith("deliverable"):
-                    deliverable_lines.extend(lines[idx:])
+                    deliverable_lines = plan_lines[idx:]
                     break
-            if deliverable_lines:
-                break
         if deliverable_lines:
             sections.append(("Deliverable", deliverable_lines))
 
-        status = self._extract_state(raw)
-        if status:
-            sections.append(("Status", [status]))
+        status_value = self._get_first_attribute(payload, ["status", "state"])
+        status_text: str | None = None
+        if status_value is not None:
+            if isinstance(status_value, str):
+                status_text = status_value
+            elif hasattr(status_value, "value"):
+                status_candidate = getattr(status_value, "value")
+                if isinstance(status_candidate, str):
+                    status_text = status_candidate
+            if status_text is None:
+                status_text = str(status_value)
+        if status_text:
+            sections.append(("Status", [status_text]))
 
-        cleaned_sections = []
-        for title, lines in sections:
-            deduped = [line for line in lines if line and line != "(none)"]
-            if deduped:
-                cleaned_sections.append((title, deduped))
+        return sections
 
-        if cleaned_sections:
-            return cleaned_sections
+    def _coerce_raw_text(self, result: Any) -> str:
+        if isinstance(result, str):
+            return result
 
-        cleaned_lines = []
-        for line in raw.replace("\\n", "\n").splitlines():
-            line = line.strip().strip("'\"")
-            if not line:
+        candidates = [result]
+        seen: set[int] = set()
+        while candidates:
+            current = candidates.pop()
+            if current is None:
                 continue
-            if line.startswith("WorkflowStatusEvent(") or line.startswith("RequestInfoEvent("):
+            if isinstance(current, str):
+                return current
+            obj_id = id(current)
+            if obj_id in seen:
                 continue
-            cleaned_lines.append(line)
+            seen.add(obj_id)
+            for attr in ("content", "text", "message", "output", "value"):
+                if hasattr(current, attr):
+                    candidate = getattr(current, attr)
+                    if candidate is None:
+                        continue
+                    if isinstance(candidate, str):
+                        return candidate
+                    candidates.append(candidate)
 
-        return [("Result", cleaned_lines or ["(none)"])]
+        return str(result)
+
+    def _find_structured_payload(self, result: Any) -> Any | None:
+        if isinstance(result, str) or result is None:
+            return None
+
+        to_visit = [result]
+        seen: set[int] = set()
+        while to_visit:
+            current = to_visit.pop()
+            if current is None or isinstance(current, str):
+                continue
+            obj_id = id(current)
+            if obj_id in seen:
+                continue
+            seen.add(obj_id)
+
+            if any(hasattr(current, attr) for attr in ("facts", "facts_text", "plan", "plan_text")):
+                return current
+
+            for attr in ("message", "output", "result", "data", "value", "payload", "response"):
+                if hasattr(current, attr):
+                    candidate = getattr(current, attr)
+                    if candidate is not None:
+                        to_visit.append(candidate)
+
+        return None
 
     @staticmethod
-    def _extract_field(raw: str, field: str) -> str | None:
-        import re
-
-        pattern = re.compile(rf"{field}=(?P<q>[\'\"])(?P<val>.*?)(?<!\\)(?P=q)", re.DOTALL)
-        match = pattern.search(raw)
-        if not match:
-            return None
-        return match.group("val")
-
-    @staticmethod
-    def _extract_state(raw: str) -> str | None:
-        marker = "WorkflowStatusEvent(state="
-        idx = raw.rfind(marker)
-        if idx == -1:
-            return None
-        start = idx + len(marker)
-        end = raw.find(",", start)
-        if end == -1:
-            end = raw.find(")", start)
-        if end == -1:
-            return None
-        return raw[start:end].strip()
-
+    def _get_first_attribute(obj: Any, names: Iterable[str]) -> Any:
+        for name in names:
+            if hasattr(obj, name):
+                value = getattr(obj, name)
+                if value is not None:
+                    return value
+        return None
 
 # Registry helpers so callbacks can output to the active UI.
 _CURRENT_UI = threading.local()
