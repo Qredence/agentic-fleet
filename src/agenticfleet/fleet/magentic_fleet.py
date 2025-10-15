@@ -242,7 +242,13 @@ class MagenticFleet:
         List all available checkpoints.
 
         Returns:
-            List of checkpoint metadata dictionaries.
+            List of checkpoint metadata dictionaries. Each dictionary contains:
+                - checkpoint_id (str): Unique identifier for the checkpoint.
+                - workflow_id (str): Identifier for the associated workflow.
+                - timestamp (str): Timestamp when the checkpoint was created.
+                - current_round (int): The current round or step in the workflow.
+                - metadata (dict): Additional metadata about the checkpoint.
+                - id (str): Alias for checkpoint_id (for backward compatibility).
         """
         import json
         from collections.abc import Mapping
