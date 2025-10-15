@@ -245,6 +245,7 @@ class MagenticFleet:
             List of checkpoint metadata dictionaries.
         """
         import json
+        from collections.abc import Mapping
         from pathlib import Path
 
         checkpoints: list[Any] = []
@@ -255,20 +256,31 @@ class MagenticFleet:
             storage_checkpoints = await self.checkpoint_storage.list_checkpoints()
             for checkpoint in storage_checkpoints:
                 # Convert WorkflowCheckpoint to dict ensuring REPL-compatible keys
-                checkpoint_id = getattr(
-                    checkpoint,
-                    "checkpoint_id",
-                    getattr(checkpoint, "id", None),
-                )
-                workflow_id = getattr(checkpoint, "workflow_id", None)
+                if isinstance(checkpoint, Mapping):
+                    checkpoint_id = checkpoint.get("checkpoint_id") or checkpoint.get("id")
+                    workflow_id = checkpoint.get("workflow_id")
+                    timestamp = checkpoint.get("timestamp", "")
+                    current_round = checkpoint.get("current_round", 0)
+                    metadata = checkpoint.get("metadata", {})
+                else:
+                    checkpoint_id = getattr(
+                        checkpoint,
+                        "checkpoint_id",
+                        getattr(checkpoint, "id", None),
+                    )
+                    workflow_id = getattr(checkpoint, "workflow_id", None)
+                    timestamp = getattr(checkpoint, "timestamp", "")
+                    current_round = getattr(checkpoint, "current_round", 0)
+                    metadata = getattr(checkpoint, "metadata", {})
+
                 checkpoint_dict = {
                     "checkpoint_id": checkpoint_id,
                     "workflow_id": workflow_id,
                     # Retain "id" as a backwards compatible alias if callers relied on it
                     "id": checkpoint_id,
-                    "timestamp": getattr(checkpoint, "timestamp", ""),
-                    "current_round": getattr(checkpoint, "current_round", 0),
-                    "metadata": getattr(checkpoint, "metadata", {}),
+                    "timestamp": timestamp,
+                    "current_round": current_round,
+                    "metadata": metadata,
                 }
                 checkpoints.append(checkpoint_dict)
         else:
