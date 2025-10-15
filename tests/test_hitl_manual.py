@@ -45,6 +45,7 @@ def test_create_approval_request():
     assert request.code == "print('hello')"
     print("  ✓ Request created successfully")
 
+
 @pytest.mark.asyncio
 async def test_mock_approval_handler():
     """Test mock approval handler."""

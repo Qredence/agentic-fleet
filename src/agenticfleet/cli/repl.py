@@ -1,15 +1,14 @@
-"""
-REPL (Read-Eval-Print-Loop) interface for AgenticFleet.
-
-This module provides the interactive command-line interface for users
-to interact with the multi-agent system.
-"""
+"""Interactive REPL for AgenticFleet with rich console feedback."""
 
 import asyncio
 import sys
 from datetime import datetime
 from typing import TYPE_CHECKING
 
+from rich.table import Table
+from rich.text import Text
+
+from agenticfleet.cli.ui import ConsoleUI, register_console_ui
 from agenticfleet.config import settings
 from agenticfleet.core.logging import get_logger
 
@@ -18,7 +17,6 @@ if TYPE_CHECKING:
 
 logger = get_logger(__name__)
 
-# Workflow instance cache
 _workflow_instance = None
 
 
@@ -37,7 +35,9 @@ def get_workflow() -> "MagenticFleet":
     return _workflow_instance
 
 
-async def handle_checkpoint_command(command: str, workflow_instance: "MagenticFleet") -> bool:
+async def handle_checkpoint_command(
+    command: str, workflow_instance: "MagenticFleet", ui: ConsoleUI
+) -> bool:
     """
     Handle checkpoint-related commands.
 
@@ -52,16 +52,19 @@ async def handle_checkpoint_command(command: str, workflow_instance: "MagenticFl
 
     if parts[0] == "checkpoints" or parts[0] == "list-checkpoints":
         if not hasattr(workflow_instance, "list_checkpoints"):
-            print("Checkpoint listing is not available for this workflow.")
+            ui.log_notice("Checkpoint listing is not available for this workflow.", style="red")
             return True
 
         checkpoints = await workflow_instance.list_checkpoints()
         if not checkpoints:
-            print("No checkpoints found.")
+            ui.log_notice("No checkpoints found.", style="yellow")
         else:
-            print(f"\n{'=' * 80}")
-            print(f"Available Checkpoints ({len(checkpoints)})")
-            print("=" * 80)
+            table = Table(title=f"Available Checkpoints ({len(checkpoints)})", expand=True)
+            table.add_column("Checkpoint ID", style="cyan")
+            table.add_column("Workflow ID", style="magenta")
+            table.add_column("Round", justify="center")
+            table.add_column("Timestamp", style="green")
+            table.add_column("Status", style="yellow")
             for cp in checkpoints:
                 timestamp = cp.get("timestamp", "unknown")
                 # Format timestamp if it's an ISO string
@@ -72,55 +75,52 @@ async def handle_checkpoint_command(command: str, workflow_instance: "MagenticFl
                     # If timestamp is not valid ISO format, use as-is
                     pass
 
-                print(f"\nCheckpoint ID: {cp.get('checkpoint_id')}")
-                print(f"  Workflow ID: {cp.get('workflow_id')}")
-                print(f"  Timestamp:   {timestamp}")
-                print(f"  Round:       {cp.get('current_round')}")
                 metadata = cp.get("metadata", {})
-                if metadata:
-                    print(f"  Status:      {metadata.get('status', 'unknown')}")
-            print("=" * 80)
+                status = metadata.get("status", "unknown") if metadata else "—"
+                table.add_row(
+                    cp.get("checkpoint_id", "—"),
+                    cp.get("workflow_id", "—"),
+                    str(cp.get("current_round", "—")),
+                    timestamp,
+                    status,
+                )
+
+            ui.console.print(table)
         return True
 
     elif parts[0] == "resume" and len(parts) > 1:
         # Resume from checkpoint
         checkpoint_id = parts[1]
-        print(f"\nAttempting to resume from checkpoint: {checkpoint_id}")
+        ui.log_notice(f"Attempting to resume from checkpoint: {checkpoint_id}", style="cyan")
 
         if not hasattr(workflow_instance, "run"):
-            print("Current workflow cannot resume from checkpoints.")
+            ui.log_notice("Current workflow cannot resume from checkpoints.", style="red")
             return True
 
-        # User needs to provide new input after resuming
-        user_input = input("🎯 Your task (continuing from checkpoint): ").strip()
+        ui._print_section("Continue task", [], pre_blank=True)
+        user_input = await ui.prompt_async("Continue task")
         if not user_input:
-            print("No input provided. Resuming cancelled.")
+            ui.log_notice("No input provided. Resuming cancelled.", style="yellow")
             return True
 
-        print("-" * 50)
+        ui.console.rule(style="cyan")
 
         try:
             result = await workflow_instance.run(user_input, resume_from_checkpoint=checkpoint_id)
 
-            print("\n" + "=" * 50)
-            print("TASK COMPLETED (RESUMED FROM CHECKPOINT)!")
-            print("=" * 50)
-
-            if result:
-                print(f"Result:\n{result}")
-            else:
-                print("Task completed but no result was returned.")
+            ui.log_notice("Task completed from checkpoint", style="green")
+            ui.log_final(result or "")
 
         except Exception as e:
             logger.error(f"Workflow execution failed: {e}", exc_info=True)
-            print(f"Error resuming workflow: {e}")
+            ui.log_notice(f"Error resuming workflow: {e}", style="red")
 
         return True
 
     return False
 
 
-async def run_repl(workflow_instance: "MagenticFleet") -> None:
+async def run_repl(workflow_instance: "MagenticFleet", ui: ConsoleUI) -> None:
     """
     Run the interactive REPL loop for user interaction.
 
@@ -129,10 +129,10 @@ async def run_repl(workflow_instance: "MagenticFleet") -> None:
     """
     while True:
         try:
-            user_input = input("🎯 Your task: ").strip()
+            user_input = await ui.prompt_async()
 
             if user_input.lower() in ["quit", "exit", "q"]:
-                print("Thank you for using AgenticFleet!")
+                ui.log_notice("Thank you for using AgenticFleet!", style="green")
                 break
 
             if not user_input:
@@ -140,25 +140,24 @@ async def run_repl(workflow_instance: "MagenticFleet") -> None:
 
             # Handle checkpoint commands
             if user_input.startswith(("checkpoints", "list-checkpoints", "resume")):
-                handled = await handle_checkpoint_command(user_input, workflow_instance)
+                handled = await handle_checkpoint_command(user_input, workflow_instance, ui)
                 if handled:
                     continue
 
             safe_user_input = user_input.replace("\r", "").replace("\n", "")
             logger.info(f"Processing: '{safe_user_input}'")
-            print("-" * 50)
+            ui.console.print(Text("=" * 72, style="dim"))
+            ui.reset_run()
+            ui.log_task(user_input)
 
             try:
-                result = await workflow_instance.run(user_input)
+                ui.log_notice("Working with Magentic planner…")
+                with ui.loading("Coordinating Magentic Fleet..."):
+                    result = await workflow_instance.run(user_input)
 
-                print("\n" + "=" * 50)
-                print("TASK COMPLETED!")
-                print("=" * 50)
-
-                if result:
-                    print(f"Result:\n{result}")
-                else:
-                    print("Task completed but no result was returned.")
+                ui.log_final(result or "")
+                ui.console.print(Text("Ready for next task", style="bold"))
+                ui.console.print(Text("=" * 72, style="dim"))
 
             except Exception as e:
                 logger.error(f"Workflow execution failed: {e}", exc_info=True)
@@ -167,14 +166,14 @@ async def run_repl(workflow_instance: "MagenticFleet") -> None:
                     "or agent coordination failures."
                 )
                 logger.error("Try simplifying your request or checking your API key and quota.")
+                ui.log_notice("Workflow execution failed. Check logs for details.")
 
-            print("\n" + "=" * 70)
-            print("Ready for next task...")
-            print("=" * 70 + "\n")
+            ui.console.print(Text("=" * 72, style="dim"))
+            ui.console.print(Text("Ready for next task", style="bold"))
 
         except KeyboardInterrupt:
             logger.warning("Session interrupted by user")
-            confirm = input("\nDo you want to exit? (y/n): ").strip().lower()
+            confirm = (await ui.prompt_async("Exit? (y/n)")).lower()
             if confirm in ["y", "yes"]:
                 logger.info("Goodbye!")
                 break
@@ -194,66 +193,51 @@ def run_repl_main() -> int:
     logger.info("Powered by Microsoft Agent Framework")
     logger.info("Using OpenAI with structured responses")
 
+    ui = ConsoleUI()
+    register_console_ui(ui)
+
+    ui.show_header()
+    ui.show_instructions()
+
     try:
         if not settings.openai_api_key:
-            logger.error("OPENAI_API_KEY environment variable is required")
-            logger.error("Please copy .env.example to .env and add your OpenAI API key")
+            ui.log_notice("OPENAI_API_KEY environment variable is required", style="red")
+            ui.log_notice(
+                "Please copy .env.example to .env and add your OpenAI API key", style="yellow"
+            )
             return 1
     except Exception as e:
         logger.error(f"Configuration Error: {e}", exc_info=True)
+        ui.log_notice(f"Configuration error: {e}", style="red")
         return 1
 
-    # Get the workflow instance based on mode
     workflow_instance = get_workflow()
+    ui.log_notice("Magentic workflow ready")
 
-    logger.info("Initializing Magentic workflow...")
-    logger.info("Workflow ready!")
-    logger.info("Agents: Orchestrator, Researcher, Coder, Analyst")
-    logger.info("Tools: Web search, Code interpreter, Data analysis")
-
-    print("\n" + "=" * 70)
-    print("AGENTICFLEET READY (MAGENTIC MODE)")
-    print("=" * 70)
-    print("\nExample tasks to try:")
-    print("  • 'Research Python machine learning libraries and write example code'")
-    print("  • 'Analyze e-commerce trends and suggest visualizations'")
-    print("  • 'Write a Python function to process CSV data and explain it'")
-    print("\nCommands:")
-    print("  - Type your task and press Enter to execute")
-    print("  - Type 'checkpoints' or 'list-checkpoints' to view saved checkpoints")
-    print("  - Type 'resume <checkpoint_id>' to resume from a checkpoint")
-    print("  - Type 'quit', 'exit', or 'q' to exit")
-    print("  - Press Ctrl+C to interrupt")
-
-    # Show workflow mode
-    print("\n📊 Workflow Mode: MAGENTIC")
-    print("   Using Microsoft Agent Framework Magentic orchestration")
-
-    # Show checkpoint status
     checkpoint_config = settings.workflow_config.get("workflow", {}).get("checkpointing", {})
     if checkpoint_config.get("enabled", False):
         storage_path = checkpoint_config.get("storage_path", "./checkpoints")
-        print(f"\n✓ Checkpointing enabled (storage: {storage_path})")
+        ui.log_notice(f"Checkpointing enabled (storage: {storage_path})")
     else:
-        print("\n⚠ Checkpointing disabled")
+        ui.log_notice("Checkpointing disabled")
 
-    # Show HITL status
     hitl_config = settings.workflow_config.get("workflow", {}).get("human_in_the_loop", {})
     if hitl_config.get("enabled", False):
         timeout = hitl_config.get("approval_timeout_seconds", 300)
-        operations = hitl_config.get("require_approval_for", [])
-        print(f"✓ Human-in-the-Loop enabled (timeout: {timeout}s)")
-        print(f"  Operations requiring approval: {', '.join(operations)}")
+        operations = ", ".join(hitl_config.get("require_approval_for", [])) or "(none)"
+        ui.log_notice(f"HITL enabled (timeout: {timeout}s) – approvals: {operations}")
     else:
-        print("⚠ Human-in-the-Loop disabled")
-    print()
+        ui.log_notice("Human-in-the-Loop disabled")
 
     try:
-        asyncio.run(run_repl(workflow_instance))
+        asyncio.run(run_repl(workflow_instance, ui))
         return 0
     except Exception as e:
         logger.error(f"Fatal error: {e}", exc_info=True)
+        ui.log_notice(f"Fatal error: {e}", style="red")
         return 1
+    finally:
+        register_console_ui(None)
 
 
 def main() -> None:

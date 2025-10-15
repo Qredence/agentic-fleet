@@ -45,3 +45,8 @@ confidence_thresholds:
   high: 0.85     # High confidence (strong evidence)
   medium: 0.70   # Medium confidence (moderate evidence)
   low: 0.50      # Low confidence (limited evidence)
+
+runtime:
+  stream: true
+  store: true
+  checkpoint: true

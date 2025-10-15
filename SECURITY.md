@@ -55,10 +55,10 @@ When using AgenticFleet:
    - Review and merge security updates promptly
    - Run `uv sync` regularly to update lockfile
 
-3. **Code Execution**: Be cautious with code interpreter tools
-   - Review generated code before execution
-   - Run in isolated environments when possible
-   - Set appropriate timeout limits
+3. **Code Execution**: Automated interpreter tooling is disabled by default
+   - If you re-enable execution, review generated code before running it
+   - Prefer isolated environments (containers, sandboxes) for any execution
+   - Set conservative timeout and resource limits to contain misbehaving code
 
 4. **Input Validation**: Validate all user inputs
    - Sanitize inputs before passing to LLMs

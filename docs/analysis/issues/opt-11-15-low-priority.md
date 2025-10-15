@@ -14,20 +14,24 @@ These optimizations have lower immediate impact but could provide value in speci
 **Priority:** 🟢 Low | **Effort:** 🔨 High (2-3 weeks)
 
 ### Overview
+
 Enable direct agent-to-agent communication without orchestrator mediation using the A2A protocol.
 
 ### Benefits
+
 - Direct agent collaboration
 - Reduced orchestrator overhead
 - Protocol-based messaging
 - Better scalability
 
 ### Use Cases
+
 - Peer-to-peer agent networks
 - Decentralized multi-agent systems
 - Agent marketplaces
 
 ### Implementation
+
 ```python
 from agent_framework_a2a import A2AAgent
 
@@ -47,15 +51,18 @@ response = await researcher.send_message(coder, "Please analyze this data")
 **Priority:** 🟢 Low | **Effort:** 🔨 Low (3-5 days)
 
 ### Overview
+
 Export workflow graphs as visual diagrams (DOT, Mermaid, PNG).
 
 ### Benefits
+
 - Documentation generation
 - Onboarding new developers
 - Debugging complex workflows
 - Presentation materials
 
 ### Implementation
+
 ```python
 from agent_framework import WorkflowViz
 
@@ -69,6 +76,7 @@ viz.export_png("workflow.png")
 ```
 
 ### Example Output
+
 ```mermaid
 graph TD
     A[User Input] --> B[Orchestrator]
@@ -89,20 +97,24 @@ graph TD
 **Priority:** 🟢 Low | **Effort:** 🔨 Medium (1-2 weeks)
 
 ### Overview
+
 Implement Redis-based state storage for distributed deployments and session persistence.
 
 ### Benefits
+
 - Multi-instance deployments
 - Session persistence across restarts
 - Distributed caching
 - High availability
 
 ### Use Cases
+
 - Production deployments
 - Load-balanced instances
 - Microservices architecture
 
 ### Implementation
+
 ```python
 from agent_framework_redis import RedisCheckpointStorage
 
@@ -121,6 +133,7 @@ workflow = (
 ```
 
 ### Configuration
+
 ```yaml
 # config/workflow.yaml
 workflow:
@@ -141,11 +154,13 @@ workflow:
 **Priority:** 🟢 Low | **Effort:** 🔨 High (3-4 weeks)
 
 ### Overview
+
 Integrate experimental features from Agent Framework Labs for research and advanced use cases.
 
 ### Features Available
 
 #### 1. Benchmarking
+
 ```python
 from agent_framework_lab.benchmarking import AgentBenchmark
 
@@ -158,6 +173,7 @@ results = await benchmark.run(
 ```
 
 #### 2. Reinforcement Learning
+
 ```python
 from agent_framework_lab.rl import RLTrainer
 
@@ -170,12 +186,14 @@ trainer.train(
 ```
 
 #### 3. Research Tools
+
 - Agent behavior analysis
 - Performance profiling
 - A/B testing framework
 - Experiment tracking
 
 ### Benefits
+
 - Cutting-edge features
 - Research capabilities
 - Performance optimization
@@ -188,11 +206,13 @@ trainer.train(
 **Priority:** 🟢 Low | **Effort:** 🔨 Low (3-5 days)
 
 ### Overview
+
 Implement advanced tool usage modes for better control over when and how tools are used.
 
 ### Features
 
 #### 1. Required Tools
+
 ```python
 from agent_framework import ToolMode
 
@@ -201,6 +221,7 @@ agent.set_tool_mode(ToolMode.REQUIRED)  # Must use tools for every response
 ```
 
 #### 2. Conditional Tools
+
 ```python
 def enable_code_tool(ctx):
     return "code" in ctx.input.lower()
@@ -209,6 +230,7 @@ agent.set_tool_condition(code_interpreter_tool, enable_code_tool)
 ```
 
 #### 3. Dynamic Registration
+
 ```python
 # Add tools at runtime based on context
 if user.has_permission("file_access"):
@@ -216,6 +238,7 @@ if user.has_permission("file_access"):
 ```
 
 #### 4. Tool Chaining
+
 ```python
 # Define tool dependencies
 agent.add_tool_chain([
@@ -226,6 +249,7 @@ agent.add_tool_chain([
 ```
 
 ### Benefits
+
 - Fine-grained control
 - Context-aware tooling
 - Better security
@@ -255,5 +279,5 @@ If time and resources permit, tackle these in order:
 
 ---
 
-**Status:** Documented for Future Consideration  
+**Status:** Documented for Future Consideration
 **Review Date:** After Phase 3 completion

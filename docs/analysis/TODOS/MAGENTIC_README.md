@@ -8,16 +8,16 @@ This guide walks through the Magentic coordination flow implemented in the Micro
 
 Magentic orchestrates a team by pairing a *manager* (the planner) with one or more *participants* (domain agents). The orchestration logic is owned by:
 
-- [`StandardMagenticManager`](reference/agent-framework/python/packages/main/agent_framework/_workflow/_magentic.py)  
+- [`StandardMagenticManager`](reference/agent-framework/python/packages/main/agent_framework/_workflow/_magentic.py)
   Calls the underlying chat model to gather facts, build plans, evaluate progress, and synthesize the final answer.
 
-- [`MagenticOrchestratorExecutor`](reference/agent-framework/python/packages/main/agent_framework/_workflow/_magentic.py)  
+- [`MagenticOrchestratorExecutor`](reference/agent-framework/python/packages/main/agent_framework/_workflow/_magentic.py)
   Implements the coordination loop—routing manager instructions to participants, collecting agent responses, and deciding when to reset or finish.
 
-- [`MagenticAgentExecutor`](reference/agent-framework/python/packages/main/agent_framework/_workflow/_magentic.py)  
+- [`MagenticAgentExecutor`](reference/agent-framework/python/packages/main/agent_framework/_workflow/_magentic.py)
   Wraps each participant agent (e.g., your MCP-enabled assistants) so they can participate in the workflow graph.
 
-- [`MagenticBuilder`](reference/agent-framework/python/packages/main/agent_framework/_workflow/_magentic.py)  
+- [`MagenticBuilder`](reference/agent-framework/python/packages/main/agent_framework/_workflow/_magentic.py)
   Glues the executors together, wires callbacks, and optionally adds checkpointing or human plan review.
 
 ### Overview Sequence

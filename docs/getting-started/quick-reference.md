@@ -21,13 +21,22 @@ python main.py                 # Launch application
 | `config/workflow_config.yaml` | Workflow execution parameters |
 | `workflows/magentic_workflow.py` | Multi-agent coordination |
 
+## 🎛️ Live CLI Experience
+
+Run `uv run fleet` to launch the rich console (the legacy `uv run agentic-fleet` alias still works). The interface now:
+
+- Streams Magentic plans, agent “thoughts”, and progress ledgers in real time.
+- Shows shimmering loading states while the fleet reasons.
+- Displays final answers in structured panels with zero scrolling guesswork.
+- Prompt history/search (↑/↓, Ctrl+R) powered by prompt-toolkit for fast iteration.
+
 ## 🤖 Agents
 
 | Agent | Temperature | Tools | Purpose |
 |-------|-------------|-------|---------|
 | **Orchestrator** | 0.1 | None | Task planning & delegation |
 | **Researcher** | 0.3 | `web_search_tool` | Information gathering |
-| **Coder** | 0.2 | `code_interpreter_tool` | Code writing & execution |
+| **Coder** | 0.2 | None (draft guidance only) | Code suggestions & review |
 | **Analyst** | 0.2 | `data_analysis_tool`, `visualization_suggestion_tool` | Data analysis & insights |
 
 ## 🛠️ Tools
@@ -41,13 +50,14 @@ response = web_search_tool("Python machine learning")
 # Returns: WebSearchResponse with SearchResult[]
 ```
 
-### Code Interpreter (`coder_agent`)
+### Coder Agent (draft only)
 
 ```python
-from agents.coder_agent.tools.code_interpreter import code_interpreter_tool
+from agenticfleet.agents import create_coder_agent
 
-result = code_interpreter_tool("print('Hello')", language="python")
-# Returns: CodeExecutionResult with output, execution_time
+coder = create_coder_agent()
+suggestion = await coder.run("Draft a Python function that greets a user")
+# Returns: guidance plus code snippet (execution happens manually)
 ```
 
 ### Data Analysis (`analyst_agent`)
@@ -97,31 +107,29 @@ system_prompt: |
   Your agent's instructions here
 
 # Agent-specific settings below
-```
-
 ## 🎯 Example Tasks
 
 ### Research + Code
 
-```
+```text
 🎯 Your task: Research Python async programming and write example code with error handling
 ```
 
 ### Data Analysis
 
-```
+```text
 🎯 Your task: Analyze sales trends Q1-Q4: $100k, $150k, $200k, $180k and suggest best visualization
 ```
 
 ### Mixed Task
 
-```
+```text
 🎯 Your task: Research REST API best practices, write a Python Flask example, and explain security considerations
 ```
 
 ### Code Explanation
 
-```
+```text
 🎯 Your task: Write a Python function to merge sorted lists and explain time complexity
 ```
 
@@ -135,7 +143,7 @@ python test_config.py
 
 ### Expected Output
 
-```
+```text
 ✓ PASS - Environment file
 ✓ PASS - OpenAI API Key
 ✓ PASS - Workflow config: max_rounds
@@ -193,7 +201,7 @@ which python  # Should point to .venv/bin/python
 
 ## 📊 Project Structure
 
-```
+```text
 AgenticFleet/
 ├── main.py                     ← Run this
 ├── test_config.py              ← Test this first

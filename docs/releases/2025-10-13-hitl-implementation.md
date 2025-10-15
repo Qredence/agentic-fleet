@@ -13,11 +13,13 @@ October 13, 2025
 ### 1. Core Approval System
 
 **Files Created:**
+
 - `src/agenticfleet/core/approval.py` - Core approval interfaces and models
 - `src/agenticfleet/core/cli_approval.py` - CLI-based approval handler
 - `src/agenticfleet/core/approved_tools.py` - Tool wrapper with approval support
 
 **Key Classes:**
+
 - `ApprovalRequest` - Pydantic model for approval requests
 - `ApprovalResponse` - Pydantic model for approval responses
 - `ApprovalDecision` - Enum for approval decisions (APPROVED, REJECTED, MODIFIED, TIMEOUT)
@@ -27,6 +29,7 @@ October 13, 2025
 ### 2. Configuration
 
 **File Modified:**
+
 - `src/agenticfleet/config/workflow.yaml`
 
 **Configuration Added:**
@@ -48,9 +51,11 @@ human_in_the_loop:
 ### 3. Integration with Code Execution
 
 **File Modified:**
+
 - `src/agenticfleet/agents/coder/tools/code_interpreter.py`
 
 **Changes:**
+
 - Added approval check before code execution
 - Supports approve/reject/modify decisions
 - Falls back to direct execution if no handler configured
@@ -58,9 +63,11 @@ human_in_the_loop:
 ### 4. Workflow Integration
 
 **File Modified:**
+
 - `src/agenticfleet/fleet/magentic_fleet.py`
 
 **Changes:**
+
 - Wire optional `approval_handler` directly into the Magentic fleet constructor
 - Ensure the global approval handler registration happens when HITL is enabled
 - Leverage configuration flags to toggle plan review and timeouts
@@ -68,9 +75,11 @@ human_in_the_loop:
 ### 5. CLI Updates
 
 **File Modified:**
+
 - `src/agenticfleet/cli/repl.py`
 
 **Changes:**
+
 - Display HITL status on startup
 - Show configured operations requiring approval
 - Display timeout settings
@@ -78,19 +87,23 @@ human_in_the_loop:
 ### 6. Documentation
 
 **Files Created:**
+
 - `docs/guides/human-in-the-loop.md` - Comprehensive user guide
 
 **Files Modified:**
+
 - `README.md` - Added HITL to features list and documentation section
 
 ### 7. Tests
 
 **Files Created:**
+
 - `tests/test_hitl.py` - Pytest test suite (requires pytest)
 - `tests/test_hitl_manual.py` - Manual test script (no dependencies)
 - `examples/demo_hitl.py` - Interactive demo script
 
 **Test Coverage:**
+
 - Approval request creation
 - Mock approval handler (approve/reject/modify)
 - Code execution integration
@@ -180,6 +193,7 @@ All tests pass successfully:
 ## Integration Testing
 
 Manual testing confirms:
+
 - ✅ CLI starts with HITL status displayed
 - ✅ Configuration loads correctly
 - ✅ Approval handler initialized when enabled
@@ -216,6 +230,7 @@ Phase 2 and 3 features as outlined in OPT-03:
 ## Breaking Changes
 
 None. HITL is opt-in and backward compatible:
+
 - Default configuration enables HITL
 - Can be disabled in workflow.yaml
 - No changes to existing agent APIs
@@ -224,12 +239,14 @@ None. HITL is opt-in and backward compatible:
 ## Dependencies
 
 No new external dependencies added. Uses existing packages:
+
 - `pydantic` - For approval request/response models
 - `asyncio` - For async approval handling
 
 ## Documentation
 
 Complete documentation provided:
+
 - User guide: `docs/guides/human-in-the-loop.md`
 - README updates with feature listing
 - Inline code documentation

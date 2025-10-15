@@ -38,8 +38,13 @@ def create_orchestrator_agent() -> ChatAgent:
     # Create and return agent (orchestrator typically has no tools)
     # Note: temperature is not a ChatAgent parameter in Microsoft Agent Framework
     # It's model-specific and some models (like o1) don't support it
-    return ChatAgent(
+    agent = ChatAgent(
         chat_client=chat_client,
         instructions=config.get("system_prompt", ""),
         name=agent_config.get("name", "orchestrator"),
     )
+
+    runtime_config = config.get("runtime", {})
+    setattr(agent, "runtime_config", runtime_config)
+
+    return agent

@@ -45,7 +45,7 @@ jobs:
             Automated pre-commit hook updates.
 
             This PR was automatically created by the pre-commit auto-update workflow.
-            
+
             **Workflow Run:** ${{ github.run_id }}
           labels: |
             dependencies

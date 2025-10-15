@@ -1,11 +1,11 @@
 # Researcher Agent Configuration
-# 
+#
 # This agent specializes in gathering, analyzing, and synthesizing information
 # from various sources. It uses web search capabilities to find relevant data.
 
 agent:
   name: "researcher"
-  model: "gpt-4o"
+  model: "gpt-5"
   temperature: 0.3  # Slightly higher for creative information synthesis
   max_tokens: 3000
 
@@ -39,3 +39,8 @@ output_format:
   include_sources: true
   citation_style: "inline"
   summary_length: "detailed"
+
+runtime:
+  stream: true
+  store: true
+  checkpoint: true

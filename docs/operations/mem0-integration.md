@@ -4,27 +4,39 @@ This document explains how `mem0` is integrated into the AgenticFleet project to
 
 ## Overview
 
-`mem0` is an open-source memory layer for AI agents. It allows agents to remember past conversations and user preferences, enabling more personalized and context-aware interactions. In AgenticFleet, `mem0` is used to provide a shared memory for all the agents in the workflow.
+`mem0` is an open-source memory layer for AI agents. It allows agents to remember past
+conversations and user preferences, enabling more personalized and context-aware
+interactions. In AgenticFleet, `mem0` is used to provide a shared memory for all the agents
+in the workflow.
 
 ## Architecture
 
-The `mem0` integration is based on a `Mem0ContextProvider` class, which is responsible for interacting with the `mem0ai` library. This class is located in the `context_provider/mem0_context_provider.py` file.
+The `mem0` integration is based on a `Mem0ContextProvider` class, which is responsible for interacting with the `mem0ai` library. This class is located in `src/agenticfleet/context/mem0_provider.py`.
 
-The `Mem0ContextProvider` is configured to use Azure AI Search as a vector store for the memories. This allows the memories to be persisted across sessions and queried efficiently.
+The `Mem0ContextProvider` configures Mem0 to use the standard OpenAI API for both language
+model responses and embeddings. A lightweight embedded Qdrant store (managed by Mem0) keeps
+vector data on disk, so no external Azure dependencies are required.
 
 ## Configuration
 
-The `mem0` integration requires the following environment variables to be set in the `.env` file:
+The `mem0` integration requires the following environment variables to be set in the `.env`
+file:
 
-- `AZURE_AI_PROJECT_ENDPOINT`: The endpoint of your Azure AI project.
-- `OPENAI_API_KEY`: Your OpenAI API key.
-- `AZURE_AI_SEARCH_ENDPOINT`: The endpoint of your Azure AI Search service.
-- `AZURE_AI_SEARCH_KEY`: The API key for your Azure AI Search service.
-- `AZURE_OPENAI_CHAT_COMPLETION_DEPLOYED_MODEL_NAME`: The name of your deployed chat completion model in Azure OpenAI.
-- `AZURE_OPENAI_EMBEDDING_DEPLOYED_MODEL_NAME`: The name of your deployed embedding model in Azure OpenAI.
+- `OPENAI_API_KEY`: Your OpenAI API key (required).
+- `OPENAI_MODEL`: Optional override for the chat model used when extracting and updating
+  memories (defaults to `gpt-4o-mini`).
+- `OPENAI_EMBEDDING_MODEL`: Optional override for the embedding model used to store and
+  retrieve memories (defaults to `text-embedding-3-small`).
+- `MEM0_HISTORY_DB_PATH`: Optional path to the on-disk history database (defaults to
+  `memories/history.db`).
 
 ## Usage
 
-The `Mem0ContextProvider` is instantiated in the `workflows/magentic_workflow.py` file and passed to each agent during its creation. The agents' system prompts have been updated to include a `{memory}` placeholder, which is replaced with the conversation history from the context provider.
+The `Mem0ContextProvider` is instantiated via the settings module and can be injected where
+long-term context is needed. Agent prompts include a `{memory}` placeholder, which is
+replaced with the retrieved context before the agent speaks. The orchestration loop adds
+relevant user inputs and agent outputs back into Mem0 so future runs can recall them.
 
-The orchestration loop in the `run_workflow` function has been updated to use the context provider to manage the conversation history. The user's input and each agent's response are added to the memory, and the memory is passed to the agents in each turn.
+Checkpointing (see `operations/checkpointing.md`) complements Mem0 by preserving the
+short-term Magentic ledger, while Mem0 retains cross-run knowledge about the user and the
+tasks they have completed.

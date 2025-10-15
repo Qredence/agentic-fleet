@@ -9,15 +9,18 @@ Based on analysis of the current v0.5.0 implementation, we've identified 15 opti
 ## 🔥 High Priority Issues
 
 ### [OPT-01] Replace Custom Workflow with WorkflowBuilder Pattern
+
 **Impact:** 🔥 High | **Effort:** 🔨 Medium (2-3 weeks)
 
 Replace custom orchestration with framework's graph-based WorkflowBuilder.
 
 **Files:**
+
 - [Summary](./opt-01-summary.md)
 - [Full Details](./opt-01-workflow-builder.md) (when created)
 
 **Benefits:**
+
 - Native graph validation with cycle detection
 - Automatic state management
 - Streaming support
@@ -27,14 +30,17 @@ Replace custom orchestration with framework's graph-based WorkflowBuilder.
 ---
 
 ### [OPT-02] Implement Workflow Checkpointing
+
 **Impact:** 🔥 High | **Effort:** 🔨 Low (1 week)
 
 Add checkpoint storage for workflow resumption and audit trails.
 
 **Files:**
+
 - [Details](./opt-02-checkpointing.md)
 
 **Benefits:**
+
 - Resume failed workflows
 - 50-80% cost savings on retries
 - Complete audit trail
@@ -44,14 +50,17 @@ Add checkpoint storage for workflow resumption and audit trails.
 ---
 
 ### [OPT-03] Add Human-in-the-Loop Capabilities
+
 **Impact:** 🔥 High | **Effort:** 🔨 Medium (2-3 weeks)
 
 Implement approval mechanisms for sensitive operations.
 
 **Files:**
+
 - [Details](./opt-03-human-in-the-loop.md)
 
 **Benefits:**
+
 - Prevent harmful actions
 - Build user trust
 - Meet compliance requirements
@@ -63,14 +72,17 @@ Implement approval mechanisms for sensitive operations.
 ## 🟡 Medium Priority Issues
 
 ### [OPT-04] Integrate Agent Framework DevUI
+
 **Impact:** 🟡 Medium | **Effort:** 🔨 Low (3-5 days)
 
 Add visual development interface for debugging and testing.
 
 **Files:**
+
 - [Details](./opt-04-devui.md)
 
 **Benefits:**
+
 - Visual workflow debugging
 - Interactive testing
 - Better developer experience
@@ -79,11 +91,13 @@ Add visual development interface for debugging and testing.
 ---
 
 ### [OPT-05] Implement Proper Observability with OpenTelemetry
+
 **Impact:** 🟡 Medium | **Effort:** 🔨 Low (3-5 days)
 
 Enable distributed tracing and metrics collection.
 
 **Benefits:**
+
 - Performance bottleneck identification
 - Cost tracking per agent
 - Error root cause analysis
@@ -94,11 +108,13 @@ Enable distributed tracing and metrics collection.
 ---
 
 ### [OPT-06] Add Middleware for Request/Response Processing
+
 **Impact:** 🟡 Medium | **Effort:** 🔨 Medium (1-2 weeks)
 
 Implement middleware chain for validation, caching, and transformation.
 
 **Benefits:**
+
 - Centralized validation
 - Security policy enforcement
 - Response caching
@@ -109,11 +125,13 @@ Implement middleware chain for validation, caching, and transformation.
 ---
 
 ### [OPT-07] Implement Concurrent Agent Execution
+
 **Impact:** 🟡 Medium | **Effort:** 🔨 Low (3-5 days)
 
 Enable parallel execution of independent tasks.
 
 **Benefits:**
+
 - Faster execution for parallel tasks
 - Better resource utilization
 - Improved user experience
@@ -123,11 +141,13 @@ Enable parallel execution of independent tasks.
 ---
 
 ### [OPT-08] Add State Management with SharedState
+
 **Impact:** 🟡 Medium | **Effort:** 🔨 Low (3-5 days)
 
 Replace context dict with framework's SharedState.
 
 **Benefits:**
+
 - Type-safe state
 - Automatic persistence
 - Better debugging
@@ -137,11 +157,13 @@ Replace context dict with framework's SharedState.
 ---
 
 ### [OPT-09] Implement MCP (Model Context Protocol) Tools
+
 **Impact:** 🟡 Medium | **Effort:** 🔨 Medium (1-2 weeks)
 
 Add MCP-compatible tools for ecosystem integration.
 
 **Benefits:**
+
 - Access to MCP ecosystem
 - Standardized tool interface
 - Broader compatibility
@@ -151,11 +173,13 @@ Add MCP-compatible tools for ecosystem integration.
 ---
 
 ### [OPT-10] Add Magentic Orchestration Pattern
+
 **Impact:** 🟡 Medium | **Effort:** 🔨 Medium (1-2 weeks)
 
 Implement Magentic pattern for advanced multi-agent coordination.
 
 **Benefits:**
+
 - Advanced delegation patterns
 - Automatic conflict resolution
 - Better scaling
@@ -167,6 +191,7 @@ Implement Magentic pattern for advanced multi-agent coordination.
 ## 🟢 Low Priority / Nice-to-Have
 
 ### [OPT-11] Agent-to-Agent (A2A) Communication
+
 **Impact:** 🟢 Low | **Effort:** 🔨 High (2-3 weeks)
 
 Direct agent communication without orchestrator mediation.
@@ -176,6 +201,7 @@ Direct agent communication without orchestrator mediation.
 ---
 
 ### [OPT-12] Workflow Visualization
+
 **Impact:** 🟢 Low | **Effort:** 🔨 Low (3-5 days)
 
 Export workflow graphs as diagrams.
@@ -185,6 +211,7 @@ Export workflow graphs as diagrams.
 ---
 
 ### [OPT-13] Redis-based State Persistence
+
 **Impact:** 🟢 Low | **Effort:** 🔨 Medium (1-2 weeks)
 
 Distributed state management for multi-instance deployments.
@@ -194,6 +221,7 @@ Distributed state management for multi-instance deployments.
 ---
 
 ### [OPT-14] AF Labs Features
+
 **Impact:** 🟢 Low | **Effort:** 🔨 High (3-4 weeks)
 
 Experimental features: benchmarking, RL, research tools.
@@ -203,6 +231,7 @@ Experimental features: benchmarking, RL, research tools.
 ---
 
 ### [OPT-15] Advanced Tool Modes
+
 **Impact:** 🟢 Low | **Effort:** 🔨 Low (3-5 days)
 
 Dynamic tool registration and conditional enabling.
@@ -214,21 +243,25 @@ Dynamic tool registration and conditional enabling.
 ## 📊 Implementation Roadmap
 
 ### Phase 1: Foundation (Weeks 1-2)
+
 - [ ] OPT-01: WorkflowBuilder migration
 - [ ] OPT-02: Checkpointing
 - [ ] OPT-05: Observability
 
 ### Phase 2: Safety & UX (Weeks 3-4)
+
 - [ ] OPT-03: Human-in-the-loop
 - [ ] OPT-04: DevUI integration
 - [ ] OPT-06: Middleware system
 
 ### Phase 3: Optimization (Weeks 5-6)
+
 - [ ] OPT-07: Concurrent execution
 - [ ] OPT-08: SharedState
 - [ ] OPT-10: Magentic orchestration
 
 ### Phase 4: Ecosystem (Weeks 7-8)
+
 - [ ] OPT-09: MCP tools
 - [ ] OPT-11: A2A communication
 - [ ] OPT-12: Visualization
@@ -285,5 +318,5 @@ Low Priority (Future):
 
 ---
 
-**Last Updated:** October 13, 2025  
+**Last Updated:** October 13, 2025
 **Version:** Initial Analysis for v0.6.0 Planning

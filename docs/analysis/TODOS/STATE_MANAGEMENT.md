@@ -402,16 +402,16 @@ class SessionMemoryCheckpointStorage(CheckpointStorage):
 
 ## 7. Multi-turn patterns combining agents and workflows
 
-1. **Single agent → stored thread → workflow**  
+1. **Single agent → stored thread → workflow**
    - Persist the agent’s `AgentThread` alongside the workflow checkpoint metadata.
    - When resuming, hydrate the thread first, then restore the workflow so downstream agents have history.
 
-2. **Team agent**  
+2. **Team agent**
    - `MagenticOrchestratorExecutor` automatically snapshots each participant’s `chat_history`.
    - Checkpoints include outstanding tool requests (`RequestInfoExecutor` state).
    - Ensure all custom executors implement `restore_state` to interpret snapshots after schema changes.
 
-3. **Human-in-the-loop**  
+3. **Human-in-the-loop**
    - Store check-point IDs keyed by user session.
    - When the user returns, restore the checkpoint, push the human response as a message, and resume the workflow.
 
