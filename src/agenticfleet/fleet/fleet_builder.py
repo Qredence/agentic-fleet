@@ -173,7 +173,7 @@ Always explain your reasoning and include evidence from agent responses."""
 
         # Create OpenAI client for the manager
         client_kwargs: dict[str, Any] = {
-            "model_id": manager_model,
+            "model": manager_model,
             "api_key": settings.openai_api_key,
         }
         if self.manager_reasoning:
