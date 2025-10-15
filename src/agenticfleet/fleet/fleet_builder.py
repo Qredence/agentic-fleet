@@ -6,6 +6,7 @@ from typing import TYPE_CHECKING, Any
 
 from agent_framework import MagenticBuilder
 from agent_framework.openai import OpenAIResponsesClient
+import inspect
 
 from agenticfleet.config import settings
 from agenticfleet.core.logging import get_logger
@@ -165,7 +166,7 @@ Always explain your reasoning and include evidence from agent responses."""
                 handler = orchestrator_handlers.get(event.kind)
                 if handler:
                     result = handler(event.message)
-                    if result:
+                    if inspect.isawaitable(result):
                         await result
                 # Could log other kinds: user_task, instruction, notice
             elif isinstance(event, MagenticAgentDeltaEvent):
