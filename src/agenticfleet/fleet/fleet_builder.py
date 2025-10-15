@@ -156,13 +156,17 @@ Always explain your reasoning and include evidence from agent responses."""
         async def unified_callback(event: MagenticCallbackEvent) -> None:
             """Route MagenticCallbackEvents to appropriate handlers."""
             if isinstance(event, MagenticOrchestratorMessageEvent):
-                # Handle orchestrator messages (plan, instructions, etc.)
-                if event.kind == "task_ledger" and self.log_progress:
-                    await callbacks.plan_creation_callback(event.message)
-                elif event.kind == "progress_ledger" and self.log_progress:
-                    await callbacks.progress_ledger_callback(event.message)
-                elif event.kind == "notice" and event.message:
-                    await callbacks.notice_callback(str(event.message))
+                # Dispatch dictionary for orchestrator message kinds
+                orchestrator_handlers = {
+                    "task_ledger": lambda msg: self.log_progress and callbacks.plan_creation_callback(msg),
+                    "progress_ledger": lambda msg: self.log_progress and callbacks.progress_ledger_callback(msg),
+                    "notice": lambda msg: msg and callbacks.notice_callback(str(msg)),
+                }
+                handler = orchestrator_handlers.get(event.kind)
+                if handler:
+                    result = handler(event.message)
+                    if result:
+                        await result
                 # Could log other kinds: user_task, instruction, notice
             elif isinstance(event, MagenticAgentDeltaEvent):
                 # Handle streaming agent deltas (buffered; no immediate console output)
