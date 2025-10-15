@@ -57,3 +57,5 @@ AgenticFleet.code-workspace
 checkpoints/
 *.checkpoint
 
+.gemini/
+gha-creds-*.json

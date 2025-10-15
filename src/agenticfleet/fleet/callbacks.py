@@ -59,6 +59,16 @@ async def progress_ledger_callback(ledger: Any) -> None:
     logger.info(f"  Instruction: {instruction[:100]}...")
 
 
+async def notice_callback(message: str) -> None:
+    """
+    Log notice messages from the orchestrator.
+
+    Args:
+        message: Notice message string.
+    """
+    logger.info(f"[Fleet] Notice: {message}")
+
+
 async def tool_call_callback(tool_name: str, tool_args: dict[str, Any], result: Any) -> None:
     """
     Log tool calls and results for debugging.
