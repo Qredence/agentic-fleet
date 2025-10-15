@@ -188,8 +188,8 @@ async def final_answer_callback(message: ChatMessage) -> None:
         message: Final ChatMessage from the manager.
     """
     content = getattr(message, "content", str(message))
-    logger.info(f"[Fleet] Final answer: {content[:300]}...")
+    logger.info(f"[Fleet] Final answer: {str(content)[:300]}...")
 
     ui = get_console_ui()
     if ui:
-        ui.log_final(str(content))
+        ui.log_final(message)

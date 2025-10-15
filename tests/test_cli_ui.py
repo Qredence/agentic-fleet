@@ -52,6 +52,32 @@ def test_log_final_structure() -> None:
     assert "Completed output" in text
 
 
+def test_log_final_with_structured_message() -> None:
+    class FinalPayload:
+        def __init__(self) -> None:
+            self.facts = ["fact one"]
+            self.plan = ["step one", "step two"]
+            self.status = "satisfied"
+            self.content = "Completed output"
+
+    class FinalEvent:
+        def __init__(self) -> None:
+            self.message = FinalPayload()
+
+    console = Console(record=True, width=80)
+    ui = ConsoleUI(console=console)
+    ui.log_final(FinalEvent())
+    text = console.export_text(clear=False)
+    assert "Facts" in text
+    assert "fact one" in text
+    assert "Plan" in text
+    assert "step one" in text
+    assert "Status" in text
+    assert "satisfied" in text
+    assert "Raw Output" in text
+    assert "Completed output" in text
+
+
 @pytest.mark.asyncio
 async def test_agent_deltas_are_buffered(monkeypatch) -> None:
     class Delta:
