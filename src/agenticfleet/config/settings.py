@@ -29,9 +29,17 @@ class Settings:
         self.azure_ai_project_endpoint = os.getenv("AZURE_AI_PROJECT_ENDPOINT")
 
         # Optional environment variables with defaults
-        self.openai_model = os.getenv("OPENAI_MODEL", "gpt-4o-mini")
+        self.openai_model = os.getenv("OPENAI_MODEL", "gpt-5-mini")
+        self.openai_embedding_model = os.getenv("OPENAI_EMBEDDING_MODEL", "text-embedding-3-small")
         self.log_level = os.getenv("LOG_LEVEL", "INFO")
         self.log_file = os.getenv("LOG_FILE", "logs/agenticfleet.log")
+
+        # Mem0 configuration
+        self.mem0_history_db_path = os.getenv("MEM0_HISTORY_DB_PATH", "memories/history.db")
+
+        # Ensure parent directory for history DB exists when using the default path
+        history_path = Path(self.mem0_history_db_path)
+        history_path.parent.mkdir(parents=True, exist_ok=True)
 
         # Azure-specific settings
         self.azure_ai_search_endpoint = os.getenv("AZURE_AI_SEARCH_ENDPOINT")

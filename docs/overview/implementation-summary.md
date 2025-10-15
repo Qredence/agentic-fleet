@@ -23,7 +23,7 @@ All Phase 1 implementation tasks have been successfully completed. The system is
 - [x] Environment variable integration
 - [x] YAML loading with error handling
 
-### Tool Implementations ✅ Complete
+### Tool Implementations ✅ / ⏸️
 
 #### Web Search Tool (Researcher Agent)
 
@@ -32,13 +32,13 @@ All Phase 1 implementation tasks have been successfully completed. The system is
 - [x] web_search_tool() function with mock responses
 - [x] Relevance scoring and result ranking
 
-#### Code Interpreter Tool (Coder Agent)
+#### Code Guidance (Coder Agent) — Execution Pending
 
-- [x] CodeExecutionResult Pydantic model
-- [x] code_interpreter_tool() function
-- [x] Restricted Python execution environment
-- [x] Stdout/stderr capture
-- [x] Execution timing
+- [x] CodeExecutionResult Pydantic model (shared across modules)
+- [x] Prompt and style configuration for draft responses
+- [ ] Hardened execution sandbox (temporarily disabled)
+- [ ] Stdout/stderr capture reimplementation
+- [ ] Execution timing and resource limits
 
 #### Data Analysis Tools (Analyst Agent)
 
@@ -50,6 +50,18 @@ All Phase 1 implementation tasks have been successfully completed. The system is
 - [x] Confidence thresholds
 
 ### Agent Implementations ✅ Complete
+
+Each `agents/<role>/config.yaml` now includes a `runtime` block with three flags:
+
+- `stream` – whether the agent is expected to stream partial responses (used by
+  observability callbacks).
+- `store` – whether outputs should be written into Mem0 for long-term recall.
+- `checkpoint` – whether the agent’s turns should be captured when creating
+  workflow checkpoints.
+
+The factories attach this runtime metadata to the instantiated `ChatAgent`
+objects (`agent.runtime_config`) so orchestration layers or tooling can react at
+runtime without re-reading YAML files.
 
 #### Orchestrator Agent
 
@@ -467,7 +479,7 @@ __Next Recommended Action__: Run `python main.py` and test with diverse task typ
 
 ---
 
-*Generated on: Phase 1 Implementation Complete*  
-*Framework: Microsoft Agent Framework v1.0.0b251007*  
-*Python: 3.13.2*  
+*Generated on: Phase 1 Implementation Complete*
+*Framework: Microsoft Agent Framework v1.0.0b251007*
+*Python: 3.13.2*
 *Package Manager: uv*

@@ -58,6 +58,7 @@ or
 ```
 
 Output:
+
 ```
 ================================================================================
 Available Checkpoints (3)
@@ -193,6 +194,7 @@ python -m pytest tests/test_configuration.py -v
 ```
 
 Test coverage includes:
+
 - Checkpoint storage creation (file, memory, disabled)
 - Default Magentic fleet wiring with checkpoint storage
 

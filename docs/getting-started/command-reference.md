@@ -15,7 +15,7 @@
 
 | Method | Command |
 |--------|---------|
-| Console script | `uv run agentic-fleet` |
+| Console script | `uv run fleet` *(alias: `uv run agentic-fleet`)* |
 | Module execution | `uv run python -m agenticfleet` |
 | Programmatic | See examples below |
 | HITL demo | `make demo-hitl` |

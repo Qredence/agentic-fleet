@@ -5,13 +5,14 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Any
 
 from agent_framework import MagenticBuilder
+from agent_framework.openai import OpenAIResponsesClient
 
 from agenticfleet.config import settings
 from agenticfleet.core.logging import get_logger
 from agenticfleet.fleet import callbacks
 
 if TYPE_CHECKING:
-    from agent_framework import AgentProtocol, CheckpointStorage
+    from agent_framework import AgentProtocol, CheckpointStorage, Workflow
 
 logger = get_logger(__name__)
 
@@ -43,6 +44,7 @@ class FleetBuilder:
             "instructions",
             self._default_manager_instructions(),
         )
+        self.manager_reasoning = manager_config.get("reasoning")
 
         # Plan review settings
         plan_review_config = fleet_config.get("plan_review", {})
@@ -107,12 +109,14 @@ Always explain your reasoning and include evidence from agent responses."""
         logger.info(f"Configuring StandardMagenticManager with model: {manager_model}")
 
         # Create OpenAI client for the manager
-        from agent_framework.openai import OpenAIResponsesClient
+        client_kwargs: dict[str, Any] = {
+            "model": manager_model,
+            "api_key": settings.openai_api_key,
+        }
+        if self.manager_reasoning:
+            client_kwargs["reasoning"] = self.manager_reasoning
 
-        chat_client = OpenAIResponsesClient(
-            model=manager_model,
-            api_key=settings.openai_api_key,
-        )
+        chat_client = OpenAIResponsesClient(**client_kwargs)
 
         # Configure the manager with custom settings
         self.builder = self.builder.with_standard_manager(
@@ -155,16 +159,19 @@ Always explain your reasoning and include evidence from agent responses."""
                 # Handle orchestrator messages (plan, instructions, etc.)
                 if event.kind == "task_ledger" and self.log_progress:
                     await callbacks.plan_creation_callback(event.message)
+                elif event.kind == "progress_ledger" and self.log_progress:
+                    await callbacks.progress_ledger_callback(event.message)
+                elif event.kind == "notice" and event.message:
+                    await callbacks.notice_callback(str(event.message))
                 # Could log other kinds: user_task, instruction, notice
             elif isinstance(event, MagenticAgentDeltaEvent):
-                # Handle streaming agent responses if enabled
+                # Handle streaming agent deltas (buffered; no immediate console output)
                 if self.streaming_enabled:
-                    # Create a mock message-like object for the callback
-                    await callbacks.streaming_agent_response_callback(event)
+                    await callbacks.agent_delta_callback(event)
             elif isinstance(event, MagenticAgentMessageEvent):
                 # Handle final agent messages
                 if self.streaming_enabled and event.message:
-                    await callbacks.streaming_agent_response_callback(event.message)
+                    await callbacks.agent_message_callback(event.message)
             elif isinstance(event, MagenticFinalResultEvent):
                 # Handle final result
                 if event.message and self.log_progress:
@@ -225,14 +232,14 @@ Always explain your reasoning and include evidence from agent responses."""
 
         return self
 
-    def build(self) -> Any:  # Returns MagenticWorkflow
+    def build(self) -> Workflow:
         """
         Build and return the Magentic workflow.
 
         Returns:
-            Configured MagenticWorkflow instance ready for execution.
+            Configured Workflow instance ready for execution.
         """
         logger.info("Building Magentic workflow")
         workflow = self.builder.build()
         logger.info("Magentic workflow built successfully")
-        return workflow
+        return workflow  # type: ignore[return-value]

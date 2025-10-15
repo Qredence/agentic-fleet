@@ -2,8 +2,8 @@
 
 ## Issue: [OPT-02] Implement Workflow Checkpointing
 
-**Priority:** 🔥 High Priority - Reliability & Cost Optimization  
-**Status:** ✅ **COMPLETE** - Phase 1 Implementation  
+**Priority:** 🔥 High Priority - Reliability & Cost Optimization
+**Status:** ✅ **COMPLETE** - Phase 1 Implementation
 **Date:** October 13, 2025
 
 ---
@@ -33,6 +33,7 @@ Successfully implemented workflow checkpointing for AgenticFleet, enabling workf
 ### 2. Features Implemented
 
 #### Configuration (workflow.yaml)
+
 ```yaml
 checkpointing:
   enabled: true                      # Enable/disable checkpointing
@@ -43,6 +44,7 @@ checkpointing:
 ```
 
 #### Workflow Methods
+
 - `set_workflow_id(workflow_id)` - Set unique workflow identifier
 - `create_checkpoint(metadata)` - Save current state with optional metadata
 - `restore_from_checkpoint(checkpoint_id)` - Restore workflow state
@@ -50,10 +52,12 @@ checkpointing:
 - `run(user_input, resume_from_checkpoint)` - Enhanced run with resume support
 
 #### REPL Commands
+
 - `checkpoints` / `list-checkpoints` - View all saved checkpoints with details
 - `resume <checkpoint_id>` - Restore workflow and continue execution
 
 #### Checkpoint Format (JSON)
+
 ```json
 {
   "checkpoint_id": "uuid",
@@ -69,10 +73,11 @@ checkpointing:
 
 ### 3. Test Coverage
 
-**Total Tests:** 36 (8 new + 28 existing)  
+**Total Tests:** 36 (8 new + 28 existing)
 **Pass Rate:** 100%
 
 #### New Checkpointing Tests
+
 1. `test_checkpoint_storage_creation_file` - File storage creation
 2. `test_checkpoint_storage_creation_memory` - Memory storage creation
 3. `test_checkpoint_storage_disabled` - Disabled state handling
@@ -83,6 +88,7 @@ checkpointing:
 8. `test_workflow_no_checkpoint_storage` - No-storage mode
 
 #### Existing Tests
+
 - All 28 existing tests continue to pass
 - No regressions detected
 - Config tests verify integration
@@ -105,13 +111,16 @@ checkpointing:
 ## Usage Examples
 
 ### 1. Basic Usage (Automatic)
+
 Checkpoints are created automatically after each workflow round:
+
 ```python
 result = await workflow.run("Analyze sales data")
 # Checkpoints created automatically at each round
 ```
 
 ### 2. List Checkpoints (REPL)
+
 ```
 🎯 Your task: checkpoints
 
@@ -125,12 +134,14 @@ Checkpoint ID: a1b2c3d4-5e6f-7890...
 ```
 
 ### 3. Resume from Checkpoint (REPL)
+
 ```
 🎯 Your task: resume a1b2c3d4-5e6f-7890-abcd-ef1234567890
 🎯 Your task (continuing): Continue the analysis
 ```
 
 ### 4. Programmatic Resume
+
 ```python
 result = await workflow.run(
     "Continue analysis",
@@ -189,18 +200,21 @@ result = await workflow.run(
 ## Code Quality
 
 ### Formatting
+
 - ✅ Black formatted (100 char line length)
 - ✅ All imports organized
 - ✅ Type hints added
 - ✅ Docstrings complete
 
 ### Testing
+
 - ✅ 8 new tests (all passing)
 - ✅ No test failures in existing suite
 - ✅ Edge cases covered
 - ✅ Error handling tested
 
 ### Documentation
+
 - ✅ User guide created
 - ✅ API documentation in docstrings
 - ✅ Configuration examples
@@ -219,6 +233,7 @@ result = await workflow.run(
 | API Calls | No change | No additional LLM calls |
 
 **Cost Savings on Failures:**
+
 - 3-round failure → Resume saves 2 rounds = ~60% cost reduction
 - 8-round failure → Resume saves 7 rounds = ~87% cost reduction
 
@@ -227,11 +242,13 @@ result = await workflow.run(
 ## Future Enhancements (Phase 2 & 3)
 
 ### Phase 2: Advanced Resume Support
+
 - [ ] Automatic retry with checkpointing
 - [ ] Checkpoint selection UI improvements
 - [ ] Resumption from latest checkpoint on error
 
 ### Phase 3: Advanced Features
+
 - [ ] Automatic cleanup of old checkpoints (by age/count)
 - [ ] Checkpoint export/import (for sharing/backup)
 - [ ] Checkpoint visualization (workflow graph)
@@ -245,6 +262,7 @@ result = await workflow.run(
 ## Files Changed
 
 ### Modified Files
+
 1. **.gitignore** - Added checkpoint directory exclusion
 2. **src/agenticfleet/config/workflow.yaml** - Added checkpoint configuration
 3. **src/agenticfleet/config/settings.py** - Added checkpoint storage factory
@@ -252,6 +270,7 @@ result = await workflow.run(
 5. **src/agenticfleet/cli/repl.py** - REPL command support
 
 ### New Files
+
 6. **tests/test_configuration.py** - Configuration and factory tests
 7. **docs/features/checkpointing.md** - User documentation (276 lines)
 8. *(removed)* Legacy demo script superseded by Magentic workflow
@@ -261,12 +280,14 @@ result = await workflow.run(
 ## Dependencies
 
 ### Framework Integration
+
 - ✅ Uses `agent_framework.FileCheckpointStorage`
 - ✅ Uses `agent_framework.InMemoryCheckpointStorage`
 - ✅ Compatible with `agent_framework.CheckpointStorage` protocol
 - ✅ No additional Python dependencies required
 
 ### Python Requirements
+
 - Python 3.12+ (using `timezone.utc`)
 - Existing agent-framework package
 - Standard library only (json, uuid, pathlib, datetime)
@@ -290,6 +311,7 @@ This returns the system to pre-checkpoint behavior with zero impact.
 ## Verification
 
 ### Manual Testing
+
 ```bash
 # Run all tests
 python -m pytest tests/ -v
@@ -302,6 +324,7 @@ python -m agenticfleet
 ```
 
 ### Automated Checks
+
 - ✅ All 36 tests passing
 - ✅ Python syntax valid
 - ✅ Import errors: None
@@ -336,11 +359,11 @@ The workflow checkpointing feature has been successfully implemented, tested, an
 3. `f2b6076` - Add comprehensive checkpointing documentation
 4. `1361b0f` - Add checkpointing demo script and finalize implementation
 
-**Branch:** `copilot/implement-workflow-checkpointing`  
-**Commits:** 4 total  
+**Branch:** `copilot/implement-workflow-checkpointing`
+**Commits:** 4 total
 **Lines Changed:** +1,059 / -23
 
 ---
 
-*Implementation completed by GitHub Copilot*  
+*Implementation completed by GitHub Copilot*
 *Date: October 13, 2025*

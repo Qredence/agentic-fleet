@@ -356,7 +356,7 @@ class TestMagenticFleetCallbacks:
     async def test_streaming_agent_response_callback(self):
         """Test streaming agent response callback."""
         from agenticfleet.fleet.callbacks import (
-            streaming_agent_response_callback,
+            agent_delta_callback,
         )
 
         # Mock message with agent_name and content attributes
@@ -365,7 +365,7 @@ class TestMagenticFleetCallbacks:
         message.content = "Response chunk from researcher"
 
         # Call callback (should not raise)
-        await streaming_agent_response_callback(message)
+        await agent_delta_callback(message)
 
         # If we get here, callback succeeded
         assert True

@@ -23,3 +23,13 @@ Recent history favors short, imperative subjects (for example `Bump actions/setu
 ## Agent Configuration & Security Tips
 
 Never commit API keys—`config/settings.py` raises if `OPENAI_API_KEY` is missing, so create a local `.env` first. Adjust behavior via each `agents/<role>/agent_config.yaml`, documenting new tool toggles and keeping temperatures conservative for determinism. When updating orchestration limits in `config/workflow_config.yaml`, call out the change in your PR so teammates stay in sync.
+
+## Versioning & Releases
+
+Before tagging a release:
+
+1. Bump the version in **all** of the following: `pyproject.toml`, `src/agenticfleet/__init__.py`, and the badge/version callout near the top of `README.md`.
+2. Update `docs/releases/` with a dated changelog entry summarising user-facing changes.
+3. Regenerate build artefacts (`uv build` or the CI workflow) only after the bumps are committed to avoid stale wheels.
+4. Run `uv run pytest`, `uv run ruff check .`, and `uv run mypy src/agenticfleet` locally; capture the green outputs in the release PR description.
+5. Before pushing, run `make clean` so `dist/`, `__pycache__/`, and other transient folders never hit version control. CI will fail fast if artefacts sneak into a branch.

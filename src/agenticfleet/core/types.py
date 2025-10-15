@@ -1,8 +1,9 @@
 """Shared type definitions for AgenticFleet."""
 
-from dataclasses import dataclass
 from enum import Enum
 from typing import Any, TypedDict
+
+from agenticfleet.core.code_types import CodeExecutionResult
 
 
 class AgentRole(str, Enum):
@@ -22,13 +23,10 @@ class AgentResponse(TypedDict):
     success: bool
 
 
-@dataclass
-class CodeExecutionResult:
-    """Result of code execution."""
-
-    success: bool
-    output: str
-    error: str
-    execution_time: float
-    language: str
-    exit_code: int
+# Re-exported for backwards compatibility; prefer importing from
+# ``agenticfleet.core.code_types`` for the canonical definition.
+__all__ = [
+    "AgentRole",
+    "AgentResponse",
+    "CodeExecutionResult",
+]

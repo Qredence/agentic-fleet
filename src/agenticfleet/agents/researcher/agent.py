@@ -53,9 +53,14 @@ def create_researcher_agent() -> ChatAgent:
 
     # Create and return agent with tools
     # Note: temperature is not a ChatAgent parameter in Microsoft Agent Framework
-    return ChatAgent(
+    agent = ChatAgent(
         chat_client=chat_client,
         instructions=config.get("system_prompt", ""),
         name=agent_config.get("name", "researcher"),
         tools=enabled_tools,
     )
+
+    runtime_config = config.get("runtime", {})
+    setattr(agent, "runtime_config", runtime_config)
+
+    return agent

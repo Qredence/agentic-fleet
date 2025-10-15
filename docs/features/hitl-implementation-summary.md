@@ -1,15 +1,19 @@
 # Human-in-the-Loop Implementation - Complete Summary
 
 ## Issue
+
 **OPT-03**: Add Human-in-the-Loop Capabilities
 
 ## Status
+
 ✅ **COMPLETE** - Phase 1 Implementation
 
 ## Implementation Date
+
 October 13, 2025
 
 ## Overview
+
 Successfully implemented Human-in-the-Loop (HITL) approval capabilities for AgenticFleet, allowing users to review and approve sensitive operations (especially code execution) before they are executed. This addresses safety, compliance, and trust requirements.
 
 ## What Was Implemented
@@ -22,19 +26,19 @@ Successfully implemented Human-in-the-Loop (HITL) approval capabilities for Agen
      - `ApprovalResponse` - Pydantic model for responses
      - `ApprovalDecision` - Enum (APPROVED, REJECTED, MODIFIED, TIMEOUT)
      - `ApprovalHandler` - Abstract base class
-   
+
    - `cli_approval.py` - CLI implementation
      - `CLIApprovalHandler` - Terminal-based approval UI
      - `create_approval_request()` - Helper function
      - Timeout handling with configurable behavior
      - Approval history tracking
-   
+
    - `approved_tools.py` - Tool wrapper system
      - Global approval handler management
      - Async and sync approval support
      - Fallback to direct execution
 
-2. **Code Execution Integration** 
+2. **Code Execution Integration**
    - Modified `code_interpreter.py` to check for approval handler
    - Supports approve/reject/modify decisions
    - Seamless fallback when no handler configured
@@ -46,6 +50,7 @@ Successfully implemented Human-in-the-Loop (HITL) approval capabilities for Agen
 
 4. **Configuration System**
    - Added HITL section to `workflow.yaml`:
+
      ```yaml
      human_in_the_loop:
        enabled: true
@@ -102,7 +107,7 @@ Successfully implemented Human-in-the-Loop (HITL) approval capabilities for Agen
    - Files changed/added
    - Testing results
    - Known limitations
-   
+
 3. **Visual Summary**
    - `docs/releases/hitl-visual-summary.md` (8KB)
    - Architecture flow diagrams
@@ -116,32 +121,38 @@ Successfully implemented Human-in-the-Loop (HITL) approval capabilities for Agen
 ## Key Features
 
 ### ✅ Approval Workflow
+
 - Interactive CLI prompt for sensitive operations
 - Three decision options: approve, reject, modify
 - Clear display of operation details and code
 - Request ID for tracking
 
 ### ✅ Code Modification
+
 - Users can edit code before execution
 - Multi-line code editing support
 - Modified code executed instead of original
 
 ### ✅ Timeout Handling
+
 - Configurable timeout (default: 300s)
 - Optional auto-reject on timeout
 - Safe default behavior (no auto-reject)
 
 ### ✅ Operation Control
+
 - Configurable list of operations requiring approval
 - Trusted operations bypass approval
 - Fine-grained control over security
 
 ### ✅ Approval History
+
 - In-memory tracking of all decisions
 - Request-response pairs stored
 - Audit trail capability
 
 ### ✅ Configuration
+
 - YAML-based configuration
 - Enable/disable per environment
 - Flexible timeout settings
@@ -150,6 +161,7 @@ Successfully implemented Human-in-the-Loop (HITL) approval capabilities for Agen
 ## Testing Results
 
 ### Manual Tests
+
 ```
 ✓ create_approval_request
 ✓ mock_approval_handler
@@ -164,6 +176,7 @@ Successfully implemented Human-in-the-Loop (HITL) approval capabilities for Agen
 ```
 
 ### Integration Tests
+
 - ✅ CLI starts with HITL status displayed
 - ✅ Configuration loads correctly
 - ✅ Approval handler initialized when enabled
@@ -174,6 +187,7 @@ Successfully implemented Human-in-the-Loop (HITL) approval capabilities for Agen
 ## Usage Example
 
 ### CLI Startup
+
 ```bash
 $ python -m agenticfleet
 
@@ -183,6 +197,7 @@ $ python -m agenticfleet
 ```
 
 ### Approval Prompt
+
 ```
 ============================================================
 ⚠️  APPROVAL REQUIRED
@@ -201,6 +216,7 @@ Approve? (yes/no/edit):
 ```
 
 ### User Actions
+
 1. **Approve**: `yes` → Code executes as shown
 2. **Reject**: `no` → Code execution blocked
 3. **Modify**: `edit` → User edits code, then executes modified version
@@ -208,6 +224,7 @@ Approve? (yes/no/edit):
 ## Files Added/Modified
 
 ### Added (8 files)
+
 - `src/agenticfleet/core/approval.py`
 - `src/agenticfleet/core/cli_approval.py`
 - `src/agenticfleet/core/approved_tools.py`
@@ -219,6 +236,7 @@ Approve? (yes/no/edit):
 - `docs/releases/hitl-visual-summary.md`
 
 ### Modified (5 files)
+
 - `src/agenticfleet/config/workflow.yaml`
 - `src/agenticfleet/agents/coder/tools/code_interpreter.py`
 - `src/agenticfleet/fleet/magentic_fleet.py`
@@ -229,17 +247,20 @@ Approve? (yes/no/edit):
 ## Configuration Details
 
 ### Enable/Disable
+
 ```yaml
 enabled: true  # Set to false to disable HITL
 ```
 
 ### Timeout Settings
+
 ```yaml
 approval_timeout_seconds: 300        # Max wait time
 auto_reject_on_timeout: false        # Safe default
 ```
 
 ### Operation Control
+
 ```yaml
 require_approval_for:                # Need approval
   - code_execution
@@ -255,24 +276,28 @@ trusted_operations:                  # Bypass approval
 ## Benefits Delivered
 
 ### Safety ✅
+
 - Prevents harmful code execution
 - Reviews operations before execution
 - Blocks dangerous actions
 - Allows modification of risky operations
 
 ### Compliance ✅
+
 - Human oversight for sensitive operations
 - Audit trail of decisions
 - Configurable approval rules
 - Meets regulatory requirements
 
 ### Trust ✅
+
 - Users see what agents plan to do
 - Users control execution
 - Transparent decision-making
 - Educational value
 
 ### Quality ✅
+
 - Catch errors before execution
 - Ensure alignment with intent
 - Feedback loop for improvement
@@ -298,6 +323,7 @@ All success criteria met! 🎉
 ## Future Enhancements (Out of Scope)
 
 Phase 2 and 3 features from OPT-03:
+
 - Approval queuing system
 - Persistent approval history/audit log
 - Approval delegation
@@ -324,6 +350,7 @@ Phase 2 and 3 features from OPT-03:
 ## Breaking Changes
 
 **None** - Implementation is fully backward compatible:
+
 - HITL is opt-in via configuration
 - Can be disabled in workflow.yaml
 - No changes to existing agent APIs
@@ -333,12 +360,14 @@ Phase 2 and 3 features from OPT-03:
 ## Dependencies
 
 **No new external dependencies** - Uses existing packages:
+
 - `pydantic` - For approval models (already required)
 - `asyncio` - For async approval (stdlib)
 
 ## Production Readiness
 
 ✅ **Ready for Production**
+
 - Zero breaking changes
 - Comprehensive testing
 - Full documentation
@@ -377,8 +406,9 @@ The feature addresses safety, compliance, and trust requirements while maintaini
 **Version**: 0.5.0
 **Branch**: copilot/add-human-in-the-loop-capabilities
 **Commits**: 4 commits
-  - Initial plan
-  - Add HITL core components and configuration
-  - Add HITL documentation and CLI integration
-  - Add HITL demo and implementation summary
-  - Final HITL implementation with visual documentation
+
+- Initial plan
+- Add HITL core components and configuration
+- Add HITL documentation and CLI integration
+- Add HITL demo and implementation summary
+- Final HITL implementation with visual documentation

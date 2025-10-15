@@ -155,17 +155,17 @@ from config.settings import settings
 
 def create_my_agent() -> ChatAgent:
     """Create a new agent using OpenAI Responses API."""
-    
+
     # Load configuration
     config = settings.load_agent_config("agents/my_agent")
     agent_config = config.get("agent", {})
-    
+
     # Create OpenAI Responses client
     # API key is read from OPENAI_API_KEY environment variable
     client = OpenAIResponsesClient(
         model_id=agent_config.get("model", settings.openai_model),
     )
-    
+
     # Create agent with tools
     agent = ChatAgent(
         name=agent_config.get("name", "my_agent"),
@@ -173,7 +173,7 @@ def create_my_agent() -> ChatAgent:
         chat_client=client,
         tools=[],  # Add your tools here
     )
-    
+
     return agent
 ```
 
@@ -213,7 +213,7 @@ echo "OPENAI_API_KEY=sk-proj-your-key" >> .env
 
 ## Status
 
-**Migration Status:** ✅ Complete  
-**Verification Status:** ✅ All Tests Passing  
-**Production Ready:** ✅ Yes  
+**Migration Status:** ✅ Complete
+**Verification Status:** ✅ All Tests Passing
+**Production Ready:** ✅ Yes
 **Last Updated:** October 10, 2025

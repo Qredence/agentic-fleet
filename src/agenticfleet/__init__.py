@@ -5,7 +5,7 @@ A sophisticated multi-agent system that coordinates specialized AI agents to sol
 complex tasks through dynamic delegation and collaboration.
 """
 
-__version__ = "0.5.0"
+__version__ = "0.5.1"
 __author__ = "Qredence"
 __email__ = "contact@qredence.ai"
 

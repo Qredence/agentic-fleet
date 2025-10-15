@@ -4,14 +4,17 @@ labels: ['enhancement', 'optimization', 'agent-framework', 'high-priority']
 ---
 
 ## Priority Level
+
 🔥 **High Priority** - Reliability & Cost Optimization
 
 ## Overview
+
 Implement workflow checkpointing using Microsoft Agent Framework's built-in checkpoint storage to enable workflow resumption after failures, provide audit trails, and reduce costs by avoiding redundant LLM calls.
 
 ## Current State
 
 ### Limitations
+
 - No state persistence between workflow runs
 - Failed workflows must restart from beginning
 - No workflow history or audit trail
@@ -46,6 +49,7 @@ state = workflow.load_checkpoint("workflow_abc123")
 ```
 
 ## Benefits
+
 - ✅ **Resume Failed Workflows**: Continue from last checkpoint instead of restarting
 - ✅ **Cost Savings**: Avoid redundant LLM API calls (can save 50-80% on retry costs)
 - ✅ **Audit Trail**: Complete history of all workflow executions
@@ -56,6 +60,7 @@ state = workflow.load_checkpoint("workflow_abc123")
 ## Implementation Steps
 
 ### Phase 1: Basic Checkpointing (Week 1)
+
 - [ ] Add FileCheckpointStorage configuration
 - [ ] Enable checkpointing in workflow builder
 - [ ] Update CLI to save checkpoint IDs
@@ -63,12 +68,14 @@ state = workflow.load_checkpoint("workflow_abc123")
 - [ ] Test checkpoint save/load
 
 ### Phase 2: Resume Support (Week 2)
+
 - [ ] Add --resume flag to CLI
 - [ ] Implement checkpoint selection UI
 - [ ] Add automatic retry with checkpointing
 - [ ] Test failure recovery scenarios
 
 ### Phase 3: Advanced Features (Week 3)
+
 - [ ] Add checkpoint cleanup/pruning
 - [ ] Implement checkpoint export/import
 - [ ] Add checkpoint visualization
@@ -92,6 +99,7 @@ workflow:
 ## Testing Requirements
 
 ### Unit Tests
+
 ```python
 def test_checkpoint_save():
     """Test checkpoint is saved after each step."""
@@ -108,21 +116,25 @@ def test_checkpoint_resume():
 ```
 
 ### Integration Tests
+
 - Test resume after network failure
 - Test resume after agent error
 - Test checkpoint cleanup
 - Test multiple concurrent workflows
 
 ## Estimated Effort
+
 🔨 **Low** (1 week)
 
 The framework provides built-in checkpointing support, so implementation is straightforward.
 
 ## Dependencies
+
 - Requires WorkflowBuilder implementation (#OPT-01)
 - May require storage backend (file system, Redis)
 
 ## Success Criteria
+
 - ✅ Workflows save checkpoints automatically
 - ✅ Failed workflows can resume from last checkpoint
 - ✅ Checkpoint history is accessible

@@ -226,14 +226,74 @@ class MagenticFleet:
             content = result.content
             if content is not None:
                 return str(content)
+            # If content is explicitly None, no response was generated
+            return NO_RESPONSE_GENERATED
 
         # Fallback to string representation only if it's not a mock
         result_str = str(result)
-        if result_str and result_str != "None" and not result_str.startswith("<MagicMock"):
+        if result_str and result_str != "None":
             return result_str
 
         logger.warning("Could not extract final answer from result")
         return NO_RESPONSE_GENERATED
+
+    async def list_checkpoints(self) -> list[Any]:
+        """
+        List all available checkpoints.
+
+        Returns:
+            List of checkpoint metadata dictionaries.
+        """
+        import json
+        from pathlib import Path
+
+        checkpoints: list[Any] = []
+
+        # If we have checkpoint storage, try to use it
+        if self.checkpoint_storage and hasattr(self.checkpoint_storage, "list_checkpoints"):
+            # If the storage has a list method, use it
+            storage_checkpoints = await self.checkpoint_storage.list_checkpoints()
+            for checkpoint in storage_checkpoints:
+                # Convert WorkflowCheckpoint to dict
+                checkpoint_dict = {
+                    "id": getattr(checkpoint, "id", str(uuid.uuid4())),
+                    "timestamp": getattr(checkpoint, "timestamp", ""),
+                    "current_round": getattr(checkpoint, "current_round", 0),
+                    "metadata": getattr(checkpoint, "metadata", {}),
+                }
+                checkpoints.append(checkpoint_dict)
+        else:
+            # Fallback: scan the checkpoints directory
+            checkpoint_dir = Path("./checkpoints")
+            if checkpoint_dir.exists():
+                for checkpoint_file in checkpoint_dir.glob("*.json"):
+                    try:
+                        with open(checkpoint_file) as f:
+                            checkpoint_data = json.load(f)
+
+                        # Extract the expected fields
+                        checkpoint_info = {
+                            "checkpoint_id": checkpoint_data.get("checkpoint_id"),
+                            "workflow_id": checkpoint_data.get("workflow_id"),
+                            "timestamp": checkpoint_data.get("timestamp"),
+                            "current_round": checkpoint_data.get("executor_states", {})
+                            .get("magentic_orchestrator", {})
+                            .get("plan_review_round", 0),
+                            "metadata": {
+                                "status": checkpoint_data.get("metadata", {}).get(
+                                    "checkpoint_type", "unknown"
+                                )
+                            },
+                        }
+                        checkpoints.append(checkpoint_info)
+                    except (json.JSONDecodeError, KeyError) as e:
+                        logger.warning(f"Failed to parse checkpoint file {checkpoint_file}: {e}")
+                        continue
+
+        # Sort by timestamp descending (newest first)
+        checkpoints.sort(key=lambda x: x.get("timestamp", ""), reverse=True)
+
+        return checkpoints
 
 
 # Default fleet instance factory for backward compatibility

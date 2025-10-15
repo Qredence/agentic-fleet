@@ -1,9 +1,11 @@
 """Unit tests for Mem0ContextProvider."""
 
+from pathlib import Path
 from unittest.mock import MagicMock, patch
 
 import pytest
 
+from agenticfleet.config import settings
 from agenticfleet.context.mem0_provider import Mem0ContextProvider
 
 
@@ -11,120 +13,78 @@ from agenticfleet.context.mem0_provider import Mem0ContextProvider
 def mock_env_vars(monkeypatch):
     """Set up required environment variables for testing."""
     monkeypatch.setenv("OPENAI_API_KEY", "test-openai-key")
-    monkeypatch.setenv("AZURE_AI_PROJECT_ENDPOINT", "https://test-project.openai.azure.com")
-    monkeypatch.setenv("AZURE_AI_SEARCH_ENDPOINT", "https://test-service.search.windows.net")
-    monkeypatch.setenv("AZURE_AI_SEARCH_KEY", "test-search-key")
-    monkeypatch.setenv("AZURE_OPENAI_CHAT_COMPLETION_DEPLOYED_MODEL_NAME", "gpt-4o")
-    monkeypatch.setenv("AZURE_OPENAI_EMBEDDING_DEPLOYED_MODEL_NAME", "text-embedding-ada-002")
+    monkeypatch.setenv("OPENAI_MODEL", "gpt-4o-mini")
+    monkeypatch.setenv("OPENAI_EMBEDDING_MODEL", "text-embedding-3-small")
+    monkeypatch.setenv("MEM0_HISTORY_DB_PATH", "tests/.tmp/mem0-history.db")
+    monkeypatch.setattr(settings, "openai_model", "gpt-4o-mini", raising=False)
+    monkeypatch.setattr(settings, "openai_embedding_model", "text-embedding-3-small", raising=False)
+    monkeypatch.setattr(
+        settings, "mem0_history_db_path", "tests/.tmp/mem0-history.db", raising=False
+    )
 
 
 @pytest.fixture
 def mock_memory():
-    """Create a mock Memory object."""
+    """Patch the Mem0 Memory class and provide the mock instance."""
     with patch("agenticfleet.context.mem0_provider.Memory") as mock_mem:
         mock_instance = MagicMock()
-        mock_mem.from_config.return_value = mock_instance
-        yield mock_instance
-
-
-@pytest.fixture
-def mock_azure_client():
-    """Create a mock AzureOpenAI client."""
-    with patch("agenticfleet.context.mem0_provider.AzureOpenAI") as mock_azure:
-        yield mock_azure
+        mock_mem.return_value = mock_instance
+        yield mock_mem, mock_instance
 
 
 class TestMem0ContextProviderInitialization:
-    """Tests for Mem0ContextProvider initialization."""
+    """Tests covering Mem0ContextProvider construction."""
 
-    def test_init_with_defaults(self, mock_env_vars, mock_memory, mock_azure_client):
-        """Test initialization with default parameters."""
+    def test_init_with_defaults(self, mock_env_vars, mock_memory):
+        """Default IDs should be applied and Memory invoked with OpenAI config."""
+        mock_mem_cls, mock_instance = mock_memory
+
         provider = Mem0ContextProvider()
 
         assert provider.user_id == "agenticfleet_user"
         assert provider.agent_id == "orchestrator"
-        assert provider.memory is not None
+        assert provider.memory is mock_instance
 
-    def test_init_with_custom_ids(self, mock_env_vars, mock_memory, mock_azure_client):
-        """Test initialization with custom user_id and agent_id."""
+        # Assert Memory was initialized directly with expected config
+        assert mock_mem_cls.call_count == 1
+        _, kwargs = mock_mem_cls.call_args
+        config = kwargs["config"]
+        assert hasattr(config, "llm")
+        assert hasattr(config, "embedder")
+        assert hasattr(config, "history_db_path")
+        assert config.llm.provider == "openai"
+        assert config.llm.config["model"] == settings.openai_model
+        assert config.embedder.provider == "openai"
+        assert config.embedder.config["model"] == settings.openai_embedding_model
+        assert Path(config.history_db_path).name == Path(settings.mem0_history_db_path).name
+
+    def test_init_with_custom_ids(self, mock_env_vars, mock_memory):
+        """Custom user/agent identifiers should persist on the provider."""
+        _, mock_instance = mock_memory
+
         provider = Mem0ContextProvider(user_id="custom_user", agent_id="custom_agent")
 
         assert provider.user_id == "custom_user"
         assert provider.agent_id == "custom_agent"
+        assert provider.memory is mock_instance
 
-    def test_init_missing_azure_project_endpoint(self, mock_memory, mock_azure_client):
-        """Test initialization fails when AZURE_AI_PROJECT_ENDPOINT is missing."""
-        # Mock settings with None for project endpoint
-        with patch("agenticfleet.context.mem0_provider.settings") as mock_settings:
-            mock_settings.azure_ai_project_endpoint = None
-            mock_settings.azure_ai_search_endpoint = "https://test.search.windows.net"
-            mock_settings.azure_ai_search_key = "test-key"
-            mock_settings.openai_api_key = "test-key"
+    def test_history_path_created(self, mock_env_vars, tmp_path, mock_memory):
+        """Mem0 history directory should be created automatically when missing."""
+        history_db = tmp_path / "history" / "mem0.db"
+        with patch(
+            "agenticfleet.context.mem0_provider.settings.mem0_history_db_path", str(history_db)
+        ):
+            Mem0ContextProvider()
 
-            with pytest.raises(ValueError, match="AZURE_AI_PROJECT_ENDPOINT"):
-                Mem0ContextProvider()
-
-    def test_init_missing_azure_search_endpoint(self, mock_memory, mock_azure_client):
-        """Test initialization fails when AZURE_AI_SEARCH_ENDPOINT is missing."""
-        # Mock settings with None for search endpoint
-        with patch("agenticfleet.context.mem0_provider.settings") as mock_settings:
-            mock_settings.azure_ai_project_endpoint = "https://test.openai.azure.com"
-            mock_settings.azure_ai_search_endpoint = None
-            mock_settings.azure_ai_search_key = "test-key"
-            mock_settings.openai_api_key = "test-key"
-
-            with pytest.raises(ValueError, match="AZURE_AI_SEARCH_ENDPOINT"):
-                Mem0ContextProvider()
-
-    def test_service_name_extraction_from_url(self, mock_env_vars, mock_azure_client):
-        """Test that service name is correctly extracted from full URL."""
-        with patch("agenticfleet.context.mem0_provider.Memory") as patched_memory:
-            with patch("agenticfleet.context.mem0_provider.settings") as mock_settings:
-                mock_settings.azure_ai_project_endpoint = "https://test-project.openai.azure.com"
-                mock_settings.azure_ai_search_endpoint = "https://test-service.search.windows.net"
-                mock_settings.azure_ai_search_key = "test-search-key"
-                mock_settings.openai_api_key = "test-openai-key"
-                mock_settings.azure_openai_chat_completion_deployed_model_name = "gpt-4o"
-                mock_settings.azure_openai_embedding_deployed_model_name = "text-embedding-ada-002"
-
-                patched_memory.from_config.return_value = MagicMock()
-
-                _ = Mem0ContextProvider()
-
-                call_args = patched_memory.from_config.call_args
-                config = call_args[0][0]
-
-                assert config["vector_store"]["config"]["service_name"] == "test-service"
-
-    def test_service_name_without_https(self, mock_azure_client):
-        """Test that service name is used as-is when not a full URL."""
-        # Mock settings with non-URL service name
-        with patch("agenticfleet.context.mem0_provider.settings") as mock_settings:
-            mock_settings.azure_ai_project_endpoint = "https://test.openai.azure.com"
-            mock_settings.azure_ai_search_endpoint = "my-service-name"
-            mock_settings.azure_ai_search_key = "test-key"
-            mock_settings.openai_api_key = "test-key"
-            mock_settings.azure_openai_chat_completion_deployed_model_name = "gpt-4o"
-            mock_settings.azure_openai_embedding_deployed_model_name = "text-embedding"
-
-            with patch("agenticfleet.context.mem0_provider.Memory") as patched_memory:
-                patched_memory.from_config.return_value = MagicMock()
-
-                _ = Mem0ContextProvider()
-
-                # Verify service_name is used as-is
-                call_args = patched_memory.from_config.call_args
-                config = call_args[0][0]
-
-                assert config["vector_store"]["config"]["service_name"] == "my-service-name"
+        assert history_db.parent.exists()
 
 
 class TestMem0ContextProviderGet:
-    """Tests for Mem0ContextProvider.get() method."""
+    """Tests for the retrieval helper."""
 
-    def test_get_with_results(self, mock_env_vars, mock_memory, mock_azure_client):
-        """Test get() returns concatenated memories."""
-        mock_memory.search.return_value = [
+    def test_get_with_results(self, mock_env_vars, mock_memory):
+        _, mock_instance = mock_memory
+        mock_instance.search.return_value = [
             {"memory": "User prefers Python", "score": 0.95},
             {"memory": "User likes machine learning", "score": 0.88},
         ]
@@ -133,138 +93,136 @@ class TestMem0ContextProviderGet:
         result = provider.get("What does the user like?")
 
         assert result == "User prefers Python\nUser likes machine learning"
-        mock_memory.search.assert_called_once_with(
+        mock_instance.search.assert_called_once_with(
             "What does the user like?",
             user_id="agenticfleet_user",
             agent_id="orchestrator",
         )
 
-    def test_get_with_empty_results(self, mock_env_vars, mock_memory, mock_azure_client):
-        """Test get() returns empty string when no results."""
-        mock_memory.search.return_value = []
+    def test_get_with_empty_results(self, mock_env_vars, mock_memory):
+        _, mock_instance = mock_memory
+        mock_instance.search.return_value = []
 
         provider = Mem0ContextProvider()
-        result = provider.get("What does the user like?")
+        assert provider.get("What does the user like?") == ""
 
-        assert result == ""
-
-    def test_get_with_custom_ids(self, mock_env_vars, mock_memory, mock_azure_client):
-        """Test get() uses custom user_id and agent_id."""
-        mock_memory.search.return_value = [{"memory": "Test memory", "score": 0.9}]
+    def test_get_with_custom_ids(self, mock_env_vars, mock_memory):
+        _, mock_instance = mock_memory
+        mock_instance.search.return_value = [{"memory": "Test memory", "score": 0.9}]
 
         provider = Mem0ContextProvider()
-        _ = provider.get("query", user_id="alice", agent_id="researcher")
+        provider.get("query", user_id="alice", agent_id="researcher")
 
-        mock_memory.search.assert_called_once_with("query", user_id="alice", agent_id="researcher")
+        mock_instance.search.assert_called_once_with(
+            "query", user_id="alice", agent_id="researcher"
+        )
 
-    def test_get_with_missing_memory_key(self, mock_env_vars, mock_memory, mock_azure_client):
-        """Test get() handles results without 'memory' key gracefully."""
-        mock_memory.search.return_value = [
+    def test_get_with_missing_memory_key(self, mock_env_vars, mock_memory):
+        _, mock_instance = mock_memory
+        mock_instance.search.return_value = [
             {"memory": "Valid memory", "score": 0.9},
-            {"score": 0.8},  # Missing 'memory' key
-            {"memory": "", "score": 0.7},  # Empty memory
+            {"score": 0.8},
+            {"memory": "", "score": 0.7},
         ]
 
         provider = Mem0ContextProvider()
-        result = provider.get("query")
+        assert provider.get("query") == "Valid memory"
 
-        assert result == "Valid memory"
-
-    def test_get_handles_exception(self, mock_env_vars, mock_memory, mock_azure_client, capsys):
-        """Test get() handles exceptions gracefully and returns empty string."""
-        mock_memory.search.side_effect = Exception("Search failed")
+    def test_get_handles_exception(self, mock_env_vars, mock_memory, capsys):
+        _, mock_instance = mock_memory
+        mock_instance.search.side_effect = Exception("Search failed")
 
         provider = Mem0ContextProvider()
-        result = provider.get("query")
+        assert provider.get("query") == ""
 
-        assert result == ""
         captured = capsys.readouterr()
         assert "Error searching memories: Search failed" in captured.out
 
-    def test_get_with_non_dict_results(self, mock_env_vars, mock_memory, mock_azure_client):
-        """Test get() handles non-dict results gracefully."""
-        mock_memory.search.return_value = ["string_result", 123, None]
+    def test_get_with_non_dict_results(self, mock_env_vars, mock_memory):
+        _, mock_instance = mock_memory
+        mock_instance.search.return_value = ["string_result", 123, None]
 
         provider = Mem0ContextProvider()
-        result = provider.get("query")
+        assert provider.get("query") == ""
 
-        assert result == ""
-
-    def test_get_fallback_to_default_ids(self, mock_env_vars, mock_memory, mock_azure_client):
-        """Test get() falls back to default IDs when None is provided."""
-        mock_memory.search.return_value = [{"memory": "Test", "score": 0.9}]
+    def test_get_fallback_to_default_ids(self, mock_env_vars, mock_memory):
+        _, mock_instance = mock_memory
+        mock_instance.search.return_value = [{"memory": "Test", "score": 0.9}]
 
         provider = Mem0ContextProvider(user_id="default_user", agent_id="default_agent")
-        _ = provider.get("query", user_id=None, agent_id=None)
+        provider.get("query", user_id=None, agent_id=None)
 
-        mock_memory.search.assert_called_once_with(
+        mock_instance.search.assert_called_once_with(
             "query", user_id="default_user", agent_id="default_agent"
         )
 
 
 class TestMem0ContextProviderAdd:
-    """Tests for Mem0ContextProvider.add() method."""
+    """Tests for persisting new memories."""
 
-    def test_add_with_defaults(self, mock_env_vars, mock_memory, mock_azure_client):
-        """Test add() with default parameters."""
+    def test_add_with_defaults(self, mock_env_vars, mock_memory):
+        _, mock_instance = mock_memory
         provider = Mem0ContextProvider()
         provider.add("User likes Python")
 
-        mock_memory.add.assert_called_once_with(
+        mock_instance.add.assert_called_once_with(
             "User likes Python",
             user_id="agenticfleet_user",
             agent_id="orchestrator",
             metadata={},
         )
 
-    def test_add_with_custom_ids(self, mock_env_vars, mock_memory, mock_azure_client):
-        """Test add() with custom user_id and agent_id."""
+    def test_add_with_custom_ids(self, mock_env_vars, mock_memory):
+        _, mock_instance = mock_memory
         provider = Mem0ContextProvider()
         provider.add("Test data", user_id="alice", agent_id="researcher")
 
-        mock_memory.add.assert_called_once_with(
+        mock_instance.add.assert_called_once_with(
             "Test data", user_id="alice", agent_id="researcher", metadata={}
         )
 
-    def test_add_with_metadata(self, mock_env_vars, mock_memory, mock_azure_client):
-        """Test add() with custom metadata."""
+    def test_add_with_metadata(self, mock_env_vars, mock_memory):
+        _, mock_instance = mock_memory
         metadata = {"category": "preferences", "importance": "high"}
 
         provider = Mem0ContextProvider()
         provider.add("User data", metadata=metadata)
 
-        mock_memory.add.assert_called_once_with(
+        mock_instance.add.assert_called_once_with(
             "User data",
             user_id="agenticfleet_user",
             agent_id="orchestrator",
             metadata=metadata,
         )
 
-    def test_add_handles_exception(self, mock_env_vars, mock_memory, mock_azure_client, capsys):
-        """Test add() handles exceptions gracefully."""
-        mock_memory.add.side_effect = Exception("Add failed")
+    def test_add_handles_exception(self, mock_env_vars, mock_memory, capsys):
+        _, mock_instance = mock_memory
+        mock_instance.add.side_effect = Exception("Add failed")
 
         provider = Mem0ContextProvider()
-        provider.add("Test data")  # Should not raise
+        provider.add("Test data")
 
         captured = capsys.readouterr()
         assert "Error adding memory: Add failed" in captured.out
 
-    def test_add_fallback_to_default_ids(self, mock_env_vars, mock_memory, mock_azure_client):
-        """Test add() falls back to default IDs when None is provided."""
+    def test_add_fallback_to_default_ids(self, mock_env_vars, mock_memory):
+        _, mock_instance = mock_memory
         provider = Mem0ContextProvider(user_id="default_user", agent_id="default_agent")
         provider.add("Test data", user_id=None, agent_id=None)
 
-        mock_memory.add.assert_called_once_with(
-            "Test data", user_id="default_user", agent_id="default_agent", metadata={}
+        mock_instance.add.assert_called_once_with(
+            "Test data",
+            user_id="default_user",
+            agent_id="default_agent",
+            metadata={},
         )
 
-    def test_add_with_empty_metadata(self, mock_env_vars, mock_memory, mock_azure_client):
-        """Test add() converts None metadata to empty dict."""
+    def test_add_with_empty_metadata(self, mock_env_vars, mock_memory):
+        _, mock_instance = mock_memory
         provider = Mem0ContextProvider()
         provider.add("Test data", metadata=None)
 
-        mock_memory.add.assert_called_once_with(
+        mock_instance.add.assert_called_once_with(
             "Test data",
             user_id="agenticfleet_user",
             agent_id="orchestrator",
@@ -273,69 +231,14 @@ class TestMem0ContextProviderAdd:
 
 
 class TestMem0ContextProviderConfiguration:
-    """Tests for Mem0ContextProvider configuration."""
+    """Configuration-level assertions."""
 
-    def test_memory_config_structure(self, mock_env_vars, mock_azure_client):
-        """Test that Memory.from_config is called with correct structure."""
+    def test_memory_receives_expected_config(self, mock_env_vars):
         with patch("agenticfleet.context.mem0_provider.Memory") as patched_memory:
-            with patch("agenticfleet.context.mem0_provider.settings") as mock_settings:
-                mock_settings.azure_ai_project_endpoint = "https://test-project.openai.azure.com"
-                mock_settings.azure_ai_search_endpoint = "https://test-service.search.windows.net"
-                mock_settings.azure_ai_search_key = "test-search-key"
-                mock_settings.openai_api_key = "test-openai-key"
-                mock_settings.azure_openai_chat_completion_deployed_model_name = "gpt-4o"
-                mock_settings.azure_openai_embedding_deployed_model_name = "text-embedding-ada-002"
+            Mem0ContextProvider()
 
-                patched_memory.from_config.return_value = MagicMock()
-
-                _ = Mem0ContextProvider()
-
-                # Verify from_config was called
-                assert patched_memory.from_config.called
-
-                # Get the config passed to from_config
-                call_args = patched_memory.from_config.call_args
-                config = call_args[0][0]
-
-                # Verify config structure
-                assert "vector_store" in config
-                assert "llm" in config
-                assert "embedder" in config
-
-                # Verify vector store config
-                vs_config = config["vector_store"]["config"]
-                assert vs_config["service_name"] == "test-service"
-                assert vs_config["api_key"] == "test-search-key"
-                assert vs_config["collection_name"] == "agenticfleet-memories"
-                assert vs_config["embedding_model_dims"] == 1536
-
-                # Verify LLM config
-                assert config["llm"]["provider"] == "azure_openai"
-                assert config["llm"]["config"]["model"] == "gpt-4o"
-                assert config["llm"]["config"]["temperature"] == 0
-                assert config["llm"]["config"]["max_tokens"] == 1000
-
-                # Verify embedder config
-                assert config["embedder"]["provider"] == "azure_openai"
-                assert config["embedder"]["config"]["model"] == "text-embedding-ada-002"
-
-    def test_azure_client_initialization(self, mock_env_vars, mock_azure_client):
-        """Test that AzureOpenAI client is initialized correctly."""
-        with patch("agenticfleet.context.mem0_provider.Memory") as patched_memory:
-            with patch("agenticfleet.context.mem0_provider.settings") as mock_settings:
-                mock_settings.azure_ai_project_endpoint = "https://test-project.openai.azure.com"
-                mock_settings.azure_ai_search_endpoint = "https://test-service.search.windows.net"
-                mock_settings.azure_ai_search_key = "test-search-key"
-                mock_settings.openai_api_key = "test-openai-key"
-                mock_settings.azure_openai_chat_completion_deployed_model_name = "gpt-4o"
-                mock_settings.azure_openai_embedding_deployed_model_name = "text-embedding-ada-002"
-
-                patched_memory.from_config.return_value = MagicMock()
-
-                _ = Mem0ContextProvider()
-
-                mock_azure_client.assert_called_once_with(
-                    azure_endpoint="https://test-project.openai.azure.com",
-                    api_key="test-openai-key",
-                    api_version="2025-05-01",
-                )
+            _, kwargs = patched_memory.call_args
+            config = kwargs["config"]
+            assert config.llm.provider == "openai"
+            assert config.embedder.provider == "openai"
+            assert Path(config.history_db_path).name == Path(settings.mem0_history_db_path).name

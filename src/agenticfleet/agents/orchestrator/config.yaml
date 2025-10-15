@@ -34,3 +34,8 @@ delegation_rules:
     delegate_to: "coder"
   - condition: "data_analysis"
     delegate_to: "analyst"
+
+runtime:
+  stream: false
+  store: true
+  checkpoint: true

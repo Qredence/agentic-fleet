@@ -4,12 +4,15 @@ labels: ['enhancement', 'optimization', 'middleware', 'architecture']
 ---
 
 ## Priority Level
+
 🟡 **Medium Priority** - Code Quality & Maintainability
 
 ## Overview
+
 Implement middleware system for centralized request validation, response transformation, caching, and security policy enforcement.
 
 ## Current State
+
 - Direct agent invocation without pre/post processing
 - No centralized validation logic
 - No caching capabilities
@@ -27,11 +30,11 @@ class ValidationMiddleware(AgentMiddleware):
             raise ValueError("Input too short")
         return await next(context)
 
-@agent_middleware  
+@agent_middleware
 class CachingMiddleware(AgentMiddleware):
     def __init__(self):
         self.cache = {}
-    
+
     async def on_request(self, context, next):
         key = hash(context.input)
         if key in self.cache:
@@ -47,6 +50,7 @@ orchestrator.add_middleware(CachingMiddleware())
 ```
 
 ## Benefits
+
 - ✅ Centralized validation logic
 - ✅ Security policy enforcement
 - ✅ Response caching (cost savings)
@@ -54,6 +58,7 @@ orchestrator.add_middleware(CachingMiddleware())
 - ✅ Easier to add cross-cutting concerns
 
 ## Implementation Steps
+
 - [ ] Define middleware interface
 - [ ] Create validation middleware
 - [ ] Create caching middleware
@@ -62,6 +67,7 @@ orchestrator.add_middleware(CachingMiddleware())
 - [ ] Add configuration options
 
 ## Estimated Effort
+
 🔨 **Medium** (1-2 weeks)
 
 ---
