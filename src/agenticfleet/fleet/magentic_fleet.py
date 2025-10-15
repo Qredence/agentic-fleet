@@ -254,9 +254,18 @@ class MagenticFleet:
             # If the storage has a list method, use it
             storage_checkpoints = await self.checkpoint_storage.list_checkpoints()
             for checkpoint in storage_checkpoints:
-                # Convert WorkflowCheckpoint to dict
+                # Convert WorkflowCheckpoint to dict ensuring REPL-compatible keys
+                checkpoint_id = getattr(
+                    checkpoint,
+                    "checkpoint_id",
+                    getattr(checkpoint, "id", None),
+                )
+                workflow_id = getattr(checkpoint, "workflow_id", None)
                 checkpoint_dict = {
-                    "id": getattr(checkpoint, "id", str(uuid.uuid4())),
+                    "checkpoint_id": checkpoint_id,
+                    "workflow_id": workflow_id,
+                    # Retain "id" as a backwards compatible alias if callers relied on it
+                    "id": checkpoint_id,
                     "timestamp": getattr(checkpoint, "timestamp", ""),
                     "current_round": getattr(checkpoint, "current_round", 0),
                     "metadata": getattr(checkpoint, "metadata", {}),
