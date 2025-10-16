@@ -17,24 +17,29 @@ logger = get_logger(__name__)
 class ConsoleUIProtocol(Protocol):
     """Protocol describing the ConsoleUI interface used by callbacks."""
 
-    def log_agent_message(self, message: AgentMessage) -> None: ...
+    def log_agent_message(self, message: AgentMessage) -> None:
+        pass
 
     def log_plan(
         self,
         facts: list[str] | tuple[str, ...] | None,
         plan: list[str] | tuple[str, ...] | None,
-    ) -> None: ...
+    ) -> None:
+        pass
 
     def log_progress(
         self,
         status: str,
         next_speaker: str,
         instruction: str | None = None,
-    ) -> None: ...
+    ) -> None:
+        pass
 
-    def log_notice(self, text: str, *, style: str = "blue") -> None: ...
+    def log_notice(self, text: str, *, style: str = "blue") -> None:
+        pass
 
-    def log_final(self, result: Any) -> None: ...
+    def log_final(self, result: Any) -> None:
+        pass
 
 
 def _coerce_lines(value: Any) -> list[str]:
