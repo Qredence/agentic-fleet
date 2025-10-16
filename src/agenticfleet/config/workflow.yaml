@@ -6,13 +6,13 @@ workflow:
   timeout_seconds: 300
   checkpointing:
     enabled: true
-    storage_type: file  # Options: file, memory
+    storage_type: file # Options: file, memory
     storage_path: ./checkpoints
     cleanup_after_days: 30
     auto_resume_on_failure: false
   human_in_the_loop:
     enabled: true
-    approval_timeout_seconds: 300  # 5 minutes
+    approval_timeout_seconds: 300 # 5 minutes
     auto_reject_on_timeout: false
     require_approval_for:
       - code_execution
@@ -26,7 +26,7 @@ workflow:
 # Magentic Fleet configuration for Microsoft Agent Framework orchestration
 fleet:
   manager:
-    model: "gpt-5-chat"
+    model: "gpt-5"
     reasoning:
       effort: high
     instructions: |

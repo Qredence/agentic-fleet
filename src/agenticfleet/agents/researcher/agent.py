@@ -12,13 +12,17 @@ Usage:
     result = await researcher.run("Search for Python best practices")
 """
 
-from agent_framework import ChatAgent
-from agent_framework.openai import OpenAIResponsesClient
+try:
+    from agent_framework.openai import OpenAIResponsesClient
+except ImportError:
+    OpenAIResponsesClient = None  # type: ignore[misc, assignment]
 
+from agenticfleet.agents.base import FleetAgent
 from agenticfleet.config import settings
+from agenticfleet.core.openai import get_responses_model_parameter
 
 
-def create_researcher_agent() -> ChatAgent:
+def create_researcher_agent() -> FleetAgent:
     """
     Create the Researcher agent with web search capabilities.
 
@@ -26,19 +30,19 @@ def create_researcher_agent() -> ChatAgent:
     OpenAIResponsesClient. Tools are plain Python functions passed as a list.
 
     Returns:
-        ChatAgent: Configured researcher agent with web search tools
-
-    Raises:
-        AgentConfigurationError: If required configuration is missing
+        FleetAgent: Configured researcher agent with web search tools
     """
     # Load researcher-specific configuration
     config = settings.load_agent_config("researcher")
     agent_config = config.get("agent", {})
 
     # Create OpenAI chat client
-    chat_client = OpenAIResponsesClient(
-        model_id=agent_config.get("model", settings.openai_model),
-    )
+    chat_client_kwargs = {
+        get_responses_model_parameter(OpenAIResponsesClient): agent_config.get(
+            "model", settings.openai_model
+        )
+    }
+    chat_client = OpenAIResponsesClient(**chat_client_kwargs)
 
     # Import and configure tools based on agent configuration
     from agenticfleet.agents.researcher.tools.web_search_tools import web_search_tool
@@ -53,14 +57,11 @@ def create_researcher_agent() -> ChatAgent:
 
     # Create and return agent with tools
     # Note: temperature is not a ChatAgent parameter in Microsoft Agent Framework
-    agent = ChatAgent(
+    agent = FleetAgent(
         chat_client=chat_client,
         instructions=config.get("system_prompt", ""),
         name=agent_config.get("name", "researcher"),
         tools=enabled_tools,
+        runtime_config=config.get("runtime", {}),
     )
-
-    runtime_config = config.get("runtime", {})
-    setattr(agent, "runtime_config", runtime_config)
-
     return agent

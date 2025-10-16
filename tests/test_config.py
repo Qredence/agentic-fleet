@@ -168,7 +168,7 @@ def main():
         print(f"\n{GREEN}[OK] All tests passed! System is ready to run.{RESET}")
         print("\nNext steps:")
         print("  1. Make sure your .env file has a valid OPENAI_API_KEY")
-        print("  2. Run: python main.py")
+        print("  2. Run: uv run fleet")
         return 0
     else:
         print(f"\n{RED}[FAIL] Some tests failed. Please fix the issues above.{RESET}")

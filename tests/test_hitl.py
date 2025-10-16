@@ -9,7 +9,12 @@ from agenticfleet.core.approval import (
     ApprovalRequest,
     ApprovalResponse,
 )
+from agenticfleet.core.approved_tools import set_approval_handler
 from agenticfleet.core.cli_approval import CLIApprovalHandler, create_approval_request
+from agenticfleet.core.code_execution_approval import (
+    CodeApprovalOutcome,
+    maybe_request_approval_for_code_execution,
+)
 
 
 class MockApprovalHandler(CLIApprovalHandler):
@@ -139,6 +144,35 @@ def test_approval_history():
     assert len(history) == 1
     assert history[0][0] == request
     assert history[0][1].decision == ApprovalDecision.APPROVED
+
+
+def _reset_handler() -> None:
+    """Utility to clear global handler state between tests."""
+    set_approval_handler(None)
+
+
+def test_code_execution_skips_when_not_required():
+    """Code execution should bypass approval when not configured."""
+    handler = MockApprovalHandler(decision=ApprovalDecision.APPROVED)
+    try:
+        set_approval_handler(handler, require_operations=["file_operations"])
+        result = maybe_request_approval_for_code_execution("print('test')", "python")
+        assert result.outcome == CodeApprovalOutcome.APPROVED
+        assert handler.requests_received == []
+    finally:
+        _reset_handler()
+
+
+def test_code_execution_requests_when_required():
+    """Code execution should request approval when listed in configuration."""
+    handler = MockApprovalHandler(decision=ApprovalDecision.APPROVED)
+    try:
+        set_approval_handler(handler, require_operations=["code_execution"])
+        result = maybe_request_approval_for_code_execution("print('test')", "python")
+        assert result.outcome == CodeApprovalOutcome.APPROVED
+        assert len(handler.requests_received) == 1
+    finally:
+        _reset_handler()
 
 
 if __name__ == "__main__":

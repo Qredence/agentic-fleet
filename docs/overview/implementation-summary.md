@@ -1,8 +1,13 @@
 # AgenticFleet Phase 1 - Implementation Summary
 
-## ✅ Project Status: COMPLETE
+> **Status (October 16, 2025):** Archived summary covering the pre-0.5.0 layout.
+> The current Magentic implementation lives under `src/agenticfleet/`. For the
+> up-to-date architecture overview, read
+> [`../features/magentic-fleet-implementation.md`](../features/magentic-fleet-implementation.md).
 
-All Phase 1 implementation tasks have been successfully completed. The system is ready for testing and validation.
+## ✅ Project Status: COMPLETE (Historical)
+
+All Phase 1 implementation tasks were completed under the legacy package layout.
 
 ---
 
@@ -113,10 +118,10 @@ runtime without re-reading YAML files.
 
 ### Package Structure ✅ Complete
 
-- [x] agents/__init__.py with exports
-- [x] config/__init__.py with exports
-- [x] workflows/__init__.py with exports
-- [x] All tool package __init__.py files
+- [x] agents/\_\_init\_\_.py with exports
+- [x] config/\_\_init\_\_.py with exports
+- [x] workflows/\_\_init\_\_.py with exports
+- [x] All tool package \_\_init\_\_.py files
 - [x] Proper module docstrings
 
 ### Testing & Validation ✅ Complete
@@ -128,7 +133,7 @@ runtime without re-reading YAML files.
 - [x] Tool import validation (4 tools)
 - [x] Agent factory validation (4 factories)
 - [x] Workflow import validation
-- [x] __All 6/6 test categories passing__
+- [x] **All 6/6 test categories passing**
 
 ### Documentation ✅ Complete
 
@@ -205,25 +210,25 @@ runtime without re-reading YAML files.
 
 ### Dependencies Installed
 
-- __agent-framework__: 1.0.0b251007 (pre-release)
-- __openai__: >=1.0.0
-- __pydantic__: >=2.0.0
-- __python-dotenv__: >=1.0.0
-- __pyyaml__: >=6.0
-- __pytest__: >=7.0.0 (dev)
-- __black__: >=23.0.0 (dev)
-- __ruff__: >=0.1.0 (dev)
-- __mypy__: >=1.0.0 (dev)
+- **agent-framework**: 1.0.0b251007 (pre-release)
+- **openai**: >=1.0.0
+- **pydantic**: >=2.0.0
+- **python-dotenv**: >=1.0.0
+- **pyyaml**: >=6.0
+- **pytest**: >=7.0.0 (dev)
+- **black**: >=23.0.0 (dev)
+- **ruff**: >=0.1.0 (dev)
+- **mypy**: >=1.0.0 (dev)
 
 Total packages: 148
 
 ### Architecture Patterns
 
-- __Agent Factory Pattern__: Consistent agent creation across all agents
-- __Magentic Workflow__: Microsoft Agent Framework's multi-agent coordination
-- __Pydantic Models__: Type-safe structured responses
-- __Two-Tier Configuration__: Central workflow + individual agent configs
-- __Event-Driven Observability__: Real-time monitoring via on_event handler
+- **Agent Factory Pattern**: Consistent agent creation across all agents
+- **Magentic Workflow**: Microsoft Agent Framework's multi-agent coordination
+- **Pydantic Models**: Type-safe structured responses
+- **Two-Tier Configuration**: Central workflow + individual agent configs
+- **Event-Driven Observability**: Real-time monitoring via on_event handler
 
 ### Agent Temperatures
 
@@ -305,7 +310,7 @@ cat .env
 ### 2. Run Configuration Tests
 
 ```bash
-python test_config.py
+uv run python tests/test_config.py
 ```
 
 Expected: "✓ All tests passed! System is ready to run."
@@ -313,7 +318,7 @@ Expected: "✓ All tests passed! System is ready to run."
 ### 3. Launch Application
 
 ```bash
-python main.py
+uv run fleet
 ```
 
 ### 4. Try Example Tasks
@@ -338,7 +343,7 @@ python main.py
 - Test Suite: ~260 lines
 - Documentation: ~500 lines (README + docstrings)
 
-__Total: ~2,060 lines of implementation__
+**Total: ~2,060 lines of implementation**
 
 ### Documentation Coverage
 
@@ -354,33 +359,33 @@ __Total: ~2,060 lines of implementation__
 
 ### 1. Individual Agent Configurations
 
-__Decision__: Each agent has its own `agent_config.yaml` file.
+**Decision**: Each agent has its own `agent_config.yaml` file.
 
-__Rationale__: Enables independent tuning of agent behavior, temperature, and prompts without affecting others.
+**Rationale**: Enables independent tuning of agent behavior, temperature, and prompts without affecting others.
 
 ### 2. Pydantic Models for Tool Responses
 
-__Decision__: All tools return structured Pydantic models.
+**Decision**: All tools return structured Pydantic models.
 
-__Rationale__: Type safety, validation, and clear contracts between agents and tools.
+**Rationale**: Type safety, validation, and clear contracts between agents and tools.
 
 ### 3. Mock Tool Implementations
 
-__Decision__: Phase 1 uses mock data for web search and data analysis.
+**Decision**: Phase 1 uses mock data for web search and data analysis.
 
-__Rationale__: Validates architecture without external dependencies. Real APIs planned for Phase 2.
+**Rationale**: Validates architecture without external dependencies. Real APIs planned for Phase 2.
 
 ### 4. Magentic Workflow Pattern
 
-__Decision__: Used Microsoft Agent Framework's MagenticBuilder pattern.
+**Decision**: Used Microsoft Agent Framework's MagenticBuilder pattern.
 
-__Rationale__: Native framework support for multi-agent coordination with observability.
+**Rationale**: Native framework support for multi-agent coordination with observability.
 
 ### 5. REPL Interface
 
-__Decision__: Interactive command-line interface for Phase 1.
+**Decision**: Interactive command-line interface for Phase 1.
 
-__Rationale__: Simplest user interaction model for validation. Web UI planned for Phase 2.
+**Rationale**: Simplest user interaction model for validation. Web UI planned for Phase 2.
 
 ---
 
@@ -466,7 +471,7 @@ __Rationale__: Simplest user interaction model for validation. Web UI planned fo
 
 ## 🎉 Phase 1 Conclusion
 
-__Status__: ✅ __PRODUCTION READY FOR VALIDATION__
+**Status**: ✅ **PRODUCTION READY FOR VALIDATION**
 
 The AgenticFleet Phase 1 implementation is complete and fully functional. All core components have been implemented with comprehensive documentation and testing. The system is ready for:
 
@@ -475,11 +480,11 @@ The AgenticFleet Phase 1 implementation is complete and fully functional. All co
 3. ✅ Performance benchmarking
 4. ✅ Phase 2 planning and refinement
 
-__Next Recommended Action__: Run `python main.py` and test with diverse task types to identify areas for Phase 2 enhancement.
+**Next Recommended Action**: Run `uv run fleet` and test with diverse task types to identify areas for Phase 2 enhancement.
 
 ---
 
-*Generated on: Phase 1 Implementation Complete*
-*Framework: Microsoft Agent Framework v1.0.0b251007*
-*Python: 3.13.2*
-*Package Manager: uv*
+_Generated on: Phase 1 Implementation Complete_
+_Framework: Microsoft Agent Framework v1.0.0b251007_
+_Python: 3.13.2_
+_Package Manager: uv_

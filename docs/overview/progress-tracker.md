@@ -5,6 +5,12 @@
 **Branch:** 0.5
 **Last Updated:** October 10, 2025
 
+> **Status (October 16, 2025):** Archived tracker from the pre-0.5.1 layout.
+> For the active workflow, see
+> [`../features/magentic-fleet-implementation.md`](../features/magentic-fleet-implementation.md)
+> and the refreshed onboarding in
+> [`../getting-started/quick-reference.md`](../getting-started/quick-reference.md).
+
 ---
 
 ## 📊 Project Status: Phase 1 Complete ✅
@@ -279,20 +285,20 @@ All Phase 1 objectives have been completed and verified.
 ### Documentation
 
 - [README](../README.md) - Project overview
-- [Repository Guidelines](../AGENTS.md) - Development rules
-- [Quick Reference](QUICK_REFERENCE.md) - Getting started
+- [Repository Guidelines](../operations/repository-guidelines.md) - Development rules
+- [Quick Reference](../getting-started/quick-reference.md) - Getting started
 - [Checkpointing Implementation Summary](../features/checkpointing-summary.md) - Technical details
-- [Migration Guide](MIGRATION_TO_RESPONSES_API.md) - API updates
-- [Bug Fixes](FIXES.md) - Issue resolutions
+- [Responses API Migration](../migrations/responses-api-migration.md) - API updates
+- [Release Notes](../releases/2025-10-14-v0.5.1-magentic-fleet.md) - Latest validation evidence
 
 ### Commands
 
 ```bash
 # Test configuration
-uv run python test_config.py
+uv run python tests/test_config.py
 
 # Run application
-uv run python main.py
+uv run fleet
 
 # Format code
 uv run black .
@@ -334,7 +340,7 @@ uv run pytest
 
 ### Development Guidelines
 
-- Follow repository guidelines in ../AGENTS.md
+- Follow repository guidelines in ../operations/repository-guidelines.md
 - Use `uv` for all Python operations
 - Keep commits focused and well-documented
 - Test before committing

@@ -8,7 +8,7 @@ from typing import TYPE_CHECKING
 from rich.table import Table
 from rich.text import Text
 
-from agenticfleet.cli.ui import ConsoleUI, register_console_ui
+from agenticfleet.cli.ui import ConsoleUI
 from agenticfleet.config import settings
 from agenticfleet.core.logging import get_logger
 
@@ -17,10 +17,10 @@ if TYPE_CHECKING:
 
 logger = get_logger(__name__)
 
-_workflow_instance = None
+_workflow_instance: "MagenticFleet | None" = None
 
 
-def get_workflow() -> "MagenticFleet":
+def get_workflow(ui: ConsoleUI | None = None) -> "MagenticFleet":
     """
     Get the Magentic Fleet workflow instance, creating it on first use.
     """
@@ -30,7 +30,11 @@ def get_workflow() -> "MagenticFleet":
         logger.info("Using Magentic Fleet workflow")
         from agenticfleet.fleet import create_default_fleet
 
-        _workflow_instance = create_default_fleet()
+        _workflow_instance = create_default_fleet(console_ui=ui)
+        return _workflow_instance
+
+    if ui is not None:
+        _workflow_instance.set_console_ui(ui)
 
     return _workflow_instance
 
@@ -155,7 +159,11 @@ async def run_repl(workflow_instance: "MagenticFleet", ui: ConsoleUI) -> None:
                 with ui.loading("Coordinating Magentic Fleet..."):
                     result = await workflow_instance.run(user_input)
 
-                ui.log_final(result or "")
+                final_render = workflow_instance.console_callbacks.consume_final_render()
+                if final_render is None:
+                    ui.log_final(result or "")
+                else:
+                    ui.log_final(final_render)
                 ui.console.print(Text("Ready for next task", style="bold"))
                 ui.console.print(Text("=" * 72, style="dim"))
 
@@ -194,7 +202,6 @@ def run_repl_main() -> int:
     logger.info("Using OpenAI with structured responses")
 
     ui = ConsoleUI()
-    register_console_ui(ui)
 
     ui.show_header()
     ui.show_instructions()
@@ -211,7 +218,7 @@ def run_repl_main() -> int:
         ui.log_notice(f"Configuration error: {e}", style="red")
         return 1
 
-    workflow_instance = get_workflow()
+    workflow_instance = get_workflow(ui)
     ui.log_notice("Magentic workflow ready")
 
     checkpoint_config = settings.workflow_config.get("workflow", {}).get("checkpointing", {})
@@ -237,7 +244,8 @@ def run_repl_main() -> int:
         ui.log_notice(f"Fatal error: {e}", style="red")
         return 1
     finally:
-        register_console_ui(None)
+        if "workflow_instance" in locals() and workflow_instance is not None:
+            workflow_instance.set_console_ui(None)
 
 
 def main() -> None:

@@ -2,8 +2,12 @@
 
 from __future__ import annotations
 
+import asyncio
+import inspect
+import logging
 import uuid
-from typing import TYPE_CHECKING, Any
+from pathlib import Path
+from typing import TYPE_CHECKING, Any, cast
 
 from agenticfleet.agents import (
     create_analyst_agent,
@@ -11,13 +15,94 @@ from agenticfleet.agents import (
     create_researcher_agent,
 )
 from agenticfleet.config import settings
+from agenticfleet.core.approval import ApprovalDecision
+from agenticfleet.core.checkpoints import (
+    load_checkpoint_metadata_from_path,
+    normalize_checkpoint_metadata,
+    sort_checkpoint_metadata,
+)
+from agenticfleet.core.cli_approval import create_approval_request
 from agenticfleet.core.exceptions import WorkflowError
 from agenticfleet.core.logging import get_logger
+from agenticfleet.core.openai import get_responses_model_parameter
+from agenticfleet.fleet.callbacks import ConsoleCallbacks
 from agenticfleet.fleet.fleet_builder import FleetBuilder
 
-if TYPE_CHECKING:
+try:  # pragma: no cover - runtime import guard
+    from agent_framework import (
+        ChatAgent,
+        HostedCodeInterpreterTool,
+        MagenticAgentDeltaEvent,
+        MagenticAgentMessageEvent,
+        MagenticBuilder,
+        MagenticCallbackEvent,
+        MagenticCallbackMode,
+        MagenticFinalResultEvent,
+        MagenticOrchestratorMessageEvent,
+        MagenticPlanReviewDecision,
+        MagenticPlanReviewReply,
+        MagenticPlanReviewRequest,
+        RequestInfoEvent,
+        WorkflowOutputEvent,
+    )
+    from agent_framework.openai import OpenAIChatClient, OpenAIResponsesClient
+
+    _AGENT_FRAMEWORK_AVAILABLE = True
+except ModuleNotFoundError as import_error:  # pragma: no cover - fallback for tests
+    ChatAgent = None  # type: ignore[misc, assignment]
+    HostedCodeInterpreterTool = None  # type: ignore[misc, assignment]
+    MagenticAgentDeltaEvent = None  # type: ignore[misc, assignment]
+    MagenticAgentMessageEvent = None  # type: ignore[misc, assignment]
+    MagenticBuilder = None  # type: ignore[misc, assignment]
+    MagenticCallbackEvent = None  # type: ignore[misc, assignment]
+    MagenticCallbackMode = None  # type: ignore[misc, assignment]
+    MagenticFinalResultEvent = None  # type: ignore[misc, assignment]
+    MagenticOrchestratorMessageEvent = None  # type: ignore[misc, assignment]
+    MagenticPlanReviewDecision = None  # type: ignore[misc, assignment]
+    MagenticPlanReviewReply = None  # type: ignore[misc, assignment]
+    MagenticPlanReviewRequest = None  # type: ignore[misc, assignment]
+    RequestInfoEvent = None  # type: ignore[misc, assignment]
+    WorkflowOutputEvent = None  # type: ignore[misc, assignment]
+    OpenAIChatClient = None  # type: ignore[misc, assignment]
+    OpenAIResponsesClient = None  # type: ignore[misc, assignment]
+    _AGENT_FRAMEWORK_AVAILABLE = False
+    logging.getLogger(__name__).warning(
+        "agent_framework package not available: %s – running in fallback mode.",
+        import_error,
+    )
+else:  # pragma: no cover - debug logging when dependency is present
+    logging.getLogger(__name__).debug(
+        "agent_framework components loaded: %s",
+        ", ".join(
+            [
+                ChatAgent.__name__,
+                HostedCodeInterpreterTool.__name__,
+                MagenticAgentDeltaEvent.__name__,
+                MagenticAgentMessageEvent.__name__,
+                MagenticBuilder.__name__,
+                "MagenticCallbackEvent",  # Union type, no __name__
+                MagenticCallbackMode.__name__,
+                MagenticFinalResultEvent.__name__,
+                MagenticOrchestratorMessageEvent.__name__,
+                MagenticPlanReviewReply.__name__,
+                RequestInfoEvent.__name__,
+                WorkflowOutputEvent.__name__,
+                OpenAIChatClient.__name__,
+                OpenAIResponsesClient.__name__,
+            ]
+        ),
+    )
+
+if TYPE_CHECKING:  # pragma: no cover - typing helpers
     from agent_framework import AgentProtocol, CheckpointStorage
 
+    from agenticfleet.cli.ui import ConsoleUI
+else:
+    AgentProtocol = Any
+    CheckpointStorage = Any
+    ConsoleUI = Any
+
+logging.getLogger(__name__).addHandler(logging.NullHandler())
 logger = get_logger(__name__)
 
 NO_RESPONSE_GENERATED = "No response generated"
@@ -27,318 +112,348 @@ class MagenticFleet:
     """
     Magentic-based fleet orchestrator using Microsoft Agent Framework.
 
-    This class replaces the custom MultiAgentWorkflow with a proper Magentic
-    implementation that uses:
-    - StandardMagenticManager for planning and progress evaluation
-    - MagenticOrchestratorExecutor for coordination loop
-    - MagenticAgentExecutor wrappers for each specialist agent
-
-    The planner dynamically delegates to agents based on JSON-structured
-    progress ledgers rather than manual DELEGATE token parsing.
+    Coordinates specialist agents via Microsoft's Magentic workflow pattern,
+    handling plan creation, delegation, optional plan review, and streaming
+    observability callbacks surfaced in the CLI.
     """
 
     def __init__(
         self,
         checkpoint_storage: CheckpointStorage | None = None,
         approval_handler: Any | None = None,
+        approval_policy: dict[str, Any] | None = None,
         agents: dict[str, AgentProtocol] | None = None,
+        console_callbacks: ConsoleCallbacks | None = None,
     ) -> None:
-        """
-        Initialize the Magentic fleet orchestrator.
-
-        Args:
-            checkpoint_storage: Optional storage for workflow state persistence.
-            approval_handler: Optional handler for HITL plan review operations.
-            agents: Optional custom agent dictionary (uses defaults if None).
-        """
         self.checkpoint_storage = checkpoint_storage
         self.approval_handler = approval_handler
+        self.approval_policy = approval_policy or {}
+        self.console_callbacks = console_callbacks or ConsoleCallbacks()
         self.workflow_id: str | None = None
+        self._latest_final_text: str | None = None
 
-        # Create or use provided agents
         if agents is None:
             logger.info("Creating default specialist agents")
             self.agents = self._create_default_agents()
         else:
-            logger.info(f"Using {len(agents)} provided agents")
+            logger.info("Using provided specialist agents: %s", list(agents))
             self.agents = agents
 
-        # Build the Magentic workflow
+        self._apply_coder_tooling()
         self.workflow = self._build_magentic_workflow()
 
-        # Configure HITL if enabled
-        if approval_handler:
-            from agenticfleet.core.approved_tools import set_approval_handler
-
-            set_approval_handler(approval_handler)
-            logger.info("HITL approval handler configured for fleet")
-
     def _create_default_agents(self) -> dict[str, AgentProtocol]:
-        """
-        Create the default set of specialist agents.
-
-        Returns:
-            Dictionary mapping agent names to AgentProtocol instances.
-        """
         agents: dict[str, AgentProtocol] = {}
 
         try:
-            researcher = create_researcher_agent()
-            agents["researcher"] = researcher
-            logger.debug("Created researcher agent")
-        except Exception as error:
-            logger.warning(f"Failed to create researcher agent: {error}")
+            agents["researcher"] = create_researcher_agent()
+        except Exception as error:  # pragma: no cover - defensive guard
+            logger.warning("Failed to create researcher agent: %s", error)
 
         try:
-            coder = create_coder_agent()
-            agents["coder"] = coder
-            logger.debug("Created coder agent")
-        except Exception as error:
-            logger.warning(f"Failed to create coder agent: {error}")
+            agents["coder"] = create_coder_agent()
+        except Exception as error:  # pragma: no cover - defensive guard
+            logger.warning("Failed to create coder agent: %s", error)
 
         try:
-            analyst = create_analyst_agent()
-            agents["analyst"] = analyst
-            logger.debug("Created analyst agent")
-        except Exception as error:
-            logger.warning(f"Failed to create analyst agent: {error}")
+            agents["analyst"] = create_analyst_agent()
+        except Exception as error:  # pragma: no cover - defensive guard
+            logger.warning("Failed to create analyst agent: %s", error)
 
         if not agents:
             raise WorkflowError("Failed to create any specialist agents")
 
-        logger.info(f"Created {len(agents)} specialist agents: {list(agents.keys())}")
         return agents
 
-    def _build_magentic_workflow(self) -> Any:
-        """
-        Build the Magentic workflow using FleetBuilder.
+    def _apply_coder_tooling(self) -> None:
+        """Attach hosted code interpreter tooling to the coder agent."""
 
-        Returns:
-            Configured Magentic workflow ready for execution.
-        """
-        logger.info("Building Magentic workflow with FleetBuilder")
+        if not _AGENT_FRAMEWORK_AVAILABLE or OpenAIResponsesClient is None:
+            return
 
-        builder = FleetBuilder()
+        coder = self.agents.get("coder")
+        if coder is None:
+            return
 
-        # Configure the workflow
-        workflow = (
-            builder.with_agents(self.agents)
-            .with_manager()  # Uses default instructions and model from config
-            .with_observability()  # Enable streaming and progress callbacks
-            .with_checkpointing(self.checkpoint_storage)
-            .with_plan_review()  # Uses config setting
-            .build()
+        try:
+            chat_agent = cast(ChatAgent, coder)
+        except TypeError:  # pragma: no cover - defensive
+            return
+
+        responses_param = get_responses_model_parameter(OpenAIResponsesClient)  # type: ignore[arg-type]
+        model_name = settings.workflow_config.get("defaults", {}).get("model")
+
+        if not isinstance(model_name, str) or not model_name:
+            fallback_model = getattr(settings, "openai_model", None)
+            model_name = fallback_model if isinstance(fallback_model, str) else None
+
+        if not model_name:
+            logger.debug(
+                "Skipping coder tooling initialisation because no OpenAI model name was found."
+            )
+            return
+
+        chat_agent.chat_client = OpenAIResponsesClient(  # type: ignore[call-arg]
+            **{responses_param: model_name}
         )
 
-        logger.info("Magentic workflow built successfully")
+        if HostedCodeInterpreterTool is not None:
+            chat_agent.tools = HostedCodeInterpreterTool()  # type: ignore[attr-defined]
+
+    def _build_magentic_workflow(self) -> Any:
+        """Construct the Magentic workflow with repository conventions."""
+
+        builder = (
+            FleetBuilder(console_callbacks=self.console_callbacks)
+            .with_agents(self.agents)
+            .with_manager()
+            .with_observability()
+        )
+
+        if self.checkpoint_storage:
+            builder = builder.with_checkpointing(self.checkpoint_storage)
+
+        builder = builder.with_plan_review()
+        workflow = builder.build()
+
         return workflow
 
     def set_workflow_id(self, workflow_id: str) -> None:
-        """
-        Set the workflow ID for tracking and checkpoint management.
-
-        Args:
-            workflow_id: Unique identifier for this workflow execution.
-        """
         self.workflow_id = workflow_id
-        logger.debug(f"Workflow ID set to: {workflow_id}")
+
+    def set_console_ui(self, ui: ConsoleUI | None) -> None:
+        self.console_callbacks.set_ui(ui)
 
     async def run(
         self,
         user_input: str,
         resume_from_checkpoint: str | None = None,
     ) -> str:
-        """
-        Execute the Magentic workflow.
-
-        The workflow follows the Magentic coordination cycle:
-        1. Plan: Manager gathers facts and creates plan
-        2. Evaluate: Manager creates progress ledger (JSON)
-        3. Act: Orchestrator delegates to selected agent
-        4. Observe: Agent response appended to chat history
-        5. Repeat until completion or replan if stalled
-
-        Args:
-            user_input: The user's request or query.
-            resume_from_checkpoint: Optional checkpoint ID to resume from.
-
-        Returns:
-            The final response synthesized by the manager.
-        """
-        # Generate workflow ID if not set
         if not self.workflow_id:
             self.workflow_id = f"fleet_{uuid.uuid4().hex[:8]}"
-            logger.info(f"Generated workflow ID: {self.workflow_id}")
 
-        # Handle checkpoint resumption if requested
+        run_kwargs: dict[str, Any] = {}
         if resume_from_checkpoint:
-            logger.info(f"Attempting to resume from checkpoint: {resume_from_checkpoint}")
-            # Note: Checkpoint restoration is handled by the workflow's
-            # CheckpointStorage integration automatically
-            # We just need to pass the checkpoint_id to the workflow
+            run_kwargs["resume_from_checkpoint"] = resume_from_checkpoint
 
-        try:
-            logger.info(f"Starting Magentic workflow for: {user_input[:100]}...")
+        run_stream_method = getattr(self.workflow, "run_stream", None)
+        send_responses_method = getattr(self.workflow, "send_responses_streaming", None)
+        supports_streaming = (
+            _AGENT_FRAMEWORK_AVAILABLE
+            and run_stream_method is not None
+            and callable(run_stream_method)
+            and inspect.isasyncgenfunction(run_stream_method)
+        )
 
-            # Execute the Magentic workflow
-            # The workflow returns a result object with the final ChatMessage
-            run_kwargs: dict[str, Any] = {}
-            if resume_from_checkpoint is not None:
-                run_kwargs["resume_from_checkpoint"] = resume_from_checkpoint
-
+        if not supports_streaming:
+            logger.debug("Fallback workflow execution (agent_framework unavailable)")
             result = await self.workflow.run(user_input, **run_kwargs)
+            final_render = self.console_callbacks.consume_final_render()
+            if final_render and final_render.raw_text:
+                self._latest_final_text = final_render.raw_text
+                return final_render.raw_text
+            answer = self._extract_final_answer_from_result(result)
+            if answer != NO_RESPONSE_GENERATED:
+                self._latest_final_text = answer
+            return answer
 
-            # Extract the final answer from the result
-            response_text = self._extract_final_answer(result)
+        pending_request: RequestInfoEvent | None = None
+        pending_responses: dict[str, MagenticPlanReviewReply] | None = None
+        final_output_text: str | None = None
+        completed = False
+        resume_token_used = resume_from_checkpoint is not None
 
-            logger.info("Magentic workflow completed successfully")
-            return response_text
+        while not completed:
+            if (
+                pending_responses
+                and callable(send_responses_method)
+                and inspect.isasyncgenfunction(send_responses_method)
+            ):
+                stream = send_responses_method(pending_responses, **run_kwargs)
+            elif run_stream_method is not None:
+                stream = run_stream_method(user_input, **run_kwargs)
+            else:
+                break
 
-        except Exception as error:
-            logger.error(f"Magentic workflow execution failed: {error}", exc_info=True)
-            raise WorkflowError(f"Fleet execution failed: {error}") from error
+            events: list[MagenticCallbackEvent] = [event async for event in stream]
+            pending_responses = None
 
-    def _extract_final_answer(self, result: Any) -> str:
-        """
-        Extract the final answer text from the workflow result.
+            if resume_token_used:
+                run_kwargs.pop("resume_from_checkpoint", None)
+                resume_token_used = False
 
-        Args:
-            result: The result object returned by the workflow.
+            for event in events:
+                if (
+                    isinstance(event, RequestInfoEvent)
+                    and event.request_type is MagenticPlanReviewRequest
+                ):
+                    pending_request = event
+                elif isinstance(event, WorkflowOutputEvent):
+                    if event.data is not None:
+                        final_output_text = str(event.data)
+                    completed = True
+                elif isinstance(event, MagenticFinalResultEvent) and event.message is not None:
+                    self._latest_final_text = getattr(event.message, "text", None) or str(
+                        event.message
+                    )
+                elif isinstance(event, MagenticAgentMessageEvent) and event.message is not None:
+                    self._latest_final_text = getattr(event.message, "text", None) or str(
+                        event.message
+                    )
+                elif isinstance(event, MagenticAgentDeltaEvent):
+                    # Streaming deltas already routed via ConsoleCallbacks
+                    continue
 
-        Returns:
-            The final answer as a string.
-        """
-        # Try to get the output from the result
+            if pending_request is not None:
+                reply = await self._handle_plan_review_request(pending_request)
+                pending_responses = {pending_request.request_id: reply}
+                pending_request = None
+
+            if not events and pending_responses is None and pending_request is None:
+                break
+
+        final_render = self.console_callbacks.consume_final_render()
+        if final_render and final_render.raw_text:
+            self._latest_final_text = final_render.raw_text
+            return final_render.raw_text
+
+        if self._latest_final_text:
+            return self._latest_final_text
+
+        if final_output_text:
+            return final_output_text
+
+        return NO_RESPONSE_GENERATED
+
+    def _extract_final_answer_from_result(self, result: object) -> str:
+        """Best-effort extraction of a final answer from workflow output."""
+
+        if result is None:
+            return NO_RESPONSE_GENERATED
+
         if hasattr(result, "output"):
-            output = result.output
+            output = result.output  # type: ignore[attr-defined]
             if isinstance(output, str):
                 return output
             if hasattr(output, "content"):
-                content = output.content
-                if content is not None:
-                    return str(content)
-                # If content is None, fall through to check if output itself has value
+                content_value = getattr(output, "content")
+                if content_value is not None:
+                    return str(content_value)
             if output is not None:
                 return str(output)
 
-        # Try to get content directly
         if hasattr(result, "content"):
-            content = result.content
+            content = result.content  # type: ignore[attr-defined]
             if content is not None:
                 return str(content)
-            # If content is explicitly None, no response was generated
-            return NO_RESPONSE_GENERATED
 
-        # Fallback to string representation only if it's not a mock
         result_str = str(result)
         if result_str and result_str != "None" and not result_str.startswith("<MagicMock"):
             return result_str
 
-        logger.warning("Could not extract final answer from result")
+        logger.warning("Could not extract final answer from result: %s", type(result).__name__)
         return NO_RESPONSE_GENERATED
 
-    async def list_checkpoints(self) -> list[Any]:
-        """
-        List all available checkpoints.
+    async def _handle_plan_review_request(
+        self,
+        event: RequestInfoEvent,
+    ) -> MagenticPlanReviewReply:
+        request = cast(MagenticPlanReviewRequest, event.data)
+        await self.console_callbacks.notice_callback("Plan review requested.")
+        await asyncio.sleep(0)
 
-        Returns:
-            List of checkpoint metadata dictionaries. Each dictionary contains:
-                - checkpoint_id (str): Unique identifier for the checkpoint.
-                - workflow_id (str): Identifier for the associated workflow.
-                - timestamp (str): Timestamp when the checkpoint was created.
-                - current_round (int): The current round or step in the workflow.
-                - metadata (dict): Additional metadata about the checkpoint.
-                - id (str): Alias for checkpoint_id (for backward compatibility).
-        """
-        import json
-        from collections.abc import Mapping
-        from pathlib import Path
+        if self.approval_handler is not None:
+            approval_request = create_approval_request(
+                operation_type="plan_review",
+                agent_name="magentic_orchestrator",
+                operation="Approve or revise plan",
+                details={
+                    "task_text": request.task_text,
+                    "facts_text": request.facts_text,
+                    "plan_text": request.plan_text,
+                    "round_index": request.round_index,
+                },
+            )
+            response = await self.approval_handler.request_approval(approval_request)
 
-        checkpoints: list[Any] = []
+            if response.decision == ApprovalDecision.APPROVED:
+                edited = response.modified_code if response.modified_code else None
+                return MagenticPlanReviewReply(
+                    decision=MagenticPlanReviewDecision.APPROVE,
+                    edited_plan_text=edited,
+                    comments=response.reason,
+                )
 
-        # If we have checkpoint storage, try to use it
-        if self.checkpoint_storage and hasattr(self.checkpoint_storage, "list_checkpoints"):
-            # If the storage has a list method, use it
-            storage_checkpoints = await self.checkpoint_storage.list_checkpoints()
-            for checkpoint in storage_checkpoints:
-                # Convert WorkflowCheckpoint to dict ensuring REPL-compatible keys
-                if isinstance(checkpoint, Mapping):
-                    checkpoint_id = checkpoint.get("checkpoint_id") or checkpoint.get("id")
-                    workflow_id = checkpoint.get("workflow_id")
-                    timestamp = checkpoint.get("timestamp", "")
-                    current_round = checkpoint.get("current_round", 0)
-                    metadata = checkpoint.get("metadata", {})
-                else:
-                    checkpoint_id = getattr(
-                        checkpoint,
-                        "checkpoint_id",
-                        getattr(checkpoint, "id", None),
+            if response.decision == ApprovalDecision.MODIFIED:
+                return MagenticPlanReviewReply(
+                    decision=MagenticPlanReviewDecision.APPROVE,
+                    edited_plan_text=response.modified_code,
+                    comments=response.reason,
+                )
+
+            return MagenticPlanReviewReply(
+                decision=MagenticPlanReviewDecision.REVISE,
+                comments=response.reason or "Reviewer requested a revised plan.",
+            )
+
+        return MagenticPlanReviewReply(decision=MagenticPlanReviewDecision.APPROVE)
+
+    async def list_checkpoints(self) -> list[dict[str, Any]]:
+        storage = self.checkpoint_storage
+
+        if storage and hasattr(storage, "list_checkpoints"):
+            try:
+                raw_checkpoints = await storage.list_checkpoints()
+            except Exception as error:  # pragma: no cover - defensive guard
+                logger.warning("Failed to read checkpoints from storage: %s", error)
+            else:
+                normalized = [
+                    checkpoint_dict
+                    for checkpoint_dict in (
+                        normalize_checkpoint_metadata(checkpoint)
+                        for checkpoint in (raw_checkpoints or [])
                     )
-                    workflow_id = getattr(checkpoint, "workflow_id", None)
-                    timestamp = getattr(checkpoint, "timestamp", "")
-                    current_round = getattr(checkpoint, "current_round", 0)
-                    metadata = getattr(checkpoint, "metadata", {})
+                    if checkpoint_dict is not None
+                ]
+                return sort_checkpoint_metadata(normalized)
 
-                checkpoint_dict = {
-                    "checkpoint_id": checkpoint_id,
-                    "workflow_id": workflow_id,
-                    # Retain "id" as a backwards compatible alias if callers relied on it
-                    "id": checkpoint_id,
-                    "timestamp": timestamp,
-                    "current_round": current_round,
-                    "metadata": metadata,
-                }
-                checkpoints.append(checkpoint_dict)
-        else:
-            # Fallback: scan the checkpoints directory
-            checkpoint_dir = Path("./checkpoints")
-            if checkpoint_dir.exists():
-                for checkpoint_file in checkpoint_dir.glob("*.json"):
-                    try:
-                        with open(checkpoint_file) as f:
-                            checkpoint_data = json.load(f)
+        fallback_path = self._default_checkpoint_directory()
+        logger.debug("Scanning local checkpoint directory at %s", fallback_path)
+        return await asyncio.to_thread(
+            load_checkpoint_metadata_from_path,
+            fallback_path,
+        )
 
-                        # Extract the expected fields
-                        checkpoint_info = {
-                            "checkpoint_id": checkpoint_data.get("checkpoint_id"),
-                            "workflow_id": checkpoint_data.get("workflow_id"),
-                            "timestamp": checkpoint_data.get("timestamp"),
-                            "current_round": checkpoint_data.get("executor_states", {})
-                            .get("magentic_orchestrator", {})
-                            .get("plan_review_round", 0),
-                            "metadata": {
-                                "status": checkpoint_data.get("metadata", {}).get(
-                                    "checkpoint_type", "unknown"
-                                )
-                            },
-                        }
-                        checkpoints.append(checkpoint_info)
-                    except (json.JSONDecodeError, KeyError) as e:
-                        logger.warning(f"Failed to parse checkpoint file {checkpoint_file}: {e}")
-                        continue
-
-        # Sort by timestamp descending (newest first)
-        checkpoints.sort(key=lambda x: x.get("timestamp", ""), reverse=True)
-
-        return checkpoints
+    def _default_checkpoint_directory(self) -> Path:
+        checkpoint_config = (
+            settings.workflow_config.get("workflow", {}).get("checkpointing", {}) or {}
+        )
+        storage_path = checkpoint_config.get("storage_path", "./checkpoints")
+        try:
+            return Path(storage_path).expanduser()
+        except TypeError:  # pragma: no cover - defensive guard
+            logger.debug(
+                "Invalid checkpoint storage path configured (%r); using default ./checkpoints",
+                storage_path,
+            )
+            return Path("checkpoints")
 
 
-# Default fleet instance factory for backward compatibility
-# Note: Do not instantiate at module level to avoid import errors
-# Use create_default_fleet() function instead
-
-
-def create_default_fleet() -> MagenticFleet:
+def create_default_fleet(console_ui: ConsoleUI | None = None) -> MagenticFleet:
     """
-    Create a default MagenticFleet instance with settings from config.
+    Instantiate a MagenticFleet wired to the repository defaults.
+
+    Args:
+        console_ui: Optional CLI UI implementation used to render streaming callbacks.
 
     Returns:
-        Configured MagenticFleet instance ready to run.
+        A configured MagenticFleet ready for execution.
     """
-    checkpoint_storage = settings.create_checkpoint_storage()
 
+    checkpoint_storage = settings.create_checkpoint_storage()
     approval_handler = None
-    hitl_config = settings.workflow_config.get("workflow", {}).get("human_in_the_loop", {})
+    hitl_config = settings.workflow_config.get("workflow", {}).get("human_in_the_loop", {}) or {}
+
     if hitl_config.get("enabled", False):
         from agenticfleet.core.cli_approval import CLIApprovalHandler
 
@@ -348,9 +463,17 @@ def create_default_fleet() -> MagenticFleet:
             timeout_seconds=timeout_seconds,
             auto_reject_on_timeout=auto_reject,
         )
-        logger.info(f"HITL enabled with timeout={timeout_seconds}s, auto_reject={auto_reject}")
+        logger.info(
+            "HITL enabled with timeout=%s, auto_reject=%s",
+            timeout_seconds,
+            auto_reject,
+        )
+
+    console_callbacks = ConsoleCallbacks(console_ui)
 
     return MagenticFleet(
         checkpoint_storage=checkpoint_storage,
+        approval_policy=hitl_config,
         approval_handler=approval_handler,
+        console_callbacks=console_callbacks,
     )

@@ -7,7 +7,7 @@ from enum import Enum
 from typing import TYPE_CHECKING, NamedTuple
 
 from agenticfleet.core.approval import ApprovalDecision
-from agenticfleet.core.approved_tools import get_approval_handler
+from agenticfleet.core.approved_tools import get_approval_handler, operation_requires_approval
 from agenticfleet.core.cli_approval import create_approval_request
 from agenticfleet.core.logging import get_logger
 
@@ -41,12 +41,16 @@ def maybe_request_approval_for_code_execution(code: str, language: str) -> CodeA
         CodeApprovalResult indicating the outcome and any relevant data.
     """
 
+    operation_type = "code_execution"
     handler = get_approval_handler()
     if handler is None:
         return CodeApprovalResult(outcome=CodeApprovalOutcome.NO_HANDLER)
 
+    if not operation_requires_approval(operation_type):
+        return CodeApprovalResult(outcome=CodeApprovalOutcome.APPROVED)
+
     request = create_approval_request(
-        operation_type="code_execution",
+        operation_type=operation_type,
         agent_name="coder",
         operation="Execute Python code",
         details={"language": language, "code_length": len(code)},

@@ -99,10 +99,10 @@ Always use `uv run` for executing Python commands:
 
 ```bash
 # Run configuration tests
-uv run python test_config.py
+uv run python tests/test_config.py
 
 # Start the application
-uv run python main.py
+uv run fleet
 
 # Run pytest
 uv run pytest
@@ -120,13 +120,13 @@ uv run ruff check .
 
 ### Test Configuration
 ```bash
-uv run python test_config.py
+uv run python tests/test_config.py
 ```
 Expected: All 6/6 tests pass
 
 ### Test Application Startup
 ```bash
-echo "quit" | uv run python main.py
+echo "quit" | uv run fleet
 ```
 Expected: Application starts successfully with workflow creation message
 
@@ -141,7 +141,7 @@ For any new agent or client code:
 - [ ] Don't pass `temperature` or `api_key` to constructor
 - [ ] Ensure `OPENAI_API_KEY` is set in environment
 - [ ] Use `uv run` for all Python command executions
-- [ ] Test with `uv run python test_config.py`
+- [ ] Test with `uv run python tests/test_config.py`
 - [ ] Verify application startup
 
 ---

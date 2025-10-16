@@ -1,11 +1,13 @@
 """Interactive console helpers for the AgenticFleet CLI."""
 
+from __future__ import annotations
+
 import itertools
 import threading
 import time
-from collections.abc import Iterable, Iterator
+from collections.abc import Iterable, Iterator, Sequence
 from contextlib import contextmanager
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
@@ -22,9 +24,19 @@ from rich.text import Text
 
 @dataclass
 class AgentMessage:
+    """Represents a message emitted by an agent participant."""
+
     agent_name: str
     content: str
     mode: str = "response"
+
+
+@dataclass
+class FinalRenderData:
+    """Structured payload used when rendering the final answer."""
+
+    sections: list[tuple[str, list[str]]] = field(default_factory=list)
+    raw_text: str | None = None
 
 
 class ConsoleUI:
@@ -45,15 +57,21 @@ class ConsoleUI:
         )
 
     def reset_run(self) -> None:
+        """Reset counters for the next orchestration run."""
+
         self.step_counter = 1
 
     def show_header(self) -> None:
+        """Render the CLI header banner."""
+
         self.console.print(Text("AgenticFleet", style="bold"))
         self.console.print(Text("Multi-Agent Orchestration • Magentic Fleet", style="dim"))
         self.console.print(Text(self._divider, style="dim"))
         self.console.print()
 
     def show_instructions(self) -> None:
+        """Show usage instructions."""
+
         self._print_section(
             "How to Interact",
             [
@@ -64,6 +82,8 @@ class ConsoleUI:
         )
 
     async def prompt_async(self, label: str = "Task") -> str:
+        """Prompt the operator for input, preserving Rich output."""
+
         with patch_stdout():
             text = await self.session.prompt_async(HTML(f"<prompt>➤ {label.lower()} › </prompt>"))
         return text.strip()
@@ -91,10 +111,14 @@ class ConsoleUI:
             thread.join(timeout=1)
 
     def log_task(self, task: str) -> None:
+        """Record the starting task description."""
+
         self.reset_run()
         self._print_section("Task", [task], pre_blank=False)
 
     def log_plan(self, facts: str | Iterable[str] | None, plan: str | Iterable[str] | None) -> None:
+        """Render the manager's plan and gathered facts."""
+
         facts_lines = [line for line in self._format_lines(facts) if line != "(none)"]
         plan_lines = [line for line in self._format_lines(plan) if line != "(none)"]
         body: list[str] = []
@@ -110,6 +134,8 @@ class ConsoleUI:
         self.step_counter += 1
 
     def log_progress(self, status: str, next_speaker: str, instruction: str | None = None) -> None:
+        """Render the latest progress ledger line."""
+
         lines = [
             f"Status      : {status}",
             f"Next speaker: {next_speaker}",
@@ -121,28 +147,83 @@ class ConsoleUI:
         self._print_section("Progress", lines)
 
     def log_agent_message(self, message: AgentMessage) -> None:
+        """Render a specialist agent response."""
+
         lines = [line for line in message.content.strip().splitlines() if line.strip()]
         if not lines:
             return
         self._print_section(f"Agent · {message.agent_name}", [f"  {line}" for line in lines])
 
     def log_notice(self, text: str, *, style: str = "blue") -> None:
-        self._print_section("Notice", [f"  {text}"])
+        """Render a notice message."""
 
-    def log_final(self, result: Any) -> None:
-        sections, raw_text = self._format_final_sections(result)
-        for title, lines in sections:
+        self._print_section("Notice", [f"  {text}"], style=style)
+
+    def log_final(self, result: FinalRenderData | str | Any | None) -> None:
+        """Render the final answer payload."""
+
+        sections: list[tuple[str, list[str]]]
+        raw_output: str
+
+        if isinstance(result, FinalRenderData):
+            sections = result.sections or [("Result", ["(none)"])]
+            raw_output = result.raw_text or ""
+        elif isinstance(result, str):
+            normalized = result or ""
+            lines = [line.strip() for line in normalized.splitlines() if line.strip()]
+            sections = [("Result", lines or ["(none)"])]
+            raw_output = normalized
+        elif result is None:
+            sections = [("Result", ["(none)"])]
+            raw_output = ""
+        else:
+            message = getattr(result, "message", result)
+            sections = []
+            raw_output = ""
+
+            if hasattr(message, "facts"):
+                facts_lines = self._format_lines(getattr(message, "facts"))
+                if facts_lines:
+                    sections.append(("Facts", facts_lines))
+
+            if hasattr(message, "plan"):
+                plan_lines = self._format_lines(getattr(message, "plan"))
+                if plan_lines:
+                    sections.append(("Plan", plan_lines))
+
+            if hasattr(message, "status"):
+                status = getattr(message, "status")
+                if status is not None:
+                    sections.append(("Status", [str(status)]))
+
+            if hasattr(message, "content") and getattr(message, "content"):
+                raw_output = str(getattr(message, "content"))
+            else:
+                raw_output = str(getattr(message, "raw_text", "")) or ""
+
+            if not sections:
+                content_lines = self._format_lines(raw_output)
+                sections.append(("Result", content_lines))
+
+        if not sections:
+            sections = [("Result", ["(none)"])]
+
+        for index, (title, lines) in enumerate(sections):
             pretty = [f"  {line}" for line in lines] if lines else ["  (none)"]
-            self._print_section(title, pretty)
-        display_text = raw_text.strip("\n")
-        if display_text:
+            self._print_section(title, pretty, pre_blank=index != 0)
+
+        if raw_output and raw_output.strip():
             self.console.print(Text("Raw Output", style="bold"))
             self.console.print(Text(self._divider, style="dim"))
-            self.console.print(display_text)
+            self.console.print(raw_output)
             self.console.print()
 
     @staticmethod
-    def _format_lines(value: str | Iterable[str | dict[str, Any]] | None) -> list[str]:
+    def _format_lines(
+        value: str | Iterable[str | dict[str, Any]] | dict[str, Any] | None,
+    ) -> list[str]:
+        """Normalize various inputs to a list of displayable strings."""
+
         if value is None:
             return ["(none)"]
 
@@ -151,159 +232,46 @@ class ConsoleUI:
             stripped = [v.strip().strip("'\"") for v in normalized.splitlines() if v.strip()]
             return stripped or ["(none)"]
 
-        lines: list[str] = []
-        for item in value:
-            if isinstance(item, dict):
-                for key, val in item.items():
-                    lines.append(f"{key}: {val}")
-            else:
-                text = str(item).strip().strip("'\"")
-                text = text.replace("\\n", "\n")
-                if text:
-                    lines.append(text)
+        if isinstance(value, dict):
+            return [f"{key}: {val}" for key, val in value.items()]
 
-        return lines or ["(none)"]
+        if isinstance(value, Sequence):
+            lines: list[str] = []
+            for item in value:
+                if isinstance(item, dict):
+                    lines.extend(f"{key}: {val}" for key, val in item.items())
+                elif item is None:
+                    continue
+                else:
+                    text = str(item).strip()
+                    if text:
+                        lines.extend(ConsoleUI._format_lines(text))
+            return lines or ["(none)"]
 
-    def _print_section(self, title: str, lines: Iterable[str], *, pre_blank: bool = True) -> None:
+        text = str(value).strip()
+        return ConsoleUI._format_lines(text) if text else ["(none)"]
+
+    def _print_section(
+        self,
+        title: str,
+        lines: Iterable[str],
+        *,
+        pre_blank: bool = True,
+        style: str | None = None,
+    ) -> None:
+        """Render a titled section with optional styling."""
+
         if pre_blank:
             self.console.print()
-        self.console.print(Text(title, style="bold"))
+
+        header_style = "bold" if style is None else f"bold {style}"
+        self.console.print(Text(title, style=header_style))
         self.console.print(Text(self._divider, style="dim"))
+
         for line in lines:
-            self.console.print(line)
+            if style:
+                self.console.print(Text(line, style=style))
+            else:
+                self.console.print(line)
+
         self.console.print()
-
-    def _format_final_sections(self, result: Any) -> tuple[list[tuple[str, list[str]]], str]:
-        raw_text = self._coerce_raw_text(result)
-        structured_sections = self._extract_structured_sections(result)
-        if structured_sections:
-            return structured_sections, raw_text
-
-        raw_for_lines = raw_text.strip()
-        lines = [line.strip() for line in raw_for_lines.splitlines() if line.strip()]
-        if not lines:
-            return [("Result", ["(no response)"])], ""
-        return [("Result", lines)], raw_text
-
-    def _extract_structured_sections(self, result: Any) -> list[tuple[str, list[str]]]:
-        payload = self._find_structured_payload(result)
-        if payload is None:
-            return []
-
-        sections: list[tuple[str, list[str]]] = []
-
-        facts_value = self._get_first_attribute(payload, ["facts", "facts_text", "facts_list"])
-        facts_lines = [ln for ln in self._format_lines(facts_value) if ln != "(none)"]
-        if facts_lines:
-            sections.append(("Facts", facts_lines))
-
-        plan_value = self._get_first_attribute(payload, ["plan", "plan_text", "plan_steps"])
-        plan_lines = [ln for ln in self._format_lines(plan_value) if ln != "(none)"] if plan_value else []
-        if plan_lines:
-            sections.append(("Plan", plan_lines))
-
-        deliverable_value = self._get_first_attribute(
-            payload,
-            ["deliverable", "deliverables", "deliverable_text", "deliverable_notes"],
-        )
-        deliverable_lines = (
-            [ln for ln in self._format_lines(deliverable_value) if ln != "(none)"]
-            if deliverable_value
-            else []
-        )
-        if not deliverable_lines and plan_lines:
-            for idx, line in enumerate(plan_lines):
-                if line.lower().startswith("deliverable"):
-                    deliverable_lines = plan_lines[idx:]
-                    break
-        if deliverable_lines:
-            sections.append(("Deliverable", deliverable_lines))
-
-        status_value = self._get_first_attribute(payload, ["status", "state"])
-        status_text: str | None = None
-        if status_value is not None:
-            if isinstance(status_value, str):
-                status_text = status_value
-            elif hasattr(status_value, "value"):
-                status_candidate = getattr(status_value, "value")
-                if isinstance(status_candidate, str):
-                    status_text = status_candidate
-            if status_text is None:
-                status_text = str(status_value)
-        if status_text:
-            sections.append(("Status", [status_text]))
-
-        return sections
-
-    def _coerce_raw_text(self, result: Any) -> str:
-        if isinstance(result, str):
-            return result
-
-        candidates = [result]
-        seen: set[int] = set()
-        while candidates:
-            current = candidates.pop()
-            if current is None:
-                continue
-            if isinstance(current, str):
-                return current
-            obj_id = id(current)
-            if obj_id in seen:
-                continue
-            seen.add(obj_id)
-            for attr in ("content", "text", "message", "output", "value"):
-                if hasattr(current, attr):
-                    candidate = getattr(current, attr)
-                    if candidate is None:
-                        continue
-                    if isinstance(candidate, str):
-                        return candidate
-                    candidates.append(candidate)
-
-        return str(result)
-
-    def _find_structured_payload(self, result: Any) -> Any | None:
-        if isinstance(result, str) or result is None:
-            return None
-
-        to_visit = [result]
-        seen: set[int] = set()
-        while to_visit:
-            current = to_visit.pop()
-            if current is None or isinstance(current, str):
-                continue
-            obj_id = id(current)
-            if obj_id in seen:
-                continue
-            seen.add(obj_id)
-
-            if any(hasattr(current, attr) for attr in ("facts", "facts_text", "plan", "plan_text")):
-                return current
-
-            for attr in ("message", "output", "result", "data", "value", "payload", "response"):
-                if hasattr(current, attr):
-                    candidate = getattr(current, attr)
-                    if candidate is not None:
-                        to_visit.append(candidate)
-
-        return None
-
-    @staticmethod
-    def _get_first_attribute(obj: Any, names: Iterable[str]) -> Any:
-        for name in names:
-            if hasattr(obj, name):
-                value = getattr(obj, name)
-                if value is not None:
-                    return value
-        return None
-
-# Registry helpers so callbacks can output to the active UI.
-_CURRENT_UI = threading.local()
-
-
-def register_console_ui(ui: ConsoleUI | None) -> None:
-    _CURRENT_UI.value = ui
-
-
-def get_console_ui() -> ConsoleUI | None:
-    return getattr(_CURRENT_UI, "value", None)

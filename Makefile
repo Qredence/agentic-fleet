@@ -29,7 +29,6 @@ help:
 # Setup commands
 install:
 	uv sync --all-extras
-
 sync:
 	uv sync
 

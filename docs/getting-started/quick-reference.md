@@ -1,302 +1,116 @@
-# 🚀 AgenticFleet Quick Reference
+# AgenticFleet Quick Reference
 
-## One-Command Setup
+**Version:** 0.5.1
+**Last Updated:** October 16, 2025
 
-```bash
-# From AgenticFleet directory
-cp .env.example .env           # Add your OPENAI_API_KEY
-uv sync                        # Install all dependencies
-source .venv/bin/activate      # Activate environment
-python test_config.py          # Verify setup (should pass 6/6)
-python main.py                 # Launch application
-```
-
-## 📂 Key Files
-
-| File | Purpose |
-|------|---------|
-| `main.py` | Application entry point - run this |
-| `test_config.py` | Configuration validation tests |
-| `config/settings.py` | Configuration loader |
-| `config/workflow_config.yaml` | Workflow execution parameters |
-| `workflows/magentic_workflow.py` | Multi-agent coordination |
-
-## 🎛️ Live CLI Experience
-
-Run `uv run fleet` to launch the rich console (the legacy `uv run agentic-fleet` alias still works). The interface now:
-
-- Streams Magentic plans, agent “thoughts”, and progress ledgers in real time.
-- Shows shimmering loading states while the fleet reasons.
-- Displays final answers in structured panels with zero scrolling guesswork.
-- Prompt history/search (↑/↓, Ctrl+R) powered by prompt-toolkit for fast iteration.
-
-## 🤖 Agents
-
-| Agent | Temperature | Tools | Purpose |
-|-------|-------------|-------|---------|
-| **Orchestrator** | 0.1 | None | Task planning & delegation |
-| **Researcher** | 0.3 | `web_search_tool` | Information gathering |
-| **Coder** | 0.2 | None (draft guidance only) | Code suggestions & review |
-| **Analyst** | 0.2 | `data_analysis_tool`, `visualization_suggestion_tool` | Data analysis & insights |
-
-## 🛠️ Tools
-
-### Web Search (`researcher_agent`)
-
-```python
-from agents.researcher_agent.tools.web_search_tools import web_search_tool
-
-response = web_search_tool("Python machine learning")
-# Returns: WebSearchResponse with SearchResult[]
-```
-
-### Coder Agent (draft only)
-
-```python
-from agenticfleet.agents import create_coder_agent
-
-coder = create_coder_agent()
-suggestion = await coder.run("Draft a Python function that greets a user")
-# Returns: guidance plus code snippet (execution happens manually)
-```
-
-### Data Analysis (`analyst_agent`)
-
-```python
-from agents.analyst_agent.tools.data_analysis_tools import (
-    data_analysis_tool,
-    visualization_suggestion_tool
-)
-
-analysis = data_analysis_tool(data="Sales: Q1=$100k, Q2=$150k")
-# Returns: DataAnalysisResponse with insights[]
-
-viz = visualization_suggestion_tool(data_type="time_series")
-# Returns: VisualizationSuggestion with chart_type, rationale
-```
-
-## ⚙️ Configuration
-
-### Environment Variables (`.env`)
-
-```bash
-OPENAI_API_KEY=sk-your-key-here    # Required
-OPENAI_MODEL=gpt-4o                # Optional (default in configs)
-```
-
-### Workflow Limits (`config/workflow_config.yaml`)
-
-```yaml
-workflow:
-  max_rounds: 10          # Max conversation rounds
-  max_stalls: 3           # Max stalls before reset
-  max_resets: 2           # Max workflow resets
-  timeout_seconds: 300    # Task timeout
-```
-
-### Agent Config (`agents/*/agent_config.yaml`)
-
-```yaml
-agent:
-  name: "agent_name"
-  model: "gpt-4o"
-  temperature: 0.2        # Agent-specific
-  max_tokens: 4000
-
-system_prompt: |
-  Your agent's instructions here
-
-# Agent-specific settings below
-## 🎯 Example Tasks
-
-### Research + Code
-
-```text
-🎯 Your task: Research Python async programming and write example code with error handling
-```
-
-### Data Analysis
-
-```text
-🎯 Your task: Analyze sales trends Q1-Q4: $100k, $150k, $200k, $180k and suggest best visualization
-```
-
-### Mixed Task
-
-```text
-🎯 Your task: Research REST API best practices, write a Python Flask example, and explain security considerations
-```
-
-### Code Explanation
-
-```text
-🎯 Your task: Write a Python function to merge sorted lists and explain time complexity
-```
-
-## 🧪 Testing
-
-### Run All Tests
-
-```bash
-python test_config.py
-```
-
-### Expected Output
-
-```text
-✓ PASS - Environment file
-✓ PASS - OpenAI API Key
-✓ PASS - Workflow config: max_rounds
-✓ PASS - Workflow config: max_stalls
-✓ PASS - Workflow config: max_resets
-✓ PASS - orchestrator_agent config
-✓ PASS - researcher_agent config
-✓ PASS - coder_agent config
-✓ PASS - analyst_agent config
-✓ PASS - Import web_search_tool
-✓ PASS - Import code_interpreter_tool
-✓ PASS - Import data_analysis_tool
-✓ PASS - Import visualization_suggestion_tool
-✓ PASS - Factory create_orchestrator_agent
-✓ PASS - Factory create_researcher_agent
-✓ PASS - Factory create_coder_agent
-✓ PASS - Factory create_analyst_agent
-✓ PASS - Workflow import
-
-Overall: 6/6 tests passed
-```
-
-## 🐛 Common Issues
-
-### "OPENAI_API_KEY not found"
-
-```bash
-# Solution: Add key to .env file
-echo "OPENAI_API_KEY=sk-your-key-here" > .env
-```
-
-### "Module not found" errors
-
-```bash
-# Solution: Reinstall dependencies
-uv sync --force
-# or
-pip install -e . --force-reinstall
-```
-
-### YAML syntax errors
-
-```bash
-# Solution: Validate YAML files
-python -c "import yaml; yaml.safe_load(open('config/workflow_config.yaml'))"
-```
-
-### Import errors from agents
-
-```bash
-# Solution: Check you're in project root and venv is active
-pwd  # Should end in /AgenticFleet
-which python  # Should point to .venv/bin/python
-```
-
-## 📊 Project Structure
-
-```text
-AgenticFleet/
-├── main.py                     ← Run this
-├── test_config.py              ← Test this first
-├── .env                        ← Add your API key here
-│
-├── config/
-│   ├── settings.py
-│   └── workflow_config.yaml
-│
-├── agents/
-│   ├── orchestrator_agent/
-│   │   ├── agent.py
-│   │   └── agent_config.yaml
-│   ├── researcher_agent/
-│   │   ├── agent.py
-│   │   ├── agent_config.yaml
-│   │   └── tools/web_search_tools.py
-│   ├── coder_agent/
-│   │   ├── agent.py
-│   │   ├── agent_config.yaml
-│   │   └── tools/code_interpreter.py
-│   └── analyst_agent/
-│       ├── agent.py
-│       ├── agent_config.yaml
-│       └── tools/data_analysis_tools.py
-│
-└── workflows/
-    └── magentic_workflow.py
-```
-
-## 🔍 Debugging
-
-### Enable verbose output
-
-```python
-# In main.py, add before workflow creation:
-import logging
-logging.basicConfig(level=logging.DEBUG)
-```
-
-### Check agent creation
-
-```python
-# Test individual agent
-from agents.orchestrator_agent.agent import create_orchestrator_agent
-orchestrator = create_orchestrator_agent()
-print(f"Agent created: {orchestrator}")
-```
-
-### Validate configuration
-
-```python
-# Test config loading
-from config.settings import settings
-print(f"Workflow config: {settings.workflow_config}")
-print(f"Agent config: {settings.load_agent_config('agents/orchestrator_agent')}")
-```
-
-## 💡 Tips
-
-### Customize Agent Behavior
-
-Edit `agents/*/agent_config.yaml` to change:
-
-- Temperature (creativity vs consistency)
-- System prompt (agent personality and rules)
-- Max tokens (response length)
-
-### Adjust Execution Limits
-
-Edit `config/workflow_config.yaml` to change:
-
-- `max_rounds`: More rounds = more complex tasks
-- `max_stalls`: Patience for stuck workflows
-- `timeout_seconds`: Overall task timeout
-
-### Monitor Workflow Events
-
-The `on_event` handler in `workflows/magentic_workflow.py` logs all workflow events. Uncomment print statements for detailed tracking.
-
-## 📚 Resources
-
-- **Documentation Index**: `docs/README.md`
-- **Implementation Details**: `../overview/implementation-summary.md`
-- **Developer Standards**: `../operations/repository-guidelines.md`
-- **Troubleshooting**: `../runbooks/troubleshooting.md`
-- **Microsoft Agent Framework**: [docs.microsoft.com/agent-framework](https://docs.microsoft.com/agent-framework)
-
-## 🆘 Get Help
-
-1. **Configuration Issues**: Run `python test_config.py`
-2. **Runtime Errors**: Check `.env` file and API key
-3. **Tool Errors**: Verify imports work: `python -c "from agents.researcher_agent.tools.web_search_tools import web_search_tool"`
-4. **Workflow Errors**: Check YAML syntax in config files
+Use this page as the fastest path from a fresh clone to a productive workstation.
 
 ---
 
-**Ready to start?** Run: `python main.py`
+## First-Time Setup
+
+```bash
+cp .env.example .env              # Add OPENAI_API_KEY and optional Mem0 settings
+uv sync                           # Install runtime + dev dependencies
+uv run python tests/test_config.py  # Smoke-test configuration (pytest suite)
+uv run fleet                      # Launch the interactive CLI
+```
+
+> Legacy entry points such as `python main.py` have been retired. Always run
+> the packaged CLI (`fleet` / `agentic-fleet`) or the module form
+> `uv run python -m agenticfleet`.
+
+---
+
+## Everyday Commands
+
+| Task | Recommended Command |
+|------|---------------------|
+| Launch CLI | `uv run fleet` |
+| Run with workflow flag | `uv run fleet --workflow=magentic` *(default)* |
+| Run full pytest suite | `make test` *(wraps `uv run pytest -v`)* |
+| Config smoke test only | `make test-config` *(wraps `uv run python tests/test_config.py`)* |
+| Format & lint | `make format` then `make lint` |
+| Static checks bundle | `make check` *(ruff + mypy)* |
+| Clean caches | `make clean` |
+| Install/update deps | `make install` *(first run)*, `make sync` *(subsequent sync)* |
+
+All `make` targets are thin wrappers around `uv` commands defined in the root `Makefile`.
+
+---
+
+## Key Files & Folders
+
+| Path | Description |
+|------|-------------|
+| `src/agenticfleet/cli/repl.py` | Console entry point invoked by `fleet` / `agentic-fleet`. |
+| `src/agenticfleet/config/workflow.yaml` | Workflow-level limits, checkpointing, HITL settings. |
+| `src/agenticfleet/config/settings.py` | Environment loader and config helpers. |
+| `src/agenticfleet/agents/<role>/config.yaml` | Per-agent prompts, tooling, runtime flags. |
+| `src/agenticfleet/fleet/magentic_fleet.py` | Magentic orchestration wrapper and factory (`create_default_fleet`). |
+| `tests/test_config.py` | End-to-end configuration smoke tests. |
+| `docs/` | Architecture, feature, and operations guides (see `docs/README.md`). |
+| `Makefile` | Shortcut commands for development workflows. |
+
+---
+
+## Agent Roster (Defaults)
+
+| Agent | Config File | Default Model | Enabled Tools | Purpose |
+|-------|-------------|---------------|---------------|---------|
+| Orchestrator | `src/agenticfleet/agents/orchestrator/config.yaml` | `gpt-5` | — | Plans tasks, selects speakers, synthesises results. |
+| Researcher | `src/agenticfleet/agents/researcher/config.yaml` | `gpt-5` | `web_search_tool` | Performs external research with inline citations. |
+| Coder | `src/agenticfleet/agents/coder/config.yaml` | `gpt-5` | — *(draft-only)* | Drafts code and runbooks; execution stays manual. |
+| Analyst | `src/agenticfleet/agents/analyst/config.yaml` | `gpt-5` | `data_analysis_tool`, `visualization_suggestion_tool` | Interprets data and recommends visuals. |
+
+Tweak models, runtime flags, or tool availability by editing the corresponding YAML file, then rerun `uv run python tests/test_config.py` to validate.
+
+---
+
+## Configuration Reference
+
+- **Environment:** `.env` (copied from `.env.example`) supplies `OPENAI_API_KEY`, optional Mem0 and Azure identity settings.
+- **Workflow:** `src/agenticfleet/config/workflow.yaml`
+  - `workflow.max_rounds`, `max_stalls`, `max_resets`, `timeout_seconds`
+  - `checkpointing` → storage path (`./checkpoints`) and retention
+  - `human_in_the_loop` → approval gates for high-risk operations
+- **Memory:** Enable persistent Mem0 in `workflow.checkpointing` and the agent runtime sections (`checkpoint: true`).
+- **Console Options:** CLI accepts `--workflow`, reserved for backwards compatibility; all values defer to Magentic orchestration.
+
+---
+
+## Testing & Quality Gates
+
+```bash
+make test-config        # Sanity check configs, factories, imports
+make test               # Full pytest run (async + CLI + mem0 suites)
+make lint               # Ruff lint rules (pycodestyle, pyflakes, pyupgrade)
+make format             # Ruff --fix + Black
+make type-check         # Mypy (src-only)
+make check              # Lint + mypy bundle
+```
+
+Spot-check specific tests with `uv run pytest tests/<file>.py -k "<expression>"`.
+
+---
+
+## CLI Tips
+
+- **History & Search:** Use ↑ / ↓ to cycle prompts, `Ctrl+R` to fuzzy-search history.
+- **Checkpointing:** `checkpoints` lists saved states, `resume <id>` continues a run.
+- **Status Panel:** The console streams plan deltas, agent turns, and final answers.
+- **Exit:** Type `quit`, `exit`, or press `Ctrl+C` and confirm.
+
+---
+
+## Troubleshooting Cheatsheet
+
+| Symptom | Quick Fix |
+|---------|-----------|
+| `OPENAI_API_KEY not set` | Confirm `.env` exists or export the key before running the CLI. |
+| Missing dependencies | `make sync` (or `uv sync`) to reinstall from `uv.lock`. |
+| Stale caches or weird imports | `make clean` then rerun tests. |
+| CLI refuses to start | Run `uv run python tests/test_config.py` to validate configs and API credentials. |
+| Mem0/context issues | Check `memories/` directory and review `docs/operations/mem0-integration.md`. |
+
+For deeper diagnostics, see `docs/runbooks/troubleshooting.md`.
