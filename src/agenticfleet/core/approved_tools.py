@@ -22,10 +22,19 @@ def set_approval_handler(
     trusted_operations: Iterable[str] | None = None,
 ) -> None:
     """
-    Set the global approval handler for code execution.
+    Set the global approval handler for code execution and configure approval requirements.
 
     Args:
-        handler: Approval handler instance or None to disable approval
+        handler: Approval handler instance or None to disable approval.
+        require_operations: Iterable of operation identifiers (str) that require approval.
+            Each operation is normalized (stripped and lowercased). If None or empty, no operations require approval.
+        trusted_operations: Iterable of operation identifiers (str) that are always allowed without approval.
+            Each operation is normalized (stripped and lowercased). If an operation appears in both
+            require_operations and trusted_operations, trusted_operations takes precedence and approval is not required.
+
+    Notes:
+        - Passing handler=None disables approval and resets required/trusted operations.
+        - trusted_operations always override require_operations for the same operation.
     """
     global _approval_handler
     global _required_operations
