@@ -181,9 +181,18 @@ class MagenticFleet:
             return
 
         responses_param = get_responses_model_parameter(OpenAIResponsesClient)  # type: ignore[arg-type]
-        model_name = settings.workflow_config.get("defaults", {}).get(
-            "model", settings.openai_model
-        )
+        model_name = settings.workflow_config.get("defaults", {}).get("model")
+
+        if not isinstance(model_name, str) or not model_name:
+            fallback_model = getattr(settings, "openai_model", None)
+            model_name = fallback_model if isinstance(fallback_model, str) else None
+
+        if not model_name:
+            logger.debug(
+                "Skipping coder tooling initialisation because no OpenAI model name was found."
+            )
+            return
+
         chat_agent.chat_client = OpenAIResponsesClient(  # type: ignore[call-arg]
             **{responses_param: model_name}
         )
