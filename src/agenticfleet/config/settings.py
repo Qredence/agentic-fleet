@@ -13,8 +13,8 @@ try:
 
     _AGENT_FRAMEWORK_AVAILABLE = True
 except ModuleNotFoundError:  # pragma: no cover - dependency optional in tests
-    CheckpointStorage = object  # type: ignore[assignment]
-    InMemoryCheckpointStorage = None  # type: ignore[assignment]
+    CheckpointStorage = object  # type: ignore[misc, assignment]
+    InMemoryCheckpointStorage = None  # type: ignore[misc, assignment]
     _AGENT_FRAMEWORK_AVAILABLE = False
 
 from agenticfleet.core.checkpoints import AgenticFleetFileCheckpointStorage

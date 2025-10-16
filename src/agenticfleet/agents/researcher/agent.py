@@ -14,12 +14,11 @@ Usage:
 
 try:
     from agent_framework.openai import OpenAIResponsesClient
-except ModuleNotFoundError:  # pragma: no cover - dependency optional in tests
-    OpenAIResponsesClient = None  # type: ignore[assignment]
+except ImportError:
+    OpenAIResponsesClient = None  # type: ignore[misc, assignment]
 
 from agenticfleet.agents.base import FleetAgent
 from agenticfleet.config import settings
-from agenticfleet.core.exceptions import AgentConfigurationError
 from agenticfleet.core.openai import get_responses_model_parameter
 
 
@@ -36,12 +35,6 @@ def create_researcher_agent() -> FleetAgent:
     # Load researcher-specific configuration
     config = settings.load_agent_config("researcher")
     agent_config = config.get("agent", {})
-
-    if OpenAIResponsesClient is None:
-        raise AgentConfigurationError(
-            "agent_framework is required to create the researcher agent. "
-            "Install the 'agent-framework' package to enable this agent."
-        )
 
     # Create OpenAI chat client
     chat_client_kwargs = {
