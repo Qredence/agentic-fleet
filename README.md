@@ -40,7 +40,7 @@ cd agentic-fleet
 cp .env.example .env
 # Edit .env and add OPENAI_API_KEY (plus optional Mem0 settings)
 # 3. Install dependencies
-uv sync
+make install
 # 4. Launch the CLI
 fleet # or run "uv run fleet"
 ```
