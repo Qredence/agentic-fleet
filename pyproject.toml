@@ -33,7 +33,7 @@ dependencies = [
     "agent-framework-mem0",
     "agent-framework-redis",
     "agent-framework-devui",
-    "mem0ai==1.0.0b0",
+    "mem0ai==1.0.0",
     "rich>=13.7.0",
     "prompt-toolkit>=3.0.47",
 ]
