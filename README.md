@@ -28,21 +28,24 @@ AgenticFleet coordinates specialised researcher, coder, and analyst agents throu
 - Python 3.12+
 - [uv](https://docs.astral.sh/uv/) package manager (`curl -LsSf https://astral.sh/uv/install.sh | sh`)
 - OpenAI API key (`OPENAI_API_KEY`)
-- Microsoft Agent Framework packages (`agent-framework`, its core/azure/mem0 extras); install them with `uv pip install "agent-framework[azure-ai,mem0]"` to enable full Magentic execution
 
 ### Install & Configure
 
 ```bash
-# 1. Clone
+# 1. Clone the repository
 git clone https://github.com/Qredence/agentic-fleet.git
 cd agentic-fleet
-# 2. Configure environment
+
+# 2. Configure your environment
 cp .env.example .env
-# Edit .env and add OPENAI_API_KEY (plus optional Mem0 settings)
+# Edit .env to add your OPENAI_API_KEY and any optional Mem0 settings
+
 # 3. Install dependencies
 make install
+
 # 4. Launch the CLI
-fleet # or run "uv run fleet"
+make run
+# Or: fleet, uv run fleet
 ```
 
 The CLI provides:
@@ -63,12 +66,12 @@ History search (`↑` / `↓` or `Ctrl+R`), checkpoints (`checkpoints`, `resume 
 
 ## Agents at a Glance
 
-| Agent        | Model default | Purpose                              |
-| ------------ | ------------- | ------------------------------------ |
-| Orchestrator | `gpt-5`       | Plans, delegates, synthesises        |
-| Researcher   | `gpt-5`       | Finds and summarises sources         |
-| Coder        | `gpt-5`       | Drafts code and explains run steps   |
-| Analyst      | `gpt-5`       | Interprets data and suggests visuals |
+| Agent        | Model default           | Purpose                              |
+| ------------ | ----------------------- | ------------------------------------ |
+| Orchestrator | `gpt-4-turbo-preview`   | Plans, delegates, synthesises        |
+| Researcher   | `gpt-4-turbo-preview`   | Finds and summarises sources         |
+| Coder        | `gpt-4-turbo-preview`   | Drafts code and explains run steps   |
+| Analyst      | `gpt-4-turbo-preview`   | Interprets data and suggests visuals |
 
 Runtime toggles (`stream`, `store`, `checkpoint`) live in each `agents/<role>/config.yaml` and are attached to the instantiated `ChatAgent` for orchestration to inspect.
 
@@ -102,14 +105,11 @@ Dive deeper:
 ## Development Workflow
 
 ```bash
-# Lint & format
-uv run ruff check .
-uv run black .
-# Type check
-uv run mypy src/agenticfleet
-# Tests (quick + full)
-uv run pytest tests/test_config.py
-uv run pytest
+# Lint, format, and type-check
+make check
+
+# Run tests
+make test
 ```
 
 Additional integration-specific tests live in `tests/test_cli_ui.py` (console parsing) and `tests/test_mem0_context_provider.py` (memory provider).
@@ -134,16 +134,17 @@ See `docs/README.md` for a full index.
 
 ```
 AgenticFleet/
-├── src/agenticfleet/    # application code (CLI, config, fleet orchestration)
-├── tests/               # unit and integration coverage
-├── docs/                # product, ops, and architecture guides
-├── examples/            # runnable workflow samples
-├── tools/               # maintenance scripts and static-analysis configs
-├── dist/                # build artefacts (gitignored)
-├── var/                 # runtime logs, checkpoints, Mem0 state (gitignored)
-├── pyproject.toml       # Python package definition
-├── Makefile             # developer shortcuts (lint, test, build)
-└── uv.lock              # pinned dependency graph
+├── src/agenticfleet/    # Main application code
+│   ├── cli/             # Interactive REPL and UI
+│   ├── config/          # Workflow and settings configuration
+│   ├── core/            # Core logic (checkpoints, approvals)
+│   └── fleet/           # Agent orchestration (Magentic)
+├── tests/               # Unit and integration tests
+├── docs/                # Project documentation
+├── examples/            # Example scripts
+├── pyproject.toml       # Project metadata and dependencies
+├── Makefile             # Developer command shortcuts
+└── uv.lock              # Pinned dependency versions
 ```
 
 ---
