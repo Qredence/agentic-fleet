@@ -300,6 +300,10 @@ def create_default_fleet(console_ui: ConsoleUI | None = None) -> MagenticFleet:
     """
     Create a default MagenticFleet instance with settings from config.
 
+    Args:
+        console_ui: Optional ConsoleUI instance to inject into ConsoleCallbacks.
+            If provided, this UI will be used for streaming output and callback handling
+            throughout the fleet workflow. If None, a default ConsoleUI will be used.
     Returns:
         Configured MagenticFleet instance ready to run.
     """
