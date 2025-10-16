@@ -50,7 +50,7 @@ def set_approval_handler(
 
     _required_operations = {op.strip().lower() for op in (require_operations or []) if op.strip()}
     _trusted_operations = {op.strip().lower() for op in (trusted_operations or []) if op.strip()}
-    logger.info(f"Approval handler {'set' if handler else 'disabled'} for code execution")
+    logger.info("Approval handler configured for code execution")
 
 
 def get_approval_handler() -> ApprovalHandler | None:
