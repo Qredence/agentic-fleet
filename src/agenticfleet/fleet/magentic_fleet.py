@@ -429,12 +429,14 @@ class MagenticFleet:
             settings.workflow_config.get("workflow", {}).get("checkpointing", {}) or {}
         )
         storage_path = checkpoint_config.get("storage_path", "./var/checkpoints")
-        storage_path = settings._rewrite_runtime_path(  # type: ignore[attr-defined]
-            storage_path,
-            env_var_name=None,
-            old_prefix="checkpoints",
-            new_prefix="var/checkpoints",
-        )
+        # Inline legacy path normalization logic to avoid private API dependency
+        old_prefix = "checkpoints"
+        new_prefix = "var/checkpoints"
+        if (
+            isinstance(storage_path, str)
+            and storage_path.startswith(old_prefix)
+        ):
+            storage_path = storage_path.replace(old_prefix, new_prefix, 1)
         try:
             return Path(storage_path).expanduser()
         except TypeError:  # pragma: no cover - defensive guard
