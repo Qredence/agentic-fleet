@@ -1,6 +1,6 @@
 [project]
 name = "agentic-fleet"
-version = "0.5.1"
+version = "0.5.2"
 description = "A multi-agent orchestration system built with Microsoft Agent Framework"
 authors = [{ name = "Qredence", email = "contact@qredence.ai" }]
 readme = "README.md"
