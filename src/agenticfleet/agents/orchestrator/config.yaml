@@ -36,6 +36,6 @@ delegation_rules:
     delegate_to: "analyst"
 
 runtime:
-  stream: false
+  stream: true
   store: true
   checkpoint: true

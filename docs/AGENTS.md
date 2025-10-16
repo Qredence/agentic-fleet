@@ -12,7 +12,7 @@ This document explains how the multi-agent system in AgenticFleet is assembled, 
 |--------------|--------------------------------------------------|---------------------------------------------------------|--------------------------------------------------------------------------|----------------------------------------------------------|
 | Orchestrator | `create_orchestrator_agent()`                     | `src/agenticfleet/agents/orchestrator/config.yaml`      | - (no tools)                                                             | Task triage, delegation, result synthesis                |
 | Researcher   | `create_researcher_agent()`                       | `src/agenticfleet/agents/researcher/config.yaml`        | `web_search_tool` (structured web search responses)                      | Information gathering and citation prep                  |
-| Coder        | `create_coder_agent()`                            | `src/agenticfleet/agents/coder/config.yaml`             | Manual code drafting (automated execution temporarily disabled)          | Code generation guidance and review                      |
+| Coder        | `create_coder_agent()`                            | `src/agenticfleet/agents/coder/config.yaml`             | Hosted code interpreter runtime (auto-attached when `agent_framework` is installed) | Code generation guidance and review                      |
 | Analyst      | `create_analyst_agent()`                          | `src/agenticfleet/agents/analyst/config.yaml`           | `data_analysis_tool`, `visualization_suggestion_tool` (structured output) | Data exploration, insight generation, visualization help |
 
 ## Orchestration Flow
@@ -46,10 +46,10 @@ This document explains how the multi-agent system in AgenticFleet is assembled, 
 
 ### Coder (`src/agenticfleet/agents/coder/agent.py`)
 
-- **Factory**: `create_coder_agent()` currently returns a tool-free `ChatAgent` that focuses on code drafting and review. The HITL approval wiring remains available for when execution tooling returns.
-- **Tooling**: The legacy `code_interpreter_tool` has been removed while we harden the sandbox. Until it comes back, the coder agent should never claim to have run code—ensure prompts reinforce that behaviour.
+- **Factory**: `create_coder_agent()` builds the base `ChatAgent` from YAML configuration. At runtime, `MagenticFleet._apply_coder_tooling()` swaps in a `HostedCodeInterpreterTool` whenever Microsoft Agent Framework packages are present; the agent falls back to manual drafting if that dependency is missing.
+- **Tooling**: The hosted interpreter executes code in Microsoft’s sandbox, so guard long-running or unsafe operations in prompts and approval flows. When the fallback path is active, the coder agent should explicitly state that outputs are advisory only.
 - **Configuration**: `config.yaml` targets `gpt-5` with a conservative temperature so generated snippets stay deterministic. Style guidance (line length, documentation style) still applies to keep output consistent.
-- **Extensibility**: When reintroducing execution, add a new tool module under `agents/coder/tools`, register it in the factory, and gate usage through the approval handler.
+- **Extensibility**: To augment tooling, extend `_apply_coder_tooling()` (or register additional tools in the factory) and cover the behaviour in `tests/test_code_types.py`/`tests/test_magentic_fleet.py`.
 
 ### Analyst (`src/agenticfleet/agents/analyst/agent.py`)
 
@@ -59,8 +59,8 @@ This document explains how the multi-agent system in AgenticFleet is assembled, 
 
 ## Settings, Environment, and Shared Config
 
-- `src/agenticfleet/config/settings.py` loads environment variables at import time. Missing required variables (`OPENAI_API_KEY`, `AZURE_AI_PROJECT_ENDPOINT`) raise `AgentConfigurationError`, so ensure they exist before importing any module that touches `settings`.
-- Optional Azure settings (`AZURE_AI_SEARCH_ENDPOINT`, `AZURE_AI_SEARCH_KEY`, deployed model names) unlock the `Mem0ContextProvider` and Azure-specific functionality. Defaults fall back to safe values when available.
+- `src/agenticfleet/config/settings.py` loads environment variables at import time. Only `OPENAI_API_KEY` is strictly required; it raises `AgentConfigurationError` the first time `require_openai_api_key()` is called if the key is missing.
+- Optional Azure settings (`AZURE_AI_PROJECT_ENDPOINT`, search endpoints/keys, deployed model names) are defined for future integration, but the current Mem0/OpenAI flow works without them.
 - Logging is initialized through `agenticfleet.core.logging.setup_logging`, honoring `LOG_LEVEL` and `LOG_FILE`. Update `.env` to redirect logs during development.
 - The shared workflow defaults (model, temperature, token limits) are declared in `config/workflow.yaml` and can be overridden agent by agent in the respective config files.
 
@@ -79,7 +79,7 @@ This document explains how the multi-agent system in AgenticFleet is assembled, 
 
 1. **Scaffold**: Create a new subdirectory under `src/agenticfleet/agents/<new_agent>/` containing `__init__.py`, `agent.py`, `config.yaml`, and an optional `tools/` package.
 2. **Factory Pattern**: Model `agent.py` after existing factories: load YAML via `settings.load_agent_config`, instantiate `OpenAIResponsesClient`, collect enabled tools, and return a configured `ChatAgent`.
-3. **Register**: Export the new factory in `src/agenticfleet/agents/__init__.py` and wire the agent into `workflow_builder.py` (add `.add_agent(...)`, delegation predicates, and edges as needed).
+3. **Register**: Export the new factory in `src/agenticfleet/agents/__init__.py` and wire the agent into `fleet/fleet_builder.py` (add `.with_agents(...)`, delegation predicates, and edges as needed).
 4. **Prompt + Delegation**: Update the orchestrator prompt (or other agents) to emit delegation tokens that match your new predicate logic (e.g., `DELEGATE: planner`).
 5. **Configuration + Tests**: Add YAML knobs for any new tool options, and extend `tests/test_config.py` to cover the new agent’s configuration and tool imports.
 

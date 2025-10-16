@@ -41,7 +41,7 @@ cp .env.example .env
 # 3. Install dependencies
 uv sync
 # 4. Launch the CLI
-uv run fleet
+fleet # or run "uv run fleet"
 ```
 
 The CLI provides:
@@ -126,6 +126,24 @@ The `docs/` directory is structured by intent:
 - `overview/` – implementation summary, roadmap, a progress tracker.
 
 See `docs/README.md` for a full index.
+
+---
+
+## Repository Layout
+
+```
+AgenticFleet/
+├── src/agenticfleet/    # application code (CLI, config, fleet orchestration)
+├── tests/               # unit and integration coverage
+├── docs/                # product, ops, and architecture guides
+├── examples/            # runnable workflow samples
+├── tools/               # maintenance scripts and static-analysis configs
+├── dist/                # build artefacts (gitignored)
+├── var/                 # runtime logs, checkpoints, Mem0 state (gitignored)
+├── pyproject.toml       # Python package definition
+├── Makefile             # developer shortcuts (lint, test, build)
+└── uv.lock              # pinned dependency graph
+```
 
 ---
 

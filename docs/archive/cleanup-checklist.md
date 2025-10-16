@@ -74,7 +74,7 @@ main.py                    # → src/agenticfleet/cli/repl.py
 ### Backup Created ✅
 
 ```bash
-./scripts/backup_old_structure.sh
+./tools/scripts/backup_old_structure.sh
 ```
 
 Creates timestamped backup in `.backup_old_structure_YYYYMMDD_HHMMSS/`
@@ -93,7 +93,7 @@ Before cleanup, ensure:
 
 ```bash
 # Create backup first
-./scripts/backup_old_structure.sh
+./tools/scripts/backup_old_structure.sh
 
 # Remove old structure
 rm -rf agents/ config/ context_provider/ workflows/ main.py
