@@ -5,7 +5,13 @@ description = "A multi-agent orchestration system built with Microsoft Agent Fra
 authors = [{ name = "Qredence", email = "contact@qredence.ai" }]
 readme = "README.md"
 license = { text = "MIT" }
-keywords = ["agents", "ai", "microsoft-agent-framework", "multi-agent", "orchestration"]
+keywords = [
+    "agents",
+    "ai",
+    "microsoft-agent-framework",
+    "multi-agent",
+    "orchestration",
+]
 classifiers = [
     "Development Status :: 3 - Alpha",
     "Intended Audience :: Developers",
@@ -41,10 +47,10 @@ agentic-fleet = "agenticfleet.cli.repl:main"
 fleet = "agenticfleet.cli.repl:main"
 
 [project.urls]
-Homepage = "https://github.com/Qredence/AgenticFleet"
-Documentation = "https://github.com/Qredence/AgenticFleet/docs"
-Repository = "https://github.com/Qredence/AgenticFleet"
-Issues = "https://github.com/Qredence/AgenticFleet/issues"
+Homepage = "https://github.com/Qredence/agentic-fleet"
+Documentation = "https://github.com/Qredence/agentic-fleet/docs"
+Repository = "https://github.com/Qredence/agentic-fleet"
+Issues = "https://github.com/Qredence/agentic-fleet/issues"
 
 [build-system]
 requires = ["hatchling"]
@@ -93,11 +99,11 @@ line-length = 100
 
 [tool.ruff.lint]
 select = [
-    "E",   # pycodestyle errors
-    "F",   # pyflakes
-    "W",   # pycodestyle warnings
-    "I",   # isort (import sorting)
-    "UP",  # pyupgrade
+    "E",  # pycodestyle errors
+    "F",  # pyflakes
+    "W",  # pycodestyle warnings
+    "I",  # isort (import sorting)
+    "UP", # pyupgrade
 ]
 ignore = []
 
@@ -117,5 +123,5 @@ show_error_codes = true
 pretty = true
 ignore_missing_imports = true
 exclude = [
-    "tests/.*",  # tests can be looser
+    "tests/.*", # tests can be looser
 ]

@@ -202,9 +202,9 @@ Or push the `.github/labels.yml` file to main.
 Add to your `README.md`:
 
 ```markdown
-[![CI](https://github.com/Qredence/AgenticFleet/actions/workflows/ci.yml/badge.svg)](https://github.com/Qredence/AgenticFleet/actions/workflows/ci.yml)
-[![CodeQL](https://github.com/Qredence/AgenticFleet/actions/workflows/codeql.yml/badge.svg)](https://github.com/Qredence/AgenticFleet/actions/workflows/codeql.yml)
-[![Release](https://github.com/Qredence/AgenticFleet/actions/workflows/release.yml/badge.svg)](https://github.com/Qredence/AgenticFleet/actions/workflows/release.yml)
+[![CI](https://github.com/Qredence/agentic-fleet/actions/workflows/ci.yml/badge.svg)](https://github.com/Qredence/agentic-fleet/actions/workflows/ci.yml)
+[![CodeQL](https://github.com/Qredence/agentic-fleet/actions/workflows/codeql.yml/badge.svg)](https://github.com/Qredence/agentic-fleet/actions/workflows/codeql.yml)
+[![Release](https://github.com/Qredence/agentic-fleet/actions/workflows/release.yml/badge.svg)](https://github.com/Qredence/agentic-fleet/actions/workflows/release.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Python 3.12+](https://img.shields.io/badge/python-3.12+-blue.svg)](https://www.python.org/downloads/)
 [![uv](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/uv/main/assets/badge/v0.json)](https://github.com/astral-sh/uv)
@@ -285,16 +285,16 @@ act -j test --secret-file .env.secrets
 
 ## 📝 Workflow Triggers Summary
 
-| Workflow | Push | PR | Schedule | Manual |
-|----------|------|-----|----------|--------|
-| CI | ✅ | ✅ | ❌ | ✅ |
-| Release | ❌ (tags) | ❌ | ❌ | ✅ |
-| CodeQL | ✅ | ✅ | ✅ Weekly | ❌ |
-| Dependency Review | ❌ | ✅ | ❌ | ❌ |
-| Stale | ❌ | ❌ | ✅ Daily | ✅ |
-| PR Labels | ❌ | ✅ | ❌ | ❌ |
-| Label Sync | ✅ | ❌ | ❌ | ✅ |
-| Pre-commit Update | ❌ | ❌ | ✅ Weekly | ✅ |
+| Workflow          | Push      | PR  | Schedule  | Manual |
+| ----------------- | --------- | --- | --------- | ------ |
+| CI                | ✅        | ✅  | ❌        | ✅     |
+| Release           | ❌ (tags) | ❌  | ❌        | ✅     |
+| CodeQL            | ✅        | ✅  | ✅ Weekly | ❌     |
+| Dependency Review | ❌        | ✅  | ❌        | ❌     |
+| Stale             | ❌        | ❌  | ✅ Daily  | ✅     |
+| PR Labels         | ❌        | ✅  | ❌        | ❌     |
+| Label Sync        | ✅        | ❌  | ❌        | ✅     |
+| Pre-commit Update | ❌        | ❌  | ✅ Weekly | ✅     |
 
 ## 🔍 Monitoring
 

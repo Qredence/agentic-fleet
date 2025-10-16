@@ -301,7 +301,7 @@ Total packages: 148
 
 ```bash
 # Ensure you're in the project directory
-cd AgenticFleet
+cd agentic-fleet
 
 # Check that .env file exists with your OpenAI API key
 cat .env

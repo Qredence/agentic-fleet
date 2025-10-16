@@ -65,11 +65,11 @@ name: "CodeQL"
 
 on:
   push:
-    branches: [ main, develop, 0.5.0a ]
+    branches: [main, develop, 0.5.0a]
   pull_request:
-    branches: [ main ]
+    branches: [main]
   schedule:
-    - cron: '0 6 * * 1'  # Weekly Monday 6 AM UTC
+    - cron: "0 6 * * 1" # Weekly Monday 6 AM UTC
 
 jobs:
   analyze:
@@ -83,22 +83,22 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        language: [ 'python' ]
+        language: ["python"]
 
     steps:
-    - name: Checkout repository
-      uses: actions/checkout@v4
+      - name: Checkout repository
+        uses: actions/checkout@v4
 
-    - name: Initialize CodeQL
-      uses: github/codeql-action/init@v3
-      with:
-        languages: ${{ matrix.language }}
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@v3
+        with:
+          languages: ${{ matrix.language }}
 
-    - name: Autobuild
-      uses: github/codeql-action/autobuild@v3
+      - name: Autobuild
+        uses: github/codeql-action/autobuild@v3
 
-    - name: Perform CodeQL Analysis
-      uses: github/codeql-action/analyze@v3
+      - name: Perform CodeQL Analysis
+        uses: github/codeql-action/analyze@v3
 ```
 
 **Risk**: Medium (if removing references), Low (if implementing)
@@ -197,10 +197,10 @@ run: OPENAI_API_KEY=${{ secrets.OPENAI_API_KEY }} ... uv run python tests/test_c
 **Action**:
 
 ```yaml
-  # Maintain Python dependencies
-  # Note: Using "pip" ecosystem (UV doesn't have native Dependabot support yet)
-  # UV is compatible with pip ecosystem and will use these updates
-  - package-ecosystem: "pip"
+# Maintain Python dependencies
+# Note: Using "pip" ecosystem (UV doesn't have native Dependabot support yet)
+# UV is compatible with pip ecosystem and will use these updates
+- package-ecosystem: "pip"
 ```
 
 **Risk**: Low
@@ -260,8 +260,8 @@ test:
 **Recommendations**:
 
 ```yaml
-days-before-stale: 45  # Reduced from 60
-exempt-issue-labels: "pinned,security,roadmap,waiting-for-response"  # Added waiting-for-response
+days-before-stale: 45 # Reduced from 60
+exempt-issue-labels: "pinned,security,roadmap,waiting-for-response" # Added waiting-for-response
 ```
 
 **Risk**: Low
@@ -392,9 +392,9 @@ exempt-issue-labels: "pinned,security,roadmap,waiting-for-response"  # Added wai
 **Add to root README.md**:
 
 ```markdown
-[![CI](https://github.com/Qredence/AgenticFleet/workflows/CI/badge.svg)](https://github.com/Qredence/AgenticFleet/actions/workflows/ci.yml)
-[![Release](https://github.com/Qredence/AgenticFleet/workflows/Release/badge.svg)](https://github.com/Qredence/AgenticFleet/actions/workflows/release.yml)
-[![CodeQL](https://github.com/Qredence/AgenticFleet/workflows/CodeQL/badge.svg)](https://github.com/Qredence/AgenticFleet/actions/workflows/codeql.yml)
+[![CI](https://github.com/Qredence/agentic-fleet/workflows/CI/badge.svg)](https://github.com/Qredence/agentic-fleet/actions/workflows/ci.yml)
+[![Release](https://github.com/Qredence/agentic-fleet/workflows/Release/badge.svg)](https://github.com/Qredence/agentic-fleet/actions/workflows/release.yml)
+[![CodeQL](https://github.com/Qredence/agentic-fleet/workflows/CodeQL/badge.svg)](https://github.com/Qredence/agentic-fleet/actions/workflows/codeql.yml)
 ```
 
 **Risk**: Low

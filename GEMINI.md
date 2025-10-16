@@ -26,35 +26,40 @@ The project uses `uv` for dependency management and running scripts. Key command
 ### Installation
 
 1. **Clone the repository:**
-    ```bash
-    git clone https://github.com/Qredence/AgenticFleet.git
-    cd AgenticFleet
-    ```
+   ```bash
+   git clone https://github.com/Qredence/agentic-fleet.git
+   cd agentic-fleet
+   ```
 2. **Configure Environment:**
-    Copy `.env.example` to `.env` and add your `OPENAI_API_KEY`.
-    ```bash
-    cp .env.example .env
-    ```
+   Copy `.env.example` to `.env` and add your `OPENAI_API_KEY`.
+   ```bash
+   cp .env.example .env
+   ```
 3. **Install Dependencies:**
-    ```bash
-    uv sync
-    ```
-    Alternatively, use the Makefile:
-    ```bash
-    make install
-    ```
+   ```bash
+   uv sync
+   ```
+   Alternatively, use the Makefile:
+   ```bash
+   make install
+   ```
 
 ### Running the Application
 
 To start the interactive CLI:
+
 ```bash
 fleet
 ```
+
 or
+
 ```bash
 uv run fleet
 ```
+
 or
+
 ```bash
 make run
 ```
@@ -62,10 +67,13 @@ make run
 ### Running Tests
 
 To run the full test suite:
+
 ```bash
 uv run pytest
 ```
+
 or
+
 ```bash
 make test
 ```
@@ -77,26 +85,27 @@ make test
 The project uses `black` for code formatting and `ruff` for linting.
 
 - **Check for issues:**
-    ```bash
-    make lint
-    ```
+  ```bash
+  make lint
+  ```
 - **Format code:**
-    ```bash
-    make format
-    ```
+  ```bash
+  make format
+  ```
 
 ### Type Checking
 
 The project uses `mypy` for static type checking.
 
 - **Run type checker:**
-    ```bash
-    make type-check
-    ```
+  ```bash
+  make type-check
+  ```
 
 ### All Checks
 
 To run all quality checks (linting, formatting, type-checking) at once:
+
 ```bash
 make check
 ```
@@ -106,9 +115,9 @@ make check
 Pre-commit hooks are configured in `.pre-commit-config.yaml` to automatically run checks before committing.
 
 - **Install hooks:**
-    ```bash
-    make pre-commit-install
-    ```
+  ```bash
+  make pre-commit-install
+  ```
 
 ## Project Structure
 

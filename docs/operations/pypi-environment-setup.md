@@ -5,9 +5,10 @@
 This guide will help you set up the PyPI publishing environment for AgenticFleet to enable automated releases through GitHub Actions.
 
 ## Quick Checklist
+
 - [ ] Create a GitHub environment named `pypi` and lock it to tag pattern `v[0-9]+.[0-9]+.[0-9]+*`.
 - [ ] (Optional) Add required reviewers for the environment.
-- [ ] On PyPI, add a pending trusted publisher with project `agentic-fleet`, owner `Qredence`, repo `AgenticFleet`, workflow `release.yml`, environment `pypi`.
+- [ ] On PyPI, add a pending trusted publisher with project `agentic-fleet`, owner `Qredence`, repo `agentic-fleet`, workflow `release.yml`, environment `pypi`.
 - [ ] Push a tagged build (e.g. `v0.5.0-alpha1`) and approve the deployment if prompted.
 - [ ] Verify the package appears on <https://pypi.org/project/agentic-fleet/> and the GitHub release is created.
 - [ ] If using API tokens instead of trusted publishing, store the token as `PYPI_API_TOKEN` in the `pypi` environment and update `.github/workflows/release.yml` accordingly.
@@ -56,7 +57,7 @@ You have two options for PyPI authentication:
 
 #### 1. Navigate to Repository Settings
 
-Open: <https://github.com/Qredence/AgenticFleet/settings/environments>
+Open: <https://github.com/Qredence/agentic-fleet/settings/environments>
 
 Or manually:
 
@@ -75,6 +76,7 @@ Or manually:
 On the environment configuration page:
 
 1. **Deployment branches and tags**:
+
    - Select: ✅ **"Selected tags"**
    - Click **"Add deployment branch or tag rule"**
    - Enter tag pattern: **`v[0-9]+.[0-9]+.[0-9]+*`**
@@ -83,14 +85,17 @@ On the environment configuration page:
    - Click **"Add rule"**
 
 2. **Required reviewers** (Optional but recommended):
+
    - Toggle **"Required reviewers"** ON
    - Add yourself or other maintainers
    - This adds manual approval before each release
 
 3. **Wait timer** (Optional):
+
    - Set a delay before deployment (e.g., 0 minutes)
 
 4. **Prevent self-review** (Optional):
+
    - Toggle ON if using required reviewers
 
 5. Click **"Save protection rules"**
@@ -114,13 +119,13 @@ Or manually:
 
 Scroll to **"Add a new pending publisher"** section and fill in:
 
-| Field | Value |
-|-------|-------|
+| Field                 | Value           |
+| --------------------- | --------------- |
 | **PyPI Project Name** | `agentic-fleet` |
-| **Owner** | `Qredence` |
-| **Repository name** | `AgenticFleet` |
-| **Workflow name** | `release.yml` |
-| **Environment name** | `pypi` |
+| **Owner**             | `Qredence`      |
+| **Repository name**   | `AgenticFleet`  |
+| **Workflow name**     | `release.yml`   |
+| **Environment name**  | `pypi`          |
 
 Click **"Add"**
 
@@ -156,7 +161,7 @@ Your release workflow is already configured to use trusted publishing. No additi
 
 #### 2. Add Token to GitHub Environment
 
-1. Go to: <https://github.com/Qredence/AgenticFleet/settings/environments>
+1. Go to: <https://github.com/Qredence/agentic-fleet/settings/environments>
 2. Click on **"pypi"** environment
 3. Scroll to **"Environment secrets"**
 4. Click **"Add secret"**
@@ -174,7 +179,7 @@ Open `.github/workflows/release.yml` and update the PyPI publishing step:
 - name: Publish distribution to PyPI
   uses: pypa/gh-action-pypi-publish@release/v1
   with:
-    password: ${{ secrets.PYPI_API_TOKEN }}  # Add this line
+    password: ${{ secrets.PYPI_API_TOKEN }} # Add this line
     skip-existing: true
 ```
 
@@ -186,7 +191,7 @@ For testing releases before publishing to production PyPI:
 
 ### 1. Create TestPyPI Environment
 
-1. Go to: <https://github.com/Qredence/AgenticFleet/settings/environments>
+1. Go to: <https://github.com/Qredence/agentic-fleet/settings/environments>
 2. Click **"New environment"**
 3. Name: **`testpypi`**
 4. Configure same deployment rules as `pypi`
@@ -299,7 +304,7 @@ gh run view <run-id> --log
 
 ### Check on GitHub
 
-1. Go to: <https://github.com/Qredence/AgenticFleet/actions/workflows/release.yml>
+1. Go to: <https://github.com/Qredence/agentic-fleet/actions/workflows/release.yml>
 2. Click on the latest run
 3. View logs for each job
 
@@ -319,7 +324,7 @@ gh run view <run-id> --log
 
 **Solution**:
 
-1. Verify environment exists: <https://github.com/Qredence/AgenticFleet/settings/environments>
+1. Verify environment exists: <https://github.com/Qredence/agentic-fleet/settings/environments>
 2. Check environment name matches exactly: `pypi` (lowercase)
 3. Ensure tag matches pattern: `v*.*.*`
 
@@ -354,7 +359,7 @@ gh run view <run-id> --log
 
 **Solution**:
 
-1. Go to: <https://github.com/Qredence/AgenticFleet/actions>
+1. Go to: <https://github.com/Qredence/agentic-fleet/actions>
 2. Click on waiting workflow run
 3. Click **"Review deployments"**
 4. Select environment
@@ -384,11 +389,11 @@ graph TD
 
 ### Key URLs
 
-- **Repository Settings**: <https://github.com/Qredence/AgenticFleet/settings>
-- **Environments**: <https://github.com/Qredence/AgenticFleet/settings/environments>
+- **Repository Settings**: <https://github.com/Qredence/agentic-fleet/settings>
+- **Environments**: <https://github.com/Qredence/agentic-fleet/settings/environments>
 - **PyPI Publishing**: <https://pypi.org/manage/account/publishing/>
 - **TestPyPI Publishing**: <https://test.pypi.org/manage/account/publishing/>
-- **Workflow Runs**: <https://github.com/Qredence/AgenticFleet/actions/workflows/release.yml>
+- **Workflow Runs**: <https://github.com/Qredence/agentic-fleet/actions/workflows/release.yml>
 - **Package on PyPI**: <https://pypi.org/project/agentic-fleet/>
 
 ### Quick Commands

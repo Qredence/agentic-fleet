@@ -15,7 +15,7 @@ We release patches for security vulnerabilities for the following versions:
 
 Instead, please report them via GitHub's Security Advisory feature:
 
-1. Go to the [Security Advisories](https://github.com/Qredence/AgenticFleet/security/advisories) page
+1. Go to the [Security Advisories](https://github.com/Qredence/agentic-fleet/security/advisories) page
 2. Click "New draft security advisory"
 3. Provide a detailed description of the vulnerability
 4. Include steps to reproduce if applicable
@@ -46,16 +46,19 @@ Please include the following information:
 When using AgenticFleet:
 
 1. **API Keys**: Never commit API keys or secrets to version control
+
    - Use `.env` files (which are .gitignored)
    - Use environment variables in production
    - Rotate keys regularly
 
 2. **Dependencies**: Keep dependencies up to date
+
    - Enable Dependabot alerts
    - Review and merge security updates promptly
    - Run `uv sync` regularly to update lockfile
 
 3. **Code Execution**: Automated interpreter tooling is disabled by default
+
    - If you re-enable execution, review generated code before running it
    - Prefer isolated environments (containers, sandboxes) for any execution
    - Set conservative timeout and resource limits to contain misbehaving code
@@ -109,7 +112,7 @@ This project aims to follow:
 For security concerns, contact:
 
 - Email: <contact@qredence.ai>
-- GitHub Security Advisory: [Create Advisory](https://github.com/Qredence/AgenticFleet/security/advisories/new)
+- GitHub Security Advisory: [Create Advisory](https://github.com/Qredence/agentic-fleet/security/advisories/new)
 
 ---
 

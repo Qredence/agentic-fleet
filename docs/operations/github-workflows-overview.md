@@ -194,9 +194,9 @@ act -j lint
 Add these badges to your README.md:
 
 ```markdown
-[![CI](https://github.com/Qredence/AgenticFleet/actions/workflows/ci.yml/badge.svg)](https://github.com/Qredence/AgenticFleet/actions/workflows/ci.yml)
-[![CodeQL](https://github.com/Qredence/AgenticFleet/actions/workflows/codeql.yml/badge.svg)](https://github.com/Qredence/AgenticFleet/actions/workflows/codeql.yml)
-[![Release](https://github.com/Qredence/AgenticFleet/actions/workflows/release.yml/badge.svg)](https://github.com/Qredence/AgenticFleet/actions/workflows/release.yml)
+[![CI](https://github.com/Qredence/agentic-fleet/actions/workflows/ci.yml/badge.svg)](https://github.com/Qredence/agentic-fleet/actions/workflows/ci.yml)
+[![CodeQL](https://github.com/Qredence/agentic-fleet/actions/workflows/codeql.yml/badge.svg)](https://github.com/Qredence/agentic-fleet/actions/workflows/codeql.yml)
+[![Release](https://github.com/Qredence/agentic-fleet/actions/workflows/release.yml/badge.svg)](https://github.com/Qredence/agentic-fleet/actions/workflows/release.yml)
 ```
 
 ## Best Practices

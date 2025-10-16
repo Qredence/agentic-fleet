@@ -1,4 +1,5 @@
 ![AgenticFleet Architecture](docs/afleet-preview.png)
+
 # AgenticFleet
 
 > Multi-agent orchestration built on the Microsoft Agent Framework.
@@ -33,8 +34,8 @@ AgenticFleet coordinates specialised researcher, coder, and analyst agents throu
 
 ```bash
 # 1. Clone
-git clone https://github.com/Qredence/AgenticFleet.git
-cd AgenticFleet
+git clone https://github.com/Qredence/agentic-fleet.git
+cd agentic-fleet
 # 2. Configure environment
 cp .env.example .env
 # Edit .env and add OPENAI_API_KEY (plus optional Mem0 settings)
@@ -62,12 +63,12 @@ History search (`↑` / `↓` or `Ctrl+R`), checkpoints (`checkpoints`, `resume 
 
 ## Agents at a Glance
 
-| Agent        | Model default | Purpose                               |
-|--------------|---------------|---------------------------------------|
-| Orchestrator | `gpt-5`       | Plans, delegates, synthesises         |
-| Researcher   | `gpt-5`       | Finds and summarises sources          |
-| Coder        | `gpt-5`       | Drafts code and explains run steps    |
-| Analyst      | `gpt-5`       | Interprets data and suggests visuals  |
+| Agent        | Model default | Purpose                              |
+| ------------ | ------------- | ------------------------------------ |
+| Orchestrator | `gpt-5`       | Plans, delegates, synthesises        |
+| Researcher   | `gpt-5`       | Finds and summarises sources         |
+| Coder        | `gpt-5`       | Drafts code and explains run steps   |
+| Analyst      | `gpt-5`       | Interprets data and suggests visuals |
 
 Runtime toggles (`stream`, `store`, `checkpoint`) live in each `agents/<role>/config.yaml` and are attached to the instantiated `ChatAgent` for orchestration to inspect.
 

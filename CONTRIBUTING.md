@@ -14,8 +14,8 @@ project-specific conventions you should follow before opening a pull request.
 
 ```bash
 # Clone and enter the repository
-git clone https://github.com/Qredence/AgenticFleet.git
-cd AgenticFleet
+git clone https://github.com/Qredence/agentic-fleet.git
+cd agentic-fleet
 
 # Install dependencies (creates/updates .venv)
 uv sync

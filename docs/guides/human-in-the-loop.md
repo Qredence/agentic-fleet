@@ -20,9 +20,9 @@ HITL is configured in `src/agenticfleet/config/workflow.yaml`:
 ```yaml
 workflow:
   human_in_the_loop:
-    enabled: true  # Set to false to disable
-    approval_timeout_seconds: 300  # 5 minutes
-    auto_reject_on_timeout: false  # Don't auto-reject on timeout
+    enabled: true # Set to false to disable
+    approval_timeout_seconds: 300 # 5 minutes
+    auto_reject_on_timeout: false # Don't auto-reject on timeout
     require_approval_for:
       - code_execution
       - file_operations
@@ -81,20 +81,26 @@ Approve? (yes/no/edit):
 You have three choices:
 
 #### 1. Approve (yes/y/approve)
+
 Allow the operation to proceed as proposed:
+
 ```
 Approve? (yes/no/edit): yes
 ```
 
 #### 2. Reject (no/n/reject/deny)
+
 Block the operation from executing:
+
 ```
 Approve? (yes/no/edit): no
 Reason for rejection (optional): Too risky
 ```
 
 #### 3. Edit (edit/e/modify/m)
+
 Modify the code before execution (only for code operations):
+
 ```
 Approve? (yes/no/edit): edit
 
@@ -111,8 +117,8 @@ print(data.head())
 ### Timeout Behavior
 
 ```yaml
-approval_timeout_seconds: 300  # Wait up to 5 minutes for approval
-auto_reject_on_timeout: false  # What to do if timeout occurs
+approval_timeout_seconds: 300 # Wait up to 5 minutes for approval
+auto_reject_on_timeout: false # What to do if timeout occurs
 ```
 
 - If `auto_reject_on_timeout: true`, operations are automatically rejected after timeout
@@ -124,9 +130,9 @@ Configure which operations require approval:
 
 ```yaml
 require_approval_for:
-  - code_execution        # Python code execution
-  - file_operations       # File read/write/delete
-  - external_api_calls    # API calls to external services
+  - code_execution # Python code execution
+  - file_operations # File read/write/delete
+  - external_api_calls # API calls to external services
   - sensitive_data_access # Access to sensitive data sources
 ```
 
@@ -134,8 +140,8 @@ Trusted operations that don't require approval:
 
 ```yaml
 trusted_operations:
-  - web_search      # Web searches are considered safe
-  - data_analysis   # Data analysis (read-only)
+  - web_search # Web searches are considered safe
+  - data_analysis # Data analysis (read-only)
 ```
 
 ## Use Cases
@@ -219,6 +225,7 @@ Approve? (yes/no/edit): yes
 To disable HITL and allow autonomous execution:
 
 1. Edit `src/agenticfleet/config/workflow.yaml`:
+
    ```yaml
    workflow:
      human_in_the_loop:
@@ -228,6 +235,7 @@ To disable HITL and allow autonomous execution:
 2. Restart AgenticFleet
 
 You'll see:
+
 ```
 ⚠ Human-in-the-Loop disabled
 ```
@@ -237,6 +245,7 @@ You'll see:
 ### When to Enable HITL
 
 ✅ **Enable for**:
+
 - Production environments
 - Sensitive data operations
 - Critical infrastructure changes
@@ -244,6 +253,7 @@ You'll see:
 - Learning and development
 
 ❌ **Consider Disabling for**:
+
 - Development/testing environments
 - Trusted, well-tested workflows
 - Automated CI/CD pipelines
@@ -265,6 +275,7 @@ You'll see:
 **Cause**: No response within `approval_timeout_seconds`
 
 **Solutions**:
+
 - Increase timeout in configuration
 - Set `auto_reject_on_timeout: true` for automatic handling
 - Respond more quickly to prompts
@@ -274,6 +285,7 @@ You'll see:
 **Cause**: Trying to edit a non-code operation
 
 **Solutions**:
+
 - Only code operations can be edited
 - Use approve or reject for other operation types
 
@@ -282,6 +294,7 @@ You'll see:
 **Cause**: HITL may be disabled or misconfigured
 
 **Solutions**:
+
 1. Check `workflow.yaml`: `human_in_the_loop.enabled: true`
 2. Verify operation type in `require_approval_for` list
 3. Restart AgenticFleet after configuration changes
@@ -335,10 +348,11 @@ result = await workflow.run("Your task here")
 ## Support
 
 For issues or questions:
-- GitHub Issues: https://github.com/Qredence/AgenticFleet/issues
-- Documentation: https://github.com/Qredence/AgenticFleet/docs
+
+- GitHub Issues: https://github.com/Qredence/agentic-fleet/issues
+- Documentation: https://github.com/Qredence/agentic-fleet/docs
 
 ---
 
-*Last Updated: October 13, 2025*
-*Version: 0.5.0*
+_Last Updated: October 13, 2025_
+_Version: 0.5.0_
