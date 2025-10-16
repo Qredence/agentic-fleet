@@ -10,9 +10,6 @@ from typing import Any
 
 try:
     from agent_framework import FileCheckpointStorage
-    from agent_framework._workflow._checkpoint import (
-        WorkflowCheckpoint,  # type: ignore[import-not-found]
-    )
 except ImportError:
 
     class FileCheckpointStorage:  # type: ignore[no-redef]
@@ -21,11 +18,6 @@ except ImportError:
                 "agent_framework is required for AgenticFleetFileCheckpointStorage. "
                 "Please install agent_framework to use checkpoint storage features."
             )
-
-    class WorkflowCheckpoint:  # type: ignore[no-redef]
-        """Fallback when agent_framework is not available."""
-
-        pass
 
 
 from agenticfleet.core.logging import get_logger

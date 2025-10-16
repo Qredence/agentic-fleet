@@ -160,6 +160,8 @@ async def run_repl(workflow_instance: "MagenticFleet", ui: ConsoleUI) -> None:
                 final_render = workflow_instance.console_callbacks.consume_final_render()
                 if final_render is None:
                     ui.log_final(result or "")
+                else:
+                    ui.log_final(final_render)
                 ui.console.print(Text("Ready for next task", style="bold"))
                 ui.console.print(Text("=" * 72, style="dim"))
 
@@ -240,7 +242,8 @@ def run_repl_main() -> int:
         ui.log_notice(f"Fatal error: {e}", style="red")
         return 1
     finally:
-        workflow_instance.console_callbacks.bind_ui(None)
+        if 'workflow_instance' in locals() and workflow_instance is not None:
+            workflow_instance.console_callbacks.bind_ui(None)
 
 
 def main() -> None:

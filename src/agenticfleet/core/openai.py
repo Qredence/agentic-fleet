@@ -16,7 +16,7 @@ def get_responses_model_parameter(client_cls: type[object]) -> str:
     parameters = signature.parameters
 
     if "model_id" in parameters:
-        return "model"
+        return "model_id"
 
     if "model" in parameters:
         return "model"
