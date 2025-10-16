@@ -73,6 +73,18 @@ dev = [
 [tool.black]
 target-version = ['py312']
 line-length = 100
+exclude = '''
+/(
+    \.git
+  | \.mypy_cache
+  | \.pytest_cache
+  | \.ruff_cache
+  | \.venv
+  | node_modules
+  | dist
+  | build
+)/
+'''
 
 [tool.ruff]
 src = ["src"]

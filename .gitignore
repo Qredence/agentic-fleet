@@ -61,3 +61,6 @@ checkpoints/
 gha-creds-*.json
 AgenticFleet.code-workspace
 AgenticFleet.code-workspace
+
+# Node modules
+node_modules/
