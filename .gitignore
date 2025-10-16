@@ -53,8 +53,8 @@ htmlcov/
 Thumbs.db
 AgenticFleet.code-workspace
 
-# Checkpoints
-checkpoints/
+# Runtime artifacts
+var/
 *.checkpoint
 
 .gemini/

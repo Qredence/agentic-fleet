@@ -49,7 +49,7 @@ def setup_logging(
 
     if log_file:
         # Only allow log files within the default logs directory
-        logs_root = Path("logs").resolve()
+        logs_root = Path("var/logs").resolve()
         candidate_path = Path(log_file)
         # Forbid absolute paths or parent traversal
         if candidate_path.is_absolute() or ".." in candidate_path.parts:
@@ -78,7 +78,7 @@ def setup_logging(
         except Exception:
             inside_logs = False
         if not inside_logs:
-            msg = f"Log file path '{log_path}' is not allowed: " f"must be within '{logs_root}'"
+            msg = f"Log file path '{log_path}' is not allowed: must be within '{logs_root}'"
             raise ValueError(msg)
         log_path.parent.mkdir(parents=True, exist_ok=True)
         handlers.append(logging.FileHandler(str(log_path)))

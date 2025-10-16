@@ -28,7 +28,7 @@ file:
 - `OPENAI_EMBEDDING_MODEL`: Optional override for the embedding model used to store and
   retrieve memories (defaults to `text-embedding-3-small`).
 - `MEM0_HISTORY_DB_PATH`: Optional path to the on-disk history database (defaults to
-  `memories/history.db`).
+  `var/memories/history.db`).
 
 ## Usage
 

@@ -58,7 +58,7 @@ planning from the last round.
 Checkpoints capture the conversational ledger and agent state _within a single
 workflow run_. Mem0 complements this by providing cross-run memories that encode
 facts about the user or prior work. Mem0 is backed by OpenAI models (no Azure
-dependency) and stores history in a local database (`memories/history.db` by
+dependency) and stores history in a local database (`var/memories/history.db` by
 default). Together they offer:
 
 - **Short-term recall** – checkpoints rebuild the task ledger exactly as the

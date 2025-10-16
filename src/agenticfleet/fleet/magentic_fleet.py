@@ -428,15 +428,21 @@ class MagenticFleet:
         checkpoint_config = (
             settings.workflow_config.get("workflow", {}).get("checkpointing", {}) or {}
         )
-        storage_path = checkpoint_config.get("storage_path", "./checkpoints")
+        storage_path = checkpoint_config.get("storage_path", "./var/checkpoints")
+        storage_path = settings._rewrite_runtime_path(  # type: ignore[attr-defined]
+            storage_path,
+            env_var_name=None,
+            old_prefix="checkpoints",
+            new_prefix="var/checkpoints",
+        )
         try:
             return Path(storage_path).expanduser()
         except TypeError:  # pragma: no cover - defensive guard
             logger.debug(
-                "Invalid checkpoint storage path configured (%r); using default ./checkpoints",
+                "Invalid checkpoint storage path configured (%r); using default ./var/checkpoints",
                 storage_path,
             )
-            return Path("checkpoints")
+            return Path("var/checkpoints")
 
 
 def create_default_fleet(console_ui: ConsoleUI | None = None) -> MagenticFleet:

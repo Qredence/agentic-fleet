@@ -2,6 +2,12 @@
 # Archive old folder structure before cleanup
 # This creates a backup that can be restored if needed
 
+set -euo pipefail
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+REPO_ROOT="$(cd "${SCRIPT_DIR}/../.." && pwd)"
+cd "${REPO_ROOT}"
+
 echo "Creating backup of old structure..."
 
 # Create backup directory with timestamp

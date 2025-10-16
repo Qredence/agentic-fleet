@@ -8,7 +8,7 @@ to specialized agents (researcher, coder, analyst), and synthesizing results.
 """
 
 try:
-    from agent_framework.llm.clients.openai import OpenAIResponsesClient
+    from agent_framework.openai import OpenAIResponsesClient
 except ImportError:
     OpenAIResponsesClient = None  # type: ignore[misc]
 

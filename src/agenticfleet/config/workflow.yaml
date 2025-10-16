@@ -7,7 +7,7 @@ workflow:
   checkpointing:
     enabled: true
     storage_type: file # Options: file, memory
-    storage_path: ./checkpoints
+    storage_path: ./var/checkpoints
     cleanup_after_days: 30
     auto_resume_on_failure: false
   human_in_the_loop:
