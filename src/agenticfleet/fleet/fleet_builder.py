@@ -14,8 +14,8 @@ try:  # pragma: no cover - runtime import guard
     from agent_framework import MagenticBuilder as _RealMagenticBuilder
     from agent_framework.openai import OpenAIResponsesClient as _RealOpenAIResponsesClient
 except ModuleNotFoundError:  # pragma: no cover - fallback for test environments
-    _RealMagenticBuilder = None
-    _RealOpenAIResponsesClient = None
+    _RealMagenticBuilder = None  # type: ignore
+    _RealOpenAIResponsesClient = None  # type: ignore
 
 
 if TYPE_CHECKING:
@@ -66,8 +66,8 @@ class _FallbackMagenticBuilder:
         return self._workflow
 
 
-MagenticBuilder = _RealMagenticBuilder or _FallbackMagenticBuilder
-OpenAIResponsesClient = _RealOpenAIResponsesClient or _FallbackOpenAIResponsesClient
+MagenticBuilder = _RealMagenticBuilder or _FallbackMagenticBuilder  # type: ignore[truthy-function,unreachable]
+OpenAIResponsesClient = _RealOpenAIResponsesClient or _FallbackOpenAIResponsesClient  # type: ignore[truthy-function,unreachable]
 _AGENT_FRAMEWORK_AVAILABLE = _RealMagenticBuilder is not None
 
 logger = get_logger(__name__)

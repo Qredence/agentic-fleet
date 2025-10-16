@@ -10,7 +10,9 @@ from typing import Any
 
 try:
     from agent_framework import FileCheckpointStorage
-    from agent_framework._workflow._checkpoint import WorkflowCheckpoint
+    from agent_framework._workflow._checkpoint import (
+        WorkflowCheckpoint,  # type: ignore[import-not-found]
+    )
 except ImportError:
 
     class FileCheckpointStorage:  # type: ignore[no-redef]
