@@ -13,7 +13,8 @@ try:
 
     _AGENT_FRAMEWORK_AVAILABLE = True
 except ModuleNotFoundError:  # pragma: no cover - dependency optional in tests
-    CheckpointStorage = object  # type: ignore[misc, assignment]
+    from typing import Any as CheckpointStorage  # type: ignore[misc, assignment]
+
     InMemoryCheckpointStorage = None  # type: ignore[misc, assignment]
     _AGENT_FRAMEWORK_AVAILABLE = False
 
@@ -147,6 +148,9 @@ class Settings:
             return None
 
         if storage_type == "memory":
+            if InMemoryCheckpointStorage is None:
+                logging.warning("InMemoryCheckpointStorage not available")
+                return None
             return InMemoryCheckpointStorage()
         elif storage_type == "file":
             storage_path = checkpoint_config.get("storage_path", "./var/checkpoints")

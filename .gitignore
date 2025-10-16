@@ -61,3 +61,5 @@ var/
 gha-creds-*.json
 AgenticFleet.code-workspace
 AgenticFleet.code-workspace
+
+node_modules/
