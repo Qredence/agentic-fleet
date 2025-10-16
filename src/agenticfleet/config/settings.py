@@ -3,7 +3,7 @@
 import logging
 import os
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
 
 import yaml
 from agent_framework import CheckpointStorage, InMemoryCheckpointStorage
@@ -127,7 +127,9 @@ class Settings:
             storage_path = checkpoint_config.get("storage_path", "./checkpoints")
             # Ensure the checkpoints directory exists
             Path(storage_path).mkdir(parents=True, exist_ok=True)
-            return AgenticFleetFileCheckpointStorage(storage_path)
+            # AgenticFleetFileCheckpointStorage extends FileCheckpointStorage but overrides
+            # list_checkpoints signature for our use case - cast to satisfy type checker
+            return cast(CheckpointStorage, AgenticFleetFileCheckpointStorage(storage_path))
         else:
             logging.warning(
                 f"Unknown checkpoint storage type: {storage_type}. Checkpointing disabled."

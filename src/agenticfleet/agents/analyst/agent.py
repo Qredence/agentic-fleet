@@ -12,6 +12,7 @@ from agent_framework.openai import OpenAIResponsesClient
 
 from agenticfleet.agents.base import AgenticFleetChatAgent
 from agenticfleet.config import settings
+from agenticfleet.core.openai import get_responses_model_parameter
 
 
 def create_analyst_agent() -> AgenticFleetChatAgent:
@@ -29,9 +30,12 @@ def create_analyst_agent() -> AgenticFleetChatAgent:
     agent_config = config.get("agent", {})
 
     # Create OpenAI chat client
-    chat_client = OpenAIResponsesClient(
-        model_id=agent_config.get("model", settings.openai_model),
-    )
+    chat_client_kwargs = {
+        get_responses_model_parameter(OpenAIResponsesClient): agent_config.get(
+            "model", settings.openai_model
+        )
+    }
+    chat_client = OpenAIResponsesClient(**chat_client_kwargs)
 
     # Import and configure tools based on agent configuration
     from agenticfleet.agents.analyst.tools.data_analysis_tools import (

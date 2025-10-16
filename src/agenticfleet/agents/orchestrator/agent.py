@@ -11,6 +11,7 @@ from agent_framework.openai import OpenAIResponsesClient
 
 from agenticfleet.agents.base import AgenticFleetChatAgent
 from agenticfleet.config import settings
+from agenticfleet.core.openai import get_responses_model_parameter
 
 
 def create_orchestrator_agent() -> AgenticFleetChatAgent:
@@ -28,9 +29,12 @@ def create_orchestrator_agent() -> AgenticFleetChatAgent:
     agent_config = config.get("agent", {})
 
     # Create OpenAI chat client
-    chat_client = OpenAIResponsesClient(
-        model_id=agent_config.get("model", settings.openai_model),
-    )
+    chat_client_kwargs = {
+        get_responses_model_parameter(OpenAIResponsesClient): agent_config.get(
+            "model", settings.openai_model
+        )
+    }
+    chat_client = OpenAIResponsesClient(**chat_client_kwargs)
 
     # Create and return agent (orchestrator typically has no tools)
     # Note: temperature is not a ChatAgent parameter in Microsoft Agent Framework

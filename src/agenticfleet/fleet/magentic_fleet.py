@@ -203,7 +203,7 @@ class MagenticFleet:
             logger.error(f"Magentic workflow execution failed: {error}", exc_info=True)
             raise WorkflowError(f"Fleet execution failed: {error}") from error
 
-    def _extract_final_answer(self, result: Any) -> str:
+    def _extract_final_answer(self, result: object) -> str:
         """
         Extract the final answer text from the workflow result.
 
@@ -261,10 +261,10 @@ class MagenticFleet:
         return normalized
 
     @staticmethod
-    def _normalize_checkpoint_metadata(checkpoint: Any) -> dict[str, Any]:
+    def _normalize_checkpoint_metadata(checkpoint: object) -> dict[str, Any]:
         """Normalize checkpoint metadata regardless of storage implementation."""
 
-        def resolve(source: Any, *names: str, default: Any = None) -> Any:
+        def resolve(source: object, *names: str, default: object = None) -> object:
             for name in names:
                 if isinstance(source, dict) and name in source:
                     value = source[name]

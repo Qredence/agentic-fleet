@@ -4,32 +4,41 @@ from __future__ import annotations
 
 import asyncio
 import json
+from datetime import datetime
 from pathlib import Path
 from typing import Any
 
 try:
     from agent_framework import FileCheckpointStorage
+    from agent_framework._workflow._checkpoint import WorkflowCheckpoint
 except ImportError:
-    class FileCheckpointStorage:
-        def __init__(self, *args, **kwargs):
+
+    class FileCheckpointStorage:  # type: ignore[no-redef]
+        def __init__(self, *args: Any, **kwargs: Any) -> None:
             raise ImportError(
                 "agent_framework is required for AgenticFleetFileCheckpointStorage. "
                 "Please install agent_framework to use checkpoint storage features."
             )
+
+    class WorkflowCheckpoint:  # type: ignore[no-redef]
+        """Fallback when agent_framework is not available."""
+
+        pass
+
 
 from agenticfleet.core.logging import get_logger
 
 logger = get_logger(__name__)
 
 
-class AgenticFleetFileCheckpointStorage(FileCheckpointStorage):
+class AgenticFleetFileCheckpointStorage(FileCheckpointStorage):  # type: ignore[misc]
     """File-based checkpoint storage with listing support."""
 
     def __init__(self, storage_path: str | Path) -> None:
         super().__init__(storage_path)
         self._storage_path = Path(storage_path)
 
-    async def list_checkpoints(self) -> list[dict[str, Any]]:  # type: ignore[override]
+    async def list_checkpoints(self, workflow_id: str | None = None) -> list[dict[str, Any]]:  # type: ignore[override]
         """Return serialized checkpoint metadata sorted by newest first."""
 
         return await asyncio.to_thread(self._load_checkpoints)
@@ -37,7 +46,7 @@ class AgenticFleetFileCheckpointStorage(FileCheckpointStorage):
     def _load_checkpoints(self) -> list[dict[str, Any]]:
         checkpoints: list[dict[str, Any]] = []
 
-        for checkpoint_file in sorted(self._storage_path.glob("*.json"), reverse=True):
+        for checkpoint_file in self._storage_path.glob("*.json"):
             try:
                 with checkpoint_file.open() as handle:
                     data = json.load(handle)
@@ -55,6 +64,8 @@ class AgenticFleetFileCheckpointStorage(FileCheckpointStorage):
                 }
             )
 
+        checkpoints.sort(key=self._checkpoint_sort_key, reverse=True)
+
         return checkpoints
 
     @staticmethod
@@ -70,6 +81,35 @@ class AgenticFleetFileCheckpointStorage(FileCheckpointStorage):
                     return value
 
         return 0
+
+    @staticmethod
+    def _checkpoint_sort_key(checkpoint: dict[str, Any]) -> tuple[float, str]:
+        timestamp = checkpoint.get("timestamp")
+        parsed = AgenticFleetFileCheckpointStorage._parse_timestamp(timestamp)
+        identifier = str(checkpoint.get("checkpoint_id") or "")
+        return (parsed, identifier)
+
+    @staticmethod
+    def _parse_timestamp(timestamp: object) -> float:
+        if timestamp is None:
+            return float("-inf")
+
+        if isinstance(timestamp, int | float):
+            return float(timestamp)
+
+        if isinstance(timestamp, str):
+            iso_value = timestamp
+            if iso_value.endswith("Z"):
+                iso_value = iso_value[:-1] + "+00:00"
+            try:
+                return datetime.fromisoformat(iso_value).timestamp()
+            except ValueError:
+                try:
+                    return float(iso_value)
+                except ValueError:
+                    return float("-inf")
+
+        return float("-inf")
 
 
 __all__ = ["AgenticFleetFileCheckpointStorage"]

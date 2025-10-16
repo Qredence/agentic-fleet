@@ -2,11 +2,12 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, cast
 
 from agenticfleet.config import settings
 from agenticfleet.core.exceptions import AgentConfigurationError
 from agenticfleet.core.logging import get_logger
+from agenticfleet.core.openai import get_responses_model_parameter
 from agenticfleet.fleet import callbacks
 
 try:  # pragma: no cover - runtime import guard
@@ -173,7 +174,7 @@ Always explain your reasoning and include evidence from agent responses."""
 
         # Create OpenAI client for the manager
         client_kwargs: dict[str, Any] = {
-            "model": manager_model,
+            get_responses_model_parameter(OpenAIResponsesClient): manager_model,
             "api_key": settings.openai_api_key,
         }
         if self.manager_reasoning:
@@ -182,8 +183,10 @@ Always explain your reasoning and include evidence from agent responses."""
         chat_client = OpenAIResponsesClient(**client_kwargs)
 
         # Configure the manager with custom settings
+        # chat_client is OpenAIResponsesClient which implements ChatClientProtocol when
+        # agent_framework is installed; fallback is only for import-time compatibility
         self.builder = self.builder.with_standard_manager(
-            chat_client=chat_client,
+            chat_client=cast(Any, chat_client),
             instructions=manager_instructions,
             max_round_count=self.max_round_count,
             max_stall_count=self.max_stall_count,
