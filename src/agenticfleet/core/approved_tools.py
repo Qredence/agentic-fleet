@@ -26,11 +26,14 @@ def set_approval_handler(
 
     Args:
         handler: Approval handler instance or None to disable approval.
-        require_operations: Iterable of operation identifiers (str) that require approval.
-            Each operation is normalized (stripped and lowercased). If None or empty, no operations require approval.
-        trusted_operations: Iterable of operation identifiers (str) that are always allowed without approval.
-            Each operation is normalized (stripped and lowercased). If an operation appears in both
-            require_operations and trusted_operations, trusted_operations takes precedence and approval is not required.
+        require_operations: Iterable of operation identifiers (str) that require
+            approval. Each operation is normalized (stripped and lowercased).
+            If None or empty, no operations require approval.
+        trusted_operations: Iterable of operation identifiers (str) that are
+            always allowed without approval. Each operation is normalized
+            (stripped and lowercased). If an operation appears in both
+            require_operations and trusted_operations, trusted_operations takes
+            precedence and approval is not required.
 
     Notes:
         - Passing handler=None disables approval and resets required/trusted operations.

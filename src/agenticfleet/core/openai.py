@@ -25,7 +25,7 @@ def get_responses_model_parameter(client_cls: type[object]) -> str:
         if parameter.kind is inspect.Parameter.VAR_KEYWORD:
             return "model"
 
-    return "model_id"
+    return "model"
 
 
 __all__ = ["get_responses_model_parameter"]
