@@ -1,10 +1,34 @@
 """Integration-style tests for the console UI output and callbacks."""
 
+import os
+
 import pytest
 from rich.console import Console
 
 from agenticfleet.cli.ui import AgentMessage, ConsoleUI
 from agenticfleet.fleet.callbacks import ConsoleCallbacks
+
+
+@pytest.fixture(autouse=True)
+def patch_prompt_toolkit_output(monkeypatch):
+    """Patch prompt_toolkit output to avoid Windows console errors in CI.
+
+    This fixture automatically patches prompt_toolkit's output creation
+    when running in CI environments (GitHub Actions, etc.) to use DummyOutput
+    instead of platform-specific console outputs that may not be available.
+    """
+    if os.environ.get("CI", "false").lower() == "true":
+        try:
+            from prompt_toolkit.output import DummyOutput
+
+            # Patch the create_output function to always return DummyOutput
+            monkeypatch.setattr(
+                "prompt_toolkit.output.defaults.create_output",
+                lambda *args, **kwargs: DummyOutput(),
+            )
+        except ImportError:
+            # If prompt_toolkit is not available, skip patching
+            pass
 
 
 def _record_output(action) -> str:
