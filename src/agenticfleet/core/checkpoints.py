@@ -7,7 +7,15 @@ import json
 from pathlib import Path
 from typing import Any
 
-from agent_framework import FileCheckpointStorage
+try:
+    from agent_framework import FileCheckpointStorage
+except ImportError:
+    class FileCheckpointStorage:
+        def __init__(self, *args, **kwargs):
+            raise ImportError(
+                "agent_framework is required for AgenticFleetFileCheckpointStorage. "
+                "Please install agent_framework to use checkpoint storage features."
+            )
 
 from agenticfleet.core.logging import get_logger
 
