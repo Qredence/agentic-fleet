@@ -16,7 +16,7 @@ Enhance observability by implementing proper OpenTelemetry integration for distr
 ### Implementation
 
 - Basic logging setup in `src/agenticfleet/core/logging.py`
-- File-based logs in `logs/agenticfleet.log`
+- File-based logs in `var/logs/agenticfleet.log`
 - No distributed tracing
 - Limited metrics collection
 - No cost tracking per agent

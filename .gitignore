@@ -53,11 +53,13 @@ htmlcov/
 Thumbs.db
 AgenticFleet.code-workspace
 
-# Checkpoints
-checkpoints/
+# Runtime artifacts
+var/
 *.checkpoint
 
 .gemini/
 gha-creds-*.json
 AgenticFleet.code-workspace
 AgenticFleet.code-workspace
+
+node_modules/

@@ -13,7 +13,8 @@ try:
 
     _AGENT_FRAMEWORK_AVAILABLE = True
 except ModuleNotFoundError:  # pragma: no cover - dependency optional in tests
-    CheckpointStorage = object  # type: ignore[misc, assignment]
+    from typing import Any as CheckpointStorage  # type: ignore[misc, assignment]
+
     InMemoryCheckpointStorage = None  # type: ignore[misc, assignment]
     _AGENT_FRAMEWORK_AVAILABLE = False
 
@@ -39,10 +40,22 @@ class Settings:
         self.openai_model = os.getenv("OPENAI_MODEL", "gpt-5-mini")
         self.openai_embedding_model = os.getenv("OPENAI_EMBEDDING_MODEL", "text-embedding-3-small")
         self.log_level = os.getenv("LOG_LEVEL", "INFO")
-        self.log_file = os.getenv("LOG_FILE", "logs/agenticfleet.log")
+        self.log_file = os.getenv("LOG_FILE", "var/logs/agenticfleet.log")
+        self.log_file = self._rewrite_runtime_path(
+            self.log_file,
+            env_var_name="LOG_FILE",
+            old_prefix="logs",
+            new_prefix="var/logs",
+        )
 
         # Mem0 configuration
-        self.mem0_history_db_path = os.getenv("MEM0_HISTORY_DB_PATH", "memories/history.db")
+        self.mem0_history_db_path = os.getenv("MEM0_HISTORY_DB_PATH", "var/memories/history.db")
+        self.mem0_history_db_path = self._rewrite_runtime_path(
+            self.mem0_history_db_path,
+            env_var_name="MEM0_HISTORY_DB_PATH",
+            old_prefix="memories",
+            new_prefix="var/memories",
+        )
 
         # Ensure parent directory for history DB exists when using the default path
         history_path = Path(self.mem0_history_db_path)
@@ -135,9 +148,18 @@ class Settings:
             return None
 
         if storage_type == "memory":
+            if InMemoryCheckpointStorage is None:
+                logging.warning("InMemoryCheckpointStorage not available")
+                return None
             return InMemoryCheckpointStorage()
         elif storage_type == "file":
-            storage_path = checkpoint_config.get("storage_path", "./checkpoints")
+            storage_path = checkpoint_config.get("storage_path", "./var/checkpoints")
+            storage_path = self._rewrite_runtime_path(
+                storage_path,
+                env_var_name=None,
+                old_prefix="checkpoints",
+                new_prefix="var/checkpoints",
+            )
             # Ensure the checkpoints directory exists
             Path(storage_path).mkdir(parents=True, exist_ok=True)
             # AgenticFleetFileCheckpointStorage extends FileCheckpointStorage but overrides
@@ -165,6 +187,55 @@ class Settings:
         if not self._openai_api_key:
             raise AgentConfigurationError("OPENAI_API_KEY environment variable is required")
         return self._openai_api_key
+
+    def _rewrite_runtime_path(
+        self,
+        raw_value: str,
+        *,
+        env_var_name: str | None,
+        old_prefix: str,
+        new_prefix: str,
+    ) -> str:
+        """Remap legacy runtime paths (e.g., logs/, checkpoints/) into var/."""
+
+        if env_var_name:
+            override_value = os.getenv(env_var_name)
+            if override_value:
+                override_path = Path(override_value)
+                if override_path.is_absolute():
+                    return override_value
+                override_parts = override_path.parts
+                if not override_parts:
+                    return override_value
+                has_legacy_prefix = override_parts[0] == old_prefix or (
+                    len(override_parts) > 1
+                    and override_parts[0] == "."
+                    and override_parts[1] == old_prefix
+                )
+                if not has_legacy_prefix:
+                    return override_value
+                raw_value = override_value
+
+        if not raw_value:
+            return raw_value
+
+        path_obj = Path(raw_value)
+        new_prefix_parts = Path(new_prefix).parts
+
+        if not path_obj.parts:
+            return raw_value
+
+        parts = path_obj.parts
+
+        if parts[0] == old_prefix:
+            rewritten = Path(*new_prefix_parts, *parts[1:])
+            return str(rewritten)
+
+        if len(parts) > 1 and parts[0] == "." and parts[1] == old_prefix:
+            rewritten = Path(".", *new_prefix_parts, *parts[2:])
+            return str(rewritten)
+
+        return raw_value
 
 
 # Global settings instance

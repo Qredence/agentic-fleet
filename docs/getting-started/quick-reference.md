@@ -111,6 +111,6 @@ Spot-check specific tests with `uv run pytest tests/<file>.py -k "<expression>"`
 | Missing dependencies | `make sync` (or `uv sync`) to reinstall from `uv.lock`. |
 | Stale caches or weird imports | `make clean` then rerun tests. |
 | CLI refuses to start | Run `uv run python tests/test_config.py` to validate configs and API credentials. |
-| Mem0/context issues | Check `memories/` directory and review `docs/operations/mem0-integration.md`. |
+| Mem0/context issues | Check `var/memories/` directory and review `docs/operations/mem0-integration.md`. |
 
 For deeper diagnostics, see `docs/runbooks/troubleshooting.md`.

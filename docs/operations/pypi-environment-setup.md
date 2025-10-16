@@ -395,7 +395,7 @@ graph TD
 
 ```bash
 # Run setup helper script
-./scripts/setup-pypi-environment.sh
+./tools/scripts/setup-pypi-environment.sh
 
 # Create release
 git tag v0.5.0
@@ -439,4 +439,4 @@ After completing this setup:
 - Check workflow logs: `gh run view --log`
 - Review this guide: `docs/PYPI_ENVIRONMENT_SETUP.md`
 - See main setup: `docs/GITHUB_ACTIONS_SETUP.md`
-- Run helper script: `./scripts/setup-pypi-environment.sh`
+- Run helper script: `./tools/scripts/setup-pypi-environment.sh`

@@ -286,9 +286,9 @@ result = await fleet.run("Search for recent AI research papers")
    - Adjust orchestrator limits
 
 4. **Monitor Execution**
-   - Check `logs/agenticfleet.log` for fleet events
+   - Check `var/logs/agenticfleet.log` for fleet events
    - Callbacks log plan creation, progress, and delegation
-   - View checkpoint files in `./checkpoints/`
+   - View checkpoint files in `./var/checkpoints/`
 
 ## 📚 References
 

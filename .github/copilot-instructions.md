@@ -64,6 +64,14 @@ Enable/disable via `fleet.callbacks.*` in workflow.yaml. All callbacks are optio
 - **Makefile shortcuts**: `make install` (first-time setup), `make sync` (update deps), `make test-config`, `make run`. Prefer these over raw uv commands for consistency.
 - **Testing Magentic**: `tests/test_magentic_fleet.py` (14 tests) covers fleet creation, agent registration, callback wiring, and workflow execution. `tests/test_configuration.py` tests factory and checkpoint storage. Mock `OpenAIResponsesClient` to avoid API calls in tests.
 
+## VS Code Configuration
+
+- **Python interpreter**: `.vscode/settings.json` sets `python.defaultInterpreterPath` to `.venv/bin/python`. The project uses **uv** for dependency management, not pip/venv. Never configure `python-envs` settings with venv/pip managers—this creates conflicts.
+- **Formatting & linting**: Ruff is the default formatter with explicit save actions. Black runs via `make format`. Code actions (fix all, organize imports) are explicit to avoid noise. All settings in `pyproject.toml` prevent config drift.
+- **Launch configs**: `.vscode/launch.json` provides debug targets for `main.py` and `tests/test_config.py`. Both use `.venv/bin/python` interpreter. Add new configs for agent debugging or REPL sessions.
+- **Tasks**: All VS Code tasks in `.vscode/tasks.json` use `uv run` prefix and depend on `uv: sync`. Run tasks via Command Palette (Cmd+Shift+P → "Tasks: Run Task") or keyboard shortcuts. Standard tasks: lint, format, type-check, tests, test-config.
+- **Workspace exclusions**: `.vscode/settings.json` excludes `.venv/`, `var/`, `__pycache__`, and cache directories from file watcher to improve performance. Runtime state lives in `var/checkpoints` and `var/logs`.
+
 ## Error Handling & Logging
 
 - **Exception hierarchy**: Raise `AgentConfigurationError` for config issues, `WorkflowError` for orchestration failures, `ToolExecutionError` for tool problems, `ContextProviderError` for memory issues. All inherit from `AgenticFleetError` in `core/exceptions.py`.

@@ -9,9 +9,9 @@ The analyst is responsible for data analysis and generating insights.
 from typing import Any
 
 try:
-    from agent_framework.llm.clients.openai import OpenAIResponsesClient
+    from agent_framework.openai import OpenAIResponsesClient
 except ImportError:
-    OpenAIResponsesClient = None  # type: ignore[misc]
+    OpenAIResponsesClient = None  # type: ignore[assignment,misc]
 
 from agenticfleet.agents.base import FleetAgent
 from agenticfleet.config import settings

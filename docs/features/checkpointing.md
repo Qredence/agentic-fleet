@@ -23,7 +23,7 @@ workflow:
   checkpointing:
     enabled: true                      # Enable/disable checkpointing
     storage_type: file                 # Options: file, memory
-    storage_path: ./checkpoints        # Path for file storage
+    storage_path: ./var/checkpoints    # Path for file storage
     cleanup_after_days: 30             # Auto-cleanup (not yet implemented)
     auto_resume_on_failure: false      # Auto-resume (not yet implemented)
 ```
@@ -40,7 +40,7 @@ workflow:
 When you start AgenticFleet, you'll see the checkpoint status:
 
 ```
-✓ Checkpointing enabled (storage: ./checkpoints)
+✓ Checkpointing enabled (storage: ./var/checkpoints)
 ```
 
 #### List Checkpoints
@@ -216,7 +216,7 @@ The checkpointing system integrates with Microsoft Agent Framework's checkpoint 
 │   CheckpointStorage                 │
 │   (FileCheckpointStorage)           │
 │                                     │
-│  - storage_path: ./checkpoints      │
+│  - storage_path: ./var/checkpoints  │
 │  - Saves JSON files                 │
 └─────────────────────────────────────┘
 ```
@@ -250,8 +250,8 @@ checkpointing:
 The directory is created automatically, but ensure the parent directory is writable:
 
 ```bash
-mkdir -p ./checkpoints
-chmod 755 ./checkpoints
+mkdir -p ./var/checkpoints
+chmod 755 ./var/checkpoints
 ```
 
 ### Checkpoint restore fails
@@ -259,8 +259,8 @@ chmod 755 ./checkpoints
 Ensure the checkpoint file exists and is valid JSON:
 
 ```bash
-ls ./checkpoints/
-cat ./checkpoints/<checkpoint-id>.json | python -m json.tool
+ls ./var/checkpoints/
+cat ./var/checkpoints/<checkpoint-id>.json | python -m json.tool
 ```
 
 ## Related Documentation

@@ -154,7 +154,7 @@ AgenticFleet/
 │   ├── core/
 │   └── cli/
 ├── docs/                     # reorganised as getting-started/, overview/, operations/, etc.
-├── scripts/
+├── tools/                    # scripts/ and static analysis configs live here now
 ├── tests/
 ├── pyproject.toml
 └── uv.lock
