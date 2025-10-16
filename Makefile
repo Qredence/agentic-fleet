@@ -29,9 +29,6 @@ help:
 # Setup commands
 install:
 	uv sync --all-extras
-	uv pip install --prerelease allow agent-framework agent-framework-core agent-framework-a2a agent-framework-azure-ai agent-framework-mem0 agent-framework-redis agent-framework-devui
-	uv pip install -U openai
-
 sync:
 	uv sync
 
