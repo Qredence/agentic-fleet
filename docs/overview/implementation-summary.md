@@ -484,7 +484,7 @@ The AgenticFleet Phase 1 implementation is complete and fully functional. All co
 
 ---
 
-*Generated on: Phase 1 Implementation Complete*
-*Framework: Microsoft Agent Framework v1.0.0b251007*
-*Python: 3.13.2*
-*Package Manager: uv*
+_Generated on: Phase 1 Implementation Complete_
+_Framework: Microsoft Agent Framework v1.0.0b251007_
+_Python: 3.13.2_
+_Package Manager: uv_
