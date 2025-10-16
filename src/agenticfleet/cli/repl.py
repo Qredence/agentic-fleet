@@ -242,7 +242,8 @@ def run_repl_main() -> int:
         ui.log_notice(f"Fatal error: {e}", style="red")
         return 1
     finally:
-        workflow_instance.console_callbacks.bind_ui(None)
+        if 'workflow_instance' in locals() and workflow_instance is not None:
+            workflow_instance.console_callbacks.bind_ui(None)
 
 
 def main() -> None:
