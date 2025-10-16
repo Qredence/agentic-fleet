@@ -1,5 +1,7 @@
 """Code interpreter tool with human-in-the-loop approval support."""
 
+from collections.abc import Iterable
+
 from agenticfleet.core.approval import ApprovalDecision, ApprovalHandler
 from agenticfleet.core.cli_approval import create_approval_request
 from agenticfleet.core.code_types import CodeExecutionResult
@@ -9,9 +11,16 @@ logger = get_logger(__name__)
 
 # Global approval handler (set by workflow)
 _approval_handler: ApprovalHandler | None = None
+_required_operations: set[str] = set()
+_trusted_operations: set[str] = set()
 
 
-def set_approval_handler(handler: ApprovalHandler | None) -> None:
+def set_approval_handler(
+    handler: ApprovalHandler | None,
+    *,
+    require_operations: Iterable[str] | None = None,
+    trusted_operations: Iterable[str] | None = None,
+) -> None:
     """
     Set the global approval handler for code execution.
 
@@ -19,7 +28,19 @@ def set_approval_handler(handler: ApprovalHandler | None) -> None:
         handler: Approval handler instance or None to disable approval
     """
     global _approval_handler
+    global _required_operations
+    global _trusted_operations
+
     _approval_handler = handler
+
+    if handler is None:
+        _required_operations = set()
+        _trusted_operations = set()
+        logger.info("Approval handler disabled for code execution")
+        return
+
+    _required_operations = {op.strip().lower() for op in (require_operations or []) if op.strip()}
+    _trusted_operations = {op.strip().lower() for op in (trusted_operations or []) if op.strip()}
     logger.info(f"Approval handler {'set' if handler else 'disabled'} for code execution")
 
 
@@ -31,6 +52,26 @@ def get_approval_handler() -> ApprovalHandler | None:
         Current approval handler or None
     """
     return _approval_handler
+
+
+def operation_requires_approval(operation_type: str) -> bool:
+    """
+    Determine whether the given operation should request approval.
+
+    Args:
+        operation_type: Operation identifier (e.g., ``code_execution``).
+
+    Returns:
+        True if approval is required, False otherwise.
+    """
+
+    if operation_type.lower() in _trusted_operations:
+        return False
+
+    if not _required_operations:
+        return False
+
+    return operation_type.lower() in _required_operations
 
 
 def _execute_without_approval(code: str, language: str) -> CodeExecutionResult:
@@ -51,13 +92,14 @@ async def code_interpreter_tool_with_approval(
 ) -> CodeExecutionResult:
     """Execute code with human-in-the-loop approval if enabled."""
 
+    operation_type = "code_execution"
     handler = get_approval_handler()
 
-    if handler is None:
+    if handler is None or not operation_requires_approval(operation_type):
         return _execute_without_approval(code, language)
 
     request = create_approval_request(
-        operation_type="code_execution",
+        operation_type=operation_type,
         agent_name="coder",
         operation="Execute Python code",
         details={"language": language, "code_length": len(code)},
@@ -94,9 +136,10 @@ def code_interpreter_tool(code: str, language: str = "python") -> CodeExecutionR
 
     import asyncio
 
+    operation_type = "code_execution"
     handler = get_approval_handler()
 
-    if handler is None:
+    if handler is None or not operation_requires_approval(operation_type):
         return _execute_without_approval(code, language)
 
     try:

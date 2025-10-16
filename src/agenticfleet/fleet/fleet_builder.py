@@ -8,7 +8,7 @@ from agenticfleet.config import settings
 from agenticfleet.core.exceptions import AgentConfigurationError
 from agenticfleet.core.logging import get_logger
 from agenticfleet.core.openai import get_responses_model_parameter
-from agenticfleet.fleet import callbacks
+from agenticfleet.fleet.callbacks import ConsoleCallbacks
 
 try:  # pragma: no cover - runtime import guard
     from agent_framework import MagenticBuilder as _RealMagenticBuilder
@@ -82,17 +82,24 @@ class FleetBuilder:
     specialist agents (participants).
     """
 
-    def __init__(self, console_callbacks: callbacks.ConsoleCallbacks | None = None) -> None:
+    def __init__(self, console_callbacks: ConsoleCallbacks | None = None) -> None:
         """Initialize the fleet builder with default configuration."""
+        workflow_defaults = settings.workflow_config.get("workflow", {})
         fleet_config = settings.workflow_config.get("fleet", {})
         self.config = fleet_config
-        self.console_callbacks = console_callbacks or callbacks.ConsoleCallbacks()
+        self.console_callbacks = console_callbacks or ConsoleCallbacks()
 
         # Extract orchestrator settings
         orchestrator_config = fleet_config.get("orchestrator", {})
-        self.max_round_count = orchestrator_config.get("max_round_count", 15)
-        self.max_stall_count = orchestrator_config.get("max_stall_count", 3)
-        self.max_reset_count = orchestrator_config.get("max_reset_count", 2)
+        self.max_round_count = orchestrator_config.get(
+            "max_round_count", workflow_defaults.get("max_rounds", 15)
+        )
+        self.max_stall_count = orchestrator_config.get(
+            "max_stall_count", workflow_defaults.get("max_stalls", 3)
+        )
+        self.max_reset_count = orchestrator_config.get(
+            "max_reset_count", workflow_defaults.get("max_resets", 2)
+        )
 
         # Extract manager settings
         manager_config = fleet_config.get("manager", {})
@@ -173,9 +180,11 @@ Always explain your reasoning and include evidence from agent responses."""
         logger.info(f"Configuring StandardMagenticManager with model: {manager_model}")
 
         # Create OpenAI client for the manager
+        api_key = settings.require_openai_api_key()
+
         client_kwargs: dict[str, Any] = {
             get_responses_model_parameter(OpenAIResponsesClient): manager_model,
-            "api_key": settings.openai_api_key,
+            "api_key": api_key,
         }
         if self.manager_reasoning:
             client_kwargs["reasoning"] = self.manager_reasoning

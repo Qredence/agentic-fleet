@@ -2,15 +2,15 @@
 
 ## Project Structure & Module Organization
 
-Each role-specific factory lives under `agents/<role>/agent.py`, keeping prompts and tool wiring close to the code they power. Shared defaults stay in `config/workflow_config.yaml`, while `config/settings.py` loads `.env` secrets and exposes helpers like `settings.load_agent_config()`. Place orchestration glue in `workflows/`, long-form notes in `docs/`, and mirror module paths under `tests/` (for example `tests/test_researcher_agent.py`).
+Each role-specific factory lives under `src/agenticfleet/agents/<role>/agent.py`, keeping prompts and tool wiring close to the code they power. Shared defaults stay in `src/agenticfleet/config/workflow.yaml`, while `src/agenticfleet/config/settings.py` loads `.env` secrets and exposes helpers like `settings.load_agent_config()`. Place orchestration glue in `src/agenticfleet/workflows/`, long-form notes in `docs/`, and mirror module paths under `tests/` (for example `tests/test_magentic_fleet.py`).
 
 ## Build, Test, and Development Commands
 
-Install dependencies with `uv sync`, or `uv pip install -e ".[dev]"` when adjusting packaging. Run suites via `uv run pytest` (filter with `uv run pytest -k researcher`), and finish every branch with `uv run black .`, `uv run ruff check .`, and `uv run mypy agents config`. To verify wiring quickly, run `uv run python -c "from agents.orchestrator_agent.agent import create_orchestrator_agent; create_orchestrator_agent()"`; a successful instantiation confirms credentials and configs.
+Install dependencies with `uv sync`, or `uv pip install -e ".[dev]"` when adjusting packaging. Run suites via `uv run pytest` (filter with `uv run pytest -k researcher`), and finish every branch with `uv run black .`, `uv run ruff check .`, and `uv run mypy src/agenticfleet`. To verify wiring quickly, run `uv run python -c "from agenticfleet.agents.orchestrator.agent import create_orchestrator_agent; create_orchestrator_agent()"`; a successful instantiation confirms credentials and configs.
 
 ## Coding Style & Naming Conventions
 
-ALWAYS USE uv to run and manage python packages execution etc. Black and Ruff enforce a 100-character limit and Python 3.12 targets (`pyproject.toml`). Name factories and tools imperatively (`create_<role>_agent`, `run_<action>_tool`) and keep docstrings in the Google style referenced in `agents/coder_agent/agent_config.yaml`. YAML configs should use snake-case keys (`max_rounds`, `analysis_types`), live in source control, and keep secrets in `.env`.
+ALWAYS USE uv to run and manage Python packages. Black and Ruff enforce a 100-character limit and Python 3.12 targets (`pyproject.toml`). Name factories and tools imperatively (`create_<role>_agent`, `run_<action>_tool`) and keep docstrings in the Google style referenced in `src/agenticfleet/agents/coder/config.yaml`. YAML configs should use snake-case keys (`max_rounds`, `analysis_types`), live in source control, and keep secrets in `.env`.
 
 ## Testing Guidelines
 
@@ -22,7 +22,7 @@ Recent history favors short, imperative subjects (for example `Bump actions/setu
 
 ## Agent Configuration & Security Tips
 
-Never commit API keys—`config/settings.py` raises if `OPENAI_API_KEY` is missing, so create a local `.env` first. Adjust behavior via each `agents/<role>/agent_config.yaml`, documenting new tool toggles and keeping temperatures conservative for determinism. When updating orchestration limits in `config/workflow_config.yaml`, call out the change in your PR so teammates stay in sync.
+Never commit API keys—`src/agenticfleet/config/settings.py` raises if `OPENAI_API_KEY` is missing, so create a local `.env` first. Adjust behavior via each `src/agenticfleet/agents/<role>/config.yaml`, documenting new tool toggles and keeping temperatures conservative for determinism. When updating orchestration limits in `src/agenticfleet/config/workflow.yaml`, call out the change in your PR so teammates stay in sync.
 
 ## Versioning & Releases
 

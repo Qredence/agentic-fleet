@@ -6,8 +6,16 @@ from pathlib import Path
 from typing import Any, cast
 
 import yaml
-from agent_framework import CheckpointStorage, InMemoryCheckpointStorage
 from dotenv import load_dotenv
+
+try:
+    from agent_framework import CheckpointStorage, InMemoryCheckpointStorage
+
+    _AGENT_FRAMEWORK_AVAILABLE = True
+except ModuleNotFoundError:  # pragma: no cover - dependency optional in tests
+    CheckpointStorage = object  # type: ignore[assignment]
+    InMemoryCheckpointStorage = None  # type: ignore[assignment]
+    _AGENT_FRAMEWORK_AVAILABLE = False
 
 from agenticfleet.core.checkpoints import AgenticFleetFileCheckpointStorage
 from agenticfleet.core.exceptions import AgentConfigurationError
@@ -21,10 +29,8 @@ class Settings:
 
     def __init__(self) -> None:
         """Initialize settings from environment variables and config files."""
-        # Required environment variables
-        self.openai_api_key = os.getenv("OPENAI_API_KEY")
-        if not self.openai_api_key:
-            raise AgentConfigurationError("OPENAI_API_KEY environment variable is required")
+        # Required environment variables (validated lazily when accessed)
+        self._openai_api_key = os.getenv("OPENAI_API_KEY")
 
         # Azure AI Project endpoint (optional - required only for certain features like Mem0)
         self.azure_ai_project_endpoint = os.getenv("AZURE_AI_PROJECT_ENDPOINT")
@@ -121,6 +127,13 @@ class Settings:
 
         storage_type = checkpoint_config.get("storage_type", "file")
 
+        if not _AGENT_FRAMEWORK_AVAILABLE:
+            logging.warning(
+                "agent_framework is not installed; checkpointing is disabled even though it "
+                "was requested in the configuration."
+            )
+            return None
+
         if storage_type == "memory":
             return InMemoryCheckpointStorage()
         elif storage_type == "file":
@@ -135,6 +148,23 @@ class Settings:
                 f"Unknown checkpoint storage type: {storage_type}. Checkpointing disabled."
             )
             return None
+
+    @property
+    def openai_api_key(self) -> str | None:
+        """Return the configured OpenAI API key if present (may be None)."""
+
+        return self._openai_api_key
+
+    def require_openai_api_key(self) -> str:
+        """
+        Return the OpenAI API key or raise if missing.
+
+        Raises:
+            AgentConfigurationError: If the OPENAI_API_KEY env var is not configured.
+        """
+        if not self._openai_api_key:
+            raise AgentConfigurationError("OPENAI_API_KEY environment variable is required")
+        return self._openai_api_key
 
 
 # Global settings instance

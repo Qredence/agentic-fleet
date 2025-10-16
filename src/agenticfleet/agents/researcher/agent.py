@@ -12,14 +12,18 @@ Usage:
     result = await researcher.run("Search for Python best practices")
 """
 
-from agent_framework.openai import OpenAIResponsesClient
+try:
+    from agent_framework.openai import OpenAIResponsesClient
+except ModuleNotFoundError:  # pragma: no cover - dependency optional in tests
+    OpenAIResponsesClient = None  # type: ignore[assignment]
 
-from agenticfleet.agents.base import AgenticFleetChatAgent
+from agenticfleet.agents.base import FleetAgent
 from agenticfleet.config import settings
+from agenticfleet.core.exceptions import AgentConfigurationError
 from agenticfleet.core.openai import get_responses_model_parameter
 
 
-def create_researcher_agent() -> AgenticFleetChatAgent:
+def create_researcher_agent() -> FleetAgent:
     """
     Create the Researcher agent with web search capabilities.
 
@@ -27,11 +31,17 @@ def create_researcher_agent() -> AgenticFleetChatAgent:
     OpenAIResponsesClient. Tools are plain Python functions passed as a list.
 
     Returns:
-        AgenticFleetChatAgent: Configured researcher agent with web search tools
+        FleetAgent: Configured researcher agent with web search tools
     """
     # Load researcher-specific configuration
     config = settings.load_agent_config("researcher")
     agent_config = config.get("agent", {})
+
+    if OpenAIResponsesClient is None:
+        raise AgentConfigurationError(
+            "agent_framework is required to create the researcher agent. "
+            "Install the 'agent-framework' package to enable this agent."
+        )
 
     # Create OpenAI chat client
     chat_client_kwargs = {
@@ -54,12 +64,11 @@ def create_researcher_agent() -> AgenticFleetChatAgent:
 
     # Create and return agent with tools
     # Note: temperature is not a ChatAgent parameter in Microsoft Agent Framework
-    agent = AgenticFleetChatAgent(
+    agent = FleetAgent(
         chat_client=chat_client,
         instructions=config.get("system_prompt", ""),
         name=agent_config.get("name", "researcher"),
         tools=enabled_tools,
         runtime_config=config.get("runtime", {}),
     )
-
     return agent

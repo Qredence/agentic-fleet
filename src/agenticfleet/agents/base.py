@@ -4,11 +4,24 @@ from __future__ import annotations
 
 from typing import Any
 
-from agent_framework import ChatAgent
+from agenticfleet.core.exceptions import AgentConfigurationError
+
+try:
+    from agent_framework import ChatAgent
+except ModuleNotFoundError:  # pragma: no cover - dependency optional in tests
+
+    class ChatAgent:  # type: ignore[no-redef,override]
+        """Fallback ChatAgent that raises when instantiated without the dependency."""
+
+        def __init__(self, *args: Any, **kwargs: Any) -> None:
+            raise AgentConfigurationError(
+                "agent_framework is required to instantiate fleet agents. "
+                "Install the 'agent-framework' package to enable this functionality."
+            )
 
 
-class AgenticFleetChatAgent(ChatAgent):
-    """ChatAgent variant that exposes runtime configuration explicitly."""
+class FleetAgent(ChatAgent):
+    """ChatAgent variant that exposes runtime configuration metadata."""
 
     runtime_config: dict[str, Any]
 
@@ -18,10 +31,8 @@ class AgenticFleetChatAgent(ChatAgent):
         runtime_config: dict[str, Any] | None = None,
         **kwargs: Any,
     ) -> None:
-        """Initialise the agent and attach runtime metadata."""
-
         super().__init__(*args, **kwargs)
         self.runtime_config = runtime_config or {}
 
 
-__all__ = ["AgenticFleetChatAgent"]
+__all__ = ["FleetAgent"]

@@ -90,9 +90,10 @@ async def test_agent_deltas_are_buffered(monkeypatch) -> None:
 
     console = Console(record=True, width=80)
     ui = ConsoleUI(console=console)
-    handler = ConsoleCallbacks(ui)
-    await handler.agent_delta_callback(Delta())
-    await handler.agent_message_callback(Final())
+    handlers = ConsoleCallbacks(ui)
+
+    await handlers.agent_delta_callback(Delta())
+    await handlers.agent_message_callback(Final())
 
     text = console.export_text(clear=False)
     assert text.count("First chunk") == 1

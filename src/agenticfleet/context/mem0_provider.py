@@ -30,11 +30,13 @@ class Mem0ContextProvider:
         self.user_id = user_id
         self.agent_id = agent_id
 
+        api_key = settings.require_openai_api_key()
+
         # Configure Mem0 to use OpenAI for both LLM responses and embeddings
         llm_config = LlmConfig(
             provider="openai",
             config={
-                "api_key": settings.openai_api_key,
+                "api_key": api_key,
                 "model": settings.openai_model,
                 "temperature": 0,
                 "max_tokens": 1000,
@@ -43,7 +45,7 @@ class Mem0ContextProvider:
         embedder_config = EmbedderConfig(
             provider="openai",
             config={
-                "api_key": settings.openai_api_key,
+                "api_key": api_key,
                 "model": settings.openai_embedding_model,
             },
         )

@@ -62,55 +62,76 @@ The Magentic workflow follows this coordination pattern:
 
 ## Configuration
 
-### Workflow Settings (`config/workflow.yaml`)
+### Workflow Settings (`src/agenticfleet/config/workflow.yaml`)
 
 ```yaml
-fleet:
-  enabled: true
-
-  # Orchestration limits
-  max_round_count: 30      # Maximum coordination rounds
-  max_stall_count: 3       # Replans after 3 stalls
-  max_reset_count: 2       # Complete restart limit
-
-  # Manager configuration
-  manager:
-    model: "gpt-4o"        # Manager LLM model
-    instructions: |
-      You are the Magentic Manager orchestrating a team of specialist agents.
-      Your role is to plan, coordinate, and synthesize their work.
-
-  # Features
-  plan_review:
-    enabled: false          # Human-in-the-loop plan approval
-
+workflow:
+  max_rounds: 10
+  max_stalls: 3
+  max_resets: 2
+  timeout_seconds: 300
   checkpointing:
-    enabled: true           # Workflow state persistence
-    storage_dir: "checkpoints"
+    enabled: true
+    storage_type: file
+    storage_path: ./checkpoints
+    cleanup_after_days: 30
+    auto_resume_on_failure: false
+  human_in_the_loop:
+    enabled: true
+    approval_timeout_seconds: 300
+    auto_reject_on_timeout: false
+    require_approval_for:
+      - code_execution
+      - file_operations
+      - external_api_calls
+      - sensitive_data_access
+    trusted_operations:
+      - web_search
+      - data_analysis
 
-  observability:
-    streaming: true         # Stream agent responses
-    log_progress: true      # Log progress ledgers
+fleet:
+  manager:
+    model: "gpt-5"
+    reasoning:
+      effort: high
+    instructions: |
+      You are coordinating a fleet of specialized AI agents to solve complex tasks.
+  orchestrator:
+    max_round_count: 15
+    max_stall_count: 3
+    max_reset_count: 2
+  plan_review:
+    enabled: true
+    require_human_approval: false
+  callbacks:
+    streaming_enabled: true
+    log_progress_ledger: true
+    log_tool_calls: true
 ```
 
 ### Agent Participants
 
-The fleet includes three specialist agents:
+The default fleet includes four specialist roles:
 
-1. **Researcher Agent**
+1. **Orchestrator**
+   - Description: Coordinates delegation and synthesises final answers.
+   - Model: `gpt-5`
+   - Tools: None (planning-only role).
+
+2. **Researcher**
+   - Description: Performs web search and source synthesis.
+   - Model: `gpt-5`
    - Tools: `web_search_tool`
-   - Description: "Specialist in research and information gathering"
-   - Model: `gpt-4o-mini` (configurable)
 
-2. **Coder Agent**
-   - Tools: `code_interpreter_tool`
-   - Description: "A helpful assistant that writes and executes code"
-   - Model: `gpt-4o-mini` (configurable)
+3. **Coder**
+   - Description: Drafts code and explains manual execution steps.
+   - Model: `gpt-5`
+   - Tools: None *(code execution is currently disabled)*.
 
-3. **Analyst Agent**
+4. **Analyst**
+   - Description: Analyses structured data and recommends visualisations.
+   - Model: `gpt-5`
    - Tools: `data_analysis_tool`, `visualization_suggestion_tool`
-   - Description: "Data analysis expert providing insights and recommendations"
-   - Model: `gpt-4o-mini` (configurable)
 
 ## Usage
 
@@ -118,10 +139,10 @@ The fleet includes three specialist agents:
 
 ```bash
 # Use Magentic Fleet workflow (default)
-uv run python main.py --workflow=magentic
+uv run fleet --workflow=magentic
 
 # Legacy flag (deprecated, maps to Magentic)
-uv run python main.py --workflow=legacy
+uv run fleet --workflow=legacy
 ```
 
 ### Programmatic Usage
@@ -148,37 +169,37 @@ asyncio.run(main())
 ### Custom Fleet Configuration
 
 ```python
-from agenticfleet.fleet.fleet_builder import FleetBuilder
-from agenticfleet.agents.researcher import create_researcher_agent
-from agenticfleet.agents.coder import create_coder_agent
-from agent_framework import FileCheckpointStorage
+import asyncio
 
-# Build custom fleet
-builder = FleetBuilder()
-fleet = (
-    builder
-    .with_agents({
-        "researcher": create_researcher_agent(),
-        "coder": create_coder_agent(),
-    })
-    .with_manager(
-        model="gpt-4o",
-        max_round_count=20
-    )
-    .with_checkpointing(
-        storage=FileCheckpointStorage("./my_checkpoints")
-    )
-    .with_plan_review(enabled=True)  # HITL
+from agenticfleet.agents.coder import create_coder_agent
+from agenticfleet.agents.researcher import create_researcher_agent
+from agenticfleet.core.checkpoints import AgenticFleetFileCheckpointStorage
+from agenticfleet.fleet.fleet_builder import FleetBuilder
+
+researcher = create_researcher_agent()
+coder = create_coder_agent()
+storage = AgenticFleetFileCheckpointStorage("./my_checkpoints")
+
+workflow = (
+    FleetBuilder()
+    .with_agents({"researcher": researcher, "coder": coder})
+    .with_manager(model="gpt-5", max_round_count=12)
+    .with_checkpointing(storage=storage)
+    .with_plan_review(enabled=True)
     .with_observability()
     .build()
 )
 
-# Use MagenticFleet wrapper
-from agenticfleet.fleet.magentic_fleet import MagenticFleet
-fleet_wrapper = MagenticFleet(
-    agents={"researcher": researcher, "coder": coder},
-    checkpoint_storage=storage
-)
+async def run_custom_workflow() -> str | None:
+    return (
+        await workflow.run(
+            "Analyze energy efficiency of ML models",
+            resume_from_checkpoint=None,
+        )
+    )
+
+result = asyncio.run(run_custom_workflow())
+print(result)
 ```
 
 ## Features
@@ -318,7 +339,7 @@ To switch from legacy to Magentic workflow:
    uv run python main.py
 
    # New
-   uv run python main.py --workflow=magentic
+   uv run fleet --workflow=magentic
    ```
 
 2. **Update programmatic code**:

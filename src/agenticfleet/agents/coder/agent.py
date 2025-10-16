@@ -14,15 +14,25 @@ Usage:
     result = await coder.run("Write a function to calculate fibonacci numbers")
 """
 
-from agent_framework.openai import OpenAIResponsesClient
+try:
+    from agent_framework.openai import OpenAIResponsesClient
+except ModuleNotFoundError:  # pragma: no cover - dependency optional in tests
+    OpenAIResponsesClient = None  # type: ignore[assignment]
 
-from agenticfleet.agents.base import AgenticFleetChatAgent
+from agenticfleet.agents.base import FleetAgent
 from agenticfleet.config import settings
+from agenticfleet.core.exceptions import AgentConfigurationError
 from agenticfleet.core.openai import get_responses_model_parameter
 
 
-def create_coder_agent() -> AgenticFleetChatAgent:
+def create_coder_agent() -> FleetAgent:
     """Create the Coder agent responsible for code drafting and review."""
+
+    if OpenAIResponsesClient is None:
+        raise AgentConfigurationError(
+            "agent_framework is required to create the coder agent. "
+            "Install the 'agent-framework' package to enable this agent."
+        )
 
     # Load coder-specific configuration
     config = settings.load_agent_config("coder")
@@ -41,12 +51,11 @@ def create_coder_agent() -> AgenticFleetChatAgent:
 
     # Create and return agent with instructions only
     # Note: temperature is not a ChatAgent parameter in Microsoft Agent Framework
-    agent = AgenticFleetChatAgent(
+    agent = FleetAgent(
         chat_client=chat_client,
         instructions=config.get("system_prompt", ""),
         name=agent_config.get("name", "coder"),
         tools=enabled_tools,
         runtime_config=config.get("runtime", {}),
     )
-
     return agent

@@ -41,7 +41,7 @@ uv run python your_script.py
 | Task | Command |
 |------|---------|
 | Run all tests | `uv run pytest` |
-| Run specific file | `uv run pytest tests/unit/test_agents/test_orchestrator.py` |
+| Run specific file | `uv run pytest tests/test_magentic_fleet.py` |
 | Run with name filter | `uv run pytest -k "test_orchestrator"` |
 | Run with coverage | `uv run pytest --cov=agenticfleet --cov-report=html` |
 | Run verbose | `uv run pytest -v` |
@@ -88,8 +88,8 @@ uv run pre-commit run --all-files
 
 | Task | Command |
 |------|---------|
-| Clean cache files | `find . -type d -name "__pycache__" -exec rm -rf {} + 2>/dev/null` |
-| Clean .pyc files | `find . -type f -name "*.pyc" -delete` |
+| Clean cache files | `make clean` |
+| Manual cache purge | `find . -type d -name "__pycache__" -exec rm -rf {} + 2>/dev/null` |
 | Update dependencies | `uv sync --upgrade` |
 | Lock dependencies | `uv lock` |
 
@@ -164,7 +164,7 @@ uv run python
 | Issue | Solution |
 |-------|----------|
 | Import errors | `uv sync` |
-| Stale cache | `find . -type d -name "__pycache__" -exec rm -rf {} +` |
+| Stale cache | `make clean` |
 | Type errors | `uv run mypy --install-types` |
 | Dependency conflicts | `uv sync --reinstall` |
 | Python version issues | Check `uv python list` and `.python-version` |
@@ -212,7 +212,7 @@ print(f'✅ All agents created: {o.name}, {r.name}, {c.name}, {a.name}')
 ### ❌ DON'T DO THIS
 
 ```bash
-python main.py                  # Wrong: Uses system Python
+python main.py                  # Wrong: CLI moved to packaged entry point (use `uv run fleet`)
 pip install package             # Wrong: Wrong environment
 pytest                          # Wrong: May test wrong code
 python -m pytest                # Wrong: System Python

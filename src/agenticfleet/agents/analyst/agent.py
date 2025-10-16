@@ -8,14 +8,18 @@ The analyst is responsible for data analysis and generating insights.
 
 from typing import Any
 
-from agent_framework.openai import OpenAIResponsesClient
+try:
+    from agent_framework.openai import OpenAIResponsesClient
+except ModuleNotFoundError:  # pragma: no cover - dependency optional in tests
+    OpenAIResponsesClient = None  # type: ignore[assignment]
 
-from agenticfleet.agents.base import AgenticFleetChatAgent
+from agenticfleet.agents.base import FleetAgent
 from agenticfleet.config import settings
+from agenticfleet.core.exceptions import AgentConfigurationError
 from agenticfleet.core.openai import get_responses_model_parameter
 
 
-def create_analyst_agent() -> AgenticFleetChatAgent:
+def create_analyst_agent() -> FleetAgent:
     """
     Create the Analyst agent with data analysis capabilities.
 
@@ -23,11 +27,17 @@ def create_analyst_agent() -> AgenticFleetChatAgent:
     OpenAIResponsesClient. Tools are plain Python functions passed as a list.
 
     Returns:
-        AgenticFleetChatAgent: Configured analyst agent with data analysis tools
+    FleetAgent: Configured analyst agent with data analysis tools
     """
     # Load analyst-specific configuration
     config = settings.load_agent_config("analyst")
     agent_config = config.get("agent", {})
+
+    if OpenAIResponsesClient is None:
+        raise AgentConfigurationError(
+            "agent_framework is required to create the analyst agent. "
+            "Install the 'agent-framework' package to enable this agent."
+        )
 
     # Create OpenAI chat client
     chat_client_kwargs = {
@@ -57,12 +67,11 @@ def create_analyst_agent() -> AgenticFleetChatAgent:
 
     # Create and return agent with tools
     # Note: temperature is not a ChatAgent parameter in Microsoft Agent Framework
-    agent = AgenticFleetChatAgent(
+    agent = FleetAgent(
         chat_client=chat_client,
         instructions=config.get("system_prompt", ""),
         name=agent_config.get("name", "analyst"),
         tools=enabled_tools,
         runtime_config=config.get("runtime", {}),
     )
-
     return agent

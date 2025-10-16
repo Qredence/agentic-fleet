@@ -17,7 +17,7 @@ if TYPE_CHECKING:
 
 logger = get_logger(__name__)
 
-_workflow_instance = None
+_workflow_instance: "MagenticFleet | None" = None
 
 
 def get_workflow(ui: ConsoleUI | None = None) -> "MagenticFleet":
@@ -31,8 +31,10 @@ def get_workflow(ui: ConsoleUI | None = None) -> "MagenticFleet":
         from agenticfleet.fleet import create_default_fleet
 
         _workflow_instance = create_default_fleet(console_ui=ui)
-    elif ui is not None:  # type: ignore[unreachable]
-        _workflow_instance.console_callbacks.bind_ui(ui)
+        return _workflow_instance
+
+    if ui is not None:
+        _workflow_instance.set_console_ui(ui)
 
     return _workflow_instance
 
@@ -242,8 +244,8 @@ def run_repl_main() -> int:
         ui.log_notice(f"Fatal error: {e}", style="red")
         return 1
     finally:
-        if 'workflow_instance' in locals() and workflow_instance is not None:
-            workflow_instance.console_callbacks.bind_ui(None)
+        if "workflow_instance" in locals() and workflow_instance is not None:
+            workflow_instance.set_console_ui(None)
 
 
 def main() -> None:

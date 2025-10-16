@@ -9,6 +9,7 @@ Verifies:
 - HITL plan review integration
 """
 
+from types import SimpleNamespace
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
@@ -18,6 +19,28 @@ from agenticfleet.fleet.magentic_fleet import (
     MagenticFleet,
     create_default_fleet,
 )
+
+
+def test_fleet_builder_uses_workflow_defaults(monkeypatch):
+    """Ensure workflow-level limits populate the Magentic builder when fleet config omits them."""
+    from agenticfleet.fleet import fleet_builder as fb_module
+
+    mock_settings = SimpleNamespace(
+        workflow_config={
+            "workflow": {"max_rounds": 7, "max_stalls": 4, "max_resets": 2},
+            "fleet": {"manager": {}, "plan_review": {}, "callbacks": {}},
+        },
+        openai_model="test-model",
+    )
+    mock_settings.require_openai_api_key = lambda: "sk-test"
+
+    monkeypatch.setattr(fb_module, "settings", mock_settings)
+
+    builder = fb_module.FleetBuilder()
+
+    assert builder.max_round_count == 7
+    assert builder.max_stall_count == 4
+    assert builder.max_reset_count == 2
 
 
 @pytest.fixture
@@ -363,8 +386,8 @@ class TestMagenticFleetCallbacks:
         message.content = "Response chunk from researcher"
 
         # Call callback (should not raise)
-        handler = ConsoleCallbacks()
-        await handler.agent_delta_callback(message)
+        handlers = ConsoleCallbacks()
+        await handlers.agent_delta_callback(message)
 
         # If we get here, callback succeeded
         assert True
@@ -379,8 +402,8 @@ class TestMagenticFleetCallbacks:
         plan.steps = ["Step 1", "Step 2"]
 
         # Call callback (should not raise)
-        handler = ConsoleCallbacks()
-        await handler.plan_creation_callback(plan)
+        handlers = ConsoleCallbacks()
+        await handlers.plan_creation_callback(plan)
         assert True
 
     @pytest.mark.asyncio
@@ -392,8 +415,8 @@ class TestMagenticFleetCallbacks:
         ledger = MagicMock()
 
         # Call callback (should not raise)
-        handler = ConsoleCallbacks()
-        await handler.progress_ledger_callback(ledger)
+        handlers = ConsoleCallbacks()
+        await handlers.progress_ledger_callback(ledger)
         assert True
 
 

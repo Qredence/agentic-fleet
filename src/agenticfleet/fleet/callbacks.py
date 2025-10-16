@@ -3,15 +3,38 @@
 from __future__ import annotations
 
 from contextvars import ContextVar
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, Protocol
 
-from agenticfleet.cli.ui import AgentMessage, ConsoleUI, FinalRenderData
+from agenticfleet.cli.ui import AgentMessage, FinalRenderData
 from agenticfleet.core.logging import get_logger
 
 if TYPE_CHECKING:
     from agent_framework import ChatMessage
 
 logger = get_logger(__name__)
+
+
+class ConsoleUIProtocol(Protocol):
+    """Protocol describing the ConsoleUI interface used by callbacks."""
+
+    def log_agent_message(self, message: AgentMessage) -> None: ...
+
+    def log_plan(
+        self,
+        facts: list[str] | tuple[str, ...] | None,
+        plan: list[str] | tuple[str, ...] | None,
+    ) -> None: ...
+
+    def log_progress(
+        self,
+        status: str,
+        next_speaker: str,
+        instruction: str | None = None,
+    ) -> None: ...
+
+    def log_notice(self, text: str, *, style: str = "blue") -> None: ...
+
+    def log_final(self, result: Any) -> None: ...
 
 
 def _coerce_lines(value: Any) -> list[str]:
@@ -86,23 +109,27 @@ def _first_available(source: Any, *names: str) -> Any:
 class ConsoleCallbacks:
     """Adapter that relays Magentic events to the active console UI."""
 
-    def __init__(self, ui: ConsoleUI | None = None) -> None:
+    def __init__(self, ui: ConsoleUIProtocol | None = None) -> None:
         self._ui = ui
         self._agent_stream_cache: ContextVar[dict[str, list[str]] | None] = ContextVar(
-            f"agent_stream_cache_{id(self)}",
+            "agent_stream_cache",
             default=None,
         )
         self._final_render: ContextVar[FinalRenderData | None] = ContextVar(
-            f"final_render_{id(self)}",
+            "final_render_data",
             default=None,
         )
 
-    def bind_ui(self, ui: ConsoleUI | None) -> None:
-        """Update the UI target at runtime."""
+    @property
+    def ui(self) -> ConsoleUIProtocol | None:
+        return self._ui
+
+    def set_ui(self, ui: ConsoleUIProtocol | None) -> None:
+        """Update the console UI sink used for rendering events."""
 
         self._ui = ui
 
-    def _get_ui(self) -> ConsoleUI | None:
+    def _get_ui(self) -> ConsoleUIProtocol | None:
         return self._ui
 
     def _get_stream_cache(self) -> dict[str, list[str]]:
@@ -139,8 +166,7 @@ class ConsoleCallbacks:
             return
 
         logger.info("[Fleet] Agent '%s' response: %s", agent_name, combined[:200])
-        ui = self._get_ui()
-        if ui:
+        if ui := self._get_ui():
             ui.log_agent_message(
                 AgentMessage(agent_name=agent_name, content=combined, mode="response")
             )
