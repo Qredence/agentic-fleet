@@ -432,10 +432,7 @@ class MagenticFleet:
         # Inline legacy path normalization logic to avoid private API dependency
         old_prefix = "checkpoints"
         new_prefix = "var/checkpoints"
-        if (
-            isinstance(storage_path, str)
-            and storage_path.startswith(old_prefix)
-        ):
+        if isinstance(storage_path, str) and storage_path.startswith(old_prefix):
             storage_path = storage_path.replace(old_prefix, new_prefix, 1)
         try:
             return Path(storage_path).expanduser()
