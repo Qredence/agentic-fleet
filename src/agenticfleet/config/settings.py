@@ -71,6 +71,11 @@ class Settings:
             "AZURE_OPENAI_EMBEDDING_DEPLOYED_MODEL_NAME"
         )
 
+        # Observability settings
+        self.enable_otel = os.getenv("ENABLE_OTEL", "false").lower() == "true"
+        self.enable_sensitive_data = os.getenv("ENABLE_SENSITIVE_DATA", "false").lower() == "true"
+        self.otlp_endpoint = os.getenv("OTLP_ENDPOINT", "http://localhost:4317")
+
         # Setup logging
         setup_logging(level=self.log_level, log_file=self.log_file)
 
