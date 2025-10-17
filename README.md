@@ -69,10 +69,10 @@ History search (`↑` / `↓` or `Ctrl+R`), checkpoints (`checkpoints`, `resume 
 
 | Agent        | Model default         | Purpose                              |
 | ------------ | --------------------- | ------------------------------------ |
-| Orchestrator | `gpt-4-turbo-preview` | Plans, delegates, synthesises        |
-| Researcher   | `gpt-4-turbo-preview` | Finds and summarises sources         |
-| Coder        | `gpt-4-turbo-preview` | Drafts code and explains run steps   |
-| Analyst      | `gpt-4-turbo-preview` | Interprets data and suggests visuals |
+| Orchestrator | `gpt-5` | Plans, delegates, synthesises        |
+| Researcher   | `gpt-5` | Finds and summarises sources         |
+| Coder        | `gpt-5-codex` | Drafts code and explains run steps   |
+| Analyst      | `gpt-5` | Interprets data and suggests visuals |
 
 Runtime toggles (`stream`, `store`, `checkpoint`) live in each `agents/<role>/config.yaml` and are attached to the instantiated `ChatAgent` for orchestration to inspect.
 
