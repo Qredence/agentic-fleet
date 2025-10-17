@@ -9,10 +9,11 @@ Welcome! The docs are now arranged by intent so you can jump straight to what yo
 
 - **architecture/**
   - [`magentic-fleet.md`](architecture/magentic-fleet.md) – end-to-end view of the fleet orchestration stack.
-  - [`README`](architecture/README.md) *(if present)* summarises patterns used across diagrams.
+  - [`README`](architecture/README.md) _(if present)_ summarises patterns used across diagrams.
 - **features/**
   - [`magentic-fleet.md`](features/magentic-fleet.md) – feature overview and usage guidance.
   - [`magentic-fleet-implementation.md`](features/magentic-fleet-implementation.md) – implementation deep dive.
+  - [`observability.md`](features/observability.md) – OpenTelemetry tracing setup and usage.
   - [`checkpointing-summary.md`](features/checkpointing-summary.md) – checkpointing rollout notes and API surface.
   - [`hitl-implementation-summary.md`](features/hitl-implementation-summary.md) – HITL enablement timeline and artifacts.
 - **getting-started/**

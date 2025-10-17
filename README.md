@@ -17,6 +17,7 @@ AgenticFleet coordinates specialised researcher, coder, and analyst agents throu
 - **Thoughtful CLI** – Codex-style interface with history search, live status streaming, and readable plan/progress sections (`fleet`).
 - **Persistent context** – Optional Mem0 memory layer (OpenAI-backed) plus on-disk workflow checkpoints.
 - **Safety rails** – HITL approvals, per-agent runtime toggles, and configurable execution limits.
+- **Full observability** – Built-in OpenTelemetry tracing with Jaeger/AI Toolkit integration for workflow visibility.
 - **Documentation first** – Every subsystem has a dedicated guide in `docs/`.
 
 ---
@@ -66,12 +67,12 @@ History search (`↑` / `↓` or `Ctrl+R`), checkpoints (`checkpoints`, `resume 
 
 ## Agents at a Glance
 
-| Agent        | Model default           | Purpose                              |
-| ------------ | ----------------------- | ------------------------------------ |
-| Orchestrator | `gpt-4-turbo-preview`   | Plans, delegates, synthesises        |
-| Researcher   | `gpt-4-turbo-preview`   | Finds and summarises sources         |
-| Coder        | `gpt-4-turbo-preview`   | Drafts code and explains run steps   |
-| Analyst      | `gpt-4-turbo-preview`   | Interprets data and suggests visuals |
+| Agent        | Model default         | Purpose                              |
+| ------------ | --------------------- | ------------------------------------ |
+| Orchestrator | `gpt-4-turbo-preview` | Plans, delegates, synthesises        |
+| Researcher   | `gpt-4-turbo-preview` | Finds and summarises sources         |
+| Coder        | `gpt-4-turbo-preview` | Drafts code and explains run steps   |
+| Analyst      | `gpt-4-turbo-preview` | Interprets data and suggests visuals |
 
 Runtime toggles (`stream`, `store`, `checkpoint`) live in each `agents/<role>/config.yaml` and are attached to the instantiated `ChatAgent` for orchestration to inspect.
 
@@ -89,6 +90,7 @@ Dive deeper:
 
 - `docs/architecture/magentic-fleet.md`
 - `docs/features/magentic-fleet-implementation.md`
+- `docs/features/observability.md`
 - `docs/operations/checkpointing.md`
 - `docs/operations/mem0-integration.md`
 
@@ -98,7 +100,7 @@ Dive deeper:
 
 - **Workflow** – `src/agenticfleet/config/workflow.yaml` (models, reasoning effort, checkpoint settings, HITL).
 - **Agents** – `src/agenticfleet/agents/<role>/config.yaml` (system prompts, runtime flags).
-- **Environment** – `.env` for OpenAI credentials, optional Mem0 (`MEM0_HISTORY_DB_PATH`, `OPENAI_EMBEDDING_MODEL`).
+- **Environment** – `.env` for OpenAI credentials, optional Mem0 (`MEM0_HISTORY_DB_PATH`, `OPENAI_EMBEDDING_MODEL`), and observability (`ENABLE_OTEL`, `OTLP_ENDPOINT`).
 
 ---
 
