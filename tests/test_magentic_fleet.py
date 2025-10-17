@@ -309,12 +309,14 @@ class TestMagenticFleetFactoryMethod:
     @patch("agenticfleet.fleet.magentic_fleet.create_researcher_agent")
     @patch("agenticfleet.fleet.magentic_fleet.create_coder_agent")
     @patch("agenticfleet.fleet.magentic_fleet.create_analyst_agent")
+    @patch("agenticfleet.fleet.magentic_fleet.set_approval_handler")
     @patch("agenticfleet.fleet.magentic_fleet.settings.create_checkpoint_storage")
     @patch("agenticfleet.fleet.fleet_builder.FleetBuilder.build")
     def test_create_default_fleet(
         self,
         mock_build,
         mock_create_checkpoint,
+        mock_set_handler,
         mock_create_analyst,
         mock_create_coder,
         mock_create_researcher,
@@ -339,6 +341,12 @@ class TestMagenticFleetFactoryMethod:
 
         # Verify checkpoint storage was created
         mock_create_checkpoint.assert_called_once()
+        mock_set_handler.assert_called_once()
+        handler_arg = mock_set_handler.call_args.args[0]
+        assert handler_arg is not None
+        call_kwargs = mock_set_handler.call_args.kwargs
+        assert "require_operations" in call_kwargs
+        assert "trusted_operations" in call_kwargs
 
         # Verify fleet is properly initialized
         assert fleet is not None

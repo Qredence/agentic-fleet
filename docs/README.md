@@ -1,7 +1,7 @@
 # AgenticFleet Documentation
 
-**Version:** 0.5.1
-**Last Updated:** October 16, 2025
+**Version:** 0.5.2
+**Last Updated:** October 18, 2025
 
 Welcome! The docs are now arranged by intent so you can jump straight to what you need.
 
@@ -45,6 +45,7 @@ Welcome! The docs are now arranged by intent so you can jump straight to what yo
   - [`2025-10-12-v0.5.0.md`](releases/2025-10-12-v0.5.0.md) – release changelog and validation evidence.
   - [`2025-10-13-hitl-implementation.md`](releases/2025-10-13-hitl-implementation.md) – HITL enablement release notes and validation details.
   - [`2025-10-14-v0.5.1-magentic-fleet.md`](releases/2025-10-14-v0.5.1-magentic-fleet.md) – Magentic workflow GA summary.
+  - [`2025-10-18-v0.5.2-redis-integration.md`](releases/2025-10-18-v0.5.2-redis-integration.md) – Redis-backed context + chat history release notes.
   - [`hitl-visual-summary.md`](releases/hitl-visual-summary.md) – visual overview of the HITL rollout.
 - **archive/**
   - Historical clean-up checklists and .github remediation summaries retained for audit.
