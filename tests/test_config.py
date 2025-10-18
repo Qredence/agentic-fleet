@@ -13,9 +13,14 @@ Tests performed:
 5. Agent factory functions
 """
 
+import os
 from pathlib import Path
 
-import pytest
+# Ensure environment defaults match pytest runs when executed via `python`
+try:
+    import tests.conftest  # noqa: F401  # pylint: disable=unused-import
+except Exception:  # pragma: no cover - best effort fallback for direct execution
+    os.environ.setdefault("OPENAI_API_KEY", "test-openai-key")
 
 # Color codes for terminal output (kept for backward compatibility if run as script)
 GREEN = "\033[92m"
