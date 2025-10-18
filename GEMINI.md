@@ -141,3 +141,53 @@ AgenticFleet/
 - **Credentials & Environment:** `.env` (API keys, Mem0 settings)
 - **Workflow:** `src/agenticfleet/config/workflow.yaml` (models, checkpointing, HITL)
 - **Agent Prompts:** `src/agenticfleet/agents/<role>/config.yaml`
+
+## Agent Configuration
+
+Agents are configured via YAML files located in `src/agenticfleet/agents/<agent_name>/config.yaml`. These files define the agent's behavior, including the model, system prompt, and other settings.
+
+For example, here is the configuration for the `coder` agent (`src/agenticfleet/agents/coder/config.yaml`):
+
+```yaml
+# Coder Agent Configuration
+#
+# This agent specializes in drafting and reviewing code suggestions.
+# Direct execution is currently disabled; responses should focus on
+# high-quality snippets, reasoning, and manual run guidance.
+
+agent:
+  name: "coder"
+  model: "gpt-5-codex"
+  temperature: 0.2  # Lower temperature for precise, deterministic code
+  max_tokens: 4000
+
+system_prompt: |
+  You are a coder agent. Your role is to propose high-quality code solutions
+  and explain how to run them manually. The automated code interpreter is
+  currently unavailable, so never claim you executed code. Instead, provide
+  concise snippets, reasoning about expected behaviour, and clear next steps
+  the operator can run in their own environment.
+
+  Conversation History:
+  {memory}
+
+
+# Tool configuration (execution temporarily disabled)
+tools: []
+
+# Supported programming languages for authored snippets
+supported_languages:
+  - python
+  # Future phases: javascript, typescript, rust, go
+
+runtime:
+  stream: true
+  store: true
+  checkpoint: true
+
+# Coding standards and style preferences
+coding_standards:
+  style_guide: "pep8"
+  documentation_style: "google"
+  max_line_length: 100
+```
