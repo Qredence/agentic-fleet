@@ -22,52 +22,77 @@ jobs:
       FAILED_HEAD_BRANCH: ${{ github.event.workflow_run.head_branch }}
       FAILED_HEAD_SHA: ${{ github.event.workflow_run.head_sha }}
     steps:
-      - name: Check OpenAI API Key Set
+      - name: Ensure OpenAI secret is available
+        id: openai-secret-check
         run: |
           if [ -z "$OPENAI_API_KEY" ]; then
             echo "OPENAI_API_KEY secret is not set. Skipping auto-fix." >&2
-            exit 1
+            echo "has-secret=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "has-secret=true" >> "$GITHUB_OUTPUT"
           fi
       - name: Checkout Failing Ref
-        uses: actions/checkout@v4
+        if: ${{ steps.openai-secret-check.outputs.has-secret == 'true' }}
+        uses: actions/checkout@v5
         with:
           ref: ${{ env.FAILED_HEAD_SHA }}
           fetch-depth: 0
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
+      - name: Install uv
+        if: ${{ steps.openai-secret-check.outputs.has-secret == 'true' }}
+        uses: astral-sh/setup-uv@v7
         with:
-          node-version: '20'
-          cache: 'npm'
-      - name: Install dependencies
-        run: |
-          if [ -f package-lock.json ]; then npm ci; else npm i; fi
+          enable-cache: true
+          cache-dependency-glob: "uv.lock"
+      - name: Set up Python 3.12
+        if: ${{ steps.openai-secret-check.outputs.has-secret == 'true' }}
+        run: uv python install 3.12
+      - name: Install project dependencies
+        if: ${{ steps.openai-secret-check.outputs.has-secret == 'true' }}
+        run: uv sync --all-extras
       - name: Debug run identifiers
+        if: ${{ steps.openai-secret-check.outputs.has-secret == 'true' }}
         run: |
-          echo "workflow_run.run_id=${{ github.event.workflow_run.run_id }}"
           echo "workflow_run.id=${{ github.event.workflow_run.id }}"
           echo "github.run_id=${{ github.run_id }}"
-      - name: Ensure Codex server info file exists
-        run: |
-          mkdir -p /home/runner/.codex
-          echo '{}' > /home/runner/.codex/${{ github.run_id }}.json
       - name: Run Codex
-        uses: openai/codex-action@main
+        if: ${{ steps.openai-secret-check.outputs.has-secret == 'true' }}
+        uses: openai/codex-action@0cb7e270ce49747f8c51ebb61d1a169ed67b5764
         id: codex
         with:
-          openai_api_key: ${{ secrets.OPENAI_API_KEY }}
+          openai-api-key: ${{ secrets.OPENAI_API_KEY }}
           prompt: >-
-            You are working in a Node.js monorepo with Jest tests and GitHub Actions. Read the repository,
-            run the test suite, identify the minimal change needed to make all tests pass, implement only that change,
+            You are working in a Python repository that uses uv for dependency management and pytest for testing. Read the
+            repository, run the relevant uv-based test commands (for example `uv run python tests/test_config.py` and
+            `uv run pytest -q`), identify the minimal change needed to make the failing CI pass, implement only that change,
             and stop. Do not refactor unrelated code or files. Keep changes small and surgical.
-          codex_args: '["--config","sandbox_mode=\"workspace-write\""]'
-      - name: Verify tests
-        run: npm test --silent
+          codex-args: '["--config","sandbox_mode=\"workspace-write\""]'
+      - name: Re-sync project dependencies
+        if: ${{ steps.openai-secret-check.outputs.has-secret == 'true' }}
+        run: uv sync --all-extras
+      - name: Run configuration validation tests
+        if: ${{ steps.openai-secret-check.outputs.has-secret == 'true' }}
+        env:
+          AZURE_AI_PROJECT_ENDPOINT: ${{ secrets.AZURE_AI_PROJECT_ENDPOINT }}
+          AZURE_AI_SEARCH_ENDPOINT: ${{ secrets.AZURE_AI_SEARCH_ENDPOINT }}
+          AZURE_AI_SEARCH_KEY: ${{ secrets.AZURE_AI_SEARCH_KEY }}
+          AZURE_OPENAI_CHAT_COMPLETION_DEPLOYED_MODEL_NAME: ${{ secrets.AZURE_OPENAI_CHAT_COMPLETION_DEPLOYED_MODEL_NAME }}
+          AZURE_OPENAI_EMBEDDING_DEPLOYED_MODEL_NAME: ${{ secrets.AZURE_OPENAI_EMBEDDING_DEPLOYED_MODEL_NAME }}
+        run: uv run python tests/test_config.py
+      - name: Run pytest suite
+        if: ${{ steps.openai-secret-check.outputs.has-secret == 'true' }}
+        env:
+          AZURE_AI_PROJECT_ENDPOINT: ${{ secrets.AZURE_AI_PROJECT_ENDPOINT }}
+          AZURE_AI_SEARCH_ENDPOINT: ${{ secrets.AZURE_AI_SEARCH_ENDPOINT }}
+          AZURE_AI_SEARCH_KEY: ${{ secrets.AZURE_AI_SEARCH_KEY }}
+          AZURE_OPENAI_CHAT_COMPLETION_DEPLOYED_MODEL_NAME: ${{ secrets.AZURE_OPENAI_CHAT_COMPLETION_DEPLOYED_MODEL_NAME }}
+          AZURE_OPENAI_EMBEDDING_DEPLOYED_MODEL_NAME: ${{ secrets.AZURE_OPENAI_EMBEDDING_DEPLOYED_MODEL_NAME }}
+        run: uv run pytest -q
       - name: Create pull request with fixes
-        if: success()
+        if: ${{ success() && steps.openai-secret-check.outputs.has-secret == 'true' }}
         uses: peter-evans/create-pull-request@v6
         with:
           commit-message: "fix(ci): auto-fix failing tests via Codex"
-          branch: codex/auto-fix-${{ github.event.workflow_run.run_id }}
+          branch: codex/auto-fix-${{ github.event.workflow_run.id }}
           base: ${{ env.FAILED_HEAD_BRANCH }}
           title: "Auto-fix failing CI via Codex"
           body: |
