@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import inspect
+from collections.abc import Callable
 from typing import TYPE_CHECKING, Any, cast
 
 from agenticfleet.config import settings
@@ -163,6 +165,8 @@ Always explain your reasoning and include evidence from agent responses."""
         self,
         instructions: str | None = None,
         model: str | None = None,
+        *,
+        chat_message_store_factory: Callable[[], Any] | None = None,
     ) -> FleetBuilder:
         """
         Configure StandardMagenticManager with custom prompts.
@@ -194,13 +198,38 @@ Always explain your reasoning and include evidence from agent responses."""
         # Configure the manager with custom settings
         # chat_client is OpenAIResponsesClient which implements ChatClientProtocol when
         # agent_framework is installed; fallback is only for import-time compatibility
-        self.builder = self.builder.with_standard_manager(
-            chat_client=cast(Any, chat_client),
-            instructions=manager_instructions,
-            max_round_count=self.max_round_count,
-            max_stall_count=self.max_stall_count,
-            max_reset_count=self.max_reset_count,
-        )
+        standard_manager_kwargs: dict[str, Any] = {
+            "chat_client": cast(Any, chat_client),
+            "instructions": manager_instructions,
+            "max_round_count": self.max_round_count,
+            "max_stall_count": self.max_stall_count,
+            "max_reset_count": self.max_reset_count,
+        }
+
+        include_store_factory = False
+        if chat_message_store_factory is not None:
+            try:
+                signature = inspect.signature(self.builder.with_standard_manager)  # type: ignore[arg-type]
+            except (TypeError, ValueError):
+                signature = None
+
+            if signature is None:
+                include_store_factory = True
+            else:
+                parameters = signature.parameters
+                include_store_factory = "chat_message_store_factory" in parameters or any(
+                    param.kind == inspect.Parameter.VAR_KEYWORD for param in parameters.values()
+                )
+
+            if include_store_factory:
+                standard_manager_kwargs["chat_message_store_factory"] = chat_message_store_factory
+            else:
+                logger.info(
+                    "Skipping chat message store factory because the installed "
+                    "agent_framework version does not support it."
+                )
+
+        self.builder = self.builder.with_standard_manager(**standard_manager_kwargs)
 
         return self
 

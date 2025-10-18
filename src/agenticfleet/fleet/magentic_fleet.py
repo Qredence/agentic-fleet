@@ -16,6 +16,7 @@ from agenticfleet.agents import (
 )
 from agenticfleet.config import settings
 from agenticfleet.core.approval import ApprovalDecision
+from agenticfleet.core.approved_tools import set_approval_handler
 from agenticfleet.core.checkpoints import (
     load_checkpoint_metadata_from_path,
     normalize_checkpoint_metadata,
@@ -203,12 +204,11 @@ class MagenticFleet:
     def _build_magentic_workflow(self) -> Any:
         """Construct the Magentic workflow with repository conventions."""
 
-        builder = (
-            FleetBuilder(console_callbacks=self.console_callbacks)
-            .with_agents(self.agents)
-            .with_manager()
-            .with_observability()
-        )
+        chat_message_store_factory = settings.redis_chat_message_store_factory()
+
+        builder = FleetBuilder(console_callbacks=self.console_callbacks).with_agents(self.agents)
+        builder = builder.with_manager(chat_message_store_factory=chat_message_store_factory)
+        builder = builder.with_observability()
 
         if self.checkpoint_storage:
             builder = builder.with_checkpointing(self.checkpoint_storage)
@@ -263,7 +263,7 @@ class MagenticFleet:
         completed = False
         resume_token_used = resume_from_checkpoint is not None
 
-        while not completed:
+        while True:
             if (
                 pending_responses
                 and callable(send_responses_method)
@@ -275,14 +275,17 @@ class MagenticFleet:
             else:
                 break
 
-            events: list[MagenticCallbackEvent] = [event async for event in stream]
-            pending_responses = None
-
             if resume_token_used:
                 run_kwargs.pop("resume_from_checkpoint", None)
                 resume_token_used = False
 
-            for event in events:
+            pending_responses = None
+            had_events = False
+
+            async for event in stream:
+                had_events = True
+                if isinstance(event, MagenticAgentDeltaEvent):
+                    continue
                 if (
                     isinstance(event, RequestInfoEvent)
                     and event.request_type is MagenticPlanReviewRequest
@@ -300,16 +303,14 @@ class MagenticFleet:
                     self._latest_final_text = getattr(event.message, "text", None) or str(
                         event.message
                     )
-                elif isinstance(event, MagenticAgentDeltaEvent):
-                    # Streaming deltas already routed via ConsoleCallbacks
-                    continue
 
             if pending_request is not None:
                 reply = await self._handle_plan_review_request(pending_request)
                 pending_responses = {pending_request.request_id: reply}
                 pending_request = None
+                continue
 
-            if not events and pending_responses is None and pending_request is None:
+            if completed or not had_events:
                 break
 
         final_render = self.console_callbacks.consume_final_render()
@@ -473,6 +474,13 @@ def create_default_fleet(console_ui: ConsoleUI | None = None) -> MagenticFleet:
             timeout_seconds,
             auto_reject,
         )
+        set_approval_handler(
+            approval_handler,
+            require_operations=hitl_config.get("require_approval_for", []),
+            trusted_operations=hitl_config.get("trusted_operations", []),
+        )
+    else:
+        set_approval_handler(None)
 
     console_callbacks = ConsoleCallbacks(console_ui)
 

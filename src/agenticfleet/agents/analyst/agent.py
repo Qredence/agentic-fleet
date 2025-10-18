@@ -67,11 +67,19 @@ def create_analyst_agent() -> FleetAgent:
 
     # Create and return agent with tools
     # Note: temperature is not a ChatAgent parameter in Microsoft Agent Framework
+    context_providers = settings.create_context_providers(
+        agent_id=agent_config.get("name"),
+    )
+    fleet_agent_kwargs: dict[str, Any] = {}
+    if context_providers:
+        fleet_agent_kwargs["context_providers"] = context_providers
+
     agent = FleetAgent(
         chat_client=chat_client,
         instructions=config.get("system_prompt", ""),
         name=agent_config.get("name", "analyst"),
         tools=enabled_tools,
         runtime_config=config.get("runtime", {}),
+        **fleet_agent_kwargs,
     )
     return agent
