@@ -1,8 +1,17 @@
 from __future__ import annotations
 
+import os
 from pathlib import Path
 
 from dotenv import load_dotenv
+_mem0_dir = os.environ.get("MEM0_DIR")
+if _mem0_dir is None:
+    _mem0_dir = Path(__file__).resolve().parents[3] / "var" / "mem0"
+else:
+    _mem0_dir = Path(_mem0_dir).expanduser()
+_mem0_dir = _mem0_dir.resolve()
+os.environ["MEM0_DIR"] = str(_mem0_dir)
+_mem0_dir.mkdir(parents=True, exist_ok=True)
 from mem0 import Memory  # type: ignore
 from mem0.configs.base import (  # type: ignore[import-untyped]
     EmbedderConfig,
