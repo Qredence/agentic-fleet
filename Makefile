@@ -29,6 +29,7 @@ help:
 # Setup commands
 install:
 	uv sync --all-extras
+	uv pip install -U openai
 sync:
 	uv sync
 

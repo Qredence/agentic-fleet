@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from typing import TYPE_CHECKING, Any, cast
 
 from agenticfleet.config import settings
@@ -163,6 +164,8 @@ Always explain your reasoning and include evidence from agent responses."""
         self,
         instructions: str | None = None,
         model: str | None = None,
+        *,
+        chat_message_store_factory: Callable[[], Any] | None = None,
     ) -> FleetBuilder:
         """
         Configure StandardMagenticManager with custom prompts.
@@ -194,14 +197,30 @@ Always explain your reasoning and include evidence from agent responses."""
         # Configure the manager with custom settings
         # chat_client is OpenAIResponsesClient which implements ChatClientProtocol when
         # agent_framework is installed; fallback is only for import-time compatibility
-        self.builder = self.builder.with_standard_manager(
-            chat_client=cast(Any, chat_client),
-            instructions=manager_instructions,
-            max_round_count=self.max_round_count,
-            max_stall_count=self.max_stall_count,
-            max_reset_count=self.max_reset_count,
-        )
+        standard_manager_kwargs: dict[str, Any] = {
+            "chat_client": cast(Any, chat_client),
+            "instructions": manager_instructions,
+            "max_round_count": self.max_round_count,
+            "max_stall_count": self.max_stall_count,
+            "max_reset_count": self.max_reset_count,
+        }
 
+        if chat_message_store_factory is not None:
+            standard_manager_kwargs["chat_message_store_factory"] = chat_message_store_factory
+
+        try:
+            self.builder = self.builder.with_standard_manager(**standard_manager_kwargs)
+        except TypeError as e:
+            if chat_message_store_factory is not None and "chat_message_store_factory" in str(e):
+                logger.info(
+                    "Skipping chat message store factory because the installed "
+                    "agent_framework version does not support it."
+                )
+                # Remove the kwarg and try again
+                standard_manager_kwargs.pop("chat_message_store_factory", None)
+                self.builder = self.builder.with_standard_manager(**standard_manager_kwargs)
+            else:
+                raise
         return self
 
     def with_observability(self) -> FleetBuilder:

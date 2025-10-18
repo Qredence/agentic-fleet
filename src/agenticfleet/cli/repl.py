@@ -206,6 +206,19 @@ def run_repl_main() -> int:
     ui.show_header()
     ui.show_instructions()
 
+    # Set up OpenTelemetry tracing if enabled
+    if settings.enable_otel:
+        try:
+            from agent_framework.observability import setup_observability
+
+            setup_observability(
+                otlp_endpoint=settings.otlp_endpoint,
+                enable_sensitive_data=settings.enable_sensitive_data,
+            )
+            ui.log_notice("OpenTelemetry tracing enabled")
+        except ImportError:
+            ui.log_notice("agent_framework observability not available", style="yellow")
+
     try:
         if not settings.openai_api_key:
             ui.log_notice("OPENAI_API_KEY environment variable is required", style="red")

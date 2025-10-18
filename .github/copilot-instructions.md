@@ -1,5 +1,9 @@
 # AI Agent Instructions for AgenticFleet
 
+## Quick Context: What This Is
+
+AgenticFleet is a **multi-agent orchestration system** built on Microsoft Agent Framework's Magentic One pattern. A manager agent (the orchestrator) breaks tasks into plans, then dynamically delegates to specialist agents (researcher, coder, analyst) that execute with specific tools. The entire workflow is observable via callbacks, persistable via checkpoints, and controllable via human approval gates.
+
 ## Architecture & Orchestration
 
 - **Magentic Fleet (Only Mode)**: AgenticFleet uses Microsoft's Magentic One pattern with intelligent planning via `MagenticFleet` in `src/agenticfleet/fleet/magentic_fleet.py`. The manager creates structured plans, evaluates progress, and dynamically delegates to specialist agents. Run with `agentic-fleet` or call `create_default_fleet()`.
@@ -7,6 +11,14 @@
 - **Agent factories**: Each specialist lives under `src/agenticfleet/agents/*/agent.py`. Factories wrap `ChatAgent` with `OpenAIResponsesClient(model_id=...)` and optional tools. Never use deprecated `OpenAIChatClient`.
 - **Configuration hierarchy**: Manager settings in `config/workflow.yaml` under `fleet.manager` (model, instructions). Per-agent configs in `agents/<role>/config.yaml` (name, model, system_prompt, tools). Global settings (API keys, endpoints) load from `.env` via `config/settings.py`.
 - **Legacy removed**: Custom `MultiAgentWorkflow` and `workflow_builder.py` have been deleted. The `workflows` module now re-exports `MagenticFleet` and `create_default_fleet()` for compatibility.
+
+## Critical Patterns & Developer Conventions
+
+- **uv-first**: ALL Python commands MUST prefix with `uv run` (e.g., `uv run pytest`, `uv run python -m agenticfleet`). Project uses **uv** for dependency management, not pip/venv. See `docs/getting-started/command-reference.md` for the canonical command reference.
+- **Model naming**: Respect per-agent `model` in `agents/<role>/config.yaml`; never hardcode models. Current default is `gpt-5` (orchestrator/researcher/analyst) and `gpt-5-codex` (coder). Preserve preview model names during refactoring.
+- **YAML as source of truth**: All configuration is declarative in YAML files, not code. When changing agent behavior, edit `agents/<role>/config.yaml` first (system_prompt, tools list, model, temperature, max_tokens). Never override via factory code.
+- **Tool return types**: All tools return Pydantic models (`CodeExecutionResult`, `WebSearchResponse`, `DataAnalysisResponse`, `VisualizationSuggestion`) from `core/code_types.py`. This ensures downstream agents can parse outputs reliably. New tools must follow this pattern.
+- **Approval flow design**: When adding approval-required operations (code execution, file ops, sensitive APIs), wrap in `create_approval_request()` helper and check `ApprovalDecision` enum (approve/reject/modify). Never bypass approval checks when configured.
 
 ## Magentic Workflow Cycle
 
@@ -17,6 +29,36 @@
 5. **REPEAT**: Continues until complete or limits reached: `max_round_count: 30`, `max_stall_count: 3` (triggers replan), `max_reset_count: 2` (complete restart)
 
 Configure limits in `workflow.yaml` under `fleet.orchestrator`. Adjust based on task complexity and cost tolerance.
+
+## Essential Developer Workflows
+
+### Running & Testing
+
+- **Run application**: `uv run python -m agenticfleet` or `uv run fleet` (console script entry)
+- **Validate configuration**: `uv run python tests/test_config.py` after ANY change to YAML or agent factories. This is critical—it validates env vars, agent structure, tool imports, and factory callables in one go.
+- **Run tests**: Run only related tests, not the entire suite. Example: `uv run pytest tests/test_magentic_fleet.py -k "test_orchestrator"` (specific filter). Do NOT use `@pytest.mark.asyncio` on new tests.
+- **Code quality pre-commit**: `make check` chains lint + format + type checks. Individual commands: `make lint`, `make format`, `make type-check`. Format only changed files, not the entire codebase.
+- **Resolve before executing**: Before running commands to execute or test code, ensure all problems, compilation errors, and warnings are resolved. Use `uv run mypy .` to catch type issues early.
+- **All test suites**: `tests/test_magentic_fleet.py` (14 core orchestration tests), `tests/test_config.py` (configuration validation), `tests/test_mem0_context_provider.py` (memory integration)
+- **Debug information**: Use `print()` statements as needed during debugging, but remove them when testing is complete.
+
+### Adding or Modifying Agents
+
+1. **Scaffold agent**: Create `src/agenticfleet/agents/<new_role>/` with `agent.py`, `config.yaml`, `tools/` package, `__init__.py`
+2. **Factory pattern**: Load YAML via `settings.load_agent_config(name)`, instantiate `OpenAIResponsesClient(model_id=...)`, collect tools from YAML `tools` list, return `ChatAgent`. Always specify parameter types and return type: `def create_<role>_agent() -> ChatAgent:`
+3. **Register**: Export factory in `agents/__init__.py`, wire into `FleetBuilder.with_agents()` in `fleet_builder.py`
+4. **Update manager**: Edit manager instructions in `workflow.yaml` under `fleet.manager.instructions` to document new agent's capabilities and delegation rules
+5. **Test**: Extend `tests/test_config.py` to validate new agent's config and tool imports. Run only the new test: `uv run pytest tests/test_config.py::test_<new_role>_agent -v`. Review existing agent tests to match coding style.
+6. **Extend workflow tests**: Add test cases to `tests/test_magentic_fleet.py` for new agent participation in the workflow
+
+### Adding Tools
+
+1. **Tool implementation**: Create `agents/<role>/tools/<name>.py` returning Pydantic response model. Always specify parameter and return types: `def my_tool(param: str) -> MyToolResponse:`. Do not use `Optional[Type]`; use `Type | None` instead.
+2. **Enable in config**: Add to `agents/<role>/config.yaml` under `tools` list with `name: <tool_name>` and `enabled: true`
+3. **Approval integration**: For sensitive ops (code execution, file writes), wrap in `approved_tools.py` checks using `create_approval_request()` helper
+4. **Update prompt**: Document tool in agent's `system_prompt` in config.yaml so agent understands when to use it
+5. **Unit tests**: Mock external calls; verify tool returns correct Pydantic schema for downstream agents to parse. Run only related test: `uv run pytest tests/agents/<role>/test_<tool_name>.py -v`
+6. **Review samples**: When adding tools, check existing tool implementations for consistent coding style and patterns
 
 ## Event-Driven Callbacks
 
@@ -75,22 +117,39 @@ Enable/disable via `fleet.callbacks.*` in workflow.yaml. All callbacks are optio
 ## Error Handling & Logging
 
 - **Exception hierarchy**: Raise `AgentConfigurationError` for config issues, `WorkflowError` for orchestration failures, `ToolExecutionError` for tool problems, `ContextProviderError` for memory issues. All inherit from `AgenticFleetError` in `core/exceptions.py`.
-- **Logging**: `setup_logging()` in `core/logging.py` runs during `Settings` init, writes to `logs/agenticfleet.log`. Respect `LOG_LEVEL` env var. Use `get_logger(__name__)` in modules, never print statements.
+- **Logging**: `setup_logging()` in `core/logging.py` runs during `Settings` init, writes to `logs/agenticfleet.log`. Respect `LOG_LEVEL` env var. Use `get_logger(__name__)` in modules, never print statements (except during debug).
 - **Magentic debugging**: Enable all callbacks in workflow.yaml for verbose logging. Progress ledger shows manager's reasoning; tool callbacks show agent actions. Checkpoints enable replay for post-mortem analysis.
+- **Type hints**: Always specify function parameter types and return types. Use `Type | None` instead of `Optional[Type]`. Example: `def process(data: str | None) -> Result:`
+
+## Common Pitfalls & Integration Checklist
+
+- **❌ Hardcoding models**: Never hardcode `gpt-4o` or model names in code. Always read from `agents/<role>/config.yaml`. Models can change; YAML is the source of truth.
+- **❌ Bypassing YAML configuration**: Avoid setting agent behavior in Python factory code—move it to `config.yaml`. This lets non-engineers tune agent prompts and tools without code changes.
+- **❌ Tool schema mismatches**: If a downstream agent can't parse tool output, it's likely the Pydantic schema changed but wasn't updated everywhere. Check `core/code_types.py` and ensure all tools match their expected response type.
+- **❌ Skipping config validation**: Always run `uv run python tests/test_config.py` after YAML changes. It catches missing env vars, broken tool imports, and invalid agent structure before runtime.
+- **❌ Using `python` directly**: Never run `python main.py` or `pytest`. Always use `uv run` prefix. This ensures you're in the project environment and respects the lockfile.
+- **✅ Before committing**: Run `make check` to lint, format, and type-check. Run `make test-config` to validate all agent config. Run `make test` to ensure no regressions.
 
 ## Extending the Magentic Fleet
 
 - **Adding agents**: (1) Create `src/agenticfleet/agents/<new_agent>/` with `agent.py`, `config.yaml`, `tools/` package, `__init__.py`. (2) Model factory after existing patterns: load YAML via `settings.load_agent_config`, instantiate `OpenAIResponsesClient`, collect tools, return `ChatAgent`. (3) Export factory in `agents/__init__.py`. (4) Register in `fleet_builder.py`: add to `FleetBuilder` agents list with `.add_agent()`. (5) Update manager instructions in `workflow.yaml` to describe new agent's capabilities. (6) Extend `tests/test_config.py` and `tests/test_magentic_fleet.py`.
 - **Adding tools**: (1) Create tool function in `agents/<role>/tools/<name>.py` returning Pydantic model. (2) Add to agent's `config.yaml` tools list with `enabled: true`. (3) For sensitive operations, wrap with HITL approval check via `approved_tools.py`. (4) Write unit tests mocking external calls. (5) Update agent system_prompt in config.yaml to document tool availability.
 - **Customizing manager**: Edit manager instructions in `workflow.yaml` under `fleet.manager.instructions`. Be explicit about delegation strategy, planning format, and termination criteria. Manager uses these instructions to create plans and evaluate progress.
-- **Model overrides**: Respect per-agent `model` in config.yaml; never hardcode models. This preserves preview models (e.g., `gpt-5-codex`, `gpt-5`) during refactoring. Fall back to `settings.openai_model` (default: `gpt-4o-mini`) when model key missing.
+- **Model overrides**: Respect per-agent `model` in config.yaml; never hardcode models. This preserves preview models (e.g., `gpt-5-codex`, `gpt-5`) during refactoring. Fall back to `settings.openai_model` (default: `gpt-5`) when model key missing.
+
+## Testing Patterns
+
+- **Factory mocking**: Import `create_<role>_agent()` directly and test with a mock `OpenAIResponsesClient` to avoid API calls. Example: `mock_client = MagicMock(spec=OpenAIResponsesClient)`.
+- **Config validation**: Use `settings.load_agent_config()` to verify YAML structure; assert required keys are present. This catches config drift early.
+- **Callback testing**: Instantiate `ConsoleCallbacks` with a mock sink and verify callback signatures match expected events (e.g., `streaming_agent_response_callback` should receive `MagenticAgentDeltaEvent`).
+- **Checkpoint testing**: Use `InMemoryCheckpointStorage` in tests; reserve `FileCheckpointStorage` for integration tests. Cleanup `var/checkpoints` between test runs if using file storage.
 
 ## Key References
 
+- **Microsoft Agent Framework**: https://github.com/microsoft/agent-framework/python/ (core orchestration patterns, official documentation, latest API updates)
 - **Magentic Architecture**: `docs/architecture/magentic-fleet.md` (architectural design), `docs/features/magentic-fleet.md` (complete feature guide), `docs/features/magentic-fleet-implementation.md` (implementation details)
 - **Fleet Code**: `src/agenticfleet/fleet/magentic_fleet.py` (orchestrator), `src/agenticfleet/fleet/fleet_builder.py` (builder pattern), `src/agenticfleet/fleet/callbacks.py` (observability)
 - **Core Types**: `src/agenticfleet/core/code_types.py` (`CodeExecutionResult`), `src/agenticfleet/core/approval.py` (HITL), `src/agenticfleet/core/exceptions.py` (error hierarchy)
 - **Features**: `docs/features/checkpointing.md` (state persistence), `docs/guides/human-in-the-loop.md` (HITL usage), `docs/operations/mem0-integration.md` (memory setup)
 - **Agents**: `docs/AGENTS.md` (agent catalog with capabilities)
 - **Releases**: `docs/releases/2025-10-14-v0.5.1-magentic-fleet.md` (Magentic Fleet release), `docs/releases/2025-10-13-hitl-implementation.md` (HITL implementation)
-- **Framework Patterns**: `.github/instructions/microsoft-agent-framework-memory.instructions.md` (best practices: use `OpenAIResponsesClient`, preserve model names, verify with official docs)

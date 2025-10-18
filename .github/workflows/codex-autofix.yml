@@ -41,10 +41,15 @@ jobs:
       - name: Install dependencies
         run: |
           if [ -f package-lock.json ]; then npm ci; else npm i; fi
+      - name: Debug run identifiers
+        run: |
+          echo "workflow_run.run_id=${{ github.event.workflow_run.run_id }}"
+          echo "workflow_run.id=${{ github.event.workflow_run.id }}"
+          echo "github.run_id=${{ github.run_id }}"
       - name: Ensure Codex server info file exists
         run: |
           mkdir -p /home/runner/.codex
-          echo '{}' > /home/runner/.codex/${{ github.event.workflow_run.run_id }}.json
+          echo '{}' > /home/runner/.codex/${{ github.run_id }}.json
       - name: Run Codex
         uses: openai/codex-action@main
         id: codex

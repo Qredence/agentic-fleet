@@ -2,6 +2,7 @@
 
 import logging
 import os
+from collections.abc import Callable
 from pathlib import Path
 from typing import Any, cast
 
@@ -17,6 +18,15 @@ except ModuleNotFoundError:  # pragma: no cover - dependency optional in tests
 
     InMemoryCheckpointStorage = None  # type: ignore[misc, assignment]
     _AGENT_FRAMEWORK_AVAILABLE = False
+
+try:  # pragma: no cover - dependency optional in tests
+    from agent_framework_redis import RedisChatMessageStore, RedisProvider
+
+    _REDIS_AVAILABLE = True
+except ModuleNotFoundError:  # pragma: no cover - dependency optional in tests
+    RedisChatMessageStore = None  # type: ignore[misc, assignment]
+    RedisProvider = None  # type: ignore[misc, assignment]
+    _REDIS_AVAILABLE = False
 
 from agenticfleet.core.checkpoints import AgenticFleetFileCheckpointStorage
 from agenticfleet.core.exceptions import AgentConfigurationError
@@ -37,7 +47,7 @@ class Settings:
         self.azure_ai_project_endpoint = os.getenv("AZURE_AI_PROJECT_ENDPOINT")
 
         # Optional environment variables with defaults
-        self.openai_model = os.getenv("OPENAI_MODEL", "gpt-5-mini")
+        self.openai_model = os.getenv("OPENAI_MODEL", "gpt-5")
         self.openai_embedding_model = os.getenv("OPENAI_EMBEDDING_MODEL", "text-embedding-3-small")
         self.log_level = os.getenv("LOG_LEVEL", "INFO")
         self.log_file = os.getenv("LOG_FILE", "var/logs/agenticfleet.log")
@@ -61,6 +71,9 @@ class Settings:
         history_path = Path(self.mem0_history_db_path)
         history_path.parent.mkdir(parents=True, exist_ok=True)
 
+        # Redis configuration (optional)
+        self.redis_url = os.getenv("REDIS_URL")
+
         # Azure-specific settings
         self.azure_ai_search_endpoint = os.getenv("AZURE_AI_SEARCH_ENDPOINT")
         self.azure_ai_search_key = os.getenv("AZURE_AI_SEARCH_KEY")
@@ -70,6 +83,11 @@ class Settings:
         self.azure_openai_embedding_deployed_model_name = os.getenv(
             "AZURE_OPENAI_EMBEDDING_DEPLOYED_MODEL_NAME"
         )
+
+        # Observability settings
+        self.enable_otel = os.getenv("ENABLE_OTEL", "false").lower() == "true"
+        self.enable_sensitive_data = os.getenv("ENABLE_SENSITIVE_DATA", "false").lower() == "true"
+        self.otlp_endpoint = os.getenv("OTLP_ENDPOINT", "http://localhost:4317")
 
         # Setup logging
         setup_logging(level=self.log_level, log_file=self.log_file)
@@ -148,10 +166,11 @@ class Settings:
             return None
 
         if storage_type == "memory":
-            if InMemoryCheckpointStorage is None:
+            storage_cls = cast(Any, InMemoryCheckpointStorage)
+            if storage_cls is None:
                 logging.warning("InMemoryCheckpointStorage not available")
                 return None
-            return InMemoryCheckpointStorage()
+            return storage_cls()
         elif storage_type == "file":
             storage_path = checkpoint_config.get("storage_path", "./var/checkpoints")
             storage_path = self._rewrite_runtime_path(
@@ -170,6 +189,97 @@ class Settings:
                 f"Unknown checkpoint storage type: {storage_type}. Checkpointing disabled."
             )
             return None
+
+    def redis_chat_message_store_factory(
+        self,
+        *,
+        key_prefix: str | None = None,
+        max_messages: int | None = None,
+    ) -> Callable[[], Any] | None:
+        """Return a factory for Redis-backed chat message stores, if available."""
+
+        if not (_REDIS_AVAILABLE and self.redis_url and RedisChatMessageStore is not None):
+            return None
+
+        config_source = self.workflow_config.get("redis", {}).get("chat_store", {})
+        allowed_keys = {"key_prefix", "max_messages"}
+
+        factory_kwargs: dict[str, Any] = {
+            key: config_source[key] for key in allowed_keys if key in config_source
+        }
+
+        if key_prefix is not None:
+            factory_kwargs["key_prefix"] = key_prefix
+        if max_messages is not None:
+            factory_kwargs["max_messages"] = max_messages
+
+        def factory() -> Any:
+            return RedisChatMessageStore(redis_url=self.redis_url, **factory_kwargs)  # type: ignore[misc]
+
+        return factory
+
+    def create_redis_provider(
+        self,
+        *,
+        agent_id: str | None = None,
+        user_id: str | None = None,
+        thread_id: str | None = None,
+    ) -> Any | None:
+        """Create a Redis context provider when configuration and dependency are available."""
+
+        if not (_REDIS_AVAILABLE and self.redis_url and RedisProvider is not None):
+            return None
+
+        config_source = self.workflow_config.get("redis", {}).get("provider", {})
+        allowed_keys = {
+            "index_name",
+            "prefix",
+            "redis_vectorizer",
+            "vector_field_name",
+            "vector_algorithm",
+            "vector_distance_metric",
+            "application_id",
+            "agent_id",
+            "user_id",
+            "thread_id",
+            "scope_to_per_operation_thread_id",
+            "context_prompt",
+            "redis_index",
+            "overwrite_index",
+        }
+        provider_kwargs: dict[str, Any] = {
+            key: config_source[key] for key in allowed_keys if key in config_source
+        }
+
+        if agent_id is not None:
+            provider_kwargs["agent_id"] = agent_id
+        if user_id is not None:
+            provider_kwargs["user_id"] = user_id
+        if thread_id is not None:
+            provider_kwargs["thread_id"] = thread_id
+
+        return RedisProvider(redis_url=self.redis_url, **provider_kwargs)  # type: ignore[misc]
+
+    def create_context_providers(
+        self,
+        *,
+        agent_id: str | None = None,
+        user_id: str | None = None,
+        thread_id: str | None = None,
+    ) -> list[Any]:
+        """Return all configured context providers for the current environment."""
+
+        providers: list[Any] = []
+
+        redis_provider = self.create_redis_provider(
+            agent_id=agent_id,
+            user_id=user_id,
+            thread_id=thread_id,
+        )
+        if redis_provider is not None:
+            providers.append(redis_provider)
+
+        return providers
 
     @property
     def openai_api_key(self) -> str | None:

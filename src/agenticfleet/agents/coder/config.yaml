@@ -6,7 +6,7 @@
 
 agent:
   name: "coder"
-  model: "gpt-5"
+  model: "gpt-5-codex"
   temperature: 0.2  # Lower temperature for precise, deterministic code
   max_tokens: 4000
 
@@ -30,7 +30,7 @@ supported_languages:
   # Future phases: javascript, typescript, rust, go
 
 runtime:
-  stream: false
+  stream: true
   store: true
   checkpoint: true
 
