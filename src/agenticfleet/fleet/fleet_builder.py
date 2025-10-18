@@ -206,31 +206,22 @@ Always explain your reasoning and include evidence from agent responses."""
             "max_reset_count": self.max_reset_count,
         }
 
-        include_store_factory = False
         if chat_message_store_factory is not None:
-            try:
-                signature = inspect.signature(self.builder.with_standard_manager)  # type: ignore[arg-type]
-            except (TypeError, ValueError):
-                signature = None
+            standard_manager_kwargs["chat_message_store_factory"] = chat_message_store_factory
 
-            if signature is None:
-                include_store_factory = True
-            else:
-                parameters = signature.parameters
-                include_store_factory = "chat_message_store_factory" in parameters or any(
-                    param.kind == inspect.Parameter.VAR_KEYWORD for param in parameters.values()
-                )
-
-            if include_store_factory:
-                standard_manager_kwargs["chat_message_store_factory"] = chat_message_store_factory
-            else:
+        try:
+            self.builder = self.builder.with_standard_manager(**standard_manager_kwargs)
+        except TypeError as e:
+            if chat_message_store_factory is not None and "chat_message_store_factory" in str(e):
                 logger.info(
                     "Skipping chat message store factory because the installed "
                     "agent_framework version does not support it."
                 )
-
-        self.builder = self.builder.with_standard_manager(**standard_manager_kwargs)
-
+                # Remove the kwarg and try again
+                standard_manager_kwargs.pop("chat_message_store_factory", None)
+                self.builder = self.builder.with_standard_manager(**standard_manager_kwargs)
+            else:
+                raise
         return self
 
     def with_observability(self) -> FleetBuilder:
