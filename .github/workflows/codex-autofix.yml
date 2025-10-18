@@ -54,6 +54,12 @@ jobs:
         run: |
           echo "workflow_run.id=${{ github.event.workflow_run.id }}"
           echo "github.run_id=${{ github.run_id }}"
+      - name: Prepare Codex server info file
+        if: ${{ steps.openai-secret-check.outputs.has-secret == 'true' }}
+        run: |
+          mkdir -p /home/runner/.codex
+          rm -f "/home/runner/.codex/${{ github.run_id }}.json"
+          touch "/home/runner/.codex/${{ github.run_id }}.json"
       - name: Run Codex
         if: ${{ steps.openai-secret-check.outputs.has-secret == 'true' }}
         uses: openai/codex-action@0cb7e270ce49747f8c51ebb61d1a169ed67b5764
