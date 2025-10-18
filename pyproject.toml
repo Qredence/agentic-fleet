@@ -4,7 +4,7 @@ version = "0.5.2"
 description = "A multi-agent orchestration system built with Microsoft Agent Framework"
 authors = [{ name = "Qredence", email = "contact@qredence.ai" }]
 readme = "README.md"
-license = { text = "MIT" }
+license = { file = "LICENSE" }
 keywords = [
     "agents",
     "ai",
@@ -56,8 +56,14 @@ Issues = "https://github.com/Qredence/agentic-fleet/issues"
 requires = ["hatchling"]
 build-backend = "hatchling.build"
 
+[tool.hatch.metadata]
+allow-direct-references = true
+
 [tool.hatch.build.targets.wheel]
 packages = ["src/agenticfleet"]
+
+[tool.hatch.build.targets.sdist]
+include = ["/src", "/LICENSE", "/README.md"]
 
 [tool.uv.sources]
 
