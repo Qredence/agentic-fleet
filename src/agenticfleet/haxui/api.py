@@ -34,7 +34,9 @@ class ReflectionRequest(BaseModel):
     worker_model: str = Field(
         default="gpt-4.1-nano", description="Model ID for Worker (response generation)"
     )
-    reviewer_model: str = Field(default="gpt-4.1", description="Model ID for Reviewer (quality evaluation)")
+    reviewer_model: str = Field(
+        default="gpt-4.1", description="Model ID for Reviewer (quality evaluation)"
+    )
     conversation_id: str | None = Field(
         default=None, description="Existing conversation to continue (optional)"
     )

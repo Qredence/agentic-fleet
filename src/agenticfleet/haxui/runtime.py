@@ -30,7 +30,10 @@ def build_entity_catalog() -> tuple[list[EntityInfo], list[EntityInfo]]:
             type="workflow",
             name="Magentic Fleet Orchestration",
             framework="microsoft-agent-framework",
-            description="Multi-agent orchestration using Magentic One pattern with manager and specialist agents",
+            description=(
+                "Multi-agent orchestration using Magentic One pattern "
+                "with manager and specialist agents"
+            ),
             metadata={
                 "pattern": "magentic_one",
                 "agents": ["researcher", "coder", "analyst"],
@@ -57,7 +60,10 @@ def build_entity_catalog() -> tuple[list[EntityInfo], list[EntityInfo]]:
             type="workflow",
             name="Reflection Workflow (Worker + Reviewer)",
             framework="microsoft-agent-framework",
-            description="Worker generates responses, Reviewer evaluates quality. Iterates until approval.",
+            description=(
+                "Worker generates responses, Reviewer evaluates quality. "
+                "Iterates until approval."
+            ),
             metadata={
                 "pattern": "reflection",
                 "quality_assurance": True,
@@ -149,5 +155,7 @@ class FleetRuntime:
             Workflow agent instance
         """
         # Always create a new instance with specified models
-        logger.info(f"Creating workflow_as_agent (worker={worker_model}, reviewer={reviewer_model})")
+        logger.info(
+            f"Creating workflow_as_agent (worker={worker_model}, reviewer={reviewer_model})"
+        )
         return create_workflow_agent(worker_model=worker_model, reviewer_model=reviewer_model)
