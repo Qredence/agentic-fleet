@@ -213,8 +213,6 @@ def create_app() -> FastAPI:
                         role_obj = event.role
                         if isinstance(role_obj, Role):
                             role_value = role_obj.value
-                        elif isinstance(role_obj, str):
-                            role_value = role_obj  # type: ignore[unreachable]
                     else:
                         text = str(event)
 
