@@ -36,8 +36,6 @@ async def custom_models_example() -> None:
     )
 
 
-
-
 async def streaming_example() -> None:
     """Demonstrate streaming responses with run_stream()."""
     print("\n" + "=" * 70)
@@ -54,9 +52,6 @@ async def streaming_example() -> None:
         print(f"Event: {event}")
 
     print("=" * 70)
-
-
-
 
 
 async def complex_query_example() -> None:
