@@ -36,6 +36,9 @@ dependencies = [
     "mem0ai==1.0.0",
     "rich>=13.7.0",
     "prompt-toolkit>=3.0.47",
+    "fastapi>=0.115.0",
+    "uvicorn[standard]>=0.32.0",
+    "sse-starlette>=2.2.1",
 ]
 requires-python = ">=3.12"
 
@@ -80,6 +83,7 @@ dev = [
     "pre-commit>=3.5.0",
     "types-PyYAML>=6.0.0",
     "types-requests>=2.31.0",
+    "httpx>=0.27.0",
 ]
 
 [tool.black]

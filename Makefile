@@ -1,4 +1,4 @@
-.PHONY: help install sync clean test test-config lint format type-check check run demo-hitl pre-commit-install
+.PHONY: help install sync clean test test-config lint format type-check check run haxui-server demo-hitl pre-commit-install
 
 # Default target
 help:
@@ -11,6 +11,7 @@ help:
 	@echo ""
 	@echo "Development:"
 	@echo "  make run               Run the main application"
+	@echo "  make haxui-server      Start HaxUI backend API server"
 	@echo "  make test              Run all tests"
 	@echo "  make test-config       Run configuration validation"
 	@echo ""
@@ -36,6 +37,10 @@ sync:
 # Run application
 run:
 	uv run python -m agenticfleet
+
+# HaxUI backend server
+haxui-server:
+	uv run uvicorn agenticfleet.haxui.api:app --reload --port 8000
 
 # Examples
 demo-hitl:
