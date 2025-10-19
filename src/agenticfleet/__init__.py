@@ -17,6 +17,11 @@ from agenticfleet.agents import (
     create_researcher_agent,
 )
 from agenticfleet.fleet.magentic_fleet import MagenticFleet, create_default_fleet
+from agenticfleet.observability import (
+    get_trace_config,
+    is_tracing_enabled,
+    setup_tracing,
+)
 
 __all__ = [
     "__version__",
@@ -28,4 +33,7 @@ __all__ = [
     "create_analyst_agent",
     "MagenticFleet",
     "create_default_fleet",
+    "setup_tracing",
+    "is_tracing_enabled",
+    "get_trace_config",
 ]
