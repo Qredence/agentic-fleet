@@ -10,12 +10,12 @@ import sys
 from pathlib import Path
 
 # Add src to path
-src_path = Path(__file__).parent / "src"
+src_path = Path(__file__).parent.parent / "src"
 sys.path.insert(0, str(src_path))
 
 
 def test_import() -> bool:
-    \"\"\"Test that tracing module can be imported.\"\"\"
+    """Test that tracing module can be imported."""
     print("✓ Testing imports...")
     try:
         from agenticfleet import setup_tracing  # type: ignore[attr-defined]  # noqa: F401
@@ -28,7 +28,7 @@ def test_import() -> bool:
 
 
 def test_setup() -> bool:
-    """Test that tracing can be initialized."""
+    """Test that tracing can be set up without errors."""
     print("\n✓ Testing tracing setup...")
     try:
         from agenticfleet import is_tracing_enabled, setup_tracing  # type: ignore[attr-defined]
@@ -51,7 +51,7 @@ def test_setup() -> bool:
 
 
 def test_config() -> bool:
-    """Test that config can be retrieved."""
+    """Test that config functions work."""
     print("\n✓ Testing configuration retrieval...")
     try:
         from agenticfleet import get_trace_config  # type: ignore[attr-defined]
@@ -64,7 +64,7 @@ def test_config() -> bool:
         return False
 
 
-def test_environment_vars() -> bool:
+def test_environment_vars() -> int:
     """Test environment variable handling."""
     print("\n✓ Testing environment variables...")
     import os

@@ -261,8 +261,8 @@ def create_app() -> FastAPI:
                     input_tokens = len(encoding.encode(query))
                     output_tokens = len(encoding.encode(accumulated))
                     total_tokens = input_tokens + output_tokens
-                except Exception:
-                    # Fallback if model encoding not found
+                except (KeyError, Exception):
+                    # Fallback if model encoding not found or other encoding errors
                     input_tokens = None
                     output_tokens = None
                     total_tokens = None
@@ -284,14 +284,20 @@ def create_app() -> FastAPI:
                 yield b"data: [DONE]\n\n"
 
             except Exception as exc:
-                # Send error event
+                # Log full error internally
+                import logging
+
+                logger = logging.getLogger(__name__)
+                logger.error(f"Workflow error: {exc}", exc_info=True)
+
+                # Send generic error to client (prevent information exposure)
                 sequence_number += 1
                 yield format_sse(
                     {
                         "type": "error",
                         "error": {
                             "type": "workflow_error",
-                            "message": str(exc),
+                            "message": "An error occurred during workflow execution",
                         },
                         "sequence_number": sequence_number,
                     }
@@ -487,18 +493,24 @@ async def build_sse_stream(
         yield b"data: [DONE]\n\n"
 
     except Exception as exc:  # pragma: no cover - defensive
+        # Log full error internally
+        import logging
+
+        logger = logging.getLogger(__name__)
+        logger.error(f"Stream error: {exc}", exc_info=True)
+
         sequence_number += 1
         error_event = {
             "type": "error",
-            "message": f"{exc}",
+            "message": "An error occurred during response generation",
             "sequence_number": sequence_number,
         }
         yield format_sse(error_event)
         await append_assistant_message(
             store,
             conversation_id,
-            accumulated or f"[error] {exc}",
-            [{"type": "text", "text": accumulated or str(exc)}],
+            accumulated or "[error] An error occurred",
+            [{"type": "text", "text": accumulated or "An error occurred"}],
             status="incomplete",
         )
         yield b"data: [DONE]\n\n"

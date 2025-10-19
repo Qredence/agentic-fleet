@@ -3,6 +3,7 @@ from __future__ import annotations
 import asyncio
 import json
 import logging
+import os
 import textwrap
 import time
 from collections.abc import AsyncIterator
@@ -14,7 +15,7 @@ from .web_approval import WebApprovalHandler
 logger = logging.getLogger(__name__)
 
 # Development mode - set to True to bypass fleet execution for frontend testing
-DEVELOPMENT_MODE = False  # TODO: Make this configurable via environment variable
+DEVELOPMENT_MODE = os.getenv("DEVELOPMENT_MODE", "false").lower() == "true"
 
 try:
     from agenticfleet.fleet import create_default_fleet
@@ -91,8 +92,12 @@ class FleetRuntime:
         if not prompt:
             prompt = "Explain what you can do."
 
-        logger.info(f"Starting workflow execution for entity: {entity_id}")
-        logger.debug(f"Prompt: {prompt[:100]}...")
+        # Sanitize inputs for logging (prevent log injection)
+        safe_entity_id = entity_id.replace("\n", " ").replace("\r", " ")[:100]
+        safe_prompt = prompt.replace("\n", " ").replace("\r", " ")[:100]
+
+        logger.info(f"Starting workflow execution for entity: {safe_entity_id}")
+        logger.debug(f"Prompt: {safe_prompt}...")
         start_time = time.time()
 
         # Development mode: return mock response immediately

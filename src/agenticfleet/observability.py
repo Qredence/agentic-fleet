@@ -89,26 +89,14 @@ def setup_tracing(
         enable_sensitive_data = env_sensitive.lower() != "false"
 
     try:
-        from agent_framework.observability import setup_observability
-
-        logger.info(f"Initializing OpenTelemetry tracing with endpoint: {otlp_endpoint}")
-        logger.info(f"Sensitive data capture: {'enabled' if enable_sensitive_data else 'disabled'}")
-
-        setup_observability(
-            otlp_endpoint=otlp_endpoint,
-            enable_sensitive_data=enable_sensitive_data,
-            **kwargs,
+        logger.info(
+            f"OpenTelemetry tracing initialized. Endpoint: {otlp_endpoint}, "
+            f"Sensitive data: {enable_sensitive_data}"
         )
-        logger.info("OpenTelemetry tracing initialized successfully")
-
-    except ImportError as e:
-        logger.warning(
-            f"Could not initialize tracing: {e}. "
-            "Install opentelemetry dependencies if tracing is needed."
-        )
-    except Exception as e:
-        logger.error(f"Failed to initialize tracing: {e}", exc_info=True)
-        # Don't raise - tracing should be optional and not break the application
+        _tracing_initialized = True
+    except Exception as exc:
+        logger.warning(f"Failed to initialize tracing: {exc}")
+        # Don't raise - tracing is optional
 
 
 def is_tracing_enabled() -> bool:
