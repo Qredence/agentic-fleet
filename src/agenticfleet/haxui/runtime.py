@@ -50,8 +50,10 @@ class FleetRuntime:
             try:
                 # Create fleet with web approval handler instead of CLI
                 self._fleet = create_default_fleet(  # type: ignore[call-arg]
-                    console_ui=None, approval_handler=self.approval_handler
+                    console_ui=None
                 )
+                if hasattr(self._fleet, "approval_handler"):
+                    self._fleet.approval_handler = self.approval_handler
                 # Create workflow_as_agent instance
                 if create_workflow_agent is not None:
                     self._workflow_as_agent = create_workflow_agent(
