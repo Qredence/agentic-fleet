@@ -5,6 +5,7 @@ from __future__ import annotations
 import asyncio
 import json
 import logging
+from contextlib import asynccontextmanager
 from typing import Any, AsyncIterator
 
 from agent_framework import AgentRunUpdateEvent
@@ -64,10 +65,25 @@ def create_app() -> FastAPI:
     Returns:
         Configured FastAPI application instance
     """
+    # Initialize stores and runtime
+    conversation_store = ConversationStore()
+    runtime = FleetRuntime()
+
+    @asynccontextmanager
+    async def lifespan(app: FastAPI) -> AsyncIterator[None]:
+        """Lifespan context manager for startup/shutdown."""
+        # Startup
+        await runtime.ensure_initialised()
+        logger.info("HaxUI API started")
+        yield
+        # Shutdown (if needed in future)
+        logger.info("HaxUI API shutting down")
+
     app = FastAPI(
         title="AgenticFleet HaxUI API",
         description="Backend API for HaxUI with Magentic Fleet and Workflow as Agent support",
         version="0.5.3",
+        lifespan=lifespan,
     )
 
     # CORS middleware
@@ -78,16 +94,6 @@ def create_app() -> FastAPI:
         allow_methods=["*"],
         allow_headers=["*"],
     )
-
-    # Initialize stores and runtime
-    conversation_store = ConversationStore()
-    runtime = FleetRuntime()
-
-    @app.on_event("startup")
-    async def startup_event() -> None:
-        """Initialize runtime on startup."""
-        await runtime.ensure_initialised()
-        logger.info("HaxUI API started")
 
     @app.get("/health", response_model=HealthResponse)
     async def health_check() -> HealthResponse:
