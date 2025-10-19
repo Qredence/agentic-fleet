@@ -89,11 +89,21 @@ def setup_tracing(
         enable_sensitive_data = env_sensitive.lower() != "false"
 
     try:
+        from agent_framework.observability import setup_observability
+
+        setup_observability(
+            otlp_endpoint=otlp_endpoint,
+            enable_sensitive_data=enable_sensitive_data,
+            **kwargs,
+        )
         logger.info(
             f"OpenTelemetry tracing initialized. Endpoint: {otlp_endpoint}, "
             f"Sensitive data: {enable_sensitive_data}"
         )
         _tracing_initialized = True
+    except ImportError as exc:
+        logger.warning(f"Failed to import agent_framework.observability: {exc}")
+        # Don't raise - tracing is optional
     except Exception as exc:
         logger.warning(f"Failed to initialize tracing: {exc}")
         # Don't raise - tracing is optional
