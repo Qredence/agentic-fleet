@@ -13,15 +13,31 @@ from agenticfleet.workflows.workflow_as_agent import create_workflow_agent
 logger = logging.getLogger(__name__)
 
 
-def build_entity_catalog() -> tuple[list[EntityInfo], list[EntityInfo]]:
+def build_entity_catalog() -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
     """
     Build catalog of available agents and workflows.
 
     Returns:
-        Tuple of (agents, workflows) where each is a list of EntityInfo objects
+        Tuple of (agents, workflows) where each is a list of entity dictionaries
     """
-    agents: list[EntityInfo] = []
-    workflows: list[EntityInfo] = []
+    agents: list[dict[str, Any]] = []
+    workflows: list[dict[str, Any]] = []
+
+    # Add researcher agent
+    try:
+        researcher_info = EntityInfo(
+            id="researcher",
+            type="agent",
+            name="Researcher Agent",
+            framework="microsoft-agent-framework",
+            description="Performs research and gathers information",
+            tools=["web_search"],
+            metadata={"role": "research", "capabilities": ["search", "analysis"]},
+            model="gpt-5",
+        )
+        agents.append(researcher_info.model_dump())
+    except Exception as e:
+        logger.warning(f"Failed to register researcher agent: {e}")
 
     # Add Magentic Fleet workflow
     try:
@@ -49,7 +65,7 @@ def build_entity_catalog() -> tuple[list[EntityInfo], list[EntityInfo]]:
                 "required": ["query"],
             },
         )
-        workflows.append(magentic_fleet_info)
+        workflows.append(magentic_fleet_info.model_dump())
     except Exception as e:
         logger.warning(f"Failed to register magentic_fleet: {e}")
 
@@ -89,7 +105,7 @@ def build_entity_catalog() -> tuple[list[EntityInfo], list[EntityInfo]]:
                 "required": ["query"],
             },
         )
-        workflows.append(workflow_as_agent_info)
+        workflows.append(workflow_as_agent_info.model_dump())
     except Exception as e:
         logger.warning(f"Failed to register workflow_as_agent: {e}")
 
