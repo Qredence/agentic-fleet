@@ -1,6 +1,6 @@
 [project]
 name = "agentic-fleet"
-version = "0.5.2"
+version = "0.5.3"
 description = "A multi-agent orchestration system built with Microsoft Agent Framework"
 authors = [{ name = "Qredence", email = "contact@qredence.ai" }]
 readme = "README.md"
@@ -36,6 +36,10 @@ dependencies = [
     "mem0ai==1.0.0",
     "rich>=13.7.0",
     "prompt-toolkit>=3.0.47",
+    "ipykernel>=7.0.1",
+    "openai==2.5.0",
+    "azure-ai-evaluation>=1.12.0",
+    "tiktoken>=0.12.0",
 ]
 requires-python = ">=3.12"
 
