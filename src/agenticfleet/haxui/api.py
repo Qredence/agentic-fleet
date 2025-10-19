@@ -205,18 +205,23 @@ def create_app() -> FastAPI:
                 async for event in agent.run_stream(query):
                     sequence_number += 1
 
-                    text = getattr(event, "text", None)
-                    role_value: str | None = None
-                    author_name: str | None = getattr(event, "author_name", None)
+                    # Unwrap AgentRunUpdateEvent to get the actual data
+                    from agent_framework import AgentRunUpdateEvent
 
-                    if isinstance(event, AgentRunResponseUpdate):
-                        role_obj = event.role
+                    actual_event = event.data if isinstance(event, AgentRunUpdateEvent) else event
+
+                    text = getattr(actual_event, "text", None)
+                    role_value: str | None = None
+                    author_name: str | None = getattr(actual_event, "author_name", None)
+
+                    if isinstance(actual_event, AgentRunResponseUpdate):
+                        role_obj = actual_event.role
                         if isinstance(role_obj, Role):
                             role_value = role_obj.value
                     else:
-                        text = str(event)
+                        text = str(actual_event)
 
-                    raw_text = text if text is not None else str(event)
+                    raw_text = text if text is not None else str(actual_event)
 
                     if role_value == Role.ASSISTANT.value:
                         accumulated += raw_text
