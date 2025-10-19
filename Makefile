@@ -1,4 +1,4 @@
-.PHONY: help install sync clean test test-config lint format type-check check run demo-hitl pre-commit-install
+.PHONY: help install sync clean test test-config test-e2e lint format type-check check run demo-hitl pre-commit-install dev haxui-server frontend-install frontend-dev
 
 # Default target
 help:
@@ -8,11 +8,16 @@ help:
 	@echo "Setup:"
 	@echo "  make install           Install dependencies (first time setup)"
 	@echo "  make sync              Sync dependencies from lockfile"
+	@echo "  make frontend-install  Install frontend dependencies"
 	@echo ""
 	@echo "Development:"
 	@echo "  make run               Run the main application"
+	@echo "  make dev               Run backend + frontend together (full stack)"
+	@echo "  make haxui-server      Run backend only (port 8000)"
+	@echo "  make frontend-dev      Run frontend only (port 5173)"
 	@echo "  make test              Run all tests"
 	@echo "  make test-config       Run configuration validation"
+	@echo "  make test-e2e          Run end-to-end frontend tests (requires dev running)"
 	@echo ""
 	@echo "Code Quality:"
 	@echo "  make lint              Run Ruff linter"
@@ -29,17 +34,48 @@ help:
 # Setup commands
 install:
 	uv sync --all-extras
-	uv pip install -U openai
+	@echo "✓ Python dependencies installed"
+	@echo ""
+	@echo "Next: Run 'make frontend-install' to install frontend dependencies"
+
 sync:
 	uv sync
+
+frontend-install:
+	@echo "Installing frontend dependencies..."
+	cd src/frontend && npm install
+	@echo "✓ Frontend dependencies installed"
 
 # Run application
 run:
 	uv run python -m agenticfleet
 
+# Full stack development (backend + frontend)
+dev:
+	@echo "Starting AgenticFleet Full Stack Development..."
+	@echo ""
+	@echo "Backend:  http://localhost:8000"
+	@echo "Frontend: http://localhost:5173"
+	@echo ""
+	@echo "Press Ctrl+C to stop both services"
+	@echo ""
+	@trap 'kill 0' INT; \
+	uv run uvicorn agenticfleet.haxui.api:app --reload --port 8000 & \
+	cd src/frontend && npm run dev
+
 # Examples
 demo-hitl:
 	uv run python examples/demo_hitl.py
+
+# DevUI backend server only
+haxui-server:
+	@echo "Starting HaxUI backend on http://localhost:8000"
+	uv run uvicorn agenticfleet.haxui.api:app --reload --port 8000
+
+# Frontend dev server only
+frontend-dev:
+	@echo "Starting frontend on http://localhost:5173"
+	cd src/frontend && npm run dev
 
 # Testing
 test:
@@ -47,6 +83,10 @@ test:
 
 test-config:
 	uv run python tests/test_config.py
+
+test-e2e:
+	@echo "Running E2E tests (requires backend + frontend running)..."
+	uv run python tests/e2e/playwright_test_workflow.py
 
 # Code quality
 lint:
