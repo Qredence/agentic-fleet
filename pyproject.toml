@@ -26,6 +26,7 @@ dependencies = [
     "pyyaml>=6.0.3",
     "requests>=2.32.5",
     "pydantic>=2.12.0",
+    "tiktoken>=0.7.0,<0.8",
     "agent-framework",
     "agent-framework-core",
     "agent-framework-a2a",
