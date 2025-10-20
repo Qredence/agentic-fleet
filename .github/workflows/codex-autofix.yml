@@ -69,8 +69,8 @@ jobs:
           prompt: >-
             You are working in a Python repository that uses uv for dependency management and pytest for testing. Read the
             repository, run the relevant uv-based test commands (for example `uv run python tests/test_config.py` and
-            `uv run pytest -q`), identify the minimal change needed to make the failing CI pass, implement only that change,
-            and stop. Do not refactor unrelated code or files. Keep changes small and surgical.
+            `uv run pytest -q -m "not e2e"`), identify the minimal change needed to make the failing CI pass, implement only that change,
+            and stop. Note: E2E tests require a running server and are excluded from CI via the -m "not e2e" marker. Do not refactor unrelated code or files. Keep changes small and surgical.
           codex-args: '["--config","sandbox_mode=\"workspace-write\""]'
       - name: Re-sync project dependencies
         if: ${{ steps.openai-secret-check.outputs.has-secret == 'true' }}
@@ -92,7 +92,7 @@ jobs:
           AZURE_AI_SEARCH_KEY: ${{ secrets.AZURE_AI_SEARCH_KEY }}
           AZURE_OPENAI_CHAT_COMPLETION_DEPLOYED_MODEL_NAME: ${{ secrets.AZURE_OPENAI_CHAT_COMPLETION_DEPLOYED_MODEL_NAME }}
           AZURE_OPENAI_EMBEDDING_DEPLOYED_MODEL_NAME: ${{ secrets.AZURE_OPENAI_EMBEDDING_DEPLOYED_MODEL_NAME }}
-        run: uv run pytest -q
+        run: uv run pytest -q -m "not e2e"
       - name: Create pull request with fixes
         if: ${{ success() && steps.openai-secret-check.outputs.has-secret == 'true' }}
         uses: peter-evans/create-pull-request@v7

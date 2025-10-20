@@ -3,6 +3,7 @@
 import pytest
 
 
+@pytest.mark.e2e
 class TestWorkflowAsAgentE2E:
     """End-to-end tests for workflow_as_agent frontend integration."""
 

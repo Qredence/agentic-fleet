@@ -1,0 +1,22 @@
+"""Prompt package for the dynamic Magentic workflow."""
+
+from .manager import MANAGER_PROMPT
+from .modules import EXECUTOR_PROMPT, GENERATOR_PROMPT, PLANNER_PROMPT, VERIFIER_PROMPT
+from .tools import (
+    BASE_GENERATOR_PROMPT,
+    GOOGLE_SEARCH_PROMPT,
+    PYTHON_CODER_PROMPT,
+    WIKIPEDIA_SEARCH_PROMPT,
+)
+
+__all__ = [
+    "MANAGER_PROMPT",
+    "PLANNER_PROMPT",
+    "EXECUTOR_PROMPT",
+    "VERIFIER_PROMPT",
+    "GENERATOR_PROMPT",
+    "GOOGLE_SEARCH_PROMPT",
+    "PYTHON_CODER_PROMPT",
+    "WIKIPEDIA_SEARCH_PROMPT",
+    "BASE_GENERATOR_PROMPT",
+]
