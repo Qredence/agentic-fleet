@@ -62,6 +62,7 @@ fleet:
 # Shared defaults that can be overridden by individual agents
 defaults:
   model: "gpt-5"
+  tool_model: "gpt-4.1-mini"
   temperature: 0.2
   max_tokens: 4000
   top_p: 1.0

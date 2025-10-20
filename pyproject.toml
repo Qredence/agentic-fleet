@@ -40,7 +40,7 @@ dependencies = [
     "ipykernel>=7.0.1",
     "openai==2.5.0",
     "azure-ai-evaluation>=1.12.0",
-    "tiktoken>=0.12.0",
+    "tiktoken<=0.12.0",
 ]
 requires-python = ">=3.12"
 
@@ -50,6 +50,7 @@ azure = ["azure-ai-agents>=1.2.0b5"]
 [project.scripts]
 agentic-fleet = "agenticfleet.cli.repl:main"
 fleet = "agenticfleet.cli.repl:main"
+dynamic-fleet = "agenticfleet.workflows.dynamic.cli:main"
 
 [project.urls]
 Homepage = "https://github.com/Qredence/agentic-fleet"
