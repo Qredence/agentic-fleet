@@ -17,5 +17,5 @@ def test_parse_timestamp_with_invalid_string():
 
 
 def test_parse_timestamp_with_none():
-    with pytest.raises(ValueError):
-        _parse_timestamp(None)
+    """None timestamps return -inf for sorting to the end."""
+    assert _parse_timestamp(None) == float("-inf")
