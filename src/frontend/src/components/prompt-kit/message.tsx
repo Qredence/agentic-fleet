@@ -20,7 +20,7 @@ const Message = ({ children, className, ...props }: MessageProps) => (
 )
 
 export type MessageAvatarProps = {
-  src: string
+  src?: string
   alt: string
   fallback?: string
   delayMs?: number
@@ -36,7 +36,7 @@ const MessageAvatar = ({
 }: MessageAvatarProps) => {
   return (
     <Avatar className={cn("h-8 w-8 shrink-0", className)}>
-      <AvatarImage src={src} alt={alt} />
+      {src && <AvatarImage src={src} alt={alt} />}
       {fallback && (
         <AvatarFallback delayMs={delayMs}>{fallback}</AvatarFallback>
       )}

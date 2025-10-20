@@ -17,7 +17,7 @@ describe('PendingApprovals', () => {
       <PendingApprovals
         pendingApprovals={pendingApprovals}
         approvalStatuses={{}}
-        onRespondToApproval={() => {}}
+        onRespondToApproval={() => () => {}}
       />
     );
     expect(screen.getByText('Pending approvals')).toBeInTheDocument();
