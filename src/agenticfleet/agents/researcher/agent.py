@@ -54,15 +54,24 @@ def create_researcher_agent() -> FleetAgent:
     chat_client = OpenAIResponsesClient(**chat_client_kwargs)
 
     # Import and configure tools based on agent configuration
-    from agenticfleet.agents.researcher.tools.web_search_tools import web_search_tool
+    from agenticfleet.tools.tool_calling import registry
 
     # Check which tools are enabled in the configuration
     tools_config = config.get("tools", [])
-    enabled_tools = []
+    enabled_tools = registry.resolve_tools_from_config(tools_config)
 
-    for tool_config in tools_config:
-        if tool_config.get("name") == "web_search_tool" and tool_config.get("enabled", True):
-            enabled_tools.append(web_search_tool)
+    # Fallback to legacy wiring if registry didn't resolve anything
+    if not enabled_tools:
+        try:
+            from agenticfleet.agents.researcher.tools.web_search_tools import web_search_tool
+
+            for tool_config in tools_config:
+                if tool_config.get("name") == "web_search_tool" and tool_config.get(
+                    "enabled", True
+                ):
+                    enabled_tools.append(web_search_tool)
+        except Exception:  # pragma: no cover - defensive fallback
+            enabled_tools = []
 
     # Create and return agent with tools
     # Note: temperature is not a ChatAgent parameter in Microsoft Agent Framework

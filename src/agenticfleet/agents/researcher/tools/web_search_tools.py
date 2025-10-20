@@ -1,5 +1,7 @@
 from pydantic import BaseModel, Field
 
+from agenticfleet.tools.tool_calling import tool
+
 
 class SearchResult(BaseModel):
     """Individual search result with metadata."""
@@ -18,6 +20,10 @@ class WebSearchResponse(BaseModel):
     total_results: int = Field(..., description="Total number of results found")
     search_query: str = Field(..., description="Original search query")
     source: str = Field(..., description="Search source identifier")
+
+
+class WebSearchParams(BaseModel):
+    query: str = Field(..., description="The search query to look up")
 
 
 # Mock responses for Phase 1
@@ -49,6 +55,7 @@ mock_responses = {
 }
 
 
+@tool(name="web_search_tool", input_model=WebSearchParams, tags={"search", "mock"})
 def web_search_tool(query: str) -> WebSearchResponse:
     """
     Search the web for current information on a given query.
