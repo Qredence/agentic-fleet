@@ -4,7 +4,11 @@
 import asyncio
 import sys
 
-from agenticfleet.core.approval import ApprovalDecision, ApprovalRequest, ApprovalResponse
+from agenticfleet.core.approval import (
+    ApprovalDecision,
+    ApprovalRequest,
+    ApprovalResponse,
+)
 from agenticfleet.core.approved_tools import set_approval_handler
 from agenticfleet.core.cli_approval import CLIApprovalHandler, create_approval_request
 

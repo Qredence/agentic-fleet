@@ -1,6 +1,6 @@
 /**
  * Custom React hook for FastAPI HaxUI chat integration with SSE streaming
- * 
+ *
  * This hook manages:
  * - SSE connection to FastAPI backend
  * - Message state and history

@@ -83,7 +83,10 @@ def test_tool_imports():
     tools = [
         ("agenticfleet.agents.researcher.tools.web_search_tools", "web_search_tool"),
         ("agenticfleet.agents.analyst.tools.data_analysis_tools", "data_analysis_tool"),
-        ("agenticfleet.agents.analyst.tools.data_analysis_tools", "visualization_suggestion_tool"),
+        (
+            "agenticfleet.agents.analyst.tools.data_analysis_tools",
+            "visualization_suggestion_tool",
+        ),
     ]
 
     for module_name, tool_name in tools:

@@ -11,7 +11,10 @@ Usage:
 
 import asyncio
 
-from agenticfleet.workflows.workflow_as_agent import create_workflow_agent, run_workflow_agent
+from agenticfleet.workflows.workflow_as_agent import (
+    create_workflow_agent,
+    run_workflow_agent,
+)
 
 
 async def basic_example() -> None:

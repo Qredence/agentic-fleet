@@ -15,10 +15,11 @@ surface area compatible with what the tests expect without reviving the full
 feature set of the original prototype.
 """
 
+from collections.abc import Callable, Mapping, MutableMapping
 from dataclasses import dataclass
-from typing import Any, Callable, Mapping, MutableMapping
+from typing import Any
 
-from agent_framework import Executor, WorkflowBuilder, WorkflowContext, handler
+from agent_framework import Executor, Workflow, WorkflowBuilder, WorkflowContext, handler
 
 ExecutorFactory = Callable[[], Executor]
 
@@ -126,9 +127,7 @@ class Generator(Executor):
         super().__init__(id="generator")
 
     @handler
-    async def respond(
-        self, result: VerificationResult, ctx: WorkflowContext[None, str]
-    ) -> None:
+    async def respond(self, result: VerificationResult, ctx: WorkflowContext[None, str]) -> None:
         if result.approved:
             await ctx.yield_output(result.content)
         else:  # pragma: no cover - defensive fallback for custom verifiers
@@ -167,7 +166,7 @@ def create_default_dynamic_participants(
 
 
 def _coerce_participants(
-    participants: DynamicWorkflowParticipants | Mapping[str, Mapping[str, ExecutorFactory]]
+    participants: DynamicWorkflowParticipants | Mapping[str, Mapping[str, ExecutorFactory]],
 ) -> DynamicWorkflowParticipants:
     if isinstance(participants, DynamicWorkflowParticipants):
         return participants
@@ -184,7 +183,7 @@ def create_dynamic_workflow(
     ) = None,
     include_default_tool_agents: bool = True,
     max_iterations: int = 8,
-):
+) -> Workflow:
     """Build a small workflow suitable for experimentation and tests."""
 
     spec = _coerce_participants(participants or create_default_dynamic_participants())

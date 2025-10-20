@@ -223,7 +223,8 @@ def run_repl_main() -> int:
         if not settings.openai_api_key:
             ui.log_notice("OPENAI_API_KEY environment variable is required", style="red")
             ui.log_notice(
-                "Please copy .env.example to .env and add your OpenAI API key", style="yellow"
+                "Please copy .env.example to .env and add your OpenAI API key",
+                style="yellow",
             )
             return 1
     except Exception as e:

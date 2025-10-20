@@ -170,7 +170,9 @@ class Reviewer(Executor):
         # Send structured review result to Worker.
         await ctx.send_message(
             ReviewResponse(
-                request_id=request.request_id, feedback=parsed.feedback, approved=parsed.approved
+                request_id=request.request_id,
+                feedback=parsed.feedback,
+                approved=parsed.approved,
             )
         )
 
@@ -229,7 +231,9 @@ class Worker(Executor):
 
         # Create review request and send to Reviewer.
         request = ReviewRequest(
-            request_id=str(uuid4()), user_messages=user_messages, agent_messages=response.messages
+            request_id=str(uuid4()),
+            user_messages=user_messages,
+            agent_messages=response.messages,
         )
         status = f"Worker: Sending response for review (ID: {request.request_id[:8]})"
         print(status)
@@ -273,7 +277,8 @@ class Worker(Executor):
             # Emit approved result to external consumer via AgentRunUpdateEvent.
             await ctx.add_event(
                 AgentRunUpdateEvent(
-                    self.id, data=AgentRunResponseUpdate(contents=contents, role=Role.ASSISTANT)
+                    self.id,
+                    data=AgentRunResponseUpdate(contents=contents, role=Role.ASSISTANT),
                 )
             )
             return

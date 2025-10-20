@@ -72,7 +72,8 @@ class TestMem0ContextProviderInitialization:
         """Mem0 history directory should be created automatically when missing."""
         history_db = tmp_path / "history" / "mem0.db"
         with patch(
-            "agenticfleet.context.mem0_provider.settings.mem0_history_db_path", str(history_db)
+            "agenticfleet.context.mem0_provider.settings.mem0_history_db_path",
+            str(history_db),
         ):
             Mem0ContextProvider()
 

@@ -63,9 +63,6 @@ dev:
 	uv run uvicorn agenticfleet.haxui.api:app --reload --port 8000 & \
 	cd src/frontend && npm run dev
 
-# Examples
-demo-hitl:
-	uv run python examples/demo_hitl.py
 
 # DevUI backend server only
 haxui-server:

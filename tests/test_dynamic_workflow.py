@@ -13,7 +13,12 @@ from agenticfleet.workflows._experimental_dynamic import (  # noqa: E402
 
 def test_default_backbone_participants_present() -> None:
     participants = create_default_dynamic_participants(include_tool_agents=False)
-    assert set(participants.backbone.keys()) == {"planner", "executor", "verifier", "generator"}
+    assert set(participants.backbone.keys()) == {
+        "planner",
+        "executor",
+        "verifier",
+        "generator",
+    }
     assert participants.tools == {}
 
 

@@ -91,7 +91,10 @@ class WebApprovalHandler(ApprovalHandler):
                 self._pending.pop(request.request_id, None)
 
     async def set_approval_response(
-        self, request_id: str, decision: ApprovalDecision, modified_code: str | None = None
+        self,
+        request_id: str,
+        decision: ApprovalDecision,
+        modified_code: str | None = None,
     ) -> bool:
         """
         Provide a response to a pending approval request.
@@ -145,7 +148,10 @@ class WebApprovalHandler(ApprovalHandler):
 
 
 def create_approval_request(
-    agent_name: str, operation_type: str, operation: str, details: dict[str, Any] | None = None
+    agent_name: str,
+    operation_type: str,
+    operation: str,
+    details: dict[str, Any] | None = None,
 ) -> ApprovalRequest:
     """
     Helper to create approval requests with consistent formatting.

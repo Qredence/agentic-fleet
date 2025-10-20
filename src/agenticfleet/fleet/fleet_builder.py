@@ -13,7 +13,9 @@ from agenticfleet.fleet.callbacks import ConsoleCallbacks
 
 try:  # pragma: no cover - runtime import guard
     from agent_framework import MagenticBuilder as _RealMagenticBuilder
-    from agent_framework.openai import OpenAIResponsesClient as _RealOpenAIResponsesClient
+    from agent_framework.openai import (
+        OpenAIResponsesClient as _RealOpenAIResponsesClient,
+    )
 except ModuleNotFoundError:  # pragma: no cover - fallback for test environments
     _RealMagenticBuilder = None  # type: ignore
     _RealOpenAIResponsesClient = None  # type: ignore

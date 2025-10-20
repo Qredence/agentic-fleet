@@ -128,7 +128,10 @@ def create_app() -> FastAPI:
         await store.delete(conversation_id)
         return Response(status_code=status.HTTP_204_NO_CONTENT)
 
-    @app.get("/v1/conversations/{conversation_id}/items", response_model=ConversationItemsResponse)
+    @app.get(
+        "/v1/conversations/{conversation_id}/items",
+        response_model=ConversationItemsResponse,
+    )
     async def list_conversation_items(
         conversation_id: str,
         store: ConversationStore = Depends(get_conversation_store),

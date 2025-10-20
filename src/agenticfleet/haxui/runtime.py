@@ -49,9 +49,7 @@ class FleetRuntime:
         else:  # pragma: no cover - conditional import may succeed
             try:
                 # Create fleet with web approval handler instead of CLI
-                self._fleet = create_default_fleet(  # type: ignore[call-arg]
-                    console_ui=None
-                )
+                self._fleet = create_default_fleet(console_ui=None)  # type: ignore[call-arg]
                 if hasattr(self._fleet, "approval_handler"):
                     self._fleet.approval_handler = self.approval_handler
                 # Create workflow_as_agent instance
