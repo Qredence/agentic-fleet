@@ -14,6 +14,7 @@ from agent_framework import (
 )
 
 from agenticfleet.core.logging import get_logger
+from agenticfleet.fleet.callbacks import ConsoleCallbacks
 
 from .modules import create_default_dynamic_participants
 from .prompts import MANAGER_PROMPT
@@ -30,6 +31,9 @@ def create_dynamic_workflow(
     manager_model: str | None = None,
     progress_ledger_retry_count: int | None = None,
     checkpoint_storage: CheckpointStorage | None = None,
+    console_callbacks: ConsoleCallbacks | None = None,
+    streaming_enabled: bool = True,
+    log_progress: bool = True,
 ) -> Workflow:
     """
     Build a Magentic workflow with dynamic agent routing and optional tool agents.
@@ -66,6 +70,45 @@ def create_dynamic_workflow(
 
     if checkpoint_storage is not None:
         builder = builder.with_checkpointing(checkpoint_storage)
+
+    # Attach observability callbacks if provided
+    if console_callbacks is not None and (streaming_enabled or log_progress):
+        try:
+            from agent_framework import (
+                MagenticAgentDeltaEvent,
+                MagenticAgentMessageEvent,
+                MagenticCallbackEvent,
+                MagenticCallbackMode,
+                MagenticFinalResultEvent,
+                MagenticOrchestratorMessageEvent,
+            )
+
+            async def unified_callback(event: MagenticCallbackEvent) -> None:  # type: ignore[name-defined]
+                if isinstance(event, MagenticOrchestratorMessageEvent):  # type: ignore[name-defined]
+                    if event.kind == "task_ledger" and log_progress:
+                        await console_callbacks.plan_creation_callback(event.message)
+                    elif event.kind == "progress_ledger" and log_progress:
+                        await console_callbacks.progress_ledger_callback(event.message)
+                    elif event.kind == "notice" and event.message:
+                        await console_callbacks.notice_callback(str(event.message))
+                elif isinstance(event, MagenticAgentDeltaEvent):  # type: ignore[name-defined]
+                    if streaming_enabled:
+                        await console_callbacks.agent_delta_callback(event)
+                elif isinstance(event, MagenticAgentMessageEvent):  # type: ignore[name-defined]
+                    if streaming_enabled and event.message:
+                        await console_callbacks.agent_message_callback(event.message)
+                elif isinstance(event, MagenticFinalResultEvent):  # type: ignore[name-defined]
+                    if event.message and log_progress:
+                        await console_callbacks.final_answer_callback(event.message)
+
+            mode = (
+                MagenticCallbackMode.STREAMING  # type: ignore[name-defined]
+                if streaming_enabled
+                else MagenticCallbackMode.NON_STREAMING  # type: ignore[name-defined]
+            )
+            builder = builder.on_event(unified_callback, mode=mode)
+        except Exception as exc:  # pragma: no cover - defensive fallback
+            logger.warning("Failed to attach dynamic workflow callbacks: %s", exc)
 
     workflow = builder.build()
     logger.info("Dynamic Magentic workflow created successfully.")
