@@ -58,3 +58,4 @@ async def test_streaming_response(app):
         body = "".join(chunks)
         assert "[DONE]" in body
         assert "response.completed" in body
+        assert "\"conversation_id\"" in body

@@ -188,7 +188,7 @@ def _checkpoint_sort_key(checkpoint: Mapping[str, Any]) -> tuple[float, str]:
 
 def _parse_timestamp(timestamp: object) -> float:
     if timestamp is None:
-        return float("-inf")
+        raise ValueError("Timestamp value is required")
 
     if isinstance(timestamp, int | float):
         return float(timestamp)
@@ -202,10 +202,10 @@ def _parse_timestamp(timestamp: object) -> float:
         except ValueError:
             try:
                 return float(iso_value)
-            except ValueError:
-                return float("-inf")
+            except ValueError as float_error:
+                raise ValueError(f"Invalid timestamp value: {timestamp}") from float_error
 
-    return float("-inf")
+    raise ValueError(f"Unsupported timestamp type: {type(timestamp).__name__}")
 
 
 class AgenticFleetFileCheckpointStorage(FileCheckpointStorage):  # type: ignore[misc]
