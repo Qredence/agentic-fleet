@@ -1,7 +1,6 @@
 """Test workflow_as_agent API integration."""
 
 import pytest
-
 from agenticfleet.haxui.runtime import FleetRuntime, build_entity_catalog
 
 
