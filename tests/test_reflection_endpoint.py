@@ -4,6 +4,7 @@ import httpx
 import pytest
 
 
+@pytest.mark.e2e
 @pytest.mark.asyncio
 async def test_reflection_workflow_endpoint():
     """Test the /v1/workflow/reflection endpoint."""
@@ -25,6 +26,7 @@ async def test_reflection_workflow_endpoint():
         assert len(events) > 0, "Expected at least one SSE event"
 
 
+@pytest.mark.e2e
 @pytest.mark.asyncio
 async def test_reflection_workflow_with_custom_models():
     """Test reflection workflow with custom model parameters."""
@@ -41,6 +43,7 @@ async def test_reflection_workflow_with_custom_models():
         assert response.status_code == 200
 
 
+@pytest.mark.e2e
 @pytest.mark.asyncio
 async def test_reflection_workflow_missing_query():
     """Test that missing query returns 400."""
@@ -55,6 +58,7 @@ async def test_reflection_workflow_missing_query():
         assert "query" in data["detail"].lower()
 
 
+@pytest.mark.e2e
 @pytest.mark.asyncio
 async def test_reflection_workflow_with_conversation():
     """Test reflection workflow with conversation persistence."""

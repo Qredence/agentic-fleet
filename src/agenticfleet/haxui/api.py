@@ -128,7 +128,10 @@ def create_app() -> FastAPI:
         await store.delete(conversation_id)
         return Response(status_code=status.HTTP_204_NO_CONTENT)
 
-    @app.get("/v1/conversations/{conversation_id}/items", response_model=ConversationItemsResponse)
+    @app.get(
+        "/v1/conversations/{conversation_id}/items",
+        response_model=ConversationItemsResponse,
+    )
     async def list_conversation_items(
         conversation_id: str,
         store: ConversationStore = Depends(get_conversation_store),
@@ -486,6 +489,7 @@ async def build_sse_stream(
 
         # Send completion event
         event = build_completed_event(
+            conversation_id=conversation_id,
             entity_id=entity_id,
             assistant_text=accumulated,
             usage=usage,
@@ -562,6 +566,7 @@ def count_tokens(text: str, model: str = "gpt-4") -> int:
 
 def build_completed_event(
     *,
+    conversation_id: str,
     entity_id: str,
     assistant_text: str,
     usage: dict[str, Any],
@@ -578,6 +583,7 @@ def build_completed_event(
             "object": "response",
             "created_at": created_at,
             "model": entity_id,
+            "conversation_id": conversation_id,
             "output": [
                 {
                     "type": "message",

@@ -9,11 +9,7 @@ import uuid
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, cast
 
-from agenticfleet.agents import (
-    create_analyst_agent,
-    create_coder_agent,
-    create_researcher_agent,
-)
+from agenticfleet.agents import create_analyst_agent, create_coder_agent, create_researcher_agent
 from agenticfleet.config import settings
 from agenticfleet.core.approval import ApprovalDecision
 from agenticfleet.core.approved_tools import set_approval_handler
@@ -147,17 +143,17 @@ class MagenticFleet:
         agents: dict[str, AgentProtocol] = {}
 
         try:
-            agents["researcher"] = create_researcher_agent()
+            agents["researcher"] = cast(AgentProtocol, create_researcher_agent())
         except Exception as error:  # pragma: no cover - defensive guard
             logger.warning("Failed to create researcher agent: %s", error)
 
         try:
-            agents["coder"] = create_coder_agent()
+            agents["coder"] = cast(AgentProtocol, create_coder_agent())
         except Exception as error:  # pragma: no cover - defensive guard
             logger.warning("Failed to create coder agent: %s", error)
 
         try:
-            agents["analyst"] = create_analyst_agent()
+            agents["analyst"] = cast(AgentProtocol, create_analyst_agent())
         except Exception as error:  # pragma: no cover - defensive guard
             logger.warning("Failed to create analyst agent: %s", error)
 

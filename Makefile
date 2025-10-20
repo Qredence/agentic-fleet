@@ -33,7 +33,7 @@ help:
 
 # Setup commands
 install:
-	uv sync --all-extras
+	uv pip install agentic-fleet
 	@echo "✓ Python dependencies installed"
 	@echo ""
 	@echo "Next: Run 'make frontend-install' to install frontend dependencies"
@@ -63,9 +63,6 @@ dev:
 	uv run uvicorn agenticfleet.haxui.api:app --reload --port 8000 & \
 	cd src/frontend && npm run dev
 
-# Examples
-demo-hitl:
-	uv run python examples/demo_hitl.py
 
 # DevUI backend server only
 haxui-server:

@@ -7,7 +7,10 @@ from enum import Enum
 from typing import TYPE_CHECKING, NamedTuple
 
 from agenticfleet.core.approval import ApprovalDecision
-from agenticfleet.core.approved_tools import get_approval_handler, operation_requires_approval
+from agenticfleet.core.approved_tools import (
+    get_approval_handler,
+    operation_requires_approval,
+)
 from agenticfleet.core.cli_approval import create_approval_request
 from agenticfleet.core.logging import get_logger
 

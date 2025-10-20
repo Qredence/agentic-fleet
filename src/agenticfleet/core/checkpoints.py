@@ -91,14 +91,24 @@ def normalize_checkpoint_metadata(
     )
     has_metadata = bool(normalized["metadata"])
 
-    if not any((has_identifier, has_workflow, has_timestamp, has_round_information, has_metadata)):
+    if not any(
+        (
+            has_identifier,
+            has_workflow,
+            has_timestamp,
+            has_round_information,
+            has_metadata,
+        )
+    ):
         # Discard empty checkpoints
         return None
 
     return normalized
 
 
-def load_checkpoint_metadata_from_path(storage_path: str | Path) -> list[dict[str, Any]]:
+def load_checkpoint_metadata_from_path(
+    storage_path: str | Path,
+) -> list[dict[str, Any]]:
     """
     Load checkpoint metadata from JSON files stored at ``storage_path``.
 
@@ -202,10 +212,10 @@ def _parse_timestamp(timestamp: object) -> float:
         except ValueError:
             try:
                 return float(iso_value)
-            except ValueError:
-                return float("-inf")
+            except ValueError as float_error:
+                raise ValueError(f"Invalid timestamp value: {timestamp}") from float_error
 
-    return float("-inf")
+    raise ValueError(f"Unsupported timestamp type: {type(timestamp).__name__}")
 
 
 class AgenticFleetFileCheckpointStorage(FileCheckpointStorage):  # type: ignore[misc]
