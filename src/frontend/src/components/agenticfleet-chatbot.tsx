@@ -88,12 +88,12 @@ export const MessageComponent = memo(({ message }: MessageComponentProps) => {
             {message.content}
           </MessageContent>
         ) : isSystem ? (
-          <MessageContent className="bg-muted text-muted-foreground max-w-[85%] rounded-xl px-4 py-3 text-sm sm:max-w-[75%]">
+          <div className="bg-muted text-muted-foreground max-w-[85%] rounded-xl px-4 py-3 text-sm sm:max-w-[75%]">
             <div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground/80">
               {actorLabel}
             </div>
             <div className="whitespace-pre-wrap">{message.content}</div>
-          </MessageContent>
+          </div>
         ) : (
           <MessageContent className="bg-secondary text-primary max-w-[85%] sm:max-w-[75%]">
             {message.content}
