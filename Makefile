@@ -74,6 +74,16 @@ frontend-dev:
 	@echo "Starting frontend on http://localhost:5173"
 	cd src/frontend && npm run dev
 
+# DevUI backend server only
+haxui-server:
+	@echo "Starting HaxUI backend on http://localhost:8000"
+	uv run uvicorn agenticfleet.haxui.api:app --reload --port 8000
+
+# Frontend dev server only
+frontend-dev:
+	@echo "Starting frontend on http://localhost:5173"
+	cd src/frontend && npm run dev
+
 # Testing
 test:
 	uv run pytest -v
