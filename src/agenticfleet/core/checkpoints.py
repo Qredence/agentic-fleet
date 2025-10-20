@@ -198,7 +198,7 @@ def _checkpoint_sort_key(checkpoint: Mapping[str, Any]) -> tuple[float, str]:
 
 def _parse_timestamp(timestamp: object) -> float:
     if timestamp is None:
-        raise ValueError("Timestamp value is required")
+        return float('-inf')
 
     if isinstance(timestamp, int | float):
         return float(timestamp)
