@@ -285,10 +285,11 @@ export default function AgenticFleetChatbot({
   });
 
   const trimmedInput = input.trim();
-  const isLoading = useMemo(
+  const checkLoading = useCallback(
     () => status === "submitted" || status === "streaming",
     [status]
   );
+  const isLoading = useMemo(() => checkLoading(), [checkLoading]);
 
   const handleSubmit = useCallback(() => {
     if (!trimmedInput) return;
