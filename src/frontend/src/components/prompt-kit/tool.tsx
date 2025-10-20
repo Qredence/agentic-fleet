@@ -14,18 +14,7 @@ import {
 } from "lucide-react";
 import { useState } from "react";
 
-export type ToolPart = {
-  type: string;
-  state:
-    | "input-streaming"
-    | "input-available"
-    | "output-available"
-    | "output-error";
-  input?: Record<string, unknown>;
-  output?: Record<string, unknown>;
-  toolCallId?: string;
-  errorText?: string;
-};
+import type { ToolPart } from "@/components/types/tool";
 
 export type ToolProps = {
   toolPart: ToolPart;
