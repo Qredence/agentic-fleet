@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import json
+import os
 from contextvars import ContextVar
 from typing import TYPE_CHECKING, Any, Protocol
 
@@ -111,6 +113,10 @@ def _first_available(source: Any, *names: str) -> Any:
     return None
 
 
+def _debug_enabled() -> bool:
+    return os.getenv("DEBUG", "0").strip() == "1"
+
+
 class ConsoleCallbacks:
     """Adapter that relays Magentic events to the active console UI."""
 
@@ -188,6 +194,17 @@ class ConsoleCallbacks:
         for step in plan_lines or ["(none)"]:
             logger.info("  Step: %s", step)
 
+        # Optional structured JSON log for debugging
+        if _debug_enabled():
+            try:
+                payload = {
+                    "facts": getattr(ledger, "facts", None),
+                    "plan": getattr(ledger, "plan", None),
+                }
+                logger.debug("[Fleet][DEBUG] task_ledger=%s", json.dumps(payload, default=str))
+            except Exception:  # pragma: no cover - best effort
+                pass
+
         if ui := self._get_ui():
             ui.log_plan(facts_lines or ["(none)"], plan_lines or ["(none)"])
 
@@ -206,6 +223,19 @@ class ConsoleCallbacks:
         if instruction_lines:
             for line in instruction_lines:
                 logger.info("  Instruction: %s", line[:100])
+
+        # Optional structured JSON log for debugging
+        if _debug_enabled():
+            try:
+                payload = {
+                    "is_request_satisfied": bool(is_satisfied),
+                    "is_in_loop": bool(is_loop),
+                    "next_speaker": next_speaker,
+                    "instruction": getattr(ledger, "instruction", None),
+                }
+                logger.debug("[Fleet][DEBUG] progress_ledger=%s", json.dumps(payload, default=str))
+            except Exception:  # pragma: no cover - best effort
+                pass
 
         if ui := self._get_ui():
             status = (

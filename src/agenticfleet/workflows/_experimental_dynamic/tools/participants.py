@@ -23,6 +23,7 @@ def create_tool_factories() -> Mapping[str, Callable[[], AgentProtocol]]:
     }
 
     factories["google_search"] = create_google_search_participant
+    factories["web_search"] = create_google_search_participant  # alias for convenience
     factories["wikipedia_search"] = create_wikipedia_search_participant
     factories["python_coder"] = create_python_coder_participant
 
