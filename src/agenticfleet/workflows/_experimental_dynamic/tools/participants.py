@@ -19,12 +19,12 @@ logger = get_logger(__name__)
 def create_tool_factories() -> Mapping[str, Callable[[], AgentProtocol]]:
     """Return lazily evaluated factories for optional tool agents."""
     factories: dict[str, Callable[[], AgentProtocol]] = {
-        "base_generator": lambda: create_base_generator_participant(),
+        "base_generator": create_base_generator_participant,
     }
 
-    factories["google_search"] = lambda: create_google_search_participant()
-    factories["wikipedia_search"] = lambda: create_wikipedia_search_participant()
-    factories["python_coder"] = lambda: create_python_coder_participant()
+    factories["google_search"] = create_google_search_participant
+    factories["wikipedia_search"] = create_wikipedia_search_participant
+    factories["python_coder"] = create_python_coder_participant
 
     return factories
 
