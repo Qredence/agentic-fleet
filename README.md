@@ -120,15 +120,21 @@ Additional integration-specific tests live in `tests/test_cli_ui.py` (console pa
 
 ## Documentation Map
 
-The `docs/` directory is structured by intent:
+The `docs/` directory provides comprehensive documentation for users and contributors:
 
-- `getting-started/` – quick reference & command guides.
-- `features/` – deep dives on Magentic, HITL, checkpointing.
-- `operations/` – repo guidelines, CI, Mem0 configuration.
-- `guides/` – step-by-step walkthroughs.
-- `overview/` – implementation summary, roadmap, a progress tracker.
+### For Users
+- **[Getting Started](docs/getting-started/)** – Installation, quick start, configuration
+- **[User Guides](docs/guides/)** – Step-by-step tutorials for common tasks
+- **[API Reference](docs/api/)** – REST API and Python SDK documentation
+- **[Troubleshooting](docs/troubleshooting/)** – FAQ and common issues
 
-See `docs/README.md` for a full index.
+### For Developers
+- **[Architecture](docs/architecture/)** – System design and patterns
+- **[Features](docs/features/)** – Detailed feature documentation
+- **[Development](docs/operations/)** – Contributing and development workflow
+- **[Advanced Topics](docs/advanced/)** – Tool development and customization
+
+See the **[Documentation Index](docs/README.md)** for the complete navigation guide.
 
 ---
 

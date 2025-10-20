@@ -1,65 +1,144 @@
 # AgenticFleet Documentation
 
-**Version:** 0.5.2
-**Last Updated:** October 18, 2025
+**Version:** 0.5.3
+**Last Updated:** October 20, 2025
 
-Welcome! The docs are now arranged by intent so you can jump straight to what you need.
+Welcome to AgenticFleet! This documentation helps you get started quickly and master multi-agent orchestration with the Microsoft Agent Framework.
 
-## Directory Map
+---
 
-- **architecture/**
-  - [`magentic-fleet.md`](architecture/magentic-fleet.md) – end-to-end view of the fleet orchestration stack.
-  - [`README`](architecture/README.md) _(if present)_ summarises patterns used across diagrams.
-- **features/**
-  - [`magentic-fleet.md`](features/magentic-fleet.md) – feature overview and usage guidance.
-  - [`magentic-fleet-implementation.md`](features/magentic-fleet-implementation.md) – implementation deep dive.
-  - [`observability.md`](features/observability.md) – OpenTelemetry tracing setup and usage.
-  - [`checkpointing-summary.md`](features/checkpointing-summary.md) – checkpointing rollout notes and API surface.
-  - [`hitl-implementation-summary.md`](features/hitl-implementation-summary.md) – HITL enablement timeline and artifacts.
-- **getting-started/**
-  - [`command-reference.md`](getting-started/command-reference.md) – uv + Makefile command catalogue.
-  - [`quick-reference.md`](getting-started/quick-reference.md) – one-page onboarding checklist.
-- **overview/**
-  - [`implementation-summary.md`](overview/implementation-summary.md) – architecture deep dive + component guide.
-  - [`progress-tracker.md`](overview/progress-tracker.md) – milestone status and roadmap.
-- **guides/**
-  - [`human-in-the-loop.md`](guides/human-in-the-loop.md) – configuring approval flows and policies.
-- **analysis/**
-  - [`issues/`](analysis/issues/) – optimization proposals and decision records.
-- **operations/**
-  - [`developer-environment.md`](operations/developer-environment.md) – uv workflow, tooling, CI guardrails.
-  - [`github-actions-setup.md`](operations/github-actions-setup.md) – workflow catalogue and protection rules.
-  - [`github-workflows-overview.md`](operations/github-workflows-overview.md) – plain-language description of each workflow.
-  - [`backlog.md`](operations/backlog.md) – active engineering backlog and cleanup plan.
-  - [`mem0-integration.md`](operations/mem0-integration.md) – persistent memory configuration.
-  - [`checkpointing.md`](operations/checkpointing.md) – checkpoint lifecycle, configuration, and CLI usage.
-  - [`pypi-environment-setup.md`](operations/pypi-environment-setup.md) – trusted publishing + API token instructions.
-  - [`repository-guidelines.md`](operations/repository-guidelines.md) – coding standards and review practices.
-  - [`workflows-quick-reference.md`](operations/workflows-quick-reference.md) – job-by-job cheat sheet.
-- **migrations/**
-  - [`responses-api-migration.md`](migrations/responses-api-migration.md) – OpenAI Responses client migration notes.
-  - [`src-layout-migration.md`](migrations/src-layout-migration.md) – summary of the 0.5.0 package restructure.
-- **runbooks/**
-  - [`troubleshooting.md`](runbooks/troubleshooting.md) – recurring issues (tag rules, ChatAgent params, mem0 regression tests).
-- **releases/**
-  - [`2025-10-12-v0.5.0.md`](releases/2025-10-12-v0.5.0.md) – release changelog and validation evidence.
-  - [`2025-10-13-hitl-implementation.md`](releases/2025-10-13-hitl-implementation.md) – HITL enablement release notes and validation details.
-  - [`2025-10-14-v0.5.1-magentic-fleet.md`](releases/2025-10-14-v0.5.1-magentic-fleet.md) – Magentic workflow GA summary.
-  - [`2025-10-18-v0.5.2-redis-integration.md`](releases/2025-10-18-v0.5.2-redis-integration.md) – Redis-backed context + chat history release notes.
-  - [`hitl-visual-summary.md`](releases/hitl-visual-summary.md) – visual overview of the HITL rollout.
-- **archive/**
-  - Historical clean-up checklists and .github remediation summaries retained for audit.
+## 📚 Documentation Structure
 
-## Start Here
+### 🚀 Getting Started
+Perfect for first-time users and quick setup.
 
-1. **New contributor?** Read [`../README.md`](../README.md) then skim the items in `getting-started/`.
-2. **Maintaining pipelines?** Jump to `operations/`.
-3. **Investigating regressions?** Check `runbooks/`.
+- **[Installation](getting-started/installation.md)** – System requirements, installation steps, and environment setup
+- **[Quick Start Guide](getting-started/quickstart.md)** – Your first workflow in 5 minutes
+- **[Command Reference](getting-started/command-reference.md)** – Complete CLI and Makefile commands
+- **[Configuration Guide](getting-started/configuration.md)** – Environment variables, YAML files, and agent settings
 
-## Contributing to Docs
+### 📖 User Guides
+Step-by-step tutorials for common tasks.
 
-- Keep new material inside one of the folders above; use kebab-case filenames.
-- Update this index whenever you add, move, or retire a document.
-- Prefer linking to sections rather than duplicating content across guides.
+- **[Working with Agents](guides/agents.md)** – Understanding and customizing the specialist agents
+- **[Human-in-the-Loop (HITL)](guides/human-in-the-loop.md)** – Approval workflows and safety controls
+- **[Checkpointing & Resume](guides/checkpointing.md)** – Save and restore workflow state
+- **[Memory Management](guides/memory.md)** – Persistent context with Mem0 integration
+- **[YAML Workflows](guides/yaml-workflows.md)** – Creating custom workflow definitions
+- **[Web UI Integration](guides/web-ui.md)** – Using the React frontend and API endpoints
 
-For feedback or questions, open an issue or email <contact@qredence.ai>.
+### 🔧 Advanced Topics
+Deep dives for power users.
+
+- **[Magentic Fleet Architecture](architecture/magentic-fleet.md)** – How the orchestration system works
+- **[Observability & Tracing](features/observability.md)** – OpenTelemetry integration and debugging
+- **[Tool Development](advanced/tool-development.md)** – Creating custom agent tools
+- **[Workflow Customization](advanced/workflow-customization.md)** – Building your own orchestration patterns
+- **[Performance Tuning](advanced/performance.md)** – Optimization strategies and best practices
+
+### 📡 API Reference
+Integration and API documentation.
+
+- **[REST API](api/rest-api.md)** – HTTP endpoints for workflow execution
+- **[SSE Streaming](api/sse-streaming.md)** – Server-Sent Events for real-time updates
+- **[Reflection Endpoint](api/reflection-endpoint.md)** – Worker-reviewer pattern API
+- **[Python API](api/python-api.md)** – Programmatic usage and SDK reference
+
+### 🎯 Features
+Detailed feature documentation.
+
+- **[Magentic Fleet](features/magentic-fleet.md)** – Manager/executor orchestration pattern
+- **[Checkpointing System](features/checkpointing-summary.md)** – State persistence and recovery
+- **[HITL Implementation](features/hitl-implementation-summary.md)** – Approval system design
+- **[Observability](features/observability.md)** – Tracing and monitoring
+- **[Web HITL](features/web-hitl-integration.md)** – Browser-based approval interface
+- **[Workflow-as-Agent](features/workflow-as-agent-integration.md)** – Composable workflow patterns
+
+### 🛠️ Development
+Contributing and development workflows.
+
+- **[Developer Setup](operations/developer-environment.md)** – Local development environment
+- **[Testing Guide](development/testing.md)** – Writing and running tests
+- **[Contributing Guidelines](../CONTRIBUTING.md)** – How to contribute to AgenticFleet
+- **[Code Standards](operations/repository-guidelines.md)** – Coding conventions and review practices
+- **[CI/CD Pipeline](operations/github-workflows-overview.md)** – GitHub Actions workflows
+
+### 🔍 Troubleshooting
+Common issues and solutions.
+
+- **[Troubleshooting Guide](runbooks/troubleshooting.md)** – Common problems and fixes
+- **[FAQ](troubleshooting/faq.md)** – Frequently asked questions
+- **[Known Issues](troubleshooting/known-issues.md)** – Current limitations and workarounds
+- **[Migration Guides](migrations/)** – Upgrading between versions
+
+### 📋 Reference
+Additional resources and information.
+
+- **[Agent Catalog](AGENTS.md)** – Complete list of available agents and their capabilities
+- **[Changelog](../CHANGELOG.md)** – Version history and release notes
+- **[Release Notes](releases/)** – Detailed release documentation
+- **[Glossary](reference/glossary.md)** – Terms and concepts
+- **[Architecture Diagrams](architecture/)** – System architecture documentation
+
+---
+
+## Quick Navigation
+
+### I want to
+
+| Goal | Start Here |
+|------|------------|
+| **Install AgenticFleet** | [Installation Guide](getting-started/installation.md) |
+| **Run my first workflow** | [Quick Start](getting-started/quickstart.md) |
+| **Understand the agents** | [Agent Catalog](AGENTS.md) + [Working with Agents](guides/agents.md) |
+| **Add approval gates** | [HITL Guide](guides/human-in-the-loop.md) |
+| **Save workflow progress** | [Checkpointing Guide](guides/checkpointing.md) |
+| **Enable memory/context** | [Memory Management](guides/memory.md) |
+| **Create custom tools** | [Tool Development](advanced/tool-development.md) |
+| **Use the REST API** | [REST API Reference](api/rest-api.md) |
+| **Deploy to production** | [Deployment Guide](deployment/production.md) |
+| **Troubleshoot issues** | [Troubleshooting](runbooks/troubleshooting.md) |
+| **Contribute code** | [Contributing Guidelines](../CONTRIBUTING.md) |
+
+---
+
+## 🆘 Getting Help
+
+- **Issues:** Found a bug? [Open an issue](https://github.com/Qredence/agentic-fleet/issues)
+- **Discussions:** Questions? [Start a discussion](https://github.com/Qredence/agentic-fleet/discussions)
+- **Email:** Contact us at <contact@qredence.ai>
+
+---
+
+## 📝 Documentation Conventions
+
+Throughout this documentation:
+
+- 💡 **Tips** provide helpful hints and best practices
+- ⚠️ **Warnings** highlight potential pitfalls
+- 📌 **Notes** offer additional context
+- 🔒 **Security** notes indicate security considerations
+
+Code examples use:
+- `bash` for shell commands
+- `python` for Python code
+- `yaml` for configuration files
+
+---
+
+## 🤝 Contributing to Documentation
+
+We welcome documentation improvements! To contribute:
+
+1. Edit files in the `docs/` directory
+2. Use kebab-case for filenames (e.g., `my-guide.md`)
+3. Update this README when adding new pages
+4. Follow the existing structure and style
+5. Test links and code examples
+
+See [Contributing Guidelines](../CONTRIBUTING.md) for more details.
+
+---
+
+**Last updated:** October 20, 2025
+**Version:** 0.5.3
