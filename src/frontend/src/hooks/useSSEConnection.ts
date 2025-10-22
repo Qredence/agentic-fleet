@@ -95,7 +95,7 @@ export function useSSEConnection({
     try {
       // Append headers as query parameters (SSE limitation)
       const params = new URLSearchParams(headers);
-      const fullUrl = `${url}${params.toString() ? "?" + params.toString() : ""}`;
+      const fullUrl = `${url}${params.toString() ? (url.includes('?') ? '&' : '?') + params.toString() : ""}`;
 
       const eventSource = new EventSource(fullUrl);
       eventSourceRef.current = eventSource;
