@@ -394,7 +394,7 @@ def git_current_branch(*, repo_path: str = ".") -> str:
         raise ToolExecutionError(f"git_current_branch failed: {stderr or e}") from e
 
 
-# Helper to cap output size for common types
+# Helper to cap output size for text/bytes payloads only.
 
 def _cap_output(result: Any, cap: int | None) -> Any:
     if cap is None:
@@ -402,14 +402,11 @@ def _cap_output(result: Any, cap: int | None) -> Any:
     try:
         if isinstance(result, str):
             return result[:cap]
-        if isinstance(result, bytes):
+        if isinstance(result, (bytes, bytearray)):
             return result[:cap]
-        if isinstance(result, dict):
-            # Best-effort: stringified truncation for oversized dicts
-            text = str(result)
-            return text[:cap]
-        # Fallback to string representation
-        text = str(result)
-        return text[:cap]
     except Exception:
         return result
+
+    # Non-text results (e.g., Pydantic models, dicts, custom objects) should
+    # pass through unchanged so callers preserve structure and typing.
+    return result
