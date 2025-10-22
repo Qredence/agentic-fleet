@@ -1,11 +1,8 @@
 name: CI
 
 on:
-  push:
-    branches: [main, 0.5.0a, develop]
-  pull_request:
-    branches: [main, 0.5.0a, develop]
-  workflow_dispatch:  # Allow manual triggering
+  release:
+    types: [created]
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
