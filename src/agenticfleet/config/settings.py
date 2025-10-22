@@ -176,7 +176,7 @@ class Settings:
 
         try:
             redis_spec = importlib.util.find_spec("agent_framework_redis")
-        except (ModuleNotFoundError, ImportError, Exception):
+        except (ModuleNotFoundError, ImportError):
             redis_spec = None
         if not (redis_spec and self.redis_url):
             return None
