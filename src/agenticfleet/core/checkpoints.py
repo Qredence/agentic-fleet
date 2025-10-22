@@ -15,7 +15,7 @@ logger = get_logger(__name__)
 
 try:
     from agent_framework import (
-        FileCheckpointStorage as BaseFileCheckpointStorage,  # type: ignore[assignment]
+        FileCheckpointStorage as BaseFileCheckpointStorage,
     )
 except ImportError:
 
