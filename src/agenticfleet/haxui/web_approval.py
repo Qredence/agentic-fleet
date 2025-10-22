@@ -232,18 +232,24 @@ def assess_risk_level(operation_type: str, details: dict[str, Any] | None = None
         # Check details for elevated risk
         if details:
             # Elevate to high if accessing sensitive paths or data
-            sensitive_keywords = {"password", "secret", "token", "/etc/", "/root/"}
+            sensitive_keywords = {
+                "password",
+                "secret",
+                "token",
+                "api_key",
+                "access_key",
+                "private_key",
+                "public_key",
+                "/etc/",
+                "/root/",
+            }
             # Check both keys and values for sensitive keywords (case-insensitive)
             for k, v in details.items():
                 k_lower = str(k).lower()
                 v_lower = str(v).lower() if v is not None else ""
-                # Only match 'key' if it's not the dictionary key name
                 for keyword in sensitive_keywords:
                     if keyword in k_lower or keyword in v_lower:
                         return RiskLevel.HIGH
-                # Special handling for 'key' keyword: match only in values, not keys
-                if "key" in v_lower and k_lower != "key":
-                    return RiskLevel.HIGH
         return RiskLevel.MEDIUM
 
     # Default to low risk
