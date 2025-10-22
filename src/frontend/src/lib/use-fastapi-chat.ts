@@ -342,7 +342,8 @@ export function useFastAPIChat({
           break;
         }
 
-        case "response.function_approval.requested": {
+        case "response.function_approval.requested":
+        case "approval_request": {
           approvalWorkflow.handleApprovalRequested(event);
           break;
         }
