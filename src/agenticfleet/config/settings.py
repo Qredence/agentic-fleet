@@ -174,7 +174,11 @@ class Settings:
     ) -> Callable[[], Any] | None:
         """Return a factory for Redis-backed chat message stores, if available."""
 
-        if not (importlib.util.find_spec("agent_framework_redis") and self.redis_url):
+        try:
+            redis_spec = importlib.util.find_spec("agent_framework_redis")
+        except (ModuleNotFoundError, ImportError, Exception):
+            redis_spec = None
+        if not (redis_spec and self.redis_url):
             return None
 
         from agent_framework_redis import RedisChatMessageStore
