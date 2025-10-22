@@ -214,5 +214,5 @@ qa_agent = create_workflow_agent(
 ## Related Documentation
 
 - [Magentic Fleet Architecture](../docs/architecture/magentic-fleet.md)
-- [Agent Development Guide](../docs/AGENTS.md)
+- [Agent Development Guide](../../docs/project/AGENTS.md)
 - [Microsoft Agent Framework](https://github.com/microsoft/agent-framework)

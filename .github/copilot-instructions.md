@@ -151,5 +151,5 @@ Enable/disable via `fleet.callbacks.*` in workflow.yaml. All callbacks are optio
 - **Fleet Code**: `src/agenticfleet/fleet/magentic_fleet.py` (orchestrator), `src/agenticfleet/fleet/fleet_builder.py` (builder pattern), `src/agenticfleet/fleet/callbacks.py` (observability)
 - **Core Types**: `src/agenticfleet/core/code_types.py` (`CodeExecutionResult`), `src/agenticfleet/core/approval.py` (HITL), `src/agenticfleet/core/exceptions.py` (error hierarchy)
 - **Features**: `docs/features/checkpointing.md` (state persistence), `docs/guides/human-in-the-loop.md` (HITL usage), `docs/operations/mem0-integration.md` (memory setup)
-- **Agents**: `docs/AGENTS.md` (agent catalog with capabilities)
+- **Agents**: `docs/project/AGENTS.md` (agent catalog with capabilities)
 - **Releases**: `docs/releases/2025-10-14-v0.5.1-magentic-fleet.md` (Magentic Fleet release), `docs/releases/2025-10-13-hitl-implementation.md` (HITL implementation)

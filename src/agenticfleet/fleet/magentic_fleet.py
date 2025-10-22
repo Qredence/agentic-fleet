@@ -166,36 +166,77 @@ class MagenticFleet:
         """Attach hosted code interpreter tooling to the coder agent."""
 
         if not _AGENT_FRAMEWORK_AVAILABLE or OpenAIResponsesClient is None:
+            logger.debug("Skipping coder tooling initialisation (agent_framework unavailable).")
+            return
+
+        if HostedCodeInterpreterTool is None:  # type: ignore
+            logger.debug("HostedCodeInterpreterTool unavailable; skipping tool injection.")  # type: ignore
             return
 
         coder = self.agents.get("coder")
         if coder is None:
+            logger.debug("No coder agent registered; skipping tooling initialisation.")
+            return
+
+        if not hasattr(coder, "chat_client"):
+            logger.debug("Coder agent lacks a chat_client attribute; skipping tooling.")
+            return
+
+        defaults = settings.workflow_config.get("defaults", {})
+        model_name = (
+            defaults.get("tool_model")
+            or defaults.get("model")
+            or getattr(settings, "openai_model", None)
+        )
+
+        if not isinstance(model_name, str) or not model_name.strip():
+            logger.debug("No model configured for coder tooling; skipping initialisation.")
+            return
+
+        responses_param = get_responses_model_parameter(OpenAIResponsesClient)
+        try:
+            client_kwargs: dict[str, str | None] = {responses_param: model_name}
+            chat_client = cast(Any, OpenAIResponsesClient)(**client_kwargs)
+        except Exception as exc:  # pragma: no cover - defensive guard
+            logger.warning("Failed to initialise coder chat client: %s", exc)
             return
 
         try:
-            chat_agent = cast(ChatAgent, coder)
-        except TypeError:  # pragma: no cover - defensive
+            setattr(coder, "chat_client", chat_client)
+        except AttributeError:  # pragma: no cover - defensive guard
+            logger.debug("Coder agent chat_client attribute is read-only; skipping update.")
+        else:
+            logger.debug("Configured coder agent chat client with model '%s'.", model_name)
+
+        interpreter_cls = cast(Any, HostedCodeInterpreterTool)
+
+        current_tools = getattr(coder, "tools", None)
+
+        def has_interpreter(tools: Any) -> bool:
+            if tools is None:
+                return False
+            if isinstance(tools, list | tuple | set):
+                return any(isinstance(tool, interpreter_cls) for tool in tools)
+            return isinstance(tools, interpreter_cls)
+
+        if has_interpreter(current_tools):
+            logger.debug("Coder agent already has a HostedCodeInterpreterTool; skipping attach.")
             return
 
-        responses_param = get_responses_model_parameter(OpenAIResponsesClient)  # type: ignore[arg-type]
-        model_name = settings.workflow_config.get("defaults", {}).get("model")
-
-        if not isinstance(model_name, str) or not model_name:
-            fallback_model = getattr(settings, "openai_model", None)
-            model_name = fallback_model if isinstance(fallback_model, str) else None
-
-        if not model_name:
-            logger.debug(
-                "Skipping coder tooling initialisation because no OpenAI model name was found."
-            )
+        try:
+            interpreter = interpreter_cls()
+        except Exception as exc:  # pragma: no cover - defensive guard
+            logger.warning("Failed to instantiate HostedCodeInterpreterTool: %s", exc)
             return
 
-        chat_agent.chat_client = OpenAIResponsesClient(  # type: ignore[call-arg]
-            **{responses_param: model_name}
-        )
-
-        if HostedCodeInterpreterTool is not None:
-            chat_agent.tools = HostedCodeInterpreterTool()  # type: ignore[attr-defined]
+        if current_tools is None:
+            setattr(coder, "tools", [interpreter])
+        elif isinstance(current_tools, list):
+            current_tools.append(interpreter)
+        elif isinstance(current_tools, tuple):
+            setattr(coder, "tools", current_tools + (interpreter,))
+        else:
+            setattr(coder, "tools", [current_tools, interpreter])
 
     def _build_magentic_workflow(self) -> Any:
         """Construct the Magentic workflow with repository conventions."""
@@ -253,13 +294,14 @@ class MagenticFleet:
                 self._latest_final_text = answer
             return answer
 
-        pending_request: RequestInfoEvent | None = None
-        pending_responses: dict[str, MagenticPlanReviewReply] | None = None
+        pending_request: Any | None = None
+        pending_responses: dict[str, Any] | None = None
         final_output_text: str | None = None
         completed = False
         resume_token_used = resume_from_checkpoint is not None
 
         while True:
+            stream: Any | None = None
             if (
                 pending_responses
                 and callable(send_responses_method)
@@ -278,27 +320,40 @@ class MagenticFleet:
             pending_responses = None
             had_events = False
 
-            async for event in stream:
-                had_events = True
-                if isinstance(event, MagenticAgentDeltaEvent):
-                    continue
-                if (
-                    isinstance(event, RequestInfoEvent)
-                    and event.request_type is MagenticPlanReviewRequest
-                ):
-                    pending_request = event
-                elif isinstance(event, WorkflowOutputEvent):
-                    if event.data is not None:
-                        final_output_text = str(event.data)
-                    completed = True
-                elif isinstance(event, MagenticFinalResultEvent) and event.message is not None:
-                    self._latest_final_text = getattr(event.message, "text", None) or str(
-                        event.message
-                    )
-                elif isinstance(event, MagenticAgentMessageEvent) and event.message is not None:
-                    self._latest_final_text = getattr(event.message, "text", None) or str(
-                        event.message
-                    )
+            if stream is not None:
+                async for event in stream:
+                    had_events = True
+                    if MagenticAgentDeltaEvent is not None and isinstance(
+                        event, MagenticAgentDeltaEvent
+                    ):
+                        continue
+                    if (
+                        RequestInfoEvent is not None
+                        and MagenticPlanReviewRequest is not None
+                        and isinstance(event, RequestInfoEvent)
+                        and event.request_type is MagenticPlanReviewRequest
+                    ):
+                        pending_request = event
+                    elif WorkflowOutputEvent is not None and isinstance(event, WorkflowOutputEvent):
+                        if event.data is not None:
+                            final_output_text = str(event.data)
+                        completed = True
+                    elif (
+                        MagenticFinalResultEvent is not None
+                        and isinstance(event, MagenticFinalResultEvent)
+                        and event.message is not None
+                    ):
+                        self._latest_final_text = getattr(event.message, "text", None) or str(
+                            event.message
+                        )
+                    elif (
+                        MagenticAgentMessageEvent is not None
+                        and isinstance(event, MagenticAgentMessageEvent)
+                        and event.message is not None
+                    ):
+                        self._latest_final_text = getattr(event.message, "text", None) or str(
+                            event.message
+                        )
 
             if pending_request is not None:
                 reply = await self._handle_plan_review_request(pending_request)
@@ -353,9 +408,14 @@ class MagenticFleet:
 
     async def _handle_plan_review_request(
         self,
-        event: RequestInfoEvent,
-    ) -> MagenticPlanReviewReply:
-        request = cast(MagenticPlanReviewRequest, event.data)
+        event: Any,
+    ) -> Any:
+        if MagenticPlanReviewReply is None or MagenticPlanReviewDecision is None:
+            raise WorkflowError(
+                "Plan review handling requested but agent framework is unavailable."
+            )
+
+        request = cast(Any, event.data)
         await self.console_callbacks.notice_callback("Plan review requested.")
         await asyncio.sleep(0)
 

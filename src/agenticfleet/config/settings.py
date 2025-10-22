@@ -47,9 +47,9 @@ class Settings:
         self.azure_ai_project_endpoint = os.getenv("AZURE_AI_PROJECT_ENDPOINT")
 
         # Optional environment variables with defaults
-        self.openai_model = os.getenv("OPENAI_MODEL", "gpt-5")
+        self.openai_model = os.getenv("OPENAI_MODEL", "gpt-5-mini")
         self.openai_embedding_model = os.getenv("OPENAI_EMBEDDING_MODEL", "text-embedding-3-small")
-        self.log_level = os.getenv("LOG_LEVEL", "INFO")
+        self.log_level = os.getenv("LOG_LEVEL", "INFO").upper()
         self.log_file = os.getenv("LOG_FILE", "var/logs/agenticfleet.log")
         self.log_file = self._rewrite_runtime_path(
             self.log_file,
@@ -85,7 +85,7 @@ class Settings:
         )
 
         # Observability settings
-        self.enable_otel = os.getenv("ENABLE_OTEL", "false").lower() == "true"
+        self.enable_otel = os.getenv("ENABLE_OTEL", "true").lower() == "true"
         self.enable_sensitive_data = os.getenv("ENABLE_SENSITIVE_DATA", "false").lower() == "true"
         self.otlp_endpoint = os.getenv("OTLP_ENDPOINT", "http://localhost:4317")
 

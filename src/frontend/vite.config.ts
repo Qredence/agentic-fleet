@@ -1,31 +1,31 @@
-import react from "@vitejs/plugin-react";
-import { dirname, resolve } from "path";
-import { fileURLToPath } from "url";
+import react from "@vitejs/plugin-react-swc";
+import { componentTagger } from "lovable-tagger";
+import path from "path";
 import { defineConfig } from "vite";
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = dirname(__filename);
-
 // https://vitejs.dev/config/
-export default defineConfig({
-  plugins: [react()],
-  resolve: {
-    alias: {
-      "@": resolve(__dirname, "./src"),
-    },
-  },
+export default defineConfig(({ mode }) => ({
   server: {
+    host: "::",
     port: 5173,
     proxy: {
+      // Proxy API requests to backend during development
       "/v1": {
         target: "http://localhost:8000",
         changeOrigin: true,
-        timeout: 180000, // 3 minutes timeout for long-running workflows
+        secure: false,
       },
       "/health": {
         target: "http://localhost:8000",
         changeOrigin: true,
+        secure: false,
       },
     },
   },
-});
+  plugins: [react(), mode === "development" && componentTagger()].filter(Boolean),
+  resolve: {
+    alias: {
+      "@": path.resolve(__dirname, "./src"),
+    },
+  },
+}));

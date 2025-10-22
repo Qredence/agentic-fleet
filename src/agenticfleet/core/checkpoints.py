@@ -9,11 +9,15 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any
 
+from agenticfleet.core.logging import get_logger
+
+logger = get_logger(__name__)
+
 try:
-    from agent_framework import FileCheckpointStorage
+    from agent_framework import FileCheckpointStorage as BaseFileCheckpointStorage
 except ImportError:
 
-    class FileCheckpointStorage:  # type: ignore[no-redef]
+    class BaseFileCheckpointStorage:  # type: ignore[no-redef]
         def __init__(self, *args: Any, **kwargs: Any) -> None:
             raise ImportError(
                 "agent_framework is required for AgenticFleetFileCheckpointStorage. "
@@ -21,9 +25,8 @@ except ImportError:
             )
 
 
-from agenticfleet.core.logging import get_logger
-
-logger = get_logger(__name__)
+# Backwards compatibility: expose FileCheckpointStorage symbol from this module
+FileCheckpointStorage = BaseFileCheckpointStorage
 
 
 def normalize_checkpoint_metadata(
@@ -218,7 +221,7 @@ def _parse_timestamp(timestamp: object) -> float:
     raise ValueError(f"Unsupported timestamp type: {type(timestamp).__name__}")
 
 
-class AgenticFleetFileCheckpointStorage(FileCheckpointStorage):  # type: ignore[misc]
+class AgenticFleetFileCheckpointStorage(BaseFileCheckpointStorage):  # type: ignore[misc]
     """File-based checkpoint storage with listing support."""
 
     def __init__(self, storage_path: str | Path) -> None:

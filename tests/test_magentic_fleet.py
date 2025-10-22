@@ -10,6 +10,7 @@ Verifies:
 """
 
 from types import SimpleNamespace
+from typing import Any
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
@@ -74,6 +75,84 @@ def mock_workflow_runner():
     runner = MagicMock()
     runner.run = AsyncMock()
     return runner
+
+
+class TestCoderToolingConfiguration:
+    """Validate coder tooling configuration logic."""
+
+    def _make_fleet_with_coder(self, coder):
+        fleet = MagenticFleet.__new__(MagenticFleet)
+        fleet.agents = {"coder": coder}
+        return fleet
+
+    def test_apply_coder_tooling_prefers_tool_model(self, monkeypatch):
+        """Ensure the tool-specific model is used when available."""
+        from agenticfleet.fleet import magentic_fleet as module
+
+        init_kwargs: dict[str, Any] = {}
+
+        class DummyClient:
+            def __init__(self, **kwargs: Any) -> None:
+                init_kwargs.update(kwargs)
+
+        class DummyTool:
+            creation_count = 0
+
+            def __init__(self) -> None:
+                type(self).creation_count += 1
+
+        coder = SimpleNamespace(chat_client=None, tools=None)
+        fleet = self._make_fleet_with_coder(coder)
+
+        monkeypatch.setattr(module, "_AGENT_FRAMEWORK_AVAILABLE", True)
+        monkeypatch.setattr(module, "OpenAIResponsesClient", DummyClient)
+        monkeypatch.setattr(module, "HostedCodeInterpreterTool", DummyTool)
+        monkeypatch.setattr(module, "get_responses_model_parameter", lambda _: "model")
+
+        settings_stub = SimpleNamespace(
+            workflow_config={"defaults": {"model": "base", "tool_model": "tool"}},
+            openai_model="fallback",
+        )
+        monkeypatch.setattr(module, "settings", settings_stub)
+
+        fleet._apply_coder_tooling()
+
+        assert init_kwargs == {"model": "tool"}
+        assert isinstance(coder.chat_client, DummyClient)
+        assert isinstance(coder.tools, list)
+        assert len(coder.tools) == 1
+        assert isinstance(coder.tools[0], DummyTool)
+
+    def test_apply_coder_tooling_does_not_duplicate_interpreter(self, monkeypatch):
+        """Ensure interpreter is not attached multiple times."""
+        from agenticfleet.fleet import magentic_fleet as module
+
+        class DummyClient:
+            def __init__(self, **kwargs: Any) -> None:
+                self.kwargs = kwargs
+
+        class DummyTool:
+            def __init__(self) -> None:
+                pass
+
+        existing_tool = DummyTool()
+        coder = SimpleNamespace(chat_client=None, tools=[existing_tool])
+        fleet = self._make_fleet_with_coder(coder)
+
+        monkeypatch.setattr(module, "_AGENT_FRAMEWORK_AVAILABLE", True)
+        monkeypatch.setattr(module, "OpenAIResponsesClient", DummyClient)
+        monkeypatch.setattr(module, "HostedCodeInterpreterTool", DummyTool)
+        monkeypatch.setattr(module, "get_responses_model_parameter", lambda _: "model")
+
+        settings_stub = SimpleNamespace(
+            workflow_config={"defaults": {"model": "base"}},
+            openai_model="fallback",
+        )
+        monkeypatch.setattr(module, "settings", settings_stub)
+
+        fleet._apply_coder_tooling()
+
+        assert coder.tools == [existing_tool]
 
 
 class TestMagenticFleetInitialization:

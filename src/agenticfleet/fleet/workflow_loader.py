@@ -52,7 +52,7 @@ def create_agent_from_config(agent_config: dict[str, Any]) -> ChatAgent:
     name = agent_config["name"]
     description = agent_config.get("description", "")
     instructions = agent_config.get("instructions", "")
-    model = agent_config.get("model", "gpt-5")
+    model = agent_config.get("model", "gpt-5-mini")
     tools_config = agent_config.get("tools", [])
 
     # Create chat client based on model
@@ -110,7 +110,7 @@ def build_workflow_from_config(
 
     # Configure manager
     manager_config = config.get("manager", {})
-    manager_model = manager_config.get("model", "gpt-5")
+    manager_model = manager_config.get("model", "gpt-5-mini")
     manager_instructions = manager_config.get("instructions")
     builder = builder.with_manager(instructions=manager_instructions, model=manager_model)
 
