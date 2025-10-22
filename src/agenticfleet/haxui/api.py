@@ -3,18 +3,22 @@ from __future__ import annotations
 import asyncio
 import json
 import time
-from collections.abc import AsyncIterator, Iterable
+from collections.abc import AsyncIterator, Iterable, Mapping
 from pathlib import Path
 from typing import Any
 from uuid import uuid4
 
-import tiktoken
+try:
+    import tiktoken
+except ImportError:  # pragma: no cover - optional dependency
+    tiktoken = None  # type: ignore[assignment]
 from agent_framework import AgentRunResponseUpdate, Role
 from fastapi import Depends, FastAPI, HTTPException, Request, Response, status
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse, StreamingResponse
 
 from agenticfleet import __version__
+from agenticfleet.config import settings
 from agenticfleet.core.approval import ApprovalDecision
 from agenticfleet.workflows.workflow_as_agent import create_workflow_agent
 
@@ -29,6 +33,9 @@ except Exception:
 
 from .conversations import ConversationStore
 from .models import (
+    ApprovalDecisionRequest,
+    ApprovalListResponse,
+    ApprovalRequestInfo,
     ConversationItemsResponse,
     ConversationListResponse,
     ConversationSummary,
@@ -37,6 +44,8 @@ from .models import (
     HealthResponse,
 )
 from .runtime import FleetRuntime, build_entity_catalog
+from .storage import SQLiteConversationStore
+from .web_approval import WebApprovalHandler
 
 
 def create_app() -> FastAPI:
@@ -56,16 +65,35 @@ def create_app() -> FastAPI:
         allow_headers=["*"],
     )
 
-    runtime = FleetRuntime()
-    conversation_store = ConversationStore()
+    workflow_cfg = settings.workflow_config.get("workflow", {})
+    hitl_config = workflow_cfg.get("human_in_the_loop", {}) or {}
+    timeout_seconds = hitl_config.get("approval_timeout_seconds", 300)
+
+    haxui_config = settings.workflow_config.get("haxui", {}) or {}
+    storage_config = haxui_config.get("storage", {}) or {}
+    storage_path = storage_config.get("path")
+
+    approval_handler = WebApprovalHandler(
+        timeout_seconds=timeout_seconds,
+        store_path=storage_path,
+    )
+    runtime = FleetRuntime(approval_handler=approval_handler)
+    conversation_store = ConversationStore(SQLiteConversationStore(storage_path))
     agent_entities, workflow_entities = build_entity_catalog()
     entity_lookup = {entity["id"]: entity for entity in (*agent_entities, *workflow_entities)}
+
+    app.state.runtime = runtime
+    app.state.conversation_store = conversation_store
+    app.state.approval_handler = approval_handler
 
     def get_runtime() -> FleetRuntime:
         return runtime
 
     def get_conversation_store() -> ConversationStore:
         return conversation_store
+
+    def get_approval_handler() -> WebApprovalHandler:
+        return approval_handler
 
     def get_entity(entity_id: str) -> dict[str, Any]:
         entity = entity_lookup.get(entity_id)
@@ -142,6 +170,62 @@ def create_app() -> FastAPI:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND, detail="Conversation not found."
             )
+
+    @app.get("/v1/approvals", response_model=ApprovalListResponse)
+    async def list_approvals(
+        handler: WebApprovalHandler = Depends(get_approval_handler),
+    ) -> ApprovalListResponse:
+        pending = await handler.get_pending_requests()
+        items = [
+            ApprovalRequestInfo(
+                request_id=item["request_id"],
+                operation_type=item["operation_type"],
+                agent_name=item["agent_name"],
+                operation=item["operation"],
+                details=item.get("details") or {},
+                code=item.get("code"),
+                status=item.get("status", "pending"),
+                timestamp=item["timestamp"],
+            )
+            for item in pending
+        ]
+        return ApprovalListResponse(data=items)
+
+    @app.post(
+        "/v1/approvals/{request_id}",
+        status_code=status.HTTP_204_NO_CONTENT,
+    )
+    async def respond_to_approval(
+        request_id: str,
+        payload: ApprovalDecisionRequest,
+        runtime: FleetRuntime = Depends(get_runtime),
+    ) -> Response:
+        try:
+            decision = ApprovalDecision(payload.decision.lower())
+        except ValueError as exc:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"Unsupported decision '{payload.decision}'",
+            ) from exc
+
+        if decision == ApprovalDecision.MODIFIED and not payload.modified_code:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="modified_code is required when decision is 'modified'.",
+            )
+
+        handled = await runtime.approval_handler.set_approval_response(
+            request_id,
+            decision,
+            modified_code=payload.modified_code,
+            reason=payload.reason,
+        )
+        if not handled:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Approval request not found or already handled.",
+            )
+        return Response(status_code=status.HTTP_204_NO_CONTENT)
 
     @app.post("/v1/workflow/reflection")
     async def run_reflection_workflow(
@@ -253,7 +337,6 @@ def create_app() -> FastAPI:
                                 "sequence_number": sequence_number,
                             }
                         )
-                        continue
 
                 # Save assistant response to conversation
                 assistant_content = [{"type": "text", "text": accumulated}]
@@ -262,16 +345,18 @@ def create_app() -> FastAPI:
                 # Send completion
                 sequence_number += 1
                 # Calculate token usage
-                try:
-                    encoding = tiktoken.encoding_for_model(worker_model)
-                    input_tokens = len(encoding.encode(query))
-                    output_tokens = len(encoding.encode(accumulated))
-                    total_tokens = input_tokens + output_tokens
-                except (KeyError, Exception):
-                    # Fallback if model encoding not found or other encoding errors
-                    input_tokens = None
-                    output_tokens = None
-                    total_tokens = None
+                input_tokens: int | None = None
+                output_tokens: int | None = None
+                total_tokens: int | None = None
+
+                if tiktoken is not None:
+                    try:
+                        encoding = tiktoken.encoding_for_model(worker_model)
+                        input_tokens = len(encoding.encode(query))
+                        output_tokens = len(encoding.encode(accumulated))
+                        total_tokens = input_tokens + output_tokens
+                    except (KeyError, Exception):
+                        pass  # Already initialized to None above
 
                 yield format_sse(
                     {
@@ -415,6 +500,16 @@ async def build_sse_stream(
     sequence_number = 0
     accumulated = ""
     assistant_content: list[dict[str, Any]] = []
+    status_events: asyncio.Queue[dict[str, Any]] = asyncio.Queue()
+
+    async def status_callback(_: str, metrics: Mapping[str, int | str]) -> None:
+        await status_events.put(
+            {
+                "type": "response.queue_status",
+                "metrics": dict(metrics),
+                "item_id": message_id,
+            }
+        )
 
     # Task for streaming the agent response
     response_task = asyncio.create_task(
@@ -422,6 +517,7 @@ async def build_sse_stream(
             entity_id,
             user_text=user_text,
             input_payload=input_payload,
+            status_callback=status_callback,
         )
     )
 
@@ -441,7 +537,7 @@ async def build_sse_stream(
                 last_heartbeat = current_time
 
             # Check for pending approval requests
-            pending = runtime.approval_handler.get_pending_requests()
+            pending = await runtime.approval_handler.get_pending_requests()
             for approval_req in pending:
                 req_id = approval_req["request_id"]
                 if req_id not in emitted_approval_ids:
@@ -463,11 +559,23 @@ async def build_sse_stream(
                     )
                     emitted_approval_ids.add(req_id)
 
+            while not status_events.empty():
+                queue_event = await status_events.get()
+                sequence_number += 1
+                queue_event["sequence_number"] = sequence_number
+                yield format_sse(queue_event)
+
             # Wait briefly before checking again
             await asyncio.sleep(0.1)
 
         # Task is done - get result
         result, usage = await response_task
+
+        while not status_events.empty():
+            queue_event = await status_events.get()
+            sequence_number += 1
+            queue_event["sequence_number"] = sequence_number
+            yield format_sse(queue_event)
 
         # Stream the result in chunks
         if result:
@@ -488,11 +596,13 @@ async def build_sse_stream(
                 )
 
         # Send completion event
+        queue_metrics = await runtime.queue_metrics()
         event = build_completed_event(
             conversation_id=conversation_id,
             entity_id=entity_id,
             assistant_text=accumulated,
             usage=usage,
+            queue_metrics=queue_metrics,
             sequence_number=sequence_number + 1,
         )
         yield format_sse(event)
@@ -556,12 +666,14 @@ def count_tokens(text: str, model: str = "gpt-4") -> int:
     Returns:
         Number of tokens in the text
     """
-    try:
-        encoding = tiktoken.encoding_for_model(model)
-        return len(encoding.encode(text))
-    except Exception:
-        # Fallback: rough approximation if encoding not found
-        return len(text.split())
+    if tiktoken is not None:
+        try:
+            encoding = tiktoken.encoding_for_model(model)
+            return len(encoding.encode(text))
+        except Exception:
+            pass
+    # Fallback: rough approximation if encoding not found
+    return len(text.split())
 
 
 def build_completed_event(
@@ -570,12 +682,13 @@ def build_completed_event(
     entity_id: str,
     assistant_text: str,
     usage: dict[str, Any],
+    queue_metrics: dict[str, int] | None,
     sequence_number: int,
 ) -> dict[str, Any]:
     response_id = f"resp_{uuid4().hex[:12]}"
     message_id = f"msg_{uuid4().hex[:12]}"
     created_at = int(time.time())
-    return {
+    payload = {
         "type": "response.completed",
         "sequence_number": sequence_number,
         "response": {
@@ -605,6 +718,9 @@ def build_completed_event(
             "tools": [],
         },
     }
+    if queue_metrics is not None:
+        payload["queue_metrics"] = queue_metrics
+    return payload
 
 
 def format_sse(event: dict[str, Any]) -> bytes:
@@ -672,6 +788,8 @@ def extract_approval_response(input_param: Any) -> dict[str, Any] | None:
                     "request_id": content_item.get("request_id"),
                     "approved": content_item.get("approved", False),
                 }
+            else:
+                continue
     return None
 
 

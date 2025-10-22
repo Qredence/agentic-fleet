@@ -1,125 +1,100 @@
 # AgenticFleet Frontend
 
-React + Vite + TypeScript frontend for AgenticFleet multi-agent orchestration system.
+React-based frontend for AgenticFleet multi-agent system with real-time SSE streaming and Human-in-the-Loop approval workflow.
 
-## Features
+## 🚀 Quick Start
 
-- 🤖 **Chatbot Interface**: Beautiful chat UI from [prompt-kit](https://prompt-kit.com)
-- ⚡ **Real-time Streaming**: SSE-based streaming from FastAPI backend
-- 🎨 **Modern UI**: Tailwind CSS + shadcn/ui components
-- 🔥 **Fast Development**: Vite HMR for instant updates
+### With Backend
 
-## Quick Start
+From the project root, run both services at once:
 
 ```bash
-# Install dependencies
-npm install
-
-# Start dev server (with FastAPI proxy)
-npm run dev
-
-# Build for production
-npm run build
-
-# Preview production build
-npm run preview
+./scripts/start-with-frontend.sh
 ```
 
-## Architecture
+This starts:
 
-```
-Frontend (Vite + React)     FastAPI Backend (HaxUI)
-┌─────────────────────┐     ┌──────────────────────┐
-│                     │     │                      │
-│  AgenticFleet       │────▶│  /v1/responses       │
-│  Chatbot            │     │  (SSE streaming)     │
-│                     │     │                      │
-│  - useFastAPIChat   │     │  MagenticFleet       │
-│  - Message UI       │     │  Orchestrator        │
-│  - Input Handler    │     │                      │
-└─────────────────────┘     └──────────────────────┘
-```
+- Backend on `http://localhost:8000`
+- Frontend on `http://localhost:8080`
 
-## Integration with FastAPI
-
-The frontend connects to FastAPI HaxUI endpoints:
-
-- **`POST /v1/responses`**: Send messages and receive SSE streams
-- **`GET /v1/conversations`**: List conversation history
-- **`GET /health`**: Check backend status
-
-Vite proxy config (`vite.config.ts`) automatically forwards `/v1/*` and `/health` to `http://localhost:8000`.
-
-## Components
-
-### Main Chatbot Component
-
-- `src/components/agenticfleet-chatbot.tsx`: Full chatbot UI
-- `src/lib/use-fastapi-chat.ts`: Custom React hook for FastAPI SSE
-
-### Prompt-Kit Components (from shadcn)
-
-- `src/components/prompt-kit/chat-container.tsx`: Chat layout
-- `src/components/prompt-kit/message.tsx`: Message bubbles
-- `src/components/prompt-kit/prompt-input.tsx`: Input with actions
-- `src/components/prompt-kit/markdown.tsx`: Markdown rendering
-- `src/components/prompt-kit/code-block.tsx`: Code syntax highlighting
-- `src/components/prompt-kit/loader.tsx`: Loading indicators
-
-### UI Components (shadcn/ui)
-
-- `src/components/ui/button.tsx`
-- `src/components/ui/avatar.tsx`
-- `src/components/ui/tooltip.tsx`
-- `src/components/ui/textarea.tsx`
-
-## Development
-
-### Starting the Full Stack
+### Frontend Only
 
 ```bash
-# Terminal 1: Start FastAPI backend
-cd /path/to/AgenticFleet
-uv run python -m agenticfleet.haxui.runtime  # or uvicorn command
-
-# Terminal 2: Start Vite dev server
 cd src/frontend
+npm install
 npm run dev
 ```
 
-Open http://localhost:5173 to see the chatbot.
+Frontend will be available at `http://localhost:8080`
 
-### Customization
+> **Note:** The frontend expects the backend to be running on `http://localhost:8000`. Vite proxy is configured to forward API requests.
 
-**Change model/agent:**
+## 📚 Documentation
 
-```tsx
-<AgenticFleetChatbot
-  model="researcher" // or "coder", "analyst", "magentic_fleet"
-  placeholder="Ask the researcher..."
-/>
+- **[Frontend-Backend Integration Guide](../../docs/guides/frontend-backend-integration.md)** - Complete integration documentation
+- **[Integration Summary](../../docs/FRONTEND-INTEGRATION.md)** - Quick overview of changes
+
+## ✨ Features
+
+- **Real-time SSE Streaming** - Character-by-character message streaming from backend
+- **Multi-Agent Chat** - Interactive conversation with multiple specialized agents
+- **HITL Approval Flow** - Human approval prompts for sensitive operations
+- **Model Selection** - Switch between Magentic Fleet and Reflection & Retry workflows
+- **Type-Safe API** - Full TypeScript integration with backend APIs
+- **Modern UI** - Built with shadcn/ui components and Tailwind CSS
+
+## 🛠️ Project Info
+
+## How can I edit this code?
+
+There are several ways of editing your application.
+
+**Use Lovable**
+
+Changes made via Lovable will be committed automatically to this repo.
+
+**Use your preferred IDE**
+
+If you want to work locally using your own IDE, you can clone this repo and push changes. Pushed changes will also be reflected in Lovable.
+
+The only requirement is having Node.js & npm installed - [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
+
+Follow these steps:
+
+```sh
+# Step 1: Clone the repository using the project's Git URL.
+git clone <YOUR_GIT_URL>
+
+# Step 2: Navigate to the project directory.
+cd <YOUR_PROJECT_NAME>
+
+# Step 3: Install the necessary dependencies.
+npm i
+
+# Step 4: Start the development server with auto-reloading and an instant preview.
+npm run dev
 ```
 
-**Add conversation context:**
+**Edit a file directly in GitHub**
 
-```tsx
-<AgenticFleetChatbot conversationId="conv_abc123" model="magentic_fleet" />
-```
+- Navigate to the desired file(s).
+- Click the "Edit" button (pencil icon) at the top right of the file view.
+- Make your changes and commit the changes.
 
-## Building for Production
+**Use GitHub Codespaces**
 
-```bash
-npm run build
-```
+- Navigate to the main page of your repository.
+- Click on the "Code" button (green button) near the top right.
+- Select the "Codespaces" tab.
+- Click on "New codespace" to launch a new Codespace environment.
+- Edit files directly within the Codespace and commit and push your changes once you're done.
 
-Output: `dist/` directory with static files ready for deployment.
+## What technologies are used for this project?
 
-### Deployment Options
+This project is built with:
 
-1. **Serve from FastAPI**: Copy `dist/` to `src/agenticfleet/haxui/ui/` and serve via FastAPI static files
-2. **CDN/Static Host**: Deploy `dist/` to Vercel, Netlify, Cloudflare Pages, etc.
-3. **Nginx/Apache**: Serve `dist/` with reverse proxy to FastAPI backend
-
-## License
-
-MIT
+- Vite
+- TypeScript
+- React
+- shadcn-ui
+- Tailwind CSS

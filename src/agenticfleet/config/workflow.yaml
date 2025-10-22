@@ -59,6 +59,12 @@ fleet:
     log_progress_ledger: true
     log_tool_calls: true
 
+haxui:
+  storage:
+    path: ./var/haxui/state.db
+  concurrency:
+    max_parallel_requests: 3
+
 # Shared defaults that can be overridden by individual agents
 defaults:
   model: "gpt-5"

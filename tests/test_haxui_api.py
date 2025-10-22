@@ -1,3 +1,5 @@
+from datetime import UTC, datetime
+
 import pytest
 from httpx import ASGITransport, AsyncClient
 
@@ -59,3 +61,46 @@ async def test_streaming_response(app):
         assert "[DONE]" in body
         assert "response.completed" in body
         assert '"conversation_id"' in body
+        assert "queue_metrics" in body
+
+        convo_response = await client.get("/v1/conversations")
+        assert convo_response.status_code == 200
+    convo_payload = convo_response.json()
+    assert convo_payload["data"], "Conversation store did not persist records"
+
+
+@pytest.mark.asyncio
+async def test_approval_listing_and_response(app):
+    handler = app.state.approval_handler
+    await handler.initialise()
+
+    request_id = "req_test_1"
+    await handler._store.add_request(  # type: ignore[attr-defined]
+        {
+            "request_id": request_id,
+            "operation_type": "code_execution",
+            "agent_name": "coder",
+            "operation": "Execute test code",
+            "details": {"language": "python"},
+            "code": "print('hello')",
+            "timestamp": datetime.now(UTC).isoformat(),
+            "status": "pending",
+        }
+    )
+
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+        response = await client.get("/v1/approvals")
+        assert response.status_code == 200
+        payload = response.json()
+        assert any(item["request_id"] == request_id for item in payload["data"])
+
+        submit = await client.post(
+            f"/v1/approvals/{request_id}",
+            json={"decision": "approved", "reason": "looks good"},
+        )
+        assert submit.status_code == 204
+
+        cleared = await client.get("/v1/approvals")
+        assert cleared.status_code == 200
+        after_payload = cleared.json()
+        assert not any(item["request_id"] == request_id for item in after_payload["data"])

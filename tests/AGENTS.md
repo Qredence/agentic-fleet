@@ -2,7 +2,7 @@
 
 > **Agent instructions for working with the AgenticFleet test suite**
 
-This file provides guidance for AI coding agents working specifically within the `tests/` directory. For general project instructions, see the [root AGENTS.md](../AGENTS.md).
+This file provides guidance for AI coding agents working specifically within the `tests/` directory. For general project instructions, see the [root AGENTS.md](../docs/project/AGENTS.md).
 
 ---
 
@@ -746,7 +746,7 @@ make test-e2e
 
 ## References
 
-- **Root AGENTS.md**: `../AGENTS.md` (general project instructions)
+- **Root AGENTS.md**: `../docs/project/AGENTS.md` (general project instructions)
 - **pytest Documentation**: https://docs.pytest.org/
 - **pytest-asyncio**: https://pytest-asyncio.readthedocs.io/
 - **unittest.mock**: https://docs.python.org/3/library/unittest.mock.html

@@ -15,6 +15,7 @@ surface area compatible with what the tests expect without reviving the full
 feature set of the original prototype.
 """
 
+import json
 from collections.abc import Callable, Mapping, MutableMapping
 from dataclasses import dataclass
 from typing import Any
@@ -55,27 +56,12 @@ class DynamicWorkflowParticipants:
 
 
 @dataclass
-class PlanningRequest:
-    """Light-weight request produced by the planner."""
-
-    prompt: str
-
-
-@dataclass
 class ExecutionResult:
     """Result emitted by the executor for verification."""
 
     prompt: str
     content: str
-
-
-@dataclass
-class VerificationResult:
-    """Feedback produced by the verifier for the generator."""
-
-    prompt: str
-    content: str
-    approved: bool
+    approved: bool = False
     feedback: str | None = None
 
 
@@ -86,8 +72,8 @@ class Planner(Executor):
         super().__init__(id="planner")
 
     @handler
-    async def plan(self, message: str, ctx: WorkflowContext[PlanningRequest]) -> None:
-        await ctx.send_message(PlanningRequest(prompt=message))
+    async def plan(self, message: str, ctx: WorkflowContext[str, str]) -> None:
+        await ctx.send_message(message)
 
 
 class WorkerExecutor(Executor):
@@ -97,12 +83,11 @@ class WorkerExecutor(Executor):
         super().__init__(id="executor")
 
     @handler
-    async def execute(
-        self, request: PlanningRequest, ctx: WorkflowContext[ExecutionResult]
-    ) -> None:
-        await ctx.send_message(
-            ExecutionResult(prompt=request.prompt, content=f"Draft response: {request.prompt}")
-        )
+    async def handle(self, request: str, ctx: WorkflowContext[str, str]) -> None:
+        import dataclasses
+
+        result = ExecutionResult(prompt=request, content=f"Draft response: {request}")
+        await ctx.send_message(json.dumps(dataclasses.asdict(result)))
 
 
 class Verifier(Executor):
@@ -112,12 +97,15 @@ class Verifier(Executor):
         super().__init__(id="verifier")
 
     @handler
-    async def review(
-        self, result: ExecutionResult, ctx: WorkflowContext[VerificationResult]
-    ) -> None:
-        await ctx.send_message(
-            VerificationResult(prompt=result.prompt, content=result.content, approved=True)
+    async def review(self, message: str, ctx: WorkflowContext[str, str]) -> None:
+        data = json.loads(message)
+        result = ExecutionResult(**data)
+        approved_result = ExecutionResult(
+            prompt=result.prompt, content=result.content, approved=True
         )
+        from dataclasses import asdict
+
+        await ctx.send_message(json.dumps(asdict(approved_result)))
 
 
 class Generator(Executor):
@@ -127,11 +115,11 @@ class Generator(Executor):
         super().__init__(id="generator")
 
     @handler
-    async def respond(self, result: VerificationResult, ctx: WorkflowContext[None, str]) -> None:
+    async def respond(self, message: str, ctx: WorkflowContext[str, str]) -> None:
+        data = json.loads(message)
+        result = ExecutionResult(**data)
         if result.approved:
             await ctx.yield_output(result.content)
-        else:  # pragma: no cover - defensive fallback for custom verifiers
-            await ctx.send_message(PlanningRequest(prompt=result.prompt), target_id="planner")
 
 
 class EchoTool(Executor):
@@ -141,7 +129,9 @@ class EchoTool(Executor):
         super().__init__(id=id)
 
     @handler
-    async def invoke(self, payload: Mapping[str, Any], ctx: WorkflowContext[None, str]) -> None:
+    async def invoke(
+        self, payload: Mapping[str, Any], ctx: WorkflowContext[Mapping[str, Any], str]
+    ) -> None:
         text = payload.get("query") or payload.get("input") or ""
         await ctx.yield_output(str(text))
 

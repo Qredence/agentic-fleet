@@ -3,6 +3,7 @@ import type {
   ChatStatus,
   Message,
   PendingApproval,
+  ToolCall,
 } from "@/lib/use-fastapi-chat";
 import { create } from "zustand";
 import { immer } from "zustand/middleware/immer";
@@ -15,13 +16,13 @@ interface ChatState {
   conversationId?: string;
   pendingApprovals: PendingApproval[];
   approvalStatuses: Record<string, ApprovalActionState>;
-  messageToolCalls: Record<string, any[]>;
+  messageToolCalls: Record<string, ToolCall[]>;
 }
 
 interface ChatActions {
   setMessages: (messages: Message[]) => void;
   addMessage: (message: Message) => void;
-  updateMessage: (id: string, content: string, toolCalls?: any[]) => void;
+  updateMessage: (id: string, content: string, toolCalls?: ToolCall[]) => void;
   setInput: (input: string) => void;
   setStatus: (status: ChatStatus) => void;
   setError: (error: Error | null) => void;
@@ -29,11 +30,11 @@ interface ChatActions {
   addPendingApproval: (approval: PendingApproval) => void;
   removePendingApproval: (requestId: string) => void;
   setApprovalStatus: (requestId: string, status: ApprovalActionState) => void;
-  addToolCall: (messageId: string, toolCall: any) => void;
+  addToolCall: (messageId: string, toolCall: ToolCall) => void;
   updateToolCall: (
     messageId: string,
     toolCallId: string,
-    output: any,
+    output: unknown,
     errorText?: string
   ) => void;
   clearMessages: () => void;
@@ -74,20 +75,14 @@ export const useChatStore = create<ChatState & ChatActions>()(
     setConversationId: (conversationId) => set({ conversationId }),
     addPendingApproval: (approval) =>
       set((state) => {
-        if (
-          !state.pendingApprovals.some(
-            (a) => a.requestId === approval.requestId
-          )
-        ) {
+        if (!state.pendingApprovals.some((a) => a.requestId === approval.requestId)) {
           state.pendingApprovals.push(approval);
           state.approvalStatuses[approval.requestId] = { status: "idle" };
         }
       }),
     removePendingApproval: (requestId) =>
       set((state) => {
-        state.pendingApprovals = state.pendingApprovals.filter(
-          (a) => a.requestId !== requestId
-        );
+        state.pendingApprovals = state.pendingApprovals.filter((a) => a.requestId !== requestId);
         delete state.approvalStatuses[requestId];
       }),
     setApprovalStatus: (requestId, status) =>
