@@ -226,8 +226,12 @@ export function useSSEConnection({
           clearTimeout(reconnectTimeoutRef.current);
         }
       } else {
-        // Page visible again, reconnect if disconnected
-        if (connectionState === "disconnected" && !isManualDisconnect.current) {
+        // Page visible again, reconnect if disconnected and not already connecting
+        if (
+          connectionState === "disconnected" &&
+          !isManualDisconnect.current &&
+          connectionState !== "connecting"
+        ) {
           reconnect();
         }
       }
