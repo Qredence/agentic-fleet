@@ -95,7 +95,7 @@ jobs:
         run: uv sync --all-extras
 
       - name: Run configuration tests
-        if: ${{ github.event_name != 'pull_request' || github.event.pull_request.head.repo.fork == false }}
+        if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.fork == false
         env:
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
           AZURE_AI_PROJECT_ENDPOINT: ${{ secrets.AZURE_AI_PROJECT_ENDPOINT }}
@@ -106,7 +106,7 @@ jobs:
         run: uv run python tests/test_config.py
 
       - name: Run pytest with coverage
-        if: ${{ github.event_name != 'pull_request' || github.event.pull_request.head.repo.fork == false }}
+        if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.fork == false
         env:
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
           AZURE_AI_PROJECT_ENDPOINT: ${{ secrets.AZURE_AI_PROJECT_ENDPOINT }}
