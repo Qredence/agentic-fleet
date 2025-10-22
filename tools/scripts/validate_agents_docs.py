@@ -58,8 +58,8 @@ MODEL_HARDCODE_PATTERN = re.compile(
 DIRECT_PYTHON_CMD_PATTERN = re.compile(r"(?<!uv run )(python -m |pytest)\b")
 
 # Matches function definitions (single or multi-line) lacking a return type annotation
-# Uses possessive quantifiers (via atomic grouping) to prevent catastrophic backtracking
-FUNCTION_DEF_NO_RETURN = re.compile(r"^def\s+\w+\s*\((?:[^\)]|\n)*?\)\s*:(?!\s*->)", re.MULTILINE)
+# Uses a negated character class with fixed upper limit to prevent catastrophic backtracking
+FUNCTION_DEF_NO_RETURN = re.compile(r"^def\s+\w+\s*\([^)]{0,500}\)\s*:(?!\s*->)", re.MULTILINE)
 
 TABLE_HEADER_PATTERN = re.compile(r"^\|.+\|\s*$")
 
