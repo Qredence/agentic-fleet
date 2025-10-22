@@ -74,7 +74,7 @@ class ProgressEvent(SSEEvent):
 
     type: EventType = EventType.PROGRESS
     step: str
-    progress: float  # 0.0 to 1.0
+    progress: float = Field(ge=0.0, le=1.0)  # 0.0 to 1.0
     message: str
 
 
