@@ -44,6 +44,7 @@ from .models import (
     HealthResponse,
 )
 from .runtime import FleetRuntime, build_entity_catalog
+from .sse_events import RiskLevel, SSEEventEmitter
 from .storage import SQLiteConversationStore
 from .web_approval import WebApprovalHandler
 
@@ -381,18 +382,14 @@ def create_app() -> FastAPI:
                 logger = logging.getLogger(__name__)
                 logger.error(f"Workflow error: {exc}", exc_info=True)
 
-                # Send generic error to client (prevent information exposure)
+                # Send generic error to client using SSEEventEmitter
                 sequence_number += 1
-                yield format_sse(
-                    {
-                        "type": "error",
-                        "error": {
-                            "type": "workflow_error",
-                            "message": "An error occurred during workflow execution",
-                        },
-                        "sequence_number": sequence_number,
-                    }
+                error_sse = SSEEventEmitter.emit_error(
+                    error="Workflow Execution Error",
+                    details="An error occurred during workflow execution",
+                    recoverable=False,
                 )
+                yield error_sse
                 yield b"data: [DONE]\n\n"
 
         return StreamingResponse(stream_workflow(), media_type="text/event-stream")
@@ -541,22 +538,27 @@ async def build_sse_stream(
             for approval_req in pending:
                 req_id = approval_req["request_id"]
                 if req_id not in emitted_approval_ids:
-                    # Emit approval request event
+                    # Emit approval request event using SSEEventEmitter
                     sequence_number += 1
-                    yield format_sse(
-                        {
-                            "type": "response.function_approval.requested",
-                            "request_id": req_id,
-                            "function_call": {
-                                "id": req_id,
-                                "name": approval_req["operation_type"],
-                                "arguments": approval_req["details"],
-                            },
-                            "item_id": message_id,
-                            "output_index": 0,
-                            "sequence_number": sequence_number,
-                        }
+
+                    # Extract risk level from details or default to MEDIUM
+                    details = approval_req.get("details", {})
+                    risk_level_str = details.get("risk_level", "medium")
+                    risk_level = RiskLevel(risk_level_str)
+
+                    # Get operation context
+                    operation_type = approval_req["operation_type"]
+                    context = approval_req.get("operation", "")
+
+                    # Emit structured approval request with risk level
+                    sse_data = SSEEventEmitter.emit_approval_request(
+                        id=req_id,
+                        operation=operation_type,
+                        params=details,
+                        context=context,
+                        risk_level=risk_level,
                     )
+                    yield sse_data
                     emitted_approval_ids.add(req_id)
 
             while not status_events.empty():
@@ -617,12 +619,14 @@ async def build_sse_stream(
         logger.error(f"Stream error: {exc}", exc_info=True)
 
         sequence_number += 1
-        error_event = {
-            "type": "error",
-            "message": "An error occurred during response generation",
-            "sequence_number": sequence_number,
-        }
-        yield format_sse(error_event)
+        # Use SSEEventEmitter for structured error events
+        error_sse = SSEEventEmitter.emit_error(
+            error="Response Generation Error",
+            details="An error occurred during response generation",
+            recoverable=False,
+        )
+        yield error_sse
+
         await append_assistant_message(
             store,
             conversation_id,

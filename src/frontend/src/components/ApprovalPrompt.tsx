@@ -13,8 +13,10 @@ import {
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { Textarea } from "@/components/ui/textarea";
+import type { RiskLevel } from "@/lib/types/contracts";
 import { ApprovalActionState } from "@/lib/use-fastapi-chat";
-import { AlertTriangle, Check, FileEdit, MinusCircle } from "lucide-react";
+import { AlertTriangle, Check, FileEdit, Info, MinusCircle, Shield } from "lucide-react";
+import { toast } from "sonner";
 
 interface ApprovalPromptProps {
   requestId: string;
@@ -23,22 +25,28 @@ interface ApprovalPromptProps {
     name: string;
     arguments: Record<string, unknown>;
   };
-  operationType?: string;
   operation?: string;
   details?: Record<string, unknown>;
   code?: string | null;
+  context?: string;
+  riskLevel?: RiskLevel;
   status: ApprovalActionState;
-  onApprove: (options?: { modifiedCode?: string; reason?: string }) => void;
+  onApprove: (options?: {
+    modifiedCode?: string;
+    modifiedParams?: Record<string, unknown>;
+    reason?: string;
+  }) => void;
   onReject: (reason: string) => void;
 }
 
 export function ApprovalPrompt({
   requestId,
   functionCall,
-  operationType,
   operation,
   details,
   code,
+  context,
+  riskLevel = "medium",
   status,
   onApprove,
   onReject,
@@ -55,8 +63,33 @@ export function ApprovalPrompt({
   }, [code, functionCall]);
 
   const [editedCode, setEditedCode] = useState(initialCode);
+  const [isModifyingParams, setIsModifyingParams] = useState(false);
+  const [editedParams, setEditedParams] = useState(() => {
+    const params = functionCall?.arguments || details || {};
+    return JSON.stringify(params, null, 2);
+  });
   const [reason, setReason] = useState("");
   const [showValidation, setShowValidation] = useState(false);
+
+  const getRiskBadge = () => {
+    const riskConfig = {
+      low: { color: "default", icon: Info, label: "LOW RISK" },
+      medium: { color: "secondary", icon: AlertTriangle, label: "MEDIUM RISK" },
+      high: { color: "destructive", icon: Shield, label: "HIGH RISK" },
+    };
+    const config = riskConfig[riskLevel];
+    const Icon = config.icon;
+
+    return (
+      <Badge
+        variant={config.color as "default" | "secondary" | "destructive"}
+        className="gap-1 text-xs"
+      >
+        <Icon className="h-3 w-3" />
+        {config.label}
+      </Badge>
+    );
+  };
 
   const handleReject = () => {
     if (!reason.trim()) {
@@ -67,14 +100,41 @@ export function ApprovalPrompt({
   };
 
   const handleApprove = () => {
-    const payload: { modifiedCode?: string; reason?: string } = {};
+    const payload: {
+      modifiedCode?: string;
+      modifiedParams?: Record<string, unknown>;
+      reason?: string;
+    } = {};
+
+    // Handle modified code
     if (editedCode && editedCode !== initialCode) {
       payload.modifiedCode = editedCode;
     }
+
+    // Handle modified params
+    if (isModifyingParams) {
+      try {
+        const parsed = JSON.parse(editedParams);
+        payload.modifiedParams = parsed;
+      } catch (err) {
+        const errorMsg =
+          err instanceof Error
+            ? `Invalid JSON in modified parameters: ${err.message}`
+            : "Invalid JSON in modified parameters";
+        toast.error(errorMsg);
+        return;
+      }
+    }
+
     if (reason.trim()) {
       payload.reason = reason.trim();
     }
+
     onApprove(Object.keys(payload).length ? payload : undefined);
+  };
+
+  const handleModifyToggle = () => {
+    setIsModifyingParams(!isModifyingParams);
   };
 
   const argumentDetails = functionCall?.arguments || details || {};
@@ -85,9 +145,7 @@ export function ApprovalPrompt({
         <div className="flex items-center gap-2">
           <AlertTriangle className="h-5 w-5 text-amber-500" />
           <CardTitle className="text-base">Approval Required</CardTitle>
-          <Badge variant="outline" className="ml-auto text-xs">
-            {operationType || functionCall?.name || "Pending"}
-          </Badge>
+          {getRiskBadge()}
         </div>
         <CardDescription className="text-xs">
           The agent is requesting permission to execute an operation
@@ -105,19 +163,56 @@ export function ApprovalPrompt({
             {(operation || functionCall?.name) && (
               <div>
                 <div className="text-muted-foreground mb-1">Operation:</div>
-                <div className="text-foreground break-words">
-                  {operation || functionCall?.name}
-                </div>
+                <div className="text-foreground break-words">{operation || functionCall?.name}</div>
+              </div>
+            )}
+
+            {context && (
+              <div>
+                <div className="text-muted-foreground mb-1">Context:</div>
+                <div className="text-foreground break-words whitespace-pre-wrap">{context}</div>
               </div>
             )}
 
             {Object.keys(argumentDetails).length > 0 && (
               <div>
                 <Separator className="my-2" />
-                <div className="text-muted-foreground mb-1">Arguments:</div>
-                <pre className="text-foreground whitespace-pre-wrap break-all">
-                  {JSON.stringify(argumentDetails, null, 2)}
-                </pre>
+                <div className="flex items-center justify-between mb-1">
+                  <div className="text-muted-foreground">Parameters:</div>
+                  {!isModifyingParams && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-6 text-xs"
+                      onClick={handleModifyToggle}
+                    >
+                      <FileEdit className="h-3 w-3 mr-1" />
+                      Modify
+                    </Button>
+                  )}
+                </div>
+                {isModifyingParams ? (
+                  <div className="space-y-2">
+                    <Textarea
+                      value={editedParams}
+                      onChange={(e) => setEditedParams(e.target.value)}
+                      className="font-mono text-xs min-h-[120px]"
+                      spellCheck={false}
+                    />
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="h-6 text-xs"
+                      onClick={handleModifyToggle}
+                    >
+                      Cancel Modifications
+                    </Button>
+                  </div>
+                ) : (
+                  <pre className="text-foreground whitespace-pre-wrap break-all max-h-40 overflow-auto">
+                    {JSON.stringify(argumentDetails, null, 2)}
+                  </pre>
+                )}
               </div>
             )}
 

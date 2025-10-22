@@ -22,7 +22,7 @@ from agenticfleet.fleet.magentic_fleet import (
 )
 
 
-def test_fleet_builder_uses_workflow_defaults(monkeypatch):
+def test_fleet_builder_uses_workflow_defaults(monkeypatch: pytest.MonkeyPatch) -> None:
     """Ensure workflow-level limits populate the Magentic builder when fleet config omits them."""
     from agenticfleet.fleet import fleet_builder as fb_module
 
@@ -45,7 +45,7 @@ def test_fleet_builder_uses_workflow_defaults(monkeypatch):
 
 
 @pytest.fixture
-def mock_agents():
+def mock_agents() -> dict[str, Any]:
     """Create mock agents for testing."""
     researcher = MagicMock()
     researcher.name = "researcher"
@@ -70,7 +70,7 @@ def mock_agents():
 
 
 @pytest.fixture
-def mock_workflow_runner():
+def mock_workflow_runner() -> MagicMock:
     """Create a mock workflow runner."""
     runner = MagicMock()
     runner.run = AsyncMock()
@@ -80,12 +80,12 @@ def mock_workflow_runner():
 class TestCoderToolingConfiguration:
     """Validate coder tooling configuration logic."""
 
-    def _make_fleet_with_coder(self, coder):
+    def _make_fleet_with_coder(self, coder: Any) -> MagenticFleet:
         fleet = MagenticFleet.__new__(MagenticFleet)
         fleet.agents = {"coder": coder}
         return fleet
 
-    def test_apply_coder_tooling_prefers_tool_model(self, monkeypatch):
+    def test_apply_coder_tooling_prefers_tool_model(self, monkeypatch: pytest.MonkeyPatch) -> None:
         """Ensure the tool-specific model is used when available."""
         from agenticfleet.fleet import magentic_fleet as module
 
@@ -104,7 +104,6 @@ class TestCoderToolingConfiguration:
         coder = SimpleNamespace(chat_client=None, tools=None)
         fleet = self._make_fleet_with_coder(coder)
 
-        monkeypatch.setattr(module, "_AGENT_FRAMEWORK_AVAILABLE", True)
         monkeypatch.setattr(module, "OpenAIResponsesClient", DummyClient)
         monkeypatch.setattr(module, "HostedCodeInterpreterTool", DummyTool)
         monkeypatch.setattr(module, "get_responses_model_parameter", lambda _: "model")
@@ -123,7 +122,9 @@ class TestCoderToolingConfiguration:
         assert len(coder.tools) == 1
         assert isinstance(coder.tools[0], DummyTool)
 
-    def test_apply_coder_tooling_does_not_duplicate_interpreter(self, monkeypatch):
+    def test_apply_coder_tooling_does_not_duplicate_interpreter(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
         """Ensure interpreter is not attached multiple times."""
         from agenticfleet.fleet import magentic_fleet as module
 
@@ -139,7 +140,6 @@ class TestCoderToolingConfiguration:
         coder = SimpleNamespace(chat_client=None, tools=[existing_tool])
         fleet = self._make_fleet_with_coder(coder)
 
-        monkeypatch.setattr(module, "_AGENT_FRAMEWORK_AVAILABLE", True)
         monkeypatch.setattr(module, "OpenAIResponsesClient", DummyClient)
         monkeypatch.setattr(module, "HostedCodeInterpreterTool", DummyTool)
         monkeypatch.setattr(module, "get_responses_model_parameter", lambda _: "model")
@@ -164,13 +164,13 @@ class TestMagenticFleetInitialization:
     @patch("agenticfleet.fleet.fleet_builder.FleetBuilder.build")
     def test_default_agent_creation(
         self,
-        mock_build,
-        mock_create_analyst,
-        mock_create_coder,
-        mock_create_researcher,
-        mock_agents,
-        mock_workflow_runner,
-    ):
+        mock_build: Any,
+        mock_create_analyst: Any,
+        mock_create_coder: Any,
+        mock_create_researcher: Any,
+        mock_agents: dict[str, Any],
+        mock_workflow_runner: MagicMock,
+    ) -> None:
         """Test creating fleet with default agents."""
         # Setup mock agent factories
         mock_create_researcher.return_value = mock_agents["researcher"]
@@ -193,7 +193,9 @@ class TestMagenticFleetInitialization:
         assert "analyst" in fleet.agents
 
     @patch("agenticfleet.fleet.fleet_builder.FleetBuilder.build")
-    def test_custom_agent_initialization(self, mock_build, mock_agents, mock_workflow_runner):
+    def test_custom_agent_initialization(
+        self, mock_build: Any, mock_agents: dict[str, Any], mock_workflow_runner: MagicMock
+    ) -> None:
         """Test fleet creation with custom agents."""
         mock_build.return_value = mock_workflow_runner
 
@@ -205,7 +207,9 @@ class TestMagenticFleetInitialization:
         assert len(fleet.agents) == 3
 
     @patch("agenticfleet.fleet.fleet_builder.FleetBuilder.build")
-    def test_fleet_with_checkpoint_storage(self, mock_build, mock_agents, mock_workflow_runner):
+    def test_fleet_with_checkpoint_storage(
+        self, mock_build: Any, mock_agents: dict[str, Any], mock_workflow_runner: MagicMock
+    ) -> None:
         """Test fleet creation with checkpointing enabled."""
         mock_build.return_value = mock_workflow_runner
 
@@ -222,7 +226,9 @@ class TestMagenticFleetInitialization:
         assert fleet.checkpoint_storage == checkpoint_storage
 
     @patch("agenticfleet.fleet.fleet_builder.FleetBuilder.build")
-    def test_fleet_with_approval_handler(self, mock_build, mock_agents, mock_workflow_runner):
+    def test_fleet_with_approval_handler(
+        self, mock_build: Any, mock_agents: dict[str, Any], mock_workflow_runner: MagicMock
+    ) -> None:
         """Test fleet creation with HITL approval handler."""
         mock_build.return_value = mock_workflow_runner
 
@@ -244,7 +250,9 @@ class TestMagenticFleetExecution:
 
     @patch("agenticfleet.fleet.fleet_builder.FleetBuilder.build")
     @pytest.mark.asyncio
-    async def test_run_basic_task(self, mock_build, mock_agents, mock_workflow_runner):
+    async def test_run_basic_task(
+        self, mock_build: Any, mock_agents: dict[str, Any], mock_workflow_runner: MagicMock
+    ) -> None:
         """Test running a basic task through the fleet."""
         mock_build.return_value = mock_workflow_runner
 
@@ -263,7 +271,9 @@ class TestMagenticFleetExecution:
 
     @patch("agenticfleet.fleet.fleet_builder.FleetBuilder.build")
     @pytest.mark.asyncio
-    async def test_run_with_checkpoint_resume(self, mock_build, mock_agents, mock_workflow_runner):
+    async def test_run_with_checkpoint_resume(
+        self, mock_build: Any, mock_agents: dict[str, Any], mock_workflow_runner: MagicMock
+    ) -> None:
         """Test resuming from a checkpoint."""
         mock_build.return_value = mock_workflow_runner
 
@@ -290,7 +300,9 @@ class TestMagenticFleetExecution:
 
     @patch("agenticfleet.fleet.fleet_builder.FleetBuilder.build")
     @pytest.mark.asyncio
-    async def test_run_with_no_output(self, mock_build, mock_agents, mock_workflow_runner):
+    async def test_run_with_no_output(
+        self, mock_build: Any, mock_agents: dict[str, Any], mock_workflow_runner: MagicMock
+    ) -> None:
         """Test handling workflow with no output."""
         mock_build.return_value = mock_workflow_runner
 
@@ -310,8 +322,8 @@ class TestMagenticFleetExecution:
     @patch("agenticfleet.fleet.fleet_builder.FleetBuilder.build")
     @pytest.mark.asyncio
     async def test_run_with_output_none_content_value(
-        self, mock_build, mock_agents, mock_workflow_runner
-    ):
+        self, mock_build: Any, mock_agents: dict[str, Any], mock_workflow_runner: MagicMock
+    ) -> None:
         """Test handling workflow with output None but content has a value."""
         mock_build.return_value = mock_workflow_runner
 
@@ -330,8 +342,8 @@ class TestMagenticFleetExecution:
     @patch("agenticfleet.fleet.fleet_builder.FleetBuilder.build")
     @pytest.mark.asyncio
     async def test_run_with_output_value_content_none(
-        self, mock_build, mock_agents, mock_workflow_runner
-    ):
+        self, mock_build: Any, mock_agents: dict[str, Any], mock_workflow_runner: MagicMock
+    ) -> None:
         """Test handling workflow with output has value but content is None."""
         mock_build.return_value = mock_workflow_runner
 
@@ -349,7 +361,9 @@ class TestMagenticFleetExecution:
 
     @patch("agenticfleet.fleet.fleet_builder.FleetBuilder.build")
     @pytest.mark.asyncio
-    async def test_workflow_id_generation(self, mock_build, mock_agents, mock_workflow_runner):
+    async def test_workflow_id_generation(
+        self, mock_build: Any, mock_agents: dict[str, Any], mock_workflow_runner: MagicMock
+    ) -> None:
         """Test automatic workflow ID generation."""
         mock_build.return_value = mock_workflow_runner
 
@@ -370,7 +384,9 @@ class TestMagenticFleetExecution:
 
     @patch("agenticfleet.fleet.fleet_builder.FleetBuilder.build")
     @pytest.mark.asyncio
-    async def test_set_workflow_id(self, mock_build, mock_agents, mock_workflow_runner):
+    async def test_set_workflow_id(
+        self, mock_build: Any, mock_agents: dict[str, Any], mock_workflow_runner: MagicMock
+    ) -> None:
         """Test manually setting workflow ID."""
         mock_build.return_value = mock_workflow_runner
 
@@ -393,15 +409,15 @@ class TestMagenticFleetFactoryMethod:
     @patch("agenticfleet.fleet.fleet_builder.FleetBuilder.build")
     def test_create_default_fleet(
         self,
-        mock_build,
-        mock_create_checkpoint,
-        mock_set_handler,
-        mock_create_analyst,
-        mock_create_coder,
-        mock_create_researcher,
-        mock_agents,
-        mock_workflow_runner,
-    ):
+        mock_build: Any,
+        mock_create_checkpoint: Any,
+        mock_set_handler: Any,
+        mock_create_analyst: Any,
+        mock_create_coder: Any,
+        mock_create_researcher: Any,
+        mock_agents: dict[str, Any],
+        mock_workflow_runner: MagicMock,
+    ) -> None:
         """Test creating fleet with factory method."""
         # Setup mocks
         mock_create_researcher.return_value = mock_agents["researcher"]
@@ -436,7 +452,9 @@ class TestMagenticFleetBuilder:
     """Test FleetBuilder configuration."""
 
     @patch("agenticfleet.fleet.fleet_builder.MagenticBuilder")
-    def test_builder_fluent_api(self, mock_magentic_builder_class, mock_agents):
+    def test_builder_fluent_api(
+        self, mock_magentic_builder_class: Any, mock_agents: dict[str, Any]
+    ) -> None:
         """Test FleetBuilder fluent API."""
         from agenticfleet.fleet.fleet_builder import FleetBuilder
 
@@ -463,7 +481,7 @@ class TestMagenticFleetCallbacks:
     """Test Magentic Fleet event callbacks."""
 
     @pytest.mark.asyncio
-    async def test_streaming_agent_response_callback(self):
+    async def test_streaming_agent_response_callback(self) -> None:
         """Test streaming agent response callback."""
         from agenticfleet.fleet.callbacks import ConsoleCallbacks
 
@@ -480,7 +498,7 @@ class TestMagenticFleetCallbacks:
         assert True
 
     @pytest.mark.asyncio
-    async def test_plan_creation_callback(self):
+    async def test_plan_creation_callback(self) -> None:
         """Test plan creation callback."""
         from agenticfleet.fleet.callbacks import ConsoleCallbacks
 
@@ -494,7 +512,7 @@ class TestMagenticFleetCallbacks:
         assert True
 
     @pytest.mark.asyncio
-    async def test_progress_ledger_callback(self):
+    async def test_progress_ledger_callback(self) -> None:
         """Test progress ledger callback."""
         from agenticfleet.fleet.callbacks import ConsoleCallbacks
 
