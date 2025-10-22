@@ -55,7 +55,7 @@ MODEL_HARDCODE_PATTERN = re.compile(
     r"OpenAIResponsesClient\s*\(\s*model_id\s*=\s*['\"]gpt-[^'\"]+['\"]", re.IGNORECASE
 )
 
-DIRECT_PYTHON_CMD_PATTERN = re.compile(r"(?<!uv run )(python -m |pytest)\b")
+DIRECT_PYTHON_CMD_PATTERN = re.compile(r"(?<!\buv\s+run\s+)(python(?:\s+-m)?|pytest)\b")
 
 # Matches function definitions (single or multi-line) lacking a return type annotation
 FUNCTION_DEF_NO_RETURN = re.compile(
