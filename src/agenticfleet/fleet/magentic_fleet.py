@@ -294,13 +294,14 @@ class MagenticFleet:
                 self._latest_final_text = answer
             return answer
 
-        pending_request: RequestInfoEvent | None = None
-        pending_responses: dict[str, MagenticPlanReviewReply] | None = None
+        pending_request: Any | None = None
+        pending_responses: dict[str, Any] | None = None
         final_output_text: str | None = None
         completed = False
         resume_token_used = resume_from_checkpoint is not None
 
         while True:
+            stream: Any | None = None
             if (
                 pending_responses
                 and callable(send_responses_method)
@@ -319,27 +320,40 @@ class MagenticFleet:
             pending_responses = None
             had_events = False
 
-            async for event in stream:
-                had_events = True
-                if isinstance(event, MagenticAgentDeltaEvent):
-                    continue
-                if (
-                    isinstance(event, RequestInfoEvent)
-                    and event.request_type is MagenticPlanReviewRequest
-                ):
-                    pending_request = event
-                elif isinstance(event, WorkflowOutputEvent):
-                    if event.data is not None:
-                        final_output_text = str(event.data)
-                    completed = True
-                elif isinstance(event, MagenticFinalResultEvent) and event.message is not None:
-                    self._latest_final_text = getattr(event.message, "text", None) or str(
-                        event.message
-                    )
-                elif isinstance(event, MagenticAgentMessageEvent) and event.message is not None:
-                    self._latest_final_text = getattr(event.message, "text", None) or str(
-                        event.message
-                    )
+            if stream is not None:
+                async for event in stream:
+                    had_events = True
+                    if MagenticAgentDeltaEvent is not None and isinstance(
+                        event, MagenticAgentDeltaEvent
+                    ):
+                        continue
+                    if (
+                        RequestInfoEvent is not None
+                        and MagenticPlanReviewRequest is not None
+                        and isinstance(event, RequestInfoEvent)
+                        and event.request_type is MagenticPlanReviewRequest
+                    ):
+                        pending_request = event
+                    elif WorkflowOutputEvent is not None and isinstance(event, WorkflowOutputEvent):
+                        if event.data is not None:
+                            final_output_text = str(event.data)
+                        completed = True
+                    elif (
+                        MagenticFinalResultEvent is not None
+                        and isinstance(event, MagenticFinalResultEvent)
+                        and event.message is not None
+                    ):
+                        self._latest_final_text = getattr(event.message, "text", None) or str(
+                            event.message
+                        )
+                    elif (
+                        MagenticAgentMessageEvent is not None
+                        and isinstance(event, MagenticAgentMessageEvent)
+                        and event.message is not None
+                    ):
+                        self._latest_final_text = getattr(event.message, "text", None) or str(
+                            event.message
+                        )
 
             if pending_request is not None:
                 reply = await self._handle_plan_review_request(pending_request)
@@ -394,9 +408,14 @@ class MagenticFleet:
 
     async def _handle_plan_review_request(
         self,
-        event: RequestInfoEvent,
-    ) -> MagenticPlanReviewReply:
-        request = cast(MagenticPlanReviewRequest, event.data)
+        event: Any,
+    ) -> Any:
+        if MagenticPlanReviewReply is None or MagenticPlanReviewDecision is None:
+            raise WorkflowError(
+                "Plan review handling requested but agent framework is unavailable."
+            )
+
+        request = cast(Any, event.data)
         await self.console_callbacks.notice_callback("Plan review requested.")
         await asyncio.sleep(0)
 

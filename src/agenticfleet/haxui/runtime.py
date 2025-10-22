@@ -6,9 +6,11 @@ import logging
 import os
 import textwrap
 import time
-from collections.abc import AsyncIterator
+from collections.abc import AsyncIterator, Awaitable, Callable, Mapping
+from contextlib import asynccontextmanager
 
 from agenticfleet.config import settings
+from agenticfleet.core.approved_tools import set_approval_handler
 
 from .web_approval import WebApprovalHandler
 
@@ -30,16 +32,28 @@ except Exception:  # pragma: no cover - dependency missing in some environments
 class FleetRuntime:
     """Wrapper around MagenticFleet with graceful fallbacks."""
 
-    def __init__(self) -> None:
-        self._lock = asyncio.Lock()
+    def __init__(self, approval_handler: WebApprovalHandler | None = None) -> None:
+        haxui_config = settings.workflow_config.get("haxui", {}) or {}
+        concurrency_config = haxui_config.get("concurrency", {}) or {}
+        max_parallel = int(concurrency_config.get("max_parallel_requests", 2) or 1)
+        if max_parallel < 1:
+            max_parallel = 1
+
         self._fleet: MagenticFleet | None = None  # type: ignore[valid-type]
         self._workflow_as_agent = None  # type: ignore[var-annotated]
         self._initialisation_error: str | None = None
-        self.approval_handler = WebApprovalHandler()
+        self.approval_handler = approval_handler or WebApprovalHandler()
+        self._max_concurrency = max_parallel
+        self._semaphore = asyncio.Semaphore(max_parallel)
+        self._queue_lock = asyncio.Lock()
+        self._queue_waiters = 0
+        self._inflight = 0
 
     async def ensure_initialised(self) -> None:
         if self._fleet or self._initialisation_error:
             return
+
+        await self.approval_handler.initialise()
 
         if create_default_fleet is None:
             self._initialisation_error = (  # type: ignore[unreachable]
@@ -50,8 +64,14 @@ class FleetRuntime:
             try:
                 # Create fleet with web approval handler instead of CLI
                 self._fleet = create_default_fleet(console_ui=None)  # type: ignore[call-arg]
-                if hasattr(self._fleet, "approval_handler"):
+                if self._fleet is not None and hasattr(self._fleet, "approval_handler"):
                     self._fleet.approval_handler = self.approval_handler
+                    approval_policy = getattr(self._fleet, "approval_policy", {}) or {}
+                    set_approval_handler(
+                        self.approval_handler,
+                        require_operations=approval_policy.get("require_approval_for", []),
+                        trusted_operations=approval_policy.get("trusted_operations", []),
+                    )
                 # Create workflow_as_agent instance
                 if create_workflow_agent is not None:
                     self._workflow_as_agent = create_workflow_agent(
@@ -68,6 +88,9 @@ class FleetRuntime:
         user_text: str | None,
         input_payload: dict | None = None,
         timeout_seconds: int = 120,
+        status_callback: (
+            Callable[[str, Mapping[str, int | str]], Awaitable[None] | None] | None
+        ) = None,
     ) -> tuple[str, dict]:
         """Generate a response string and usage statistics for the given entity."""
 
@@ -100,24 +123,24 @@ class FleetRuntime:
         logger.debug(f"Prompt: {safe_prompt}...")
         start_time = time.time()
 
-        # Development mode: return mock response immediately
-        if DEVELOPMENT_MODE:
-            logger.info("DEVELOPMENT_MODE enabled - returning mock response")
-            await asyncio.sleep(2)  # Simulate some processing
-            mock_response = (
-                "[Mock Response] Received your request: "
-                f"'{prompt[:50]}...'\n\n"
-                "This is a development mode response. The actual MagenticFleet workflow "
-                "is disabled to allow frontend testing. Set DEVELOPMENT_MODE=False in "
-                "runtime.py to enable real workflow execution."
-            )
-            usage = self._estimate_usage(prompt + mock_response)
-            logger.info("Mock response generated successfully")
-            return mock_response, usage
-
         result: str
         try:
-            async with self._lock:
+            async with self._worker_slot(status_callback):
+                # Development mode: return mock response immediately
+                if DEVELOPMENT_MODE:
+                    logger.info("DEVELOPMENT_MODE enabled - returning mock response")
+                    await asyncio.sleep(2)  # Simulate some processing
+                    mock_response = (
+                        "[Mock Response] Received your request: "
+                        f"'{prompt[:50]}...'\n\n"
+                        "This is a development mode response. The actual MagenticFleet workflow "
+                        "is disabled to allow frontend testing. Set DEVELOPMENT_MODE=False in "
+                        "runtime.py to enable real workflow execution."
+                    )
+                    usage = self._estimate_usage(prompt + mock_response)
+                    logger.info("Mock response generated successfully")
+                    return mock_response, usage
+
                 # Route to appropriate workflow based on entity_id
                 if entity_id == "workflow_as_agent" and self._workflow_as_agent is not None:
                     # Use workflow_as_agent pattern
@@ -195,6 +218,64 @@ class FleetRuntime:
 
         # Attach usage metadata to iterator by yielding sentinel JSON
         yield json.dumps({"__usage__": usage})
+
+    async def queue_metrics(self) -> dict[str, int]:
+        """Return current queue metrics."""
+        async with self._queue_lock:
+            return self._queue_snapshot()
+
+    @asynccontextmanager
+    async def _worker_slot(
+        self,
+        status_callback: Callable[[str, Mapping[str, int | str]], Awaitable[None] | None] | None,
+    ) -> AsyncIterator[None]:
+        metrics = await self._increment_waiters()
+        await self._notify_status(status_callback, "queued", metrics)
+        await self._semaphore.acquire()
+        metrics = await self._mark_running()
+        await self._notify_status(status_callback, "started", metrics)
+        try:
+            yield
+        finally:
+            self._semaphore.release()
+            metrics = await self._mark_finished()
+            await self._notify_status(status_callback, "finished", metrics)
+
+    async def _increment_waiters(self) -> dict[str, int]:
+        async with self._queue_lock:
+            self._queue_waiters += 1
+            return self._queue_snapshot()
+
+    async def _mark_running(self) -> dict[str, int]:
+        async with self._queue_lock:
+            self._queue_waiters = max(0, self._queue_waiters - 1)
+            self._inflight += 1
+            return self._queue_snapshot()
+
+    async def _mark_finished(self) -> dict[str, int]:
+        async with self._queue_lock:
+            self._inflight = max(0, self._inflight - 1)
+            return self._queue_snapshot()
+
+    async def _notify_status(
+        self,
+        callback: Callable[[str, Mapping[str, int | str]], Awaitable[None] | None] | None,
+        phase: str,
+        metrics: Mapping[str, int],
+    ) -> None:
+        if callback is None:
+            return
+        payload: dict[str, int | str] = {**metrics, "phase": phase}
+        result = callback(phase, payload)
+        if asyncio.iscoroutine(result):
+            await result
+
+    def _queue_snapshot(self) -> dict[str, int]:
+        return {
+            "max_parallel": self._max_concurrency,
+            "inflight": self._inflight,
+            "queued": self._queue_waiters,
+        }
 
 
 def build_entity_catalog() -> tuple[list[dict], list[dict]]:

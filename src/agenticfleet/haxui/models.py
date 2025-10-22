@@ -77,3 +77,30 @@ class HealthResponse(BaseModel):
     status: Literal["healthy"] = "healthy"
     version: str
     agents_dir: str | None = None
+
+
+class ApprovalRequestInfo(BaseModel):
+    """Details about a pending approval request."""
+
+    request_id: str
+    operation_type: str
+    agent_name: str
+    operation: str
+    details: dict[str, Any] = Field(default_factory=dict)
+    code: str | None = None
+    status: str = "pending"
+    timestamp: str
+
+
+class ApprovalListResponse(BaseModel):
+    """List of pending approval requests."""
+
+    data: list[ApprovalRequestInfo]
+
+
+class ApprovalDecisionRequest(BaseModel):
+    """Payload submitted to approve or reject a request."""
+
+    decision: Literal["approved", "rejected", "modified"]
+    reason: str | None = None
+    modified_code: str | None = None

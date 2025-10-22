@@ -2,7 +2,7 @@
 
 > **Agent instructions for working with the `agenticfleet` Python package**
 
-This file provides guidance for AI coding agents working specifically within the `src/agenticfleet/` Python package. For general project instructions, see the [root AGENTS.md](../../AGENTS.md).
+This file provides guidance for AI coding agents working specifically within the `src/agenticfleet/` Python package. For general project instructions, see the [root AGENTS.md](../../docs/project/AGENTS.md).
 
 ---
 
@@ -632,7 +632,7 @@ api_key = settings.openai_api_key  # From .env
 
 ## References
 
-- **Root AGENTS.md**: `../../AGENTS.md` (general project instructions)
+- **Root AGENTS.md**: `../../docs/project/AGENTS.md` (general project instructions)
 - **Package README**: `../../README.md` (user-facing documentation)
 - **Architecture Docs**: `../../docs/architecture/`
 - **API Docs**: `../../docs/api/`

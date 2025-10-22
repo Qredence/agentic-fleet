@@ -7,6 +7,7 @@ allowing the frontend to display approval prompts and send responses.
 from __future__ import annotations
 
 import asyncio
+from pathlib import Path
 from typing import Any
 from uuid import uuid4
 
@@ -16,6 +17,8 @@ from agenticfleet.core.approval import (
     ApprovalRequest,
     ApprovalResponse,
 )
+
+from .storage import SQLiteApprovalStore
 
 
 class PendingApprovalRequest:
@@ -46,7 +49,9 @@ class WebApprovalHandler(ApprovalHandler):
     client responses.
     """
 
-    def __init__(self, timeout_seconds: float = 300.0) -> None:
+    def __init__(
+        self, timeout_seconds: float = 300.0, store_path: Path | str | None = None
+    ) -> None:
         """
         Initialize web approval handler.
 
@@ -56,6 +61,15 @@ class WebApprovalHandler(ApprovalHandler):
         self.timeout_seconds = timeout_seconds
         self._pending: dict[str, PendingApprovalRequest] = {}
         self._lock = asyncio.Lock()
+        self._store = SQLiteApprovalStore(store_path)
+        self._store_initialised = asyncio.Event()
+
+    async def initialise(self) -> None:
+        """Initialise the backing store."""
+        if self._store_initialised.is_set():
+            return
+        await self._store.initialise()
+        self._store_initialised.set()
 
     async def request_approval(self, request: ApprovalRequest) -> ApprovalResponse:
         """
@@ -70,9 +84,23 @@ class WebApprovalHandler(ApprovalHandler):
         Raises:
             asyncio.TimeoutError: If no response received within timeout
         """
+        await self.initialise()
         async with self._lock:
             pending = PendingApprovalRequest(request)
             self._pending[request.request_id] = pending
+
+        await self._store.add_request(
+            {
+                "request_id": request.request_id,
+                "operation_type": request.operation_type,
+                "agent_name": request.agent_name,
+                "operation": request.operation,
+                "details": request.details,
+                "code": request.code,
+                "timestamp": request.timestamp,
+                "status": "pending",
+            }
+        )
 
         try:
             # Wait for response from web client
@@ -89,12 +117,14 @@ class WebApprovalHandler(ApprovalHandler):
         finally:
             async with self._lock:
                 self._pending.pop(request.request_id, None)
+            await self._store.remove(request.request_id)
 
     async def set_approval_response(
         self,
         request_id: str,
         decision: ApprovalDecision,
         modified_code: str | None = None,
+        reason: str | None = None,
     ) -> bool:
         """
         Provide a response to a pending approval request.
@@ -111,25 +141,34 @@ class WebApprovalHandler(ApprovalHandler):
             pending = self._pending.get(request_id)
 
         if pending is None:
-            return False
+            store_updated = await self._store.mark_completed(
+                request_id, decision.value, reason=reason
+            )
+            if store_updated:
+                await self._store.remove(request_id)
+            return store_updated
 
         response = ApprovalResponse(
             request_id=request_id,
             decision=decision,
             modified_code=modified_code,
-            reason=None,
+            reason=reason,
         )
         pending.set_response(response)
+        store_updated = await self._store.mark_completed(request_id, decision.value, reason=reason)
+        if store_updated:
+            await self._store.remove(request_id)
         return True
 
-    def get_pending_requests(self) -> list[dict[str, Any]]:
+    async def get_pending_requests(self) -> list[dict[str, Any]]:
         """
         Get list of pending approval requests.
 
         Returns:
             List of pending requests as dictionaries
         """
-        return [
+        await self.initialise()
+        pending = [
             {
                 "request_id": req.request.request_id,
                 "operation_type": req.request.operation_type,
@@ -138,13 +177,22 @@ class WebApprovalHandler(ApprovalHandler):
                 "details": req.request.details,
                 "code": req.request.code,
                 "timestamp": req.request.timestamp,
+                "status": "pending",
+                "reason": None,
             }
             for req in self._pending.values()
         ]
+        stored = await self._store.list_pending()
+        known_ids = {item["request_id"] for item in pending}
+        for record in stored:
+            if record["request_id"] not in known_ids:
+                pending.append(record)
+        return pending
 
-    def has_pending_requests(self) -> bool:
+    async def has_pending_requests(self) -> bool:
         """Check if there are any pending approval requests."""
-        return len(self._pending) > 0
+        pending = await self.get_pending_requests()
+        return len(pending) > 0
 
 
 def create_approval_request(
