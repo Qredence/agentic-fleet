@@ -30,7 +30,7 @@ export const ChatInput = ({ onSendMessage, disabled }: ChatInputProps) => {
 
   return (
     <form onSubmit={handleSubmit} className="p-4">
-      <div className="w-full bg-card rounded-3xl shadow-sm border border-border overflow-hidden">
+      <div className="w-full rounded-3xl shadow-sm border border-border overflow-hidden">
         <div className="flex flex-col w-full p-3 gap-2">
           {/* Input field */}
           <input
@@ -70,7 +70,7 @@ export const ChatInput = ({ onSendMessage, disabled }: ChatInputProps) => {
               type="submit"
               disabled={!message.trim() || disabled}
               aria-label="Send message"
-              className={`flex items-center justify-center px-4 py-1.5 rounded-full text-xs font-semibold transition-smooth ${
+              className={`flex items-center justify-center px-4 rounded-full text-xs font-semibold transition-smooth h-[30px] ${
                 !message.trim() || disabled
                   ? "bg-muted text-muted-foreground cursor-not-allowed"
                   : "bg-primary text-primary-foreground hover:bg-primary/90"

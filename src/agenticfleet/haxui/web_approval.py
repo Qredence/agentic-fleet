@@ -18,6 +18,7 @@ from agenticfleet.core.approval import (
     ApprovalResponse,
 )
 
+from .sse_events import RiskLevel
 from .storage import SQLiteApprovalStore
 
 
@@ -195,29 +196,95 @@ class WebApprovalHandler(ApprovalHandler):
         return len(pending) > 0
 
 
+def assess_risk_level(operation_type: str, details: dict[str, Any] | None = None) -> RiskLevel:
+    """
+    Assess risk level based on operation type and context.
+
+    Args:
+        operation_type: Type of operation being requested
+        details: Additional context for risk assessment
+
+    Returns:
+        RiskLevel: Assessed risk (low, medium, high)
+    """
+    # High-risk operations
+    high_risk_operations = {
+        "file_write",
+        "file_delete",
+        "system_command",
+        "network_request",
+        "api_key_access",
+    }
+
+    # Medium-risk operations
+    medium_risk_operations = {
+        "code_execution",
+        "database_query",
+        "plan_review",
+        "file_read",
+    }
+
+    # Check operation type
+    if operation_type in high_risk_operations:
+        return RiskLevel.HIGH
+
+    if operation_type in medium_risk_operations:
+        # Check details for elevated risk
+        if details:
+            # Elevate to high if accessing sensitive paths or data
+            sensitive_keywords = {"password", "secret", "token", "/etc/", "/root/"}
+            # Check both keys and values for sensitive keywords (case-insensitive)
+            for k, v in details.items():
+                k_lower = str(k).lower()
+                v_lower = str(v).lower() if v is not None else ""
+                # Only match 'key' if it's not the dictionary key name
+                for keyword in sensitive_keywords:
+                    if keyword in k_lower or keyword in v_lower:
+                        return RiskLevel.HIGH
+                # Special handling for 'key' keyword: match only in values, not keys
+                if "key" in v_lower and k_lower != "key":
+                    return RiskLevel.HIGH
+        return RiskLevel.MEDIUM
+
+    # Default to low risk
+    return RiskLevel.LOW
+
+
 def create_approval_request(
     agent_name: str,
     operation_type: str,
     operation: str,
     details: dict[str, Any] | None = None,
+    risk_level: RiskLevel | None = None,
 ) -> ApprovalRequest:
     """
-    Helper to create approval requests with consistent formatting.
+    Helper to create approval requests with consistent formatting and risk assessment.
 
     Args:
         agent_name: Name of the agent making the request
         operation_type: Type of operation (e.g., "code_execution", "plan_review")
         operation: Human-readable operation description
         details: Additional context details
+        risk_level: Override automatic risk assessment (optional)
 
     Returns:
-        ApprovalRequest ready to be sent to handler
+        ApprovalRequest ready to be sent to handler with risk level
     """
+    # Assess risk if not explicitly provided
+    if risk_level is None:
+        risk_level = assess_risk_level(operation_type, details)
+
+    import copy
+
+    # Add risk_level to details for serialization
+    request_details = copy.deepcopy(details) if details else {}
+    request_details["risk_level"] = risk_level.value
+
     return ApprovalRequest(
         request_id=uuid4().hex,
         agent_name=agent_name,
         operation_type=operation_type,
         operation=operation,
-        details=details or {},
+        details=request_details,
         code=None,
     )

@@ -1,5 +1,6 @@
 """Config settings management for AgenticFleet."""
 
+import importlib.util
 import logging
 import os
 from collections.abc import Callable
@@ -7,26 +8,8 @@ from pathlib import Path
 from typing import Any, cast
 
 import yaml
+from agent_framework import CheckpointStorage, InMemoryCheckpointStorage
 from dotenv import load_dotenv
-
-try:
-    from agent_framework import CheckpointStorage, InMemoryCheckpointStorage
-
-    _AGENT_FRAMEWORK_AVAILABLE = True
-except ModuleNotFoundError:  # pragma: no cover - dependency optional in tests
-    from typing import Any as CheckpointStorage  # type: ignore[misc, assignment]
-
-    InMemoryCheckpointStorage = None  # type: ignore[misc, assignment]
-    _AGENT_FRAMEWORK_AVAILABLE = False
-
-try:  # pragma: no cover - dependency optional in tests
-    from agent_framework_redis import RedisChatMessageStore, RedisProvider
-
-    _REDIS_AVAILABLE = True
-except ModuleNotFoundError:  # pragma: no cover - dependency optional in tests
-    RedisChatMessageStore = None  # type: ignore[misc, assignment]
-    RedisProvider = None  # type: ignore[misc, assignment]
-    _REDIS_AVAILABLE = False
 
 from agenticfleet.core.checkpoints import AgenticFleetFileCheckpointStorage
 from agenticfleet.core.exceptions import AgentConfigurationError
@@ -158,13 +141,6 @@ class Settings:
 
         storage_type = checkpoint_config.get("storage_type", "file")
 
-        if not _AGENT_FRAMEWORK_AVAILABLE:
-            logging.warning(
-                "agent_framework is not installed; checkpointing is disabled even though it "
-                "was requested in the configuration."
-            )
-            return None
-
         if storage_type == "memory":
             storage_cls = cast(Any, InMemoryCheckpointStorage)
             if storage_cls is None:
@@ -198,8 +174,10 @@ class Settings:
     ) -> Callable[[], Any] | None:
         """Return a factory for Redis-backed chat message stores, if available."""
 
-        if not (_REDIS_AVAILABLE and self.redis_url and RedisChatMessageStore is not None):
+        if not (importlib.util.find_spec("agent_framework_redis") and self.redis_url):
             return None
+
+        from agent_framework_redis import RedisChatMessageStore
 
         config_source = self.workflow_config.get("redis", {}).get("chat_store", {})
         allowed_keys = {"key_prefix", "max_messages"}
@@ -214,7 +192,7 @@ class Settings:
             factory_kwargs["max_messages"] = max_messages
 
         def factory() -> Any:
-            return RedisChatMessageStore(redis_url=self.redis_url, **factory_kwargs)  # type: ignore[misc]
+            return RedisChatMessageStore(redis_url=self.redis_url, **factory_kwargs)
 
         return factory
 
@@ -227,8 +205,10 @@ class Settings:
     ) -> Any | None:
         """Create a Redis context provider when configuration and dependency are available."""
 
-        if not (_REDIS_AVAILABLE and self.redis_url and RedisProvider is not None):
+        if not (importlib.util.find_spec("agent_framework_redis") and self.redis_url):
             return None
+
+        from agent_framework_redis import RedisProvider
 
         config_source = self.workflow_config.get("redis", {}).get("provider", {})
         allowed_keys = {
@@ -258,7 +238,7 @@ class Settings:
         if thread_id is not None:
             provider_kwargs["thread_id"] = thread_id
 
-        return RedisProvider(redis_url=self.redis_url, **provider_kwargs)  # type: ignore[misc]
+        return RedisProvider(redis_url=self.redis_url, **provider_kwargs)
 
     def create_context_providers(
         self,

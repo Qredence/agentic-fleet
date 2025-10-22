@@ -14,7 +14,9 @@ from agenticfleet.core.logging import get_logger
 logger = get_logger(__name__)
 
 try:
-    from agent_framework import FileCheckpointStorage as BaseFileCheckpointStorage
+    from agent_framework import (
+        FileCheckpointStorage as BaseFileCheckpointStorage,  # type: ignore[assignment]
+    )
 except ImportError:
 
     class BaseFileCheckpointStorage:  # type: ignore[no-redef]
@@ -26,7 +28,7 @@ except ImportError:
 
 
 # Backwards compatibility: expose FileCheckpointStorage symbol from this module
-FileCheckpointStorage = BaseFileCheckpointStorage
+FileCheckpointStorage: type[BaseFileCheckpointStorage] = BaseFileCheckpointStorage  # type: ignore[assignment]
 
 
 def normalize_checkpoint_metadata(

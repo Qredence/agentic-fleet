@@ -1,4 +1,4 @@
-.PHONY: help install sync clean test test-config test-e2e lint format type-check check run demo-hitl pre-commit-install dev haxui-server frontend-install frontend-dev
+.PHONY: help install sync clean test test-config test-e2e lint format type-check check run demo-hitl pre-commit-install dev haxui-server frontend-install frontend-dev validate-agents
 
 # Default target
 help:
@@ -29,11 +29,13 @@ help:
 	@echo "  make pre-commit-install  Install pre-commit hooks"
 	@echo "  make clean             Remove cache and build artifacts"
 	@echo "  make demo-hitl         Run the HITL walkthrough example"
+	@echo "  make validate-agents   Validate AGENTS.md invariants"
 	@echo ""
 
 # Setup commands
 install:
 	uv pip install agentic-fleet
+	uv sync --all-extras
 	@echo "✓ Python dependencies installed"
 	@echo ""
 	@echo "Next: Run 'make frontend-install' to install frontend dependencies"
@@ -99,6 +101,10 @@ type-check:
 # Run all checks
 check: lint type-check
 	@echo "✓ All quality checks passed!"
+
+# Validate AGENTS.md invariants
+validate-agents:
+	uv run python tools/scripts/validate_agents_docs.py --format text
 
 # Pre-commit
 pre-commit-install:

@@ -233,7 +233,7 @@ export function useFastAPIChat({
       const timeoutId = setTimeout(() => controller.abort(), 5000); // 5s timeout
 
       const response = await fetch(buildApiUrl(API_ENDPOINTS.HEALTH), {
-        method: "HEAD",
+        method: "GET",
         signal: controller.signal,
       });
 
@@ -269,7 +269,7 @@ export function useFastAPIChat({
     (event: SSEEvent) => {
       switch (event.type) {
         case "response.output_text.delta": {
-          if (!messageState.currentMessageId) {
+          if (!messageState.isStreaming()) {
             messageState.startStreamingMessage(event.item_id, event.delta, event.actor);
           } else {
             messageState.appendDelta(event.delta);
