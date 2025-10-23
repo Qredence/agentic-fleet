@@ -351,8 +351,8 @@ def create_workflow_agent(
     # Initialize chat clients and executors.
     worker_client = OpenAIChatClient(model_id=worker_model)
     reviewer_client = OpenAIChatClient(model_id=reviewer_model)
-    reviewer = Reviewer(id=reviewer_id, chat_client=reviewer_client)
-    worker = Worker(id=worker_id, chat_client=worker_client)
+    reviewer = Reviewer(executor_id=reviewer_id, chat_client=reviewer_client)
+    worker = Worker(executor_id=worker_id, chat_client=worker_client)
 
     # Build workflow with Worker ↔ Reviewer cycle.
     agent = (

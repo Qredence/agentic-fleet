@@ -89,7 +89,7 @@ async def _run_async(args: argparse.Namespace) -> int:
     output: str | None = None
     if result is not None:
         if hasattr(result, "output"):
-            value = result.output
+            value = getattr(result, "output", None)
             output = value if isinstance(value, str) else str(value)
         else:
             output = str(result)

@@ -8,7 +8,10 @@ import textwrap
 import time
 from collections.abc import AsyncIterator, Awaitable, Callable, Mapping
 from contextlib import asynccontextmanager
-from typing import Any
+from typing import TYPE_CHECKING, Any
+
+if TYPE_CHECKING:
+    pass
 
 from agenticfleet.config import settings
 from agenticfleet.core.approved_tools import set_approval_handler
@@ -22,11 +25,11 @@ DEVELOPMENT_MODE = os.getenv("DEVELOPMENT_MODE", "false").lower() == "true"
 
 try:
     from agenticfleet.fleet import create_default_fleet
-    from agenticfleet.fleet.magentic_fleet import MagenticFleet
+    from agenticfleet.fleet.magentic_fleet import MagenticFleet as _MagenticFleet
     from agenticfleet.workflows.workflow_as_agent import create_workflow_agent
 except Exception:  # pragma: no cover - dependency missing in some environments
     create_default_fleet = None  # type: ignore[assignment]
-    MagenticFleet = None  # type: ignore[assignment,misc]
+    _MagenticFleet = None  # type: ignore[assignment,misc]
     create_workflow_agent = None  # type: ignore[assignment]
 
 
@@ -40,7 +43,7 @@ class FleetRuntime:
         if max_parallel < 1:
             max_parallel = 1
 
-        self._fleet: MagenticFleet | None = None
+        self._fleet: Any | None = None
         self._workflow_as_agent = None
         self._initialisation_error: str | None = None
         self.approval_handler = approval_handler or WebApprovalHandler()

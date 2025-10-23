@@ -270,11 +270,10 @@ class MagenticFleet:
                         if event.data is not None:
                             final_output_text = str(event.data)
                         completed = True
-                    elif isinstance(event, MagenticFinalResultEvent) and event.message is not None:
-                        self._latest_final_text = getattr(event.message, "text", None) or str(
-                            event.message
-                        )
-                    elif isinstance(event, MagenticAgentMessageEvent) and event.message is not None:
+                    elif (
+                        isinstance(event, MagenticFinalResultEvent | MagenticAgentMessageEvent)
+                        and event.message is not None
+                    ):
                         self._latest_final_text = getattr(event.message, "text", None) or str(
                             event.message
                         )
@@ -308,18 +307,18 @@ class MagenticFleet:
             return NO_RESPONSE_GENERATED
 
         if hasattr(result, "output"):
-            output = result.output
+            output = getattr(result, "output", None)
             if isinstance(output, str):
                 return output
-            if hasattr(output, "content"):
-                content_value = output.content
+            if output is not None and hasattr(output, "content"):
+                content_value = getattr(output, "content", None)
                 if content_value is not None:
                     return str(content_value)
             if output is not None:
                 return str(output)
 
         if hasattr(result, "content"):
-            content = result.content
+            content = getattr(result, "content", None)
             if content is not None:
                 return str(content)
 

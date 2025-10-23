@@ -552,7 +552,7 @@ async def build_sse_stream(
 
                     # Emit structured approval request with risk level
                     sse_data = SSEEventEmitter.emit_approval_request(
-                        request_id=req_id,
+                        id=req_id,
                         operation=operation_type,
                         params=details,
                         context=context,
