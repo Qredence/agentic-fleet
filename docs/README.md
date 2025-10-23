@@ -113,13 +113,15 @@ docs/
 
 ```bash
 # Development
-make dev              # Full stack development
-make test-config       # Validate configuration
+uv run agentic-fleet  # Full stack (frontend + backend)
+uv run fleet          # CLI/REPL only
+make dev              # Same as agentic-fleet
+make test-config      # Validate configuration
 make test             # Run test suite
 
 # Individual Components
 make haxui-server     # Backend only
-make frontend-dev      # Frontend only
+make frontend-dev     # Frontend only
 
 # Quality Assurance
 make check            # All quality checks
@@ -165,4 +167,4 @@ For the latest documentation updates, check the [Git history](https://github.com
 
 ---
 
-*This documentation covers everything you need to successfully develop with, deploy, and troubleshoot AgenticFleet. Whether you're a user wanting to get started, a developer extending the system, or a system administrator managing production deployments, you'll find comprehensive guides and references here.*
+_This documentation covers everything you need to successfully develop with, deploy, and troubleshoot AgenticFleet. Whether you're a user wanting to get started, a developer extending the system, or a system administrator managing production deployments, you'll find comprehensive guides and references here._

@@ -139,7 +139,7 @@ class MagenticFleet:
             return
 
         try:
-            setattr(coder, "chat_client", chat_client)
+            coder.chat_client = chat_client  # type: ignore[attr-defined]
         except AttributeError:  # pragma: no cover - defensive guard
             logger.debug("Coder agent chat_client attribute is read-only; skipping update.")
         else:
@@ -167,13 +167,13 @@ class MagenticFleet:
             return
 
         if current_tools is None:
-            setattr(coder, "tools", [interpreter])
+            coder.tools = [interpreter]  # type: ignore[attr-defined]
         elif isinstance(current_tools, list):
             current_tools.append(interpreter)
         elif isinstance(current_tools, tuple):
-            setattr(coder, "tools", current_tools + (interpreter,))
+            coder.tools = (*current_tools, interpreter)  # type: ignore[attr-defined]
         else:
-            setattr(coder, "tools", [current_tools, interpreter])
+            coder.tools = [current_tools, interpreter]  # type: ignore[attr-defined]
 
     def _build_magentic_workflow(self) -> Any:
         """Construct the Magentic workflow with repository conventions."""
@@ -270,11 +270,11 @@ class MagenticFleet:
                         if event.data is not None:
                             final_output_text = str(event.data)
                         completed = True
-                    elif isinstance(event, MagenticFinalResultEvent) and event.message is not None:
-                        self._latest_final_text = getattr(event.message, "text", None) or str(
-                            event.message
-                        )
-                    elif isinstance(event, MagenticAgentMessageEvent) and event.message is not None:
+                    elif (
+                        isinstance(event, MagenticFinalResultEvent) and event.message is not None
+                    ) or (
+                        isinstance(event, MagenticAgentMessageEvent) and event.message is not None
+                    ):
                         self._latest_final_text = getattr(event.message, "text", None) or str(
                             event.message
                         )
@@ -308,18 +308,18 @@ class MagenticFleet:
             return NO_RESPONSE_GENERATED
 
         if hasattr(result, "output"):
-            output = result.output  # type: ignore[attr-defined]
+            output = result.output
             if isinstance(output, str):
                 return output
             if hasattr(output, "content"):
-                content_value = getattr(output, "content")
+                content_value = output.content
                 if content_value is not None:
                     return str(content_value)
             if output is not None:
                 return str(output)
 
         if hasattr(result, "content"):
-            content = result.content  # type: ignore[attr-defined]
+            content = result.content
             if content is not None:
                 return str(content)
 

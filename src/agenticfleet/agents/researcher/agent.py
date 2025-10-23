@@ -15,7 +15,7 @@ Usage:
 try:
     from agent_framework.openai import OpenAIResponsesClient
 except ImportError:
-    OpenAIResponsesClient = None  # type: ignore[misc, assignment]
+    OpenAIResponsesClient = None  # type: ignore[assignment, misc]
 
 from typing import Any
 

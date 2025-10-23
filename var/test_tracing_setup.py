@@ -18,7 +18,7 @@ def test_import() -> bool:
     """Test that tracing module can be imported."""
     print("✓ Testing imports...")
     try:
-        from agenticfleet import setup_tracing  # type: ignore[attr-defined]  # noqa: F401
+        from agenticfleet import setup_tracing  # noqa: F401
 
         print("  ✓ Successfully imported tracing functions")
         return True
@@ -31,7 +31,7 @@ def test_setup() -> bool:
     """Test that tracing can be set up without errors."""
     print("\n✓ Testing tracing setup...")
     try:
-        from agenticfleet import is_tracing_enabled, setup_tracing  # type: ignore[attr-defined]
+        from agenticfleet import is_tracing_enabled, setup_tracing
 
         # Setup with default endpoint
         setup_tracing()
@@ -54,7 +54,7 @@ def test_config() -> bool:
     """Test that config functions work."""
     print("\n✓ Testing configuration retrieval...")
     try:
-        from agenticfleet import get_trace_config  # type: ignore[attr-defined]
+        from agenticfleet import get_trace_config
 
         config = get_trace_config()
         print(f"  ✓ Config retrieved: {config}")

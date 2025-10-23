@@ -191,8 +191,33 @@ dependencies = [
 ]
 
 [package.optional-dependencies]
+all = [
+    { name = "agent-framework-devui" },
+    { name = "agent-framework-mem0" },
+    { name = "agent-framework-redis" },
+    { name = "azure-ai-agents" },
+    { name = "azure-ai-evaluation" },
+    { name = "azure-identity" },
+    { name = "mem0ai" },
+    { name = "prompt-toolkit" },
+    { name = "rich" },
+]
 azure = [
     { name = "azure-ai-agents" },
+    { name = "azure-identity" },
+]
+evaluation = [
+    { name = "azure-ai-evaluation" },
+]
+memory = [
+    { name = "agent-framework-mem0" },
+    { name = "agent-framework-redis" },
+    { name = "mem0ai" },
+]
+ui = [
+    { name = "agent-framework-devui" },
+    { name = "prompt-toolkit" },
+    { name = "rich" },
 ]
 
 [package.dev-dependencies]
@@ -216,24 +241,33 @@ requires-dist = [
     { name = "agent-framework-azure-ai" },
     { name = "agent-framework-core" },
     { name = "agent-framework-devui" },
+    { name = "agent-framework-devui", marker = "extra == 'ui'" },
     { name = "agent-framework-mem0" },
+    { name = "agent-framework-mem0", marker = "extra == 'memory'" },
     { name = "agent-framework-redis" },
-    { name = "azure-ai-agents", specifier = ">=1.2.0b5" },
-    { name = "azure-ai-agents", marker = "extra == 'azure'", specifier = ">=1.2.0b5" },
-    { name = "azure-ai-evaluation", specifier = ">=1.12.0" },
-    { name = "azure-identity", specifier = ">=1.25.1" },
-    { name = "ipykernel", specifier = ">=7.0.1" },
+    { name = "agent-framework-redis", marker = "extra == 'memory'" },
+    { name = "agentic-fleet", extras = ["azure", "memory", "ui", "evaluation"], marker = "extra == 'all'" },
+    { name = "azure-ai-agents", specifier = ">=1.2.0b5,<2.0" },
+    { name = "azure-ai-agents", marker = "extra == 'azure'", specifier = ">=1.2.0b5,<2.0" },
+    { name = "azure-ai-evaluation", specifier = ">=1.12.0,<2.0" },
+    { name = "azure-ai-evaluation", marker = "extra == 'evaluation'", specifier = ">=1.12.0,<2.0" },
+    { name = "azure-identity", specifier = ">=1.25.1,<2.0" },
+    { name = "azure-identity", marker = "extra == 'azure'", specifier = ">=1.25.1,<2.0" },
+    { name = "ipykernel", specifier = ">=7.0.1,<8.0" },
     { name = "mem0ai", specifier = "==1.0.0" },
+    { name = "mem0ai", marker = "extra == 'memory'", specifier = "==1.0.0" },
     { name = "openai", specifier = "==2.5.0" },
-    { name = "prompt-toolkit", specifier = ">=3.0.47" },
-    { name = "pydantic", specifier = ">=2.12.0" },
-    { name = "python-dotenv", specifier = ">=1.1.1" },
-    { name = "pyyaml", specifier = ">=6.0.3" },
-    { name = "requests", specifier = ">=2.32.5" },
-    { name = "rich", specifier = ">=13.7.0" },
-    { name = "tiktoken", specifier = ">=0.12.0" },
+    { name = "prompt-toolkit", specifier = ">=3.0.47,<4.0" },
+    { name = "prompt-toolkit", marker = "extra == 'ui'", specifier = ">=3.0.47,<4.0" },
+    { name = "pydantic", specifier = ">=2.12.0,<3.0" },
+    { name = "python-dotenv", specifier = ">=1.1.1,<2.0" },
+    { name = "pyyaml", specifier = ">=6.0.3,<7.0" },
+    { name = "requests", specifier = ">=2.32.5,<3.0" },
+    { name = "rich", specifier = ">=13.7.0,<14.0" },
+    { name = "rich", marker = "extra == 'ui'", specifier = ">=13.7.0,<14.0" },
+    { name = "tiktoken", specifier = ">=0.12.0,<1.0" },
 ]
-provides-extras = ["azure"]
+provides-extras = ["azure", "memory", "ui", "evaluation", "all"]
 
 [package.metadata.requires-dev]
 dev = [
@@ -3226,15 +3260,15 @@ wheels = [
 
 [[package]]
 name = "rich"
-version = "14.2.0"
+version = "13.9.4"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "markdown-it-py" },
     { name = "pygments" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/fb/d2/8920e102050a0de7bfabeb4c4614a49248cf8d5d7a8d01885fbb24dc767a/rich-14.2.0.tar.gz", hash = "sha256:73ff50c7c0c1c77c8243079283f4edb376f0f6442433aecb8ce7e6d0b92d1fe4", size = 219990, upload-time = "2025-10-09T14:16:53.064Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/ab/3a/0316b28d0761c6734d6bc14e770d85506c986c85ffb239e688eeaab2c2bc/rich-13.9.4.tar.gz", hash = "sha256:439594978a49a09530cff7ebc4b5c7103ef57baf48d5ea3184f21d9a2befa098", size = 223149, upload-time = "2024-11-01T16:43:57.873Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/25/7a/b0178788f8dc6cafce37a212c99565fa1fe7872c70c6c9c1e1a372d9d88f/rich-14.2.0-py3-none-any.whl", hash = "sha256:76bc51fe2e57d2b1be1f96c524b890b816e334ab4c1e45888799bfaab0021edd", size = 243393, upload-time = "2025-10-09T14:16:51.245Z" },
+    { url = "https://files.pythonhosted.org/packages/19/71/39c7c0d87f8d4e6c020a393182060eaefeeae6c01dab6a84ec346f2567df/rich-13.9.4-py3-none-any.whl", hash = "sha256:6049d5e6ec054bf2779ab3358186963bac2ea89175919d699e378b99738c2a90", size = 242424, upload-time = "2024-11-01T16:43:55.817Z" },
 ]
 
 [[package]]

@@ -36,54 +36,56 @@ def test_reflection_endpoint() -> bool:
     print("-" * 70 + "\n")
 
     try:
-        with httpx.Client(timeout=60.0) as client:
-            with client.stream("POST", url, json=payload) as response:
-                if response.status_code != 200:
-                    print(f"Error: HTTP {response.status_code}")
-                    print(response.text)
-                    return False
+        with (
+            httpx.Client(timeout=60.0) as client,
+            client.stream("POST", url, json=payload) as response,
+        ):
+            if response.status_code != 200:
+                print(f"Error: HTTP {response.status_code}")
+                print(response.text)
+                return False
 
-                accumulated = ""
-                event_count = 0
+            accumulated = ""
+            event_count = 0
 
-                for line in response.iter_lines():
-                    if line.startswith("data: "):
-                        data = line[6:]  # Remove "data: " prefix
+            for line in response.iter_lines():
+                if line.startswith("data: "):
+                    data = line[6:]  # Remove "data: " prefix
 
-                        if data == "[DONE]":
-                            print("\n" + "-" * 70)
-                            print("Stream completed")
-                            break
+                    if data == "[DONE]":
+                        print("\n" + "-" * 70)
+                        print("Stream completed")
+                        break
 
-                        try:
-                            event = json.loads(data)
-                            event_count += 1
+                    try:
+                        event = json.loads(data)
+                        event_count += 1
 
-                            if event.get("type") == "response.output_text.delta":
-                                delta = event.get("delta", "")
-                                accumulated += delta
-                                print(delta, end="", flush=True)
+                        if event.get("type") == "response.output_text.delta":
+                            delta = event.get("delta", "")
+                            accumulated += delta
+                            print(delta, end="", flush=True)
 
-                            elif event.get("type") == "response.done":
-                                print("\n\n" + "-" * 70)
-                                print("Response completed")
-                                print(f"Conversation ID: {event.get('conversation_id')}")
-                                print(f"Message ID: {event.get('message_id')}")
-                                usage = event.get("usage", {})
-                                print(f"Usage: {usage}")
+                        elif event.get("type") == "response.done":
+                            print("\n\n" + "-" * 70)
+                            print("Response completed")
+                            print(f"Conversation ID: {event.get('conversation_id')}")
+                            print(f"Message ID: {event.get('message_id')}")
+                            usage = event.get("usage", {})
+                            print(f"Usage: {usage}")
 
-                            elif event.get("type") == "error":
-                                print(f"\n\nError: {event.get('error')}")
-                                return False
+                        elif event.get("type") == "error":
+                            print(f"\n\nError: {event.get('error')}")
+                            return False
 
-                        except json.JSONDecodeError:
-                            continue
+                    except json.JSONDecodeError:
+                        continue
 
-                print("\n" + "=" * 70)
-                print(f"Total events: {event_count}")
-                print(f"Response length: {len(accumulated)} characters")
-                print("=" * 70)
-                return True
+            print("\n" + "=" * 70)
+            print(f"Total events: {event_count}")
+            print(f"Response length: {len(accumulated)} characters")
+            print("=" * 70)
+            return True
 
     except httpx.ConnectError:
         print("❌ Could not connect to backend at http://localhost:8000")

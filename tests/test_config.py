@@ -25,7 +25,7 @@ RESET = "\033[0m"
 BOLD = "\033[1m"
 
 
-def test_environment():
+def test_environment() -> None:
     """Test environment variables and .env file."""
     import os
 
@@ -42,7 +42,7 @@ def test_environment():
     assert settings.openai_api_key or openai_key_from_env, "OPENAI_API_KEY not set"
 
 
-def test_workflow_config():
+def test_workflow_config() -> None:
     """Test workflow configuration file."""
     from agenticfleet.config import settings
 
@@ -59,7 +59,7 @@ def test_workflow_config():
         assert field in workflow, f"Missing required field: {field}"
 
 
-def test_agent_configs():
+def test_agent_configs() -> None:
     """Test agent configuration files."""
     agents = ["orchestrator", "researcher", "coder", "analyst"]
 
@@ -78,7 +78,7 @@ def test_agent_configs():
         assert "model" in agent_config, f"Missing 'model' field for {agent_name}"
 
 
-def test_tool_imports():
+def test_tool_imports() -> None:
     """Test that all tools can be imported."""
     tools = [
         ("agenticfleet.agents.researcher.tools.web_search_tools", "web_search_tool"),
@@ -95,7 +95,7 @@ def test_tool_imports():
         assert tool is not None, f"Could not import {tool_name} from {module_name}"
 
 
-def test_agent_factories():
+def test_agent_factories() -> None:
     """Test that all agent factory functions work."""
     factories = [
         ("agenticfleet.agents.orchestrator.agent", "create_orchestrator_agent"),
@@ -113,7 +113,7 @@ def test_agent_factories():
         assert callable(factory), f"Factory {factory_name} is not callable"
 
 
-def test_fleet_import():
+def test_fleet_import() -> None:
     """Test that fleet factory can be imported."""
     from agenticfleet.fleet import MagenticFleet, create_default_fleet
 
@@ -121,7 +121,7 @@ def test_fleet_import():
     assert MagenticFleet is not None
 
 
-def print_test(name, passed, message=""):
+def print_test(name: str, passed: bool, message: str = "") -> None:
     """Print test result with color coding."""
     status = f"{GREEN}✓ PASS{RESET}" if passed else f"{RED}✗ FAIL{RESET}"
     print(f"{status} - {name}")
@@ -129,7 +129,7 @@ def print_test(name, passed, message=""):
         print(f"       {message}")
 
 
-def main():
+def main() -> int:
     """Run all configuration tests."""
     print(f"\n{BOLD}{'=' * 60}{RESET}")
     print(f"{BOLD}AgenticFleet Configuration Test Suite{RESET}")
@@ -145,17 +145,17 @@ def main():
         "Fleet Import": test_fleet_import,
     }
 
-    results = {}
+    results: dict[str, bool | None] = {}
     for test_name, test_func in test_functions.items():
         try:
             test_func()
             results[test_name] = True
         except pytest.skip.Exception as e:
             results[test_name] = None
-            print(f"  {YELLOW}!{RESET} {test_name}: {str(e)}")
+            print(f"  {YELLOW}!{RESET} {test_name}: {e!s}")
         except (AssertionError, ImportError) as e:
             results[test_name] = False
-            print(f"  {RED}✗{RESET} {test_name}: {str(e)}")
+            print(f"  {RED}✗{RESET} {test_name}: {e!s}")
 
     # Summary
     print(f"\n{BOLD}{'=' * 60}{RESET}")

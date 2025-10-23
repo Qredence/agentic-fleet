@@ -34,8 +34,7 @@ help:
 
 # Setup commands
 install:
-	uv pip install agentic-fleet
-	uv sync --all-extras
+	uv pip install agentic-fleet[all]
 	@echo "✓ Python dependencies installed"
 	@echo ""
 	@echo "Next: Run 'make frontend-install' to install frontend dependencies"

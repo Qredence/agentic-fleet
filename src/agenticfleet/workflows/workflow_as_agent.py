@@ -100,15 +100,15 @@ class Reviewer(Executor):
     Only responses that meet all criteria are approved.
     """
 
-    def __init__(self, id: str, chat_client: ChatClientProtocol) -> None:
+    def __init__(self, executor_id: str, chat_client: ChatClientProtocol) -> None:
         """
         Initialize the Reviewer executor.
 
         Args:
-            id: Unique identifier for this executor
+            executor_id: Unique identifier for this executor
             chat_client: Chat client for LLM interactions
         """
-        super().__init__(id=id)
+        super().__init__(id=executor_id)
         self._chat_client = chat_client
 
     @handler
@@ -186,15 +186,15 @@ class Worker(Executor):
     reviewer's suggestions until approval is achieved.
     """
 
-    def __init__(self, id: str, chat_client: ChatClientProtocol) -> None:
+    def __init__(self, executor_id: str, chat_client: ChatClientProtocol) -> None:
         """
         Initialize the Worker executor.
 
         Args:
-            id: Unique identifier for this executor
+            executor_id: Unique identifier for this executor
             chat_client: Chat client for LLM interactions
         """
-        super().__init__(id=id)
+        super().__init__(id=executor_id)
         self._chat_client = chat_client
         self._pending_requests: dict[str, tuple[ReviewRequest, list[ChatMessage]]] = {}
 

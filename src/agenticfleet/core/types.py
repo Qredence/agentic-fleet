@@ -26,7 +26,7 @@ class AgentResponse(TypedDict):
 # Re-exported for backwards compatibility; prefer importing from
 # ``agenticfleet.core.code_types`` for the canonical definition.
 __all__ = [
-    "AgentRole",
     "AgentResponse",
+    "AgentRole",
     "CodeExecutionResult",
 ]

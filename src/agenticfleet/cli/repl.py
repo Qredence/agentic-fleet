@@ -246,7 +246,7 @@ def run_repl_main() -> int:
     if hitl_config.get("enabled", False):
         timeout = hitl_config.get("approval_timeout_seconds", 300)
         operations = ", ".join(hitl_config.get("require_approval_for", [])) or "(none)"
-        ui.log_notice(f"HITL enabled (timeout: {timeout}s) – approvals: {operations}")
+        ui.log_notice(f"HITL enabled (timeout: {timeout}s) - approvals: {operations}")
     else:
         ui.log_notice("Human-in-the-Loop disabled")
 

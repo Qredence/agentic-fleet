@@ -20,11 +20,11 @@ if TYPE_CHECKING:  # pragma: no cover - expose dynamic exports to static analyse
     )
 
 __all__ = [
+    "DynamicWorkflowParticipants",
     "MagenticFleet",
+    "create_default_dynamic_participants",
     "create_default_fleet",
     "create_dynamic_workflow",
-    "create_default_dynamic_participants",
-    "DynamicWorkflowParticipants",
 ]
 
 _EXPORTS: dict[str, tuple[str, str]] = {

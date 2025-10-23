@@ -8,6 +8,7 @@ import textwrap
 import time
 from collections.abc import AsyncIterator, Awaitable, Callable, Mapping
 from contextlib import asynccontextmanager
+from typing import Any
 
 from agenticfleet.config import settings
 from agenticfleet.core.approved_tools import set_approval_handler
@@ -24,9 +25,9 @@ try:
     from agenticfleet.fleet.magentic_fleet import MagenticFleet
     from agenticfleet.workflows.workflow_as_agent import create_workflow_agent
 except Exception:  # pragma: no cover - dependency missing in some environments
-    create_default_fleet = None  # type: ignore[assignment,misc]
+    create_default_fleet = None  # type: ignore[assignment]
     MagenticFleet = None  # type: ignore[assignment,misc]
-    create_workflow_agent = None  # type: ignore[assignment,misc]
+    create_workflow_agent = None  # type: ignore[assignment]
 
 
 class FleetRuntime:
@@ -39,8 +40,8 @@ class FleetRuntime:
         if max_parallel < 1:
             max_parallel = 1
 
-        self._fleet: MagenticFleet | None = None  # type: ignore[valid-type]
-        self._workflow_as_agent = None  # type: ignore[var-annotated]
+        self._fleet: MagenticFleet | None = None
+        self._workflow_as_agent = None
         self._initialisation_error: str | None = None
         self.approval_handler = approval_handler or WebApprovalHandler()
         self._max_concurrency = max_parallel
@@ -63,7 +64,7 @@ class FleetRuntime:
         else:  # pragma: no cover - conditional import may succeed
             try:
                 # Create fleet with web approval handler instead of CLI
-                self._fleet = create_default_fleet(console_ui=None)  # type: ignore[call-arg]
+                self._fleet = create_default_fleet(console_ui=None)
                 if self._fleet is not None and hasattr(self._fleet, "approval_handler"):
                     self._fleet.approval_handler = self.approval_handler
                     approval_policy = getattr(self._fleet, "approval_policy", {}) or {}
@@ -86,12 +87,12 @@ class FleetRuntime:
         entity_id: str,
         *,
         user_text: str | None,
-        input_payload: dict | None = None,
+        input_payload: dict[str, Any] | None = None,
         timeout_seconds: int = 120,
         status_callback: (
             Callable[[str, Mapping[str, int | str]], Awaitable[None] | None] | None
         ) = None,
-    ) -> tuple[str, dict]:
+    ) -> tuple[str, dict[str, Any]]:
         """Generate a response string and usage statistics for the given entity."""
 
         await self.ensure_initialised()
@@ -176,12 +177,12 @@ class FleetRuntime:
         except Exception as exc:
             elapsed = time.time() - start_time
             logger.error(f"Workflow error after {elapsed:.2f}s: {exc}", exc_info=True)
-            error_msg = f"An error occurred while processing your request: {str(exc)}"
+            error_msg = f"An error occurred while processing your request: {exc!s}"
             usage = self._estimate_usage(prompt)
             return error_msg, usage
 
     @staticmethod
-    def _estimate_usage(text: str) -> dict:
+    def _estimate_usage(text: str) -> dict[str, Any]:
         token_guess = max(len(text) // 4, 1)
         prompt_guess = max(len(textwrap.shorten(text, width=200)) // 4, 1)
         total = prompt_guess + token_guess
@@ -198,7 +199,7 @@ class FleetRuntime:
         entity_id: str,
         *,
         user_text: str | None,
-        input_payload: dict | None = None,
+        input_payload: dict[str, Any] | None = None,
         chunk_size: int = 160,
     ) -> AsyncIterator[str]:
         """Stream a response in chunked form for SSE."""
@@ -278,7 +279,7 @@ class FleetRuntime:
         }
 
 
-def build_entity_catalog() -> tuple[list[dict], list[dict]]:
+def build_entity_catalog() -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
     """Construct lightweight agent/workflow descriptors from repository config."""
 
     workflow_cfg = settings.workflow_config or {}

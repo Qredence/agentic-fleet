@@ -56,11 +56,11 @@ All colors MUST be HSL.
     /* Dropdown menu colors */
     --dropdown-bg: 0 0% 7% / 0.6;
     --dropdown-hover: 0 0% 7% / 0.25;
-    
+
     /* Message bubbles */
     --message-user-bg: 0 0% 20%;
     --message-agent-bg: 0 0% 21%;
-    
+
     /* Header overlay */
     --header-bg: 0 0% 14%;
     --header-border: 0 0% 95% / 0.6;
@@ -112,15 +112,15 @@ All colors MUST be HSL.
     /* Glass effect */
     --glass-bg: 0 0% 10% / 0.6;
     --glass-border: 0 0% 30% / 0.3;
-    
+
     /* Dropdown menu colors */
     --dropdown-bg: 0 0% 7% / 0.6;
     --dropdown-hover: 0 0% 7% / 0.25;
-    
+
     /* Message bubbles */
     --message-user-bg: 0 0% 20%;
     --message-agent-bg: 0 0% 21%;
-    
+
     /* Header overlay */
     --header-bg: 0 0% 14%;
     --header-border: 0 0% 95% / 0.6;

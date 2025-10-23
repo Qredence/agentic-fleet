@@ -4,6 +4,36 @@
 
 ---
 
+## Quick Start
+
+**Essential workflow development commands:**
+
+```bash
+# Test workflow implementations
+uv run pytest tests/test_dynamic_workflow.py -v
+uv run pytest -k reflection -v
+
+# Run workflow-specific tests
+uv run pytest tests/test_workflow_as_agent_api.py -v
+
+# Test integration
+uv run agentic-fleet  # Full stack with workflows
+uv run fleet          # CLI to test workflows
+
+# Validate workflow exports
+grep -R "create_.*workflow" -n src/agenticfleet/workflows
+```
+
+**Adding a New Workflow:**
+
+1. Create `<name>.py` with `create_<name>_workflow()`
+2. Export in `workflows/__init__.py`
+3. Add CLI/API integration if needed
+4. Write tests in `tests/test_<name>.py`
+5. Document in this file
+
+---
+
 ## 1. Purpose
 
 The workflows layer encapsulates **higher-order orchestration patterns** that wrap or configure the underlying Magentic Fleet / ChatAgent graph. It allows exposing variants (e.g., reflection-based retry loops, dynamic adaptive planners) behind stable CLI / API interfaces.

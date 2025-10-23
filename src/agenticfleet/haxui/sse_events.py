@@ -46,7 +46,7 @@ class AgentResponseEvent(SSEEvent):
     type: EventType = EventType.AGENT_RESPONSE
     agent: str
     content: str
-    isComplete: bool = False
+    is_complete: bool = False
 
 
 class ToolCallEvent(SSEEvent):
@@ -105,22 +105,22 @@ class SSEEventEmitter:
         return event.to_sse()
 
     @staticmethod
-    def emit_tool_call(tool: str, args: dict, result: Any = None) -> bytes:
+    def emit_tool_call(tool: str, args: dict[str, Any], result: Any = None) -> bytes:
         """Emit tool call notification"""
         event = ToolCallEvent(tool=tool, args=args, result=result)
         return event.to_sse()
 
     @staticmethod
     def emit_approval_request(
-        id: str,
+        request_id: str,
         operation: str,
-        params: dict,
+        params: dict[str, Any],
         context: str,
         risk_level: RiskLevel | None = None,
     ) -> bytes:
         """Emit approval request"""
         event = ApprovalRequestEvent(
-            id=id,
+            id=request_id,
             operation=operation,
             params=params,
             context=context,

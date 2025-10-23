@@ -50,6 +50,9 @@ make type-check    # MyPy strict checks
 
 # Run tests
 make test
+
+# Validate agent documentation invariants
+make validate-agents
 ```
 
 ## Architecture Overview
@@ -161,6 +164,9 @@ make test-e2e
 
 # Run configuration validation only
 make test-config
+
+# Run tests for specific agent
+uv run pytest tests/agents/coder/test_code_interpreter_tool.py -v
 ```
 
 ## Human-in-the-Loop (HITL)
@@ -200,6 +206,7 @@ npm run lint       # ESLint
 npm run lint:fix   # ESLint with auto-fix
 npm run format     # Prettier formatting
 npm run preview    # Preview production build
+npm run type-check # TypeScript type checking
 ```
 
 ## Production Readiness
@@ -230,6 +237,7 @@ make validate-agents  # Validate AGENTS.md documentation invariants
 - ✅ Checkpointing enabled for cost optimization
 - ✅ OpenTelemetry tracing configured
 - ✅ Environment variables properly set
+- ✅ Agent documentation invariants validated (`make validate-agents`)
 
 ## Common Pitfalls to Avoid
 
@@ -272,6 +280,9 @@ make demo-hitl
 
 # Clean development environment
 make clean
+
+# Setup pre-commit hooks
+make pre-commit-install
 ```
 
 ### Performance Optimizations

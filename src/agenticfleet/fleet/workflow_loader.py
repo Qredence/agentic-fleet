@@ -36,7 +36,7 @@ def load_workflow_from_yaml(yaml_path: str | Path) -> dict[str, Any]:
         config = yaml.safe_load(f)
 
     logger.info(f"Loaded workflow configuration from {yaml_path}")
-    return config
+    return config  # type: ignore[no-any-return]
 
 
 def create_agent_from_config(agent_config: dict[str, Any]) -> ChatAgent:
@@ -66,7 +66,7 @@ def create_agent_from_config(agent_config: dict[str, Any]) -> ChatAgent:
     tools: list[Any] = []
     # Tool loading can be extended here as needed
     # Example: load tools from agent config YAML files
-    for tool_config in tools_config:
+    for _ in tools_config:
         # Tools should be loaded via agent factory pattern from agent-specific configs
         pass
 

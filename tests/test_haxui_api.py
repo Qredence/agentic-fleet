@@ -1,4 +1,5 @@
 from datetime import UTC, datetime
+from typing import Any
 
 import pytest
 from httpx import ASGITransport, AsyncClient
@@ -7,12 +8,12 @@ from agenticfleet.haxui import create_app
 
 
 @pytest.fixture
-def app():
+def app() -> Any:
     return create_app()
 
 
 @pytest.mark.asyncio
-async def test_health_endpoint(app):
+async def test_health_endpoint(app: Any) -> None:
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
         response = await client.get("/health")
         assert response.status_code == 200
@@ -22,7 +23,7 @@ async def test_health_endpoint(app):
 
 
 @pytest.mark.asyncio
-async def test_entity_listing(app):
+async def test_entity_listing(app: Any) -> None:
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
         response = await client.get("/v1/entities")
         assert response.status_code == 200
@@ -33,7 +34,7 @@ async def test_entity_listing(app):
 
 
 @pytest.mark.asyncio
-async def test_streaming_response(app):
+async def test_streaming_response(app: Any) -> None:
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
         payload = {
             "model": "magentic_fleet",
@@ -70,12 +71,12 @@ async def test_streaming_response(app):
 
 
 @pytest.mark.asyncio
-async def test_approval_listing_and_response(app):
+async def test_approval_listing_and_response(app: Any) -> None:
     handler = app.state.approval_handler
     await handler.initialise()
 
     request_id = "req_test_1"
-    await handler._store.add_request(  # type: ignore[attr-defined]
+    await handler._store.add_request(
         {
             "request_id": request_id,
             "operation_type": "code_execution",

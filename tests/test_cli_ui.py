@@ -1,6 +1,7 @@
-"""Integration-style tests for the console UI output and callbacks."""
+"""Test CLI UI components."""
 
 import os
+from typing import Any
 
 import pytest
 from rich.console import Console
@@ -10,7 +11,7 @@ from agenticfleet.fleet.callbacks import ConsoleCallbacks
 
 
 @pytest.fixture(autouse=True)
-def patch_prompt_toolkit_output(monkeypatch):
+def patch_prompt_toolkit_output(monkeypatch: Any) -> None:
     """Patch prompt_toolkit output to avoid Windows console errors in CI.
 
     This fixture automatically patches prompt_toolkit's output creation
@@ -31,7 +32,7 @@ def patch_prompt_toolkit_output(monkeypatch):
             pass
 
 
-def _record_output(action) -> str:
+def _record_output(action: Any) -> str:
     console = Console(record=True, width=80)
     ui = ConsoleUI(console=console)
     action(ui)
@@ -103,7 +104,7 @@ def test_log_final_with_structured_message() -> None:
 
 
 @pytest.mark.asyncio
-async def test_agent_deltas_are_buffered(monkeypatch) -> None:
+async def test_agent_deltas_are_buffered(monkeypatch: Any) -> None:
     class Delta:
         agent_name = "researcher"
         delta = "First chunk"

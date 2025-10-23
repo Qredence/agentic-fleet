@@ -4,6 +4,42 @@
 
 ---
 
+## Quick Start
+
+**Essential commands for agent development:**
+
+```bash
+# Add new agent
+mkdir -p src/agenticfleet/agents/<role>/tools
+touch src/agenticfleet/agents/<role>/{agent.py,config.yaml,__init__.py}
+
+# Validate configuration (CRITICAL after changes)
+make test-config
+# OR
+uv run python tests/test_config.py
+
+# Test specific agent
+uv run pytest tests/test_config.py::test_<role>_agent -v
+
+# Run orchestration tests
+uv run pytest tests/test_magentic_fleet.py -k agent -v
+
+# Test full integration
+uv run agentic-fleet  # Full stack
+uv run fleet          # CLI only
+```
+
+**Agent Development Checklist:**
+
+1. Create `config.yaml` with model, prompt, tools
+2. Implement factory in `agent.py`
+3. Export in `agents/__init__.py`
+4. Register in `fleet/fleet_builder.py`
+5. Update manager in `config/workflow.yaml`
+6. Run `make test-config`
+
+---
+
 ## 1. Purpose
 
 The `agents/` directory houses **specialized role agents** participating in Magentic workflows (planner/orchestrator + executors). Agents are thin factories binding:

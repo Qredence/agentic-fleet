@@ -10,7 +10,7 @@ __all__ = [
     "create_base_generator_participant",
     "create_google_search_participant",
     "create_python_coder_participant",
-    "create_wikipedia_search_participant",
     "create_tool_factories",
     "create_tool_participants",
+    "create_wikipedia_search_participant",
 ]

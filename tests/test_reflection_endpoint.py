@@ -6,7 +6,7 @@ import pytest
 
 @pytest.mark.e2e
 @pytest.mark.asyncio
-async def test_reflection_workflow_endpoint():
+async def test_reflection_workflow_endpoint() -> None:
     """Test the /v1/workflow/reflection endpoint."""
     async with httpx.AsyncClient(timeout=30.0) as client:
         response = await client.post(
@@ -28,7 +28,7 @@ async def test_reflection_workflow_endpoint():
 
 @pytest.mark.e2e
 @pytest.mark.asyncio
-async def test_reflection_workflow_with_custom_models():
+async def test_reflection_workflow_with_custom_models() -> None:
     """Test reflection workflow with custom model parameters."""
     async with httpx.AsyncClient(timeout=30.0) as client:
         response = await client.post(
@@ -45,8 +45,8 @@ async def test_reflection_workflow_with_custom_models():
 
 @pytest.mark.e2e
 @pytest.mark.asyncio
-async def test_reflection_workflow_missing_query():
-    """Test that missing query returns 400."""
+async def test_reflection_workflow_missing_query() -> None:
+    """Test reflection endpoint with missing query parameter."""
     async with httpx.AsyncClient() as client:
         response = await client.post(
             "http://localhost:8000/v1/workflow/reflection",
@@ -60,8 +60,8 @@ async def test_reflection_workflow_missing_query():
 
 @pytest.mark.e2e
 @pytest.mark.asyncio
-async def test_reflection_workflow_with_conversation():
-    """Test reflection workflow with conversation persistence."""
+async def test_reflection_workflow_with_conversation() -> None:
+    """Test reflection workflow with conversation_id parameter."""
     async with httpx.AsyncClient(timeout=30.0) as client:
         # Create a conversation first
         conv_response = await client.post("http://localhost:8000/v1/conversations", json={})

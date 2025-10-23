@@ -86,8 +86,8 @@ export const ChatMessage = React.memo(
     const Icon = config.icon;
 
     const isUserMessage = agent === "user";
-    const messageBgClass = isUserMessage 
-      ? "bg-[hsl(var(--message-user-bg))]" 
+    const messageBgClass = isUserMessage
+      ? "bg-[hsl(var(--message-user-bg))]"
       : "bg-[hsl(var(--message-agent-bg))]";
 
     return (

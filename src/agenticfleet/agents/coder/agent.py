@@ -19,7 +19,7 @@ from typing import Any
 try:
     from agent_framework.openai import OpenAIResponsesClient
 except ImportError:
-    OpenAIResponsesClient = None  # type: ignore[assignment,misc]
+    OpenAIResponsesClient = None  # type: ignore[assignment, misc]
 
 from agenticfleet.agents.base import FleetAgent
 from agenticfleet.config import settings
@@ -49,7 +49,7 @@ def create_coder_agent() -> FleetAgent:
     chat_client = OpenAIResponsesClient(**chat_client_kwargs)
 
     # No tools currently enabled for coder agent (execution disabled)
-    enabled_tools: list = []
+    enabled_tools: list[Any] = []
 
     # Create and return agent with instructions only
     # Note: temperature is not a ChatAgent parameter in Microsoft Agent Framework

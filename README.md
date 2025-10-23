@@ -43,8 +43,10 @@ cp .env.example .env
 make install
 
 # 4. Launch the fleet (runs frontend + backend)
-make dev
-# Alternative (backend only): uv run fleet
+uv run agentic-fleet
+# Alternatives:
+#   make dev          # Same as agentic-fleet
+#   uv run fleet      # CLI/REPL only
 ```
 
 ## ✨ Key Features
@@ -85,18 +87,20 @@ cp .env.example .env
 make install
 
 # 4. Launch the fleet (runs frontend + backend)
-make dev
+uv run agentic-fleet
 # Frontend runs on port 5173, backend on port 8000
-# Alternative (backend only): uv run fleet
+# Alternatives:
+#   make dev          # Same as agentic-fleet
+#   uv run fleet      # CLI/REPL only
 ```
 
 ### First Run
 
 **Web Frontend (Default):**
-The `make dev` command launches both frontend and backend. Access the web UI at `http://localhost:5173` to interact with agents through a modern React interface using the agent-as-workflow pattern.
+Run `uv run agentic-fleet` (or `make dev`) to launch both frontend and backend. Access the web UI at `http://localhost:5173` to interact with agents through a modern React interface using the agent-as-workflow pattern.
 
 **CLI Interface:**
-For command-line interaction, run `uv run fleet`:
+For command-line interaction only, run `uv run fleet`:
 
 ```text
 AgenticFleet v0.5.4
@@ -245,15 +249,17 @@ make test
 
 All commands use `uv run` prefix (managed by Makefile):
 
-| Command            | Purpose                                 |
-| ------------------ | --------------------------------------- |
-| `make dev`         | Launch frontend + backend (full stack)  |
-| `make test`        | Run full test suite                     |
-| `make test-config` | Validate YAML configs & agent factories |
-| `make lint`        | Check code with Ruff                    |
-| `make format`      | Auto-format with Black + Ruff           |
-| `make type-check`  | Run mypy strict type checking           |
-| `make check`       | Chain lint + format + type checks       |
+| Command                | Purpose                                 |
+| ---------------------- | --------------------------------------- |
+| `uv run agentic-fleet` | Launch frontend + backend (full stack)  |
+| `uv run fleet`         | CLI/REPL interface only                 |
+| `make dev`             | Same as agentic-fleet                   |
+| `make test`            | Run full test suite                     |
+| `make test-config`     | Validate YAML configs & agent factories |
+| `make lint`            | Check code with Ruff                    |
+| `make format`          | Auto-format with Black + Ruff           |
+| `make type-check`      | Run mypy strict type checking           |
+| `make check`           | Chain lint + format + type checks       |
 
 ### Testing Patterns
 
