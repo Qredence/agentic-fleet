@@ -1,4 +1,4 @@
-![AgenticFleet Architecture](docs/afleet-preview.png)
+![AgenticFleet Architecture](src/frontend/src/public/afleet-preview.png)
 
 # AgenticFleet
 

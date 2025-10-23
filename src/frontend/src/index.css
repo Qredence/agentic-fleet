@@ -30,6 +30,10 @@ All colors MUST be HSL.
     --accent: 0 0% 90%;
     --accent-foreground: 0 0% 10%;
 
+    --background-top: 0 0% 99%;
+    --background-mid: 0 0% 96%;
+    --background-bottom: 0 0% 93%;
+
     --destructive: 0 0% 20%;
     --destructive-foreground: 0 0% 98%;
 
@@ -55,26 +59,30 @@ All colors MUST be HSL.
   }
 
   .dark {
-    --background: 0 0% 5%;
+    --background: 0 0% 15%;
     --foreground: 0 0% 98%;
 
-    --card: 0 0% 8%;
+    --card: 0 0% 18%;
     --card-foreground: 0 0% 98%;
 
-    --popover: 0 0% 8%;
+    --popover: 0 0% 18%;
     --popover-foreground: 0 0% 98%;
 
     --primary: 0 0% 98%;
     --primary-foreground: 0 0% 10%;
 
-    --secondary: 0 0% 15%;
+    --secondary: 0 0% 20%;
     --secondary-foreground: 0 0% 98%;
 
-    --muted: 0 0% 15%;
+    --muted: 0 0% 22%;
     --muted-foreground: 0 0% 60%;
 
-    --accent: 0 0% 20%;
+    --accent: 0 0% 25%;
     --accent-foreground: 0 0% 98%;
+
+    --background-top: 0 0% 17%;
+    --background-mid: 0 0% 16%;
+    --background-bottom: 0 0% 15%;
 
     --destructive: 0 0% 80%;
     --destructive-foreground: 0 0% 10%;
@@ -102,6 +110,12 @@ All colors MUST be HSL.
 
   body {
     @apply bg-background text-foreground antialiased;
+    background-image: linear-gradient(
+      180deg,
+      hsl(var(--background-top)) 0%,
+      hsl(var(--background-mid)) 50%,
+      hsl(var(--background-bottom)) 100%
+    );
     font-feature-settings:
       "rlig" 1,
       "calt" 1;
@@ -188,5 +202,11 @@ All colors MUST be HSL.
   }
   body {
     @apply bg-background text-foreground;
+    background-image: linear-gradient(
+      180deg,
+      hsl(var(--background-top)) 0%,
+      hsl(var(--background-mid)) 50%,
+      hsl(var(--background-bottom)) 100%
+    );
   }
 }

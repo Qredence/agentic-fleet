@@ -1,8 +1,9 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { MessageSquare, Plus, Settings } from "lucide-react";
+import { Archive, Edit, MessageSquare, MoreVertical, Plus, Settings, Trash2 } from "lucide-react";
 import { useMemo } from "react";
 
 import { Button } from "@/components/ui/button";
+import { DropdownMenu } from "@/components/ui/dropdown-menu";
 import { useToast } from "@/hooks/use-toast";
 import { API_ENDPOINTS, buildApiUrl } from "@/lib/api-config";
 import { cn } from "@/lib/utils";
@@ -140,6 +141,45 @@ export const ChatSidebar = ({ selectedConversationId, onSelectConversation }: Ch
                 {conversation.timestamp && (
                   <p className="text-xs text-muted-foreground mt-1">{conversation.timestamp}</p>
                 )}
+              </div>
+              <div onClick={(e) => e.stopPropagation()}>
+                <DropdownMenu
+                  options={[
+                    {
+                      label: "Edit",
+                      onClick: () => {
+                        toast({
+                          title: "Edit conversation",
+                          description: `Editing ${conversation.title}`,
+                        });
+                      },
+                      Icon: <Edit className="h-4 w-4" />,
+                    },
+                    {
+                      label: "Archive",
+                      onClick: () => {
+                        toast({
+                          title: "Archive conversation",
+                          description: `Archived ${conversation.title}`,
+                        });
+                      },
+                      Icon: <Archive className="h-4 w-4" />,
+                    },
+                    {
+                      label: "Delete",
+                      onClick: () => {
+                        toast({
+                          title: "Delete conversation",
+                          description: `Deleted ${conversation.title}`,
+                          variant: "destructive",
+                        });
+                      },
+                      Icon: <Trash2 className="h-4 w-4" />,
+                    },
+                  ]}
+                >
+                  <MoreVertical className="h-4 w-4 opacity-0 group-hover:opacity-100 transition-opacity" />
+                </DropdownMenu>
               </div>
             </div>
           </button>

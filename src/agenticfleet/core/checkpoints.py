@@ -7,28 +7,36 @@ import json
 from collections.abc import Mapping
 from datetime import datetime
 from pathlib import Path
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from agenticfleet.core.logging import get_logger
 
 logger = get_logger(__name__)
 
-try:
-    from agent_framework import (
-        FileCheckpointStorage as BaseFileCheckpointStorage,
-    )
-except ImportError:
+# Use a TYPE_CHECKING split to avoid redefining the symbol at runtime in a way
+# that confuses mypy. During type checking we assume the dependency is present;
+# at runtime we fall back to a stub that raises a helpful error if missing.
+if TYPE_CHECKING:  # pragma: no cover
+    from agent_framework import FileCheckpointStorage as AgentFrameworkFileCheckpointStorageBase
+else:  # pragma: no cover - runtime path
+    try:
+        from agent_framework import FileCheckpointStorage as AgentFrameworkFileCheckpointStorageBase
+    except ImportError:
 
-    class BaseFileCheckpointStorage:  # type: ignore[no-redef]
-        def __init__(self, *args: Any, **kwargs: Any) -> None:
-            raise ImportError(
-                "agent_framework is required for AgenticFleetFileCheckpointStorage. "
-                "Please install agent_framework to use checkpoint storage features."
-            )
+        class AgentFrameworkFileCheckpointStorageBase:  # Fallback stub
+            def __init__(self, *args: Any, **kwargs: Any) -> None:  # noqa: D401
+                raise ImportError(
+                    "agent_framework is required for FileCheckpointStorage. "
+                    "Please install agent_framework to use checkpoint storage features."
+                )
 
 
-# Backwards compatibility: expose FileCheckpointStorage symbol from this module
-FileCheckpointStorage: type[BaseFileCheckpointStorage] = BaseFileCheckpointStorage  # type: ignore[assignment]
+# Public export expected by downstream code.
+FileCheckpointStorage = AgentFrameworkFileCheckpointStorageBase
+
+
+# Backward compatibility alias (external code may still reference this name).
+AgentFrameworkFileCheckpointStorage = FileCheckpointStorage
 
 
 def normalize_checkpoint_metadata(
@@ -223,7 +231,7 @@ def _parse_timestamp(timestamp: object) -> float:
     raise ValueError(f"Unsupported timestamp type: {type(timestamp).__name__}")
 
 
-class AgenticFleetFileCheckpointStorage(BaseFileCheckpointStorage):  # type: ignore[misc]
+class AgenticFleetFileCheckpointStorage(AgentFrameworkFileCheckpointStorageBase):
     """File-based checkpoint storage with listing support."""
 
     def __init__(self, storage_path: str | Path) -> None:
@@ -245,6 +253,7 @@ class AgenticFleetFileCheckpointStorage(BaseFileCheckpointStorage):  # type: ign
 
 __all__ = [
     "AgenticFleetFileCheckpointStorage",
+    "FileCheckpointStorage",
     "load_checkpoint_metadata_from_path",
     "normalize_checkpoint_metadata",
     "sort_checkpoint_metadata",

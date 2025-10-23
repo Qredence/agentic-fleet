@@ -85,12 +85,16 @@ export const ChatMessage = React.memo(
     const config = agentConfig[agent];
     const Icon = config.icon;
 
+    const isUserMessage = agent === "user";
+    const messageBgColor = isUserMessage ? "rgb(51, 51, 51)" : "rgba(54, 53, 55, 1)";
+
     return (
       <Message
         className={cn(
-          "p-4 hover:bg-muted/30 transition-smooth rounded-lg",
+          "p-4 hover:bg-muted/30 transition-smooth rounded-lg justify-center",
           isNew && "animate-fade-in",
-          isStreaming && "animate-pulse-subtle"
+          isStreaming && "animate-pulse-subtle",
+          isUserMessage ? "flex-row-reverse pl-10" : "flex-row pr-10"
         )}
       >
         {/* Avatar */}
@@ -104,49 +108,69 @@ export const ChatMessage = React.memo(
         </div>
 
         {/* Content */}
-        <div className="flex-1 min-w-0 space-y-3">
-          <div className="flex items-baseline gap-2 mb-1">
-            <span className="text-sm font-semibold text-foreground">{config.name}</span>
-            <span className="text-xs text-muted-foreground">{timestamp}</span>
-          </div>
-
-          {/* Reasoning Block */}
-          {reasoning && (
-            <Reasoning>
-              <ReasoningTitle>{config.name} is thinking...</ReasoningTitle>
-              <ReasoningContent>{reasoning}</ReasoningContent>
-            </Reasoning>
-          )}
-
-          {/* Steps */}
-          {steps && steps.length > 0 && (
-            <Steps>
-              {steps.map((step, i) => (
-                <Step key={i} status={step.status}>
-                  {step.label}
-                </Step>
-              ))}
-            </Steps>
-          )}
-
-          {/* Tools */}
-          {tools && tools.length > 0 && (
-            <div className="space-y-2">
-              {tools.map((tool, i) => (
-                <Tool key={i} name={tool.name} status={tool.status} icon={tool.icon}>
-                  {tool.description}
-                </Tool>
-              ))}
+        <div className="flex-1 min-w-0 max-w-[600px]">
+          <div className="w-full">
+            <div
+              className={cn(
+                "flex items-center gap-2 mb-1",
+                isUserMessage ? "justify-end" : "justify-start"
+              )}
+            >
+              {!isUserMessage && (
+                <span className="text-sm font-semibold text-foreground">{config.name}</span>
+              )}
+              <span className="text-xs text-muted-foreground">{timestamp}</span>
+              {isUserMessage && (
+                <span className="text-sm font-semibold text-foreground">{config.name}</span>
+              )}
             </div>
-          )}
 
-          {/* Main Message */}
-          <MessageContent
-            markdown={true}
-            className="bg-transparent p-4 border border-border/50 rounded-lg"
-          >
-            {message}
-          </MessageContent>
+            {/* Reasoning Block */}
+            {reasoning && (
+              <Reasoning>
+                <ReasoningTitle>{config.name} is thinking...</ReasoningTitle>
+                <ReasoningContent>{reasoning}</ReasoningContent>
+              </Reasoning>
+            )}
+
+            {/* Steps */}
+            {steps && steps.length > 0 && (
+              <Steps>
+                {steps.map((step, i) => (
+                  <Step key={i} status={step.status}>
+                    {step.label}
+                  </Step>
+                ))}
+              </Steps>
+            )}
+
+            {/* Tools */}
+            {tools && tools.length > 0 && (
+              <div className="space-y-2">
+                {tools.map((tool, i) => (
+                  <Tool key={i} name={tool.name} status={tool.status} icon={tool.icon}>
+                    {tool.description}
+                  </Tool>
+                ))}
+              </div>
+            )}
+
+            {/* Main Message */}
+            <MessageContent
+              markdown={true}
+              className="p-6 border border-border/50 w-full"
+              style={{
+                borderRadius: "32px",
+                backgroundColor: messageBgColor,
+                display: "flex",
+                flexDirection: "column",
+                justifyContent: "center",
+                alignItems: "flex-start",
+              }}
+            >
+              {message}
+            </MessageContent>
+          </div>
         </div>
       </Message>
     );

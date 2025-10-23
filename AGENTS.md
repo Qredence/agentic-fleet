@@ -1,179 +1,252 @@
 # AGENTS.md
 
-> Agent-focused operational guide for the **AgenticFleet** repository. This complements (not duplicates) the human‑oriented `README.md` and the package / test scoped `src/agenticfleet/AGENTS.md` and `tests/AGENTS.md`. Use this file as the single entry point for autonomous / semi‑autonomous coding agents.
+> README for AI coding agents working on **AgenticFleet**. This complements human-oriented `README.md` and provides actionable commands, conventions, and technical context. For detailed module guidance, see nested AGENTS.md files in subprojects.
 
 ---
 
-## 1. Project Overview
+## Project Overview
 
-AgenticFleet is a **multi‑agent orchestration system** implementing the Microsoft Agent Framework "Magentic One" pattern with: planner/orchestrator + specialist executor agents (researcher, coder, analyst), optional long‑term memory (Mem0), human‑in‑the‑loop approval gates, checkpointed workflow state, a FastAPI backend (OpenAI Responses API compatible), and a modern React (Vite + shadcn/ui + Tailwind CSS) frontend consuming SSE event streams.
+AgenticFleet is a **multi-agent orchestration system** built on Microsoft Agent Framework's "Magentic One" pattern. It features:
 
-Key characteristics:
+- **Architecture**: Manager (orchestrator) + specialist agents (researcher, coder, analyst)
+- **Backend**: FastAPI with OpenAI Responses API compatibility, SSE streaming
+- **Frontend**: React + Vite + TypeScript + shadcn/ui with real-time streaming UI
+- **Key Features**: HITL approval gates, checkpointing, Mem0 memory, OpenTelemetry tracing
+- **Languages**: Python 3.12+ (backend), TypeScript (frontend)
+- **Package Manager**: **uv** for Python (NEVER use pip/venv directly), npm for frontend
 
-- Python 3.12+, dependency management with **uv** (DO NOT use pip/venv directly)
-- Declarative **YAML-first configuration** for agents & workflow
-- Agents use `OpenAIResponsesClient` (Azure/OpenAI Response API format) returning **Pydantic models** for tool outputs
-- Human approval (HITL) for sensitive operations (code execution, file access, etc.)
-- OpenTelemetry instrumentation & callback observability
-- Checkpointing to reduce LLM cost (resume & replay)
-- Frontend real-time streaming + approval UI
+**CRITICAL**: All Python commands must use `uv run` prefix. Configuration is YAML-first (never hardcode models/prompts in code).
 
 ---
 
-## 2. Quick Directory Map (High Signal Only)
+## Quick Directory Map
 
 ```
-├── AGENTS.md                # (this file) agent operational guide
-├── README.md                # human overview
-├── Makefile                 # canonical dev commands (wraps uv)
-├── pyproject.toml           # project + tool config
+AgenticFleet/
+├── AGENTS.md               # This file - agent instructions
+├── README.md               # User documentation
+├── Makefile                # All dev commands (wraps uv)
+├── pyproject.toml          # Python dependencies & config
 ├── src/
-│   ├── agenticfleet/        # core Python package (see src/agenticfleet/AGENTS.md)
-│   └── frontend/            # React + Vite + Tailwind UI
-├── tests/                   # pytest suite (see tests/AGENTS.md)
-├── var/                     # runtime artifacts (checkpoints, logs, memories)
-└── docs/ (referenced in README)  # architecture / guides (not fully enumerated here)
+│   ├── agenticfleet/       # Core Python package
+│   │   └── AGENTS.md       # Python package details
+│   └── frontend/           # React UI
+│       └── AGENTS.md       # Frontend details
+├── tests/                  # Test suite
+│   └── AGENTS.md          # Testing guide
+├── config/                 # YAML configuration
+└── var/                    # Runtime state (checkpoints, logs)
 ```
 
-Supporting per‑area AGENTS docs:
+**Nested AGENTS.md files**:
 
-- `src/agenticfleet/AGENTS.md` – deep Python package & module guidance
-- `tests/AGENTS.md` – test strategy, execution patterns
+- `src/agenticfleet/AGENTS.md` - Python package development
+- `src/frontend/AGENTS.md` - Frontend development
+- `tests/AGENTS.md` - Testing patterns
 
 ---
 
-## 3. Environment & Setup
+## Setup Commands
 
-### 3.1 Prerequisites
+**Prerequisites**:
 
 - Python 3.12+
-- `uv` installed (`curl -LsSf https://astral.sh/uv/install.sh | sh`)
+- uv (`curl -LsSf https://astral.sh/uv/install.sh | sh`)
 - Node.js 18+ (for frontend)
-- OpenAI (or Azure OpenAI) API key in `.env`
+- OpenAI API key
 
-### 3.2 Bootstrap
+**First-time setup**:
 
 ```bash
-# Clone
+# Clone repo
 git clone https://github.com/Qredence/agentic-fleet.git
 cd agentic-fleet
 
-# Environment file (create if missing)
-cp .env.example .env  # add OPENAI_API_KEY=...
+# Create .env file
+echo "OPENAI_API_KEY=sk-YOUR-KEY-HERE" > .env
 
-# Backend dependencies (wraps uv install path logic via Makefile) – preferred
-make install          # or: uv sync
+# Install backend
+make install
 
-# Frontend dependencies
-make frontend-install # or: (cd src/frontend && npm install)
+# Install frontend
+make frontend-install
 ```
 
-If `.env.example` is absent, create `.env` with at minimum:
+**Environment variables** (`.env`):
 
 ```bash
-OPENAI_API_KEY=sk-REPLACE_ME
-```
+# Required
+OPENAI_API_KEY=sk-...
 
-Optional variables (set only if needed):
-
-```bash
-ENABLE_OTEL=true
-OTLP_ENDPOINT=http://localhost:4317
-MEM0_HISTORY_DB_PATH=./var/mem0
+# Optional
+ENABLE_OTEL=true                      # Enable OpenTelemetry
+OTLP_ENDPOINT=http://localhost:4317   # OTLP collector
+MEM0_HISTORY_DB_PATH=./var/mem0       # Memory storage
 OPENAI_EMBEDDING_MODEL=text-embedding-3-small
 ```
 
 ---
 
-## 4. Core Development Workflow
+## Development Commands
 
-Always prefer **Makefile targets** (they handle `uv run` correctly).
+**Always use Makefile targets** - they handle `uv run` correctly.
 
-| Action                | Command (Preferred)     | Notes                                     |
-| --------------------- | ----------------------- | ----------------------------------------- |
-| Install backend deps  | `make install`          | First-time only; shows next steps         |
-| Sync deps             | `make sync`             | Matches lock state                        |
-| Install frontend deps | `make frontend-install` | Installs under `src/frontend`             |
-| Full stack dev        | `make dev`              | Backend (8000) + Frontend (5173)          |
-| Backend only          | `make haxui-server`     | FastAPI + SSE API                         |
-| Frontend only         | `make frontend-dev`     | Vite dev server                           |
-| Run app (CLI)         | `make run`              | Invokes `python -m agenticfleet`          |
-| Config validation     | `make test-config`      | CRITICAL after YAML/env changes           |
-| Tests (all)           | `make test`             | Pytest suite (slow; focus tests normally) |
-| Lint                  | `make lint`             | Ruff only                                 |
-| Format                | `make format`           | Ruff fix + Black                          |
-| Type check            | `make type-check`       | mypy (strict-ish)                         |
-| All quality           | `make check`            | Lint + type (formatting is non-blocking)  |
-| E2E tests             | `make test-e2e`         | Requires dev servers running              |
+### Running the Application
 
-Manual variants: always prefix Python commands with `uv run` (e.g., `uv run pytest ...`).
+```bash
+make dev              # Full stack: backend (8000) + frontend (5173)
+make haxui-server     # Backend only (FastAPI + SSE)
+make frontend-dev     # Frontend only (Vite)
+make run              # CLI mode (python -m agenticfleet)
+```
+
+### Testing
+
+```bash
+make test-config      # CRITICAL: Validate config after changes
+make test             # Run all tests (slow)
+make test-e2e         # End-to-end tests (requires make dev)
+
+# Focused testing (faster)
+uv run pytest tests/test_magentic_fleet.py -v
+uv run pytest tests/test_config.py::test_researcher_agent -v
+uv run pytest -k "orchestrator" -v
+```
+
+### Code Quality
+
+```bash
+make check            # All checks: lint + type-check
+make lint             # Ruff linter
+make format           # Ruff + Black formatting
+make type-check       # mypy type checker
+make validate-agents  # Validate AGENTS.md invariants
+```
+
+### Dependency Management
+
+```bash
+make install          # First-time setup
+make sync             # Sync from lockfile
+make frontend-install # Frontend deps
+```
+
+**CRITICAL**: Always prefix manual Python commands with `uv run`:
+
+```bash
+uv run pytest tests/test_config.py
+uv run python -m agenticfleet
+uv run mypy .
+```
 
 ---
 
-## 5. Frontend (React + Vite) Workflow
+## Frontend Development
 
-Location: `src/frontend/`
+**Location**: `src/frontend/`
 
-Scripts (from `package.json`):
+**Tech**: React 18 • TypeScript • Vite • Tailwind CSS • shadcn/ui • TanStack Query
 
-| Script              | Purpose                                                |
-| ------------------- | ------------------------------------------------------ |
-| `npm run dev`       | Vite dev server (default port 5173 or 8080 per README) |
-| `npm run build`     | Production build to `dist/`                            |
-| `npm run build:dev` | Development-mode build (faster, unminified)            |
-| `npm run preview`   | Preview built artifacts                                |
-| `npm run lint`      | ESLint scan                                            |
-| `npm run lint:fix`  | Auto-fix ESLint issues                                 |
-| `npm run format`    | Prettier write                                         |
+**Commands**:
 
-Tech stack: React 18, TypeScript, Tailwind CSS, shadcn/ui, Radix primitives, TanStack Query, SSE streaming integration.
+```bash
+cd src/frontend
+npm run dev          # Dev server (port 5173 or 8080)
+npm run build        # Production build
+npm run build:dev    # Dev build (unminified)
+npm run preview      # Preview built app
+npm run lint         # ESLint
+npm run lint:fix     # Auto-fix
+npm run format       # Prettier
+```
 
-Backend contract: SSE streaming endpoint and approval POST endpoints (FastAPI) — do not alter event shape without updating frontend stream parser.
+**Backend integration**:
+
+- SSE streaming endpoint for real-time agent responses
+- POST endpoints for approval decisions
+- Event format follows OpenAI Responses API spec
+- Do not change event shape without updating frontend parser
+
+**See `src/frontend/AGENTS.md` for detailed frontend instructions**
 
 ---
 
-## 6. Agents & Orchestration Essentials
+## Agent System
 
-Agents: orchestrator (manager), researcher, coder, analyst.
+**Agents**: orchestrator (manager), researcher, coder, analyst
 
-- **NEVER hardcode model names** in Python – always loaded via `agents/<role>/config.yaml`.
-- Tools return Pydantic response types from `agenticfleet.core.code_types`.
-- Manager (orchestrator) executes PLAN → EVALUATE → ACT → OBSERVE loop until termination (limits in `config/workflow.yaml`: `max_round_count`, `max_stall_count`, `max_reset_count`).
+**Key principles**:
 
-Adding an agent (summary):
+- ❌ **NEVER hardcode model names** - always load from `agents/<role>/config.yaml`
+- ✅ Tools return Pydantic models from `agenticfleet.core.code_types`
+- ✅ Manager executes PLAN → EVALUATE → ACT → OBSERVE loop
+- ✅ Limits configured in `config/workflow.yaml`: `max_round_count`, `max_stall_count`, `max_reset_count`
 
-1. Scaffold `src/agenticfleet/agents/<role>/{agent.py,config.yaml,tools/__init__.py}`
-2. Implement `create_<role>_agent()` factory with full type hints
-3. Register export in `agents/__init__.py` and builder in `fleet/fleet_builder.py`
-4. Update manager instructions in `config/workflow.yaml`
-5. Add config validation tests in `tests/test_config.py`
-6. (Optional) Add orchestration tests in `tests/test_magentic_fleet.py`
+**Adding a new agent**:
 
-Adding a tool:
+1. Scaffold structure:
 
-1. Create `agents/<role>/tools/<tool_name>.py` returning a defined Pydantic model
-2. Register in agent `config.yaml` under `tools` with `enabled: true`
-3. Reference in agent `system_prompt`
-4. Add unit test(s)
+   ```bash
+   mkdir -p src/agenticfleet/agents/<role>/tools
+   touch src/agenticfleet/agents/<role>/{agent.py,config.yaml,__init__.py}
+   ```
+
+2. Create factory in `agents/<role>/agent.py`:
+
+   ```python
+   def create_<role>_agent() -> ChatAgent:
+       """Create the <role> agent with tools."""
+       settings = Settings()
+       config = settings.load_agent_config("<role>")
+       client = OpenAIResponsesClient(model_id=config["model"])
+       # Load tools from config...
+       return ChatAgent(name=config["name"], model_client=client, ...)
+   ```
+
+3. Configure in `agents/<role>/config.yaml`:
+
+   ```yaml
+   name: "<Role> Agent"
+   model: "gpt-5" # NEVER hardcode in Python
+   system_prompt: "You are a specialist..."
+   tools:
+     - name: tool_name
+       enabled: true
+   ```
+
+4. Register:
+
+   - Export in `agents/__init__.py`
+   - Wire into `fleet/fleet_builder.py`
+   - Update manager instructions in `config/workflow.yaml`
+
+5. Validate: `make test-config`
+
+**Adding a tool**:
+
+1. Implement in `agents/<role>/tools/<tool>.py` returning Pydantic model
+2. Add to `agents/<role>/config.yaml` under `tools`
+3. Reference in agent's `system_prompt`
+4. Add unit test
 5. Run `make test-config`
 
 ---
 
-## 7. Configuration Hierarchy
+## Configuration Management
 
-Priority sources:
+**Priority hierarchy**:
 
-1. **YAML** (workflow + per-agent) – canonical behavior & prompts
-2. **Environment Variables** – secrets, toggles
-3. **Code** – only wiring & factories; avoid logic overrides
+1. **YAML** (workflow + per-agent) - canonical behavior & prompts
+2. **Environment Variables** (`.env`) - secrets, toggles
+3. **Code** - only wiring & factories; avoid logic overrides
 
-Key files:
+**Key files**:
 
-- `config/workflow.yaml` – Manager instructions, callback toggles, HITL settings, checkpointing
-- `agents/<role>/config.yaml` – Model, system prompt, tools, runtime flags
-- `.env` – Keys & feature flags (never commit secrets)
+- `config/workflow.yaml` - Manager instructions, callbacks, HITL, checkpointing
+- `agents/<role>/config.yaml` - Model, system prompt, tools, runtime flags
+- `.env` - API keys & feature flags (never commit secrets)
 
-Validation command (must run after any change):
+**CRITICAL**: Run after ANY configuration change:
 
 ```bash
 make test-config
@@ -181,69 +254,120 @@ make test-config
 
 ---
 
-## 8. Human‑in‑the‑Loop (HITL) & Approvals
+## Human-in-the-Loop (HITL)
 
-Sensitive operations (e.g., code execution) must route through an `ApprovalHandler` implementation:
+**Purpose**: Approval gates for sensitive operations (code execution, file ops, etc.)
 
-- CLI: `core/cli_approval.py`
-- Web: `haxui/web_approval.py`
+**Handlers**:
 
-Tool wrappers create `ApprovalRequest` objects; responses can APPROVE / REJECT / MODIFY. **Never bypass approval** when the operation type is listed in workflow config `require_approval_for`.
+- CLI: `core/cli_approval.py` (terminal prompts)
+- Web: `haxui/web_approval.py` (SSE events + POST endpoint)
 
-Agent implementers: use helper utilities (see existing tool patterns) instead of re‑inventing approval flows.
+**Tool pattern**:
 
----
+```python
+from agenticfleet.core.approval import ApprovalRequest, ApprovalDecision
 
-## 9. Checkpointing & Memory
+request = ApprovalRequest(
+    operation_type="code_execution",
+    description="Execute Python code",
+    details={"code": "print('hello')"},
+    timeout_seconds=300
+)
 
-Checkpoint storage drastically reduces repeated token spend for retries and resumes.
+response = await approval_handler.request_approval(request)
 
-- Storage: File (`./var/checkpoints`) or In‑Memory (tests)
-- Resume parameter: `resume_from_checkpoint=<id>` when invoking fleet run
+if response.decision == ApprovalDecision.APPROVE:
+    # Execute
+    ...
+```
 
-Memory (Mem0 integration) is optional. When enabled, environment variables (e.g., Mem0 path, embedding model) must be present; memory provider exists in `context/mem0_provider.py`.
-
----
-
-## 10. Observability & Tracing
-
-- Callbacks (`fleet/callbacks.py`): streaming, plan logging, progress ledger, tool calls, final answer
-- Tracing gating env vars: `ENABLE_OTEL`, `OTLP_ENDPOINT`
-- Avoid logging secrets — respect `ENABLE_SENSITIVE_DATA` if implemented
-
-When adding new events: ensure shape consistency & update both CLI and frontend stream consumers.
+**Rule**: Never bypass approval checks when operation is in `require_approval_for` list in workflow config.
 
 ---
 
-## 11. Testing Strategy (Global Summary)
+## Checkpointing & Memory
 
-(Deep details in `tests/AGENTS.md`.)
+**Checkpointing**: Saves workflow state to resume/replay (reduces LLM costs 50-80%)
 
-Golden rules:
+- Storage: File (`./var/checkpoints`) or In-Memory (tests)
+- Resume: `resume_from_checkpoint=<id>` in fleet run
+- Enable via `FleetBuilder.with_checkpointing(storage)`
+
+**Memory (Mem0)**: Optional long-term memory via Azure AI Search + embeddings
+
+- Provider: `context/mem0_provider.py`
+- Requires: `AZURE_AI_SEARCH_ENDPOINT`, `AZURE_OPENAI_*` env vars
+- Status: Exported but not yet wired into prompts
+
+---
+
+## Observability
+
+**Callbacks** (`fleet/callbacks.py`):
+
+- `streaming_agent_response_callback` - Stream agent outputs
+- `plan_creation_callback` - Log manager plans
+- `progress_ledger_callback` - Track progress evaluations
+- `tool_call_callback` - Monitor tool executions
+- `final_answer_callback` - Capture results
+
+**OpenTelemetry tracing**:
+
+- Enable: `ENABLE_OTEL=true`
+- Endpoint: `OTLP_ENDPOINT=http://localhost:4317`
+- Sensitive data: `ENABLE_SENSITIVE_DATA=true` (captures prompts/completions)
+
+**Rule**: When adding events, ensure shape consistency & update CLI and frontend consumers.
+
+---
+
+## Testing
+
+**Test files**:
+
+- `tests/test_config.py` - Configuration validation (CRITICAL after config changes)
+- `tests/test_magentic_fleet.py` - 14 core orchestration tests
+- `tests/test_haxui_api.py` - FastAPI endpoint tests
+- `tests/test_*.py` - Other unit/integration tests
+- `tests/e2e/` - Playwright end-to-end tests
+
+**Common commands**:
+
+```bash
+# CRITICAL: After config/YAML changes
+make test-config
+
+# All tests (slow)
+make test
+
+# Focused testing (PREFERRED)
+uv run pytest tests/test_magentic_fleet.py -v
+uv run pytest tests/test_config.py::test_researcher_agent -v
+uv run pytest -k "orchestrator" -v
+
+# Coverage
+uv run pytest --cov=src/agenticfleet --cov-report=term-missing
+
+# E2E (requires `make dev` running)
+make test-e2e
+```
+
+**Testing rules**:
 
 - Run `make test-config` after modifying YAML / env / tool imports
 - Prefer focused pytest invocations (`-k`, single file, single test) for speed
 - Mock external LLM/tool network calls (patch `OpenAIResponsesClient`)
 - Use `asyncio_mode=auto`; do NOT add `@pytest.mark.asyncio`
+- Coverage targets: core >80%, tools >70%, config validation 100%
 
-Common commands:
-
-```bash
-make test               # all tests (slower)
-make test-config        # config validation (critical after config or agent changes)
-uv run pytest tests/test_magentic_fleet.py -k orchestrator -v
-uv run pytest --cov=src/agenticfleet --cov-report=term-missing
-```
-
-E2E (requires servers): `make dev` then `make test-e2e`.
-
-Coverage targets (suggested): core >80%, tools >70%, config validation 100% existence.
+**See `tests/AGENTS.md` for detailed testing guidance**
 
 ---
 
-## 12. Code Style & Quality
+## Code Quality
 
-Backend:
+**Backend standards**:
 
 - Formatting: Black (100 char lines) + Ruff (imports, pyupgrade)
 - Typing: Python 3.12 syntax (`Type | None`, never `Optional[Type]`)
@@ -251,53 +375,61 @@ Backend:
 - Logging via `core/logging.get_logger` (no stray prints in production code)
 - Tool return schemas must remain stable (Pydantic models in `core/code_types.py`)
 
-Frontend:
+**Frontend standards**:
 
 - ESLint (+ React hooks & refresh plugins)
-- Prettier for formatting (`npm run format`)
-- Tailwind + shadcn/ui guidelines (utility-first class merging via `tailwind-merge`)
+- Prettier for formatting
+- Tailwind + shadcn/ui guidelines (utility-first class merging)
 
-Quality commands:
+**Commands**:
 
 ```bash
-make lint
-make format
-make type-check
-make check
+# Backend
+make lint        # Ruff linter
+make format      # Ruff fix + Black
+make type-check  # mypy
+make check       # All checks (lint + type)
+
+# Frontend
+cd src/frontend
 npm run lint
 npm run lint:fix
 npm run format
 ```
 
+**Before committing**: Run `make check` and `make test-config`
+
 ---
 
-## 13. Build & Deployment (High-Level)
+## Build & Deployment
 
-Backend build artifacts are wheel/sdist defined by `hatchling` (see `pyproject.toml`). Frontend builds to `src/frontend/dist/` via Vite.
+**Backend**: Wheel/sdist via `hatchling` (see `pyproject.toml`)
+**Frontend**: Vite builds to `src/frontend/dist/`
 
-Typical sequence (conceptual CI):
+**Typical CI sequence**:
 
 1. `uv sync` (install)
 2. `make test-config`
 3. `make check`
 4. `make test`
 5. Frontend: `npm ci && npm run build`
-6. Package backend: `uv build` (or `python -m build` if configured)
-7. Publish / containerize (not defined here)
+6. Package: `uv build`
 
-If adding CI steps: use caching (uv / node_modules), matrix Python versions (3.12 / 3.13), and separate lint, type, test jobs.
+**CI considerations**: Cache uv / node_modules, matrix Python 3.12/3.13, separate lint/type/test jobs
 
 ---
 
-## 14. Security Considerations
+## Security
+
+**Critical practices**:
 
 - Never commit secrets (`.env` is ignored). Rotate API keys if exposed.
-- Enforce approval for code/file/network side‑effects.
-- Validate external input through Pydantic models.
-- Keep dependency set updated (`make sync` + `uv sync`).
-- Consider scanning (Bandit / pip‑audit) if integrating security CI.
+- Enforce approval for code/file/network side-effects
+- Validate external input through Pydantic models
+- Keep dependencies updated (`make sync` + `uv sync`)
+- Consider scanning (Bandit / pip-audit) in CI
 
-Potential sensitive surfaces:
+**Sensitive surfaces**:
 
 - Code execution tool
 - File system access (if future tools added)
@@ -305,27 +437,7 @@ Potential sensitive surfaces:
 
 ---
 
-## 15. Adding / Modifying Major Components
-
-### Add a New Workflow Variant
-
-1. Create module under `src/agenticfleet/workflows/`
-2. Provide factory or entrypoint function
-3. Wire CLI flag or API route (FastAPI)
-4. Add tests (API + orchestration)
-5. Update docs & config validation if applicable
-
-### Introduce New Observability Callback
-
-1. Add function to `fleet/callbacks.py`
-2. Register in `ConsoleCallbacks` / builder
-3. Update workflow YAML toggle if new flag needed
-4. Extend tests for event triggers
-5. Update frontend if event stream shape changes
-
----
-
-## 16. Troubleshooting (Agent-Centric)
+## Troubleshooting
 
 | Symptom                    | Likely Cause                  | Action                                                                             |
 | -------------------------- | ----------------------------- | ---------------------------------------------------------------------------------- |
@@ -339,68 +451,77 @@ Potential sensitive surfaces:
 
 ---
 
-## 17. Quick Command Reference (Copy/Paste Friendly)
+## Quick Command Reference
 
 ```bash
-# Backend install & validate
-make install && make test-config
+# Setup
+make install && make frontend-install
 
 # Full stack dev
 make dev
 
-# Focused orchestration test
-uv run pytest tests/test_magentic_fleet.py::test_fleet_builder_with_agents -v
+# Backend only
+make haxui-server
 
-# Add + validate new agent after edits
+# Frontend only
+make frontend-dev
+
+# Config validation (CRITICAL after changes)
 make test-config
 
-# Quality gates
+# Focused test
+uv run pytest tests/test_magentic_fleet.py::test_fleet_builder_with_agents -v
+
+# Quality checks
 make check && make test
 
 # Frontend build
-(cd src/frontend && npm run build)
+cd src/frontend && npm run build
 
 # Coverage
 uv run pytest --cov=src/agenticfleet --cov-report=term-missing
 
-# Validate AGENTS documentation invariants (presence, required sections, no hardcoded models, proper uv usage)
+# Validate AGENTS docs
 make validate-agents
 ```
 
 ---
 
-## 18. Invariants (DO NOT VIOLATE)
+## Invariants (DO NOT VIOLATE)
+
+**Critical rules**:
 
 - All Python execution via `uv run` (including tests & lint)
 - No hardcoded model IDs; always load from YAML
-- Tool outputs MUST be Pydantic models defined (or added) in `core/code_types.py`
+- Tool outputs MUST be Pydantic models from `core/code_types.py`
 - Approval required operations must respect handler decisions
 - Configuration changes require `make test-config` before commit/PR
-- Documentation invariants enforced via `make validate-agents`; run before opening a PR to ensure AGENTS docs are up to date and free of anti‑patterns
+- Run `make validate-agents` before opening PR to ensure docs are up to date
 
 ---
 
-## 19. Extension Roadmap (Agent Hints)
+## Extension Ideas
 
 Potential safe automation tasks:
 
 - Generate agent skeleton given a role name
-- Auto-update manager instructions when adding agent (append role description)
-- Add schema validation for YAML via Pydantic model (future)
-- Implement memory injection into prompts (update builder + tests)
+- Auto-update manager instructions when adding agent
+- Add schema validation for YAML via Pydantic model
+- Implement memory injection into prompts
 
 ---
 
-## 20. References
+## References
 
-- Root README: `README.md`
-- Package detail: `src/agenticfleet/AGENTS.md`
-- Tests detail: `tests/AGENTS.md`
-- Architecture docs: `docs/architecture/`
-- Features: `docs/features/`
-- Contributing: `docs/project/CONTRIBUTING.md`
-- Security: `SECURITY.md`
+- **Root README**: `README.md` - User documentation
+- **Package detail**: `src/agenticfleet/AGENTS.md` - Python package development
+- **Frontend detail**: `src/frontend/AGENTS.md` - Frontend development
+- **Tests detail**: `tests/AGENTS.md` - Testing patterns
+- **Architecture**: `docs/architecture/` - System design
+- **Features**: `docs/features/` - Feature guides
+- **Contributing**: `docs/project/CONTRIBUTING.md`
+- **Security**: `SECURITY.md`
 
 ---
 
-**End of AGENTS.md** – Keep this file current; update alongside structural or workflow changes. Autonomous agents should treat missing updates here as a signal to request maintenance.
+**Keep this file current** – Update alongside structural or workflow changes. Autonomous agents should treat missing updates here as a signal to request maintenance.

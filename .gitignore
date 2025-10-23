@@ -64,3 +64,5 @@ AgenticFleet.code-workspace
 
 # Node modules
 node_modules/
+
+.config/
