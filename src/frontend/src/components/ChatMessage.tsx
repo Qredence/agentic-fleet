@@ -1,5 +1,6 @@
 import { Message, MessageContent } from "@/components/ui/message";
 import { Reasoning, ReasoningContent, ReasoningTitle } from "@/components/ui/reasoning";
+import { ResponseStream } from "@/components/ui/response-stream";
 import { Step, Steps } from "@/components/ui/steps";
 import { Tool } from "@/components/ui/tool";
 import { cn } from "@/lib/utils";
@@ -158,12 +159,25 @@ export const ChatMessage = React.memo(
             )}
 
             {/* Main Message */}
-            <MessageContent
-              markdown={true}
-              className={`p-6 border border-border/50 w-full rounded-[32px] ${messageBgClass} flex flex-col justify-center items-start`}
-            >
-              {message}
-            </MessageContent>
+            {isNew || isStreaming ? (
+              <div
+                className={`p-6 border border-border/50 w-full rounded-[32px] ${messageBgClass} flex flex-col justify-center items-start prose prose-sm dark:prose-invert max-w-none prose-headings:font-semibold prose-p:leading-relaxed prose-pre:p-0 prose-pre:bg-transparent prose-code:bg-muted prose-code:px-1 prose-code:py-0.5 prose-code:rounded prose-code:before:content-none prose-code:after:content-none`}
+              >
+                <ResponseStream
+                  textStream={message}
+                  mode="typewriter"
+                  speed={50}
+                  className="w-full"
+                />
+              </div>
+            ) : (
+              <MessageContent
+                markdown={true}
+                className={`p-6 border border-border/50 w-full rounded-[32px] ${messageBgClass} flex flex-col justify-center items-start`}
+              >
+                {message}
+              </MessageContent>
+            )}
           </div>
         </div>
       </Message>

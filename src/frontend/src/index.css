@@ -41,7 +41,7 @@ All colors MUST be HSL.
     --input: 0 0% 90%;
     --ring: 0 0% 20%;
 
-    --radius: 0.75rem;
+    --radius: 0.65rem;
 
     /* Agent colors - monochrome variations */
     --agent-1: 0 0% 15%;

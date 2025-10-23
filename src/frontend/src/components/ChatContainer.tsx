@@ -401,11 +401,6 @@ export const ChatContainer = ({
             </div>
           )}
 
-          {/* Connection Status Indicator */}
-          <div className="px-4 pt-4">
-            <ConnectionStatusIndicator status={connectionStatus} onRetry={checkHealth} />
-          </div>
-
           {/* Messages */}
           <div className="relative flex-1 overflow-hidden">
             <div
@@ -541,6 +536,7 @@ export const ChatContainer = ({
                 </div>
               )}
               <ChatInput onSendMessage={handleSendMessage} disabled={isProcessing} />
+              <ConnectionStatusIndicator status={connectionStatus} onRetry={checkHealth} />
             </div>
           </div>
         </div>
