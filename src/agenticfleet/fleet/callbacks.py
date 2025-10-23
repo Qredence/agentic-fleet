@@ -5,13 +5,12 @@ from __future__ import annotations
 import json
 import os
 from contextvars import ContextVar
-from typing import TYPE_CHECKING, Any, Protocol
+from typing import Any, Protocol
+
+from agent_framework import ChatMessage
 
 from agenticfleet.cli.ui import AgentMessage, FinalRenderData
 from agenticfleet.core.logging import get_logger
-
-if TYPE_CHECKING:
-    from agent_framework import ChatMessage
 
 logger = get_logger(__name__)
 

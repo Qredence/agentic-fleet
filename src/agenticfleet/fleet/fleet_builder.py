@@ -3,75 +3,16 @@
 from __future__ import annotations
 
 from collections.abc import Callable
-from typing import TYPE_CHECKING, Any, cast
+from typing import Any, cast
+
+# Primary imports from agent_framework (always available as required dependency)
+from agent_framework import AgentProtocol, CheckpointStorage, MagenticBuilder
+from agent_framework.openai import OpenAIResponsesClient
 
 from agenticfleet.config import settings
-from agenticfleet.core.exceptions import AgentConfigurationError
 from agenticfleet.core.logging import get_logger
 from agenticfleet.core.openai import get_responses_model_parameter
 from agenticfleet.fleet.callbacks import ConsoleCallbacks
-
-try:  # pragma: no cover - runtime import guard
-    from agent_framework import MagenticBuilder as _RealMagenticBuilder
-    from agent_framework.openai import (
-        OpenAIResponsesClient as _RealOpenAIResponsesClient,
-    )
-except ModuleNotFoundError:  # pragma: no cover - fallback for test environments
-    _RealMagenticBuilder = None  # type: ignore
-    _RealOpenAIResponsesClient = None  # type: ignore
-
-
-if TYPE_CHECKING:
-    from agent_framework import AgentProtocol, CheckpointStorage, Workflow
-
-
-class _FallbackOpenAIResponsesClient:
-    """Minimal stand-in when Microsoft Agent Framework is not installed."""
-
-    def __init__(self, **kwargs: Any) -> None:
-        self.kwargs = kwargs
-
-
-class _FallbackWorkflow:
-    """Workflow placeholder that raises if execution is attempted without dependency."""
-
-    async def run(self, *_: Any, **__: Any) -> Any:
-        raise AgentConfigurationError(
-            "agent_framework is required to execute workflows. Install 'agent-framework' to "
-            "enable Magentic orchestration."
-        )
-
-
-class _FallbackMagenticBuilder:
-    """No-op MagenticBuilder replacement for test environments."""
-
-    def __init__(self) -> None:
-        self._workflow = _FallbackWorkflow()
-
-    def participants(self, **kwargs: Any) -> _FallbackMagenticBuilder:
-        self.participants_kwargs = kwargs
-        return self
-
-    def with_standard_manager(self, **kwargs: Any) -> _FallbackMagenticBuilder:
-        self.manager_kwargs = kwargs
-        return self
-
-    def on_event(self, *_: Any, **__: Any) -> _FallbackMagenticBuilder:
-        return self
-
-    def with_checkpointing(self, *_: Any, **__: Any) -> _FallbackMagenticBuilder:
-        return self
-
-    def with_plan_review(self, *_: Any, **__: Any) -> _FallbackMagenticBuilder:
-        return self
-
-    def build(self) -> _FallbackWorkflow:
-        return self._workflow
-
-
-MagenticBuilder = _RealMagenticBuilder or _FallbackMagenticBuilder  # type: ignore[truthy-function,unreachable]
-OpenAIResponsesClient = _RealOpenAIResponsesClient or _FallbackOpenAIResponsesClient  # type: ignore[truthy-function,unreachable]
-_AGENT_FRAMEWORK_AVAILABLE = _RealMagenticBuilder is not None
 
 logger = get_logger(__name__)
 
@@ -121,13 +62,6 @@ class FleetBuilder:
         callback_config = fleet_config.get("callbacks", {})
         self.streaming_enabled = callback_config.get("streaming_enabled", True)
         self.log_progress = callback_config.get("log_progress_ledger", True)
-
-        self._using_fallback_builder = not _AGENT_FRAMEWORK_AVAILABLE
-        if self._using_fallback_builder:
-            logger.warning(
-                "agent_framework package not available; using fallback MagenticBuilder stub. "
-                "Install 'agent-framework' to enable full workflow execution."
-            )
 
         self.builder = MagenticBuilder()
 
@@ -236,13 +170,6 @@ Always explain your reasoning and include evidence from agent responses."""
             logger.debug("Observability callbacks disabled")
             return self
 
-        if not _AGENT_FRAMEWORK_AVAILABLE:
-            logger.warning(
-                "agent_framework not available; skipping observability callbacks. "
-                "Install 'agent-framework' to enable streaming telemetry."
-            )
-            return self
-
         logger.info("Enabling observability callbacks")
 
         # Import unified callback event types
@@ -336,7 +263,7 @@ Always explain your reasoning and include evidence from agent responses."""
 
         return self
 
-    def build(self) -> Workflow:
+    def build(self) -> Any:  # Returns MagenticWorkflow which implements Workflow protocol
         """
         Build and return the Magentic workflow.
 
@@ -345,10 +272,5 @@ Always explain your reasoning and include evidence from agent responses."""
         """
         logger.info("Building Magentic workflow")
         workflow = self.builder.build()
-        if self._using_fallback_builder:
-            logger.warning(
-                "agent_framework is not installed; returning fallback workflow stub. "
-                "Install 'agent-framework' to enable Magentic execution."
-            )
         logger.info("Magentic workflow built successfully")
-        return workflow  # type: ignore[return-value]
+        return workflow

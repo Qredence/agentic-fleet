@@ -9,7 +9,7 @@ Run with: uv run python tests/e2e/playwright_test_workflow.py
 import sys
 
 
-def test_frontend_loads():
+def test_frontend_loads() -> bool:
     """Test that the frontend loads successfully."""
     print("\n✓ Frontend loaded at http://localhost:5174")
     print("✓ Page title: AgenticFleet Studio")
@@ -17,7 +17,7 @@ def test_frontend_loads():
     return True
 
 
-def test_entities_api():
+def test_entities_api() -> bool:
     """Test that workflow_as_agent is available in the API."""
     import requests
 
@@ -58,7 +58,7 @@ def test_entities_api():
         return False
 
 
-def test_all_entities():
+def test_all_entities() -> bool:
     """List all available entities."""
     import requests
 
@@ -85,7 +85,7 @@ def test_all_entities():
         return False
 
 
-def main():
+def main() -> int:
     """Run all tests."""
     print("=" * 60)
     print("Workflow as Agent - Frontend Integration Tests")

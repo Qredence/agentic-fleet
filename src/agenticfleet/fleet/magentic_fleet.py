@@ -9,6 +9,22 @@ import uuid
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, cast
 
+# Primary imports from agent_framework (always available as required dependency)
+from agent_framework import (
+    AgentProtocol,
+    CheckpointStorage,
+    HostedCodeInterpreterTool,
+    MagenticAgentDeltaEvent,
+    MagenticAgentMessageEvent,
+    MagenticFinalResultEvent,
+    MagenticPlanReviewDecision,
+    MagenticPlanReviewReply,
+    MagenticPlanReviewRequest,
+    RequestInfoEvent,
+    WorkflowOutputEvent,
+)
+from agent_framework.openai import OpenAIResponsesClient
+
 from agenticfleet.agents import create_analyst_agent, create_coder_agent, create_researcher_agent
 from agenticfleet.config import settings
 from agenticfleet.core.approval import ApprovalDecision
@@ -25,79 +41,8 @@ from agenticfleet.core.openai import get_responses_model_parameter
 from agenticfleet.fleet.callbacks import ConsoleCallbacks
 from agenticfleet.fleet.fleet_builder import FleetBuilder
 
-try:  # pragma: no cover - runtime import guard
-    from agent_framework import (
-        ChatAgent,
-        HostedCodeInterpreterTool,
-        MagenticAgentDeltaEvent,
-        MagenticAgentMessageEvent,
-        MagenticBuilder,
-        MagenticCallbackEvent,
-        MagenticCallbackMode,
-        MagenticFinalResultEvent,
-        MagenticOrchestratorMessageEvent,
-        MagenticPlanReviewDecision,
-        MagenticPlanReviewReply,
-        MagenticPlanReviewRequest,
-        RequestInfoEvent,
-        WorkflowOutputEvent,
-    )
-    from agent_framework.openai import OpenAIChatClient, OpenAIResponsesClient
-
-    _AGENT_FRAMEWORK_AVAILABLE = True
-except ModuleNotFoundError as import_error:  # pragma: no cover - fallback for tests
-    ChatAgent = None  # type: ignore[misc, assignment]
-    HostedCodeInterpreterTool = None  # type: ignore[misc, assignment]
-    MagenticAgentDeltaEvent = None  # type: ignore[misc, assignment]
-    MagenticAgentMessageEvent = None  # type: ignore[misc, assignment]
-    MagenticBuilder = None  # type: ignore[misc, assignment]
-    MagenticCallbackEvent = None  # type: ignore[misc, assignment]
-    MagenticCallbackMode = None  # type: ignore[misc, assignment]
-    MagenticFinalResultEvent = None  # type: ignore[misc, assignment]
-    MagenticOrchestratorMessageEvent = None  # type: ignore[misc, assignment]
-    MagenticPlanReviewDecision = None  # type: ignore[misc, assignment]
-    MagenticPlanReviewReply = None  # type: ignore[misc, assignment]
-    MagenticPlanReviewRequest = None  # type: ignore[misc, assignment]
-    RequestInfoEvent = None  # type: ignore[misc, assignment]
-    WorkflowOutputEvent = None  # type: ignore[misc, assignment]
-    OpenAIChatClient = None  # type: ignore[misc, assignment]
-    OpenAIResponsesClient = None  # type: ignore[misc, assignment]
-    _AGENT_FRAMEWORK_AVAILABLE = False
-    logging.getLogger(__name__).warning(
-        "agent_framework package not available: %s – running in fallback mode.",
-        import_error,
-    )
-else:  # pragma: no cover - debug logging when dependency is present
-    logging.getLogger(__name__).debug(
-        "agent_framework components loaded: %s",
-        ", ".join(
-            [
-                ChatAgent.__name__,
-                HostedCodeInterpreterTool.__name__,
-                MagenticAgentDeltaEvent.__name__,
-                MagenticAgentMessageEvent.__name__,
-                MagenticBuilder.__name__,
-                "MagenticCallbackEvent",  # Union type, no __name__
-                MagenticCallbackMode.__name__,
-                MagenticFinalResultEvent.__name__,
-                MagenticOrchestratorMessageEvent.__name__,
-                MagenticPlanReviewReply.__name__,
-                RequestInfoEvent.__name__,
-                WorkflowOutputEvent.__name__,
-                OpenAIChatClient.__name__,
-                OpenAIResponsesClient.__name__,
-            ]
-        ),
-    )
-
-if TYPE_CHECKING:  # pragma: no cover - typing helpers
-    from agent_framework import AgentProtocol, CheckpointStorage
-
+if TYPE_CHECKING:
     from agenticfleet.cli.ui import ConsoleUI
-else:
-    AgentProtocol = Any
-    CheckpointStorage = Any
-    ConsoleUI = Any
 
 logging.getLogger(__name__).addHandler(logging.NullHandler())
 logger = get_logger(__name__)
@@ -164,14 +109,6 @@ class MagenticFleet:
 
     def _apply_coder_tooling(self) -> None:
         """Attach hosted code interpreter tooling to the coder agent."""
-
-        if not _AGENT_FRAMEWORK_AVAILABLE or OpenAIResponsesClient is None:
-            logger.debug("Skipping coder tooling initialisation (agent_framework unavailable).")
-            return
-
-        if HostedCodeInterpreterTool is None:  # type: ignore
-            logger.debug("HostedCodeInterpreterTool unavailable; skipping tool injection.")  # type: ignore
-            return
 
         coder = self.agents.get("coder")
         if coder is None:
@@ -276,14 +213,13 @@ class MagenticFleet:
         run_stream_method = getattr(self.workflow, "run_stream", None)
         send_responses_method = getattr(self.workflow, "send_responses_streaming", None)
         supports_streaming = (
-            _AGENT_FRAMEWORK_AVAILABLE
-            and run_stream_method is not None
+            run_stream_method is not None
             and callable(run_stream_method)
             and inspect.isasyncgenfunction(run_stream_method)
         )
 
         if not supports_streaming:
-            logger.debug("Fallback workflow execution (agent_framework unavailable)")
+            logger.debug("Fallback to non-streaming workflow execution")
             result = await self.workflow.run(user_input, **run_kwargs)
             final_render = self.console_callbacks.consume_final_render()
             if final_render and final_render.raw_text:
@@ -323,34 +259,22 @@ class MagenticFleet:
             if stream is not None:
                 async for event in stream:
                     had_events = True
-                    if MagenticAgentDeltaEvent is not None and isinstance(
-                        event, MagenticAgentDeltaEvent
-                    ):
+                    if isinstance(event, MagenticAgentDeltaEvent):
                         continue
                     if (
-                        RequestInfoEvent is not None
-                        and MagenticPlanReviewRequest is not None
-                        and isinstance(event, RequestInfoEvent)
+                        isinstance(event, RequestInfoEvent)
                         and event.request_type is MagenticPlanReviewRequest
                     ):
                         pending_request = event
-                    elif WorkflowOutputEvent is not None and isinstance(event, WorkflowOutputEvent):
+                    elif isinstance(event, WorkflowOutputEvent):
                         if event.data is not None:
                             final_output_text = str(event.data)
                         completed = True
-                    elif (
-                        MagenticFinalResultEvent is not None
-                        and isinstance(event, MagenticFinalResultEvent)
-                        and event.message is not None
-                    ):
+                    elif isinstance(event, MagenticFinalResultEvent) and event.message is not None:
                         self._latest_final_text = getattr(event.message, "text", None) or str(
                             event.message
                         )
-                    elif (
-                        MagenticAgentMessageEvent is not None
-                        and isinstance(event, MagenticAgentMessageEvent)
-                        and event.message is not None
-                    ):
+                    elif isinstance(event, MagenticAgentMessageEvent) and event.message is not None:
                         self._latest_final_text = getattr(event.message, "text", None) or str(
                             event.message
                         )
@@ -410,11 +334,6 @@ class MagenticFleet:
         self,
         event: Any,
     ) -> Any:
-        if MagenticPlanReviewReply is None or MagenticPlanReviewDecision is None:
-            raise WorkflowError(
-                "Plan review handling requested but agent framework is unavailable."
-            )
-
         request = cast(Any, event.data)
         await self.console_callbacks.notice_callback("Plan review requested.")
         await asyncio.sleep(0)
