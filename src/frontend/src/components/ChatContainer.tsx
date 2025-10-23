@@ -94,11 +94,15 @@ export const ChatContainer = ({
   );
 
   const handleApprove = useCallback(
-    async (requestId: string, options?: { modifiedCode?: string; reason?: string }) => {
+    async (
+      requestId: string,
+      options?: { modifiedCode?: string; modifiedParams?: Record<string, unknown>; reason?: string }
+    ) => {
       try {
         await respondToApproval(requestId, {
           decision: options?.modifiedCode ? "modified" : "approved",
           modifiedCode: options?.modifiedCode,
+          modifiedParams: options?.modifiedParams,
           reason: options?.reason,
         });
         toast({ title: "Approval submitted" });
