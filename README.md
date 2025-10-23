@@ -1,10 +1,11 @@
-![AgenticFleet Architecture](docs/afleet-preview.png)
-
 # AgenticFleet
+
+![AgenticFleet Architecture](docs/banner.png)
 
 [![Python 3.12+](https://img.shields.io/badge/python-3.12+-blue.svg)](https://www.python.org/downloads/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](./LICENSE)
 [![uv](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/uv/main/assets/badge/v0.json)](https://github.com/astral-sh/uv)
+[![PyPI Downloads](https://static.pepy.tech/personalized-badge/agentic-fleet?period=total&units=INTERNATIONAL_SYSTEM&left_color=GREY&right_color=BLUE&left_text=downloads)](https://pepy.tech/projects/agentic-fleet)
 
 > **⚠️ Active Development Notice**
 > This project is under active development. Features, APIs, and workflows may change. We recommend pinning to specific versions for production use.
@@ -85,19 +86,20 @@ make install
 
 # 4. Launch the fleet (runs frontend + backend)
 make dev
+# Frontend runs on port 5173, backend on port 8000
 # Alternative (backend only): uv run fleet
 ```
 
 ### First Run
 
 **Web Frontend (Default):**
-The `make dev` command launches both frontend and backend. Access the web UI at `http://localhost:3000` to interact with agents through a modern React interface using the agent-as-workflow pattern.
+The `make dev` command launches both frontend and backend. Access the web UI at `http://localhost:5173` to interact with agents through a modern React interface using the agent-as-workflow pattern.
 
 **CLI Interface:**
 For command-line interaction, run `uv run fleet`:
 
 ```text
-AgenticFleet v0.5.3
+AgenticFleet v0.5.4
 ________________________________________________________________________
 Task                ➤ Analyze Python code quality in my repository
 Plan · Iteration 1  Facts: User needs code analysis | Plan: Use coder agent...
@@ -124,7 +126,7 @@ Explore example workflows in `notebooks/` including:
 
 ## 🎯 Current Status
 
-**✅ Production Ready - v0.5.3**
+**✅ Production Ready - v0.5.4**
 
 AgenticFleet is now **production-ready** with enterprise-grade features:
 
@@ -296,15 +298,15 @@ Comprehensive documentation organized by audience:
 
 ## 🆕 Release Notes
 
-### v0.5.3 (2025-10-22)
+### v0.5.4 (2025-10-23)
 
-- **Type Safety Complete**: 100% mypy compliance across 83 source files
-- **Frontend Improvements**: 10 major UI/UX enhancements
-- **Modular Architecture**: Complete planner-executor-verifier-generator pattern
-- **Human-in-the-Loop**: Configurable approval system for sensitive operations
-- **State Persistence**: Checkpoint system reduces 50-80% retry costs
-- **Observability**: OpenTelemetry tracing with AI Toolkit integration
-- **Code Quality**: All linting, formatting, and type checks passing
+- **Memory Bank Integration**: Added comprehensive memory-bank instructions for AI context persistence
+- **Documentation Expansion**: Enhanced AGENTS documentation with detailed capability descriptions
+- **UI/UX Polish**: Significant frontend improvements for better user experience
+- **Backend Cleanup**: Code quality improvements and architectural refinements
+- **Security Enhancements**: Fixed workflow permissions and expression injection vulnerabilities
+- **CI/CD Improvements**: Updated workflows for release triggering and code scanning
+- **Version Management**: Consistent v0.5.4 versioning across all documentation
 
 ---
 

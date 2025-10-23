@@ -14,7 +14,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 # First-time setup (Python + frontend)
 make install && make frontend-install
 
-# Sync dependencies
+# Update dependencies after lockfile changes
 make sync
 
 # Validate configuration (CRITICAL after any YAML changes)
@@ -74,6 +74,7 @@ make test
 - **Workflow Config**: [`src/agenticfleet/config/workflow.yaml`](src/agenticfleet/config/workflow.yaml) - Global orchestration settings
 - **Agent Configs**: [`src/agenticfleet/agents/*/config.yaml`](src/agenticfleet/agents) - Per-agent configuration
 - **Frontend Config**: [`src/frontend/package.json`](src/frontend/package.json) - React app dependencies and scripts
+- **Project Config**: [`pyproject.toml`](pyproject.toml) - Python dependencies, tool configs, and project metadata
 
 ### Technology Stack
 
@@ -154,6 +155,12 @@ uv run pytest tests/test_config.py::test_orchestrator_agent -v
 
 # Run with filter
 uv run pytest tests/test_magentic_fleet.py -k "test_orchestrator"
+
+# Run end-to-end tests (requires dev server)
+make test-e2e
+
+# Run configuration validation only
+make test-config
 ```
 
 ## Human-in-the-Loop (HITL)
@@ -186,10 +193,13 @@ uv run pytest tests/test_magentic_fleet.py -k "test_orchestrator"
 
 ```bash
 cd src/frontend
-npm run dev        # Development server
+npm run dev        # Development server (port 5173)
 npm run build      # Production build
+npm run build:dev  # Development build
 npm run lint       # ESLint
-npm run format     # Prettier
+npm run lint:fix   # ESLint with auto-fix
+npm run format     # Prettier formatting
+npm run preview    # Preview production build
 ```
 
 ## Production Readiness
@@ -209,6 +219,7 @@ All quality checks must pass before commits:
 make check          # Lint + format + type-check (all must pass)
 make test-config    # Configuration validation (6/6 tests must pass)
 make test           # Full test suite
+make validate-agents  # Validate AGENTS.md documentation invariants
 ```
 
 ### Production Deployment Checklist
@@ -235,7 +246,7 @@ make test           # Full test suite
 ✅ **Configuration validation** - Always validate after YAML changes
 ✅ **Defensive programming** - Use proper type guards and error handling
 
-## Recent v0.5.3 Improvements
+## Recent v0.5.4 Improvements
 
 ### Modular Architecture Patterns
 
@@ -255,6 +266,12 @@ uv run python -m agenticfleet  # Always use uv run
 
 # Test specific components
 uv run pytest tests/test_magentic_fleet.py -k "test_orchestrator"
+
+# HITL approval demo
+make demo-hitl
+
+# Clean development environment
+make clean
 ```
 
 ### Performance Optimizations
@@ -281,7 +298,8 @@ uv run pytest tests/test_magentic_fleet.py -k "test_orchestrator"
 
 ### Configuration
 
-- `config/workflow.yaml` - Global workflow settings
-- `agents/*/config.yaml` - Per-agent configuration
-- `pyproject.toml` - Python dependencies and tool config
-- `package.json` - Frontend dependencies
+- [`config/workflow.yaml`](src/agenticfleet/config/workflow.yaml) - Global workflow settings
+- [`agents/*/config.yaml`](src/agenticfleet/agents) - Per-agent configuration
+- [`pyproject.toml`](pyproject.toml) - Python dependencies and tool config
+- [`src/frontend/package.json`](src/frontend/package.json) - Frontend dependencies
+- [`Makefile`](Makefile) - Development commands and build automation
