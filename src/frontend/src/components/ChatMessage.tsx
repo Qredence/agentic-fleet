@@ -86,7 +86,9 @@ export const ChatMessage = React.memo(
     const Icon = config.icon;
 
     const isUserMessage = agent === "user";
-    const messageBgColor = isUserMessage ? "rgb(51, 51, 51)" : "rgba(54, 53, 55, 1)";
+    const messageBgClass = isUserMessage 
+      ? "bg-[hsl(var(--message-user-bg))]" 
+      : "bg-[hsl(var(--message-agent-bg))]";
 
     return (
       <Message
@@ -158,15 +160,7 @@ export const ChatMessage = React.memo(
             {/* Main Message */}
             <MessageContent
               markdown={true}
-              className="p-6 border border-border/50 w-full"
-              style={{
-                borderRadius: "32px",
-                backgroundColor: messageBgColor,
-                display: "flex",
-                flexDirection: "column",
-                justifyContent: "center",
-                alignItems: "flex-start",
-              }}
+              className={`p-6 border border-border/50 w-full rounded-[32px] ${messageBgClass} flex flex-col justify-center items-start`}
             >
               {message}
             </MessageContent>

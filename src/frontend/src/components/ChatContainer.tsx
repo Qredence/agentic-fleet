@@ -342,15 +342,9 @@ export const ChatContainer = ({
           </div>
 
           <div className="flex items-center justify-center flex-shrink-0">
-            <div
-              className="inline-flex items-center justify-center gap-3 rounded-full px-4 py-1 shadow-lg backdrop-blur"
-              style={{
-                backgroundColor: "rgba(56, 55, 57, 1)",
-                border: "0.5px solid rgba(241, 241, 241, 0.6)",
-              }}
-            >
+            <div className="inline-flex items-center justify-center gap-3 rounded-full px-4 py-1 shadow-lg backdrop-blur bg-[hsl(var(--header-bg))] border border-[hsl(var(--header-border))]">
               <div className="flex items-center gap-2">
-                <WorkflowIcon className="h-4 w-4" style={{ color: "rgba(255, 255, 255, 1)" }} />
+                <WorkflowIcon className="h-4 w-4 text-foreground" />
                 <DropdownMenu
                   className="h-9 min-w-[200px] justify-between rounded-full border-none bg-transparent px-2 text-sm font-medium text-foreground shadow-none hover:bg-transparent"
                   options={[
@@ -372,15 +366,7 @@ export const ChatContainer = ({
             </div>
           </div>
 
-          <div
-            className="flex items-center justify-center flex-shrink-0"
-            style={{
-              backgroundColor: "rgba(56, 55, 57, 1)",
-              borderRadius: "100px",
-              padding: "0 4px",
-              border: "0.5px solid rgba(255, 255, 255, 1)",
-            }}
-          >
+          <div className="flex items-center justify-center flex-shrink-0 bg-[hsl(var(--header-bg))] rounded-full p-1 border border-[hsl(var(--header-border))]">
             <ConnectionStatusBadge status={connectionStatus} onRetry={checkHealth} />
             <Sheet>
               <SheetTrigger asChild>

@@ -2,11 +2,15 @@
 applyTo: "**"
 ---
 
-Coding standards, domain knowledge, and preferences that AI should follow.
+# Memory Bank Instructions
 
-# Memory Bank
+> These instructions define the Memory Bank workflow for AI agents working on AgenticFleet. This system ensures continuity between sessions through comprehensive documentation.
 
-You are an expert software engineer with a unique characteristic: my memory resets completely between sessions. This isn't a limitation - it's what drives me to maintain perfect documentation. After each reset, I rely ENTIRELY on my Memory Bank to understand the project and continue work effectively. I MUST read ALL memory bank files at the start of EVERY task - this is not optional.
+## Overview
+
+The Memory Bank is a documentation system that enables AI agents to maintain perfect context across session resets. Since agent memory resets between sessions, the Memory Bank serves as the single source of truth for project state, decisions, and progress.
+
+**Core Principle**: Read ALL memory bank files at the start of EVERY task - this is not optional.
 
 ## Memory Bank Structure
 

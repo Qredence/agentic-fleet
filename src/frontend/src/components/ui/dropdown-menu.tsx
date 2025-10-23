@@ -32,7 +32,7 @@ const DropdownMenu = ({
         variant="outline"
         className={
           className ||
-          "px-4 py-2 bg-[#11111198] hover:bg-[#111111d1] shadow-[0_0_20px_rgba(0,0,0,0.2)] border-none rounded-xl backdrop-blur-sm"
+          "px-4 py-2 bg-[hsl(var(--dropdown-bg))] hover:bg-[hsl(var(--dropdown-hover))] shadow-[0_0_20px_rgba(0,0,0,0.2)] border-none rounded-xl backdrop-blur-sm"
         }
       >
         {children ?? "Menu"}
@@ -54,7 +54,7 @@ const DropdownMenu = ({
             animate={{ y: 0, scale: 1, filter: "blur(0px)" }}
             exit={{ y: -5, scale: 0.95, opacity: 0, filter: "blur(10px)" }}
             transition={{ duration: 0.6, ease: "circInOut", type: "spring" }}
-            className="absolute z-10 w-48 mt-2 p-1 bg-[#11111198] rounded-xl shadow-[0_0_20px_rgba(0,0,0,0.2)] backdrop-blur-sm flex flex-col gap-2"
+            className="absolute z-10 w-48 mt-2 p-1 bg-[hsl(var(--dropdown-bg))] rounded-xl shadow-[0_0_20px_rgba(0,0,0,0.2)] backdrop-blur-sm flex flex-col gap-2"
           >
             {options && options.length > 0 ? (
               options.map((option, index) => (
@@ -79,7 +79,7 @@ const DropdownMenu = ({
                     type: "spring",
                   }}
                   whileHover={{
-                    backgroundColor: "#11111140",
+                    backgroundColor: "hsl(var(--dropdown-hover))",
                     transition: {
                       duration: 0.4,
                       ease: "easeInOut",
@@ -94,14 +94,14 @@ const DropdownMenu = ({
                   }}
                   key={option.label}
                   onClick={option.onClick}
-                  className="px-2 py-3 cursor-pointer text-white text-sm rounded-lg w-full text-left flex items-center gap-x-2"
+                  className="px-2 py-3 cursor-pointer text-foreground text-sm rounded-lg w-full text-left flex items-center gap-x-2"
                 >
                   {option.Icon}
                   {option.label}
                 </motion.button>
               ))
             ) : (
-              <div className="px-4 py-2 text-white text-xs">No options</div>
+              <div className="px-4 py-2 text-muted-foreground text-xs">No options</div>
             )}
           </motion.div>
         )}
