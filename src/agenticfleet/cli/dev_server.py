@@ -33,17 +33,28 @@ def main() -> None:
     processes: list[subprocess.Popen[str]] = []
 
     def signal_handler(signum: int, frame: object) -> None:
-        """Handle interrupt signal to cleanly shut down both servers."""
+        """Handle SIGINT/SIGTERM to cleanly shut down both servers."""
+        if signum not in (signal.SIGINT, signal.SIGTERM):
+            print(f"Ignoring unexpected signal: {signum}")
+            return
         print("\n\nShutting down servers...")
         for proc in processes:
             if proc.poll() is None:  # Process is still running
-                proc.terminate()
+                try:
+                    proc.terminate()
+                except Exception as e:
+                    print(f"Error terminating process: {e}")
         # Wait for processes to terminate
         for proc in processes:
             try:
                 proc.wait(timeout=5)
             except subprocess.TimeoutExpired:
-                proc.kill()
+                try:
+                    proc.kill()
+                except Exception as e:
+                    print(f"Error killing process: {e}")
+            except Exception as e:
+                print(f"Error waiting for process: {e}")
         print("Servers stopped.")
         sys.exit(0)
 
