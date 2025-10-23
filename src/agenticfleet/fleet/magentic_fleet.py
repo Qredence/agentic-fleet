@@ -270,11 +270,11 @@ class MagenticFleet:
                         if event.data is not None:
                             final_output_text = str(event.data)
                         completed = True
-                    elif (
-                        isinstance(event, MagenticFinalResultEvent) and event.message is not None
-                    ) or (
-                        isinstance(event, MagenticAgentMessageEvent) and event.message is not None
-                    ):
+                    elif isinstance(event, MagenticFinalResultEvent) and event.message is not None:
+                        self._latest_final_text = getattr(event.message, "text", None) or str(
+                            event.message
+                        )
+                    elif isinstance(event, MagenticAgentMessageEvent) and event.message is not None:
                         self._latest_final_text = getattr(event.message, "text", None) or str(
                             event.message
                         )
