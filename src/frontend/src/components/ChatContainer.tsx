@@ -514,7 +514,7 @@ export const ChatContainer = ({
           {/* Input - Floating at bottom */}
           <div
             className="fixed bottom-[12px] left-0 right-0 z-10 px-4"
-            style={{ height: "auto", flexGrow: 0, top: "" }}
+            style={{ height: "auto", flexGrow: 0 }}
           >
             <div className="mx-auto max-w-[800px]">
               {/* Prompt Suggestions - only show when no messages */}
