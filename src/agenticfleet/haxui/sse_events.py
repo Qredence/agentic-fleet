@@ -46,7 +46,7 @@ class AgentResponseEvent(SSEEvent):
     type: EventType = EventType.AGENT_RESPONSE
     agent: str
     content: str
-    is_complete: bool = False
+    isComplete: bool = False
 
 
 class ToolCallEvent(SSEEvent):
@@ -112,7 +112,7 @@ class SSEEventEmitter:
 
     @staticmethod
     def emit_approval_request(
-        request_id: str,
+        id: str,
         operation: str,
         params: dict[str, Any],
         context: str,
@@ -120,7 +120,7 @@ class SSEEventEmitter:
     ) -> bytes:
         """Emit approval request"""
         event = ApprovalRequestEvent(
-            id=request_id,
+            id=id,
             operation=operation,
             params=params,
             context=context,
