@@ -54,15 +54,14 @@ export const ChatInput = ({ onSendMessage, disabled }: ChatInputProps) => {
                   onClick={() =>
                     setTags(tags.map((t) => (t.id === tag.id ? { ...t, active: !t.active } : t)))
                   }
-                  className={`flex items-center gap-1 px-3 rounded-full text-xs font-semibold border transition-smooth ${
+                  className={`flex items-center gap-1 rounded-full text-xs font-semibold border transition-smooth ${
                     tag.active
-                      ? "bg-accent text-accent-foreground border-border hover:bg-accent/80"
-                      : "bg-card text-muted-foreground border-border hover:bg-muted"
+                      ? "bg-accent text-accent-foreground border-border hover:bg-accent/80 py-2 px-3"
+                      : "bg-card text-muted-foreground border-border hover:bg-muted py-1.5 px-3"
                   }`}
                   style={{
                     height: "auto",
                     alignSelf: "stretch",
-                    padding: tag.active ? "8px 12px" : "6px 12px",
                   }}
                 >
                   <span>{tag.label}</span>
