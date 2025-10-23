@@ -34,9 +34,6 @@ def main() -> None:
 
     def signal_handler(signum: int, frame: object) -> None:
         """Handle SIGINT/SIGTERM to cleanly shut down both servers."""
-        if signum not in (signal.SIGINT, signal.SIGTERM):
-            print(f"Ignoring unexpected signal: {signum}")
-            return
         print("\n\nShutting down servers...")
         for proc in processes:
             if proc.poll() is None:  # Process is still running
