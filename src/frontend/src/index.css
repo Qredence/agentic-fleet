@@ -53,6 +53,18 @@ All colors MUST be HSL.
     --glass-bg: 0 0% 100% / 0.6;
     --glass-border: 0 0% 80% / 0.3;
 
+    /* Dropdown menu colors */
+    --dropdown-bg: 0 0% 7% / 0.6;
+    --dropdown-hover: 0 0% 7% / 0.25;
+    
+    /* Message bubbles */
+    --message-user-bg: 0 0% 20%;
+    --message-agent-bg: 0 0% 21%;
+    
+    /* Header overlay */
+    --header-bg: 0 0% 14%;
+    --header-border: 0 0% 95% / 0.6;
+
     /* Transitions */
     --transition-smooth: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
     --transition-bounce: all 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
@@ -100,6 +112,18 @@ All colors MUST be HSL.
     /* Glass effect */
     --glass-bg: 0 0% 10% / 0.6;
     --glass-border: 0 0% 30% / 0.3;
+    
+    /* Dropdown menu colors */
+    --dropdown-bg: 0 0% 7% / 0.6;
+    --dropdown-hover: 0 0% 7% / 0.25;
+    
+    /* Message bubbles */
+    --message-user-bg: 0 0% 20%;
+    --message-agent-bg: 0 0% 21%;
+    
+    /* Header overlay */
+    --header-bg: 0 0% 14%;
+    --header-border: 0 0% 95% / 0.6;
   }
 }
 

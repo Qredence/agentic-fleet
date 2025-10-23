@@ -82,7 +82,7 @@ export const ChatInput = ({ onSendMessage, disabled }: ChatInputProps) => {
               }`}
               style={{ height: "auto", alignSelf: "stretch" }}
             >
-              <Send className="h-3.5 w-3.5" style={{ color: "rgba(255, 255, 255, 1)" }} />
+              <Send className="h-3.5 w-3.5 text-primary-foreground" />
             </button>
           </div>
         </div>
