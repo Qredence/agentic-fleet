@@ -33,13 +33,14 @@ jobs:
           fi
       - name: Checkout Failing Ref
         if: ${{ steps.openai-secret-check.outputs.has-secret == 'true' }}
-        uses: actions/checkout@v5
+        uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # ratchet:actions/checkout@v5
         with:
           ref: ${{ env.FAILED_HEAD_SHA }}
           fetch-depth: 0
+          persist-credentials: false
       - name: Install uv
         if: ${{ steps.openai-secret-check.outputs.has-secret == 'true' }}
-        uses: astral-sh/setup-uv@v7
+        uses: astral-sh/setup-uv@5dbc9fba7434435c4cd0268139340fa3696d98f3 # ratchet:astral-sh/setup-uv@v7
         with:
           enable-cache: true
           cache-dependency-glob: "uv.lock"
@@ -95,7 +96,7 @@ jobs:
         run: uv run pytest -q -m "not e2e"
       - name: Create pull request with fixes
         if: ${{ success() && steps.openai-secret-check.outputs.has-secret == 'true' }}
-        uses: peter-evans/create-pull-request@v7
+        uses: peter-evans/create-pull-request@271a8d0340265f705b14b6d32b9829c1cb33d45e # ratchet:peter-evans/create-pull-request@v7
         with:
           commit-message: "fix(ci): auto-fix failing tests via Codex"
           branch: codex/auto-fix-${{ github.event.workflow_run.id }}
