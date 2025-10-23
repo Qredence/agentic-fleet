@@ -31,7 +31,7 @@ export const ChatInput = ({ onSendMessage, disabled }: ChatInputProps) => {
   return (
     <form onSubmit={handleSubmit} className="p-4">
       <div className="w-full rounded-3xl glass shadow-lg border border-border/60 overflow-hidden">
-        <div className="flex flex-col w-full p-3 gap-2" style={{ height: "88px", justifyContent: "center", alignItems: "flex-start" }}>
+        <div className="flex flex-col w-full p-3 gap-2 justify-center items-start" style={{ height: "88px" }}>
           {/* Input field */}
           <input
             type="text"
