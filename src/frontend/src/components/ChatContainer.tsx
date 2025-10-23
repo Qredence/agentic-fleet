@@ -505,7 +505,6 @@ export const ChatContainer = ({
                 variant="secondary"
                 className="absolute bottom-24 right-6 shadow-md rounded-full"
                 onClick={scrollToLatest}
-                style={{ top: "836px" }}
               >
                 <ArrowDown className="h-3.5 w-3.5" aria-hidden="true" />
               </Button>
