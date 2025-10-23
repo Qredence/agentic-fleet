@@ -8,7 +8,7 @@ class TestWorkflowAsAgentE2E:
     """End-to-end tests for workflow_as_agent frontend integration."""
 
     @pytest.mark.asyncio
-    async def test_api_entities_includes_workflow_as_agent(self):
+    async def test_api_entities_includes_workflow_as_agent(self) -> None:
         """Verify workflow_as_agent appears in /v1/entities endpoint."""
         import httpx
 
@@ -31,7 +31,7 @@ class TestWorkflowAsAgentE2E:
             assert workflow["metadata"]["quality_assurance"] is True
 
     @pytest.mark.asyncio
-    async def test_api_health_check(self):
+    async def test_api_health_check(self) -> None:
         """Verify backend health endpoint."""
         import httpx
 
@@ -44,7 +44,7 @@ class TestWorkflowAsAgentE2E:
             assert "version" in data
 
     @pytest.mark.asyncio
-    async def test_workflow_as_agent_execution(self):
+    async def test_workflow_as_agent_execution(self) -> None:
         """Test workflow_as_agent execution via API."""
         import httpx
 

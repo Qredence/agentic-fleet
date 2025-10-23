@@ -37,4 +37,4 @@ def build_manager_kwargs(
     return kwargs
 
 
-__all__ = ["get_manager_limits", "build_manager_kwargs"]
+__all__ = ["build_manager_kwargs", "get_manager_limits"]

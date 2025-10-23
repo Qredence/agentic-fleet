@@ -1,5 +1,4 @@
-"""
-Tests for configuration helpers and default fleet factory.
+"""Tests for configuration helpers and default fleet factory.
 
 These tests focus on ensuring checkpoint storage is created according to the
 settings and that the default Magentic fleet wiring honours configuration.
@@ -7,34 +6,37 @@ settings and that the default Magentic fleet wiring honours configuration.
 
 import tempfile
 from pathlib import Path
+from typing import Any
 from unittest.mock import MagicMock, patch
 
 from agenticfleet.config.settings import Settings
 from agenticfleet.fleet import MagenticFleet, create_default_fleet
 
 
-def test_checkpoint_storage_creation_file():
+def test_checkpoint_storage_creation_file() -> None:
     """File-based checkpoint storage should create the target directory."""
-    with tempfile.TemporaryDirectory() as tmpdir:
-        with patch("agenticfleet.config.settings.Settings.__init__", return_value=None):
-            settings = Settings()
-            settings.workflow_config = {
-                "workflow": {
-                    "checkpointing": {
-                        "enabled": True,
-                        "storage_type": "file",
-                        "storage_path": tmpdir,
-                    }
+    with (
+        tempfile.TemporaryDirectory() as tmpdir,
+        patch("agenticfleet.config.settings.Settings.__init__", return_value=None),
+    ):
+        settings = Settings()
+        settings.workflow_config = {
+            "workflow": {
+                "checkpointing": {
+                    "enabled": True,
+                    "storage_type": "file",
+                    "storage_path": tmpdir,
                 }
             }
+        }
 
-            storage = settings.create_checkpoint_storage()
-            assert storage is not None
-            assert hasattr(storage, "storage_path")
-            assert Path(tmpdir).exists()
+        storage = settings.create_checkpoint_storage()
+        assert storage is not None
+        assert hasattr(storage, "storage_path")
+        assert Path(tmpdir).exists()
 
 
-def test_checkpoint_storage_creation_memory():
+def test_checkpoint_storage_creation_memory() -> None:
     """Memory-based checkpoint storage should be initialised when enabled."""
     with patch("agenticfleet.config.settings.Settings.__init__", return_value=None):
         settings = Settings()
@@ -51,7 +53,7 @@ def test_checkpoint_storage_creation_memory():
         assert storage is not None
 
 
-def test_checkpoint_storage_disabled():
+def test_checkpoint_storage_disabled() -> None:
     """Checkpoint storage should be skipped when explicitly disabled."""
     with patch("agenticfleet.config.settings.Settings.__init__", return_value=None):
         settings = Settings()
@@ -67,7 +69,7 @@ def test_checkpoint_storage_disabled():
         assert storage is None
 
 
-def test_create_default_fleet_returns_magentic_fleet():
+def test_create_default_fleet_returns_magentic_fleet() -> None:
     """Factory should create a MagenticFleet with configured checkpoint storage."""
     checkpoint_storage = MagicMock()
 
@@ -102,7 +104,7 @@ def test_create_default_fleet_returns_magentic_fleet():
     }
 
 
-def test_redis_helpers_without_dependency(monkeypatch):
+def test_redis_helpers_without_dependency(monkeypatch: Any) -> None:
     """Redis helpers should degrade gracefully when redis extras are unavailable."""
     with (
         patch("agenticfleet.config.settings.Settings.__init__", return_value=None),

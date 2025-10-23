@@ -23,18 +23,18 @@ if TYPE_CHECKING:  # pragma: no cover - for static analyzers
     from agenticfleet.observability import get_trace_config, is_tracing_enabled, setup_tracing
 
 __all__ = [
-    "__version__",
+    "MagenticFleet",
     "__author__",
     "__email__",
+    "__version__",
+    "create_analyst_agent",
+    "create_coder_agent",
+    "create_default_fleet",
     "create_orchestrator_agent",
     "create_researcher_agent",
-    "create_coder_agent",
-    "create_analyst_agent",
-    "MagenticFleet",
-    "create_default_fleet",
-    "setup_tracing",
-    "is_tracing_enabled",
     "get_trace_config",
+    "is_tracing_enabled",
+    "setup_tracing",
 ]
 
 _EXPORTS: dict[str, tuple[str, str]] = {

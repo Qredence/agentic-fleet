@@ -35,6 +35,7 @@ GET /health
 Returns system health status and configuration information.
 
 **Response:**
+
 ```json
 {
   "status": "healthy",
@@ -58,6 +59,7 @@ GET /v1/conversations
 Retrieve all conversation IDs and metadata.
 
 **Response:**
+
 ```json
 {
   "conversations": [
@@ -80,6 +82,7 @@ Content-Type: application/json
 ```
 
 **Request Body:**
+
 ```json
 {
   "task": "Analyze the market trends for Q1 2025",
@@ -89,6 +92,7 @@ Content-Type: application/json
 ```
 
 **Response:**
+
 ```json
 {
   "conversation_id": "conv_12345",
@@ -106,6 +110,7 @@ GET /v1/conversations/{conversation_id}
 Retrieve conversation metadata and message history.
 
 **Response:**
+
 ```json
 {
   "id": "conv_12345",
@@ -138,6 +143,7 @@ GET /v1/checkpoints
 Retrieve all available checkpoints.
 
 **Response:**
+
 ```json
 {
   "checkpoints": [
@@ -160,6 +166,7 @@ Content-Type: application/json
 ```
 
 **Request Body:**
+
 ```json
 {
   "task": "Continue market analysis",
@@ -178,6 +185,7 @@ GET /v1/agents
 Retrieve all available agents and their capabilities.
 
 **Response:**
+
 ```json
 {
   "agents": [
@@ -220,6 +228,7 @@ GET /v1/approvals
 Retrieve all pending human approval requests.
 
 **Response:**
+
 ```json
 {
   "approvals": [
@@ -247,6 +256,7 @@ Content-Type: application/json
 ```
 
 **Request Body:**
+
 ```json
 {
   "decision": "approve",
@@ -257,11 +267,13 @@ Content-Type: application/json
 ```
 
 **Decision Options:**
+
 - `"approve"` - Approve the operation as requested
 - `"reject"` - Reject the operation entirely
 - `"modify"` - Approve with modifications (include `modified_details`)
 
 **Response:**
+
 ```json
 {
   "status": "success",
@@ -284,6 +296,7 @@ Connect to real-time stream of conversation events.
 #### Event Types
 
 **Agent Response Delta:**
+
 ```json
 {
   "type": "response.output_text.delta",
@@ -295,6 +308,7 @@ Connect to real-time stream of conversation events.
 ```
 
 **Agent Response Complete:**
+
 ```json
 {
   "type": "response.completed",
@@ -308,6 +322,7 @@ Connect to real-time stream of conversation events.
 ```
 
 **Function Call Request:**
+
 ```json
 {
   "type": "function_call.requested",
@@ -323,6 +338,7 @@ Connect to real-time stream of conversation events.
 ```
 
 **Function Call Result:**
+
 ```json
 {
   "type": "function_call.completed",
@@ -338,6 +354,7 @@ Connect to real-time stream of conversation events.
 ```
 
 **Plan Creation:**
+
 ```json
 {
   "type": "workflow.plan.created",
@@ -353,6 +370,7 @@ Connect to real-time stream of conversation events.
 ```
 
 **Progress Ledger Update:**
+
 ```json
 {
   "type": "workflow.progress_ledger.updated",
@@ -368,6 +386,7 @@ Connect to real-time stream of conversation events.
 ```
 
 **Final Answer:**
+
 ```json
 {
   "type": "final_answer.completed",
@@ -382,6 +401,7 @@ Connect to real-time stream of conversation events.
 ```
 
 **Error Events:**
+
 ```json
 {
   "type": "error.occurred",
@@ -457,24 +477,24 @@ for event in conversation.stream():
 ### JavaScript/TypeScript Client
 
 ```typescript
-import { AgenticFleetClient } from '@agenticfleet/client';
+import { AgenticFleetClient } from "@agenticfleet/client";
 
 const client = new AgenticFleetClient({
-  baseUrl: 'http://localhost:8000',
-  apiKey: 'your-api-key'
+  baseUrl: "http://localhost:8000",
+  apiKey: "your-api-key",
 });
 
 const conversation = await client.createConversation({
-  task: 'Analyze market trends for Q1 2025'
+  task: "Analyze market trends for Q1 2025",
 });
 
 for await (const event of conversation.stream()) {
   switch (event.type) {
-    case 'final_answer.completed':
-      console.log('Result:', event.data.finalAnswer);
+    case "final_answer.completed":
+      console.log("Result:", event.data.finalAnswer);
       break;
-    case 'error.occurred':
-      console.error('Error:', event.data.message);
+    case "error.occurred":
+      console.error("Error:", event.data.message);
       break;
   }
 }
@@ -487,7 +507,16 @@ for await (const event of conversation.stream()) {
 Start the development server:
 
 ```bash
+# Full stack (frontend + backend)
+uv run agentic-fleet
+# OR
+make dev
+
+# Backend only
 make haxui-server
+
+# CLI/REPL only
+uv run fleet
 ```
 
 The API will be available at `http://localhost:8000`.
@@ -517,14 +546,14 @@ curl -N http://localhost:8000/v1/conversations/test/stream \
 
 ### Environment Variables
 
-| Variable | Required | Default | Description |
-|----------|------------|---------|-------------|
-| `OPENAI_API_KEY` | Yes | - | OpenAI API key for LLM access |
-| `ENABLE_OTEL` | No | false | Enable OpenTelemetry tracing |
-| `OTLP_ENDPOINT` | No | http://localhost:4317 | OpenTelemetry collector endpoint |
-| `LOG_LEVEL` | No | INFO | Logging level (DEBUG, INFO, WARN, ERROR) |
-| `MAX_CONVERSATION_LENGTH` | No | 100 | Maximum messages per conversation |
-| `CHECKPOINT_RETENTION_DAYS` | No | 30 | Days to retain checkpoints |
+| Variable                    | Required | Default               | Description                              |
+| --------------------------- | -------- | --------------------- | ---------------------------------------- |
+| `OPENAI_API_KEY`            | Yes      | -                     | OpenAI API key for LLM access            |
+| `ENABLE_OTEL`               | No       | false                 | Enable OpenTelemetry tracing             |
+| `OTLP_ENDPOINT`             | No       | http://localhost:4317 | OpenTelemetry collector endpoint         |
+| `LOG_LEVEL`                 | No       | INFO                  | Logging level (DEBUG, INFO, WARN, ERROR) |
+| `MAX_CONVERSATION_LENGTH`   | No       | 100                   | Maximum messages per conversation        |
+| `CHECKPOINT_RETENTION_DAYS` | No       | 30                    | Days to retain checkpoints               |
 
 ### Feature Flags
 
@@ -562,6 +591,7 @@ export OTLP_ENDPOINT=http://localhost:4317
 ```
 
 Metrics collected:
+
 - Request latency and duration
 - Agent execution times
 - Token usage tracking

@@ -19,6 +19,42 @@ AgenticFleet is a **multi-agent orchestration system** built on Microsoft Agent 
 
 ---
 
+## Quick Start for Agents
+
+**Most common commands you'll need:**
+
+```bash
+# Setup (first time)
+make install && make frontend-install
+
+# Run full application (frontend + backend)
+uv run agentic-fleet
+# OR
+make dev
+
+# Run CLI only
+uv run fleet
+
+# Validate configuration (CRITICAL before commits)
+make test-config
+
+# Run tests
+make test              # All tests
+uv run pytest -k "test_name" -v  # Specific test
+
+# Code quality checks (run before PR)
+make check             # Lint + format + type-check
+```
+
+**Before any PR:**
+
+1. Run `make test-config` to validate all configurations
+2. Run `make check` to ensure code quality
+3. Run relevant tests with `uv run pytest -k "relevant" -v`
+4. Run `make validate-agents` to check documentation
+
+---
+
 ## Quick Directory Map
 
 ```
@@ -94,10 +130,14 @@ OPENAI_EMBEDDING_MODEL=text-embedding-3-small
 ### Running the Application
 
 ```bash
-make dev              # Full stack: backend (8000) + frontend (5173)
+# Primary commands
+uv run agentic-fleet  # Full stack: backend (8000) + frontend (5173)
+uv run fleet          # CLI/REPL only
+
+# Alternative/component commands
+make dev              # Same as agentic-fleet
 make haxui-server     # Backend only (FastAPI + SSE)
 make frontend-dev     # Frontend only (Vite)
-make run              # CLI mode (python -m agenticfleet)
 ```
 
 ### Testing
@@ -457,14 +497,14 @@ npm run format
 # Setup
 make install && make frontend-install
 
-# Full stack dev
-make dev
+# Run application
+uv run agentic-fleet  # Full stack (frontend + backend)
+uv run fleet          # CLI/REPL only
+make dev              # Same as agentic-fleet
 
-# Backend only
-make haxui-server
-
-# Frontend only
-make frontend-dev
+# Component-specific
+make haxui-server     # Backend only
+make frontend-dev     # Frontend only
 
 # Config validation (CRITICAL after changes)
 make test-config

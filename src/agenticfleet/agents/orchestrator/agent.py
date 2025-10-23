@@ -12,7 +12,7 @@ from typing import Any
 try:
     from agent_framework.openai import OpenAIResponsesClient
 except ImportError:
-    OpenAIResponsesClient = None  # type: ignore[assignment,misc]
+    OpenAIResponsesClient = None  # type: ignore[assignment, misc]
 
 from agenticfleet.agents.base import FleetAgent
 from agenticfleet.config import settings

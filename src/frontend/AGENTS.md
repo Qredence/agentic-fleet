@@ -4,6 +4,30 @@
 
 ---
 
+## Quick Start
+
+**Essential frontend commands:**
+
+```bash
+# From repository root:
+make frontend-install  # Install dependencies
+make frontend-dev      # Start dev server (port 5173)
+
+# From src/frontend/:
+npm install      # Install dependencies
+npm run dev      # Start dev server
+npm run build    # Production build
+npm run lint     # Check code
+npm run lint:fix # Auto-fix issues
+
+# Test integration with backend:
+# Terminal 1: uv run agentic-fleet (full stack)
+# OR Terminal 1: make haxui-server (backend only)
+# Terminal 2: npm run dev (if not using agentic-fleet)
+```
+
+---
+
 ## 1. Purpose & Scope
 
 The frontend provides a **real-time multi-agent interaction UI** with:

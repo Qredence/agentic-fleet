@@ -1,6 +1,7 @@
 """Unit tests for Mem0ContextProvider."""
 
 from pathlib import Path
+from typing import Any
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -10,7 +11,7 @@ from agenticfleet.context.mem0_provider import Mem0ContextProvider
 
 
 @pytest.fixture
-def mock_env_vars(monkeypatch):
+def mock_env_vars(monkeypatch: Any) -> None:
     """Set up required environment variables for testing."""
     monkeypatch.setenv("OPENAI_API_KEY", "test-openai-key")
     monkeypatch.setenv("OPENAI_MODEL", "gpt-4o-mini")
@@ -24,7 +25,7 @@ def mock_env_vars(monkeypatch):
 
 
 @pytest.fixture
-def mock_memory():
+def mock_memory() -> Any:
     """Patch the Mem0 Memory class and provide the mock instance."""
     with patch("agenticfleet.context.mem0_provider.Memory") as mock_mem:
         mock_instance = MagicMock()
@@ -35,7 +36,7 @@ def mock_memory():
 class TestMem0ContextProviderInitialization:
     """Tests covering Mem0ContextProvider construction."""
 
-    def test_init_with_defaults(self, mock_env_vars, mock_memory):
+    def test_init_with_defaults(self, mock_env_vars: Any, mock_memory: Any) -> None:
         """Default IDs should be applied and Memory invoked with OpenAI config."""
         mock_mem_cls, mock_instance = mock_memory
 
@@ -58,7 +59,7 @@ class TestMem0ContextProviderInitialization:
         assert config.embedder.config["model"] == settings.openai_embedding_model
         assert Path(config.history_db_path).name == Path(settings.mem0_history_db_path).name
 
-    def test_init_with_custom_ids(self, mock_env_vars, mock_memory):
+    def test_init_with_custom_ids(self, mock_env_vars: Any, mock_memory: Any) -> None:
         """Custom user/agent identifiers should persist on the provider."""
         _, mock_instance = mock_memory
 
@@ -68,7 +69,9 @@ class TestMem0ContextProviderInitialization:
         assert provider.agent_id == "custom_agent"
         assert provider.memory is mock_instance
 
-    def test_history_path_created(self, mock_env_vars, tmp_path, mock_memory):
+    def test_history_path_created(
+        self, mock_env_vars: Any, tmp_path: Any, mock_memory: Any
+    ) -> None:
         """Mem0 history directory should be created automatically when missing."""
         history_db = tmp_path / "history" / "mem0.db"
         with patch(
@@ -83,7 +86,7 @@ class TestMem0ContextProviderInitialization:
 class TestMem0ContextProviderGet:
     """Tests for the retrieval helper."""
 
-    def test_get_with_results(self, mock_env_vars, mock_memory):
+    def test_get_with_results(self, mock_env_vars: Any, mock_memory: Any) -> None:
         _, mock_instance = mock_memory
         mock_instance.search.return_value = [
             {"memory": "User prefers Python", "score": 0.95},
@@ -100,14 +103,14 @@ class TestMem0ContextProviderGet:
             agent_id="orchestrator",
         )
 
-    def test_get_with_empty_results(self, mock_env_vars, mock_memory):
+    def test_get_with_empty_results(self, mock_env_vars: Any, mock_memory: Any) -> None:
         _, mock_instance = mock_memory
         mock_instance.search.return_value = []
 
         provider = Mem0ContextProvider()
         assert provider.get("What does the user like?") == ""
 
-    def test_get_with_custom_ids(self, mock_env_vars, mock_memory):
+    def test_get_with_custom_ids(self, mock_env_vars: Any, mock_memory: Any) -> None:
         _, mock_instance = mock_memory
         mock_instance.search.return_value = [{"memory": "Test memory", "score": 0.9}]
 
@@ -118,7 +121,7 @@ class TestMem0ContextProviderGet:
             "query", user_id="alice", agent_id="researcher"
         )
 
-    def test_get_with_missing_memory_key(self, mock_env_vars, mock_memory):
+    def test_get_with_missing_memory_key(self, mock_env_vars: Any, mock_memory: Any) -> None:
         _, mock_instance = mock_memory
         mock_instance.search.return_value = [
             {"memory": "Valid memory", "score": 0.9},
@@ -129,7 +132,7 @@ class TestMem0ContextProviderGet:
         provider = Mem0ContextProvider()
         assert provider.get("query") == "Valid memory"
 
-    def test_get_handles_exception(self, mock_env_vars, mock_memory, capsys):
+    def test_get_handles_exception(self, mock_env_vars: Any, mock_memory: Any, capsys: Any) -> None:
         _, mock_instance = mock_memory
         mock_instance.search.side_effect = Exception("Search failed")
 
@@ -139,14 +142,14 @@ class TestMem0ContextProviderGet:
         captured = capsys.readouterr()
         assert "Error searching memories: Search failed" in captured.out
 
-    def test_get_with_non_dict_results(self, mock_env_vars, mock_memory):
+    def test_get_with_non_dict_results(self, mock_env_vars: Any, mock_memory: Any) -> None:
         _, mock_instance = mock_memory
         mock_instance.search.return_value = ["string_result", 123, None]
 
         provider = Mem0ContextProvider()
         assert provider.get("query") == ""
 
-    def test_get_fallback_to_default_ids(self, mock_env_vars, mock_memory):
+    def test_get_fallback_to_default_ids(self, mock_env_vars: Any, mock_memory: Any) -> None:
         _, mock_instance = mock_memory
         mock_instance.search.return_value = [{"memory": "Test", "score": 0.9}]
 
@@ -161,7 +164,7 @@ class TestMem0ContextProviderGet:
 class TestMem0ContextProviderAdd:
     """Tests for persisting new memories."""
 
-    def test_add_with_defaults(self, mock_env_vars, mock_memory):
+    def test_add_with_defaults(self, mock_env_vars: Any, mock_memory: Any) -> None:
         _, mock_instance = mock_memory
         provider = Mem0ContextProvider()
         provider.add("User likes Python")
@@ -173,7 +176,7 @@ class TestMem0ContextProviderAdd:
             metadata={},
         )
 
-    def test_add_with_custom_ids(self, mock_env_vars, mock_memory):
+    def test_add_with_custom_ids(self, mock_env_vars: Any, mock_memory: Any) -> None:
         _, mock_instance = mock_memory
         provider = Mem0ContextProvider()
         provider.add("Test data", user_id="alice", agent_id="researcher")
@@ -182,7 +185,7 @@ class TestMem0ContextProviderAdd:
             "Test data", user_id="alice", agent_id="researcher", metadata={}
         )
 
-    def test_add_with_metadata(self, mock_env_vars, mock_memory):
+    def test_add_with_metadata(self, mock_env_vars: Any, mock_memory: Any) -> None:
         _, mock_instance = mock_memory
         metadata = {"category": "preferences", "importance": "high"}
 
@@ -196,7 +199,7 @@ class TestMem0ContextProviderAdd:
             metadata=metadata,
         )
 
-    def test_add_handles_exception(self, mock_env_vars, mock_memory, capsys):
+    def test_add_handles_exception(self, mock_env_vars: Any, mock_memory: Any, capsys: Any) -> None:
         _, mock_instance = mock_memory
         mock_instance.add.side_effect = Exception("Add failed")
 
@@ -206,7 +209,7 @@ class TestMem0ContextProviderAdd:
         captured = capsys.readouterr()
         assert "Error adding memory: Add failed" in captured.out
 
-    def test_add_fallback_to_default_ids(self, mock_env_vars, mock_memory):
+    def test_add_fallback_to_default_ids(self, mock_env_vars: Any, mock_memory: Any) -> None:
         _, mock_instance = mock_memory
         provider = Mem0ContextProvider(user_id="default_user", agent_id="default_agent")
         provider.add("Test data", user_id=None, agent_id=None)
@@ -218,7 +221,7 @@ class TestMem0ContextProviderAdd:
             metadata={},
         )
 
-    def test_add_with_empty_metadata(self, mock_env_vars, mock_memory):
+    def test_add_with_empty_metadata(self, mock_env_vars: Any, mock_memory: Any) -> None:
         _, mock_instance = mock_memory
         provider = Mem0ContextProvider()
         provider.add("Test data", metadata=None)
@@ -234,7 +237,7 @@ class TestMem0ContextProviderAdd:
 class TestMem0ContextProviderConfiguration:
     """Configuration-level assertions."""
 
-    def test_memory_receives_expected_config(self, mock_env_vars):
+    def test_memory_receives_expected_config(self, mock_env_vars: Any) -> None:
         with patch("agenticfleet.context.mem0_provider.Memory") as patched_memory:
             Mem0ContextProvider()
 

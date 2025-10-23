@@ -105,7 +105,7 @@ class SSEEventEmitter:
         return event.to_sse()
 
     @staticmethod
-    def emit_tool_call(tool: str, args: dict, result: Any = None) -> bytes:
+    def emit_tool_call(tool: str, args: dict[str, Any], result: Any = None) -> bytes:
         """Emit tool call notification"""
         event = ToolCallEvent(tool=tool, args=args, result=result)
         return event.to_sse()
@@ -114,7 +114,7 @@ class SSEEventEmitter:
     def emit_approval_request(
         id: str,
         operation: str,
-        params: dict,
+        params: dict[str, Any],
         context: str,
         risk_level: RiskLevel | None = None,
     ) -> bytes:

@@ -8,7 +8,7 @@ It performs heuristic (best-effort) checks and reports:
 1. Presence of required AGENTS.md files
 2. Required sections / anchors in root AGENTS.md
 3. Markdown formatting sanity (blank lines around tables heuristic)
-4. Codebase scans for common anti‑patterns:
+4. Codebase scans for common anti-patterns:
    - Hardcoded model_id strings in OpenAIResponsesClient(...) calls
    - Direct python / pytest invocations without `uv run` (in docs / AGENTS files)
 5. Tool directory function signatures lacking return type annotations (basic regex)
@@ -33,6 +33,7 @@ import sys
 from collections.abc import Iterable
 from dataclasses import asdict, dataclass
 from pathlib import Path
+from typing import Any
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 
@@ -74,7 +75,7 @@ class Finding:
     line: int | None = None
     severity: str = "error"  # error | warning | info
 
-    def to_dict(self) -> dict:
+    def to_dict(self) -> dict[str, Any]:
         return asdict(self)
 
 

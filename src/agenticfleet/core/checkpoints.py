@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import asyncio
 import json
-from collections.abc import Mapping
+from collections.abc import Mapping, Sequence
 from datetime import datetime
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
@@ -24,7 +24,7 @@ else:  # pragma: no cover - runtime path
     except ImportError:
 
         class AgentFrameworkFileCheckpointStorageBase:  # Fallback stub
-            def __init__(self, *args: Any, **kwargs: Any) -> None:  # noqa: D401
+            def __init__(self, *args: Any, **kwargs: Any) -> None:  # noqa: D401, RUF100
                 raise ImportError(
                     "agent_framework is required for FileCheckpointStorage. "
                     "Please install agent_framework to use checkpoint storage features."
@@ -79,11 +79,7 @@ def normalize_checkpoint_metadata(
     timestamp = resolve(checkpoint, "timestamp")
 
     metadata_value = resolve(checkpoint, "metadata")
-    metadata: dict[str, Any]
-    if isinstance(metadata_value, Mapping):
-        metadata = dict(metadata_value)
-    else:
-        metadata = {}
+    metadata = dict(metadata_value) if isinstance(metadata_value, Mapping) else {}
 
     current_round_value = resolve(checkpoint, "current_round", "round")
     current_round = _coerce_round(current_round_value, checkpoint, metadata)
@@ -185,7 +181,7 @@ def _coerce_round(
     if executor_states is None:
         resolved_states: object
         if isinstance(checkpoint, Mapping):
-            resolved_states = checkpoint.get("executor_states")  # type: ignore[index]
+            resolved_states = checkpoint.get("executor_states")
         else:
             resolved_states = getattr(checkpoint, "executor_states", None)
         if isinstance(resolved_states, Mapping):
@@ -238,9 +234,8 @@ class AgenticFleetFileCheckpointStorage(AgentFrameworkFileCheckpointStorageBase)
         super().__init__(storage_path)
         self._storage_path = Path(storage_path)
 
-    async def list_checkpoints(self, workflow_id: str | None = None) -> list[dict[str, Any]]:  # type: ignore[override]
+    async def list_checkpoints(self, workflow_id: str | None = None) -> Sequence[Any]:  # type: ignore[override]
         """Return serialized checkpoint metadata sorted by newest first."""
-
         checkpoints = await asyncio.to_thread(self._load_checkpoints)
         if workflow_id is not None:
             target = str(workflow_id)

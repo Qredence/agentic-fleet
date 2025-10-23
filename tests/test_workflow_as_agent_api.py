@@ -5,9 +5,9 @@ import pytest
 from agenticfleet.haxui.runtime import FleetRuntime, build_entity_catalog
 
 
-def test_workflow_as_agent_in_catalog():
+def test_workflow_as_agent_in_catalog() -> None:
     """Verify workflow_as_agent appears in entity catalog."""
-    agents, workflows = build_entity_catalog()
+    _, workflows = build_entity_catalog()
 
     # Find workflow_as_agent in workflows
     workflow_found = False
@@ -24,7 +24,7 @@ def test_workflow_as_agent_in_catalog():
     assert workflow_found, "workflow_as_agent not found in entity catalog"
 
 
-def test_entity_catalog_structure():
+def test_entity_catalog_structure() -> None:
     """Verify entity catalog returns correct structure."""
     agents, workflows = build_entity_catalog()
 
@@ -53,7 +53,7 @@ def test_entity_catalog_structure():
 
 
 @pytest.mark.asyncio
-async def test_runtime_initialization():
+async def test_runtime_initialization() -> None:
     """Verify FleetRuntime initializes workflow_as_agent."""
     runtime = FleetRuntime()
     await runtime.ensure_initialised()

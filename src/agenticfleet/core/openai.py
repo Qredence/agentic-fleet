@@ -9,7 +9,7 @@ def get_responses_model_parameter(client_cls: type[object]) -> str:
     """Return the parameter name used for the responses model on the client."""
 
     try:
-        signature = inspect.signature(client_cls.__init__)  # type: ignore[attr-defined]
+        signature = inspect.signature(client_cls.__init__)
     except (TypeError, ValueError):
         return "model"
 

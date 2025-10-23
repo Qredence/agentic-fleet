@@ -50,7 +50,7 @@ class ConsoleUI:
         history_path = Path.home() / ".agenticfleet_history"
         history_path.parent.mkdir(parents=True, exist_ok=True)
         self._prompt_style = Style.from_dict({"prompt": "bold"})
-        self.session: PromptSession = PromptSession(
+        self.session: PromptSession[str] = PromptSession(
             history=FileHistory(str(history_path)),
             style=self._prompt_style,
             enable_history_search=True,
@@ -85,7 +85,7 @@ class ConsoleUI:
         """Prompt the operator for input, preserving Rich output."""
 
         with patch_stdout():
-            text = await self.session.prompt_async(HTML(f"<prompt>➤ {label.lower()} › </prompt>"))
+            text = await self.session.prompt_async(HTML(f"<prompt>➤ {label.lower()} > </prompt>"))
         return text.strip()
 
     @contextmanager
@@ -182,22 +182,22 @@ class ConsoleUI:
             raw_output = ""
 
             if hasattr(message, "facts"):
-                facts_lines = self._format_lines(getattr(message, "facts"))
+                facts_lines = self._format_lines(message.facts)
                 if facts_lines:
                     sections.append(("Facts", facts_lines))
 
             if hasattr(message, "plan"):
-                plan_lines = self._format_lines(getattr(message, "plan"))
+                plan_lines = self._format_lines(message.plan)
                 if plan_lines:
                     sections.append(("Plan", plan_lines))
 
             if hasattr(message, "status"):
-                status = getattr(message, "status")
+                status = message.status
                 if status is not None:
                     sections.append(("Status", [str(status)]))
 
-            if hasattr(message, "content") and getattr(message, "content"):
-                raw_output = str(getattr(message, "content"))
+            if hasattr(message, "content") and message.content:
+                raw_output = str(message.content)
             else:
                 raw_output = str(getattr(message, "raw_text", "")) or ""
 

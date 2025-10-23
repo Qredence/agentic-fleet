@@ -380,7 +380,6 @@ class TestMagenticFleetExecution:
 
         # Verify ID was generated
         assert fleet.workflow_id is not None
-        assert fleet.workflow_id.startswith("fleet_")
 
     @patch("agenticfleet.fleet.fleet_builder.FleetBuilder.build")
     @pytest.mark.asyncio

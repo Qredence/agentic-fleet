@@ -1,10 +1,10 @@
-"""Simple manual test for HITL functionality without pytest."""
+"""Manual test for HITL approval workflow - requires user interaction."""
 
 import asyncio
 
 import pytest
 
-from agenticfleet.core.approval import ApprovalDecision
+from agenticfleet.core.approval import ApprovalDecision, ApprovalRequest, ApprovalResponse
 from agenticfleet.core.cli_approval import create_approval_request
 
 
@@ -14,9 +14,9 @@ class MockApprovalHandler:
     def __init__(self, decision: ApprovalDecision, modified_code: str | None = None):
         self.decision = decision
         self.modified_code = modified_code
-        self.requests_received = []
+        self.requests_received: list[ApprovalRequest] = []
 
-    async def request_approval(self, request):
+    async def request_approval(self, request: ApprovalRequest) -> ApprovalResponse:
         """Mock approval that returns predefined decision."""
         from agenticfleet.core.approval import ApprovalResponse
 
@@ -29,7 +29,7 @@ class MockApprovalHandler:
         )
 
 
-def test_create_approval_request():
+def test_create_approval_request() -> None:
     """Test creating an approval request."""
     print("Test: create_approval_request")
     request = create_approval_request(
@@ -47,7 +47,7 @@ def test_create_approval_request():
 
 
 @pytest.mark.asyncio
-async def test_mock_approval_handler():
+async def test_mock_approval_handler() -> None:
     """Test mock approval handler."""
     print("\nTest: mock_approval_handler")
 
@@ -80,7 +80,7 @@ async def test_mock_approval_handler():
     print("  ✓ Modification works")
 
 
-def main():
+def main() -> int:
     """Run all tests."""
     print("=" * 60)
     print("HITL Manual Test Suite")

@@ -108,7 +108,7 @@ class Settings:
             logging.warning(f"Configuration file not found: {file_path}")
             return {}
         except yaml.YAMLError as e:
-            raise AgentConfigurationError(f"Failed to parse YAML file {file_path}: {e}")
+            raise AgentConfigurationError(f"Failed to parse YAML file {file_path}: {e}") from e
 
     def load_agent_config(self, agent_name: str) -> dict[str, Any]:
         """
@@ -146,7 +146,7 @@ class Settings:
             if storage_cls is None:
                 logging.warning("InMemoryCheckpointStorage not available")
                 return None
-            return storage_cls()
+            return storage_cls()  # type: ignore[no-any-return]
         elif storage_type == "file":
             storage_path = checkpoint_config.get("storage_path", "./var/checkpoints")
             storage_path = self._rewrite_runtime_path(
@@ -181,7 +181,7 @@ class Settings:
         if not (redis_spec and self.redis_url):
             return None
 
-        from agent_framework_redis import RedisChatMessageStore
+        from agent_framework_redis import RedisChatMessageStore  # type: ignore[import-untyped]
 
         config_source = self.workflow_config.get("redis", {}).get("chat_store", {})
         allowed_keys = {"key_prefix", "max_messages"}

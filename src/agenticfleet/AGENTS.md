@@ -2,7 +2,30 @@
 
 > **Agent instructions for working with the `agenticfleet` Python package**
 
-This file provides guidance for AI coding agents working specifically within the `src/agenticfleet/` Python package. For general project instructions, see the [root AGENTS.md](../../docs/project/AGENTS.md).
+This file provides guidance for AI coding agents working specifically within the `src/agenticfleet/` Python package. For general project instructions, see the [root AGENTS.md](../../AGENTS.md).
+
+---
+
+## Quick Start
+
+**Essential package development commands:**
+
+```bash
+# Validate configuration (CRITICAL after changes)
+uv run python tests/test_config.py
+
+# Run package tests
+uv run pytest tests/test_config.py tests/test_magentic_fleet.py -v
+
+# Code quality
+uv run ruff check src/agenticfleet/
+uv run black src/agenticfleet/
+uv run mypy src/agenticfleet/
+
+# Test your changes
+uv run agentic-fleet  # Full stack to test integration
+uv run fleet          # CLI to test REPL
+```
 
 ---
 
@@ -632,8 +655,10 @@ api_key = settings.openai_api_key  # From .env
 
 ## References
 
-- **Root AGENTS.md**: `../../docs/project/AGENTS.md` (general project instructions)
+- **Root AGENTS.md**: `../../AGENTS.md` (general project instructions)
 - **Package README**: `../../README.md` (user-facing documentation)
+- **Frontend AGENTS**: `../frontend/AGENTS.md` (frontend development)
+- **Test AGENTS**: `../../tests/AGENTS.md` (testing patterns)
 - **Architecture Docs**: `../../docs/architecture/`
 - **API Docs**: `../../docs/api/`
 - **Microsoft Agent Framework**: https://github.com/microsoft/agent-framework/python/

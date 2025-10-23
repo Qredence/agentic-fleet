@@ -144,10 +144,10 @@ def create_app() -> FastAPI:
     ) -> ConversationSummary:
         try:
             return await store.get(conversation_id)
-        except KeyError:
+        except KeyError as e:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND, detail="Conversation not found."
-            )
+            ) from e
 
     @app.delete("/v1/conversations/{conversation_id}", status_code=status.HTTP_204_NO_CONTENT)
     async def delete_conversation(
@@ -167,10 +167,10 @@ def create_app() -> FastAPI:
     ) -> ConversationItemsResponse:
         try:
             return await store.list_items(conversation_id)
-        except KeyError:
+        except KeyError as e:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND, detail="Conversation not found."
-            )
+            ) from e
 
     @app.get("/v1/approvals", response_model=ApprovalListResponse)
     async def list_approvals(
@@ -489,7 +489,7 @@ async def build_sse_stream(
     runtime: FleetRuntime,
     entity_id: str,
     user_text: str | None,
-    input_payload: dict | None,
+    input_payload: dict[str, Any] | None,
     conversation_id: str,
     store: ConversationStore,
 ) -> AsyncIterator[bytes]:
@@ -552,7 +552,7 @@ async def build_sse_stream(
 
                     # Emit structured approval request with risk level
                     sse_data = SSEEventEmitter.emit_approval_request(
-                        id=req_id,
+                        request_id=req_id,
                         operation=operation_type,
                         params=details,
                         context=context,
@@ -732,7 +732,7 @@ def format_sse(event: dict[str, Any]) -> bytes:
     return f"data: {payload}\n\n".encode()
 
 
-def extract_input_payload(request_payload: dict[str, Any]) -> dict | None:
+def extract_input_payload(request_payload: dict[str, Any]) -> dict[str, Any] | None:
     extra_body = request_payload.get("extra_body")
     if isinstance(extra_body, dict):
         input_data = extra_body.get("input_data")

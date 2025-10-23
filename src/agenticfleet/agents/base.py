@@ -9,7 +9,7 @@ from agent_framework.openai import OpenAIResponsesClient
 from agenticfleet.core.exceptions import AgentConfigurationError
 
 
-class ChatAgent:  # type: ignore[no-redef,override]
+class ChatAgent:
     """Fallback ChatAgent that raises when instantiated without the dependency."""
 
     def __init__(self, *args: Any, **kwargs: Any) -> None:

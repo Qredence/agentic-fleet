@@ -4,11 +4,7 @@ import asyncio
 
 import pytest
 
-from agenticfleet.core.approval import (
-    ApprovalDecision,
-    ApprovalRequest,
-    ApprovalResponse,
-)
+from agenticfleet.core.approval import ApprovalDecision, ApprovalRequest, ApprovalResponse
 from agenticfleet.core.approved_tools import set_approval_handler
 from agenticfleet.core.cli_approval import CLIApprovalHandler, create_approval_request
 from agenticfleet.core.code_execution_approval import (
@@ -24,7 +20,7 @@ class MockApprovalHandler(CLIApprovalHandler):
         super().__init__(timeout_seconds=1, auto_reject_on_timeout=False)
         self.decision = decision
         self.modified_code = modified_code
-        self.requests_received = []
+        self.requests_received: list[ApprovalRequest] = []
 
     async def request_approval(self, request: ApprovalRequest) -> ApprovalResponse:
         """Mock approval that returns predefined decision."""
@@ -39,7 +35,7 @@ class MockApprovalHandler(CLIApprovalHandler):
         return response
 
 
-def test_create_approval_request():
+def test_create_approval_request() -> None:
     """Test creating an approval request."""
     request = create_approval_request(
         operation_type="code_execution",
@@ -58,7 +54,7 @@ def test_create_approval_request():
 
 
 @pytest.mark.asyncio
-async def test_mock_approval_handler_approve():
+async def test_mock_approval_handler_approve() -> None:
     """Test mock approval handler with approval decision."""
     handler = MockApprovalHandler(decision=ApprovalDecision.APPROVED)
 
@@ -77,7 +73,7 @@ async def test_mock_approval_handler_approve():
 
 
 @pytest.mark.asyncio
-async def test_mock_approval_handler_reject():
+async def test_mock_approval_handler_reject() -> None:
     """Test mock approval handler with rejection decision."""
     handler = MockApprovalHandler(decision=ApprovalDecision.REJECTED)
 
@@ -95,7 +91,7 @@ async def test_mock_approval_handler_reject():
 
 
 @pytest.mark.asyncio
-async def test_mock_approval_handler_modify():
+async def test_mock_approval_handler_modify() -> None:
     """Test mock approval handler with modification decision."""
     modified_code = "print('modified')"
     handler = MockApprovalHandler(decision=ApprovalDecision.MODIFIED, modified_code=modified_code)
@@ -113,7 +109,7 @@ async def test_mock_approval_handler_modify():
     assert response.modified_code == modified_code
 
 
-def test_approval_handler_should_require_approval():
+def test_approval_handler_should_require_approval() -> None:
     """Test the should_require_approval logic."""
     handler = MockApprovalHandler(decision=ApprovalDecision.APPROVED)
 
@@ -125,7 +121,7 @@ def test_approval_handler_should_require_approval():
     assert not handler.should_require_approval("web_search", ["code_execution"])
 
 
-def test_approval_history():
+def test_approval_history() -> None:
     """Test that approval history is tracked."""
     handler = MockApprovalHandler(decision=ApprovalDecision.APPROVED)
 
@@ -151,7 +147,7 @@ def _reset_handler() -> None:
     set_approval_handler(None)
 
 
-def test_code_execution_skips_when_not_required():
+def test_code_execution_skips_when_not_required() -> None:
     """Code execution should bypass approval when not configured."""
     handler = MockApprovalHandler(decision=ApprovalDecision.APPROVED)
     try:
@@ -163,7 +159,7 @@ def test_code_execution_skips_when_not_required():
         _reset_handler()
 
 
-def test_code_execution_requests_when_required():
+def test_code_execution_requests_when_required() -> None:
     """Code execution should request approval when listed in configuration."""
     handler = MockApprovalHandler(decision=ApprovalDecision.APPROVED)
     try:

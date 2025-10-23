@@ -64,7 +64,7 @@ def create_dynamic_workflow(
         progress_ledger_retry_count=progress_ledger_retry_count,
     )
 
-    manager = StandardMagenticManager(**manager_kwargs)  # type: ignore[arg-type]
+    manager = StandardMagenticManager(**manager_kwargs)
 
     builder = MagenticBuilder().with_standard_manager(manager=manager).participants(**participants)
 
@@ -83,28 +83,27 @@ def create_dynamic_workflow(
                 MagenticOrchestratorMessageEvent,
             )
 
-            async def unified_callback(event: MagenticCallbackEvent) -> None:  # type: ignore[name-defined]
-                if isinstance(event, MagenticOrchestratorMessageEvent):  # type: ignore[name-defined]
+            async def unified_callback(event: MagenticCallbackEvent) -> None:
+                if isinstance(event, MagenticOrchestratorMessageEvent):
                     if event.kind == "task_ledger" and log_progress:
                         await console_callbacks.plan_creation_callback(event.message)
                     elif event.kind == "progress_ledger" and log_progress:
                         await console_callbacks.progress_ledger_callback(event.message)
                     elif event.kind == "notice" and event.message:
                         await console_callbacks.notice_callback(str(event.message))
-                elif isinstance(event, MagenticAgentDeltaEvent):  # type: ignore[name-defined]
+                elif isinstance(event, MagenticAgentDeltaEvent):
                     if streaming_enabled:
                         await console_callbacks.agent_delta_callback(event)
-                elif isinstance(event, MagenticAgentMessageEvent):  # type: ignore[name-defined]
+                elif isinstance(event, MagenticAgentMessageEvent):
                     if streaming_enabled and event.message:
                         await console_callbacks.agent_message_callback(event.message)
-                elif isinstance(event, MagenticFinalResultEvent):  # type: ignore[name-defined]
-                    if event.message and log_progress:
-                        await console_callbacks.final_answer_callback(event.message)
+                elif isinstance(event, MagenticFinalResultEvent) and event.message and log_progress:
+                    await console_callbacks.final_answer_callback(event.message)
 
             mode = (
-                MagenticCallbackMode.STREAMING  # type: ignore[name-defined]
+                MagenticCallbackMode.STREAMING
                 if streaming_enabled
-                else MagenticCallbackMode.NON_STREAMING  # type: ignore[name-defined]
+                else MagenticCallbackMode.NON_STREAMING
             )
             builder = builder.on_event(unified_callback, mode=mode)
         except Exception as exc:  # pragma: no cover - defensive fallback

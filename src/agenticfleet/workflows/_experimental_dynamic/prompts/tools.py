@@ -23,8 +23,8 @@ current conversation. When invoked, rewrite information cleanly, expand bullet p
 polished prose, and ensure the narrative is easy to follow."""
 
 __all__ = [
+    "BASE_GENERATOR_PROMPT",
     "GOOGLE_SEARCH_PROMPT",
     "PYTHON_CODER_PROMPT",
     "WIKIPEDIA_SEARCH_PROMPT",
-    "BASE_GENERATOR_PROMPT",
 ]

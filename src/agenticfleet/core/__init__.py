@@ -16,16 +16,16 @@ from agenticfleet.core.logging import setup_logging
 from agenticfleet.core.types import AgentResponse, AgentRole
 
 __all__ = [
-    "AgenticFleetError",
     "AgentConfigurationError",
-    "WorkflowError",
-    "setup_logging",
-    "AgentRole",
     "AgentResponse",
+    "AgentRole",
+    "AgenticFleetError",
+    "ApprovalDecision",
     "ApprovalHandler",
     "ApprovalRequest",
     "ApprovalResponse",
-    "ApprovalDecision",
     "CLIApprovalHandler",
+    "WorkflowError",
     "create_approval_request",
+    "setup_logging",
 ]

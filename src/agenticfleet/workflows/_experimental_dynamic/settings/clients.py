@@ -39,7 +39,7 @@ def tool_model_name() -> str:
 def make_responses_client(model: str | None = None, **kwargs: Any) -> OpenAIResponsesClient:
     """Instantiate an OpenAIResponsesClient for creating chat agents."""
     selected_model = model or default_model_name()
-    param_name = get_responses_model_parameter(OpenAIResponsesClient)  # type: ignore[arg-type]
+    param_name = get_responses_model_parameter(OpenAIResponsesClient)
     client_kwargs: dict[str, Any] = {param_name: selected_model}
 
     if settings.openai_api_key:
@@ -47,7 +47,7 @@ def make_responses_client(model: str | None = None, **kwargs: Any) -> OpenAIResp
 
     client_kwargs.update(kwargs)
     logger.debug("Creating OpenAIResponsesClient for model %s", selected_model)
-    return OpenAIResponsesClient(**client_kwargs)  # type: ignore[call-arg]
+    return OpenAIResponsesClient(**client_kwargs)
 
 
-__all__ = ["default_model_name", "tool_model_name", "make_responses_client"]
+__all__ = ["default_model_name", "make_responses_client", "tool_model_name"]

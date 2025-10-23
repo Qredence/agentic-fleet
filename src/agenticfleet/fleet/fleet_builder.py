@@ -202,11 +202,12 @@ Always explain your reasoning and include evidence from agent responses."""
                 # Handle final agent messages
                 if self.streaming_enabled and event.message:
                     await self.console_callbacks.agent_message_callback(event.message)
-            elif isinstance(event, MagenticFinalResultEvent):
+            elif (
+                isinstance(event, MagenticFinalResultEvent) and event.message and self.log_progress
+            ):
                 # Handle final result
-                if event.message and self.log_progress:
-                    logger.info(f"[Fleet] Final result: {event.message.text[:200]}...")
-                    await self.console_callbacks.final_answer_callback(event.message)
+                logger.info(f"[Fleet] Final result: {event.message.text[:200]}...")
+                await self.console_callbacks.final_answer_callback(event.message)
 
         # Register unified callback with appropriate mode
         mode = (

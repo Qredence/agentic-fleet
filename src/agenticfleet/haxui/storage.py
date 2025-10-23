@@ -162,7 +162,8 @@ class SQLiteConversationStore:
                 "SELECT id, created_at, metadata FROM conversations WHERE id = ?",
                 (conversation_id,),
             )
-            return cursor.fetchone()
+            result = cursor.fetchone()
+            return result  # type: ignore[no-any-return]
 
     async def list_items(self, conversation_id: str) -> ConversationItemsResponse:
         await self.initialise()

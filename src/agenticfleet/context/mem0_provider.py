@@ -2,14 +2,11 @@ from __future__ import annotations
 
 import os
 from pathlib import Path
+from typing import Any
 
 from dotenv import load_dotenv
-from mem0 import Memory  # type: ignore
-from mem0.configs.base import (
-    EmbedderConfig,  # type: ignore[import-untyped]
-    LlmConfig,
-    MemoryConfig,
-)
+from mem0 import Memory
+from mem0.configs.base import EmbedderConfig, LlmConfig, MemoryConfig
 
 from ..config.settings import settings
 
@@ -113,7 +110,7 @@ class Mem0ContextProvider:
         data: str,
         user_id: str | None = None,
         agent_id: str | None = None,
-        metadata: dict | None = None,
+        metadata: dict[str, Any] | None = None,
     ) -> None:
         """
         Add a new memory.

@@ -2,7 +2,39 @@
 
 > **Agent instructions for working with the AgenticFleet test suite**
 
-This file provides guidance for AI coding agents working specifically within the `tests/` directory. For general project instructions, see the [root AGENTS.md](../docs/project/AGENTS.md).
+This file provides guidance for AI coding agents working specifically within the `tests/` directory. For general project instructions, see the [root AGENTS.md](../AGENTS.md).
+
+---
+
+## Quick Start
+
+**Essential testing commands:**
+
+```bash
+# Configuration validation (CRITICAL - run after ANY config change)
+uv run python tests/test_config.py
+
+# Run specific test file (PREFERRED over full suite)
+uv run pytest tests/test_magentic_fleet.py -v
+
+# Run specific test function
+uv run pytest tests/test_config.py::test_researcher_agent -v
+
+# Run tests matching a pattern
+uv run pytest -k "orchestrator" -v
+
+# Run with coverage
+uv run pytest --cov=src/agenticfleet --cov-report=term-missing
+
+# All tests (expensive - use sparingly)
+uv run pytest -v
+```
+
+**Before any PR:**
+
+1. `uv run python tests/test_config.py` - Validate configs
+2. `uv run pytest -k "relevant"` - Run related tests
+3. `make check` - Code quality checks
 
 ---
 
@@ -48,11 +80,13 @@ tests/
 
 ## Running Tests
 
-### Critical Commands
+### Common Test Commands
 
 ```bash
-# ALWAYS run this after config changes (YAML or agent factories)
+# Configuration validation (ALWAYS after config changes)
 uv run python tests/test_config.py
+# OR
+make test-config
 
 # Run all tests (use sparingly—expensive)
 uv run pytest -v
