@@ -444,9 +444,7 @@ export const ChatContainer = ({
                 </div>
               )}
               <ChatInput onSendMessage={handleSendMessage} disabled={isProcessing} />
-              <div className="mt-4">
-                <ConnectionStatusIndicator status={connectionStatus} onRetry={checkHealth} />
-              </div>
+              <ConnectionStatusIndicator status={connectionStatus} onRetry={checkHealth} />
             </div>
           </div>
         </div>
