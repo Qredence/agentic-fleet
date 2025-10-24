@@ -20,22 +20,17 @@ export function mapRoleToAgent(role: string, actor?: string): AgentType {
   // If an actor is specified, try to map it to a known agent type
   if (actor) {
     const lowerActor = actor.toLowerCase();
-    
-    // Direct mappings for known agent types
-    if (lowerActor === "analyst" || lowerActor.includes("analyst")) {
-      return "analyst";
-    }
-    if (lowerActor === "researcher" || lowerActor.includes("researcher")) {
-      return "researcher";
-    }
-    if (lowerActor === "strategist" || lowerActor.includes("strateg")) {
-      return "strategist";
-    }
-    if (lowerActor === "coordinator" || lowerActor === "orchestrator" || lowerActor.includes("coordinat")) {
-      return "coordinator";
-    }
-    if (lowerActor === "worker" || lowerActor === "coder" || lowerActor.includes("worker")) {
-      return "worker";
+    const actorMappings: { [key in AgentType]?: string[] } = {
+      analyst: ["analyst"],
+      researcher: ["researcher"],
+      strategist: ["strategist", "strateg"],
+      coordinator: ["coordinator", "orchestrator", "coordinat"],
+      worker: ["worker", "coder"]
+    };
+    for (const [agentType, substrings] of Object.entries(actorMappings)) {
+      if (substrings.some(sub => lowerActor.includes(sub))) {
+        return agentType as AgentType;
+      }
     }
   }
 
