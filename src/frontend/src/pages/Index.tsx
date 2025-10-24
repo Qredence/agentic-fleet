@@ -1,4 +1,4 @@
-import { ChatContainer } from "@/components/ChatContainer";
+import { ChatContainer } from "@/components/features/chat";
 import { useCallback, useState } from "react";
 
 const Index = () => {

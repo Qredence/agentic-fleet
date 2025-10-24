@@ -1,7 +1,7 @@
-import { ErrorBoundary } from "@/components/ErrorBoundary";
-import { Toaster as Sonner } from "@/components/ui/sonner";
-import { Toaster } from "@/components/ui/toaster";
-import { TooltipProvider } from "@/components/ui/tooltip";
+import { ErrorBoundary } from "@/components/features/shared";
+import { Toaster as Sonner } from "@/components/ui/shadcn/sonner";
+import { Toaster } from "@/components/ui/shadcn/toaster";
+import { TooltipProvider } from "@/components/ui/shadcn/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Route, Routes } from "react-router-dom";
 import Index from "./pages/Index";

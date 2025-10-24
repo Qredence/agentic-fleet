@@ -62,20 +62,36 @@ This file documents how an agent should safely modify, extend, and validate the 
 ```
 src/frontend/
 ├── src/
-│   ├── components/         # Reusable UI primitives (chat, panes, inputs)
-│   ├── hooks/              # Streaming + approval state hooks
-│   ├── lib/                # Helper utilities (formatters, SSE parser)
-│   ├── routes/             # Router-level pages / layout segments
-│   ├── state/              # Zustand stores (workflow mode, approvals)
-│   ├── types/              # Shared TypeScript types mirroring backend events
-│   └── assets/             # Icons, static assets (if any)
-├── index.html              # Vite entry
-├── vite.config.ts          # Build + alias config
-├── tailwind.config.ts      # Tailwind + shadcn integration
-└── components.json         # shadcn component registry
-```
+│   ├── components/
+│   │   ├── features/           # Feature-specific components (business logic)
+│   │   │   ├── chat/          # Chat feature: ChatContainer, ChatMessage, ChatInput, ChatHeader, ChatSidebar
+│   │   │   ├── approval/      # HITL approval: ApprovalPrompt
+│   │   │   └── shared/        # Shared features: ErrorBoundary, ConnectionStatusIndicator
+│   │   ├── ai/                # AI visualization components (plans, reasoning, tools, steps, streaming)
+│   │   └── ui/
+│   │       ├── shadcn/        # shadcn/ui primitives (DON'T MODIFY - managed by CLI)
+│   │       └── custom/        # App-specific UI components (safe to modify)
+│   ├── hooks/                 # Streaming + approval state hooks
+│   ├── lib/                   # Helper utilities (formatters, SSE parser, API clients)
+│   ├── pages/                 # Router-level pages (Index, NotFound)
+│   └── app/                   # App state (chat-store, API primitives)
+├── index.html                 # Vite entry
+├── vite.config.ts             # Build + alias config (@/ alias → src/)
+├── tailwind.config.ts         # Tailwind + shadcn integration
+└── components.json            # shadcn component registry
 
-(Exact subfolders may vary; always inspect before adding new structure.)
+**Import Conventions:**
+- Features: `import { ChatContainer } from '@/components/features/chat'` (barrel exports)
+- AI: `import { Plan, Reasoning } from '@/components/ai'` (barrel exports)
+- shadcn: `import { Button } from '@/components/ui/shadcn/button'` (individual imports, no barrel)
+- Custom UI: `import { Message } from '@/components/ui/custom/message'` (individual imports)
+
+**Component Ownership:**
+- `features/` - Safe to modify, application business logic
+- `ai/` - Safe to modify, AI-specific visualization
+- `ui/shadcn/` - DO NOT MODIFY, use shadcn CLI for updates
+- `ui/custom/` - Safe to modify, app-specific UI building blocks
+```
 
 ---
 
