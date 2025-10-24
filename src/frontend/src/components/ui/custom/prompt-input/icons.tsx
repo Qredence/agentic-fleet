@@ -1,6 +1,7 @@
 import * as React from "react";
 
-// SVG Icon Components for PromptInput
+// Self-contained SVG icon components used exclusively in PromptInput.
+// These are distinct from lucide-react icons used elsewhere in the application.
 export const PlusIcon = (props: React.SVGProps<SVGSVGElement>) => (
   <svg
     width="24"
