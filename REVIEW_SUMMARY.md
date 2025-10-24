@@ -171,7 +171,7 @@ The frontend **does not build** on either main branch or the Dependabot branch d
 **Need Help?**
 - See `PR_266_REVIEW.md` for detailed technical analysis
 - Check git history for file deletions: `git log --all --full-history -- src/frontend/src/lib/`
-- Contact: @Zochory
+- Contact: @Zachary
 
 **Reviewed by**: Copilot Coding Agent  
 **Date**: October 24, 2025  
