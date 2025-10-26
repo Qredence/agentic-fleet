@@ -41,6 +41,17 @@ class Settings:
             new_prefix="var/logs",
         )
 
+        # LiteLLM configuration (optional - for universal LLM proxy support)
+        self.use_litellm = os.getenv("USE_LITELLM", "false").lower() == "true"
+        self.litellm_model = os.getenv(
+            "LITELLM_MODEL"
+        )  # e.g., "gpt-4o-mini" or "anthropic/claude-3-5-sonnet-20241022"
+        self.litellm_api_key = os.getenv(
+            "LITELLM_API_KEY"
+        )  # Optional, can use provider-specific keys
+        self.litellm_base_url = os.getenv("LITELLM_BASE_URL")  # Optional, for custom endpoints
+        self.litellm_timeout = float(os.getenv("LITELLM_TIMEOUT", "600"))  # Default 10 minutes
+
         # Mem0 configuration
         self.mem0_history_db_path = os.getenv("MEM0_HISTORY_DB_PATH", "var/memories/history.db")
         self.mem0_history_db_path = self._rewrite_runtime_path(

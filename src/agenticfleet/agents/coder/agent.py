@@ -16,37 +16,42 @@ Usage:
 
 from typing import Any
 
-try:
-    from agent_framework.openai import OpenAIResponsesClient
-except ImportError:
-    OpenAIResponsesClient = None  # type: ignore[assignment, misc]
-
 from agenticfleet.agents.base import FleetAgent
 from agenticfleet.config import settings
 from agenticfleet.core.exceptions import AgentConfigurationError
-from agenticfleet.core.openai import get_responses_model_parameter
+from agenticfleet.core.openai import create_chat_client
 
 
 def create_coder_agent() -> FleetAgent:
     """Create the Coder agent responsible for code drafting and review."""
 
-    if OpenAIResponsesClient is None:
-        raise AgentConfigurationError(
-            "agent_framework is required to create the coder agent. "
-            "Install the 'agent-framework' package to enable this agent."
-        )
-
     # Load coder-specific configuration
     config = settings.load_agent_config("coder")
     agent_config = config.get("agent", {})
 
-    # Create OpenAI chat client
-    chat_client_kwargs = {
-        get_responses_model_parameter(OpenAIResponsesClient): agent_config.get(
-            "model", settings.openai_model
+    # Get model from config or use default
+    model = agent_config.get("model", settings.openai_model)
+
+    # Determine which client to use based on settings
+    use_litellm = settings.use_litellm
+    if use_litellm and settings.litellm_model:
+        # Use LiteLLM model if configured
+        model = settings.litellm_model
+
+    try:
+        # Create chat client using factory
+        chat_client = create_chat_client(
+            model=model,
+            use_litellm=use_litellm,
+            api_key=settings.litellm_api_key if use_litellm else None,
+            base_url=settings.litellm_base_url if use_litellm else None,
+            timeout=settings.litellm_timeout if use_litellm else None,
         )
-    }
-    chat_client = OpenAIResponsesClient(**chat_client_kwargs)
+    except ImportError as e:
+        raise AgentConfigurationError(
+            f"Required client library not available: {e}. "
+            "Install the appropriate package to enable this agent."
+        ) from e
 
     # No tools currently enabled for coder agent (execution disabled)
     enabled_tools: list[Any] = []
