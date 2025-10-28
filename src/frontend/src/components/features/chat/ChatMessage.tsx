@@ -1,13 +1,31 @@
-import { Reasoning, ReasoningContent, ReasoningTitle } from "@/components/ai/reasoning";
 import { ResponseStream } from "@/components/ai/response-stream";
 import { Step, Steps } from "@/components/ai/steps";
 import { Tool } from "@/components/ai/tool";
 import { Message, MessageContent } from "@/components/ui/custom/message";
+// Import new prompt-kit components for enhanced features
+import {
+  Reasoning as PromptReasoning,
+  ReasoningContent as PromptReasoningContent,
+  ReasoningTrigger,
+} from "@/components/ui/prompt-kit";
+import type { WorkflowEventType } from "@/lib/types";
 import { cn } from "@/lib/utils";
-import { Bot, User } from "lucide-react";
+import { AlertCircle, Bot, CheckCircle, Cog, User, Wrench } from "lucide-react";
 import React from "react";
 
-export type AgentType = "user" | "analyst" | "researcher" | "strategist" | "coordinator";
+export type AgentType =
+  | "user"
+  | "analyst"
+  | "researcher"
+  | "coder"
+  | "verifier"
+  | "manager"
+  | "generator"
+  | "executor"
+  | "planner"
+  | "router"
+  | "calculator"
+  | "responder";
 
 type AgentConfigEntry = {
   name: string;
@@ -37,6 +55,29 @@ interface ChatMessageProps {
   reasoning?: string;
   tools?: ToolUsage[];
   steps?: StepItem[];
+  eventType?: WorkflowEventType;
+  eventMetadata?: Record<string, unknown>;
+  agentRole?: string; // Backend role (router, calculator, manager, etc.)
+  confidence?: number; // Confidence level (0-1)
+  complexity?: string; // Query complexity level
+}
+
+// Helper to get workflow event icon
+function getWorkflowEventIcon(eventType: WorkflowEventType) {
+  switch (eventType) {
+    case "spawn":
+      return <Bot className="h-4 w-4" />;
+    case "progress":
+      return <Cog className="h-4 w-4" />;
+    case "tool_call":
+      return <Wrench className="h-4 w-4" />;
+    case "completion":
+      return <CheckCircle className="h-4 w-4" />;
+    case "error":
+      return <AlertCircle className="h-4 w-4 text-destructive" />;
+    default:
+      return <Cog className="h-4 w-4" />;
+  }
 }
 
 const agentConfig = {
@@ -58,17 +99,59 @@ const agentConfig = {
     color: "text-foreground",
     bgColor: "bg-muted/30",
   },
-  strategist: {
-    name: "Strategy Agent",
+  coder: {
+    name: "Coding Agent",
+    icon: Bot,
+    color: "text-foreground",
+    bgColor: "bg-muted/30",
+  },
+  verifier: {
+    name: "Verification Agent",
     icon: Bot,
     color: "text-foreground",
     bgColor: "bg-accent/50",
   },
-  coordinator: {
-    name: "Coordinator",
+  manager: {
+    name: "Manager",
     icon: Bot,
     color: "text-foreground",
     bgColor: "bg-muted/40",
+  },
+  generator: {
+    name: "Generator",
+    icon: Bot,
+    color: "text-foreground",
+    bgColor: "bg-muted/40",
+  },
+  executor: {
+    name: "Executor",
+    icon: Bot,
+    color: "text-foreground",
+    bgColor: "bg-muted/40",
+  },
+  planner: {
+    name: "Planner",
+    icon: Bot,
+    color: "text-foreground",
+    bgColor: "bg-muted/40",
+  },
+  router: {
+    name: "Query Router",
+    icon: Bot,
+    color: "text-foreground",
+    bgColor: "bg-purple-100 dark:bg-purple-900/20",
+  },
+  calculator: {
+    name: "Direct Computer",
+    icon: Bot,
+    color: "text-foreground",
+    bgColor: "bg-green-100 dark:bg-green-900/20",
+  },
+  responder: {
+    name: "Direct Response",
+    icon: Bot,
+    color: "text-foreground",
+    bgColor: "bg-blue-100 dark:bg-blue-900/20",
   },
 } satisfies Record<AgentType, AgentConfigEntry>;
 
@@ -82,14 +165,93 @@ export const ChatMessage = React.memo(
     reasoning,
     tools,
     steps,
+    eventType,
+    eventMetadata: _eventMetadata,
+    agentRole,
+    confidence,
+    complexity,
   }: ChatMessageProps) => {
     const config = agentConfig[agent];
     const Icon = config.icon;
 
     const isUserMessage = agent === "user";
+    const isWorkflowEvent = eventType !== undefined;
+
     const messageBgClass = isUserMessage
       ? "bg-[hsl(var(--message-user-bg))]"
-      : "bg-[hsl(var(--message-agent-bg))]";
+      : isWorkflowEvent
+        ? "bg-muted/30 border-border/30"
+        : "bg-[hsl(var(--message-agent-bg))]";
+
+    // Get complexity badge color
+    const getComplexityColor = (comp?: string) => {
+      switch (comp) {
+        case "trivial":
+          return "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400";
+        case "simple":
+          return "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400";
+        case "moderate":
+          return "bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400";
+        case "complex":
+          return "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400";
+        default:
+          return "bg-muted text-muted-foreground";
+      }
+    };
+
+    // Render workflow events with distinctive styling
+    if (isWorkflowEvent) {
+      const eventIcon = getWorkflowEventIcon(eventType);
+      return (
+        <Message
+          className={cn(
+            "p-3 transition-smooth rounded-lg justify-center opacity-90",
+            isNew && "animate-fade-in"
+          )}
+        >
+          <div className="flex items-start gap-3 w-full max-w-[700px]">
+            <div className="flex-shrink-0 w-6 h-6 rounded-full flex items-center justify-center bg-muted">
+              {eventIcon}
+            </div>
+            <div className="flex-1 min-w-0 space-y-1">
+              {/* Actor and Role Header */}
+              <div className="flex items-center gap-2 flex-wrap">
+                <span className="font-semibold text-sm">{config.name}</span>
+                {agentRole && <span className="text-xs text-muted-foreground">({agentRole})</span>}
+                {confidence !== undefined && (
+                  <span className="text-xs text-muted-foreground">
+                    • {Math.round(confidence * 100)}% confident
+                  </span>
+                )}
+                {complexity && (
+                  <span
+                    className={cn(
+                      "text-xs px-2 py-0.5 rounded-full font-medium",
+                      getComplexityColor(complexity)
+                    )}
+                  >
+                    {complexity}
+                  </span>
+                )}
+              </div>
+
+              {/* Event Message */}
+              <div className={cn("text-sm p-2 rounded border", messageBgClass)}>{message}</div>
+
+              {/* Reasoning (if available) */}
+              {reasoning && (
+                <div className="text-xs text-muted-foreground italic pl-4 border-l-2 border-muted-foreground/30">
+                  💭 {reasoning}
+                </div>
+              )}
+
+              {/* Timestamp */}
+              <span className="text-xs text-muted-foreground block">{timestamp}</span>
+            </div>
+          </div>
+        </Message>
+      );
+    }
 
     return (
       <Message
@@ -128,12 +290,16 @@ export const ChatMessage = React.memo(
               )}
             </div>
 
-            {/* Reasoning Block */}
+            {/* Enhanced Reasoning Block */}
             {reasoning && (
-              <Reasoning>
-                <ReasoningTitle>{config.name} is thinking...</ReasoningTitle>
-                <ReasoningContent>{reasoning}</ReasoningContent>
-              </Reasoning>
+              <PromptReasoning isStreaming={isStreaming}>
+                <ReasoningTrigger className="text-xs text-muted-foreground mb-2">
+                  💭 {config.name} is thinking...
+                </ReasoningTrigger>
+                <PromptReasoningContent markdown={true} className="text-sm">
+                  {reasoning}
+                </PromptReasoningContent>
+              </PromptReasoning>
             )}
 
             {/* Steps */}
@@ -166,8 +332,12 @@ export const ChatMessage = React.memo(
                 <ResponseStream
                   textStream={message}
                   mode="typewriter"
-                  speed={50}
+                  speed={40}
                   className="w-full"
+                  onComplete={() => {
+                    // Optional: Handle stream completion
+                    // Stream completed
+                  }}
                 />
               </div>
             ) : (

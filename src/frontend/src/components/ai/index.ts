@@ -8,5 +8,6 @@ export * from "./plan";
 export * from "./reasoning";
 export * from "./response-stream";
 export * from "./shimmer";
+export * from "./spawn";
 export * from "./steps";
 export * from "./tool";

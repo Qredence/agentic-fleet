@@ -182,58 +182,6 @@ const XIcon = (props: React.SVGProps<SVGSVGElement>) => (
   </svg>
 );
 
-const LightbulbIcon = (props: React.SVGProps<SVGSVGElement>) => (
-  <svg viewBox="0 0 24 24" fill="none" {...props}>
-    <path
-      d="M12 7C9.23858 7 7 9.23858 7 12C7 13.3613 7.54402 14.5955 8.42651 15.4972C8.77025 15.8484 9.05281 16.2663 9.14923 16.7482L9.67833 19.3924C9.86537 20.3272 10.6862 21 11.6395 21H12.3605C13.3138 21 14.1346 20.3272 14.3217 19.3924L14.8508 16.7482C14.9472 16.2663 14.9472 16.2663 15.5735 15.4972C16.456 14.5955 17 13.3613 17 12C17 9.23858 14.7614 7 12 7Z"
-      stroke="currentColor"
-      strokeWidth="2"
-    />
-    <path
-      d="M12 4V3"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    />
-    <path
-      d="M18 6L19 5"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    />
-    <path
-      d="M20 12H21"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    />
-    <path
-      d="M4 12H3"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    />
-    <path
-      d="M5 5L6 6"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    />
-    <path
-      d="M10 17H14"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    />
-  </svg>
-);
-
 const MicIcon = (props: React.SVGProps<SVGSVGElement>) => (
   <svg
     width="24"
@@ -252,24 +200,6 @@ const MicIcon = (props: React.SVGProps<SVGSVGElement>) => (
   </svg>
 );
 
-const ReflectionIcon = (props: React.SVGProps<SVGSVGElement>) => (
-  <svg
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth="2"
-    strokeLinecap="round"
-    strokeLinejoin="round"
-    {...props}
-  >
-    <circle cx="12" cy="12" r="9" />
-    <path d="M12 3v18" />
-    <path d="M3 12h18" />
-    <path d="M7.5 7.5l9 9" />
-    <path d="M16.5 7.5l-9 9" />
-  </svg>
-);
-
 const MagenticIcon = (props: React.SVGProps<SVGSVGElement>) => (
   <svg
     viewBox="0 0 24 24"
@@ -284,33 +214,13 @@ const MagenticIcon = (props: React.SVGProps<SVGSVGElement>) => (
   </svg>
 );
 
-const ContextIcon = (props: React.SVGProps<SVGSVGElement>) => (
-  <svg
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth="2"
-    strokeLinecap="round"
-    strokeLinejoin="round"
-    {...props}
-  >
-    <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20" />
-    <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z" />
-    <path d="M12 7v6" />
-    <path d="M9 10h6" />
-  </svg>
-);
-
 const toolsList = [
-  { id: "Deep Reasoning", name: "Think for longer", shortName: "Think", icon: LightbulbIcon },
   {
-    id: "reflectionRetry",
-    name: "Reflection & Retry",
-    shortName: "Reflection",
-    icon: ReflectionIcon,
+    id: "dynamicOrchestration",
+    name: "Dynamic Orchestration",
+    shortName: "Dynamic",
+    icon: MagenticIcon,
   },
-  { id: "magentic", name: "Magentic", shortName: "Magentic", icon: MagenticIcon },
-  { id: "contextKnowledge", name: "Context Knowledge", shortName: "Context", icon: ContextIcon },
 ];
 
 // --- The PromptBox Component ---

@@ -60,7 +60,7 @@ This file documents how an agent should safely modify, extend, and validate the 
 
 ## 3. Directory Layout (High Signal)
 
-```
+```text
 src/frontend/
 ├── src/
 │   ├── components/
