@@ -54,7 +54,7 @@ export function PromptInputWithActions({
     const file = e.target.files?.[0];
     if (file) {
       // Handle image upload here
-      console.log("Image selected:", file);
+      // Image selected: file
     }
   };
 

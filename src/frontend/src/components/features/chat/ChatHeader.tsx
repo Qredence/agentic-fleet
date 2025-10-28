@@ -1,17 +1,14 @@
 import { ThemeSwitch } from "@/components/ui/custom/theme-switch-button";
 import { Button } from "@/components/ui/shadcn/button";
-import { DropdownMenu } from "@/components/ui/shadcn/dropdown-menu";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/shadcn/sheet";
-import { GitBranch, History, Workflow } from "lucide-react";
+import { History, Workflow } from "lucide-react";
 import { ChatSidebar } from "./ChatSidebar";
 
 interface ChatHeaderProps {
   logoSrc: string;
   statusLabel: string;
   selectedWorkflowLabel: string;
-  selectedModel: string;
   activeConversationId?: string;
-  onModelChange: (model: string) => void;
   onSelectConversation: (conversationId?: string) => void;
 }
 
@@ -19,13 +16,9 @@ export const ChatHeader = ({
   logoSrc,
   statusLabel,
   selectedWorkflowLabel,
-  selectedModel,
   activeConversationId,
-  onModelChange,
   onSelectConversation,
 }: ChatHeaderProps) => {
-  const WorkflowIcon = selectedModel === "magentic_fleet" ? Workflow : GitBranch;
-
   return (
     <header className="fixed inset-x-0 top-0 z-20 border-b border-border/60  px-6 py-3 backdrop-blur">
       <div className="mx-auto flex w-full max-w-[1200px] items-center justify-between gap-6">
@@ -40,24 +33,8 @@ export const ChatHeader = ({
         <div className="flex items-center justify-center flex-shrink-0">
           <div className="inline-flex items-center justify-center gap-3 rounded-full px-4 py-1 shadow-lg backdrop-blur border border-[hsl(var(--header-border))]">
             <div className="flex items-center gap-2">
-              <WorkflowIcon className="h-4 w-4 text-foreground" />
-              <DropdownMenu
-                className="h-9 min-w-[200px] justify-between rounded-full border-none bg-transparent px-2 text-sm font-medium text-foreground shadow-none hover:bg-transparent"
-                options={[
-                  {
-                    label: "Magentic Fleet",
-                    onClick: () => onModelChange("magentic_fleet"),
-                    Icon: <Workflow className="h-4 w-4" />,
-                  },
-                  {
-                    label: "Reflection & Retry",
-                    onClick: () => onModelChange("workflow_as_agent"),
-                    Icon: <GitBranch className="h-4 w-4" />,
-                  },
-                ]}
-              >
-                {selectedWorkflowLabel}
-              </DropdownMenu>
+              <Workflow className="h-4 w-4 text-foreground" />
+              <span className="text-sm font-medium text-foreground">{selectedWorkflowLabel}</span>
             </div>
           </div>
         </div>
