@@ -1,159 +1,11 @@
-from __future__ import annotations
 
-import asyncio
 import json
-import time
-from collections.abc import AsyncIterator, Iterable, Mapping
-from pathlib import Path
-from typing import Any
+from typing import Any, AsyncIterator
 from uuid import uuid4
+from fastapi import FastAPI, Depends, HTTPException, Request, Response, status
+from fastapi.responses import StreamingResponse
 
-try:
-    import tiktoken
-except ImportError:  # pragma: no cover - optional dependency
-    tiktoken = None  # type: ignore[assignment]
-from agent_framework import AgentRunResponseUpdate, Role
-from fastapi import Depends, FastAPI, HTTPException, Request, Response, status
-from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse, StreamingResponse
-
-from agenticfleet import __version__
-from agenticfleet.config import settings
-from agenticfleet.core.approval import ApprovalDecision
-from agenticfleet.workflows.workflow_as_agent import create_workflow_agent
-
-# Initialize tracing for FastAPI application
-try:
-    from agenticfleet.observability import setup_tracing
-
-    setup_tracing()
-except Exception:
-    # Tracing is optional - continue if it fails
-    pass
-
-from .conversations import ConversationStore
-from .models import (
-    ApprovalDecisionRequest,
-    ApprovalListResponse,
-    ApprovalRequestInfo,
-    ConversationItemsResponse,
-    ConversationListResponse,
-    ConversationSummary,
-    DiscoveryResponse,
-    EntityInfo,
-    HealthResponse,
-)
-from .runtime import FleetRuntime, build_entity_catalog
-from .sse_events import RiskLevel, SSEEventEmitter
-from .storage import SQLiteConversationStore
-from .web_approval import WebApprovalHandler
-
-
-def create_app() -> FastAPI:
-    """Create the FastAPI application used by HaxUI."""
-
-    app = FastAPI(
-        title="AgenticFleet HaxUI API",
-        version=__version__,
-        default_response_class=JSONResponse,
-    )
-
-    app.add_middleware(
-        CORSMiddleware,
-        allow_origins=["*"],
-        allow_credentials=True,
-        allow_methods=["*"],
-        allow_headers=["*"],
-    )
-
-    workflow_cfg = settings.workflow_config.get("workflow", {})
-    hitl_config = workflow_cfg.get("human_in_the_loop", {}) or {}
-    timeout_seconds = hitl_config.get("approval_timeout_seconds", 300)
-
-    haxui_config = settings.workflow_config.get("haxui", {}) or {}
-    storage_config = haxui_config.get("storage", {}) or {}
-    storage_path = storage_config.get("path")
-
-    approval_handler = WebApprovalHandler(
-        timeout_seconds=timeout_seconds,
-        store_path=storage_path,
-    )
-    runtime = FleetRuntime(approval_handler=approval_handler)
-    conversation_store = ConversationStore(SQLiteConversationStore(storage_path))
-    agent_entities, workflow_entities = build_entity_catalog()
-    entity_lookup = {entity["id"]: entity for entity in (*agent_entities, *workflow_entities)}
-
-    app.state.runtime = runtime
-    app.state.conversation_store = conversation_store
-    app.state.approval_handler = approval_handler
-
-    def get_runtime() -> FleetRuntime:
-        return runtime
-
-    def get_conversation_store() -> ConversationStore:
-        return conversation_store
-
-    def get_approval_handler() -> WebApprovalHandler:
-        return approval_handler
-
-    def get_entity(entity_id: str) -> dict[str, Any]:
-        entity = entity_lookup.get(entity_id)
-        if entity is None:
-            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Entity not found.")
-        return entity
-
-    @app.get("/health", response_model=HealthResponse)
-    async def health() -> HealthResponse:
-        agents_dir = Path(__file__).resolve().parents[2] / "agents"
-        return HealthResponse(status="healthy", version=__version__, agents_dir=str(agents_dir))
-
-    @app.get("/v1/entities", response_model=DiscoveryResponse)
-    async def list_entities() -> DiscoveryResponse:
-        entities: Iterable[dict[str, Any]] = (*agent_entities, *workflow_entities)
-        return DiscoveryResponse(entities=[EntityInfo(**entity) for entity in entities])
-
-    @app.get("/v1/entities/{entity_id}/info", response_model=EntityInfo)
-    async def get_entity_info(entity_id: str) -> EntityInfo:
-        entity = get_entity(entity_id)
-        return EntityInfo(**entity)
-
-    @app.post(
-        "/v1/conversations",
-        response_model=ConversationSummary,
-        status_code=status.HTTP_201_CREATED,
-    )
-    async def create_conversation(
-        payload: dict[str, Any] | None = None,
-        store: ConversationStore = Depends(get_conversation_store),
-    ) -> ConversationSummary:
-        metadata = None
-        if payload and isinstance(payload.get("metadata"), dict):
-            metadata = {k: str(v) for k, v in payload["metadata"].items()}
-        return await store.create(metadata)
-
-    @app.get("/v1/conversations", response_model=ConversationListResponse)
-    async def list_conversations(
-        store: ConversationStore = Depends(get_conversation_store),
-    ) -> ConversationListResponse:
-        return await store.list()
-
-    @app.get("/v1/conversations/{conversation_id}", response_model=ConversationSummary)
-    async def get_conversation(
-        conversation_id: str,
-        store: ConversationStore = Depends(get_conversation_store),
-    ) -> ConversationSummary:
-        try:
-            return await store.get(conversation_id)
-        except KeyError as e:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND, detail="Conversation not found."
-            ) from e
-
-    @app.delete("/v1/conversations/{conversation_id}", status_code=status.HTTP_204_NO_CONTENT)
-    async def delete_conversation(
-        conversation_id: str,
-        store: ConversationStore = Depends(get_conversation_store),
-    ) -> Response:
+ -> Response:
         await store.delete(conversation_id)
         return Response(status_code=status.HTTP_204_NO_CONTENT)
 
@@ -228,6 +80,301 @@ def create_app() -> FastAPI:
             )
         return Response(status_code=status.HTTP_204_NO_CONTENT)
 
+    @app.post("/v1/workflow/dynamic")
+    async def run_dynamic_orchestration_workflow(
+        request: Request,
+        store: ConversationStore = Depends(get_conversation_store),
+    ) -> StreamingResponse:
+        """
+        Dedicated endpoint for dynamic orchestration workflow.
+
+        This endpoint creates a dynamic Magentic workflow with on-demand
+        agent spawning.
+
+        Request Body:
+            {
+                "query": "Your task here",
+                "manager_model": "gpt-4o",       // optional
+                "conversation_id": "conv_123"    // optional
+            }
+
+        Returns:
+            Server-Sent Events stream with agent responses and tool outputs
+        """
+        try:
+            from agenticfleet.workflows.dynamic_orchestration.factory import (
+                create_dynamic_group_chat_workflow,
+            )
+        except ImportError as exc:
+            raise HTTPException(
+                status_code=status.HTTP_501_NOT_IMPLEMENTED,
+                detail="Dynamic orchestration module not available",
+            ) from exc
+
+        payload = await request.json()
+        query = payload.get("query")
+        if not query or not isinstance(query, str):
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Missing or invalid 'query' field.",
+            )
+
+        manager_model = payload.get("manager_model", "gpt-4o")
+        conversation_id = payload.get("conversation_id")
+
+        # Create or validate conversation
+        if conversation_id:
+            try:
+                await store.get(conversation_id)
+            except KeyError:
+                conversation_id = None
+
+        if conversation_id is None:
+            summary = await store.create(
+                metadata={"workflow": "dynamic_orchestration", "auto_created": "true"}
+            )
+            conversation_id = summary.id
+
+        # Add user message to conversation
+        user_content = [{"type": "text", "text": query}]
+        await store.add_message(conversation_id, "user", user_content)
+
+        # Create dynamic workflow with query for complexity detection
+        workflow, _ = create_dynamic_group_chat_workflow(
+            manager_model=manager_model,
+            tool_registry=None,
+            query=query,  # Pass query for adaptive max_rounds
+        )
+
+        async def stream_dynamic_workflow() -> AsyncIterator[bytes]:
+            """Stream events from the dynamic orchestration workflow."""
+            message_id = f"msg_{uuid4().hex[:12]}"
+            sequence_number = 0
+            accumulated = ""
+
+            try:
+                async for event in workflow.run_stream(query):
+                    payloads, _ = translate_dynamic_event(event, message_id=message_id)
+                    for payload in payloads:
+                        sequence_number += 1
+                        payload["sequence_number"] = sequence_number
+                        if payload["type"] == "response.output_text.delta":
+                            payload.setdefault("actor", "assistant")
+                            payload.setdefault("role", "assistant")
+                            accumulated += payload.get("delta", "")
+                        elif payload["type"] == "workflow.event":
+                            payload.setdefault("actor", "workflow")
+                            payload.setdefault("role", "system")
+                            payload.setdefault("message_id", message_id)
+                        yield SSEEventEmitter.emit_raw(payload)
+
+                if accumulated:
+                    assistant_content = [{"type": "text", "text": accumulated}]
+                    await store.add_message(conversation_id, "assistant", assistant_content)
+
+                response_payload = build_response_payload(
+                    conversation_id=conversation_id,
+                    entity_id=manager_model,
+                    assistant_text=accumulated,
+                    usage={"input_tokens": None, "output_tokens": None, "total_tokens": None},
+                    queue_metrics=None,
+                )
+                yield SSEEventEmitter.emit_response_completed(
+                    response=response_payload["response"],
+                    sequence_number=sequence_number + 1,
+                    queue_metrics=response_payload.get("queue_metrics"),
+                )
+
+            except Exception as exc:
+                LOGGER.error(f"Dynamic workflow streaming error: {exc}", exc_info=True)
+                yield SSEEventEmitter.emit_raw(
+                    {
+                        "type": "error",
+                        "error": {"message": str(exc), "type": "workflow_error"},
+                    }
+                )
+            finally:
+                yield SSEEventEmitter.emit_done()
+
+        return StreamingResponse(
+            stream_dynamic_workflow(),
+            media_type="text/event-stream",
+            headers={
+                "Cache-Control": "no-cache",
+                "Connection": "keep-alive",
+                "X-Accel-Buffering": "no",
+            },
+        )
+
+    @app.post("/v1/workflow/optimized")
+    async def run_optimized_workflow(
+        request: Request,
+        store: ConversationStore = Depends(get_conversation_store),
+    ) -> StreamingResponse:
+        """
+        Optimized workflow endpoint with intelligent routing.
+
+        Uses executor pattern for:
+        - Fast path for trivial/simple queries (<1-2s)
+        - Adaptive complexity-based routing
+        - Full event visibility with reasoning
+        - Agent spawning only when needed
+
+        Request Body:
+            {
+                "query": "Your task here",
+                "manager_model": "gpt-4o",       // optional
+                "conversation_id": "conv_123"    // optional
+            }
+
+        Returns:
+            Server-Sent Events stream with detailed reasoning and events
+        """
+        try:
+            from agenticfleet.workflows.dynamic_orchestration.factory import (
+                create_optimized_workflow_response,
+            )
+        except ImportError as exc:
+            raise HTTPException(
+                status_code=status.HTTP_501_NOT_IMPLEMENTED,
+                detail="Optimized workflow module not available",
+            ) from exc
+
+        payload = await request.json()
+        query = payload.get("query")
+        if not query or not isinstance(query, str):
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Missing or invalid 'query' field.",
+            )
+
+        manager_model = payload.get("manager_model", "gpt-4o")
+        conversation_id = payload.get("conversation_id")
+
+        # Create or validate conversation
+        if conversation_id:
+            try:
+                await store.get(conversation_id)
+            except KeyError:
+                conversation_id = None
+
+        if conversation_id is None:
+            summary = await store.create(metadata={"workflow": "optimized", "auto_created": "true"})
+            conversation_id = summary.id
+
+        # Add user message to conversation
+        user_content = [{"type": "text", "text": query}]
+        await store.add_message(conversation_id, "user", user_content)
+
+        async def stream_optimized_workflow() -> AsyncIterator[bytes]:
+            """Stream events from optimized workflow with full reasoning."""
+            message_id = f"msg_{uuid4().hex[:12]}"
+            sequence_number = 0
+
+            try:
+                # Get workflow result with events
+                result = await create_optimized_workflow_response(
+                    query=query,
+                    manager_model=manager_model,
+                )
+
+                # Stream all events with reasoning
+                for event in result["events"]:
+                    sequence_number += 1
+
+                    # Format event for frontend
+                    event_payload = {
+                        "type": event.get("type", "workflow.event"),
+                        "message_id": message_id,
+                        "sequence_number": sequence_number,
+                        "actor": event.get("actor", "System"),
+                        "role": event.get("role", "system"),
+                        "reasoning": event.get("reasoning", ""),
+                        "confidence": event.get("confidence"),
+                        "complexity": event.get("complexity"),
+                        "data": event,
+                    }
+
+                    yield SSEEventEmitter.emit_raw(event_payload)
+
+                # If fast path, emit response
+                if result.get("fast_path") and result.get("response"):
+                    # Emit final response
+                    response_text = result["response"]
+
+                    # Stream response as deltas
+                    for char in response_text:
+                        sequence_number += 1
+                        yield SSEEventEmitter.emit_raw(
+                            {
+                                "type": "response.output_text.delta",
+                                "message_id": message_id,
+                                "sequence_number": sequence_number,
+                                "delta": char,
+                                "actor": "Direct Response",
+                                "role": "assistant",
+                            }
+                        )
+
+                    # Store in conversation
+                    assistant_content = [{"type": "text", "text": response_text}]
+                    await store.add_message(conversation_id, "assistant", assistant_content)
+
+                    # Emit completion
+                    sequence_number += 1
+                    response_payload = build_response_payload(
+                        conversation_id=conversation_id,
+                        entity_id=manager_model,
+                        assistant_text=response_text,
+                        usage={"input_tokens": None, "output_tokens": None, "total_tokens": None},
+                        queue_metrics=None,
+                    )
+                    yield SSEEventEmitter.emit_response_completed(
+                        response=response_payload["response"],
+                        sequence_number=sequence_number,
+                    )
+                else:
+                    # Complex path - would continue with workflow
+                    # For now, emit info message
+                    sequence_number += 1
+                    yield SSEEventEmitter.emit_raw(
+                        {
+                            "type": "workflow.event",
+                            "message_id": message_id,
+                            "sequence_number": sequence_number,
+                            "actor": "System",
+                            "role": "system",
+                            "reasoning": "Complex query requires full workflow execution",
+                            "event_type": "progress",
+                            "text": "Continuing with full workflow...",
+                        }
+                    )
+
+            except Exception as e:
+                LOGGER.exception("Error in optimized workflow")
+                sequence_number += 1
+                yield SSEEventEmitter.emit_raw(
+                    {
+                        "type": "workflow.error",
+                        "message_id": message_id,
+                        "sequence_number": sequence_number,
+                        "error": str(e),
+                        "actor": "System",
+                        "role": "system",
+                        "reasoning": f"Workflow execution failed: {e!r}",
+                    }
+                )
+
+        return StreamingResponse(
+            stream_optimized_workflow(),
+            media_type="text/event-stream",
+            headers={
+                "Cache-Control": "no-cache",
+                "Connection": "keep-alive",
+                "X-Accel-Buffering": "no",
+            },
+        )
+
     @app.post("/v1/workflow/reflection")
     async def run_reflection_workflow(
         request: Request,
@@ -293,27 +440,25 @@ def create_app() -> FastAPI:
                 async for event in agent.run_stream(query):
                     sequence_number += 1
 
-                    # Unwrap AgentRunUpdateEvent to get the actual data
-                    from agent_framework import AgentRunUpdateEvent
-
-                    actual_event = event.data if isinstance(event, AgentRunUpdateEvent) else event
+                    if isinstance(event, AgentRunUpdateEvent):
+                        actual_event = getattr(event, "data", event)
+                    else:
+                        actual_event = event
 
                     text = getattr(actual_event, "text", None)
-                    role_value: str | None = None
                     author_name: str | None = getattr(actual_event, "author_name", None)
+                    role_value = None
 
                     if isinstance(actual_event, AgentRunResponseUpdate):
-                        role_obj = actual_event.role
-                        if isinstance(role_obj, Role):
-                            role_value = role_obj.value
+                        role_value = _extract_role_value(getattr(actual_event, "role", None))
                     else:
                         text = str(actual_event)
 
                     raw_text = text if text is not None else str(actual_event)
 
-                    if role_value == Role.ASSISTANT.value:
+                    if role_value == ASSISTANT_ROLE_VALUE:
                         accumulated += raw_text
-                        yield format_sse(
+                        yield SSEEventEmitter.emit_raw(
                             {
                                 "type": "response.output_text.delta",
                                 "delta": raw_text,
@@ -328,7 +473,7 @@ def create_app() -> FastAPI:
                         log_text = raw_text.strip()
                         if not log_text:
                             continue
-                        yield format_sse(
+                        yield SSEEventEmitter.emit_raw(
                             {
                                 "type": "workflow.event",
                                 "actor": author_name or "workflow",
@@ -359,7 +504,7 @@ def create_app() -> FastAPI:
                     except (KeyError, Exception):
                         pass  # Already initialized to None above
 
-                yield format_sse(
+                yield SSEEventEmitter.emit_raw(
                     {
                         "type": "response.done",
                         "conversation_id": conversation_id,
@@ -442,15 +587,12 @@ def create_app() -> FastAPI:
             # Don't add user message for approval responses - they're control messages
             # Just return success event
             async def approval_ack_stream() -> AsyncIterator[bytes]:
-                yield format_sse(
-                    {
-                        "type": "response.function_approval.responded",
-                        "request_id": request_id,
-                        "approved": approved,
-                        "sequence_number": 1,
-                    }
+                yield SSEEventEmitter.emit_approval_responded(
+                    request_id=request_id,
+                    approved=approved,
+                    sequence_number=1,
                 )
-                yield b"data: [DONE]\n\n"
+                yield SSEEventEmitter.emit_done()
 
             return StreamingResponse(approval_ack_stream(), media_type="text/event-stream")
 
@@ -470,266 +612,128 @@ def create_app() -> FastAPI:
                 conversation_id = summary.id
                 await store.add_message(conversation_id, "user", user_content_blocks)
 
-        stream = build_sse_stream(
+        # INTELLIGENT ROUTING: Check if query is simple and route to optimized workflow
+        if (
+            OPTIMIZED_WORKFLOW_AVAILABLE
+            and user_text
+            and is_simple_query(user_text)
+            and model == "dynamic_orchestration"
+        ):
+            LOGGER.info(f"Routing simple query to optimized workflow: {user_text!r}")
+
+            async def stream_optimized() -> AsyncIterator[bytes]:
+                """Stream optimized workflow events with reasoning."""
+                message_id = f"msg_{uuid4().hex[:12]}"
+                sequence_number = 0
+
+                try:
+                    # Get optimized workflow result
+                    if create_optimized_workflow_response is None:
+                        raise RuntimeError("Optimized workflow factory is unavailable")
+                    result = await create_optimized_workflow_response(
+                        query=user_text,
+                        manager_model="gpt-4o",
+                    )
+
+                    # Stream all events with reasoning/confidence/complexity
+                    for event in result["events"]:
+                        sequence_number += 1
+
+                        # Emit workflow event with full context
+                        yield SSEEventEmitter.emit_raw(
+                            {
+                                "type": "workflow.event",
+                                "message_id": message_id,
+                                "sequence_number": sequence_number,
+                                "actor": event.get("actor", "System"),
+                                "role": event.get("role", "system"),
+                                "reasoning": event.get("reasoning", ""),
+                                "confidence": event.get("confidence"),
+                                "complexity": event.get("complexity"),
+                                "text": event.get("response", ""),
+                                "event_type": event.get("type", "info"),
+                            }
+                        )
+
+                    # If fast path, emit response as delta stream
+                    if result.get("fast_path") and result.get("response"):
+                        response_text = result["response"]
+
+                        # Stream character by character for smooth UX
+                        for char in response_text:
+                            sequence_number += 1
+                            yield SSEEventEmitter.emit_raw(
+                                {
+                                    "type": "response.output_text.delta",
+                                    "message_id": message_id,
+                                    "item_id": message_id,
+                                    "sequence_number": sequence_number,
+                                    "delta": char,
+                                    "actor": "Direct Response",
+                                    "role": "assistant",
+                                }
+                            )
+
+                        # Store assistant response
+                        assistant_content = [{"type": "text", "text": response_text}]
+                        await store.add_message(conversation_id, "assistant", assistant_content)
+
+                        # Emit completion event
+                        sequence_number += 1
+                        response_payload = build_response_payload(
+                            conversation_id=conversation_id,
+                            entity_id=model,
+                            assistant_text=response_text,
+                            usage={
+                                "input_tokens": None,
+                                "output_tokens": None,
+                                "total_tokens": None,
+                            },
+                            queue_metrics=None,
+                        )
+                        yield SSEEventEmitter.emit_response_completed(
+                            response=response_payload["response"],
+                            sequence_number=sequence_number,
+                        )
+
+                    yield SSEEventEmitter.emit_done()
+
+                except Exception as exc:
+                    LOGGER.exception("Error in optimized workflow")
+                    sequence_number += 1
+                    yield SSEEventEmitter.emit_raw(
+                        {
+                            "type": "error",
+                            "message_id": message_id,
+                            "sequence_number": sequence_number,
+                            "error": str(exc),
+                            "message": f"Optimized workflow failed: {exc!r}",
+                        }
+                    )
+                    yield SSEEventEmitter.emit_done()
+
+            return StreamingResponse(stream_optimized(), media_type="text/event-stream")
+
+        # STANDARD PATH: Use existing runtime for complex queries
+        streaming_config = StreamingConfig(
+            heartbeat_interval=settings.haxui_config.streaming.heartbeat_interval,
+            chunk_size=settings.haxui_config.streaming.chunk_size,
+            approval_poll_interval=settings.haxui_config.streaming.approval_poll_interval,
+        )
+
+        session = StreamingSession(
             runtime=runtime,
+            conversation_store=store,
+            conversation_id=conversation_id,
             entity_id=model,
             user_text=user_text,
             input_payload=input_payload,
-            conversation_id=conversation_id,
-            store=store,
+            config=streaming_config,
         )
 
-        return StreamingResponse(stream, media_type="text/event-stream")
+        return StreamingResponse(session.stream(), media_type="text/event-stream")
 
     return app
-
-
-async def build_sse_stream(
-    *,
-    runtime: FleetRuntime,
-    entity_id: str,
-    user_text: str | None,
-    input_payload: dict[str, Any] | None,
-    conversation_id: str,
-    store: ConversationStore,
-) -> AsyncIterator[bytes]:
-    message_id = f"msg_{uuid4().hex[:12]}"
-    sequence_number = 0
-    accumulated = ""
-    assistant_content: list[dict[str, Any]] = []
-    status_events: asyncio.Queue[dict[str, Any]] = asyncio.Queue()
-
-    async def status_callback(_: str, metrics: Mapping[str, int | str]) -> None:
-        await status_events.put(
-            {
-                "type": "response.queue_status",
-                "metrics": dict(metrics),
-                "item_id": message_id,
-            }
-        )
-
-    # Task for streaming the agent response
-    response_task = asyncio.create_task(
-        runtime.generate_response(
-            entity_id,
-            user_text=user_text,
-            input_payload=input_payload,
-            status_callback=status_callback,
-        )
-    )
-
-    # Poll for approvals and stream chunks as they arrive
-    emitted_approval_ids: set[str] = set()
-    last_heartbeat = time.time()
-    heartbeat_interval = 15  # Send heartbeat every 15 seconds
-
-    try:
-        # Poll loop: check for approvals or task completion
-        while not response_task.done():
-            # Send periodic heartbeat to keep connection alive
-            current_time = time.time()
-            if current_time - last_heartbeat >= heartbeat_interval:
-                # SSE comment format keeps connection alive
-                yield b": heartbeat\n\n"
-                last_heartbeat = current_time
-
-            # Check for pending approval requests
-            pending = await runtime.approval_handler.get_pending_requests()
-            for approval_req in pending:
-                req_id = approval_req["request_id"]
-                if req_id not in emitted_approval_ids:
-                    # Emit approval request event using SSEEventEmitter
-                    sequence_number += 1
-
-                    # Extract risk level from details or default to MEDIUM
-                    details = approval_req.get("details", {})
-                    risk_level_str = details.get("risk_level", "medium")
-                    risk_level = RiskLevel(risk_level_str)
-
-                    # Get operation context
-                    operation_type = approval_req["operation_type"]
-                    context = approval_req.get("operation", "")
-
-                    # Emit structured approval request with risk level
-                    sse_data = SSEEventEmitter.emit_approval_request(
-                        id=req_id,
-                        operation=operation_type,
-                        params=details,
-                        context=context,
-                        risk_level=risk_level,
-                    )
-                    yield sse_data
-                    emitted_approval_ids.add(req_id)
-
-            while not status_events.empty():
-                queue_event = await status_events.get()
-                sequence_number += 1
-                queue_event["sequence_number"] = sequence_number
-                yield format_sse(queue_event)
-
-            # Wait briefly before checking again
-            await asyncio.sleep(0.1)
-
-        # Task is done - get result
-        result, usage = await response_task
-
-        while not status_events.empty():
-            queue_event = await status_events.get()
-            sequence_number += 1
-            queue_event["sequence_number"] = sequence_number
-            yield format_sse(queue_event)
-
-        # Stream the result in chunks
-        if result:
-            chunk_size = 160
-            for start in range(0, len(result), chunk_size):
-                chunk = result[start : start + chunk_size]
-                accumulated += chunk
-                assistant_content = [{"type": "text", "text": accumulated}]
-                sequence_number += 1
-                yield format_sse(
-                    {
-                        "type": "response.output_text.delta",
-                        "delta": chunk,
-                        "item_id": message_id,
-                        "output_index": 0,
-                        "sequence_number": sequence_number,
-                    }
-                )
-
-        # Send completion event
-        queue_metrics = await runtime.queue_metrics()
-        event = build_completed_event(
-            conversation_id=conversation_id,
-            entity_id=entity_id,
-            assistant_text=accumulated,
-            usage=usage,
-            queue_metrics=queue_metrics,
-            sequence_number=sequence_number + 1,
-        )
-        yield format_sse(event)
-        await append_assistant_message(store, conversation_id, accumulated, assistant_content)
-        yield b"data: [DONE]\n\n"
-
-    except Exception as exc:  # pragma: no cover - defensive
-        # Log full error internally
-        import logging
-
-        logger = logging.getLogger(__name__)
-        logger.error(f"Stream error: {exc}", exc_info=True)
-
-        sequence_number += 1
-        # Use SSEEventEmitter for structured error events
-        error_sse = SSEEventEmitter.emit_error(
-            error="Response Generation Error",
-            details="An error occurred during response generation",
-            recoverable=False,
-        )
-        yield error_sse
-
-        await append_assistant_message(
-            store,
-            conversation_id,
-            accumulated or "[error] An error occurred",
-            [{"type": "text", "text": accumulated or "An error occurred"}],
-            status="incomplete",
-        )
-        yield b"data: [DONE]\n\n"
-
-
-async def append_assistant_message(
-    store: ConversationStore,
-    conversation_id: str,
-    text: str,
-    content_blocks: list[dict[str, Any]],
-    *,
-    status: str = "completed",
-) -> None:
-    if not content_blocks and text:
-        content_blocks = [{"type": "text", "text": text}]
-    try:
-        await store.add_message(
-            conversation_id,
-            "assistant",
-            content_blocks or [{"type": "text", "text": ""}],
-            status=status,
-        )
-    except KeyError:
-        # Conversation discarded after run; ignore.
-        return
-
-
-def count_tokens(text: str, model: str = "gpt-4") -> int:
-    """
-    Count tokens in text using tiktoken.
-
-    Args:
-        text: Text to count tokens for
-        model: Model name to get appropriate encoding (default: gpt-4)
-
-    Returns:
-        Number of tokens in the text
-    """
-    if tiktoken is not None:
-        try:
-            encoding = tiktoken.encoding_for_model(model)
-            return len(encoding.encode(text))
-        except Exception:
-            pass
-    # Fallback: rough approximation if encoding not found
-    return len(text.split())
-
-
-def build_completed_event(
-    *,
-    conversation_id: str,
-    entity_id: str,
-    assistant_text: str,
-    usage: dict[str, Any],
-    queue_metrics: dict[str, int] | None,
-    sequence_number: int,
-) -> dict[str, Any]:
-    response_id = f"resp_{uuid4().hex[:12]}"
-    message_id = f"msg_{uuid4().hex[:12]}"
-    created_at = int(time.time())
-    payload = {
-        "type": "response.completed",
-        "sequence_number": sequence_number,
-        "response": {
-            "id": response_id,
-            "object": "response",
-            "created_at": created_at,
-            "model": entity_id,
-            "conversation_id": conversation_id,
-            "output": [
-                {
-                    "type": "message",
-                    "role": "assistant",
-                    "content": [
-                        {
-                            "type": "output_text",
-                            "text": assistant_text,
-                            "annotations": [],
-                        }
-                    ],
-                    "id": message_id,
-                    "status": "completed",
-                }
-            ],
-            "usage": usage,
-            "parallel_tool_calls": False,
-            "tool_choice": "none",
-            "tools": [],
-        },
-    }
-    if queue_metrics is not None:
-        payload["queue_metrics"] = queue_metrics
-    return payload
-
-
-def format_sse(event: dict[str, Any]) -> bytes:
-    payload = json.dumps(event, ensure_ascii=False)
-    return f"data: {payload}\n\n".encode()
 
 
 def extract_input_payload(request_payload: dict[str, Any]) -> dict[str, Any] | None:
@@ -764,6 +768,54 @@ def extract_user_text(input_param: Any) -> str | None:
     if not collected:
         return None
     return "\n\n".join(collected)
+
+
+def is_simple_query(text: str) -> bool:
+    """
+    Detect if query is simple enough for optimized fast path.
+    Uses same patterns as QueryRouterExecutor for consistency.
+    """
+    if not text or not isinstance(text, str):
+        return False
+
+    text_lower = text.lower().strip()
+
+    # Trivial patterns from QueryRouterExecutor
+    trivial_patterns = [
+        r"^\d+\s*[+\-*/]\s*\d+$",  # Simple arithmetic: "1+1", "5*3"
+        r"^(hi|hello|hey|greetings)\s*!*$",  # Greetings
+        r"^what\s+is\s+\d+\s*[+\-*/]\s*\d+\??$",  # "what is 2+2?"
+        r"^calculate\s+\d+\s*[+\-*/]\s*\d+$",  # "calculate 10/2"
+        r"^what\s+is\s+the\s+(meaning|definition)\s+of\s+\w+\??$",  # Simple definitions
+    ]
+
+    for pattern in trivial_patterns:
+        if re.match(pattern, text_lower):
+            return True
+
+    # Simple queries: short, no complex words
+    if len(text.split()) <= 5:
+        complex_indicators = [
+            "analyze",
+            "research",
+            "investigate",
+            "compare",
+            "evaluate",
+            "strategy",
+            "plan",
+            "design",
+            "architecture",
+            "system",
+            "code",
+            "implement",
+            "create",
+            "build",
+            "develop",
+        ]
+        if not any(indicator in text_lower for indicator in complex_indicators):
+            return True
+
+    return False
 
 
 def extract_approval_response(input_param: Any) -> dict[str, Any] | None:
