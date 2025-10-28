@@ -39,7 +39,7 @@ dependencies = [
     "agent-framework-redis",
     "agent-framework-devui",
     "mem0ai==1.0.0",                    # Pinned for stable memory API
-    "rich>=13.7.0,<14.0",
+    "rich>=13.7.0,<15.0",
     "prompt-toolkit>=3.0.47,<4.0",
     "ipykernel>=7.0.1,<8.0",
     "openai==2.5.0",                    # Pinned for OpenAI Responses API compatibility
@@ -57,7 +57,7 @@ memory = ["agent-framework-mem0", "agent-framework-redis", "mem0ai==1.0.0"]
 # UI and interactive features
 ui = [
     "agent-framework-devui",
-    "rich>=13.7.0,<14.0",
+    "rich>=13.7.0,<15.0",
     "prompt-toolkit>=3.0.47,<4.0",
 ]
 
