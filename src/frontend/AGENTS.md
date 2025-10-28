@@ -45,11 +45,12 @@ This file documents how an agent should safely modify, extend, and validate the 
 
 | Area       | Choice                                        | Notes                                             |
 | ---------- | --------------------------------------------- | ------------------------------------------------- |
-| Bundler    | Vite                                          | Fast TS HMR, env via `import.meta.env`            |
+| Bundler    | Vite 7.1.12                                   | Fast TS HMR, env via `import.meta.env`            |
 | Framework  | React 18                                      | Functional components + hooks only                |
 | Language   | TypeScript                                    | Strict; avoid `any` unless isolated adapter layer |
 | UI Library | shadcn/ui + Radix Primitives                  | Accessible component primitives                   |
 | Styling    | Tailwind CSS + utility patterns               | Prefer composition over custom CSS                |
+| Animations | Framer Motion 12.23.24                        | Layout and component animations                   |
 | State      | Local + lightweight stores (`zustand`)        | Keep ephemeral vs persistent separate             |
 | Data / IO  | Fetch + React Query (`@tanstack/react-query`) | SSE stream manually handled                       |
 | Markdown   | `react-markdown` + `shiki`                    | Syntax highlighting for streamed code             |
@@ -71,8 +72,24 @@ src/frontend/
 │   │   └── ui/
 │   │       ├── shadcn/        # shadcn/ui primitives (DON'T MODIFY - managed by CLI)
 │   │       └── custom/        # App-specific UI components (safe to modify)
-│   ├── hooks/                 # Streaming + approval state hooks
-│   ├── lib/                   # Helper utilities (formatters, SSE parser, API clients)
+│   ├── layouts/               # Layout components with framer-motion animations
+│   │   ├── MainLayout.tsx     # Main application layout wrapper
+│   │   ├── ChatLayout.tsx     # Chat-specific layout with sidebar/header
+│   │   └── index.ts           # Layout barrel exports
+│   ├── hooks/                 # Custom React hooks
+│   ├── lib/                   # Helper utilities and API clients
+│   │   ├── hooks/            # Specialized hooks
+│   │   │   ├── useMessageState.ts      # Message accumulation & streaming
+│   │   │   ├── useApprovalWorkflow.ts  # HITL approval management
+│   │   │   ├── useConversationHistory.ts # Conversation loading
+│   │   │   └── useSSEConnection.ts      # SSE event types
+│   │   ├── types/            # Type definitions
+│   │   │   └── contracts.ts  # Backend contract types
+│   │   ├── agent-utils.ts    # Agent role/color mapping
+│   │   ├── api-config.ts     # API endpoints & URL builder
+│   │   ├── types.ts          # Core frontend types
+│   │   ├── utils.ts          # Utility functions
+│   │   └── use-fastapi-chat.ts # Main chat orchestration hook
 │   ├── pages/                 # Router-level pages (Index, NotFound)
 │   └── app/                   # App state (chat-store, API primitives)
 ├── index.html                 # Vite entry
@@ -83,14 +100,18 @@ src/frontend/
 **Import Conventions:**
 - Features: `import { ChatContainer } from '@/components/features/chat'` (barrel exports)
 - AI: `import { Plan, Reasoning } from '@/components/ai'` (barrel exports)
+- Layouts: `import { MainLayout, ChatLayout } from '@/layouts'` (barrel exports)
 - shadcn: `import { Button } from '@/components/ui/shadcn/button'` (individual imports, no barrel)
 - Custom UI: `import { Message } from '@/components/ui/custom/message'` (individual imports)
+- Lib: `import { mapRoleToAgent } from '@/lib/agent-utils'` (individual imports)
 
 **Component Ownership:**
 - `features/` - Safe to modify, application business logic
 - `ai/` - Safe to modify, AI-specific visualization
+- `layouts/` - Safe to modify, uses framer-motion for animations
 - `ui/shadcn/` - DO NOT MODIFY, use shadcn CLI for updates
 - `ui/custom/` - Safe to modify, app-specific UI building blocks
+- `lib/` - Safe to modify, utility functions and API clients
 ```
 
 ---
