@@ -4,7 +4,10 @@ from __future__ import annotations
 
 from typing import Any
 
-from agent_framework.openai import OpenAIResponsesClient
+try:
+    from agent_framework import ChatAgent as _ChatAgent
+except ImportError:
+    _ChatAgent = None  # type: ignore[assignment, misc]
 
 from agenticfleet.core.exceptions import AgentConfigurationError
 
@@ -19,8 +22,14 @@ class ChatAgent:
         )
 
 
-class FleetAgent(OpenAIResponsesClient):
-    """ChatAgent variant that exposes runtime configuration metadata."""
+class FleetAgent(_ChatAgent if _ChatAgent else ChatAgent):  # type: ignore[misc]
+    """ChatAgent variant that exposes runtime configuration metadata.
+
+    This class extends the base ChatAgent from agent_framework and adds
+    support for runtime configuration metadata. It accepts any chat client
+    that implements ChatClientProtocol, including OpenAIResponsesClient
+    and LiteLLMClient.
+    """
 
     runtime_config: dict[str, Any]
 
@@ -30,6 +39,11 @@ class FleetAgent(OpenAIResponsesClient):
         runtime_config: dict[str, Any] | None = None,
         **kwargs: Any,
     ) -> None:
+        if _ChatAgent is None:
+            raise AgentConfigurationError(
+                "agent_framework is required to instantiate fleet agents. "
+                "Install the 'agent-framework' package to enable this functionality."
+            )
         super().__init__(*args, **kwargs)
         self.runtime_config = runtime_config or {}
 

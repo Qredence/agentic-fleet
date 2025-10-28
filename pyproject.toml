@@ -44,6 +44,7 @@ dependencies = [
     "ipykernel>=7.0.1,<8.0",
     "openai==2.5.0",                    # Pinned for OpenAI Responses API compatibility
     "azure-ai-evaluation>=1.12.0,<2.0",
+    "litellm>=1.58.0,<2.0",             # Universal LLM proxy with caching and tracing
 ]
 requires-python = ">=3.12,<4"
 
@@ -235,6 +236,7 @@ module = [
     "agenticfleet.haxui.conversations",
     "agenticfleet.config.settings",
     "agenticfleet.core.checkpoints",
+    "agenticfleet.core.litellm_client",
     "agenticfleet.workflows.workflow_as_agent",
     "agenticfleet.cli.ui",
     "agenticfleet.agents.base",
