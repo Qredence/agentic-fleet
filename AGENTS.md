@@ -185,7 +185,7 @@ uv run mypy .
 
 **Location**: `src/frontend/`
 
-**Tech**: React 18 • TypeScript • Vite • Tailwind CSS • shadcn/ui • TanStack Query
+**Tech**: React 18 • TypeScript • Vite 7.1.12 • Tailwind CSS • shadcn/ui • Framer Motion 12.23.24 • TanStack Query
 
 **Commands**:
 
@@ -199,6 +199,15 @@ npm run lint         # ESLint
 npm run lint:fix     # Auto-fix
 npm run format       # Prettier
 ```
+
+**Key Features**:
+
+- Vite 7.x for ultra-fast HMR and builds
+- Framer Motion for smooth layout and component animations
+- Proper layout structure with MainLayout and ChatLayout
+- Type-safe API integration with backend SSE streaming
+- shadcn/ui component registry for consistent UI
+- Comprehensive hook system for messages, approvals, and SSE
 
 **Backend integration**:
 

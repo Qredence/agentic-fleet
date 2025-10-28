@@ -43,7 +43,45 @@ Frontend will be available at `http://localhost:8080`
 - **Type-Safe API** - Full TypeScript integration with backend APIs
 - **Modern UI** - Built with shadcn/ui components and Tailwind CSS
 
-## 🛠️ Project Info
+## 🛠️ Tech Stack
+
+- **Vite**: v7.1.12 - Fast build tool and dev server
+- **React**: v18.3.1 - UI framework
+- **TypeScript**: v5.8.3 - Type-safe JavaScript
+- **Tailwind CSS**: v3.4.17 - Utility-first CSS framework
+- **shadcn/ui**: v3.4.2 - Re-usable component library
+- **Framer Motion**: v12.23.24 - Animation library
+- **React Router**: v6.30.1 - Client-side routing
+- **TanStack Query**: v5.83.0 - Data fetching and caching
+
+## 📁 Project Structure
+
+```
+src/frontend/
+├── src/
+│   ├── components/
+│   │   ├── features/           # Feature-specific components
+│   │   │   ├── chat/          # Chat UI components
+│   │   │   ├── approval/      # HITL approval dialogs
+│   │   │   └── shared/        # Shared feature components
+│   │   ├── ai/                # AI visualization components
+│   │   ├── ui/
+│   │   │   ├── shadcn/        # shadcn/ui primitives (managed by CLI)
+│   │   │   └── custom/        # Custom UI components
+│   │   └── layouts/           # Layout components with animations
+│   ├── hooks/                 # Custom React hooks
+│   ├── lib/                   # Utilities and API clients
+│   │   ├── hooks/            # Specialized hooks (messages, approvals, SSE)
+│   │   ├── types/            # TypeScript type definitions
+│   │   ├── agent-utils.ts    # Agent role mapping utilities
+│   │   ├── api-config.ts     # API endpoint configuration
+│   │   └── use-fastapi-chat.ts # Main chat hook
+│   ├── pages/                 # Route pages
+│   └── app/                   # App state management
+├── vite.config.ts             # Vite configuration
+├── tailwind.config.ts         # Tailwind configuration
+└── components.json            # shadcn component registry
+```
 
 ## How can I edit this code?
 
