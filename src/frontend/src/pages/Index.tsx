@@ -9,7 +9,7 @@ const Index = () => {
   }, []);
 
   return (
-    <div className="flex h-screen w-full bg-background">
+    <div className="h-screen w-full overflow-hidden bg-background">
       <ChatContainer
         conversationId={conversationId}
         onConversationChange={handleConversationChange}

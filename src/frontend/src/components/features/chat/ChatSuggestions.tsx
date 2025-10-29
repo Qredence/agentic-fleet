@@ -75,44 +75,44 @@ const ChatSuggestionsComponent = ({
   };
 
   return (
-    <div className={`space-y-4 ${className}`}>
-      {/* Header */}
-      <div className="text-center">
-        <h3 className="text-lg font-semibold text-foreground mb-2">
+    <div className={`space-y-4 sm:space-y-6 ${className}`}>
+      {/* Header - Responsive text sizing */}
+      <div className="text-center px-4">
+        <h3 className="text-xl sm:text-2xl font-semibold text-foreground mb-2">
           What would you like to work on?
         </h3>
-        <p className="text-sm text-muted-foreground">
+        <p className="text-sm sm:text-base text-muted-foreground">
           Choose a suggestion below or type your own request
         </p>
       </div>
 
-      {/* Enhanced Suggestions Grid */}
-      <div className="grid gap-4 md:grid-cols-2">
+      {/* Enhanced Suggestions Grid - Responsive columns */}
+      <div className="grid gap-3 sm:gap-4 grid-cols-1 sm:grid-cols-2">
         {suggestions.map((suggestion, index) => (
           <PromptSuggestion
             key={index}
             onClick={() => handleSuggestionClick(suggestion.text)}
             variant="outline"
             size="lg"
-            className="p-4 text-left hover:shadow-lg transition-all duration-200"
+            className="p-3 sm:p-4 text-left hover:shadow-lg transition-all duration-200 h-full"
           >
-            <div className="flex items-start gap-3">
-              <div className="flex-shrink-0 w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center text-primary">
+            <div className="flex items-start gap-2 sm:gap-3">
+              <div className="flex-shrink-0 w-7 h-7 sm:w-8 sm:h-8 rounded-lg bg-primary/10 flex items-center justify-center text-primary">
                 {suggestion.icon}
               </div>
               <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-2 mb-1">
-                  <h4 className="font-medium text-sm leading-tight">
+                <div className="flex items-start gap-2 mb-1 flex-wrap">
+                  <h4 className="font-medium text-sm sm:text-base leading-tight flex-1 min-w-0">
                     {suggestion.text}
                   </h4>
                   <Badge
                     variant="secondary"
-                    className={`text-xs ${getCategoryColor(suggestion.category)}`}
+                    className={`text-xs flex-shrink-0 ${getCategoryColor(suggestion.category)}`}
                   >
                     {suggestion.category}
                   </Badge>
                 </div>
-                <p className="text-xs text-muted-foreground">
+                <p className="text-xs sm:text-sm text-muted-foreground">
                   {suggestion.description}
                 </p>
               </div>
@@ -121,12 +121,13 @@ const ChatSuggestionsComponent = ({
         ))}
       </div>
 
-      {/* Quick Actions */}
-      <div className="flex flex-wrap gap-2 justify-center">
+      {/* Quick Actions - Responsive layout */}
+      <div className="flex flex-wrap gap-2 justify-center px-4">
         <Button
           variant="outline"
           size="sm"
           onClick={() => handleSuggestionClick("Show me current project status")}
+          className="text-xs sm:text-sm"
         >
           Project Overview
         </Button>
@@ -134,6 +135,7 @@ const ChatSuggestionsComponent = ({
           variant="outline"
           size="sm"
           onClick={() => handleSuggestionClick("List available agents and their capabilities")}
+          className="text-xs sm:text-sm"
         >
           Agent Capabilities
         </Button>
@@ -141,6 +143,7 @@ const ChatSuggestionsComponent = ({
           variant="outline"
           size="sm"
           onClick={() => handleSuggestionClick("Help me understand the current workflow")}
+          className="text-xs sm:text-sm"
         >
           Workflow Help
         </Button>

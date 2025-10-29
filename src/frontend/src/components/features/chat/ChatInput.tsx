@@ -1,3 +1,12 @@
+/**
+ * ChatInput Component - Responsive Message Input
+ * 
+ * Features:
+ * - Responsive sizing for mobile/tablet/desktop
+ * - Proper touch targets on mobile (44px minimum)
+ * - Flexible textarea with proper constraints
+ */
+
 import { useState } from "react";
 import { Button } from "@/components/ui/shadcn/button";
 import { Send, Loader2 } from "lucide-react";
@@ -57,22 +66,22 @@ export const ChatInput = ({
           placeholder={disabled ? "Processing..." : placeholder}
           disabled={disabled || isSubmitting}
           onKeyDown={handleKeyDown}
-          className="min-h-[44px] max-h-32"
+          className="min-h-[44px] max-h-32 text-sm sm:text-base resize-none"
         />
 
-        <PromptInputActions className="pt-2">
+        <PromptInputActions className="pt-2 flex justify-end">
           <Button
             onClick={handleSubmit}
             disabled={!inputValue.trim() || disabled || isSubmitting}
             size="sm"
-            className="ml-auto"
+            className="h-9 w-9 sm:h-10 sm:w-auto sm:px-4"
           >
             {isSubmitting ? (
               <Loader2 className="h-4 w-4 animate-spin" />
             ) : (
               <Send className="h-4 w-4" />
             )}
-            <span className="sr-only">Send message</span>
+            <span className="sr-only sm:not-sr-only sm:ml-2">Send</span>
           </Button>
         </PromptInputActions>
       </PromptInput>

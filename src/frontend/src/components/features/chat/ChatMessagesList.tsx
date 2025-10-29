@@ -146,8 +146,8 @@ const ChatMessagesListComponent = ({
     <div className={`flex flex-col h-full relative ${className}`}>
       {renderQueueStatus()}
 
-      <ChatContainerRoot className="flex-1">
-        <ChatContainerContent className="space-y-4 p-4">
+      <ChatContainerRoot className="flex-1 overflow-hidden">
+        <ChatContainerContent className="space-y-3 sm:space-y-4 p-3 sm:p-4">
           {displayMessages.map((message, index) => (
             <ChatMessage
               key={message.id}
@@ -157,9 +157,9 @@ const ChatMessagesListComponent = ({
           ))}
 
           {isStreaming && (
-            <div className="flex items-center gap-3 px-4 py-3 bg-muted/30 rounded-lg">
-              <TypingLoader size="md" />
-              <span className="text-sm text-muted-foreground">Agent is thinking...</span>
+            <div className="flex items-center gap-2 sm:gap-3 px-3 sm:px-4 py-2 sm:py-3 bg-muted/30 rounded-lg">
+              <TypingLoader size="sm" />
+              <span className="text-xs sm:text-sm text-muted-foreground">Agent is thinking...</span>
               <Loader variant="pulse-dot" size="sm" />
             </div>
           )}
@@ -167,9 +167,9 @@ const ChatMessagesListComponent = ({
           <ChatContainerScrollAnchor ref={messagesEndRef} />
         </ChatContainerContent>
 
-        {/* Enhanced scroll button using prompt-kit - moved inside ChatContainerRoot */}
-        <div className="absolute bottom-4 right-4">
-          <ScrollButton className="shadow-lg" />
+        {/* Enhanced scroll button - positioned for mobile accessibility */}
+        <div className="absolute bottom-3 right-3 sm:bottom-4 sm:right-4">
+          <ScrollButton className="shadow-lg h-10 w-10 sm:h-12 sm:w-12" />
         </div>
       </ChatContainerRoot>
     </div>
