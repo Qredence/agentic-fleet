@@ -21,6 +21,20 @@
       "description": "Playwright MCP server for browser automation and testing",
       "command": "npx",
       "args": ["-y", "@executeautomation/playwright-mcp-server"]
+    },
+    "serena": {
+      "description": "Serena semantic coding assistant for intelligent code analysis and navigation",
+      "command": "uvx",
+      "args": [
+        "--from",
+        "git+https://github.com/oraios/serena",
+        "serena",
+        "start-mcp-server",
+        "--context",
+        "ide-assistant",
+        "--project",
+        "/Volumes/Samsung-SSD-T7/Workspaces/Github/qredence/agent-framework/v0.5/AgenticFleet"
+      ]
     }
   }
 }

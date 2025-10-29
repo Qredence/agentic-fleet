@@ -1,7 +1,7 @@
 [project]
 name = "agentic-fleet"
 version = "0.5.5"
-description = "Minimal trio workflow helper built with Microsoft Agent Framework"
+description = "Multi-agent orchestration system built with Microsoft Agent Framework's Magentic Fleet pattern"
 authors = [{ name = "Qredence", email = "contact@qredence.ai" }]
 readme = "README.md"
 license = { file = "LICENSE" }
@@ -63,6 +63,9 @@ evaluation = ["azure-ai-evaluation>=1.12.0,<2.0"]
 all = ["agentic-fleet[azure,memory,ui,evaluation]"]
 
 [project.scripts]
+agentic-fleet = "agenticfleet.cli.repl:main"
+fleet = "agenticfleet.cli.repl:main"
+dynamic-fleet = "agenticfleet.cli.dynamic:main"
 
 
 [project.urls]
@@ -140,7 +143,7 @@ line-length = 100
 
 
 [tool.ruff.lint]
-select = ["E", "F", "I", "UP", "B"]
+select = ["E", "F", "I", "UP", "B", "N", "A", "SIM", "RUF"]
 ignore = ["E501"]
 
 
@@ -173,3 +176,5 @@ exclude_lines = [
 python_version = "3.12"
 strict = true
 packages = ["agenticfleet"]
+# No per-module overrides; all modules must be fully type-checked and compliant.
+# Ensure all functions have explicit type hints and all imports are resolvable.

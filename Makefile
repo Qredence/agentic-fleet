@@ -1,4 +1,4 @@
-.PHONY: help install sync clean test test-config test-e2e lint format type-check check run demo-hitl pre-commit-install dev haxui-server frontend-install frontend-dev validate-agents
+.PHONY: help install sync clean test test-config test-e2e lint format type-check check run demo-hitl pre-commit-install dev backend frontend-install frontend-dev validate-agents
 
 # Default target
 help:
@@ -13,7 +13,7 @@ help:
 	@echo "Development:"
 	@echo "  make run               Run the main application"
 	@echo "  make dev               Run backend + frontend together (full stack)"
-	@echo "  make haxui-server      Run backend only (port 8000)"
+	@echo "  make backend           Run backend only (port 8000)"
 	@echo "  make frontend-dev      Run frontend only (port 5173)"
 	@echo "  make test              Run all tests"
 	@echo "  make test-config       Run configuration validation"
@@ -34,7 +34,7 @@ help:
 
 # Setup commands
 install:
-	uv pip install agentic-fleet[all]
+	uv pip install agentic-fleet[all] --pre -U
 	@echo "✓ Python dependencies installed"
 	@echo ""
 	@echo "Next: Run 'make frontend-install' to install frontend dependencies"
@@ -61,14 +61,14 @@ dev:
 	@echo "Press Ctrl+C to stop both services"
 	@echo ""
 	@trap 'kill 0' INT; \
-	uv run uvicorn agenticfleet.haxui.api:app --reload --port 8000 & \
+	uv run uvicorn agenticfleet.server:app --reload --port 8000 & \
 	cd src/frontend && npm run dev
 
 
 # DevUI backend server only
-haxui-server:
-	@echo "Starting HaxUI backend on http://localhost:8000"
-	uv run uvicorn agenticfleet.haxui.api:app --reload --port 8000
+backend:
+	@echo "Starting minimal backend on http://localhost:8000"
+	uv run uvicorn agenticfleet.server:app --reload --port 8000
 
 # Frontend dev server only
 frontend-dev:
@@ -95,7 +95,7 @@ format:
 	uv run black .
 
 type-check:
-	uv run mypy .
+	uv run mypy src
 
 # Run all checks
 check: lint type-check

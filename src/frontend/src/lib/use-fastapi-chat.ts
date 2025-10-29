@@ -17,6 +17,7 @@ import { useMessageState, type Message } from "./hooks/useMessageState";
 import { useApprovalWorkflow, type PendingApproval, type ApprovalResponsePayload } from "./hooks/useApprovalWorkflow";
 import { useChatSubmission } from "./hooks/useChatSubmission";
 import { useSSEEventProcessor } from "./hooks/useSSEEventProcessor";
+import type { Plan } from "./hooks/useSSEEventProcessor";
 import { useConnectionHealth } from "./hooks/useConnectionHealth";
 import { useChatState } from "./hooks/useChatState";
 import { useConversationManager } from "./hooks/useConversationManager";
@@ -96,10 +97,23 @@ export function useFastAPIChat({
     initialConversationId,
   });
 
+  const { setCurrentPlan } = chatState;
+  const currentPlan = chatState.state.currentPlan;
+
+  const handlePlanUpdate = useCallback(
+    (update: Plan | null | ((prev: Plan | null) => Plan | null)) => {
+      const nextPlan = typeof update === "function" ? update(currentPlan) : update;
+      setCurrentPlan(nextPlan);
+    },
+    [currentPlan, setCurrentPlan]
+  );
+
   // Connection health monitoring
   const connectionHealth = useConnectionHealth({
     onStatusChange: chatState.setConnectionStatus,
   });
+
+  const { connectionStatus, resetRetryCount, checkHealth } = connectionHealth;
 
   // SSE event processing
   const sseProcessor = useSSEEventProcessor({
@@ -128,7 +142,7 @@ export function useFastAPIChat({
           break;
       }
     },
-    onPlanUpdate: chatState.setCurrentPlan,
+    onPlanUpdate: handlePlanUpdate,
     onQueueStatusUpdate: chatState.setQueueStatus,
     onApprovalEvent: (event) => {
       if (event.type === "approval_requested") {
@@ -185,10 +199,10 @@ export function useFastAPIChat({
 
   // Reset connection health retry count when connected
   useEffect(() => {
-    if (connectionHealth.connectionStatus === "connected") {
-      connectionHealth.resetRetryCount();
+    if (connectionStatus === "connected") {
+      resetRetryCount();
     }
-  }, [connectionHealth.connectionStatus, connectionHealth.resetRetryCount]);
+  }, [connectionStatus, resetRetryCount]);
 
   // ══════════════════════════════════════════════════════════════════════════
   // Return Value - Composed Hook API
@@ -216,8 +230,8 @@ export function useFastAPIChat({
     refreshApprovals: approvalWorkflow.fetchApprovals,
 
     // Connection status
-    connectionStatus: connectionHealth.connectionStatus,
-    checkHealth: connectionHealth.checkHealth,
+    connectionStatus,
+    checkHealth,
 
     // Conversation context
     conversationId: chatState.state.conversationId,

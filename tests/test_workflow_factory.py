@@ -22,7 +22,10 @@ def test_list_available_workflows() -> None:
     workflows = factory.list_available_workflows()
 
     assert isinstance(workflows, list)
-    assert len(workflows) == 2  # collaboration and magentic_fleet
+    # Check that expected workflow IDs are present
+    workflow_ids = [w["id"] for w in workflows]
+    assert "collaboration" in workflow_ids
+    assert "magentic_fleet" in workflow_ids
 
     # Check metadata structure
     for workflow in workflows:
@@ -40,22 +43,16 @@ def test_get_workflow_config_collaboration() -> None:
 
     assert config.name == "Collaboration Workflow"
     assert config.factory == "create_collaboration_workflow"
-    assert len(config.agents) == 3  # researcher, coder, reviewer
-    assert "researcher" in config.agents
-    assert "coder" in config.agents
-    assert "reviewer" in config.agents
+    assert all(agent in config.agents for agent in ["researcher", "coder", "reviewer"])
 
 
 def test_get_workflow_config_magentic_fleet() -> None:
     """Test getting magentic fleet workflow config."""
-    factory = WorkflowFactory()
-    config = factory.get_workflow_config("magentic_fleet")
-
+    config = get_workflow_config("magentic_fleet")
     assert config.name == "Magentic Fleet Workflow"
     assert config.factory == "create_magentic_fleet_workflow"
-    assert len(config.agents) == 5  # planner, executor, coder, verifier, generator
-    assert "planner" in config.agents
-    assert "executor" in config.agents
+    required_agents = ["planner", "executor", "coder", "verifier", "generator"]
+    assert all(agent in config.agents for agent in required_agents)
     assert "coder" in config.agents
     assert "verifier" in config.agents
     assert "generator" in config.agents

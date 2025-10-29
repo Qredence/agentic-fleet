@@ -10,14 +10,10 @@ const Index = () => {
 
   return (
     <div className="flex h-screen w-full bg-background">
-      <div className="flex-1 px-4 py-6">
-        <div className="mx-auto h-full w-full max-w-5xl">
-          <ChatContainer
-            conversationId={conversationId}
-            onConversationChange={handleConversationChange}
-          />
-        </div>
-      </div>
+      <ChatContainer
+        conversationId={conversationId}
+        onConversationChange={handleConversationChange}
+      />
     </div>
   );
 };

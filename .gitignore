@@ -66,20 +66,6 @@ AgenticFleet.code-workspace
 node_modules/
 
 .config/
-.kilocode/mcp.json
-.kilocode/rules/memory-bank/architecture.md
-.kilocode/rules/memory-bank/brief.md
-.kilocode/rules/memory-bank/context.md
-.kilocode/rules/memory-bank/memory-bank-instructions.md
-.kilocode/rules/memory-bank/product.md
-.kilocode/rules/memory-bank/tasks.md
-.kilocode/rules/memory-bank/tech.md
+.kilocode/
+memory-bank/
 .pre-commit-config.yaml
-memory-bank/activeContext.md
-memory-bank/productContext.md
-memory-bank/progress.md
-memory-bank/projectbrief.md
-memory-bank/README.md
-memory-bank/systemPatterns.md
-memory-bank/techContext.md
-memory-bank/tasks/_index.md

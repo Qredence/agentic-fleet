@@ -1,62 +1,37 @@
-"""
-AgenticFleet - A multi-agent orchestration system built with Microsoft Agent Framework.
+"""Minimal trio workflow helper built on Microsoft Agent Framework."""
 
-A sophisticated multi-agent system that coordinates specialized AI agents to solve
-complex tasks through dynamic delegation and collaboration.
-"""
+from __future__ import annotations
 
-__version__ = "0.5.1"
-__author__ = "Qredence"
-__email__ = "contact@qredence.ai"
-
-from importlib import import_module
-from typing import TYPE_CHECKING, Any
-
-if TYPE_CHECKING:  # pragma: no cover - for static analyzers
-    from agenticfleet.agents import (
-        create_analyst_agent,
-        create_coder_agent,
-        create_orchestrator_agent,
-        create_researcher_agent,
-    )
-    from agenticfleet.fleet.magentic_fleet import MagenticFleet, create_default_fleet
-    from agenticfleet.observability import get_trace_config, is_tracing_enabled, setup_tracing
+from .workflow import (
+    COLLABORATION_CODER_INSTRUCTIONS,
+    COLLABORATION_MANAGER_INSTRUCTIONS,
+    COLLABORATION_RESEARCHER_INSTRUCTIONS,
+    COLLABORATION_REVIEWER_INSTRUCTIONS,
+    MAGENTIC_FLEET_CODER_INSTRUCTIONS,
+    MAGENTIC_FLEET_DEFAULT_MODEL,
+    MAGENTIC_FLEET_EXECUTOR_INSTRUCTIONS,
+    MAGENTIC_FLEET_GENERATOR_INSTRUCTIONS,
+    MAGENTIC_FLEET_MANAGER_INSTRUCTIONS,
+    MAGENTIC_FLEET_PLANNER_INSTRUCTIONS,
+    MAGENTIC_FLEET_VERIFIER_INSTRUCTIONS,
+    create_collaboration_workflow,
+    create_magentic_fleet_workflow,
+)
 
 __all__ = [
-    "MagenticFleet",
-    "__author__",
-    "__email__",
-    "__version__",
-    "create_analyst_agent",
-    "create_coder_agent",
-    "create_default_fleet",
-    "create_orchestrator_agent",
-    "create_researcher_agent",
-    "get_trace_config",
-    "is_tracing_enabled",
-    "setup_tracing",
+    "COLLABORATION_CODER_INSTRUCTIONS",
+    "COLLABORATION_MANAGER_INSTRUCTIONS",
+    "COLLABORATION_RESEARCHER_INSTRUCTIONS",
+    "COLLABORATION_REVIEWER_INSTRUCTIONS",
+    "MAGENTIC_FLEET_DEFAULT_MODEL",
+    "MAGENTIC_FLEET_PLANNER_INSTRUCTIONS",
+    "MAGENTIC_FLEET_EXECUTOR_INSTRUCTIONS",
+    "MAGENTIC_FLEET_CODER_INSTRUCTIONS",
+    "MAGENTIC_FLEET_VERIFIER_INSTRUCTIONS",
+    "MAGENTIC_FLEET_GENERATOR_INSTRUCTIONS",
+    "MAGENTIC_FLEET_MANAGER_INSTRUCTIONS",
+    "create_collaboration_workflow",
+    "create_magentic_fleet_workflow",
 ]
 
-_EXPORTS: dict[str, tuple[str, str]] = {
-    "create_orchestrator_agent": ("agenticfleet.agents", "create_orchestrator_agent"),
-    "create_researcher_agent": ("agenticfleet.agents", "create_researcher_agent"),
-    "create_coder_agent": ("agenticfleet.agents", "create_coder_agent"),
-    "create_analyst_agent": ("agenticfleet.agents", "create_analyst_agent"),
-    "MagenticFleet": ("agenticfleet.fleet.magentic_fleet", "MagenticFleet"),
-    "create_default_fleet": ("agenticfleet.fleet.magentic_fleet", "create_default_fleet"),
-    "setup_tracing": ("agenticfleet.observability", "setup_tracing"),
-    "is_tracing_enabled": ("agenticfleet.observability", "is_tracing_enabled"),
-    "get_trace_config": ("agenticfleet.observability", "get_trace_config"),
-}
-
-
-def __getattr__(name: str) -> Any:
-    if name in _EXPORTS:
-        module_name, attr_name = _EXPORTS[name]
-        module = import_module(module_name)
-        return getattr(module, attr_name)
-    raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
-
-
-def __dir__() -> list[str]:
-    return sorted(list(globals().keys()) + list(_EXPORTS.keys()))
+__version__ = "0.6.0"
