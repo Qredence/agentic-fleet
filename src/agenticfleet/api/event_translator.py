@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import logging
-from typing import TYPE_CHECKING
+from typing import Any
 
 from agent_framework import (
     MagenticAgentDeltaEvent,
@@ -14,9 +14,6 @@ from agent_framework import (
 )
 
 from agenticfleet.api.models import SSEEvent, SSEEventType
-
-if TYPE_CHECKING:
-    from typing import Any
 
 logger = logging.getLogger(__name__)
 

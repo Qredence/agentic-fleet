@@ -15,6 +15,7 @@
 import { ApprovalPrompt } from "@/components/features/approval";
 import { useToast } from "@/hooks/use-toast";
 import { useFastAPIChat } from "@/lib/use-fastapi-chat";
+import type { ApprovalResponsePayload, PendingApproval } from "@/lib/types";
 import { memo, useCallback, useEffect } from "react";
 import { ChatHeader } from "./ChatHeader";
 import { ChatInput } from "./ChatInput";
@@ -71,17 +72,54 @@ const ChatContainerComponent = ({
     [handleSendMessage],
   );
 
-  const handleApprovalResponse = useCallback(
-    async (requestId: string, action: "approve" | "reject") => {
+  const handleApprovalApprove = useCallback(
+    async (
+      approval: PendingApproval,
+      options?: {
+        modifiedCode?: string;
+        modifiedParams?: Record<string, unknown>;
+        reason?: string;
+      },
+    ) => {
+      const payload: ApprovalResponsePayload = options && (options.modifiedCode || options.modifiedParams)
+        ? {
+            type: "modify",
+            modifiedCode: options.modifiedCode,
+            modifiedParams: options.modifiedParams,
+            reason: options.reason,
+          }
+        : { type: "approve", reason: options?.reason };
+
       try {
-        await respondToApproval(requestId, action);
+        await respondToApproval(approval.requestId, payload);
         toast({
           title: "Approval submitted",
-          description: "Your decision has been recorded.",
+          description: "The agent has been notified.",
         });
       } catch (error) {
         toast({
           title: "Failed to submit approval",
+          description: error instanceof Error ? error.message : "Unknown error",
+          variant: "destructive",
+        });
+      }
+    },
+    [respondToApproval, toast],
+  );
+
+  const handleApprovalReject = useCallback(
+    async (approval: PendingApproval, reason: string) => {
+      const payload: ApprovalResponsePayload = { type: "reject", reason };
+
+      try {
+        await respondToApproval(approval.requestId, payload);
+        toast({
+          title: "Approval rejected",
+          description: "The agent will halt this operation.",
+        });
+      } catch (error) {
+        toast({
+          title: "Failed to submit rejection",
           description: error instanceof Error ? error.message : "Unknown error",
           variant: "destructive",
         });
@@ -197,11 +235,16 @@ const ChatContainerComponent = ({
           <div className="max-w-4xl mx-auto p-3 sm:p-4 space-y-3">
             {pendingApprovals.map((approval) => (
               <ApprovalPrompt
-                key={approval.id}
+                key={approval.requestId}
                 approval={approval}
-                status={approvalStatuses[approval.id]}
-                onResponse={(action) =>
-                  handleApprovalResponse(approval.id, action)
+                status={
+                  approvalStatuses[approval.requestId] ?? { status: "idle" }
+                }
+                onApprove={(options) =>
+                  handleApprovalApprove(approval, options)
+                }
+                onReject={(reason) =>
+                  handleApprovalReject(approval, reason)
                 }
               />
             ))}

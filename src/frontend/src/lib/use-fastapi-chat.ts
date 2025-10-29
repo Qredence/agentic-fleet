@@ -8,6 +8,10 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useWebSocket, type WebSocketMessage } from "./hooks/useWebSocket";
+import { createChatExecution } from "./api/chat";
+import { listApprovals, submitApprovalDecision } from "./api/approvals";
+import { checkHealth as requestHealth } from "./api/health";
+import { ApiError } from "./api/client";
 import type {
   ApprovalActionState,
   ApprovalResponsePayload,
@@ -17,6 +21,8 @@ import type {
   PendingApproval,
   Plan,
   QueueStatus,
+  ChatExecutionRequest,
+  ApprovalDecisionPayload,
 } from "./types";
 
 // Re-export types for consuming components
@@ -96,7 +102,6 @@ export function useFastAPIChat({
   const [approvalStatuses, setApprovalStatuses] = useState<Record<string, ApprovalActionState>>({});
 
   // Refs for fetch abort control and streaming
-  const abortControllerRef = useRef<AbortController | null>(null);
   const streamingMessageRef = useRef<Message | null>(null);
   const isSendingRef = useRef<boolean>(false);
   const messageIdSetRef = useRef<Set<string>>(new Set());
@@ -172,9 +177,39 @@ export function useFastAPIChat({
             finishStreaming();
             if (data.message && typeof data.message === "object") {
               const msg = data.message as Record<string, unknown>;
-              if (msg.content && typeof msg.content === "string") {
-                // Message already added via streaming, just finish
-              }
+              const messageId =
+                (typeof msg.id === "string" && msg.id) ||
+                streamingMessageRef.current?.id ||
+                `assistant-${Date.now()}`;
+              const content =
+                typeof msg.content === "string"
+                  ? msg.content
+                  : streamingMessageRef.current?.content ?? "";
+              const agentRole =
+                typeof msg.agent_type === "string" ? msg.agent_type : undefined;
+
+              setMessages((prev) => {
+                const index = prev.findIndex((item) => item.id === messageId);
+                if (index === -1) {
+                  return [
+                    ...prev,
+                    {
+                      id: messageId,
+                      role: "assistant",
+                      content,
+                      agentRole: agentRole as Message["agentRole"],
+                    },
+                  ];
+                }
+
+                const updated = [...prev];
+                updated[index] = {
+                  ...updated[index],
+                  content,
+                  agentRole: agentRole as Message["agentRole"],
+                };
+                return updated;
+              });
             }
             break;
 
@@ -207,16 +242,34 @@ export function useFastAPIChat({
             break;
 
           case "approval.requested": {
+            const requestId =
+              (typeof data.request_id === "string" && data.request_id) ||
+              (typeof data.id === "string" && data.id) ||
+              `approval-${Date.now()}`;
             const approval: PendingApproval = {
-              id: data.id as string,
-              requestId: data.request_id as string,
-              operation: data.operation as string,
-              description: data.description as string,
-              details: data.details as Record<string, unknown>,
+              id: requestId,
+              requestId,
+              operation:
+                typeof data.operation === "string" ? data.operation : undefined,
+              description:
+                typeof data.description === "string" ? data.description : undefined,
+              details: (data.details ?? {}) as Record<string, unknown>,
               timestamp: Date.now(),
+              riskLevel:
+                typeof data.risk_level === "string"
+                  ? (data.risk_level.toLowerCase() as PendingApproval["riskLevel"])
+                  : undefined,
             };
-            setPendingApprovals((prev) => [...prev, approval]);
-            setApprovalStatuses((prev) => ({ ...prev, [approval.id]: { status: "idle" } }));
+            setPendingApprovals((prev) => {
+              if (prev.some((item) => item.requestId === requestId)) {
+                return prev;
+              }
+              return [...prev, approval];
+            });
+            setApprovalStatuses((prev) => ({
+              ...prev,
+              [requestId]: prev[requestId] ?? { status: "idle" },
+            }));
             break;
           }
 
@@ -237,24 +290,23 @@ export function useFastAPIChat({
   );
 
   // WebSocket connection
-  const { isConnected: _isConnected } = useWebSocket({
+  useWebSocket({
     url: websocketUrl,
     onMessage: handleWebSocketMessage,
     onOpen: () => {
-      // eslint-disable-next-line no-console
-      console.log("WebSocket connected");
+      setConnectionStatus("connected");
     },
     onClose: () => {
-      // eslint-disable-next-line no-console
-      console.log("WebSocket disconnected");
+      setConnectionStatus("disconnected");
       setWebsocketUrl(null);
     },
     onError: (error) => {
       console.error("WebSocket error:", error);
+      setConnectionStatus("error");
       setStatus("error");
       setError(new Error("WebSocket connection failed"));
     },
-    reconnect: false, // Don't auto-reconnect for completed executions
+    reconnect: false,
   });
 
   // ══════════════════════════════════════════════════════════════════════════
@@ -287,53 +339,45 @@ export function useFastAPIChat({
       setError(null);
 
       try {
-        // Create chat execution via POST /v1/chat
-        const baseUrl = import.meta.env.VITE_BACKEND_URL || "";
-        const url = `${baseUrl}/v1/chat`;
-
-        const payload = {
+        const payload: ChatExecutionRequest = {
           message: content.trim(),
           workflow_id: model === "dynamic_orchestration" ? "magentic_fleet" : model,
-          ...(conversationId && { conversation_id: conversationId }),
           metadata: {},
         };
 
-        const response = await fetch(url, {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify(payload),
-        });
-
-        if (!response.ok) {
-          throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        if (conversationId) {
+          payload.conversation_id = conversationId;
         }
 
-        const data = await response.json();
-        const { execution_id, websocket_url } = data;
-
-        if (!websocket_url) {
+        const data = await createChatExecution(payload);
+        if (!data.websocket_url) {
           throw new Error("No WebSocket URL returned from server");
         }
 
-        // Store execution ID and start streaming
-        _setCurrentExecutionId(execution_id);
+        _setCurrentExecutionId(data.execution_id);
         setStatus("streaming");
 
-        // Start streaming message with unique ID (timestamp + random component)
         const responseId = `assistant-${Date.now()}-${Math.random().toString(36).substring(2, 11)}`;
         startStreamingMessage(responseId, "", "assistant");
 
-        // Connect to WebSocket (will trigger useWebSocket hook)
-        setWebsocketUrl(websocket_url);
-
-        // Reset sending flag after successful connection
-        isSendingRef.current = false;
+        setWebsocketUrl(data.websocket_url);
       } catch (err) {
+        const error = (() => {
+          if (err instanceof ApiError) {
+            const detail =
+              typeof err.body === "object" && err.body !== null && "detail" in err.body
+                ? String((err.body as Record<string, unknown>).detail)
+                : undefined;
+            return new Error(detail ?? `API request failed (${err.status})`);
+          }
+          if (err instanceof Error) {
+            return err;
+          }
+          return new Error("Failed to send message");
+        })();
         setStatus("error");
-        setError(err instanceof Error ? err : new Error("Failed to send message"));
-        // Reset sending flag on error
+        setError(error);
+      } finally {
         isSendingRef.current = false;
       }
     },
@@ -352,24 +396,41 @@ export function useFastAPIChat({
       }));
 
       try {
-        const baseUrl = import.meta.env.VITE_BACKEND_URL || "http://localhost:8000";
-        const response = await fetch(`${baseUrl}/v1/approvals/${requestId}/decision`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ decision: payload }),
-        });
+        const decisionPayload: ApprovalDecisionPayload = (() => {
+          switch (payload.type) {
+            case "approve":
+              return {
+                decision: "approved",
+                reason: payload.reason ?? null,
+              };
+            case "reject":
+              return {
+                decision: "rejected",
+                reason: payload.reason,
+              };
+            case "modify":
+              return {
+                decision: "modified",
+                reason: payload.reason ?? null,
+                modified_code: payload.modifiedCode ?? null,
+                modified_params: payload.modifiedParams ?? null,
+              };
+            default: {
+              const exhaustiveCheck: never = payload;
+              return exhaustiveCheck;
+            }
+          }
+        })();
 
-        if (!response.ok) {
-          throw new Error(`Failed to submit approval: ${response.status}`);
-        }
+        await submitApprovalDecision(requestId, decisionPayload);
 
         setApprovalStatuses((prev) => ({
           ...prev,
           [requestId]: { status: "success" },
         }));
-
-        // Remove from pending
-        setPendingApprovals((prev) => prev.filter((a) => a.id !== requestId));
+        setPendingApprovals((prev) =>
+          prev.filter((approval) => approval.requestId !== requestId)
+        );
       } catch (err) {
         setApprovalStatuses((prev) => ({
           ...prev,
@@ -378,14 +439,42 @@ export function useFastAPIChat({
             error: err instanceof Error ? err.message : "Unknown error",
           },
         }));
+        throw err;
       }
     },
     []
   );
 
   const refreshApprovals = useCallback(async () => {
-    // Placeholder for refreshing approvals from backend
-    // This will be implemented when the backend endpoint is available
+    const payload = await listApprovals();
+
+    const nextApprovals = payload.map<PendingApproval>((entry) => {
+      const details = (entry.details ?? {}) as Record<string, unknown>;
+      return {
+        id: entry.request_id,
+        requestId: entry.request_id,
+        details,
+        operation: typeof details?.operation === "string" ? (details.operation as string) : undefined,
+        description:
+          typeof details?.description === "string"
+            ? (details.description as string)
+            : undefined,
+        timestamp: Date.now(),
+        riskLevel:
+          typeof details?.risk_level === "string"
+            ? (details.risk_level as PendingApproval["riskLevel"])
+            : undefined,
+      };
+    });
+
+    setPendingApprovals(nextApprovals);
+    setApprovalStatuses((prev) => {
+      const next: Record<string, ApprovalActionState> = {};
+      for (const approval of nextApprovals) {
+        next[approval.requestId] = prev[approval.requestId] ?? { status: "idle" };
+      }
+      return next;
+    });
   }, []);
 
   // ══════════════════════════════════════════════════════════════════════════
@@ -394,10 +483,9 @@ export function useFastAPIChat({
 
   const checkHealth = useCallback(async () => {
     try {
-      const baseUrl = import.meta.env.VITE_BACKEND_URL || "http://localhost:8000";
-      const response = await fetch(`${baseUrl}/health`);
+      const response = await requestHealth();
 
-      if (response.ok) {
+      if (response.status === "ok") {
         setConnectionStatus("connected");
       } else {
         setConnectionStatus("error");
@@ -415,15 +503,6 @@ export function useFastAPIChat({
   useEffect(() => {
     checkHealth();
   }, [checkHealth]);
-
-  // Cleanup on unmount
-  useEffect(() => {
-    return () => {
-      if (abortControllerRef.current) {
-        abortControllerRef.current.abort();
-      }
-    };
-  }, []);
 
   // ══════════════════════════════════════════════════════════════════════════
   // Return Hook API

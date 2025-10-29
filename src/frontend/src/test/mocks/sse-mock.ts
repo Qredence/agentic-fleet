@@ -2,7 +2,7 @@
  * Mock EventSource for testing SSE connections
  */
 
-import type { AnySSEEvent } from "../../lib/types/contracts";
+import type { AnySSEEvent } from "../../lib/types";
 
 export class MockEventSource {
   readonly CONNECTING = 0 as const;

@@ -13,8 +13,7 @@ import {
 import { Label } from "@/components/ui/shadcn/label";
 import { Separator } from "@/components/ui/shadcn/separator";
 import { Textarea } from "@/components/ui/shadcn/textarea";
-import type { RiskLevel } from "@/lib/types/contracts";
-import { ApprovalActionState } from "@/lib/use-fastapi-chat";
+import type { ApprovalActionState, PendingApproval, RiskLevel } from "@/lib/types";
 import {
   AlertTriangle,
   Check,
@@ -26,17 +25,7 @@ import {
 import { toast } from "sonner";
 
 interface ApprovalPromptProps {
-  requestId: string;
-  functionCall?: {
-    id: string;
-    name: string;
-    arguments: Record<string, unknown>;
-  };
-  operation?: string;
-  details?: Record<string, unknown>;
-  code?: string | null;
-  context?: string;
-  riskLevel?: RiskLevel;
+  approval: PendingApproval;
   status: ApprovalActionState;
   onApprove: (options?: {
     modifiedCode?: string;
@@ -46,33 +35,81 @@ interface ApprovalPromptProps {
   onReject: (reason: string) => void;
 }
 
-export function ApprovalPrompt({
-  requestId,
-  functionCall,
-  operation,
-  details,
-  code,
-  context,
-  riskLevel = "medium",
-  status,
-  onApprove,
-  onReject,
-}: ApprovalPromptProps) {
+export function ApprovalPrompt({ approval, status, onApprove, onReject }: ApprovalPromptProps) {
+  const {
+    requestId,
+    operation,
+    description,
+    details: approvalDetails,
+    riskLevel = "medium",
+  } = approval;
+
+  const functionCall = useMemo(() => {
+    const details = approvalDetails ?? {};
+    const raw =
+      (details?.function_call as
+        | { id?: string; name?: string; arguments?: Record<string, unknown> }
+        | undefined) ??
+      (details?.tool_call as
+        | { id?: string; name?: string; arguments?: Record<string, unknown> }
+        | undefined);
+    if (!raw) {
+      return undefined;
+    }
+    return {
+      id: typeof raw.id === "string" ? raw.id : requestId,
+      name:
+        typeof raw.name === "string"
+          ? raw.name
+          : operation ?? "Agent Operation",
+      arguments: (raw.arguments ?? {}) as Record<string, unknown>,
+    };
+  }, [approvalDetails, operation, requestId]);
+
+  const baseDetails = useMemo(() => {
+    const details = approvalDetails ?? {};
+    if (functionCall?.arguments) {
+      return functionCall.arguments;
+    }
+    if (typeof details.parameters === "object" && details.parameters !== null) {
+      return details.parameters as Record<string, unknown>;
+    }
+    return details as Record<string, unknown>;
+  }, [approvalDetails, functionCall]);
+
+  const defaultCode = useMemo(() => {
+    const details = approvalDetails ?? {};
+    if (typeof details.code === "string") {
+      return details.code;
+    }
+    if (functionCall?.arguments?.code && typeof functionCall.arguments.code === "string") {
+      return functionCall.arguments.code as string;
+    }
+    return null;
+  }, [approvalDetails, functionCall]);
+
+  const displayContext = useMemo(() => {
+    const details = approvalDetails ?? {};
+    if (typeof details.context === "string") {
+      return details.context;
+    }
+    return description;
+  }, [approvalDetails, description]);
   const isSubmitting = status.status === "submitting";
   const hasError = status.status === "error";
 
   const initialCode = useMemo(() => {
-    if (typeof code === "string" && code.trim().length > 0) {
-      return code;
+    if (typeof defaultCode === "string" && defaultCode.trim().length > 0) {
+      return defaultCode;
     }
     const argCode = functionCall?.arguments?.code;
     return typeof argCode === "string" ? argCode : "";
-  }, [code, functionCall]);
+  }, [defaultCode, functionCall]);
 
   const [editedCode, setEditedCode] = useState(initialCode);
   const [isModifyingParams, setIsModifyingParams] = useState(false);
   const [editedParams, setEditedParams] = useState(() => {
-    const params = functionCall?.arguments || details || {};
+    const params = functionCall?.arguments || baseDetails || {};
     return JSON.stringify(params, null, 2);
   });
   const [reason, setReason] = useState("");
@@ -144,7 +181,7 @@ export function ApprovalPrompt({
     setIsModifyingParams(!isModifyingParams);
   };
 
-  const argumentDetails = functionCall?.arguments || details || {};
+  const argumentDetails = baseDetails || {};
 
   return (
     <Card className="border-amber-500/50 bg-amber-50/10 dark:bg-amber-950/10">
@@ -176,11 +213,11 @@ export function ApprovalPrompt({
               </div>
             )}
 
-            {context && (
+            {displayContext && (
               <div>
                 <div className="text-muted-foreground mb-1">Context:</div>
                 <div className="text-foreground break-words whitespace-pre-wrap">
-                  {context}
+                  {displayContext}
                 </div>
               </div>
             )}

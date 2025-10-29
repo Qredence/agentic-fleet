@@ -1,6 +1,7 @@
 """WebSocket connection manager for streaming workflow events."""
 
 import logging
+from contextlib import suppress
 from typing import Any
 
 from fastapi import WebSocket
@@ -119,3 +120,17 @@ class ConnectionManager:
         if execution_id not in self.active_connections:
             return 0
         return len(self.active_connections[execution_id])
+
+    async def disconnect_all_for_execution(self, execution_id: str) -> None:
+        """Close and forget all WebSocket connections for an execution."""
+
+        connections = self.active_connections.pop(execution_id, [])
+        for connection in connections:
+            with suppress(Exception):
+                await connection.close()
+        if connections:
+            logger.info(
+                "Closed %s WebSocket connection(s) for execution %s",
+                len(connections),
+                execution_id,
+            )

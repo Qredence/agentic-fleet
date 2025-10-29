@@ -25,16 +25,20 @@ class RedisClient:
 
     async def connect(self) -> None:
         """Connect to Redis server."""
+        if self._client is not None:
+            return
+
         try:
-            self._client = await redis.from_url(
+            client = redis.from_url(
                 self.redis_url, encoding="utf-8", decode_responses=True
             )
-            # Test connection
-            await self._client.ping()
-            logger.info("Connected to Redis successfully")
-        except Exception as e:
-            logger.error(f"Failed to connect to Redis: {e}")
+            await client.ping()
+        except Exception as exc:
+            logger.error("Failed to connect to Redis: %s", exc)
             raise
+
+        self._client = client
+        logger.info("Connected to Redis successfully")
 
     async def disconnect(self) -> None:
         """Disconnect from Redis server."""

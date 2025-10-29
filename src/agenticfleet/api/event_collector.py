@@ -150,7 +150,7 @@ class EventCollector:
         """
         try:
             return await asyncio.wait_for(self._event_queue.get(), timeout=timeout)
-        except TimeoutError:
+        except asyncio.TimeoutError:
             return None
 
     def _map_agent_type(self, agent_id: str) -> str:
