@@ -48,7 +48,8 @@ def test_get_workflow_config_collaboration() -> None:
 
 def test_get_workflow_config_magentic_fleet() -> None:
     """Test getting magentic fleet workflow config."""
-    config = get_workflow_config("magentic_fleet")
+    factory = WorkflowFactory()
+    config = factory.get_workflow_config("magentic_fleet")
     assert config.name == "Magentic Fleet Workflow"
     assert config.factory == "create_magentic_fleet_workflow"
     required_agents = ["planner", "executor", "coder", "verifier", "generator"]

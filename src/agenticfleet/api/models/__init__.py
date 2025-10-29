@@ -10,13 +10,13 @@ from .workflow_config import (
 )
 
 __all__ = [
-    # SSE Events
-    "SSEEvent",
-    "SSEEventType",
     # Workflow Configuration
     "AgentConfig",
     "ManagerConfig",
     "ReasoningConfig",
+    # SSE Events
+    "SSEEvent",
+    "SSEEventType",
     "WorkflowConfig",
     "WorkflowsConfig",
 ]

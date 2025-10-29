@@ -12,16 +12,16 @@
  * while maintaining the same functionality and improving performance.
  */
 
-import { memo, useCallback, useEffect } from "react";
 import { ApprovalPrompt } from "@/components/features/approval";
-import { ChatMessagesList } from "./ChatMessagesList";
-import { ChatStatusBar } from "./ChatStatusBar";
-import { ChatSuggestions } from "./ChatSuggestions";
-import { ChatPlanDisplay } from "./ChatPlanDisplay";
-import { ChatHeader } from "./ChatHeader";
-import { ChatInput } from "./ChatInput";
 import { useToast } from "@/hooks/use-toast";
 import { useFastAPIChat } from "@/lib/use-fastapi-chat";
+import { memo, useCallback, useEffect } from "react";
+import { ChatHeader } from "./ChatHeader";
+import { ChatInput } from "./ChatInput";
+import { ChatMessagesList } from "./ChatMessagesList";
+import { ChatPlanDisplay } from "./ChatPlanDisplay";
+import { ChatStatusBar } from "./ChatStatusBar";
+import { ChatSuggestions } from "./ChatSuggestions";
 
 interface ChatContainerProps {
   conversationId?: string;
@@ -129,34 +129,36 @@ const ChatContainerComponent = ({
 
       {/* Main Content Area */}
       <div className="flex-1 flex flex-col relative overflow-hidden">
-        {/* Messages List */}
-        <ChatMessagesList
-          messages={messages}
-          isStreaming={status === "streaming"}
-          queueStatus={queueStatus}
-          className="flex-1"
-        />
-
-        {/* Plan Display */}
-        {currentPlan && (
-          <div className="border-t bg-background">
-            <div className="max-w-4xl mx-auto p-4">
-              <ChatPlanDisplay plan={currentPlan} />
-            </div>
-          </div>
-        )}
-
-        {/* Suggestions - shown when no messages */}
-        {showSuggestions && (
+        {showSuggestions ? (
           <div className="flex-1 overflow-y-auto">
-            <div className="max-w-2xl mx-auto p-8">
+            <div className="mx-auto w-full max-w-3xl px-6 py-10 sm:py-12 lg:py-16">
               <ChatSuggestions
                 onSuggestionSelect={handleSuggestionSelect}
                 isVisible={showSuggestions}
                 chatStatus={status}
+                className="space-y-6"
               />
             </div>
           </div>
+        ) : (
+          <>
+            {/* Messages List */}
+            <ChatMessagesList
+              messages={messages}
+              isStreaming={status === "streaming"}
+              queueStatus={queueStatus}
+              className="flex-1"
+            />
+
+            {/* Plan Display */}
+            {currentPlan && (
+              <div className="border-t bg-background">
+                <div className="max-w-4xl mx-auto p-4">
+                  <ChatPlanDisplay plan={currentPlan} />
+                </div>
+              </div>
+            )}
+          </>
         )}
       </div>
 
@@ -178,9 +180,7 @@ const ChatContainerComponent = ({
                 key={approval.id}
                 approval={approval}
                 status={approvalStatuses[approval.id]}
-                onResponse={(action) =>
-                  handleApprovalResponse(approval.id, action)
-                }
+                onResponse={(action) => handleApprovalResponse(approval.id, action)}
               />
             ))}
           </div>
