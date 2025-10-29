@@ -15,7 +15,14 @@ import { Separator } from "@/components/ui/shadcn/separator";
 import { Textarea } from "@/components/ui/shadcn/textarea";
 import type { RiskLevel } from "@/lib/types/contracts";
 import { ApprovalActionState } from "@/lib/use-fastapi-chat";
-import { AlertTriangle, Check, FileEdit, Info, MinusCircle, Shield } from "lucide-react";
+import {
+  AlertTriangle,
+  Check,
+  FileEdit,
+  Info,
+  MinusCircle,
+  Shield,
+} from "lucide-react";
 import { toast } from "sonner";
 
 interface ApprovalPromptProps {
@@ -163,14 +170,18 @@ export function ApprovalPrompt({
             {(operation || functionCall?.name) && (
               <div>
                 <div className="text-muted-foreground mb-1">Operation:</div>
-                <div className="text-foreground break-words">{operation || functionCall?.name}</div>
+                <div className="text-foreground break-words">
+                  {operation || functionCall?.name}
+                </div>
               </div>
             )}
 
             {context && (
               <div>
                 <div className="text-muted-foreground mb-1">Context:</div>
-                <div className="text-foreground break-words whitespace-pre-wrap">{context}</div>
+                <div className="text-foreground break-words whitespace-pre-wrap">
+                  {context}
+                </div>
               </div>
             )}
 
@@ -221,7 +232,9 @@ export function ApprovalPrompt({
                 <Separator className="my-2" />
                 <div className="flex items-center gap-2">
                   <FileEdit className="h-4 w-4 text-muted-foreground" />
-                  <span className="text-sm font-medium">Review &amp; Modify Code</span>
+                  <span className="text-sm font-medium">
+                    Review &amp; Modify Code
+                  </span>
                 </div>
                 <Textarea
                   value={editedCode}
@@ -242,7 +255,10 @@ export function ApprovalPrompt({
         )}
 
         <div className="space-y-2">
-          <Label htmlFor={`approval-reason-${requestId}`} className="text-xs text-muted-foreground">
+          <Label
+            htmlFor={`approval-reason-${requestId}`}
+            className="text-xs text-muted-foreground"
+          >
             Notes / Reason (required to reject)
           </Label>
           <Textarea
@@ -257,7 +273,8 @@ export function ApprovalPrompt({
           />
           {showValidation && !reason.trim() && (
             <p className="text-xs text-destructive flex items-center gap-1">
-              <MinusCircle className="h-3 w-3" /> Please provide a reason to reject this request.
+              <MinusCircle className="h-3 w-3" /> Please provide a reason to
+              reject this request.
             </p>
           )}
         </div>

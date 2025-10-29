@@ -26,12 +26,13 @@ class WorkflowFactory:
 
         Args:
             config_path: Path to the YAML configuration file.
-                        Defaults to magentic_fleet.yaml in the agenticfleet package.
+                        Defaults to config/workflows.yaml at project root.
 
         """
         if config_path is None:
-            # Default to magentic_fleet.yaml in the agenticfleet package
-            config_path = Path(__file__).parent.parent / "magentic_fleet.yaml"
+            # Default to config/workflows.yaml at project root
+            # Navigate from src/agenticfleet/api -> project root -> config
+            config_path = Path(__file__).parent.parent.parent.parent / "config" / "workflows.yaml"
 
         self.config_path = Path(config_path)
         self._config: WorkflowsConfig | None = None

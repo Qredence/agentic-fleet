@@ -11,7 +11,13 @@
 import { memo, useState, useCallback } from "react";
 import { Badge } from "@/components/ui/shadcn/badge";
 import { Button } from "@/components/ui/shadcn/button";
-import { ChevronDown, ChevronRight, Loader2, CheckCircle, Circle } from "lucide-react";
+import {
+  ChevronDown,
+  ChevronRight,
+  Loader2,
+  CheckCircle,
+  Circle,
+} from "lucide-react";
 import type { Plan as PlanType } from "@/lib/hooks/useChatState";
 
 interface ChatPlanDisplayProps {
@@ -19,11 +25,14 @@ interface ChatPlanDisplayProps {
   className?: string;
 }
 
-const ChatPlanDisplayComponent = ({ plan, className = "" }: ChatPlanDisplayProps) => {
+const ChatPlanDisplayComponent = ({
+  plan,
+  className = "",
+}: ChatPlanDisplayProps) => {
   const [isExpanded, setIsExpanded] = useState(true);
 
   const handleToggleExpanded = useCallback(() => {
-    setIsExpanded(prev => !prev);
+    setIsExpanded((prev) => !prev);
   }, []);
 
   if (!plan) {
@@ -60,9 +69,7 @@ const ChatPlanDisplayComponent = ({ plan, className = "" }: ChatPlanDisplayProps
             ) : (
               <CheckCircle className="h-4 w-4 text-green-500" />
             )}
-            <h3 className="font-semibold text-foreground">
-              {plan.title}
-            </h3>
+            <h3 className="font-semibold text-foreground">{plan.title}</h3>
           </div>
         </div>
 

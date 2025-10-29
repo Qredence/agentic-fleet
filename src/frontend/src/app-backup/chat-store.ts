@@ -35,7 +35,7 @@ interface ChatActions {
     messageId: string,
     toolCallId: string,
     output: unknown,
-    errorText?: string
+    errorText?: string,
   ) => void;
   clearMessages: () => void;
 }
@@ -75,14 +75,20 @@ export const useChatStore = create<ChatState & ChatActions>()(
     setConversationId: (conversationId) => set({ conversationId }),
     addPendingApproval: (approval) =>
       set((state) => {
-        if (!state.pendingApprovals.some((a) => a.requestId === approval.requestId)) {
+        if (
+          !state.pendingApprovals.some(
+            (a) => a.requestId === approval.requestId,
+          )
+        ) {
           state.pendingApprovals.push(approval);
           state.approvalStatuses[approval.requestId] = { status: "idle" };
         }
       }),
     removePendingApproval: (requestId) =>
       set((state) => {
-        state.pendingApprovals = state.pendingApprovals.filter((a) => a.requestId !== requestId);
+        state.pendingApprovals = state.pendingApprovals.filter(
+          (a) => a.requestId !== requestId,
+        );
         delete state.approvalStatuses[requestId];
       }),
     setApprovalStatus: (requestId, status) =>
@@ -109,5 +115,5 @@ export const useChatStore = create<ChatState & ChatActions>()(
         }
       }),
     clearMessages: () => set(initialState),
-  }))
+  })),
 );

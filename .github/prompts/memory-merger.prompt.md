@@ -1,5 +1,5 @@
 ---
-description: 'Merges mature lessons from a domain memory file into its instruction file. Syntax: `/memory-merger >domain [scope]` where scope is `global` (default), `user`, `workspace`, or `ws`.'
+description: "Merges mature lessons from a domain memory file into its instruction file. Syntax: `/memory-merger >domain [scope]` where scope is `global` (default), `user`, `workspace`, or `ws`."
 ---
 
 # Memory Merger
@@ -29,6 +29,7 @@ Throughout this prompt, `<global-prompts>` and `<workspace-instructions>` refer 
 - `[scope]` - Optional. One of: `global`, `user` (both mean global), `workspace`, or `ws`. Defaults to `global`
 
 **Examples:**
+
 - `/memory-merger >prompt-engineering` - merges global prompt engineering memories
 - `/memory-merger >clojure workspace` - merges workspace clojure memories
 - `/memory-merger >git-workflow ws` - merges workspace git-workflow memories
@@ -65,6 +66,7 @@ Say: "Please review these memories. Approve all with 'go' or specify which to sk
 ### 3. Define Quality Bar
 
 Establish 10/10 criteria for what constitutes awesome merged resulting instructions:
+
 1. **Zero knowledge loss** - Every detail, example, and nuance preserved
 2. **Minimal redundancy** - Overlapping guidance consolidated
 3. **Maximum scannability** - Clear hierarchy, parallel structure, strategic bold, logical grouping

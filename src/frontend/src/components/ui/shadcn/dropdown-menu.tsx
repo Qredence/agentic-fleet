@@ -101,7 +101,9 @@ const DropdownMenu = ({
                 </motion.button>
               ))
             ) : (
-              <div className="px-4 py-2 text-muted-foreground text-xs">No options</div>
+              <div className="px-4 py-2 text-muted-foreground text-xs">
+                No options
+              </div>
             )}
           </motion.div>
         )}

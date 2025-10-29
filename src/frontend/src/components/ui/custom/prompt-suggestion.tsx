@@ -4,7 +4,11 @@ interface PromptSuggestionsProps extends React.HTMLAttributes<HTMLDivElement> {
   children: React.ReactNode;
 }
 
-export function PromptSuggestions({ children, className, ...props }: PromptSuggestionsProps) {
+export function PromptSuggestions({
+  children,
+  className,
+  ...props
+}: PromptSuggestionsProps) {
   return (
     <div className={cn("flex flex-wrap gap-2 py-2", className)} {...props}>
       {children}
@@ -12,12 +16,18 @@ export function PromptSuggestions({ children, className, ...props }: PromptSugge
   );
 }
 
-interface PromptSuggestionProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
+interface PromptSuggestionProps
+  extends React.ButtonHTMLAttributes<HTMLButtonElement> {
   icon?: React.ReactNode;
   children: React.ReactNode;
 }
 
-export function PromptSuggestion({ icon, children, className, ...props }: PromptSuggestionProps) {
+export function PromptSuggestion({
+  icon,
+  children,
+  className,
+  ...props
+}: PromptSuggestionProps) {
   return (
     <button
       className={cn(
@@ -25,7 +35,7 @@ export function PromptSuggestion({ icon, children, className, ...props }: Prompt
         "bg-card text-foreground border border-border",
         "hover:bg-accent hover:text-accent-foreground",
         "transition-smooth",
-        className
+        className,
       )}
       {...props}
     >

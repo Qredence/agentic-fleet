@@ -60,5 +60,5 @@ export function MyCustomButton({ children, ...props }) {
 
 ## Documentation
 
-- shadcn/ui docs: https://ui.shadcn.com
-- Radix UI docs: https://radix-ui.com
+- shadcn/ui docs: <https://ui.shadcn.com>
+- Radix UI docs: <https://radix-ui.com>

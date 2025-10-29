@@ -1,4 +1,8 @@
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/shadcn/alert";
+import {
+  Alert,
+  AlertDescription,
+  AlertTitle,
+} from "@/components/ui/shadcn/alert";
 import { Button } from "@/components/ui/shadcn/button";
 import { ConnectionStatus } from "@/lib/use-fastapi-chat";
 import { cn } from "@/lib/utils";
@@ -46,7 +50,9 @@ export const ConnectionStatusIndicator = ({
       aria-atomic="true"
     >
       <div className="flex items-center gap-2">
-        {isConnecting && <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />}
+        {isConnecting && (
+          <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
+        )}
         {isDisconnected && <WifiOff className="h-4 w-4" aria-hidden="true" />}
         <div className="flex-1">
           <AlertTitle className="mb-1">
@@ -55,12 +61,18 @@ export const ConnectionStatusIndicator = ({
           </AlertTitle>
           <AlertDescription className="text-sm">
             {isConnecting && (
-              <span>Attempting to establish connection with the AgenticFleet backend server.</span>
+              <span>
+                Attempting to establish connection with the AgenticFleet backend
+                server.
+              </span>
             )}
             {isDisconnected && (
               <span>
-                Unable to reach the backend server. Please ensure the backend is running on{" "}
-                <code className="text-xs bg-muted px-1 py-0.5 rounded">localhost:8000</code>
+                Unable to reach the backend server. Please ensure the backend is
+                running on{" "}
+                <code className="text-xs bg-muted px-1 py-0.5 rounded">
+                  localhost:8000
+                </code>
               </span>
             )}
           </AlertDescription>
@@ -125,20 +137,27 @@ export const ConnectionStatusBadge = ({
         "flex items-center gap-1.5 text-xs font-medium px-2 py-1 rounded-md transition-colors",
         config.className,
         status === "disconnected" && "cursor-pointer hover:bg-muted/50",
-        className
+        className,
       )}
       onClick={status === "disconnected" && onRetry ? onRetry : undefined}
       role="status"
       aria-label={config.ariaLabel}
       tabIndex={status === "disconnected" ? 0 : undefined}
       onKeyDown={(e) => {
-        if (status === "disconnected" && onRetry && (e.key === "Enter" || e.key === " ")) {
+        if (
+          status === "disconnected" &&
+          onRetry &&
+          (e.key === "Enter" || e.key === " ")
+        ) {
           e.preventDefault();
           onRetry();
         }
       }}
     >
-      <Icon className={cn("h-3 w-3", config.animate && "animate-spin")} aria-hidden="true" />
+      <Icon
+        className={cn("h-3 w-3", config.animate && "animate-spin")}
+        aria-hidden="true"
+      />
       <span>{config.label}</span>
     </div>
   );

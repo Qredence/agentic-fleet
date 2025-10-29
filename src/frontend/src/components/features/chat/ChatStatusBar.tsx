@@ -6,7 +6,7 @@
  * - Current chat status
  * - Error messages
  * - Queue status information
- * 
+ *
  * Responsive Features:
  * - Compact layout on mobile
  * - Hide non-essential info on small screens
@@ -64,7 +64,9 @@ const ChatStatusBarComponent = ({
   };
 
   return (
-    <div className={`flex items-center justify-between px-3 py-2 sm:px-4 bg-background/95 ${className}`}>
+    <div
+      className={`flex items-center justify-between px-3 py-2 sm:px-4 bg-background/95 ${className}`}
+    >
       {/* Left: Status Indicators - Always visible */}
       <div className="flex items-center gap-2 sm:gap-3 min-w-0 flex-1">
         {/* Connection Status */}
@@ -81,7 +83,9 @@ const ChatStatusBarComponent = ({
 
         {/* Chat Status */}
         <div className="flex items-center gap-1.5 flex-shrink-0">
-          <div className={`w-2 h-2 rounded-full ${getStatusColor(chatStatus)}`} />
+          <div
+            className={`w-2 h-2 rounded-full ${getStatusColor(chatStatus)}`}
+          />
           <span className="text-xs sm:text-sm text-muted-foreground">
             {getStatusText(chatStatus)}
           </span>
@@ -111,7 +115,9 @@ const ChatStatusBarComponent = ({
         {/* Queue Details - Hidden on mobile */}
         {!error && queueStatus && queueStatus.phase !== "finished" && (
           <div className="hidden sm:flex items-center gap-2 text-xs text-muted-foreground">
-            <span>{queueStatus.inflight}/{queueStatus.maxParallel} active</span>
+            <span>
+              {queueStatus.inflight}/{queueStatus.maxParallel} active
+            </span>
             {queueStatus.queued > 0 && (
               <span>• {queueStatus.queued} queued</span>
             )}

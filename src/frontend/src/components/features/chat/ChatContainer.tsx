@@ -61,14 +61,14 @@ const ChatContainerComponent = ({
         });
       }
     },
-    [sendMessage, toast]
+    [sendMessage, toast],
   );
 
   const handleSuggestionSelect = useCallback(
     (suggestion: string) => {
       handleSendMessage(suggestion);
     },
-    [handleSendMessage]
+    [handleSendMessage],
   );
 
   const handleApprovalResponse = useCallback(
@@ -87,7 +87,7 @@ const ChatContainerComponent = ({
         });
       }
     },
-    [respondToApproval, toast]
+    [respondToApproval, toast],
   );
 
   // Sync conversation ID with parent
@@ -149,7 +149,7 @@ const ChatContainerComponent = ({
         )}
 
         {/* Suggestions - Centered overlay when no messages */}
-        {showSuggestions && (
+        {showSuggestions ? (
           <div className="absolute inset-0 flex items-center justify-center overflow-y-auto">
             <div className="w-full max-w-2xl px-4 py-8">
               <ChatSuggestions
@@ -200,7 +200,9 @@ const ChatContainerComponent = ({
                 key={approval.id}
                 approval={approval}
                 status={approvalStatuses[approval.id]}
-                onResponse={(action) => handleApprovalResponse(approval.id, action)}
+                onResponse={(action) =>
+                  handleApprovalResponse(approval.id, action)
+                }
               />
             ))}
           </div>

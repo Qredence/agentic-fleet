@@ -17,7 +17,9 @@ export async function POST(req: Request) {
       getTime: tool({
         description: "Get the current time in a specific timezone",
         inputSchema: z.object({
-          timezone: z.string().describe("A valid IANA timezone, e.g. 'Europe/Paris'"),
+          timezone: z
+            .string()
+            .describe("A valid IANA timezone, e.g. 'Europe/Paris'"),
         }),
         execute: async ({ timezone }) => {
           try {

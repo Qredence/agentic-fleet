@@ -3,7 +3,11 @@
  * Displays user-friendly error UI instead of white screen
  */
 
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/shadcn/alert";
+import {
+  Alert,
+  AlertDescription,
+  AlertTitle,
+} from "@/components/ui/shadcn/alert";
 import { AlertTriangle } from "lucide-react";
 import React, { ReactNode } from "react";
 
@@ -17,7 +21,10 @@ interface ErrorBoundaryState {
   error: Error | null;
 }
 
-export class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoundaryState> {
+export class ErrorBoundary extends React.Component<
+  ErrorBoundaryProps,
+  ErrorBoundaryState
+> {
   constructor(props: ErrorBoundaryProps) {
     super(props);
     this.state = { hasError: false, error: null };
@@ -44,10 +51,14 @@ export class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoun
                 <AlertTriangle className="h-4 w-4" />
                 <AlertTitle>Something went wrong</AlertTitle>
                 <AlertDescription className="mt-2">
-                  <p className="text-sm">An unexpected error occurred. Please refresh the page.</p>
+                  <p className="text-sm">
+                    An unexpected error occurred. Please refresh the page.
+                  </p>
                   {import.meta.env.DEV && this.state.error && (
                     <details className="mt-4 p-2 bg-destructive/10 rounded text-xs font-mono">
-                      <summary className="cursor-pointer font-semibold">Error details</summary>
+                      <summary className="cursor-pointer font-semibold">
+                        Error details
+                      </summary>
                       <pre className="mt-2 whitespace-pre-wrap break-words">
                         {this.state.error.toString()}
                       </pre>

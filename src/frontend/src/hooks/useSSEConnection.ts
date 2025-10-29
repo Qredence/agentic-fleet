@@ -5,7 +5,11 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 
-export type ConnectionState = "connecting" | "connected" | "disconnected" | "error";
+export type ConnectionState =
+  | "connecting"
+  | "connected"
+  | "disconnected"
+  | "error";
 
 interface SSEConnectionOptions {
   url: string;
@@ -47,7 +51,8 @@ export function useSSEConnection({
   autoConnect = true,
   showToasts = true,
 }: SSEConnectionOptions): SSEConnectionReturn {
-  const [connectionState, setConnectionState] = useState<ConnectionState>("disconnected");
+  const [connectionState, setConnectionState] =
+    useState<ConnectionState>("disconnected");
   const [retryCount, setRetryCount] = useState(0);
   const [lastError, setLastError] = useState<string | null>(null);
 
@@ -63,7 +68,7 @@ export function useSSEConnection({
       const delay = retryDelay * Math.pow(2, attempt);
       return Math.min(delay, maxRetryDelay);
     },
-    [retryDelay, maxRetryDelay]
+    [retryDelay, maxRetryDelay],
   );
 
   /**
@@ -95,7 +100,7 @@ export function useSSEConnection({
     try {
       // Append headers as query parameters (SSE limitation)
       const params = new URLSearchParams(headers);
-      const fullUrl = `${url}${params.toString() ? (url.includes('?') ? '&' : '?') + params.toString() : ""}`;
+      const fullUrl = `${url}${params.toString() ? (url.includes("?") ? "&" : "?") + params.toString() : ""}`;
 
       const eventSource = new EventSource(fullUrl);
       eventSourceRef.current = eventSource;
@@ -117,7 +122,8 @@ export function useSSEConnection({
           onMessage?.(event);
         } catch (error) {
           console.error("Error handling SSE message:", error);
-          const errorMessage = error instanceof Error ? error.message : "Unknown error";
+          const errorMessage =
+            error instanceof Error ? error.message : "Unknown error";
           setLastError(errorMessage);
 
           if (showToasts) {
@@ -142,7 +148,7 @@ export function useSSEConnection({
           if (showToasts) {
             toast.warning(
               `Connection lost. Retrying in ${(delay / 1000).toFixed(0)}s... (${retryCount + 1}/${maxRetries})`,
-              { duration: delay }
+              { duration: delay },
             );
           }
 
@@ -153,9 +159,12 @@ export function useSSEConnection({
           setConnectionState("disconnected");
 
           if (showToasts) {
-            toast.error("Unable to connect to server. Please refresh the page.", {
-              duration: 5000,
-            });
+            toast.error(
+              "Unable to connect to server. Please refresh the page.",
+              {
+                duration: 5000,
+              },
+            );
           }
 
           cleanup();
@@ -163,7 +172,8 @@ export function useSSEConnection({
       };
     } catch (error) {
       console.error("Failed to create EventSource:", error);
-      const errorMessage = error instanceof Error ? error.message : "Unknown error";
+      const errorMessage =
+        error instanceof Error ? error.message : "Unknown error";
       setLastError(errorMessage);
       setConnectionState("error");
 

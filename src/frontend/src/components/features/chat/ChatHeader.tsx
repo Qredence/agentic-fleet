@@ -1,6 +1,6 @@
 /**
  * ChatHeader Component - Responsive Header with Flexbox Layout
- * 
+ *
  * Features:
  * - Responsive layout that adapts to mobile, tablet, and desktop
  * - Proper spacing and element positioning using Flexbox
@@ -10,7 +10,11 @@
 
 import { ThemeSwitch } from "@/components/ui/custom/theme-switch-button";
 import { Button } from "@/components/ui/shadcn/button";
-import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/shadcn/sheet";
+import {
+  Sheet,
+  SheetContent,
+  SheetTrigger,
+} from "@/components/ui/shadcn/sheet";
 import { History, Workflow, Activity } from "lucide-react";
 import { ChatSidebar } from "./ChatSidebar";
 import type { ConnectionStatus } from "@/lib/types";
@@ -38,10 +42,10 @@ export const ChatHeader = ({
       <div className="flex items-center justify-between gap-2 px-3 py-2.5 sm:gap-4 sm:px-4 md:px-6 md:py-3">
         {/* Left: Logo and Title */}
         <div className="flex items-center gap-2 sm:gap-3 min-w-0 flex-shrink">
-          <img 
-            src={logoSrc} 
-            alt="AgenticFleet logo" 
-            className="h-5 w-auto sm:h-6 flex-shrink-0" 
+          <img
+            src={logoSrc}
+            alt="AgenticFleet logo"
+            className="h-5 w-auto sm:h-6 flex-shrink-0"
           />
           <span className="text-base sm:text-lg font-semibold text-foreground truncate">
             AgenticFleet
@@ -68,14 +72,14 @@ export const ChatHeader = ({
             className="hidden sm:flex h-8 w-8 rounded-full hover:bg-muted/50"
             title={`Connection: ${connectionStatus}`}
           >
-            <Activity 
+            <Activity
               className={`h-4 w-4 ${
-                connectionStatus === "connected" 
-                  ? "text-green-500" 
+                connectionStatus === "connected"
+                  ? "text-green-500"
                   : connectionStatus === "disconnected"
-                  ? "text-red-500"
-                  : "text-yellow-500"
-              }`} 
+                    ? "text-red-500"
+                    : "text-yellow-500"
+              }`}
             />
             <span className="sr-only">Check connection</span>
           </Button>
@@ -83,9 +87,9 @@ export const ChatHeader = ({
           {/* History Sidebar */}
           <Sheet>
             <SheetTrigger asChild>
-              <Button 
-                variant="ghost" 
-                size="icon" 
+              <Button
+                variant="ghost"
+                size="icon"
                 className="h-8 w-8 rounded-full hover:bg-muted/50"
               >
                 <History className="h-4 w-4 sm:h-5 sm:w-5" />

@@ -9,13 +9,19 @@ export const handlers = [
     const stream = new ReadableStream({
       start(controller) {
         controller.enqueue(
-          encoder.encode('data: {"type":"response.output_text.delta","delta":"Hello"}\n\n')
+          encoder.encode(
+            'data: {"type":"response.output_text.delta","delta":"Hello"}\n\n',
+          ),
         );
         controller.enqueue(
-          encoder.encode('data: {"type":"response.output_text.delta","delta":", "}\n\n')
+          encoder.encode(
+            'data: {"type":"response.output_text.delta","delta":", "}\n\n',
+          ),
         );
         controller.enqueue(
-          encoder.encode('data: {"type":"response.output_text.delta","delta":"world!"}\n\n')
+          encoder.encode(
+            'data: {"type":"response.output_text.delta","delta":"world!"}\n\n',
+          ),
         );
         controller.enqueue(encoder.encode("data: [DONE]\n\n"));
         controller.close();

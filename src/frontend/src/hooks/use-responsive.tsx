@@ -132,7 +132,13 @@ export function useResponsive(): ResponsiveState & ResponsiveUtils {
     getResponsiveValue: <T,>(values: ResponsiveValues<T>) => {
       if (state.currentBreakpoint) {
         // Check breakpoints from largest to smallest
-        const breakpointOrder: BreakpointKey[] = ["2xl", "xl", "lg", "md", "sm"];
+        const breakpointOrder: BreakpointKey[] = [
+          "2xl",
+          "xl",
+          "lg",
+          "md",
+          "sm",
+        ];
         for (const bp of breakpointOrder) {
           if (values[bp] !== undefined && state.isAboveBreakpoint(bp)) {
             return values[bp];
@@ -209,7 +215,10 @@ export function useResponsive(): ResponsiveState & ResponsiveUtils {
 
     isBetweenBreakpoints: (min: BreakpointKey, max: BreakpointKey) => {
       if (!state.windowWidth) return false;
-      return state.windowWidth >= BREAKPOINTS[min] && state.windowWidth < BREAKPOINTS[max];
+      return (
+        state.windowWidth >= BREAKPOINTS[min] &&
+        state.windowWidth < BREAKPOINTS[max]
+      );
     },
   };
 

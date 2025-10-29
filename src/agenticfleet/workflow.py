@@ -10,7 +10,7 @@ from __future__ import annotations
 
 import logging
 from collections.abc import Sequence
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 from agent_framework import (
     ChatAgent,
@@ -161,7 +161,7 @@ def _create_responses_client(
     store: bool | None = None,
 ) -> OpenAIResponsesClient:
     """Create an OpenAI Responses client with optional customisation."""
-    kwargs: dict[str, object] = {"model_id": model or _MODEL_ID}
+    kwargs: dict[str, Any] = {"model_id": model or _MODEL_ID}
     if reasoning is not None:
         kwargs["reasoning"] = reasoning
     if temperature is not None:

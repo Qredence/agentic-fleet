@@ -171,7 +171,7 @@ export const ChatMessage = React.memo(
     confidence,
     complexity,
   }: ChatMessageProps) => {
-    const config = agentConfig[agent];
+    const config = agentConfig[agent] ?? agentConfig.manager;
     const Icon = config.icon;
 
     const isUserMessage = agent === "user";
@@ -206,7 +206,7 @@ export const ChatMessage = React.memo(
         <Message
           className={cn(
             "p-3 transition-smooth rounded-lg justify-center opacity-90",
-            isNew && "animate-fade-in"
+            isNew && "animate-fade-in",
           )}
         >
           <div className="flex items-start gap-3 w-full max-w-[700px]">
@@ -217,7 +217,11 @@ export const ChatMessage = React.memo(
               {/* Actor and Role Header */}
               <div className="flex items-center gap-2 flex-wrap">
                 <span className="font-semibold text-sm">{config.name}</span>
-                {agentRole && <span className="text-xs text-muted-foreground">({agentRole})</span>}
+                {agentRole && (
+                  <span className="text-xs text-muted-foreground">
+                    ({agentRole})
+                  </span>
+                )}
                 {confidence !== undefined && (
                   <span className="text-xs text-muted-foreground">
                     • {Math.round(confidence * 100)}% confident
@@ -227,7 +231,7 @@ export const ChatMessage = React.memo(
                   <span
                     className={cn(
                       "text-xs px-2 py-0.5 rounded-full font-medium",
-                      getComplexityColor(complexity)
+                      getComplexityColor(complexity),
                     )}
                   >
                     {complexity}
@@ -236,7 +240,9 @@ export const ChatMessage = React.memo(
               </div>
 
               {/* Event Message */}
-              <div className={cn("text-sm p-2 rounded border", messageBgClass)}>{message}</div>
+              <div className={cn("text-sm p-2 rounded border", messageBgClass)}>
+                {message}
+              </div>
 
               {/* Reasoning (if available) */}
               {reasoning && (
@@ -246,7 +252,9 @@ export const ChatMessage = React.memo(
               )}
 
               {/* Timestamp */}
-              <span className="text-xs text-muted-foreground block">{timestamp}</span>
+              <span className="text-xs text-muted-foreground block">
+                {timestamp}
+              </span>
             </div>
           </div>
         </Message>
@@ -259,14 +267,16 @@ export const ChatMessage = React.memo(
           "p-3 sm:p-4 transition-smooth rounded-lg justify-center",
           isNew && "animate-fade-in",
           isStreaming && "animate-pulse-subtle",
-          isUserMessage ? "flex-row-reverse pl-8 sm:pl-10" : "flex-row pr-8 sm:pr-10"
+          isUserMessage
+            ? "flex-row-reverse pl-8 sm:pl-10"
+            : "flex-row pr-8 sm:pr-10",
         )}
       >
         {/* Avatar */}
         <div
           className={cn(
             "flex-shrink-0 w-7 h-7 sm:w-8 sm:h-8 rounded-full flex items-center justify-center",
-            config.bgColor
+            config.bgColor,
           )}
         >
           <Icon className={cn("h-3.5 w-3.5 sm:h-4 sm:w-4", config.color)} />
@@ -278,15 +288,19 @@ export const ChatMessage = React.memo(
             <div
               className={cn(
                 "flex items-center gap-1.5 sm:gap-2 mb-1",
-                isUserMessage ? "justify-end" : "justify-start"
+                isUserMessage ? "justify-end" : "justify-start",
               )}
             >
               {!isUserMessage && (
-                <span className="text-xs sm:text-sm font-semibold text-foreground">{config.name}</span>
+                <span className="text-xs sm:text-sm font-semibold text-foreground">
+                  {config.name}
+                </span>
               )}
               <span className="text-xs text-muted-foreground">{timestamp}</span>
               {isUserMessage && (
-                <span className="text-xs sm:text-sm font-semibold text-foreground">{config.name}</span>
+                <span className="text-xs sm:text-sm font-semibold text-foreground">
+                  {config.name}
+                </span>
               )}
             </div>
 
@@ -296,7 +310,10 @@ export const ChatMessage = React.memo(
                 <ReasoningTrigger className="text-xs text-muted-foreground mb-2">
                   💭 {config.name} is thinking...
                 </ReasoningTrigger>
-                <PromptReasoningContent markdown={true} className="text-xs sm:text-sm">
+                <PromptReasoningContent
+                  markdown={true}
+                  className="text-xs sm:text-sm"
+                >
                   {reasoning}
                 </PromptReasoningContent>
               </PromptReasoning>
@@ -317,7 +334,12 @@ export const ChatMessage = React.memo(
             {tools && tools.length > 0 && (
               <div className="space-y-2">
                 {tools.map((tool, i) => (
-                  <Tool key={i} name={tool.name} status={tool.status} icon={tool.icon}>
+                  <Tool
+                    key={i}
+                    name={tool.name}
+                    status={tool.status}
+                    icon={tool.icon}
+                  >
                     {tool.description}
                   </Tool>
                 ))}
@@ -351,5 +373,5 @@ export const ChatMessage = React.memo(
         </div>
       </Message>
     );
-  }
+  },
 );

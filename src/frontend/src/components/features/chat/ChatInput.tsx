@@ -1,6 +1,6 @@
 /**
  * ChatInput Component - Responsive Message Input
- * 
+ *
  * Features:
  * - Responsive sizing for mobile/tablet/desktop
  * - Proper touch targets on mobile (44px minimum)
@@ -27,7 +27,7 @@ export const ChatInput = ({
   onSendMessage,
   disabled = false,
   placeholder = "Type your message...",
-  className = ""
+  className = "",
 }: ChatInputProps) => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [inputValue, setInputValue] = useState("");

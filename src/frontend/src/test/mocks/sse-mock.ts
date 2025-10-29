@@ -36,7 +36,7 @@ export class MockEventSource {
       this.onmessage(
         new MessageEvent("message", {
           data: payload,
-        })
+        }),
       );
     }
   }
@@ -56,11 +56,17 @@ export class MockEventSource {
     this.readyState = this.CLOSED;
   }
 
-  addEventListener(_type: string, _listener: EventListenerOrEventListenerObject): void {
+  addEventListener(
+    _type: string,
+    _listener: EventListenerOrEventListenerObject,
+  ): void {
     // Simplified for mocking
   }
 
-  removeEventListener(_type: string, _listener: EventListenerOrEventListenerObject): void {
+  removeEventListener(
+    _type: string,
+    _listener: EventListenerOrEventListenerObject,
+  ): void {
     // Simplified for mocking
   }
 
@@ -342,7 +348,7 @@ export const mockSSEScenarios = {
 export async function simulateSSEScenario(
   mockEventSource: MockEventSource,
   scenario: Array<Record<string, unknown>>,
-  delayMs = 100
+  delayMs = 100,
 ): Promise<void> {
   for (const event of scenario) {
     await new Promise((resolve) => setTimeout(resolve, delayMs));

@@ -2,11 +2,7 @@
   "mcpServers": {
     "DeepGraph React MCP": {
       "command": "npx",
-      "args": [
-        "-y",
-        "mcp-code-graph@latest",
-        "facebook/react"
-      ]
+      "args": ["-y", "mcp-code-graph@latest", "facebook/react"]
     },
     "prompt-kit": {
       "description": "prompt-kit registry",

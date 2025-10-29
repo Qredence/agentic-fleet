@@ -50,7 +50,7 @@ Replace the Index page with the enhanced version:
 import Index from "./pages/Index-enhanced";
 
 // Or update your router to use the enhanced version
-<Route path="/" element={<Index />} />
+<Route path="/" element={<Index />} />;
 ```
 
 ## 📱 Responsive Utilities Hook
@@ -69,7 +69,9 @@ const MyComponent = () => {
     <div>
       <p>Current device: {responsive.isMobile ? "Mobile" : "Desktop"}</p>
       <p>Breakpoint: {responsive.currentBreakpoint}</p>
-      <p>Screen size: {responsive.windowWidth}x{responsive.windowHeight}</p>
+      <p>
+        Screen size: {responsive.windowWidth}x{responsive.windowHeight}
+      </p>
     </div>
   );
 };
@@ -79,10 +81,10 @@ const MyComponent = () => {
 
 ```typescript
 interface ResponsiveState {
-  isMobile: boolean;        // < 768px
-  isTablet: boolean;        // 768px - 1024px
-  isDesktop: boolean;       // 1024px - 1536px
-  isLargeDesktop: boolean;  // >= 1536px
+  isMobile: boolean; // < 768px
+  isTablet: boolean; // 768px - 1024px
+  isDesktop: boolean; // 1024px - 1536px
+  isLargeDesktop: boolean; // >= 1536px
   currentBreakpoint: BreakpointKey | null;
   windowWidth: number | null;
   windowHeight: number | null;
@@ -109,14 +111,14 @@ const responsive = useResponsive();
 const paddingClass = responsive.getSpacingClass({
   base: "p-2",
   md: "p-4",
-  lg: "p-6"
+  lg: "p-6",
 });
 
 // Responsive typography
 const textClass = responsive.getTextClass({
   base: "text-sm",
   lg: "text-base",
-  xl: "text-lg"
+  xl: "text-lg",
 });
 
 // Container sizing
@@ -171,8 +173,8 @@ The `EnhancedChatSuggestions` includes:
   onSuggestionSelect={handleSuggestionSelect}
   isVisible={showSuggestions}
   chatStatus={status}
-  compact={responsive.isMobile}        // Compact mode for mobile
-  gridLayout="adaptive"                 // "single" | "multi" | "adaptive"
+  compact={responsive.isMobile} // Compact mode for mobile
+  gridLayout="adaptive" // "single" | "multi" | "adaptive"
 />
 ```
 
@@ -212,8 +214,8 @@ The `EnhancedApprovalPrompt` provides:
   approval={approval}
   status={status}
   onResponse={handleResponse}
-  compact={responsive.isMobile}         // Compact layout for mobile
-  touchOptimized={responsive.isMobile}  // Touch-friendly interactions
+  compact={responsive.isMobile} // Compact layout for mobile
+  touchOptimized={responsive.isMobile} // Touch-friendly interactions
 />
 ```
 
@@ -252,14 +254,14 @@ import { ResponsiveText, ResponsiveH1, ResponsiveH2, ResponsiveBody } from "@/co
 
 ```tsx
 <ResponsiveText
-  variant="h1"        // h1, h2, h3, h4, body, small, caption, code
-  size="lg"           // xs, sm, base, lg, xl, 2xl, 3xl, 4xl
-  weight="semibold"   // light, normal, medium, semibold, bold
-  color="primary"     // default, muted, primary, secondary, accent, destructive
-  align="center"      // left, center, right, justify
-  adaptive={true}     // Enable responsive scaling
+  variant="h1" // h1, h2, h3, h4, body, small, caption, code
+  size="lg" // xs, sm, base, lg, xl, 2xl, 3xl, 4xl
+  weight="semibold" // light, normal, medium, semibold, bold
+  color="primary" // default, muted, primary, secondary, accent, destructive
+  align="center" // left, center, right, justify
+  adaptive={true} // Enable responsive scaling
   scaleOnMobile={false} // Scale down on mobile
-  maxLines={3}        // Line clamping
+  maxLines={3} // Line clamping
 >
   Your text here
 </ResponsiveText>
@@ -324,11 +326,11 @@ if (responsive.isMobile) {
 }
 
 // Explicit breakpoint checks
-if (responsive.isAboveBreakpoint('lg')) {
+if (responsive.isAboveBreakpoint("lg")) {
   // Large screens and above
 }
 
-if (responsive.isBetweenBreakpoints('md', 'xl')) {
+if (responsive.isBetweenBreakpoints("md", "xl")) {
   // Between medium and extra-large
 }
 ```
@@ -349,11 +351,11 @@ The responsive design improvements provide:
 ```tsx
 // In use-responsive.tsx
 export const BREAKPOINTS = {
-  xs: 480,    // Extra small screens
-  sm: 640,    // Small screens
-  md: 768,    // Medium screens
-  lg: 1024,   // Large screens
-  xl: 1280,   // Extra large screens
+  xs: 480, // Extra small screens
+  sm: 640, // Small screens
+  md: 768, // Medium screens
+  lg: 1024, // Large screens
+  xl: 1280, // Extra large screens
   "2xl": 1536, // 2X large screens
 } as const;
 ```
@@ -396,8 +398,8 @@ const ResponsiveMyComponent = ({ children, ...props }) => {
     responsive.getSpacingClass({
       base: "p-4",
       md: "p-6",
-      lg: "p-8"
-    })
+      lg: "p-8",
+    }),
   );
 
   return (
@@ -464,21 +466,25 @@ return (
 ### Common Issues
 
 **Issue: Components not responsive**
+
 - Ensure you're using the `useResponsive` hook
 - Check that Tailwind CSS is properly configured
 - Verify the responsive classes are applied correctly
 
 **Issue: Mobile touch targets too small**
+
 - Use `touchOptimized` prop where available
 - Ensure buttons have minimum 44px height/width
 - Check for `touch-manipulation` CSS class
 
 **Issue: Text too small on mobile**
+
 - Use `scaleOnMobile={true}` for better readability
 - Ensure font sizes don't go below 14px on mobile
 - Use the responsive typography system
 
 **Issue: Safe area not respected on iOS**
+
 - Ensure safe-area-inset CSS classes are applied
 - Add viewport meta tag for proper scaling
 - Test on actual iOS devices
@@ -486,6 +492,7 @@ return (
 ### Performance Issues
 
 **Issue: Slow mobile performance**
+
 - Use conditional rendering for complex features
 - Implement virtualization for long lists
 - Optimize images and assets for mobile

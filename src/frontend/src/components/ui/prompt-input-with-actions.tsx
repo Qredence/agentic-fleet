@@ -42,7 +42,8 @@ export function PromptInputWithActions({
     // Auto-resize textarea
     if (textareaRef.current) {
       textareaRef.current.style.height = "48px";
-      textareaRef.current.style.height = Math.min(textareaRef.current.scrollHeight, 200) + "px";
+      textareaRef.current.style.height =
+        Math.min(textareaRef.current.scrollHeight, 200) + "px";
     }
   };
 
@@ -60,7 +61,10 @@ export function PromptInputWithActions({
 
   return (
     <form onSubmit={handleSubmit} className={cn("p-4", className)}>
-      <div className="w-full rounded-3xl shadow-lg border border-border/60 overflow-hidden" style={{ backgroundColor: "rgb(48, 48, 48)" }}>
+      <div
+        className="w-full rounded-3xl shadow-lg border border-border/60 overflow-hidden"
+        style={{ backgroundColor: "rgb(48, 48, 48)" }}
+      >
         <div className="flex flex-col w-full p-2 gap-2">
           {/* Hidden file input */}
           <input
@@ -132,8 +136,11 @@ export function PromptInputWithActions({
                 aria-label="Send message"
                 className="flex items-center justify-center w-8 h-8 rounded-full transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 style={{
-                  backgroundColor: !message.trim() || disabled ? "rgb(81, 81, 81)" : "rgb(0, 0, 0)",
-                  color: "rgb(255, 255, 255)"
+                  backgroundColor:
+                    !message.trim() || disabled
+                      ? "rgb(81, 81, 81)"
+                      : "rgb(0, 0, 0)",
+                  color: "rgb(255, 255, 255)",
                 }}
               >
                 <Send className="h-5 w-5" />

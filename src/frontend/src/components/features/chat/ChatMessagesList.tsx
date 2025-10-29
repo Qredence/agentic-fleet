@@ -8,17 +8,20 @@
  * - Performance optimizations with React.memo
  */
 
+import {
+  ChatContainerContent,
+  ChatContainerRoot,
+  ChatContainerScrollAnchor,
+  Loader,
+  ScrollButton,
+  TypingLoader,
+} from "@/components/ui/prompt-kit";
+import { Badge } from "@/components/ui/shadcn/badge";
+import { mapRoleToAgent } from "@/lib/agent-utils";
+import type { Message, QueueStatus } from "@/lib/types";
+import { Loader2 } from "lucide-react";
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { ChatMessage } from "./ChatMessage";
-import { Loader2 } from "lucide-react";
-import { Loader, TypingLoader } from "@/components/ui/prompt-kit";
-import {
-  ChatContainerRoot,
-  ChatContainerContent,
-  ChatContainerScrollAnchor,
-  ScrollButton,
-} from "@/components/ui/prompt-kit";
-import type { Message, QueueStatus } from "@/lib/types";
 
 interface DisplayMessage extends Message {
   receivedAt: string;
@@ -50,7 +53,7 @@ const ChatMessagesListComponent = ({
         hour: "2-digit",
         minute: "2-digit",
       }),
-    []
+    [],
   );
 
   // Memoize display messages with timestamps
@@ -79,7 +82,10 @@ const ChatMessagesListComponent = ({
     requestAnimationFrame(() => {
       requestAnimationFrame(() => {
         if (messagesEndRef.current) {
-          messagesEndRef.current.scrollIntoView({ behavior: "smooth", block: "end" });
+          messagesEndRef.current.scrollIntoView({
+            behavior: "smooth",
+            block: "end",
+          });
           setIsAtBottom(true);
         }
       });
@@ -148,21 +154,42 @@ const ChatMessagesListComponent = ({
 
       <ChatContainerRoot className="flex-1 overflow-hidden">
         <ChatContainerContent className="space-y-3 sm:space-y-4 p-3 sm:p-4">
-          {displayMessages.map((message, index) => (
-            <ChatMessage
-              key={message.id}
-              message={message}
-              isStreaming={isStreaming && index === displayMessages.length - 1}
-            />
-          ))}
+          {displayMessages
+            .filter(
+              (message) => message.content && message.content.trim() !== "",
+            )
+            .map((message, index, filteredArray) => {
+              // Transform Message to ChatMessageProps
+              const agent =
+                message.agentType ||
+                mapRoleToAgent(message.role, message.agentRole);
 
-          {isStreaming && (
-            <div className="flex items-center gap-2 sm:gap-3 px-3 sm:px-4 py-2 sm:py-3 bg-muted/30 rounded-lg">
-              <TypingLoader size="sm" />
-              <span className="text-xs sm:text-sm text-muted-foreground">Agent is thinking...</span>
-              <Loader variant="pulse-dot" size="sm" />
-            </div>
-          )}
+              return (
+                <ChatMessage
+                  key={message.id}
+                  message={message.content}
+                  agent={agent}
+                  timestamp={message.receivedAt}
+                  isStreaming={
+                    isStreaming && index === filteredArray.length - 1
+                  }
+                  agentRole={message.agentRole}
+                />
+              );
+            })}
+
+          {isStreaming &&
+            displayMessages.every(
+              (m) => !m.content || m.content.trim() === "",
+            ) && (
+              <div className="flex items-center gap-2 sm:gap-3 px-3 sm:px-4 py-2 sm:py-3 bg-muted/30 rounded-lg">
+                <TypingLoader size="sm" />
+                <span className="text-xs sm:text-sm text-muted-foreground">
+                  Agent is thinking...
+                </span>
+                <Loader variant="pulse-dot" size="sm" />
+              </div>
+            )}
 
           <ChatContainerScrollAnchor ref={messagesEndRef} />
         </ChatContainerContent>

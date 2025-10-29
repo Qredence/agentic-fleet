@@ -18,7 +18,12 @@ interface StepProps extends React.HTMLAttributes<HTMLDivElement> {
   children: React.ReactNode;
 }
 
-export function Step({ status = "pending", children, className, ...props }: StepProps) {
+export function Step({
+  status = "pending",
+  children,
+  className,
+  ...props
+}: StepProps) {
   const statusConfig = {
     pending: {
       icon: <Circle className="h-4 w-4 text-muted-foreground" />,

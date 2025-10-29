@@ -29,7 +29,7 @@ This is a **demonstration API route** that shows how to implement basic chatbot 
 
 #### API Endpoint
 
-```
+```json
 POST /api/primitives/chatbot
 Content-Type: application/json
 

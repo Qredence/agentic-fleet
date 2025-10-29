@@ -2,11 +2,7 @@
   "mcpServers": {
     "DeepGraph React MCP": {
       "command": "npx",
-      "args": [
-        "-y",
-        "mcp-code-graph@latest",
-        "facebook/react"
-      ]
+      "args": ["-y", "mcp-code-graph@latest", "facebook/react"]
     },
     "prompt-kit": {
       "description": "prompt-kit registry",
@@ -35,6 +31,14 @@
         "--project",
         "/Volumes/Samsung-SSD-T7/Workspaces/Github/qredence/agent-framework/v0.5/AgenticFleet"
       ]
+    },
+    "openmemory": {
+      "description": "OpenMemory MCP server for persistent memory management",
+      "command": "npx",
+      "args": ["-y", "@openmemory/mcp-server"],
+      "env": {
+        "OPENMEMORY_API_KEY": "om-bnf5w4qw82l6n3b1dba2c9c3lxgbfd1t"
+      }
     }
   }
 }

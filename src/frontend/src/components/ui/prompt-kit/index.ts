@@ -6,14 +6,14 @@ export {
   PromptInputTextarea,
   PromptInputActions,
   PromptInputAction,
-} from "./prompt-input"
+} from "./prompt-input";
 
 // Chat Container Components
 export {
   ChatContainerRoot,
   ChatContainerContent,
   ChatContainerScrollAnchor,
-} from "./chat-container"
+} from "./chat-container";
 
 // Message Components
 export {
@@ -22,16 +22,16 @@ export {
   MessageContent,
   MessageActions,
   MessageAction,
-} from "./message"
+} from "./message";
 
 // Content Display Components
-export { Markdown } from "./markdown"
-export { ResponseStream, useTextStream } from "./response-stream"
-export { Reasoning, ReasoningTrigger, ReasoningContent } from "./reasoning"
+export { Markdown } from "./markdown";
+export { ResponseStream, useTextStream } from "./response-stream";
+export { Reasoning, ReasoningTrigger, ReasoningContent } from "./reasoning";
 
 // Interactive Components
-export { PromptSuggestion } from "./prompt-suggestion"
-export { ScrollButton } from "./scroll-button"
+export { PromptSuggestion } from "./prompt-suggestion";
+export { ScrollButton } from "./scroll-button";
 
 // Loading Components
 export {
@@ -48,7 +48,7 @@ export {
   TextBlinkLoader,
   TextShimmerLoader,
   TextDotsLoader,
-} from "./loader"
+} from "./loader";
 
 // Type exports
 export type {
@@ -56,13 +56,13 @@ export type {
   PromptInputTextareaProps,
   PromptInputActionsProps,
   PromptInputActionProps,
-} from "./prompt-input"
+} from "./prompt-input";
 
 export type {
   ChatContainerRootProps,
   ChatContainerContentProps,
   ChatContainerScrollAnchorProps,
-} from "./chat-container"
+} from "./chat-container";
 
 export type {
   MessageProps,
@@ -70,7 +70,7 @@ export type {
   MessageContentProps,
   MessageActionsProps,
   MessageActionProps,
-} from "./message"
+} from "./message";
 
 export type {
   MarkdownProps,
@@ -78,14 +78,17 @@ export type {
   UseTextStreamOptions,
   UseTextStreamResult,
   Mode,
-} from "./response-stream"
+} from "./response-stream";
 
 export type {
   ReasoningProps,
   ReasoningTriggerProps,
   ReasoningContentProps,
-} from "./reasoning"
+} from "./reasoning";
 
-export type { PromptSuggestionProps, ScrollButtonProps } from "./prompt-suggestion"
+export type {
+  PromptSuggestionProps,
+  ScrollButtonProps,
+} from "./prompt-suggestion";
 
-export type { LoaderProps } from "./loader"
+export type { LoaderProps } from "./loader";

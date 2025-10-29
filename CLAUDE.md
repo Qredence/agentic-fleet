@@ -28,7 +28,7 @@ make test-config
 make dev
 
 # Backend only
-make haxui-server
+make backend
 
 # Frontend only
 make frontend-dev
@@ -62,21 +62,36 @@ AgenticFleet includes Model Context Protocol (MCP) servers for enhanced capabili
 ### Available MCP Servers
 
 **DeepGraph React MCP**
+
 - Provides code analysis and understanding of the React codebase
 - Located at: `facebook/react` repository
 - Tools for navigating React components and architecture
 
 **Prompt-Kit Registry**
+
 - Access to shadcn/ui component registry
 - Provides enhanced UI components for AI interfaces
 - Configuration: `shadcn@canary` with registry endpoint
 
 **Playwright MCP Server** ⭐ **NEW**
+
 - Browser automation and testing capabilities
 - Web scraping and content extraction
 - Screenshot capture and visual testing
 - Form interaction and user simulation
 - Test code generation and execution
+
+**Serena Semantic Coding Assistant**
+
+- Intelligent code analysis and navigation
+- IDE-assistant context for code understanding
+- Project-aware semantic search capabilities
+
+**OpenMemory MCP Server**
+
+- Persistent memory management capabilities
+- Cross-session context retention
+- API key configured for seamless integration
 
 ### Installing Playwright MCP
 
@@ -93,7 +108,7 @@ npx playwright install
 
 ### MCP Configuration
 
-MCP servers are configured in `.mcp.json`:
+MCP servers are configured in [`.mcp.json`](.mcp.json):
 
 ```json
 {
@@ -106,27 +121,6 @@ MCP servers are configured in `.mcp.json`:
   }
 }
 ```
-
-### Using Playwright MCP Tools
-
-Once configured, the Playwright MCP server provides tools for:
-
-```bash
-# Navigate to websites
-playwright_navigate --url="https://example.com"
-
-# Take screenshots
-playwright_screenshot --path="./screenshot.png"
-
-# Extract content
-playwright_get_content --type="text"
-
-# Interactive automation
-playwright_click --selector="#submit-button"
-playwright_type --selector="#search" --text="query"
-```
-
-**Documentation**: See `docs/setup/playwright-mcp-setup.md` for complete setup guide.
 
 ## Architecture Overview
 
@@ -142,12 +136,13 @@ The system implements Microsoft's Magentic One pattern with a sophisticated **Ma
 
 ### YAML-Driven Workflow Configuration
 
-The system features two primary workflows defined in `src/agenticfleet/magentic_fleet.yaml`:
+The system features two primary workflows defined in [`src/agenticfleet/magentic_fleet.yaml`](src/agenticfleet/magentic_fleet.yaml):
 
 1. **Collaboration Workflow** - Three-agent team (researcher, coder, reviewer)
 2. **Magentic Fleet Workflow** - Five-agent orchestration (planner, executor, coder, verifier, generator)
 
 Each workflow configures:
+
 - Agent models (default: gpt-5-mini)
 - Custom instructions and reasoning parameters
 - Temperature and token limits
@@ -170,6 +165,7 @@ The `ConsoleCallbacks` class acts as an event router, bridging Microsoft Agent F
 The system supports both static and dynamic agent configurations:
 
 **Foundation Agents (configurable models):**
+
 - **Planner**: Task decomposition and step assignment
 - **Executor**: Implementation coordination and reasoning-heavy steps
 - **Coder**: Code generation and execution with HostedCodeInterpreterTool
@@ -177,6 +173,7 @@ The system supports both static and dynamic agent configurations:
 - **Generator**: Final response synthesis and user-facing answers
 
 **Legacy Agents (for reference):**
+
 - **Orchestrator**: Task planning & result synthesis (`gpt-5`)
 - **Researcher**: Information gathering & citations (`gpt-5`)
 - **Analyst**: Data exploration & insights (`gpt-5`)
@@ -426,6 +423,7 @@ npm run preview    # Preview production build
 **Completed October 2025**: Full migration from Vite 6.x to Vite 7.x with enhanced infrastructure
 
 **Key Improvements:**
+
 - **Build Performance**: 13% faster build times (3.79s vs 4.66s)
 - **Hot Module Replacement**: Improved development experience with faster updates
 - **Bundle Optimization**: Stable bundle size (871 MB / 273 MB gzipped) with better tree-shaking
@@ -433,6 +431,7 @@ npm run preview    # Preview production build
 - **TypeScript Integration**: Seamless integration with stricter type checking
 
 **Frontend Hook Architecture (Post-Migration):**
+
 - **useSSEConnection** (315 lines) - Robust SSE event streaming with memory management
 - **useMessageState** (245 lines) - Message state management with delta batching optimization
 - **useApprovalWorkflow** (290 lines) - HITL approval request handling with retry logic
@@ -440,6 +439,7 @@ npm run preview    # Preview production build
 - **useFastAPIChat** (571 lines) - Main orchestrator hook with clear separation of concerns
 
 **Frontend-Backend Wiring Enhancements:**
+
 - **Explicit Conversation Creation**: Frontend now creates conversations via POST /v1/conversations
 - **Robust SSE Parsing**: Event buffer accumulation handles multi-line JSON without crashes
 - **Exponential Backoff Retry**: 3-attempt retry with 100ms→200ms→400ms backoff across 6 API operations
@@ -495,6 +495,33 @@ make validate-agents  # Validate AGENTS.md documentation invariants
 ✅ **Configuration validation** - Always validate after YAML changes
 ✅ **Defensive programming** - Use proper type guards and error handling
 
+## Runtime Environment & Directories
+
+**Key directories** (auto-created at runtime):
+
+- `var/checkpoints/` - Fleet state persistence (FileCheckpointStorage)
+- `var/logs/` - Application logs (`agenticfleet.log`)
+- `var/audit/` - Audit trail (JSONL format with rotation)
+- `var/memories/` - Mem0 history database
+- `var/mem0/` - Alternative memory path (configurable)
+
+**Configuration locations**:
+
+- `src/agenticfleet/magentic_fleet.yaml` - Fleet orchestration config
+- `src/agenticfleet/agents/*/config.yaml` - Per-agent configuration
+- `.env` - Environment variables (API keys, feature flags)
+- `pyproject.toml` - Python dependencies, tool configurations
+- `src/frontend/package.json` - Frontend dependencies
+
+**Observability & Tracing**:
+
+- Enable OpenTelemetry: `ENABLE_OTEL=true` in `.env`
+- OTLP endpoint: `OTLP_ENDPOINT=http://localhost:4317` (defaults to this)
+- Sensitive data capture: `ENABLE_SENSITIVE_DATA=true` (captures prompts/completions, off by default)
+- Audit logging configured in `workflow.yaml` under `audit_logging` section
+
+**Never commit**: `.env`, `var/`, `.venv/`, `__pycache__/`, `*.pyc`, checkpoint files. All are gitignored.
+
 ## Key Architectural Strengths
 
 1. **Configuration-Driven**: YAML-first approach enables runtime flexibility
@@ -513,44 +540,6 @@ make validate-agents  # Validate AGENTS.md documentation invariants
 - **Strategy Pattern**: Dynamic agent spawning based on task analysis
 - **Template Method**: Consistent agent creation workflow
 - **Command Pattern**: Approval request/response system
-
-## Recent v0.5.4 Improvements
-
-### Modular Architecture Patterns
-
-- **Planner-Executor-Verifier-Generator**: Complete modular workflow system
-- **Workflow as Agent**: Reflection and retry pattern with Worker/Reviewer agents
-- **Type Safety**: 100% mypy compliance with strict typing enforcement
-- **Production Patterns**: Error handling, logging, and observability best practices
-
-### New Development Workflows
-
-```bash
-# Validate everything before development
-make test-config && make check
-
-# Development with type safety
-uv run python -m agenticfleet  # Always use uv run
-
-# Test specific components
-uv run pytest tests/test_magentic_fleet.py -k "test_orchestrator"
-
-# HITL approval demo
-make demo-hitl
-
-# Clean development environment
-make clean
-
-# Setup pre-commit hooks
-make pre-commit-install
-```
-
-### Performance Optimizations
-
-- **Checkpointing**: 50-80% cost reduction on retries
-- **Streaming**: Real-time SSE responses for better UX
-- **Caching**: Intelligent response caching where appropriate
-- **Resource Management**: Proper cleanup and resource disposal
 
 ## File Structure Reference
 

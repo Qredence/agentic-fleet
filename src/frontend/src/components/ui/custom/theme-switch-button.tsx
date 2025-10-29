@@ -12,7 +12,9 @@ export function ThemeSwitch({ className = "" }: ThemeSwitchProps) {
   React.useEffect(() => {
     const savedTheme =
       localStorage.getItem("theme") ||
-      (window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
+      (window.matchMedia("(prefers-color-scheme: dark)").matches
+        ? "dark"
+        : "light");
 
     setTheme(savedTheme as "light" | "dark");
     document.documentElement.classList.toggle("dark", savedTheme === "dark");

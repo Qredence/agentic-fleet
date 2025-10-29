@@ -264,7 +264,6 @@ npm run format       # Prettier
    ```
 
 4. Register:
-
    - Export in `agents/__init__.py`
    - Wire into `fleet/fleet_builder.py`
    - Update manager instructions in `config/workflow.yaml`

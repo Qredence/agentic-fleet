@@ -41,14 +41,18 @@ export function Spawn({ agentName, instruction, spawnSpec }: SpawnProps) {
       </CardHeader>
       <CardContent className="space-y-2">
         <div className="flex flex-wrap gap-2 items-center">
-          <span className="text-xs font-medium text-muted-foreground">Role:</span>
+          <span className="text-xs font-medium text-muted-foreground">
+            Role:
+          </span>
           <Badge variant="outline" className="text-xs">
             {spawnSpec.role}
           </Badge>
         </div>
         {spawnSpec.capabilities && spawnSpec.capabilities.length > 0 && (
           <div className="flex flex-wrap gap-2 items-start">
-            <span className="text-xs font-medium text-muted-foreground">Capabilities:</span>
+            <span className="text-xs font-medium text-muted-foreground">
+              Capabilities:
+            </span>
             <div className="flex flex-wrap gap-1">
               {spawnSpec.capabilities.map((capability, idx) => (
                 <Badge key={idx} variant="secondary" className="text-xs">
@@ -60,8 +64,12 @@ export function Spawn({ agentName, instruction, spawnSpec }: SpawnProps) {
         )}
         {spawnSpec.model && (
           <div className="flex items-center gap-2">
-            <span className="text-xs font-medium text-muted-foreground">Model:</span>
-            <code className="text-xs bg-muted px-1.5 py-0.5 rounded">{spawnSpec.model}</code>
+            <span className="text-xs font-medium text-muted-foreground">
+              Model:
+            </span>
+            <code className="text-xs bg-muted px-1.5 py-0.5 rounded">
+              {spawnSpec.model}
+            </code>
           </div>
         )}
       </CardContent>

@@ -30,6 +30,10 @@ class SSEEventType(str, Enum):
     TOOL_CALL = "tool.call"
     TOOL_RESULT = "tool.result"
 
+    # Approval events
+    APPROVAL_REQUESTED = "approval.requested"
+    APPROVAL_RESPONDED = "approval.responded"
+
     # Final result
     FINAL_RESULT = "final.result"
 

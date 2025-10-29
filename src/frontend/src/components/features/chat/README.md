@@ -12,7 +12,7 @@ Core chat interaction components for the AgenticFleet frontend.
 
 ## Usage
 
-```typescript
+```
 import { ChatContainer } from '@/components/features/chat';
 
 // The ChatContainer orchestrates all chat sub-components
@@ -36,3 +36,6 @@ ChatContainer (orchestrator)
 - **AI**: `@/components/ai` (Plan, Reasoning, Tool, Steps, ResponseStream)
 - **Custom UI**: `@/components/ui/custom` (Message, PromptInput, etc.)
 - **Hooks**: `@/lib/hooks` (useSSEConnection, useMessageState, etc.)
+
+> **Convention:** shadcn primitives must be imported directly from `@/components/ui/shadcn/<component>`.
+> Avoid using root-level aliases such as `@/components/ui/<component>` to ensure Vite can resolve the filesystem path consistently across platforms.

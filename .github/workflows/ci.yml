@@ -61,7 +61,7 @@ jobs:
 
       - name: Run mypy type checker
         run: uv run mypy .
-        continue-on-error: true  # Don't fail CI on type errors yet
+        continue-on-error: true # Don't fail CI on type errors yet
 
   test:
     name: Test (Python ${{ matrix.python-version }})

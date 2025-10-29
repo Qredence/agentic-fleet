@@ -132,7 +132,8 @@ export default {
         "fade-in": "fade-in 0.3s ease-out",
         "slide-in": "slide-in 0.4s cubic-bezier(0.4, 0, 0.2, 1)",
         "scale-in": "scale-in 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
-        "pulse-subtle": "pulse-subtle 1.5s cubic-bezier(0.4, 0, 0.6, 1) infinite",
+        "pulse-subtle":
+          "pulse-subtle 1.5s cubic-bezier(0.4, 0, 0.6, 1) infinite",
       },
     },
   },

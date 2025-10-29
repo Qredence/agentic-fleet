@@ -1,5 +1,13 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Archive, Edit, MessageSquare, MoreVertical, Plus, Settings, Trash2 } from "lucide-react";
+import {
+  Archive,
+  Edit,
+  MessageSquare,
+  MoreVertical,
+  Plus,
+  Settings,
+  Trash2,
+} from "lucide-react";
 import { useMemo } from "react";
 
 import { Button } from "@/components/ui/shadcn/button";
@@ -21,10 +29,14 @@ interface ConversationSummary {
 
 const mapConversations = (items: ConversationSummary[]) =>
   items.map((item) => {
-    const createdAt = item.created_at ? new Date(item.created_at * 1000) : undefined;
+    const createdAt = item.created_at
+      ? new Date(item.created_at * 1000)
+      : undefined;
     const metadata = item.metadata || {};
     const title =
-      metadata.title || metadata.workflow || `Conversation ${item.id.slice(-6).toUpperCase()}`;
+      metadata.title ||
+      metadata.workflow ||
+      `Conversation ${item.id.slice(-6).toUpperCase()}`;
     return {
       id: item.id,
       title,
@@ -32,7 +44,10 @@ const mapConversations = (items: ConversationSummary[]) =>
     };
   });
 
-export const ChatSidebar = ({ selectedConversationId, onSelectConversation }: ChatSidebarProps) => {
+export const ChatSidebar = ({
+  selectedConversationId,
+  onSelectConversation,
+}: ChatSidebarProps) => {
   const queryClient = useQueryClient();
   const { toast } = useToast();
 
@@ -54,29 +69,31 @@ export const ChatSidebar = ({ selectedConversationId, onSelectConversation }: Ch
 
   const conversations = useMemo(() => mapConversations(data || []), [data]);
 
-  const { mutateAsync: createConversation, isPending: isCreating } = useMutation({
-    mutationFn: async () => {
-      const response = await fetch(buildApiUrl(API_ENDPOINTS.CONVERSATIONS), {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-      });
-      if (!response.ok) {
-        throw new Error(`Failed to create conversation: ${response.status}`);
-      }
-      return response.json();
-    },
-    onSuccess: (summary: ConversationSummary) => {
-      queryClient.invalidateQueries({ queryKey: ["conversations"] });
-      onSelectConversation?.(summary.id);
-    },
-    onError: (error) => {
-      toast({
-        title: "Unable to create conversation",
-        description: error instanceof Error ? error.message : "Unexpected error",
-        variant: "destructive",
-      });
-    },
-  });
+  const { mutateAsync: createConversation, isPending: isCreating } =
+    useMutation({
+      mutationFn: async () => {
+        const response = await fetch(buildApiUrl(API_ENDPOINTS.CONVERSATIONS), {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+        });
+        if (!response.ok) {
+          throw new Error(`Failed to create conversation: ${response.status}`);
+        }
+        return response.json();
+      },
+      onSuccess: (summary: ConversationSummary) => {
+        queryClient.invalidateQueries({ queryKey: ["conversations"] });
+        onSelectConversation?.(summary.id);
+      },
+      onError: (error) => {
+        toast({
+          title: "Unable to create conversation",
+          description:
+            error instanceof Error ? error.message : "Unexpected error",
+          variant: "destructive",
+        });
+      },
+    });
 
   const handleNewChat = async () => {
     const summary = await createConversation();
@@ -109,7 +126,8 @@ export const ChatSidebar = ({ selectedConversationId, onSelectConversation }: Ch
       <div className="flex-1 overflow-y-auto p-4 space-y-1">
         {isLoading && (
           <div className="flex items-center gap-2 text-sm text-muted-foreground">
-            <MessageSquare className="h-4 w-4 animate-pulse" /> Loading conversations...
+            <MessageSquare className="h-4 w-4 animate-pulse" /> Loading
+            conversations...
           </div>
         )}
 
@@ -131,15 +149,21 @@ export const ChatSidebar = ({ selectedConversationId, onSelectConversation }: Ch
             onClick={() => onSelectConversation?.(conversation.id)}
             className={cn(
               "w-full text-left p-3 rounded-lg transition-smooth group",
-              selectedConversationId === conversation.id ? "bg-muted" : "hover:bg-muted/50"
+              selectedConversationId === conversation.id
+                ? "bg-muted"
+                : "hover:bg-muted/50",
             )}
           >
             <div className="flex items-start gap-3">
               <MessageSquare className="h-4 w-4 mt-1 text-muted-foreground group-hover:text-foreground transition-smooth" />
               <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium truncate text-foreground">{conversation.title}</p>
+                <p className="text-sm font-medium truncate text-foreground">
+                  {conversation.title}
+                </p>
                 {conversation.timestamp && (
-                  <p className="text-xs text-muted-foreground mt-1">{conversation.timestamp}</p>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    {conversation.timestamp}
+                  </p>
                 )}
               </div>
               <div onClick={(e) => e.stopPropagation()}>
