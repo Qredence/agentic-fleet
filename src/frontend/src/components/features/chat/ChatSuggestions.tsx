@@ -93,62 +93,59 @@ const ChatSuggestionsComponent = ({
   };
 
   return (
-    <div className={`space-y-6 ${className}`}>
-      {/* Header */}
-      <div className="text-center space-y-2">
-        <h3 className="text-xl font-semibold text-foreground">What would you like to work on?</h3>
-        <p className="mx-auto max-w-2xl text-sm text-muted-foreground">
-          Choose a suggestion below or type your own request to get started.
+    <div className={`space-y-4 sm:space-y-6 ${className}`}>
+      {/* Header - Responsive text sizing */}
+      <div className="text-center px-4">
+        <h3 className="text-xl sm:text-2xl font-semibold text-foreground mb-2">
+          What would you like to work on?
+        </h3>
+        <p className="text-sm sm:text-base text-muted-foreground">
+          Choose a suggestion below or type your own request
         </p>
       </div>
 
-      {/* Enhanced Suggestions Grid */}
-      <div className="grid gap-4 sm:grid-cols-1 md:grid-cols-2">
-        {suggestions
-          .filter((suggestion) => suggestion && suggestion.text && suggestion.icon)
-          .map((suggestion, index) => (
-            <PromptSuggestion
-              key={`${suggestion.category}-${index}`}
-              onClick={() => handleSuggestionClick(suggestion.text)}
-              variant="outline"
-              size="lg"
-              className="!h-auto min-h-[140px] w-full !items-stretch !justify-start rounded-xl border border-border/60 bg-card/80 p-4 text-left shadow-sm transition-all duration-200 ease-out hover:-translate-y-0.5 hover:shadow-lg focus-visible:ring-2 focus-visible:ring-primary/40"
-            >
-              <div className="flex h-full w-full flex-col justify-between gap-4">
-                <div className="flex w-full items-start gap-3">
-                  <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">
-                    {suggestion.icon}
-                  </div>
-                  <div className="min-w-0 flex-1 space-y-2">
-                    <div className="flex flex-col gap-2">
-                      <h4 className="text-sm font-medium leading-snug text-foreground">
-                        {suggestion.text}
-                      </h4>
-                      <Badge
-                        variant="secondary"
-                        className={`w-fit text-xs ${getCategoryColor(suggestion.category)}`}
-                      >
-                        {suggestion.category}
-                      </Badge>
-                    </div>
-                    <p className="text-xs leading-relaxed text-muted-foreground">
-                      {suggestion.description}
-                    </p>
-                  </div>
+      {/* Enhanced Suggestions Grid - Responsive columns */}
+      <div className="grid gap-3 sm:gap-4 grid-cols-1 sm:grid-cols-2">
+        {suggestions.map((suggestion, index) => (
+          <PromptSuggestion
+            key={index}
+            onClick={() => handleSuggestionClick(suggestion.text)}
+            variant="outline"
+            size="lg"
+            className="p-3 sm:p-4 text-left hover:shadow-lg transition-all duration-200 h-full"
+          >
+            <div className="flex items-start gap-2 sm:gap-3">
+              <div className="flex-shrink-0 w-7 h-7 sm:w-8 sm:h-8 rounded-lg bg-primary/10 flex items-center justify-center text-primary">
+                {suggestion.icon}
+              </div>
+              <div className="flex-1 min-w-0">
+                <div className="flex items-start gap-2 mb-1 flex-wrap">
+                  <h4 className="font-medium text-sm sm:text-base leading-tight flex-1 min-w-0">
+                    {suggestion.text}
+                  </h4>
+                  <Badge
+                    variant="secondary"
+                    className={`text-xs flex-shrink-0 ${getCategoryColor(suggestion.category)}`}
+                  >
+                    {suggestion.category}
+                  </Badge>
                 </div>
-                <span className="text-xs font-medium text-primary/70">Tap to use this prompt</span>
+                <p className="text-xs sm:text-sm text-muted-foreground">
+                  {suggestion.description}
+                </p>
               </div>
             </PromptSuggestion>
           ))}
       </div>
 
-      {/* Quick Actions */}
-      <div className="flex flex-wrap items-center justify-center gap-2">
+      {/* Quick Actions - Responsive layout */}
+      <div className="flex flex-wrap gap-2 justify-center px-4">
         <Button
           variant="outline"
           size="sm"
           className="rounded-full px-4 py-1.5"
           onClick={() => handleSuggestionClick("Show me current project status")}
+          className="text-xs sm:text-sm"
         >
           Project Overview
         </Button>
@@ -157,6 +154,7 @@ const ChatSuggestionsComponent = ({
           size="sm"
           className="rounded-full px-4 py-1.5"
           onClick={() => handleSuggestionClick("List available agents and their capabilities")}
+          className="text-xs sm:text-sm"
         >
           Agent Capabilities
         </Button>
@@ -165,6 +163,7 @@ const ChatSuggestionsComponent = ({
           size="sm"
           className="rounded-full px-4 py-1.5"
           onClick={() => handleSuggestionClick("Help me understand the current workflow")}
+          className="text-xs sm:text-sm"
         >
           Workflow Help
         </Button>

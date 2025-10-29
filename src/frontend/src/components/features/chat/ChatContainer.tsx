@@ -119,19 +119,39 @@ const ChatContainerComponent = ({
   const showSuggestions = messages.length === 0 && status === "ready";
 
   return (
-    <div className="flex flex-col h-full bg-background">
-      {/* Header */}
+    <div className="flex flex-col h-screen w-full bg-background overflow-hidden">
+      {/* Header - Responsive, no fixed positioning */}
       <ChatHeader
         conversationId={conversationId}
         connectionStatus={connectionStatus}
         onCheckHealth={checkHealth}
       />
 
-      {/* Main Content Area */}
+      {/* Main Content Area - Flex-grow with proper overflow */}
       <div className="flex-1 flex flex-col relative overflow-hidden">
-        {showSuggestions ? (
-          <div className="flex-1 overflow-y-auto">
-            <div className="mx-auto w-full max-w-3xl px-6 py-10 sm:py-12 lg:py-16">
+        {/* Messages List - Takes available space */}
+        <div className="flex-1 overflow-hidden">
+          <ChatMessagesList
+            messages={messages}
+            isStreaming={status === "streaming"}
+            queueStatus={queueStatus}
+            className="h-full"
+          />
+        </div>
+
+        {/* Plan Display - Collapsible section */}
+        {currentPlan && (
+          <div className="flex-shrink-0 border-t bg-background/95 backdrop-blur-sm">
+            <div className="max-w-4xl mx-auto p-3 sm:p-4">
+              <ChatPlanDisplay plan={currentPlan} />
+            </div>
+          </div>
+        )}
+
+        {/* Suggestions - Centered overlay when no messages */}
+        {showSuggestions && (
+          <div className="absolute inset-0 flex items-center justify-center overflow-y-auto">
+            <div className="w-full max-w-2xl px-4 py-8">
               <ChatSuggestions
                 onSuggestionSelect={handleSuggestionSelect}
                 isVisible={showSuggestions}
@@ -162,19 +182,19 @@ const ChatContainerComponent = ({
         )}
       </div>
 
-      {/* Status Bar */}
+      {/* Status Bar - Compact on mobile */}
       <ChatStatusBar
         connectionStatus={connectionStatus}
         chatStatus={status}
         error={error}
         queueStatus={queueStatus}
-        className="border-t"
+        className="flex-shrink-0 border-t"
       />
 
-      {/* Pending Approvals */}
+      {/* Pending Approvals - Above input */}
       {pendingApprovals.length > 0 && (
-        <div className="border-t bg-background/95 backdrop-blur-sm">
-          <div className="max-w-4xl mx-auto p-4 space-y-3">
+        <div className="flex-shrink-0 border-t bg-background/95 backdrop-blur-sm">
+          <div className="max-w-4xl mx-auto p-3 sm:p-4 space-y-3">
             {pendingApprovals.map((approval) => (
               <ApprovalPrompt
                 key={approval.id}
@@ -187,9 +207,9 @@ const ChatContainerComponent = ({
         </div>
       )}
 
-      {/* Input Area */}
-      <div className="border-t bg-background">
-        <div className="max-w-4xl mx-auto p-4">
+      {/* Input Area - Sticky bottom with responsive padding */}
+      <div className="flex-shrink-0 border-t bg-background">
+        <div className="max-w-4xl mx-auto p-3 sm:p-4">
           <ChatInput
             onSendMessage={handleSendMessage}
             disabled={status === "streaming" || status === "submitted"}

@@ -256,20 +256,20 @@ export const ChatMessage = React.memo(
     return (
       <Message
         className={cn(
-          "p-4 transition-smooth rounded-lg justify-center",
+          "p-3 sm:p-4 transition-smooth rounded-lg justify-center",
           isNew && "animate-fade-in",
           isStreaming && "animate-pulse-subtle",
-          isUserMessage ? "flex-row-reverse pl-10" : "flex-row pr-10"
+          isUserMessage ? "flex-row-reverse pl-8 sm:pl-10" : "flex-row pr-8 sm:pr-10"
         )}
       >
         {/* Avatar */}
         <div
           className={cn(
-            "flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center",
+            "flex-shrink-0 w-7 h-7 sm:w-8 sm:h-8 rounded-full flex items-center justify-center",
             config.bgColor
           )}
         >
-          <Icon className={cn("h-4 w-4", config.color)} />
+          <Icon className={cn("h-3.5 w-3.5 sm:h-4 sm:w-4", config.color)} />
         </div>
 
         {/* Content */}
@@ -277,16 +277,16 @@ export const ChatMessage = React.memo(
           <div className="w-full">
             <div
               className={cn(
-                "flex items-center gap-2 mb-1",
+                "flex items-center gap-1.5 sm:gap-2 mb-1",
                 isUserMessage ? "justify-end" : "justify-start"
               )}
             >
               {!isUserMessage && (
-                <span className="text-sm font-semibold text-foreground">{config.name}</span>
+                <span className="text-xs sm:text-sm font-semibold text-foreground">{config.name}</span>
               )}
               <span className="text-xs text-muted-foreground">{timestamp}</span>
               {isUserMessage && (
-                <span className="text-sm font-semibold text-foreground">{config.name}</span>
+                <span className="text-xs sm:text-sm font-semibold text-foreground">{config.name}</span>
               )}
             </div>
 
@@ -296,7 +296,7 @@ export const ChatMessage = React.memo(
                 <ReasoningTrigger className="text-xs text-muted-foreground mb-2">
                   💭 {config.name} is thinking...
                 </ReasoningTrigger>
-                <PromptReasoningContent markdown={true} className="text-sm">
+                <PromptReasoningContent markdown={true} className="text-xs sm:text-sm">
                   {reasoning}
                 </PromptReasoningContent>
               </PromptReasoning>
@@ -327,7 +327,7 @@ export const ChatMessage = React.memo(
             {/* Main Message */}
             {isNew || isStreaming ? (
               <div
-                className={`p-6 border border-border/50 w-full rounded-[32px] ${messageBgClass} flex flex-col justify-center items-start prose prose-sm dark:prose-invert max-w-none prose-headings:font-semibold prose-p:leading-relaxed prose-pre:p-0 prose-pre:bg-transparent prose-code:bg-muted prose-code:px-1 prose-code:py-0.5 prose-code:rounded prose-code:before:content-none prose-code:after:content-none`}
+                className={`p-4 sm:p-6 border border-border/50 w-full rounded-2xl sm:rounded-[32px] ${messageBgClass} flex flex-col justify-center items-start prose prose-sm dark:prose-invert max-w-none prose-headings:font-semibold prose-p:leading-relaxed prose-pre:p-0 prose-pre:bg-transparent prose-code:bg-muted prose-code:px-1 prose-code:py-0.5 prose-code:rounded prose-code:before:content-none prose-code:after:content-none`}
               >
                 <ResponseStream
                   textStream={message}
@@ -336,14 +336,13 @@ export const ChatMessage = React.memo(
                   className="w-full"
                   onComplete={() => {
                     // Optional: Handle stream completion
-                    // Stream completed
                   }}
                 />
               </div>
             ) : (
               <MessageContent
                 markdown={true}
-                className={`p-6 border border-border/50 w-full rounded-[32px] ${messageBgClass} flex flex-col justify-center items-start`}
+                className={`p-4 sm:p-6 border border-border/50 w-full rounded-2xl sm:rounded-[32px] ${messageBgClass} flex flex-col justify-center items-start`}
               >
                 {message}
               </MessageContent>
