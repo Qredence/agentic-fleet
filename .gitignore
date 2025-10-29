@@ -69,3 +69,5 @@ node_modules/
 .kilocode/
 memory-bank/
 .pre-commit-config.yaml
+.github/agents/expert-react-frontend-engineer.agent.md
+.playwright-mcp/page-2025-10-29T05-03-16-472Z.png

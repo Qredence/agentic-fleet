@@ -1,6 +1,6 @@
 /**
  * Layout components for the application
- * 
+ *
  * Layouts provide consistent structure and animations using framer-motion
  */
 

@@ -170,7 +170,7 @@ def _create_responses_client(
         kwargs["max_tokens"] = max_tokens
     if store is not None:
         kwargs["store"] = store
-    return OpenAIResponsesClient(**kwargs)  # type: ignore[arg-type]
+    return OpenAIResponsesClient(**kwargs)
 
 
 def create_collaboration_workflow(
@@ -349,26 +349,26 @@ __all__: Sequence[str] = [
     "COLLABORATION_MANAGER_INSTRUCTIONS",
     "COLLABORATION_RESEARCHER_INSTRUCTIONS",
     "COLLABORATION_REVIEWER_INSTRUCTIONS",
+    "MAGENTIC_FLEET_CODER_INSTRUCTIONS",
     "MAGENTIC_FLEET_DEFAULT_MODEL",
+    "MAGENTIC_FLEET_EXECUTOR_INSTRUCTIONS",
+    "MAGENTIC_FLEET_GENERATOR_INSTRUCTIONS",
     "MAGENTIC_FLEET_MANAGER_INSTRUCTIONS",
     "MAGENTIC_FLEET_PLANNER_INSTRUCTIONS",
-    "MAGENTIC_FLEET_EXECUTOR_INSTRUCTIONS",
-    "MAGENTIC_FLEET_CODER_INSTRUCTIONS",
     "MAGENTIC_FLEET_VERIFIER_INSTRUCTIONS",
-    "MAGENTIC_FLEET_GENERATOR_INSTRUCTIONS",
-    # Workflow factories
-    "create_collaboration_workflow",
-    "create_magentic_fleet_workflow",
-    # Event handlers
-    "handle_orchestrator_message",
-    "handle_agent_delta",
-    "handle_agent_message",
-    "handle_final_result",
-    "handle_workflow_output",
     # Event types (re-exported for convenience)
     "MagenticAgentDeltaEvent",
     "MagenticAgentMessageEvent",
     "MagenticFinalResultEvent",
     "MagenticOrchestratorMessageEvent",
     "WorkflowOutputEvent",
+    # Workflow factories
+    "create_collaboration_workflow",
+    "create_magentic_fleet_workflow",
+    "handle_agent_delta",
+    "handle_agent_message",
+    "handle_final_result",
+    # Event handlers
+    "handle_orchestrator_message",
+    "handle_workflow_output",
 ]

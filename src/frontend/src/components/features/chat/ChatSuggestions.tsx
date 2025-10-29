@@ -8,11 +8,11 @@
  * - Interactive suggestion buttons
  */
 
-import { memo, useCallback } from "react";
 import { PromptSuggestion } from "@/components/ui/prompt-kit";
 import { Badge } from "@/components/ui/shadcn/badge";
 import { Button } from "@/components/ui/shadcn/button";
-import { Search, Target, TrendingUp, Sparkles } from "lucide-react";
+import { Search, Sparkles, Target, TrendingUp } from "lucide-react";
+import { memo, useCallback, useMemo } from "react";
 
 interface ChatSuggestionsProps {
   onSuggestionSelect: (suggestion: string) => void;
@@ -27,50 +27,68 @@ const ChatSuggestionsComponent = ({
   chatStatus = "ready",
   className = "",
 }: ChatSuggestionsProps) => {
-  const handleSuggestionClick = useCallback((suggestion: string) => {
-    onSuggestionSelect(suggestion);
-  }, [onSuggestionSelect]);
+  const handleSuggestionClick = useCallback(
+    (suggestion: string) => {
+      onSuggestionSelect(suggestion);
+    },
+    [onSuggestionSelect]
+  );
 
   if (!isVisible || chatStatus !== "ready") {
     return null;
   }
 
-  const suggestions = [
-    {
-      text: "Analyze Python code quality in my repository",
-      icon: <Search className="h-4 w-4" />,
-      category: "analysis",
-      description: "Review and improve code quality"
-    },
-    {
-      text: "Create a detailed plan for implementing a new feature",
-      icon: <Target className="h-4 w-4" />,
-      category: "planning",
-      description: "Step-by-step implementation plan"
-    },
-    {
-      text: "Research best practices for React performance optimization",
-      icon: <TrendingUp className="h-4 w-4" />,
-      category: "research",
-      description: "Performance optimization strategies"
-    },
-    {
-      text: "Help me debug this TypeScript compilation error",
-      icon: <Sparkles className="h-4 w-4" />,
-      category: "debugging",
-      description: "Troubleshoot compilation issues"
-    }
-  ];
+  const suggestions = useMemo(
+    () => [
+      {
+        text: "Analyze Python code quality in my repository",
+        icon: <Search className="h-4 w-4" />,
+        category: "analysis",
+        description: "Review and improve code quality",
+      },
+      {
+        text: "Create a detailed plan for implementing a new feature",
+        icon: <Target className="h-4 w-4" />,
+        category: "planning",
+        description: "Step-by-step implementation plan",
+      },
+      {
+        text: "Research best practices for React performance optimization",
+        icon: <TrendingUp className="h-4 w-4" />,
+        category: "research",
+        description: "Performance optimization strategies",
+      },
+      {
+        text: "Help me debug this TypeScript compilation error",
+        icon: <Sparkles className="h-4 w-4" />,
+        category: "debugging",
+        description: "Troubleshoot compilation issues",
+      },
+    ],
+    []
+  );
 
   const categories = [
-    { name: "analysis", color: "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200" },
-    { name: "planning", color: "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200" },
-    { name: "research", color: "bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200" },
-    { name: "debugging", color: "bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200" }
+    {
+      name: "analysis",
+      color: "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200",
+    },
+    {
+      name: "planning",
+      color: "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200",
+    },
+    {
+      name: "research",
+      color: "bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200",
+    },
+    {
+      name: "debugging",
+      color: "bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200",
+    },
   ];
 
   const getCategoryColor = (category: string) => {
-    const found = categories.find(c => c.name === category);
+    const found = categories.find((c) => c.name === category);
     return found ? found.color : "bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200";
   };
 
@@ -116,9 +134,8 @@ const ChatSuggestionsComponent = ({
                   {suggestion.description}
                 </p>
               </div>
-            </div>
-          </PromptSuggestion>
-        ))}
+            </PromptSuggestion>
+          ))}
       </div>
 
       {/* Quick Actions - Responsive layout */}
@@ -126,6 +143,7 @@ const ChatSuggestionsComponent = ({
         <Button
           variant="outline"
           size="sm"
+          className="rounded-full px-4 py-1.5"
           onClick={() => handleSuggestionClick("Show me current project status")}
           className="text-xs sm:text-sm"
         >
@@ -134,6 +152,7 @@ const ChatSuggestionsComponent = ({
         <Button
           variant="outline"
           size="sm"
+          className="rounded-full px-4 py-1.5"
           onClick={() => handleSuggestionClick("List available agents and their capabilities")}
           className="text-xs sm:text-sm"
         >
@@ -142,6 +161,7 @@ const ChatSuggestionsComponent = ({
         <Button
           variant="outline"
           size="sm"
+          className="rounded-full px-4 py-1.5"
           onClick={() => handleSuggestionClick("Help me understand the current workflow")}
           className="text-xs sm:text-sm"
         >
