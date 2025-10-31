@@ -94,8 +94,8 @@ build-backend = "hatchling.build"
 allow-direct-references = true
 
 [tool.hatch.build.targets.wheel]
-packages = ["src/agentic_fleet", "src/agenticfleet"]
-only-include = ["src/agentic_fleet", "src/agenticfleet"]
+packages = ["src/agentic_fleet"]
+only-include = ["src/agentic_fleet"]
 
 [tool.hatch.build.targets.sdist]
 include = [
