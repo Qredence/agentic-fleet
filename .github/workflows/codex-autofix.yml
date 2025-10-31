@@ -63,7 +63,7 @@ jobs:
           touch "$HOME/.codex/${{ github.run_id }}.json"
       - name: Run Codex
         if: ${{ steps.openai-secret-check.outputs.has-secret == 'true' }}
-        uses: openai/codex-action@0cb7e270ce49747f8c51ebb61d1a169ed67b5764
+        uses: openai/codex-action@f3036cd34d4257a8df0c846c9c4988166860b304
         id: codex
         with:
           openai-api-key: ${{ secrets.OPENAI_API_KEY }}
