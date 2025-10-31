@@ -53,9 +53,9 @@ uv run agentic-fleet
 ## ✨ Key Features
 
 - **🎯 Magentic-Native Architecture** – Built on Microsoft Agent Framework's `MagenticBuilder` with intelligent planning and progress evaluation
-- **⚡ Dynamic Orchestration** – Spawn specialist agents on-demand based on task requirements with real-time UI updates
+- **⚡ Dynamic Orchestration** – Spawn specialist agents on-demand based on task requirements with async updates
 - **🤖 Specialized Agent Fleet** – Pre-configured researcher, coder, and analyst agents with domain-specific tools
-- **🌐 Modern Web Frontend** – React-based UI with SSE streaming for real-time agent responses and spawn events
+- **🌐 Modern Web Frontend** – React-based UI with async, non-streaming HTTP responses
 - **📓 Interactive Notebooks** – Jupyter notebooks for experimentation, prototyping, and learning
 - **💾 State Persistence** – Checkpoint system saves 50-80% on retry costs by avoiding redundant LLM calls
 - **🛡️ Human-in-the-Loop (HITL)** – Configurable approval gates for code execution, file operations, and sensitive actions
@@ -194,7 +194,7 @@ See **[Architecture Documentation](docs/architecture/magentic-fleet.md)** for de
 - **Backend**: Python 3.12+, Microsoft Agent Framework, FastAPI, Pydantic, Azure AI integration
 - **Frontend**: React 18.3+, TypeScript, Vite 7.x, shadcn/ui, Tailwind CSS, React Hook Form
 - **Package Management**: `uv` for Python dependencies, npm for frontend dependencies
-- **Communication**: Server-Sent Events (SSE) for real-time streaming between backend and frontend
+- **Communication**: Async HTTP (non-streaming) between backend and frontend
 - **Build System**: Hatchling for Python packages, Vite 7.x for frontend assets with optimized builds
 - **State Management**: Custom hook architecture with extracted, maintainable state management patterns
 - **Error Handling**: Exponential backoff retry logic and robust error recovery across all operations
@@ -328,6 +328,9 @@ Comprehensive documentation organized by audience:
 - **[Features](docs/features/)** – Implementation deep-dives
 - **[Contributing](docs/project/CONTRIBUTING.md)** – Development workflow & standards
 - **[API Reference](docs/api/)** – REST API & Python SDK
+- **[FastAPI Best Practices](docs/api/fastapi-best-practices.md)** – Database management, validation, exceptions ✨ NEW
+- **[Developer Guide](docs/api/developer-guide.md)** – Step-by-step development guide ✨ NEW
+- **[Configuration Guide](docs/configuration-guide.md)** – Settings and environment variables ✨ NEW
 
 **[📚 Documentation Index](docs/README.md)** – Complete navigation guide
 

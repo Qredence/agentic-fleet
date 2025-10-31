@@ -11,7 +11,7 @@ from __future__ import annotations
 import importlib.resources
 import os
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
 
 import yaml
 
@@ -76,7 +76,12 @@ class WorkflowFactory:
     def _load_config(self) -> dict[str, Any]:
         """Load YAML configuration from resolved path."""
         with open(self.config_path, encoding="utf-8") as f:
-            return yaml.safe_load(f)
+            data = yaml.safe_load(f)
+
+        if not isinstance(data, dict):
+            raise TypeError("Workflow configuration must be a mapping at the top level.")
+
+        return cast(dict[str, Any], data)
 
     def list_available_workflows(self) -> list[dict[str, Any]]:
         """List all available workflows from configuration."""
@@ -120,7 +125,7 @@ class WorkflowFactory:
             manager=workflow_data.get("manager", {}),
         )
 
-    def create_from_yaml(self, workflow_id: str) -> Any:  # type: ignore[type-arg]
+    def create_from_yaml(self, workflow_id: str) -> Any:
         """Create a workflow instance from YAML configuration.
 
         Args:

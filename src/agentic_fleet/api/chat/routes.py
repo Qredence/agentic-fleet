@@ -1,13 +1,12 @@
 from __future__ import annotations
 
 from collections.abc import AsyncGenerator
-from typing import cast
 
 from fastapi import APIRouter, HTTPException
 
 from agentic_fleet.api.chat.schemas import ChatMessagePayload, ChatRequest, ChatResponse
 from agentic_fleet.api.conversations.service import ConversationNotFoundError, get_store
-from agentic_fleet.api.workflows.service import create_magentic_fleet_workflow
+from agentic_fleet.api.workflows.service import WorkflowEvent, create_magentic_fleet_workflow
 
 router = APIRouter()
 
@@ -15,18 +14,18 @@ router = APIRouter()
 async def _run_workflow(message: str) -> str:
     workflow = create_magentic_fleet_workflow()
     parts: list[str] = []
-    events = cast(AsyncGenerator[dict, None], workflow.run(message))
+    events: AsyncGenerator[WorkflowEvent, None] = workflow.run(message)
     async for event in events:
         event_type = event.get("type")
         if event_type == "message.delta":
-            data = event.get("data") or {}
-            parts.append(str(data.get("delta", "")))
+            data = event.get("data", {})
+            delta = data.get("delta", "") if isinstance(data, dict) else ""
+            parts.append(str(delta))
         elif event_type == "message.done":
             break
     return "".join(parts)
 
 
-@router.post("/chat", response_model=ChatResponse)
 async def chat(req: ChatRequest) -> ChatResponse:
     store = get_store()
     try:
@@ -56,3 +55,6 @@ async def chat(req: ChatRequest) -> ChatResponse:
         message=assistant_message,
         messages=response_messages,
     )
+
+
+router.post("/chat", response_model=ChatResponse)(chat)

@@ -30,21 +30,18 @@ def _serialize_conversation(conversation: Conversation) -> dict[str, object]:
     }
 
 
-@router.post("/conversations", status_code=201)
 def create_conversation() -> dict[str, object]:
     store = get_store()
     conversation = store.create()
     return _serialize_conversation(conversation)
 
 
-@router.get("/conversations")
 def list_conversations() -> dict[str, list[dict[str, object]]]:
     store = get_store()
     items = [_serialize_conversation(conv) for conv in store.list()]
     return {"items": items}
 
 
-@router.get("/conversations/{conversation_id}")
 def get_conversation(conversation_id: str) -> dict[str, object]:
     store = get_store()
     try:
@@ -52,3 +49,8 @@ def get_conversation(conversation_id: str) -> dict[str, object]:
     except ConversationNotFoundError as exc:
         raise HTTPException(status_code=404, detail="Conversation not found") from exc
     return _serialize_conversation(conversation)
+
+
+router.post("/conversations", status_code=201)(create_conversation)
+router.get("/conversations")(list_conversations)
+router.get("/conversations/{conversation_id}")(get_conversation)

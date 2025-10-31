@@ -11,7 +11,13 @@ class ApprovalDecision(BaseModel):
     reason: str | None = None
 
 
-@router.post("/approvals/{request_id}")
-def submit_approval(request_id: str, decision: ApprovalDecision) -> dict:
+def submit_approval(request_id: str, decision: ApprovalDecision) -> dict[str, str]:
     # Stub: persist decision later; emit event to stream
-    return {"request_id": request_id, "status": "received", "decision": decision.decision}
+    return {
+        "request_id": request_id,
+        "status": "received",
+        "decision": decision.decision,
+    }
+
+
+router.post("/approvals/{request_id}")(submit_approval)

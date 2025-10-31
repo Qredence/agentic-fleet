@@ -6,7 +6,8 @@ help:
 	@echo "===================================="
 	@echo ""
 	@echo "Setup:"
-	@echo "  make install           Install dependencies (first time setup)"
+	@echo "  make install           Install/sync dependencies (first time or update)"
+	@echo "  make dev-setup         Full development setup (install + frontend + pre-commit)"
 	@echo "  make sync              Sync dependencies from lockfile"
 	@echo "  make frontend-install  Install frontend dependencies"
 	@echo ""
@@ -34,10 +35,18 @@ help:
 
 # Setup commands
 install:
-	uv pip install agentic-fleet[all] --pre -U
+	uv sync --pre --all-extras --upgrade
 	@echo "✓ Python dependencies installed"
 	@echo ""
 	@echo "Next: Run 'make frontend-install' to install frontend dependencies"
+
+dev-setup: install frontend-install pre-commit-install
+	@echo "✓ Development environment setup complete"
+	@echo ""
+	@echo "Next steps:"
+	@echo "  1. Create .env file: cp .env.example .env"
+	@echo "  2. Add your OPENAI_API_KEY to .env"
+	@echo "  3. Run 'make dev' to start the application"
 
 sync:
 	uv sync
@@ -80,7 +89,7 @@ test:
 	uv run pytest -v
 
 test-config:
-	uv run python tests/test_config.py
+	uv run python -c "from agenticfleet.api.workflow_factory import WorkflowFactory; factory = WorkflowFactory(); print(f'\u2713 Loaded {len(factory.list_available_workflows())} workflows from config')"
 
 test-e2e:
 	@echo "Running E2E tests (requires backend + frontend running)..."

@@ -1,16 +1,35 @@
 from __future__ import annotations
 
-from agenticfleet import create_collaboration_workflow
+from collections.abc import Iterable
+
+import pytest
+from fastapi.testclient import TestClient
+
+from agentic_fleet.api.app import create_app
 
 
-def test_collaboration_workflow_builds_expected_participants() -> None:
-    workflow = create_collaboration_workflow()
+@pytest.fixture
+def client() -> Iterable[TestClient]:
+    app = create_app()
+    with TestClient(app) as test_client:
+        yield test_client
 
-    executor_ids = {executor.id for executor in workflow.get_executors_list()}
 
-    assert executor_ids == {
-        "magentic_orchestrator",
-        "agent_researcher",
-        "agent_coder",
-        "agent_reviewer",
-    }
+def test_workflows_endpoint_lists_defined_workflows(client: TestClient) -> None:
+    response = client.get("/v1/workflows")
+
+    assert response.status_code == 200
+    data = response.json()
+    workflows = data["workflows"]
+    workflow_ids = {item["id"] for item in workflows}
+    assert workflow_ids == {"collaboration", "magentic_fleet"}
+
+
+def test_workflows_endpoint_returns_specific_config(client: TestClient) -> None:
+    response = client.get("/v1/workflows/magentic_fleet")
+
+    assert response.status_code == 200
+    config = response.json()
+    assert config["id"] == "magentic_fleet"
+    assert config["factory"] == "create_magentic_fleet_workflow"
+    assert set(config["agents"].keys()) >= {"planner", "executor", "coder", "verifier", "generator"}

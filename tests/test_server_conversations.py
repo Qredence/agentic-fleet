@@ -1,14 +1,12 @@
 from __future__ import annotations
 
-import json
-
 from fastapi import status
 from fastapi.testclient import TestClient
 
-from agenticfleet.server import create_app
+from agentic_fleet.server import create_app
 
 
-def test_conversation_creation_and_listing() -> None:
+def test_conversation_creation_listing_and_detail() -> None:
     with TestClient(create_app()) as client:
         create_response = client.post("/v1/conversations")
         assert create_response.status_code == status.HTTP_201_CREATED
@@ -16,109 +14,54 @@ def test_conversation_creation_and_listing() -> None:
         created = create_response.json()
         assert "id" in created
         assert isinstance(created["created_at"], int)
-        assert isinstance(created["updated_at"], int)
-        assert created["metadata"] == {}
+        assert created["messages"] == []
 
         list_response = client.get("/v1/conversations")
         assert list_response.status_code == status.HTTP_200_OK
 
         payload = list_response.json()
-        assert "data" in payload
-        assert len(payload["data"]) == 1
-        assert payload["data"][0]["id"] == created["id"]
+        assert "items" in payload
+        assert any(item["id"] == created["id"] for item in payload["items"])
 
-
-def test_conversation_detail_items_and_deletion() -> None:
-    with TestClient(create_app()) as client:
-        create_response = client.post(
-            "/v1/conversations",
-            json={"metadata": {"title": "Example", "priority": 1}},
-        )
-        assert create_response.status_code == status.HTTP_201_CREATED
-
-        created = create_response.json()
-        conversation_id = created["id"]
-
-        detail_response = client.get(f"/v1/conversations/{conversation_id}")
+        detail_response = client.get(f"/v1/conversations/{created['id']}")
         assert detail_response.status_code == status.HTTP_200_OK
-
         detail = detail_response.json()
-        assert detail["id"] == conversation_id
-        assert detail["metadata"].get("title") == "Example"
-        assert detail["metadata"].get("priority") == "1"
+        assert detail["id"] == created["id"]
+        assert detail["messages"] == []
 
-        items_response = client.get(f"/v1/conversations/{conversation_id}/items")
-        assert items_response.status_code == status.HTTP_200_OK
-        assert items_response.json() == {"data": []}
-
-        delete_response = client.delete(f"/v1/conversations/{conversation_id}")
-        assert delete_response.status_code == status.HTTP_204_NO_CONTENT
-
-        assert (
-            client.get(f"/v1/conversations/{conversation_id}").status_code
-            == status.HTTP_404_NOT_FOUND
-        )
-        assert (
-            client.get(f"/v1/conversations/{conversation_id}/items").status_code
-            == status.HTTP_404_NOT_FOUND
-        )
+        missing_response = client.get("/v1/conversations/does-not-exist")
+        assert missing_response.status_code == status.HTTP_404_NOT_FOUND
 
 
-def test_responses_endpoint_streams_and_updates_history() -> None:
+def test_chat_endpoint_appends_messages() -> None:
     with TestClient(create_app()) as client:
-        conv_response = client.post("/v1/conversations")
-        conversation_id = conv_response.json()["id"]
+        create_response = client.post("/v1/conversations")
+        conversation_id = create_response.json()["id"]
 
-        payload = {
-            "model": "dynamic_orchestration",
-            "conversation": conversation_id,
-            "input": [
-                {
-                    "type": "message",
-                    "role": "user",
-                    "content": [
-                        {
-                            "type": "input_text",
-                            "text": "Summarise AgenticFleet",
-                        }
-                    ],
-                }
-            ],
-        }
+        chat_response = client.post(
+            "/v1/chat",
+            json={"conversation_id": conversation_id, "message": "Summarise AgenticFleet"},
+        )
+        assert chat_response.status_code == status.HTTP_200_OK
 
-        with client.stream("POST", "/v1/responses", json=payload) as response:
-            assert response.status_code == status.HTTP_200_OK
-            assert response.headers.get("content-type", "").startswith("text/event-stream")
+        payload = chat_response.json()
+        assert payload["conversation_id"] == conversation_id
+        assert isinstance(payload["message"], str)
 
-            raw_events: list[str] = []
-            for chunk in response.iter_lines():
-                if not chunk:
-                    continue
-                text = chunk.decode() if isinstance(chunk, bytes) else chunk
-                if text.startswith("data: "):
-                    raw_events.append(text[6:])
+        messages = payload["messages"]
+        assert len(messages) == 2
+        assert [message["role"] for message in messages] == ["user", "assistant"]
 
-        assert raw_events, "Expected SSE events from responses endpoint"
-        assert raw_events[-1] == "[DONE]"
+        latest_detail = client.get(f"/v1/conversations/{conversation_id}")
+        assert latest_detail.status_code == status.HTTP_200_OK
+        detail_payload = latest_detail.json()
+        assert len(detail_payload["messages"]) == 2
 
-        workflow_event = json.loads(raw_events[0])
-        assert workflow_event["type"] == "workflow.event"
-        delta_event = json.loads(raw_events[1])
-        assert delta_event["type"] == "response.output_text.delta"
-        completion_event = json.loads(raw_events[2])
-        assert completion_event["type"] == "response.completed"
-        assert completion_event["response"]["conversation_id"] == conversation_id
 
-        history_response = client.get(f"/v1/conversations/{conversation_id}/items")
-        assert history_response.status_code == status.HTTP_200_OK
-
-        history_payload = history_response.json()
-        records = history_payload.get("data", [])
-        assert len(records) == 2
-        roles = {record.get("role") for record in records}
-        assert roles == {"user", "assistant"}
-
-        assistant_entry = next(record for record in records if record.get("role") == "assistant")
-        blocks = assistant_entry.get("content", [])
-        assert blocks and blocks[0].get("type") == "output_text"
-        assert "AgenticFleet" in blocks[0].get("text", "")
+def test_chat_endpoint_requires_existing_conversation() -> None:
+    with TestClient(create_app()) as client:
+        response = client.post(
+            "/v1/chat",
+            json={"conversation_id": "missing", "message": "Hello"},
+        )
+        assert response.status_code == status.HTTP_404_NOT_FOUND

@@ -105,7 +105,7 @@ uv run workflow
 uv run workflow
 
 # Direct Python execution
-python -m agenticfleet.cli.workflow_cli
+uv run python -m agentic_fleet.cli.app
 ```
 
 ### Interactive Flow

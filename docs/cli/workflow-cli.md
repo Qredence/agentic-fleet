@@ -20,8 +20,8 @@ The Workflow CLI provides an interactive terminal interface for testing and runn
 # Run the interactive CLI
 uv run workflow
 
-# Or directly
-python -m agenticfleet.cli.workflow_cli
+# Or directly with the module path
+uv run python -m agentic_fleet.cli.app
 ```
 
 ### Interactive Menu
