@@ -1,0 +1,17 @@
+{
+  "mcpServers": {
+    "DeepGraph React MCP": {
+      "command": "npx",
+      "args": ["-y", "mcp-code-graph@latest", "facebook/react"]
+    },
+    "prompt-kit": {
+      "description": "prompt-kit registry",
+      "type": "stdio",
+      "command": "npx",
+      "args": ["-y", "shadcn@canary", "registry:mcp"],
+      "env": {
+        "REGISTRY_URL": "https://www.prompt-kit.com/c/registry.json"
+      }
+    }
+  }
+}

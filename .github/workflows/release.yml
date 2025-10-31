@@ -63,7 +63,7 @@ jobs:
       name: pypi
       url: https://pypi.org/p/agentic-fleet
     permissions:
-      id-token: write  # IMPORTANT: mandatory for trusted publishing
+      id-token: write # IMPORTANT: mandatory for trusted publishing
 
     steps:
       - name: Download all the dists
@@ -86,7 +86,7 @@ jobs:
       name: testpypi
       url: https://test.pypi.org/p/agentic-fleet
     permissions:
-      id-token: write  # IMPORTANT: mandatory for trusted publishing
+      id-token: write # IMPORTANT: mandatory for trusted publishing
 
     steps:
       - name: Download all the dists

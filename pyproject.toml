@@ -1,17 +1,11 @@
 [project]
 name = "agentic-fleet"
-version = "0.5.4"
-description = "A multi-agent orchestration system built with Microsoft Agent Framework"
+version = "0.5.5"
+description = "Multi-agent orchestration system built with Microsoft Agent Framework's Magentic Fleet pattern"
 authors = [{ name = "Qredence", email = "contact@qredence.ai" }]
 readme = "README.md"
 license = { file = "LICENSE" }
-keywords = [
-    "agents",
-    "ai",
-    "microsoft-agent-framework",
-    "multi-agent",
-    "orchestration",
-]
+keywords = ["agents", "ai", "magentic"]
 classifiers = [
     "Development Status :: 4 - Beta",
     "Intended Audience :: Developers",
@@ -26,6 +20,7 @@ classifiers = [
 dependencies = [
     "azure-ai-agents>=1.2.0b5,<2.0",
     "azure-identity>=1.25.1,<2.0",
+    "azure-cosmos>=4.8.0,<5.0",
     "python-dotenv>=1.1.1,<2.0",
     "pyyaml>=6.0.3,<7.0",
     "requests>=2.32.5,<3.0",
@@ -39,11 +34,22 @@ dependencies = [
     "agent-framework-redis",
     "agent-framework-devui",
     "mem0ai==1.0.0",                    # Pinned for stable memory API
-    "rich>=13.7.0,<14.0",
+    "rich>=13.7.0,<14.2",
     "prompt-toolkit>=3.0.47,<4.0",
     "ipykernel>=7.0.1,<8.0",
-    "openai==2.5.0",                    # Pinned for OpenAI Responses API compatibility
+    "openai>=1.99.0,<2.6.1",            # Compatible with agent-framework requirements
     "azure-ai-evaluation>=1.12.0,<2.0",
+    "fastapi>=0.120.1,<1.0",
+    "uvicorn[standard]>=0.24.0",
+    "httpx>=0.24.0,<1.0",
+    "sse-starlette>=2.0.0",
+    "sqlalchemy>=2.0.0,<3.0",
+    "databases[asyncpg]>=0.7.0,<1.0",
+    "aiofiles>=24.1.0",
+    "pydantic-settings>=2.3.2,<3.0",
+    "redis[hiredis]>=6.4.0,<7.0",
+    "websockets>=15.0.1,<16.0",
+    "typer>=0.20.0",
 ]
 requires-python = ">=3.12,<4"
 
@@ -68,9 +74,11 @@ evaluation = ["azure-ai-evaluation>=1.12.0,<2.0"]
 all = ["agentic-fleet[azure,memory,ui,evaluation]"]
 
 [project.scripts]
-agentic-fleet = "agenticfleet.cli.dev_server:main"
-fleet = "agenticfleet.cli.repl:main"
-dynamic-fleet = "agenticfleet.workflows.dynamic.cli:main"
+agentic-fleet = "agentic_fleet.cli.app:app"
+fleet = "agentic_fleet.cli.app:app"
+dynamic-fleet = "agentic_fleet.cli.app:app"
+workflow = "agentic_fleet.cli.app:app"
+
 
 [project.urls]
 Homepage = "https://github.com/Qredence/agentic-fleet"
@@ -86,8 +94,8 @@ build-backend = "hatchling.build"
 allow-direct-references = true
 
 [tool.hatch.build.targets.wheel]
-packages = ["src/agenticfleet"]
-only-include = ["src/agenticfleet"]
+packages = ["src/agentic_fleet"]
+only-include = ["src/agentic_fleet"]
 
 [tool.hatch.build.targets.sdist]
 include = [
@@ -101,6 +109,12 @@ include = [
 exclude = ["/.github", "/var", "/logs", "/__pycache__", "*.pyc"]
 
 [tool.uv.sources]
+agent-framework-core = { git = "https://github.com/microsoft/agent-framework", subdirectory = "python/packages/core", tag = "v0.5.0" }
+agent-framework-a2a = { git = "https://github.com/microsoft/agent-framework", subdirectory = "python/packages/a2a", tag = "v0.5.0" }
+agent-framework-azure-ai = { git = "https://github.com/microsoft/agent-framework", subdirectory = "python/packages/azure-ai", tag = "v0.5.0" }
+agent-framework-mem0 = { git = "https://github.com/microsoft/agent-framework", subdirectory = "python/packages/mem0", tag = "v0.5.0" }
+agent-framework-redis = { git = "https://github.com/microsoft/agent-framework", subdirectory = "python/packages/redis", tag = "v0.5.0" }
+agent-framework-devui = { git = "https://github.com/microsoft/agent-framework", subdirectory = "python/packages/devui", tag = "v0.5.0" }
 
 # Development dependencies (uv's preferred format)
 [dependency-groups]
@@ -133,57 +147,32 @@ exclude = '''
 )/
 '''
 
+
 [tool.ruff]
 src = ["src"]
 target-version = "py312"
 line-length = 100
 
+
 [tool.ruff.lint]
-select = [
-    "E",   # pycodestyle errors
-    "F",   # pyflakes
-    "W",   # pycodestyle warnings
-    "I",   # isort (import sorting)
-    "UP",  # pyupgrade
-    "B",   # flake8-bugbear (common bugs)
-    "N",   # pep8-naming conventions
-    "A",   # flake8-builtins (shadowing)
-    "COM", # flake8-commas
-    "C4",  # flake8-comprehensions
-    "RUF", # Ruff-specific rules
-    "SIM", # flake8-simplify
-]
-ignore = [
-    "E501",   # line length (handled by formatter)
-    "COM812", # trailing comma (conflicts with formatter)
-]
+select = ["E", "F", "I", "UP", "B", "N", "A", "SIM", "RUF"]
+ignore = ["E501"]
+
 
 [tool.ruff.lint.per-file-ignores]
 "__init__.py" = ["F401"]
-"src/agenticfleet/haxui/api.py" = ["B008"]  # FastAPI Depends() in default args is standard pattern
+"notebooks/*.ipynb" = ["A002"] # Allow shadowing builtins in notebooks
 
 [tool.ruff.lint.isort]
 known-first-party = ["agenticfleet"]
 
 [tool.pytest.ini_options]
 pythonpath = "src"
-asyncio_mode = "auto"
 testpaths = ["tests"]
-addopts = [
-    "-m",
-    "not e2e",
-    "--strict-markers",
-    "--strict-config",
-    "-ra",              # show summary of all test outcomes
-]
-markers = [
-    "e2e: End-to-end tests requiring a running server (deselect with '-m \"not e2e\"')",
-    "slow: Tests that take significant time to run",
-    "integration: Integration tests requiring external services",
-]
+
 
 [tool.coverage.run]
-source = ["src/agenticfleet"]
+source = ["src/agentic_fleet", "src/agenticfleet"]
 omit = ["*/tests/*", "*/__pycache__/*", "*/.venv/*"]
 
 [tool.coverage.report]
@@ -198,45 +187,25 @@ exclude_lines = [
 
 [tool.mypy]
 python_version = "3.12"
-mypy_path = "src"
 strict = true
-warn_unused_configs = true
-warn_unreachable = true
-show_error_codes = true
-pretty = true
+packages = ["agentic_fleet", "agenticfleet"]
+plugins = ["pydantic.mypy"]
+# No per-module overrides; all modules must be fully type-checked and compliant.
+# Ensure all functions have explicit type hints and all imports are resolvable.
 
-# Per-module overrides
 [[tool.mypy.overrides]]
-module = ["tests.*", "azure.*", "mem0.*", "agent_framework.*", "examples.*"]
-ignore_missing_imports = true
+module = "agenticfleet.server"
+disallow_untyped_decorators = false
 
-# Pydantic models: BaseModel import issues with strict mode
 [[tool.mypy.overrides]]
-module = [
-    "agenticfleet.core.code_types",
-    "agenticfleet.agents.analyst.tools.data_analysis_tools",
-    "agenticfleet.agents.researcher.tools.web_search_tools",
-    "agenticfleet.haxui.models",
-    "agenticfleet.haxui.sse_events",
-    "agenticfleet.core.approval",
-]
-ignore_errors = true
+module = "agenticfleet.cli.memory_cli"
+disallow_untyped_decorators = false
 
-# Unused type: ignore comments and missing imports in optional features
 [[tool.mypy.overrides]]
-module = [
-    "agenticfleet.agents.analyst.agent",
-    "agenticfleet.agents.orchestrator.agent",
-    "agenticfleet.agents.researcher.agent",
-    "agenticfleet.agents.coder.agent",
-    "agenticfleet.fleet.magentic_fleet",
-    "agenticfleet.context.mem0_provider",
-    "agenticfleet.haxui.api",
-    "agenticfleet.haxui.conversations",
-    "agenticfleet.config.settings",
-    "agenticfleet.core.checkpoints",
-    "agenticfleet.workflows.workflow_as_agent",
-    "agenticfleet.cli.ui",
-    "agenticfleet.agents.base",
-]
-ignore_errors = true
+module = "agenticfleet.persistance.database"
+disallow_untyped_defs = false
+
+[tool.pydantic-mypy]
+init_forbid_extra = true
+init_typed = true
+warn_required_dynamic_aliases = true

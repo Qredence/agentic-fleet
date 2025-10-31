@@ -1,44 +1,44 @@
-name: '🔀 Gemini Dispatch'
+name: "🔀 Gemini Dispatch"
 
 on:
   pull_request_review_comment:
     types:
-      - 'created'
+      - "created"
   pull_request_review:
     types:
-      - 'submitted'
+      - "submitted"
   pull_request:
     types:
-      - 'opened'
+      - "opened"
   issues:
     types:
-      - 'opened'
-      - 'reopened'
+      - "opened"
+      - "reopened"
   issue_comment:
     types:
-      - 'created'
+      - "created"
 
 defaults:
   run:
-    shell: 'bash'
+    shell: "bash"
 
 jobs:
   debugger:
     if: |-
-     ${{ fromJSON(vars.DEBUG || vars.ACTIONS_STEP_DEBUG || false) }}
-    runs-on: 'ubuntu-latest'
+      ${{ fromJSON(vars.DEBUG || vars.ACTIONS_STEP_DEBUG || false) }}
+    runs-on: "ubuntu-latest"
     permissions:
-      contents: 'read'
+      contents: "read"
     steps:
-      - name: 'Print context for debugging'
+      - name: "Print context for debugging"
         env:
-          DEBUG_event_name: '${{ github.event_name }}'
-          DEBUG_event__action: '${{ github.event.action }}'
-          DEBUG_event__comment__author_association: '${{ github.event.comment.author_association }}'
-          DEBUG_event__issue__author_association: '${{ github.event.issue.author_association }}'
-          DEBUG_event__pull_request__author_association: '${{ github.event.pull_request.author_association }}'
-          DEBUG_event__review__author_association: '${{ github.event.review.author_association }}'
-          DEBUG_event: '${{ toJSON(github.event) }}'
+          DEBUG_event_name: "${{ github.event_name }}"
+          DEBUG_event__action: "${{ github.event.action }}"
+          DEBUG_event__comment__author_association: "${{ github.event.comment.author_association }}"
+          DEBUG_event__issue__author_association: "${{ github.event.issue.author_association }}"
+          DEBUG_event__pull_request__author_association: "${{ github.event.pull_request.author_association }}"
+          DEBUG_event__review__author_association: "${{ github.event.review.author_association }}"
+          DEBUG_event: "${{ toJSON(github.event) }}"
         run: |-
           env | grep '^DEBUG_'
 
@@ -58,35 +58,35 @@ jobs:
         github.event_name == 'issues' &&
         contains(fromJSON('["opened", "reopened"]'), github.event.action)
       )
-    runs-on: 'ubuntu-latest'
+    runs-on: "ubuntu-latest"
     permissions:
-      contents: 'read'
-      issues: 'write'
-      pull-requests: 'write'
+      contents: "read"
+      issues: "write"
+      pull-requests: "write"
     outputs:
-      command: '${{ steps.extract_command.outputs.command }}'
-      request: '${{ steps.extract_command.outputs.request }}'
-      additional_context: '${{ steps.extract_command.outputs.additional_context }}'
-      issue_number: '${{ github.event.pull_request.number || github.event.issue.number }}'
+      command: "${{ steps.extract_command.outputs.command }}"
+      request: "${{ steps.extract_command.outputs.request }}"
+      additional_context: "${{ steps.extract_command.outputs.additional_context }}"
+      issue_number: "${{ github.event.pull_request.number || github.event.issue.number }}"
     steps:
-      - name: 'Mint identity token'
-        id: 'mint_identity_token'
+      - name: "Mint identity token"
+        id: "mint_identity_token"
         if: |-
           ${{ vars.APP_ID }}
-        uses: 'actions/create-github-app-token@67018539274d69449ef7c02e8e71183d1719ab42' # ratchet:actions/create-github-app-token@v2
+        uses: "actions/create-github-app-token@67018539274d69449ef7c02e8e71183d1719ab42" # ratchet:actions/create-github-app-token@v2
         with:
-          app-id: '${{ vars.APP_ID }}'
-          private-key: '${{ secrets.APP_PRIVATE_KEY }}'
-          permission-contents: 'read'
-          permission-issues: 'write'
-          permission-pull-requests: 'write'
+          app-id: "${{ vars.APP_ID }}"
+          private-key: "${{ secrets.APP_PRIVATE_KEY }}"
+          permission-contents: "read"
+          permission-issues: "write"
+          permission-pull-requests: "write"
 
-      - name: 'Extract command'
-        id: 'extract_command'
-        uses: 'actions/github-script@ed597411d8f924073f98dfc5c65a23a2325f34cd' # ratchet:actions/github-script@v7
+      - name: "Extract command"
+        id: "extract_command"
+        uses: "actions/github-script@ed597411d8f924073f98dfc5c65a23a2325f34cd" # ratchet:actions/github-script@v7
         env:
-          EVENT_TYPE: '${{ github.event_name }}.${{ github.event.action }}'
-          REQUEST: '${{ github.event.comment.body || github.event.review.body || github.event.issue.body }}'
+          EVENT_TYPE: "${{ github.event_name }}.${{ github.event.action }}"
+          REQUEST: "${{ github.event.comment.body || github.event.review.body || github.event.issue.body }}"
         with:
           script: |
             const request = process.env.REQUEST;
@@ -111,93 +111,93 @@ jobs:
               core.setOutput('command', 'fallthrough');
             }
 
-      - name: 'Acknowledge request'
+      - name: "Acknowledge request"
         env:
-          GITHUB_TOKEN: '${{ steps.mint_identity_token.outputs.token || secrets.GITHUB_TOKEN || github.token }}'
-          ISSUE_NUMBER: '${{ github.event.pull_request.number || github.event.issue.number }}'
+          GITHUB_TOKEN: "${{ steps.mint_identity_token.outputs.token || secrets.GITHUB_TOKEN || github.token }}"
+          ISSUE_NUMBER: "${{ github.event.pull_request.number || github.event.issue.number }}"
           MESSAGE: |-
             🤖 Hi @${{ github.actor }}, I've received your request, and I'm working on it now! You can track my progress [in the logs](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}) for more details.
-          REPOSITORY: '${{ github.repository }}'
+          REPOSITORY: "${{ github.repository }}"
         run: |-
           gh issue comment "${ISSUE_NUMBER}" \
             --body "${MESSAGE}" \
             --repo "${REPOSITORY}"
 
   review:
-    needs: 'dispatch'
+    needs: "dispatch"
     if: |-
       ${{ needs.dispatch.outputs.command == 'review' }}
-    uses: './.github/workflows/gemini-review.yml'
+    uses: "./.github/workflows/gemini-review.yml"
     permissions:
-      contents: 'read'
-      id-token: 'write'
-      issues: 'write'
-      pull-requests: 'write'
+      contents: "read"
+      id-token: "write"
+      issues: "write"
+      pull-requests: "write"
     with:
-      additional_context: '${{ needs.dispatch.outputs.additional_context }}'
-    secrets: 'inherit'
+      additional_context: "${{ needs.dispatch.outputs.additional_context }}"
+    secrets: "inherit"
 
   triage:
-    needs: 'dispatch'
+    needs: "dispatch"
     if: |-
       ${{ needs.dispatch.outputs.command == 'triage' }}
-    uses: './.github/workflows/gemini-triage.yml'
+    uses: "./.github/workflows/gemini-triage.yml"
     permissions:
-      contents: 'read'
-      id-token: 'write'
-      issues: 'write'
-      pull-requests: 'write'
+      contents: "read"
+      id-token: "write"
+      issues: "write"
+      pull-requests: "write"
     with:
-      additional_context: '${{ needs.dispatch.outputs.additional_context }}'
-    secrets: 'inherit'
+      additional_context: "${{ needs.dispatch.outputs.additional_context }}"
+    secrets: "inherit"
 
   invoke:
-    needs: 'dispatch'
+    needs: "dispatch"
     if: |-
       ${{ needs.dispatch.outputs.command == 'invoke' }}
-    uses: './.github/workflows/gemini-invoke.yml'
+    uses: "./.github/workflows/gemini-invoke.yml"
     permissions:
-      contents: 'read'
-      id-token: 'write'
-      issues: 'write'
-      pull-requests: 'write'
+      contents: "read"
+      id-token: "write"
+      issues: "write"
+      pull-requests: "write"
     with:
-      additional_context: '${{ needs.dispatch.outputs.additional_context }}'
-    secrets: 'inherit'
+      additional_context: "${{ needs.dispatch.outputs.additional_context }}"
+    secrets: "inherit"
 
   fallthrough:
     needs:
-      - 'dispatch'
-      - 'review'
-      - 'triage'
-      - 'invoke'
+      - "dispatch"
+      - "review"
+      - "triage"
+      - "invoke"
     if: |-
       ${{ always() && !cancelled() && (failure() || needs.dispatch.outputs.command == 'fallthrough') }}
-    runs-on: 'ubuntu-latest'
+    runs-on: "ubuntu-latest"
     permissions:
-      contents: 'read'
-      issues: 'write'
-      pull-requests: 'write'
+      contents: "read"
+      issues: "write"
+      pull-requests: "write"
     steps:
-      - name: 'Mint identity token'
-        id: 'mint_identity_token'
+      - name: "Mint identity token"
+        id: "mint_identity_token"
         if: |-
           ${{ vars.APP_ID }}
-        uses: 'actions/create-github-app-token@67018539274d69449ef7c02e8e71183d1719ab42' # ratchet:actions/create-github-app-token@v2
+        uses: "actions/create-github-app-token@67018539274d69449ef7c02e8e71183d1719ab42" # ratchet:actions/create-github-app-token@v2
         with:
-          app-id: '${{ vars.APP_ID }}'
-          private-key: '${{ secrets.APP_PRIVATE_KEY }}'
-          permission-contents: 'read'
-          permission-issues: 'write'
-          permission-pull-requests: 'write'
+          app-id: "${{ vars.APP_ID }}"
+          private-key: "${{ secrets.APP_PRIVATE_KEY }}"
+          permission-contents: "read"
+          permission-issues: "write"
+          permission-pull-requests: "write"
 
-      - name: 'Send failure comment'
+      - name: "Send failure comment"
         env:
-          GITHUB_TOKEN: '${{ steps.mint_identity_token.outputs.token || secrets.GITHUB_TOKEN || github.token }}'
-          ISSUE_NUMBER: '${{ github.event.pull_request.number || github.event.issue.number }}'
+          GITHUB_TOKEN: "${{ steps.mint_identity_token.outputs.token || secrets.GITHUB_TOKEN || github.token }}"
+          ISSUE_NUMBER: "${{ github.event.pull_request.number || github.event.issue.number }}"
           MESSAGE: |-
             🤖 I'm sorry @${{ github.actor }}, but I was unable to process your request. Please [see the logs](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}) for more details.
-          REPOSITORY: '${{ github.repository }}'
+          REPOSITORY: "${{ github.repository }}"
         run: |-
           gh issue comment "${ISSUE_NUMBER}" \
             --body "${MESSAGE}" \

@@ -1,0 +1,11 @@
+{
+  "devDependencies": {
+    "@azure/identity": "^4.13.0",
+    "@azure/playwright": "^1.0.0",
+    "@playwright/test": "^1.56.1",
+    "@types/node": "^24.9.2",
+    "dotenv": "^17.2.3",
+    "prettier": "3.6.2"
+  },
+  "scripts": {}
+}

@@ -53,8 +53,9 @@ uv run agentic-fleet
 ## ✨ Key Features
 
 - **🎯 Magentic-Native Architecture** – Built on Microsoft Agent Framework's `MagenticBuilder` with intelligent planning and progress evaluation
+- **⚡ Dynamic Orchestration** – Spawn specialist agents on-demand based on task requirements with async updates
 - **🤖 Specialized Agent Fleet** – Pre-configured researcher, coder, and analyst agents with domain-specific tools
-- **🌐 Modern Web Frontend** – React-based UI with agent-as-workflow pattern for seamless agent interaction
+- **🌐 Modern Web Frontend** – React-based UI with async, non-streaming HTTP responses
 - **📓 Interactive Notebooks** – Jupyter notebooks for experimentation, prototyping, and learning
 - **💾 State Persistence** – Checkpoint system saves 50-80% on retry costs by avoiding redundant LLM calls
 - **🛡️ Human-in-the-Loop (HITL)** – Configurable approval gates for code execution, file operations, and sensitive actions
@@ -62,6 +63,8 @@ uv run agentic-fleet
 - **🧠 Long-term Memory** – Optional Mem0 integration with Azure AI Search for persistent context
 - **🔧 Declarative Configuration** – YAML-based agent configuration for non-engineers to tune prompts and tools
 - **🎨 Multiple Interfaces** – CLI, web frontend, and notebooks for different workflows
+- **🎭 Browser Automation** – Playwright MCP server for web testing, scraping, and automation (NEW!)
+- **🧩 Enhanced UI Components** – shadcn prompt-kit integration for modern chat interfaces (NEW!)
 
 ---
 
@@ -131,30 +134,47 @@ Explore example workflows in `notebooks/` including:
 
 ## 🎯 Current Status
 
-**✅ Production Ready - v0.5.4**
+## ✅ Production Ready - v0.5.5
 
 AgenticFleet is now **production-ready** with enterprise-grade features:
 
-- **🔒 Type Safe**: 100% mypy compliance, zero type errors
-- **🧪 Well Tested**: Configuration validation + orchestration tests
-- **📊 Observable**: Full OpenTelemetry tracing integrated
-- **🛡️ Secure**: Human-in-the-loop approval system
-- **⚡ Performant**: Checkpoint system reduces retry costs by 50-80%
-- **🎨 Modern UI**: Production-ready React frontend with real-time streaming
+- **🔒 Type Safe**: 100% mypy compliance, zero type errors across 83 files
+- **🧪 Well Tested**: Configuration validation + orchestration tests with robust frontend testing
+- **📊 Observable**: Full OpenTelemetry tracing integrated with comprehensive event streaming
+- **🛡️ Secure**: Human-in-the-loop approval system with configurable approval policies
+- **⚡ Performant**: Checkpoint system reduces retry costs by 50-80% + Vite 7.x build optimization
+- **🎨 Modern UI**: Production-ready React frontend with Vite 7.x, real-time streaming, and hook-based architecture
+- **🔄 Resilient**: Exponential backoff retry logic across all API operations for production reliability
 
 ---
 
 ## 🏗️ Architecture
 
-AgenticFleet implements the **Magentic One** workflow pattern with a manager-executor architecture:
+AgenticFleet implements the **Magentic One** workflow pattern with two orchestration modes:
 
-### Workflow Cycle
+### Workflow Patterns
+
+**Dynamic Orchestration** (Default for complex tasks):
+
+- Manager spawns specialist agents on-demand based on task requirements
+- Real-time spawn events stream to frontend via SSE
+- Agents created with specific roles, capabilities, and models
+- Suitable for: Complex multi-step tasks, exploratory analysis, adaptive workflows
+
+**Reflection Pattern** (Worker-Reviewer):
+
+- Worker agent executes task while reviewer provides feedback
+- Iterative refinement until quality criteria met
+- Suitable for: Code review, content editing, quality assurance
+
+### Dynamic Workflow Cycle
 
 1. **PLAN** – Manager analyzes task, gathers facts, creates structured action plan
-2. **EVALUATE** – Progress ledger checks: request satisfied? in a loop? who acts next?
-3. **ACT** – Selected specialist executes with domain-specific tools, returns findings
-4. **OBSERVE** – Manager reviews response, updates context, decides next action
-5. **REPEAT** – Continues until completion or limits reached (configurable in `workflow.yaml`)
+2. **SPAWN** – Manager issues directives to create specialist agents with specific capabilities
+3. **EVALUATE** – Progress ledger checks: request satisfied? in a loop? who acts next?
+4. **ACT** – Selected specialist executes with domain-specific tools, returns findings
+5. **OBSERVE** – Manager reviews response, updates context, decides next action
+6. **REPEAT** – Continues until completion or limits reached (configurable in `workflow.yaml`)
 
 ### Agent Specialists
 
@@ -168,6 +188,16 @@ AgenticFleet implements the **Magentic One** workflow pattern with a manager-exe
 All agents use **OpenAI Response API** format via `OpenAIResponsesClient` and return structured Pydantic models for reliable downstream parsing.
 
 See **[Architecture Documentation](docs/architecture/magentic-fleet.md)** for detailed design patterns.
+
+### Technology Stack
+
+- **Backend**: Python 3.12+, Microsoft Agent Framework, FastAPI, Pydantic, Azure AI integration
+- **Frontend**: React 18.3+, TypeScript, Vite 7.x, shadcn/ui, Tailwind CSS, React Hook Form
+- **Package Management**: `uv` for Python dependencies, npm for frontend dependencies
+- **Communication**: Async HTTP (non-streaming) between backend and frontend
+- **Build System**: Hatchling for Python packages, Vite 7.x for frontend assets with optimized builds
+- **State Management**: Custom hook architecture with extracted, maintainable state management patterns
+- **Error Handling**: Exponential backoff retry logic and robust error recovery across all operations
 
 ---
 
@@ -298,12 +328,26 @@ Comprehensive documentation organized by audience:
 - **[Features](docs/features/)** – Implementation deep-dives
 - **[Contributing](docs/project/CONTRIBUTING.md)** – Development workflow & standards
 - **[API Reference](docs/api/)** – REST API & Python SDK
+- **[FastAPI Best Practices](docs/api/fastapi-best-practices.md)** – Database management, validation, exceptions ✨ NEW
+- **[Developer Guide](docs/api/developer-guide.md)** – Step-by-step development guide ✨ NEW
+- **[Configuration Guide](docs/configuration-guide.md)** – Settings and environment variables ✨ NEW
 
 **[📚 Documentation Index](docs/README.md)** – Complete navigation guide
 
 ---
 
 ## 🆕 Release Notes
+
+### v0.5.5 (2025-10-29)
+
+- **Vite 7.x Migration**: Complete frontend infrastructure upgrade with modern build tooling
+- **Production-Grade Error Handling**: Exponential backoff retry logic across all API operations
+- **Frontend Hook Architecture**: Extracted custom hooks for maintainable state management (51.4% code reduction)
+- **Robust SSE Event Parsing**: Event buffer accumulation handles complex multi-line JSON structures
+- **Frontend-Backend Wiring**: Explicit conversation creation and comprehensive API integration
+- **Build Performance**: 13% faster build times (3.79s vs 4.66s) with optimized bundle size
+- **Enhanced Developer Experience**: Improved hot module replacement and error reporting
+- **Microsoft Agent Framework**: Updated to align with upstream commit e3aad8e4e0eb
 
 ### v0.5.4 (2025-10-23)
 
@@ -313,7 +357,6 @@ Comprehensive documentation organized by audience:
 - **Backend Cleanup**: Code quality improvements and architectural refinements
 - **Security Enhancements**: Fixed workflow permissions and expression injection vulnerabilities
 - **CI/CD Improvements**: Updated workflows for release triggering and code scanning
-- **Version Management**: Consistent v0.5.4 versioning across all documentation
 
 ---
 
