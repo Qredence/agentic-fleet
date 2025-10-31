@@ -1,30 +1,99 @@
-import { ErrorBoundary } from "@/components/features/shared";
-import { Toaster as Sonner } from "@/components/ui/shadcn/sonner";
-import { Toaster } from "@/components/ui/shadcn/toaster";
-import { TooltipProvider } from "@/components/ui/shadcn/tooltip";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Route, Routes } from "react-router-dom";
-import Index from "./pages/Index";
-import NotFound from "./pages/NotFound";
+import { Button } from "@/components/ui/button";
+import { ChatContainer } from "@/components/ui/chat-container";
+import { Message } from "@/components/ui/message";
+import {
+  PromptInput,
+  PromptInputAction,
+  PromptInputActions,
+  PromptInputTextarea,
+} from "@/components/ui/prompt-input";
+import { useEffect, useState } from "react";
 
-const queryClient = new QueryClient();
+function useHealth() {
+  const [status, setStatus] = useState<"ok" | "down" | "checking">("checking");
+  useEffect(() => {
+    fetch("/v1/health")
+      .then((r) => r.json())
+      .then(() => setStatus("ok"))
+      .catch(() => setStatus("down"));
+  }, []);
+  return status;
+}
 
-const App = () => (
-  <ErrorBoundary>
-    <QueryClientProvider client={queryClient}>
-      <TooltipProvider>
-        <Toaster />
-        <Sonner />
-        <BrowserRouter>
-          <Routes>
-            <Route path="/" element={<Index />} />
-            {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
-            <Route path="*" element={<NotFound />} />
-          </Routes>
-        </BrowserRouter>
-      </TooltipProvider>
-    </QueryClientProvider>
-  </ErrorBoundary>
-);
+export default function App() {
+  const [convId, setConvId] = useState<string | null>(null);
+  const [input, setInput] = useState("");
+  const [messages, setMessages] = useState<
+    Array<{ role: "user" | "assistant"; content: string }>
+  >([]);
+  const status = useHealth();
+  const disabled = status !== "ok" || !convId;
 
-export default App;
+  useEffect(() => {
+    fetch("/v1/conversations", { method: "POST" })
+      .then((r) => r.json())
+      .then((b) => setConvId(b.id));
+  }, []);
+
+  const send = async () => {
+    if (!convId || !input) return;
+    const text = input;
+    setInput("");
+    setMessages((prev) => [...prev, { role: "user", content: text }]);
+    const resp = await fetch("/v1/chat", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ conversation_id: convId, message: text }),
+    });
+    const body = await resp.json();
+    const reply = String(body.message ?? "");
+    setMessages((prev) => [...prev, { role: "assistant", content: reply }]);
+  };
+
+  return (
+    <div style={{ maxWidth: 880, margin: "2rem auto" }}>
+      <div
+        style={{
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+          marginBottom: 12,
+        }}
+      >
+        <h1 style={{ fontFamily: "ui-sans-serif, system-ui" }}>AgenticFleet</h1>
+        <span
+          style={{
+            fontSize: 12,
+            color:
+              status === "ok" ? "#0a0" : status === "down" ? "#a00" : "#666",
+          }}
+        >
+          backend: {status}
+        </span>
+      </div>
+
+      <ChatContainer>
+        {messages.map((m, idx) => (
+          <Message key={idx} role={m.role} content={m.content} />
+        ))}
+      </ChatContainer>
+
+      <div style={{ marginTop: 12 }}>
+        <PromptInput>
+          <PromptInputTextarea
+            placeholder="Type a message"
+            value={input}
+            onChange={(e) => setInput(e.currentTarget.value)}
+          />
+          <PromptInputActions>
+            <PromptInputAction tooltip="Send">
+              <Button disabled={disabled || !input} onClick={send}>
+                Send
+              </Button>
+            </PromptInputAction>
+          </PromptInputActions>
+        </PromptInput>
+      </div>
+    </div>
+  );
+}

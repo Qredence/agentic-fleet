@@ -7,10 +7,13 @@ __pycache__/
 build/
 develop-eggs/
 dist/
+src/frontend/dist/
 downloads/
 eggs/
 .eggs/
 lib/
+!src/frontend/src/lib/
+!src/frontend/src/lib/**
 lib64/
 parts/
 sdist/
@@ -66,3 +69,16 @@ AgenticFleet.code-workspace
 node_modules/
 
 .config/
+.kilocode/
+memory-bank/
+.pre-commit-config.yaml
+.github/agents/expert-react-frontend-engineer.agent.md
+.playwright-mcp/page-2025-10-29T05-03-16-472Z.png
+
+# Playwright
+/test-results/
+/playwright-report/
+/blob-report/
+/playwright/.cache/
+/playwright/.auth/
+.pre-commit-cache/
