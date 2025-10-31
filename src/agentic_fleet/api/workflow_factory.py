@@ -53,7 +53,7 @@ class WorkflowFactory:
                 return path
 
         # Priority 2: config/workflows.yaml (repo-level override)
-        repo_config = Path(__file__).parent.parent.parent.parent / "config" / "workflows.yaml"
+        repo_config = Path(__file__).resolve().parents[3] / "config" / "workflows.yaml"
         if repo_config.exists():
             return repo_config
 
