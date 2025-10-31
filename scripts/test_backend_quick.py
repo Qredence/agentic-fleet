@@ -1,15 +1,16 @@
-"""Quick test script to verify REST-driven backend workflow execution."""
+"""Quick test script to verify REST-driven backend workflow execution.
+
+To run this script, ensure that the 'src' directory is on your PYTHONPATH,
+or install the package in editable mode from the project root:
+    pip install -e .
+Or run with:
+    PYTHONPATH=src uv run python scripts/test_backend_quick.py
+"""
 
 from __future__ import annotations
 
 import asyncio
-import sys
 from dataclasses import asdict
-from pathlib import Path
-
-# Add src to path
-sys.path.insert(0, str(Path(__file__).parent.parent.parent / "src"))
-
 from agentic_fleet.api.conversations.service import get_store
 from agentic_fleet.api.workflow_factory import WorkflowFactory
 from agentic_fleet.api.workflows.service import WorkflowEvent, create_magentic_fleet_workflow
