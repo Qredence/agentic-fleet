@@ -14,15 +14,22 @@ router = APIRouter()
 async def _run_workflow(message: str) -> str:
     workflow = create_magentic_fleet_workflow()
     parts: list[str] = []
-    events: AsyncGenerator[WorkflowEvent, None] = workflow.run(message)
-    async for event in events:
-        event_type = event.get("type")
-        if event_type == "message.delta":
-            data = event.get("data", {})
-            delta = data.get("delta", "") if isinstance(data, dict) else ""
-            parts.append(str(delta))
-        elif event_type == "message.done":
-            break
+    try:
+        events: AsyncGenerator[WorkflowEvent, None] = workflow.run(message)
+        async for event in events:
+            event_type = event.get("type")
+            if event_type == "message.delta":
+                data = event.get("data", {})
+                delta = data.get("delta", "") if isinstance(data, dict) else ""
+                parts.append(str(delta))
+            elif event_type == "message.done":
+                break
+    except Exception as exc:
+        # Optionally log the error here if logging is available
+        raise HTTPException(
+            status_code=500,
+            detail=f"Workflow execution failed: {str(exc)}"
+        ) from exc
     return "".join(parts)
 
 
