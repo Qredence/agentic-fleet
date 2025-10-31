@@ -70,14 +70,14 @@ dev:
 	@echo "Press Ctrl+C to stop both services"
 	@echo ""
 	@trap 'kill 0' INT; \
-	uv run uvicorn agenticfleet.server:app --reload --port 8000 & \
+	uv run uvicorn agentic_fleet.server:app --reload --port 8000 & \
 	cd src/frontend && npm run dev
 
 
 # DevUI backend server only
 backend:
 	@echo "Starting minimal backend on http://localhost:8000"
-	uv run uvicorn agenticfleet.server:app --reload --port 8000
+	uv run uvicorn agentic_fleet.server:app --reload --port 8000
 
 # Frontend dev server only
 frontend-dev:
