@@ -109,12 +109,12 @@ include = [
 exclude = ["/.github", "/var", "/logs", "/__pycache__", "*.pyc"]
 
 [tool.uv.sources]
-agent-framework-core = { git = "https://github.com/microsoft/agent-framework", subdirectory = "python/packages/core", rev = "e3aad8e4e0eb9411c589a4c3879b8af1d9faa621" }
-agent-framework-a2a = { git = "https://github.com/microsoft/agent-framework", subdirectory = "python/packages/a2a", rev = "e3aad8e4e0eb9411c589a4c3879b8af1d9faa621" }
-agent-framework-azure-ai = { git = "https://github.com/microsoft/agent-framework", subdirectory = "python/packages/azure-ai", rev = "e3aad8e4e0eb9411c589a4c3879b8af1d9faa621" }
-agent-framework-mem0 = { git = "https://github.com/microsoft/agent-framework", subdirectory = "python/packages/mem0", rev = "e3aad8e4e0eb9411c589a4c3879b8af1d9faa621" }
-agent-framework-redis = { git = "https://github.com/microsoft/agent-framework", subdirectory = "python/packages/redis", rev = "e3aad8e4e0eb9411c589a4c3879b8af1d9faa621" }
-agent-framework-devui = { git = "https://github.com/microsoft/agent-framework", subdirectory = "python/packages/devui", rev = "e3aad8e4e0eb9411c589a4c3879b8af1d9faa621" }
+agent-framework-core = { git = "https://github.com/microsoft/agent-framework", subdirectory = "python/packages/core", tag = "v0.5.0" }
+agent-framework-a2a = { git = "https://github.com/microsoft/agent-framework", subdirectory = "python/packages/a2a", tag = "v0.5.0" }
+agent-framework-azure-ai = { git = "https://github.com/microsoft/agent-framework", subdirectory = "python/packages/azure-ai", tag = "v0.5.0" }
+agent-framework-mem0 = { git = "https://github.com/microsoft/agent-framework", subdirectory = "python/packages/mem0", tag = "v0.5.0" }
+agent-framework-redis = { git = "https://github.com/microsoft/agent-framework", subdirectory = "python/packages/redis", tag = "v0.5.0" }
+agent-framework-devui = { git = "https://github.com/microsoft/agent-framework", subdirectory = "python/packages/devui", tag = "v0.5.0" }
 
 # Development dependencies (uv's preferred format)
 [dependency-groups]
