@@ -17,7 +17,7 @@ from fastapi import HTTPException
 from pydantic import ValidationError
 
 from agentic_fleet.api.chat.schemas import ChatMessagePayload, ChatRequest, ChatResponse
-from agentic_fleet.api.chat.service import WorkflowService, get_workflow_service
+import agentic_fleet.api.chat.service as service_module
 from agentic_fleet.api.workflows.service import (
     StubMagenticFleetWorkflow,
     WorkflowEvent,
@@ -82,14 +82,14 @@ class TestWorkflowService:
 
     @pytest.mark.asyncio
     async def test_execute_workflow_returns_aggregated_result(self) -> None:
-        service = WorkflowService()
+        service = service_module.WorkflowService()
         result = await service.execute_workflow("Test message")
         # Stub workflow returns first 16 characters by default
         assert result == "Test message"
 
     @pytest.mark.asyncio
     async def test_process_workflow_events_aggregates_deltas(self) -> None:
-        service = WorkflowService()
+        service = service_module.WorkflowService()
 
         async def mock_events() -> AsyncGenerator[WorkflowEvent, None]:
             yield {"type": "message.delta", "data": {"delta": "Hello "}}
@@ -101,7 +101,7 @@ class TestWorkflowService:
 
     @pytest.mark.asyncio
     async def test_process_workflow_events_stops_at_done(self) -> None:
-        service = WorkflowService()
+        service = service_module.WorkflowService()
 
         async def mock_events() -> AsyncGenerator[WorkflowEvent, None]:
             yield {"type": "message.delta", "data": {"delta": "Keep"}}
@@ -113,7 +113,7 @@ class TestWorkflowService:
 
     @pytest.mark.asyncio
     async def test_execute_workflow_raises_http_exception_on_error(self) -> None:
-        service = WorkflowService()
+        service = service_module.WorkflowService()
 
         # Create a mock workflow that raises an exception
         class FailingWorkflow:
@@ -122,7 +122,7 @@ class TestWorkflowService:
                 yield  # pragma: no cover
 
         # Monkey-patch the create function temporarily
-        import agentic_fleet.api.chat.service as service_module
+        # service_module already imported above
 
         original_create = service_module.create_magentic_fleet_workflow
         service_module.create_magentic_fleet_workflow = lambda: FailingWorkflow()
@@ -136,6 +136,6 @@ class TestWorkflowService:
             service_module.create_magentic_fleet_workflow = original_create
 
     def test_get_workflow_service_returns_singleton(self) -> None:
-        service1 = get_workflow_service()
-        service2 = get_workflow_service()
+        service1 = service_module.get_workflow_service()
+        service2 = service_module.get_workflow_service()
         assert service1 is service2
