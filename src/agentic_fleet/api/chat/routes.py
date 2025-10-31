@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import logging
 from collections.abc import AsyncGenerator
 
 from fastapi import APIRouter, HTTPException
@@ -7,6 +8,8 @@ from fastapi import APIRouter, HTTPException
 from agentic_fleet.api.chat.schemas import ChatMessagePayload, ChatRequest, ChatResponse
 from agentic_fleet.api.conversations.service import ConversationNotFoundError, get_store
 from agentic_fleet.api.workflows.service import WorkflowEvent, create_magentic_fleet_workflow
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter()
 
@@ -25,10 +28,10 @@ async def _run_workflow(message: str) -> str:
             elif event_type == "message.done":
                 break
     except Exception as exc:
-        # Optionally log the error here if logging is available
+        logger.error("Workflow execution failed", exc_info=True)
         raise HTTPException(
             status_code=500,
-            detail=f"Workflow execution failed: {str(exc)}"
+            detail="An error occurred while processing your request"
         ) from exc
     return "".join(parts)
 
