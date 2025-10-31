@@ -1,43 +1,18 @@
 from __future__ import annotations
 
-import logging
-from collections.abc import AsyncGenerator
-
 from fastapi import APIRouter, HTTPException
 
 from agentic_fleet.api.chat.schemas import ChatMessagePayload, ChatRequest, ChatResponse
+from agentic_fleet.api.chat.service import get_workflow_service
 from agentic_fleet.api.conversations.service import ConversationNotFoundError, get_store
-from agentic_fleet.api.workflows.service import WorkflowEvent, create_magentic_fleet_workflow
-
-logger = logging.getLogger(__name__)
 
 router = APIRouter()
 
 
-async def _run_workflow(message: str) -> str:
-    workflow = create_magentic_fleet_workflow()
-    parts: list[str] = []
-    try:
-        events: AsyncGenerator[WorkflowEvent, None] = workflow.run(message)
-        async for event in events:
-            event_type = event.get("type")
-            if event_type == "message.delta":
-                data = event.get("data", {})
-                delta = data.get("delta", "") if isinstance(data, dict) else ""
-                parts.append(str(delta))
-            elif event_type == "message.done":
-                break
-    except Exception as exc:
-        logger.error("Workflow execution failed", exc_info=True)
-        raise HTTPException(
-            status_code=500,
-            detail="An error occurred while processing your request"
-        ) from exc
-    return "".join(parts)
-
-
 async def chat(req: ChatRequest) -> ChatResponse:
     store = get_store()
+    workflow_service = get_workflow_service()
+
     try:
         store.get(req.conversation_id)
     except ConversationNotFoundError as exc:
@@ -45,7 +20,7 @@ async def chat(req: ChatRequest) -> ChatResponse:
 
     store.add_message(req.conversation_id, role="user", content=req.message)
 
-    assistant_message = await _run_workflow(req.message)
+    assistant_message = await workflow_service.execute_workflow(req.message)
     store.add_message(req.conversation_id, role="assistant", content=assistant_message)
 
     conversation = store.get(req.conversation_id)

@@ -5,6 +5,7 @@ REST-first architecture:
 
 - Pydantic validation for chat request/response models
 - Behaviour of the stub workflow used by the chat route
+- WorkflowService for separating concerns
 """
 
 from __future__ import annotations
@@ -12,11 +13,14 @@ from __future__ import annotations
 from collections.abc import AsyncGenerator
 
 import pytest
+from fastapi import HTTPException
 from pydantic import ValidationError
 
 from agentic_fleet.api.chat.schemas import ChatMessagePayload, ChatRequest, ChatResponse
+from agentic_fleet.api.chat.service import WorkflowService, get_workflow_service
 from agentic_fleet.api.workflows.service import (
     StubMagenticFleetWorkflow,
+    WorkflowEvent,
     create_magentic_fleet_workflow,
 )
 
@@ -71,3 +75,67 @@ async def test_stub_workflow_yields_delta_then_done() -> None:
 
     assert [event["type"] for event in events] == ["message.delta", "message.done"]
     assert "delta" in events[0]["data"]
+
+
+class TestWorkflowService:
+    """Tests for WorkflowService class."""
+
+    @pytest.mark.asyncio
+    async def test_execute_workflow_returns_aggregated_result(self) -> None:
+        service = WorkflowService()
+        result = await service.execute_workflow("Test message")
+        # Stub workflow returns first 16 characters by default
+        assert result == "Test message"
+
+    @pytest.mark.asyncio
+    async def test_process_workflow_events_aggregates_deltas(self) -> None:
+        service = WorkflowService()
+
+        async def mock_events() -> AsyncGenerator[WorkflowEvent, None]:
+            yield {"type": "message.delta", "data": {"delta": "Hello "}}
+            yield {"type": "message.delta", "data": {"delta": "World"}}
+            yield {"type": "message.done"}
+
+        result = await service.process_workflow_events(mock_events())
+        assert result == "Hello World"
+
+    @pytest.mark.asyncio
+    async def test_process_workflow_events_stops_at_done(self) -> None:
+        service = WorkflowService()
+
+        async def mock_events() -> AsyncGenerator[WorkflowEvent, None]:
+            yield {"type": "message.delta", "data": {"delta": "Keep"}}
+            yield {"type": "message.done"}
+            yield {"type": "message.delta", "data": {"delta": "Skip"}}
+
+        result = await service.process_workflow_events(mock_events())
+        assert result == "Keep"
+
+    @pytest.mark.asyncio
+    async def test_execute_workflow_raises_http_exception_on_error(self) -> None:
+        service = WorkflowService()
+
+        # Create a mock workflow that raises an exception
+        class FailingWorkflow:
+            async def run(self, message: str) -> AsyncGenerator[WorkflowEvent, None]:
+                raise RuntimeError("Workflow failed")
+                yield  # pragma: no cover
+
+        # Monkey-patch the create function temporarily
+        import agentic_fleet.api.chat.service as service_module
+
+        original_create = service_module.create_magentic_fleet_workflow
+        service_module.create_magentic_fleet_workflow = lambda: FailingWorkflow()
+
+        try:
+            with pytest.raises(HTTPException) as exc_info:
+                await service.execute_workflow("Test")
+            assert exc_info.value.status_code == 500
+            assert exc_info.value.detail == "An error occurred while processing your request"
+        finally:
+            service_module.create_magentic_fleet_workflow = original_create
+
+    def test_get_workflow_service_returns_singleton(self) -> None:
+        service1 = get_workflow_service()
+        service2 = get_workflow_service()
+        assert service1 is service2
