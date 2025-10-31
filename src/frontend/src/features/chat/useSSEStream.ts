@@ -52,6 +52,7 @@ export function useSSEStream() {
           }
 
           let buffer = "";
+          let currentEvent = "";
 
           while (true) {
             const { done, value } = await reader.read();
@@ -66,7 +67,9 @@ export function useSSEStream() {
             buffer = lines.pop() || ""; // Keep incomplete line in buffer
 
             for (const line of lines) {
-              if (line.startsWith("data: ")) {
+              if (line.startsWith("event: ")) {
+                currentEvent = line.slice(7);
+              } else if (line.startsWith("data: ")) {
                 const data = line.slice(6);
                 try {
                   const parsed = JSON.parse(data) as SSEMessage;
@@ -78,8 +81,16 @@ export function useSSEStream() {
                     return;
                   }
                 } catch (e) {
-                  console.error("Failed to parse SSE message:", e);
+                  console.error(
+                    "Failed to parse SSE message:",
+                    e,
+                    "data:",
+                    data,
+                  );
                 }
+              } else if (line === "") {
+                // Empty line signals end of event
+                currentEvent = "";
               }
             }
           }
