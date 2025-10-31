@@ -74,9 +74,10 @@ evaluation = ["azure-ai-evaluation>=1.12.0,<2.0"]
 all = ["agentic-fleet[azure,memory,ui,evaluation]"]
 
 [project.scripts]
-agentic-fleet = "agenticfleet.cli.repl:main"
-fleet = "agenticfleet.cli.repl:main"
-dynamic-fleet = "agenticfleet.cli.dynamic:main"
+agentic-fleet = "agentic_fleet.cli.app:app"
+fleet = "agentic_fleet.cli.app:app"
+dynamic-fleet = "agentic_fleet.cli.app:app"
+workflow = "agentic_fleet.cli.app:app"
 
 
 [project.urls]
@@ -93,8 +94,8 @@ build-backend = "hatchling.build"
 allow-direct-references = true
 
 [tool.hatch.build.targets.wheel]
-packages = ["src/agenticfleet"]
-only-include = ["src/agenticfleet"]
+packages = ["src/agentic_fleet", "src/agenticfleet"]
+only-include = ["src/agentic_fleet", "src/agenticfleet"]
 
 [tool.hatch.build.targets.sdist]
 include = [
@@ -171,7 +172,7 @@ testpaths = ["tests"]
 
 
 [tool.coverage.run]
-source = ["src/agenticfleet"]
+source = ["src/agentic_fleet", "src/agenticfleet"]
 omit = ["*/tests/*", "*/__pycache__/*", "*/.venv/*"]
 
 [tool.coverage.report]
@@ -187,7 +188,7 @@ exclude_lines = [
 [tool.mypy]
 python_version = "3.12"
 strict = true
-packages = ["agenticfleet"]
+packages = ["agentic_fleet", "agenticfleet"]
 plugins = ["pydantic.mypy"]
 # No per-module overrides; all modules must be fully type-checked and compliant.
 # Ensure all functions have explicit type hints and all imports are resolvable.

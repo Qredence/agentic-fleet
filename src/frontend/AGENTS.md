@@ -1,348 +1,56 @@
-# AGENTS.md – Frontend (React / Vite / TypeScript)
-
-> Agent-focused guide for working inside `src/frontend/`. Complements root `AGENTS.md`. Optimized for autonomous & semi-autonomous coding agents.
-
----
-
-## Quick Start
-
-**Essential frontend commands:**
-
-```bash
-# From repository root:
-make frontend-install  # Install dependencies
-make frontend-dev      # Start dev server (port 5173)
-
-# From src/frontend/:
-npm install      # Install dependencies
-npm run dev      # Start dev server
-npm run build    # Production build
-npm run lint     # Check code
-npm run lint:fix # Auto-fix issues
-
-# Test integration with backend:
-# Terminal 1: uv run agentic-fleet (full stack)
-# OR Terminal 1: make haxui-server (backend only)
-# Terminal 2: npm run dev (if not using agentic-fleet)
-```
-
----
-
-## 1. Purpose & Scope
-
-The frontend provides a **real-time multi-agent interaction UI** with:
-
-- SSE streaming of Responses API events (OpenAI-compatible)
-- HITL (Human-in-the-Loop) approval dialogs
-- Workflow model selection (Fleet / Reflection / Dynamic)
-- Multi-pane code + analysis + chat surfaces
-
-This file documents how an agent should safely modify, extend, and validate the frontend without breaking backend contracts.
-
----
-
-## 2. Tech Stack Summary
-
-| Area       | Choice                                        | Notes                                             |
-| ---------- | --------------------------------------------- | ------------------------------------------------- |
-| Bundler    | Vite 7.1.12                                   | Fast TS HMR, env via `import.meta.env`            |
-| Framework  | React 18                                      | Functional components + hooks only                |
-| Language   | TypeScript                                    | Strict; avoid `any` unless isolated adapter layer |
-| UI Library | shadcn/ui + Radix Primitives                  | Accessible component primitives                   |
-| Styling    | Tailwind CSS + utility patterns               | Prefer composition over custom CSS                |
-| Animations | Framer Motion 12.23.24                        | Layout and component animations                   |
-| State      | Local + lightweight stores (`zustand`)        | Keep ephemeral vs persistent separate             |
-| Data / IO  | Fetch + React Query (`@tanstack/react-query`) | SSE stream manually handled                       |
-| Markdown   | `react-markdown` + `shiki`                    | Syntax highlighting for streamed code             |
-| Charts     | Recharts                                      | Used in analyst outputs                           |
-
----
-
-## 3. Directory Layout (High Signal)
-
-```text
-src/frontend/
-├── src/
-│   ├── components/
-│   │   ├── features/           # Feature-specific components (business logic)
-│   │   │   ├── chat/          # Chat feature: ChatContainer, ChatMessage, ChatInput, ChatHeader, ChatSidebar
-│   │   │   ├── approval/      # HITL approval: ApprovalPrompt
-│   │   │   └── shared/        # Shared features: ErrorBoundary, ConnectionStatusIndicator
-│   │   ├── ai/                # AI visualization components (plans, reasoning, tools, steps, streaming)
-│   │   └── ui/
-│   │       ├── shadcn/        # shadcn/ui primitives (DON'T MODIFY - managed by CLI)
-│   │       └── custom/        # App-specific UI components (safe to modify)
-│   ├── layouts/               # Layout components with framer-motion animations
-│   │   ├── MainLayout.tsx     # Main application layout wrapper
-│   │   ├── ChatLayout.tsx     # Chat-specific layout with sidebar/header
-│   │   └── index.ts           # Layout barrel exports
-│   ├── hooks/                 # Custom React hooks
-│   ├── lib/                   # Helper utilities and API clients
-│   │   ├── hooks/            # Specialized hooks
-│   │   │   ├── useMessageState.ts      # Message accumulation & streaming
-│   │   │   ├── useApprovalWorkflow.ts  # HITL approval management
-│   │   │   ├── useConversationHistory.ts # Conversation loading
-│   │   │   └── useSSEConnection.ts      # SSE event types
-│   │   ├── types/            # Type definitions
-│   │   │   └── contracts.ts  # Backend contract types
-│   │   ├── agent-utils.ts    # Agent role/color mapping
-│   │   ├── api-config.ts     # API endpoints & URL builder
-│   │   ├── types.ts          # Core frontend types
-│   │   ├── utils.ts          # Utility functions
-│   │   └── use-fastapi-chat.ts # Main chat orchestration hook
-│   ├── pages/                 # Router-level pages (Index, NotFound)
-│   └── app/                   # App state (chat-store, API primitives)
-├── index.html                 # Vite entry
-├── vite.config.ts             # Build + alias config (@/ alias → src/)
-├── tailwind.config.ts         # Tailwind + shadcn integration
-└── components.json            # shadcn component registry
-
-**Import Conventions:**
-- Features: `import { ChatContainer } from '@/components/features/chat'` (barrel exports)
-- AI: `import { Plan, Reasoning } from '@/components/ai'` (barrel exports)
-- Layouts: `import { MainLayout, ChatLayout } from '@/layouts'` (barrel exports)
-- shadcn: `import { Button } from '@/components/ui/shadcn/button'` (individual imports, no barrel)
-- Custom UI: `import { Message } from '@/components/ui/custom/message'` (individual imports)
-- Lib: `import { mapRoleToAgent } from '@/lib/agent-utils'` (individual imports)
+# AGENTS.md
 
-**Component Ownership:**
-- `features/` - Safe to modify, application business logic
-- `ai/` - Safe to modify, AI-specific visualization
-- `layouts/` - Safe to modify, uses framer-motion for animations
-- `ui/shadcn/` - DO NOT MODIFY, use shadcn CLI for updates
-- `ui/custom/` - Safe to modify, app-specific UI building blocks
-- `lib/` - Safe to modify, utility functions and API clients
-```
+## Overview
 
----
+The frontend is a Vite 5 + React 18 application using TypeScript, shadcn/ui components, Tailwind utilities, and SSE streams from the FastAPI backend. It lives entirely in this folder and expects the backend API at `http://localhost:8000/v1`. Anything that mutates chat state, renders streaming responses, or touches shared UI primitives belongs here.
 
-## 4. Environment & Configuration
+## Environment & Setup
 
-Runtime env values are injected via Vite (`import.meta.env`). Avoid hardcoding backend URLs.
+1. Install Node.js 20+ (the repo assumes npm 10+). If you are using Volta or nvm, pin to the version declared in `.tool-versions` when available.
+2. Install dependencies once via `npm install` (or from repo root with `make frontend-install`).
+3. Ensure the backend is running (`make dev` or `uv run uvicorn agentic_fleet.server:app --reload --port 8000`) before exercising API-dependent features.
+4. Environment variables for the frontend reside in `src/frontend/.env` (not committed). Copy `index.html` meta tags or `vite.config.ts` aliases carefully if you need additional variables; Vite requires them to be prefixed with `VITE_`.
 
-| Variable             | Typical Value           | Purpose               |
-| -------------------- | ----------------------- | --------------------- |
-| `VITE_BACKEND_URL`   | `http://localhost:8000` | API / SSE base URL    |
-| `VITE_DEFAULT_MODEL` | `fleet`                 | Initial workflow mode |
+## Development Commands
 
-If adding new env keys:
+- Start hot reload: `npm run dev` (defaults to port 5173). Use `npm run dev -- --host` when testing from other devices.
+- Build for production: `npm run build` emits static assets in `dist/`.
+- Preview built assets locally: `npm run preview -- --port 5173`.
+- Format code: `npm run format` (prettier over the entire tree).
+- Linting is currently a stub (`npm run lint`), so rely on TypeScript and editor tooling; update the script before enabling additional linters.
 
-1. Add to `.env.local` (never commit secrets)
-2. Prefix with `VITE_`
-3. Reference using `import.meta.env.VITE_<NAME>`
-4. Update documentation + fallback logic
+## Testing Strategy
 
----
+- Component and hook tests use Vitest with React Testing Library. Run `npm run test` for a one-off pass or `npm run test -- --watch` for interactive mode.
+- Tests requiring DOM APIs rely on jsdom; avoid using browser-only globals unless they are polyfilled in `src/frontend/test/setup.ts`.
+- Keep network calls mocked. Hooks such as `useChatClient` wrap API fetches; expose the HTTP layer through dependency injection if you need deterministic tests.
 
-## 5. Commands
+## UI & State Conventions
 
-```bash
-# Install deps (from repo root)
-make frontend-install
-# or manually
-cd src/frontend && npm install
+- Shared primitives live under `src/components/ui/`; extend them rather than duplicating markup in feature-level components.
+- Feature code (e.g. `features/chat/`) combines hooks (`useChatController.ts`) with presentational components. Maintain this split to avoid large, stateful monoliths.
+- Tailwind is configured in `tailwind.config.ts`; favor utility classes with `tailwind-merge` helpers, and avoid inline styles except for dynamic values that cannot be expressed via classes.
+- Syntax highlighting leverages Shiki; when adding languages, update `src/components/ui/code-block.tsx` accordingly.
 
-# Dev server (5173 or 8080 depending on config)
-npm run dev
+## API Integration Notes
 
-# Production build
-npm run build
+- All HTTP calls flow through the chat client utilities in `features/chat/`. Respect the existing SSE parsing logic in `response-stream.tsx`; new endpoints should follow the same incremental chunk handling.
+- Backend routes live under `/v1/...`. Keep URL literals centralized in `useChatClient.ts` to make future rewrites easier.
+- When adjustments require backend changes, coordinate with `src/agentic_fleet/AGENTS.md` policies—especially around workflow IDs and approval flows.
 
-# Development (unminified) build
-npm run build:dev
+## Quick Reference
 
-# Preview build output
-npm run preview
+- `npm install` — Install dependencies.
+- `npm run dev` — Start the Vite dev server.
+- `npm run test` — Run Vitest suite.
+- `npm run test -- --watch` — Watch mode for tests.
+- `npm run build` — Generate production bundle in `dist/`.
+- `npm run preview -- --port 5173` — Serve built assets locally.
+- `npm run format` — Format source files with Prettier.
 
-# Lint / format
-npm run lint
-npm run lint:fix
-npm run format
-```
+## Troubleshooting
 
----
-
-## 6. Streaming & Event Model
-
-The backend emits OpenAI **Responses API** style SSE events. Common types consumed:
-
-| Event Type                  | Purpose                  | Action in UI                    |
-| --------------------------- | ------------------------ | ------------------------------- |
-| `content_block_delta`       | Partial token text       | Append to active message buffer |
-| `response_output_item_done` | Message segment complete | Seal current block              |
-| `approval_required`         | HITL operation pending   | Trigger approval modal & queue  |
-| `tool_call_delta`           | Tool streaming output    | Render tool scratch panel       |
-| `response_completed`        | Workflow finished        | Unlock input / flush state      |
-
-Parser MUST be resilient to unknown event types (log + ignore). When modifying event handling:
-
-- Keep backward compatibility (feature-detect new types)
-- Do not block UI on unknown payloads
-
----
-
-## 7. HITL Approval Flow (Frontend Perspective)
-
-1. Receive `approval_required` event with `request_id`, `operation_type`, `details`.
-2. Store in approval queue store (`zustand`).
-3. Present modal (include operation preview — e.g. code snippet, dataset summary).
-4. User picks APPROVE / REJECT / MODIFY.
-5. POST decision to backend endpoint (ensure proper JSON schema):
-
-```json
-{
-  "request_id": "...",
-  "decision": "approve|reject|modify",
-  "modified_data": { "code": "<optional>" }
-}
-```
-
-6. Disable buttons while awaiting 200 OK.
-7. Optimistically reflect decision (with rollback on failure).
-
-Never silently drop approval responses. Log transport errors with user hint.
-
----
-
-## 8. State Management Guidance
-
-| Category          | Strategy                     | Notes                                   |
-| ----------------- | ---------------------------- | --------------------------------------- |
-| Streaming buffer  | Local component state        | Reset per session/task                  |
-| Workflow metadata | Zustand store                | Mode, active agent, task status         |
-| Approvals         | Dedicated zustand slice      | Queue semantics FIFO                    |
-| Caching (history) | React Query / ephemeral list | Persist only if backend supports replay |
-
-Avoid global stores for transient UI-only toggles (favor local state + props).
-
----
-
-## 9. Type Safety Patterns
-
-- Mirror backend event types in a single `types/events.ts` (union discriminant: `type`).
-- Use exhaustive `switch(event.type)` + `never` fallback to catch unhandled cases.
-- No `any`; if shape unknown, narrow safely: `if ('operation_type' in ev)`.
-- Export stable prop interfaces for complex components.
-
----
-
-## 10. Adding UI Components
-
-Checklist:
-
-1. Co-locate in `components/` (or domain folder if specialized).
-2. Provide semantic, accessible markup (label associations, roles).
-3. Avoid coupling to fetch layer; accept injected callbacks.
-4. Export from an `index.ts` barrel if reused widely.
-5. Add story / usage example (placeholder: optional future Storybook integration).
-
----
-
-## 11. Theming & Styling
-
-- Prefer Tailwind utility classes; avoid deep CSS overrides.
-- Use `cn()` helper or `clsx` + `tailwind-merge` to compose dynamic class sets.
-- For new design tokens, extend `tailwind.config.ts` (do **not** inline repeated arbitrary values).
-
----
-
-## 12. Performance Considerations
-
-| Area                 | Concern                 | Mitigation                                         |
-| -------------------- | ----------------------- | -------------------------------------------------- |
-| Streaming re-renders | Character-level updates | Batch with `requestAnimationFrame` or chunk commit |
-| Large message lists  | Scroll jank             | Virtualize if >200 rendered nodes (future)         |
-| Syntax highlighting  | Blocking on large code  | Use async `shiki` + fallback skeleton              |
-| Approval modals      | State churn             | Isolate modal subtree via portal                   |
-
----
-
-## 13. Testing Strategy (Frontend)
-
-(Current repo emphasizes backend pytest; frontend test infra may be minimal.) If adding tests:
-
-- Use Playwright for E2E (already present under `tests/e2e/`).
-- Keep potential future unit tests colocated: `*.test.tsx` (Vitest / Jest if introduced).
-- Mock SSE layer with an event emitter abstraction.
-
----
-
-## 14. Adding a New Workflow Mode (Frontend)
-
-1. Extend mode enum / store.
-2. Add selection control (dropdown / segmented switch).
-3. Adjust SSE request payload (model / workflow identifier).
-4. Gracefully handle mode-specific events (feature-detect).
-5. Update root `AGENTS.md` + this file if contract changes.
-
----
-
-## 15. API Integration Rules
-
-- Centralize fetch logic (e.g., `lib/api.ts`).
-- Always include `Content-Type: application/json` for POST.
-- Abort stale requests on model switch / session reset.
-- SSE: Use native `EventSource` or `fetch + ReadableStream` poly (depending on backend). Ensure reconnection strategy is **manual** (do not auto-reconnect mid-approval).
-
----
-
-## 16. Error Handling UX
-
-| Scenario                | UI Behavior                 |
-| ----------------------- | --------------------------- |
-| SSE connection lost     | Banner + retry affordance   |
-| Backend 500             | Toast w/ truncated error id |
-| Approval submit failure | Modal inline error + retry  |
-| Unknown event type      | Console warn only           |
-
-Never expose raw stack traces to end user UI.
-
----
-
-## 17. Accessibility & UX Notes
-
-- Provide `aria-live="polite"` region for streaming text.
-- Ensure focus trap in approval modals.
-- Keyboard shortcuts (future): plan layering; avoid stealing browser defaults.
-
----
-
-## 18. Safe Automation Guardrails (For Agents)
-
-| Action                  | Check Before Proceeding                                                 |
-| ----------------------- | ----------------------------------------------------------------------- |
-| Modifying SSE parser    | Confirm backend event schema unchanged (search for `approval_required`) |
-| Adding dependency       | Ensure not duplicating existing functionality; update lock + docs       |
-| Editing Tailwind config | Verify no class name collisions / remove dead tokens                    |
-| Changing build config   | Run `npm run build` and manual smoke (open `dist/`)                     |
-
----
-
-## 19. Quick Command Reference
-
-```bash
-# Install & run
-make frontend-install && npm run dev
-
-# Lint & format
-npm run lint && npm run lint:fix && npm run format
-
-# Build / preview
-npm run build && npm run preview
-```
-
----
-
-## 20. Update Procedure
-
-When changing frontend-backend contract:
-
-1. Update TS types
-2. Adjust parser + UI mapping
-3. Run backend focused tests (make test)
-4. Smoke test streaming & approval manually
-5. Update root + related AGENTS docs
-
----
-
-**End – Frontend AGENTS.md**
+- Blank screen during development? Check the browser console for CORS errors—ensure the backend is running on port 8000 and that the CORS middleware allows `http://localhost:5173`.
+- SSE stream stalls typically mean the backend cancelled the workflow; inspect the Network tab for `event: error` payloads.
+- TypeScript path resolution issues? Run `npm install` again to refresh `node_modules/@types`, then restart `tsc --watch` or your editor's language server.
+- If UI assets look outdated after dependency upgrades, delete `.vite` cache and rerun `npm run dev`.
