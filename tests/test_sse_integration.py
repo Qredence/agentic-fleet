@@ -8,6 +8,7 @@ streams Server-Sent Events for real-time workflow execution updates.
 from __future__ import annotations
 
 import asyncio
+import json
 
 import httpx
 import pytest
@@ -42,8 +43,6 @@ async def test_sse_stream_integration() -> None:
                 events_received.append(sse)
 
                 if sse.event == "message":
-                    import json
-
                     data = json.loads(sse.data)
                     if data.get("type") == "delta" and "delta" in data:
                         deltas_received.append(data["delta"])

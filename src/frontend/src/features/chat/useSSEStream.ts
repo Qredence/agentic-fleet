@@ -17,19 +17,18 @@ export type SSEEventHandler = {
  * @returns An object with connect and disconnect methods for SSE stream management
  */
 export function useSSEStream() {
-  const eventSourceRef = useRef<EventSource | null>(null);
+  const abortControllerRef = useRef<AbortController | null>(null);
 
   const connect = useCallback(
     (conversationId: string, message: string, handlers: SSEEventHandler) => {
       // Close any existing connection
-      if (eventSourceRef.current) {
-        eventSourceRef.current.close();
+      if (abortControllerRef.current) {
+        abortControllerRef.current.abort();
       }
 
-      // Create FormData for POST request via EventSource
-      // Note: EventSource API only supports GET by default
-      // We'll use fetch with ReadableStream instead
+      // Create AbortController for this connection
       const controller = new AbortController();
+      abortControllerRef.current = controller;
 
       fetch("/v1/chat/stream", {
         method: "POST",
@@ -107,9 +106,9 @@ export function useSSEStream() {
   );
 
   const disconnect = useCallback(() => {
-    if (eventSourceRef.current) {
-      eventSourceRef.current.close();
-      eventSourceRef.current = null;
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+      abortControllerRef.current = null;
     }
   }, []);
 

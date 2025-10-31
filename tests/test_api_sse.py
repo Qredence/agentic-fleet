@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import json
+
 import pytest
 from httpx import ASGITransport, AsyncClient
 from httpx_sse import aconnect_sse
@@ -47,8 +49,6 @@ async def test_chat_streaming() -> None:
             async for sse in event_source.aiter_sse():
                 events_received.append(sse)
                 if sse.event == "message":
-                    import json
-
                     data = json.loads(sse.data)
                     if data.get("type") == "done":
                         break
