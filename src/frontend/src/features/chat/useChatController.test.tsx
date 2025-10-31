@@ -87,8 +87,8 @@ describe("useChatController", () => {
 
     expect(mockedSendChat).toHaveBeenCalledWith("conv-1", "Hello");
     expect(result.current.messages).toEqual([
-      { role: "user", content: "Hello" },
-      { role: "assistant", content: "Assistant response" },
+      { id: "conv-1-0", role: "user", content: "Hello" },
+      { id: "conv-1-1", role: "assistant", content: "Assistant response" },
     ]);
     expect(result.current.pending).toBe(false);
     expect(result.current.error).toBeNull();

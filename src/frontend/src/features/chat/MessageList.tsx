@@ -3,16 +3,23 @@ import { Markdown } from "@/components/ui/markdown";
 import { Message } from "@/components/ui/message";
 
 export function MessageList(props: {
-  items: Array<{ role: "user" | "assistant" | "system"; content: string }>;
+  items: Array<{
+    id: string | number;
+    role: "user" | "assistant" | "system";
+    content: string;
+  }>;
 }) {
   return (
     <div>
-      {props.items.map((m, i) => (
+      {props.items.map((message) => (
         <Message
-          key={i}
-          role={m.role}
+          key={message.id}
+          role={message.role}
           content={
-            <Markdown content={m.content} components={{ code: CodeBlock }} />
+            <Markdown
+              content={message.content}
+              components={{ code: CodeBlock }}
+            />
           }
         />
       ))}

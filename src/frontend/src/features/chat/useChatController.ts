@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { createConversation, getHealth, sendChat } from "./useChatClient";
 
 export type ChatMessage = {
+  id: string | number;
   role: "user" | "assistant" | "system";
   content: string;
 };
@@ -22,7 +23,8 @@ export function useChatController() {
       .then((conv) => {
         setConversationId(conv.id);
         setMessages(
-          conv.messages.map((m) => ({
+          conv.messages.map((m, index) => ({
+            id: `${conv.id}-${index}`,
             role: m.role as ChatMessage["role"],
             content: m.content,
           })),
@@ -37,7 +39,8 @@ export function useChatController() {
     setPending(true);
     try {
       const res = await sendChat(conversationId, text);
-      const updated = res.messages.map((m) => ({
+      const updated = res.messages.map((m, index) => ({
+        id: `${conversationId}-${index}`,
         role: m.role as ChatMessage["role"],
         content: m.content,
       }));
