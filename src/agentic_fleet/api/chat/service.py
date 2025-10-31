@@ -15,6 +15,14 @@ logger = logging.getLogger(__name__)
 class WorkflowService:
     """Service for managing workflow execution and event processing."""
 
+    def _create_workflow(self):
+        """Create a new workflow instance.
+        
+        Returns:
+            A workflow instance that can be used for execution
+        """
+        return create_magentic_fleet_workflow()
+
     async def execute_workflow(self, message: str) -> str:
         """Execute a workflow and return the final result.
 
@@ -27,7 +35,7 @@ class WorkflowService:
         Raises:
             HTTPException: If workflow execution fails
         """
-        workflow = create_magentic_fleet_workflow()
+        workflow = self._create_workflow()
         try:
             events = workflow.run(message)
             return await self.process_workflow_events(events)
