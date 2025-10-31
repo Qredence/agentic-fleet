@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import json
-from typing import AsyncGenerator
+from collections.abc import AsyncGenerator
 
 from fastapi import APIRouter, HTTPException
 from sse_starlette.sse import EventSourceResponse
@@ -48,7 +48,7 @@ async def chat(req: ChatRequest) -> ChatResponse:
 
 async def chat_stream(req: ChatRequest) -> EventSourceResponse:
     """Stream chat responses using Server-Sent Events.
-    
+
     This endpoint provides real-time workflow execution updates as SSE events.
     Event types:
     - message.delta: Incremental content updates
@@ -68,12 +68,12 @@ async def chat_stream(req: ChatRequest) -> EventSourceResponse:
         """Generate SSE events from workflow execution."""
         workflow = workflow_service._create_workflow()
         assistant_parts: list[str] = []
-        
+
         try:
             events = workflow.run(req.message)
             async for event in events:
                 event_type = event.get("type")
-                
+
                 if event_type == "message.delta":
                     data = event.get("data", {})
                     delta = data.get("delta", "") if isinstance(data, dict) else ""
@@ -81,29 +81,19 @@ async def chat_stream(req: ChatRequest) -> EventSourceResponse:
                         assistant_parts.append(str(delta))
                     yield {
                         "event": "message",
-                        "data": json.dumps({"type": "delta", "delta": str(delta)})
+                        "data": json.dumps({"type": "delta", "delta": str(delta)}),
                     }
                 elif event_type == "message.done":
-                    yield {
-                        "event": "message",
-                        "data": json.dumps({"type": "done"})
-                    }
+                    yield {"event": "message", "data": json.dumps({"type": "done"})}
                     break
-            
+
             # Store the complete assistant message
             assistant_message = "".join(assistant_parts)
             if assistant_message:
-                store.add_message(
-                    req.conversation_id, 
-                    role="assistant", 
-                    content=assistant_message
-                )
-                
+                store.add_message(req.conversation_id, role="assistant", content=assistant_message)
+
         except Exception as exc:
-            yield {
-                "event": "error",
-                "data": json.dumps({"error": str(exc)})
-            }
+            yield {"event": "error", "data": json.dumps({"error": str(exc)})}
 
     return EventSourceResponse(event_generator())
 

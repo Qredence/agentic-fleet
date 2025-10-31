@@ -1,24 +1,41 @@
 import { act, renderHook, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-import { createConversation, getHealth, sendChat } from "./useChatClient";
+import { createConversation, getHealth } from "./useChatClient";
 import { useChatController } from "./useChatController";
+import { useSSEStream } from "./useSSEStream";
 
 vi.mock("./useChatClient", () => {
   return {
     getHealth: vi.fn(),
     createConversation: vi.fn(),
-    sendChat: vi.fn(),
+  };
+});
+
+vi.mock("./useSSEStream", () => {
+  return {
+    useSSEStream: vi.fn(),
   };
 });
 
 const mockedGetHealth = vi.mocked(getHealth);
 const mockedCreateConversation = vi.mocked(createConversation);
-const mockedSendChat = vi.mocked(sendChat);
+const mockedUseSSEStream = vi.mocked(useSSEStream);
 
 describe("useChatController", () => {
+  let mockConnect: ReturnType<typeof vi.fn>;
+  let mockDisconnect: ReturnType<typeof vi.fn>;
+
   beforeEach(() => {
     vi.resetAllMocks();
+    mockConnect = vi.fn();
+    mockDisconnect = vi.fn();
+
+    mockedUseSSEStream.mockReturnValue({
+      connect: mockConnect,
+      disconnect: mockDisconnect,
+    });
+
     mockedGetHealth.mockResolvedValue({ status: "ok" });
     mockedCreateConversation.mockResolvedValue({
       id: "conv-1",
@@ -43,70 +60,74 @@ describe("useChatController", () => {
     expect(result.current.error).toBeNull();
   });
 
-  it("sends chat messages and updates state with response history", async () => {
+  it("sends chat messages and updates state with streaming", async () => {
     mockedCreateConversation.mockResolvedValue({
       id: "conv-1",
       title: "Test conversation",
       created_at: 123,
-      messages: [
-        {
-          id: "seed-user",
-          role: "user",
-          content: "Seed",
-          created_at: 1,
-        },
-      ],
+      messages: [],
     });
 
-    mockedSendChat.mockResolvedValue({
-      conversation_id: "conv-1",
-      message: "Assistant response",
-      messages: [
-        {
-          id: "m-1",
-          role: "user",
-          content: "Hello",
-          created_at: 1,
-        },
-        {
-          id: "m-2",
-          role: "assistant",
-          content: "Assistant response",
-          created_at: 2,
-        },
-      ],
+    mockConnect.mockImplementation((conversationId, message, handlers) => {
+      // Simulate streaming response
+      setTimeout(() => {
+        handlers.onMessage({ type: "delta", delta: "Hello " });
+        handlers.onMessage({ type: "delta", delta: "World" });
+        handlers.onMessage({ type: "done" });
+        handlers.onComplete();
+      }, 0);
+      return vi.fn(); // cleanup function
     });
 
     const { result } = renderHook(() => useChatController());
 
     await waitFor(() => expect(result.current.conversationId).toBe("conv-1"));
 
-    await act(async () => {
-      await result.current.send("Hello");
+    act(() => {
+      result.current.send("Hello");
     });
 
-    expect(mockedSendChat).toHaveBeenCalledWith("conv-1", "Hello");
-    expect(result.current.messages).toEqual([
-      { id: "conv-1-0", role: "user", content: "Hello" },
-      { id: "conv-1-1", role: "assistant", content: "Assistant response" },
-    ]);
-    expect(result.current.pending).toBe(false);
-    expect(result.current.error).toBeNull();
+    await waitFor(() => {
+      expect(mockConnect).toHaveBeenCalledWith(
+        "conv-1",
+        "Hello",
+        expect.objectContaining({
+          onMessage: expect.any(Function),
+          onError: expect.any(Function),
+          onComplete: expect.any(Function),
+        }),
+      );
+    });
+
+    await waitFor(() => {
+      expect(result.current.messages.length).toBe(2);
+      expect(result.current.messages[0]).toMatchObject({
+        role: "user",
+        content: "Hello",
+      });
+      expect(result.current.pending).toBe(false);
+    });
   });
 
-  it("sets error when sending message fails", async () => {
-    mockedSendChat.mockRejectedValueOnce(new Error("network error"));
+  it("sets error when SSE connection fails", async () => {
+    mockConnect.mockImplementation((conversationId, message, handlers) => {
+      setTimeout(() => {
+        handlers.onError(new Error("network error"));
+      }, 0);
+      return vi.fn();
+    });
 
     const { result } = renderHook(() => useChatController());
 
     await waitFor(() => expect(result.current.conversationId).toBe("conv-1"));
 
-    await act(async () => {
-      await result.current.send("Hello");
+    act(() => {
+      result.current.send("Hello");
     });
 
-    expect(mockedSendChat).toHaveBeenCalledWith("conv-1", "Hello");
-    expect(result.current.error).toBe("Failed to send message");
-    expect(result.current.pending).toBe(false);
+    await waitFor(() => {
+      expect(result.current.error).toBe("Connection error during streaming");
+      expect(result.current.pending).toBe(false);
+    });
   });
 });

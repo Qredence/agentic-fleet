@@ -48,6 +48,7 @@ async def test_chat_streaming() -> None:
                 events_received.append(sse)
                 if sse.event == "message":
                     import json
+
                     data = json.loads(sse.data)
                     if data.get("type") == "done":
                         break

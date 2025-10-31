@@ -17,7 +17,7 @@ class WorkflowService:
 
     def _create_workflow(self):
         """Create a new workflow instance.
-        
+
         Returns:
             A workflow instance that can be used for execution
         """
