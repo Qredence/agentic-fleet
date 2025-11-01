@@ -1,6 +1,4 @@
-import { CodeBlock } from "@/components/ui/code-block";
-import { Markdown } from "@/components/ui/markdown";
-import { Message } from "@/components/ui/message";
+import { Message, MessageContent } from "@/components/prompt-kit/message";
 
 export function MessageList(props: {
   items: Array<{
@@ -12,16 +10,9 @@ export function MessageList(props: {
   return (
     <div>
       {props.items.map((message) => (
-        <Message
-          key={message.id}
-          role={message.role}
-          content={
-            <Markdown
-              content={message.content}
-              components={{ code: CodeBlock }}
-            />
-          }
-        />
+        <Message key={message.id}>
+          <MessageContent markdown>{message.content}</MessageContent>
+        </Message>
       ))}
     </div>
   );

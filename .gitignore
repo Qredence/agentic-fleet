@@ -32,11 +32,13 @@ env/
 # IDE
 .vscode/
 .idea/
+.cursor/
 *.swp
 *.swo
 *~
 logs
 .serena/
+.playwright-mcp/
 
 # Environment variables
 .env

@@ -4,7 +4,7 @@ import {
   PromptInputTextarea,
   PromptInputActions,
   PromptInputAction,
-} from "@/components/ui/prompt-input";
+} from "@/components/prompt-kit/prompt-input";
 import { PromptSuggestion } from "@/components/ui/prompt-suggestion";
 import { Button } from "@/components/ui/button";
 
@@ -20,12 +20,13 @@ export function PromptBar(props: {
   };
   return (
     <div style={{ marginTop: 12 }}>
-      <PromptInput>
-        <PromptInputTextarea
-          placeholder="Type a message"
-          value={input}
-          onChange={(e) => setInput(e.currentTarget.value)}
-        />
+      <PromptInput
+        value={input}
+        onValueChange={setInput}
+        onSubmit={send}
+        disabled={props.disabled}
+      >
+        <PromptInputTextarea placeholder="Type a message" />
         <PromptInputActions>
           <PromptInputAction tooltip="Send">
             <Button disabled={props.disabled || !input} onClick={send}>

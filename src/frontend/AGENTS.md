@@ -1,56 +1,43 @@
-# AGENTS.md
+# Repository Guidelines
 
-## Overview
+## Project Structure & Module Organization
 
-The frontend is a Vite 5 + React 18 application using TypeScript, shadcn/ui components, Tailwind utilities, and SSE streams from the FastAPI backend. It lives entirely in this folder and expects the backend API at `http://localhost:8000/v1`. Anything that mutates chat state, renders streaming responses, or touches shared UI primitives belongs here.
+- `config/workflows.yaml` and `src/agentic_fleet/agents/*/config.yaml` define all agent behavior; adjust YAML rather than hardcoding logic.
+- Backend code lives in `src/agentic_fleet/`, with tests in `tests/` and utilities under `tools/`.
+- The React/Vite frontend resides in `src/frontend/src`, static assets in `src/frontend/public`, and build output in `src/frontend/dist`.
+- Shared documentation sits in `docs/` and `src/frontend/AGENTS.md`; keep this file updated alongside related guides.
 
-## Environment & Setup
+## Build, Test, and Development Commands
 
-1. Install Node.js 20+ (the repo assumes npm 10+). If you are using Volta or nvm, pin to the version declared in `.tool-versions` when available.
-2. Install dependencies once via `npm install` (or from repo root with `make frontend-install`).
-3. Ensure the backend is running (`make dev` or `uv run uvicorn agentic_fleet.server:app --reload --port 8000`) before exercising API-dependent features.
-4. Environment variables for the frontend reside in `src/frontend/.env` (not committed). Copy `index.html` meta tags or `vite.config.ts` aliases carefully if you need additional variables; Vite requires them to be prefixed with `VITE_`.
+- `make install` — sync Python dependencies via `uv`; rerun after lockfile updates.
+- `make dev` — launch FastAPI (port 8000) and Vite (port 5173) with hot reload.
+- `uv run uvicorn agentic_fleet.server:app --reload --port 8000` — backend-only loop for API work.
+- `make frontend-install` then `npm run dev` — install and run the frontend in isolation.
+- `make test`, `make test-config`, and `npm run test` — run backend pytest, config hydration guardrails, and Vitest respectively.
 
-## Development Commands
+## Coding Style & Naming Conventions
 
-- Start hot reload: `npm run dev` (defaults to port 5173). Use `npm run dev -- --host` when testing from other devices.
-- Build for production: `npm run build` emits static assets in `dist/`.
-- Preview built assets locally: `npm run preview -- --port 5173`.
-- Format code: `npm run format` (prettier over the entire tree).
-- Linting is currently a stub (`npm run lint`), so rely on TypeScript and editor tooling; update the script before enabling additional linters.
+- Target Python 3.12 with explicit type hints (`str | None` style) and prefer data classes or Pydantic models declared in `core/code_types.py`.
+- All Python tooling, linters, and scripts run through `uv run …`; never invoke `python` directly.
+- Use Ruff and Black (`make format`) plus Mypy (`make type-check`); keep YAML declarative and avoid embedding prompts or model IDs in code.
+- Follow React conventions: PascalCase components in `src/frontend/src/components`, camelCase hooks/utilities, and 2-space indentation.
 
-## Testing Strategy
+## Testing Guidelines
 
-- Component and hook tests use Vitest with React Testing Library. Run `npm run test` for a one-off pass or `npm run test -- --watch` for interactive mode.
-- Tests requiring DOM APIs rely on jsdom; avoid using browser-only globals unless they are polyfilled in `src/frontend/test/setup.ts`.
-- Keep network calls mocked. Hooks such as `useChatClient` wrap API fetches; expose the HTTP layer through dependency injection if you need deterministic tests.
+- Backend uses `pytest`; name modules `test_*.py` and co-locate fixtures in `tests/conftest.py`.
+- Frontend relies on Vitest and Testing Library; name specs `*.test.ts(x)` beside the component.
+- Run `make test-config` after any YAML or AGENTS.md change to ensure workflows hydrate correctly.
+- Optional coverage is available with `uv run pytest --cov`; keep failures reproducible by recording seed or env flags when relevant.
 
-## UI & State Conventions
+## Commit & Pull Request Guidelines
 
-- Shared primitives live under `src/components/ui/`; extend them rather than duplicating markup in feature-level components.
-- Feature code (e.g. `features/chat/`) combines hooks (`useChatController.ts`) with presentational components. Maintain this split to avoid large, stateful monoliths.
-- Tailwind is configured in `tailwind.config.ts`; favor utility classes with `tailwind-merge` helpers, and avoid inline styles except for dynamic values that cannot be expressed via classes.
-- Syntax highlighting leverages Shiki; when adding languages, update `src/components/ui/code-block.tsx` accordingly.
+- Write concise imperative subjects (e.g., `Add planner retry budget`) and reference issues or PRs with `(#123)` when applicable.
+- Bundle related changes only; ensure lint, tests, and `make test-config` pass before requesting review.
+- PRs should describe intent, call out config or schema updates, and include screenshots or CLI output for UI-affecting work.
+- After editing AGENTS documentation, run `uv run python tools/scripts/validate_agents_docs.py` and attach the passing snippet in the PR.
 
-## API Integration Notes
+## Security & Configuration Tips
 
-- All HTTP calls flow through the chat client utilities in `features/chat/`. Respect the existing SSE parsing logic in `response-stream.tsx`; new endpoints should follow the same incremental chunk handling.
-- Backend routes live under `/v1/...`. Keep URL literals centralized in `useChatClient.ts` to make future rewrites easier.
-- When adjustments require backend changes, coordinate with `src/agentic_fleet/AGENTS.md` policies—especially around workflow IDs and approval flows.
-
-## Quick Reference
-
-- `npm install` — Install dependencies.
-- `npm run dev` — Start the Vite dev server.
-- `npm run test` — Run Vitest suite.
-- `npm run test -- --watch` — Watch mode for tests.
-- `npm run build` — Generate production bundle in `dist/`.
-- `npm run preview -- --port 5173` — Serve built assets locally.
-- `npm run format` — Format source files with Prettier.
-
-## Troubleshooting
-
-- Blank screen during development? Check the browser console for CORS errors—ensure the backend is running on port 8000 and that the CORS middleware allows `http://localhost:5173`.
-- SSE stream stalls typically mean the backend cancelled the workflow; inspect the Network tab for `event: error` payloads.
-- TypeScript path resolution issues? Run `npm install` again to refresh `node_modules/@types`, then restart `tsc --watch` or your editor's language server.
-- If UI assets look outdated after dependency upgrades, delete `.vite` cache and rerun `npm run dev`.
+- Copy `.env.example` to `.env`, provide `OPENAI_API_KEY`, and rely on managed identities for Azure secrets; never commit credentials.
+- Set `AF_WORKFLOW_CONFIG` when using custom workflow files and validate with `make test-config` before deploying.
+- Enable tracing by exporting `ENABLE_OTEL=true` and pointing `OTLP_ENDPOINT` at a running collector (`tools/observability/run-otel-collector.sh`).

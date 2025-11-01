@@ -1,7 +1,12 @@
 import { act, renderHook, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-import { createConversation, getHealth, sendChat } from "./useChatClient";
+import {
+  createConversation,
+  getHealth,
+  sendChat,
+  sendChatStream,
+} from "./useChatClient";
 import { useChatController } from "./useChatController";
 
 vi.mock("./useChatClient", () => {
@@ -9,12 +14,14 @@ vi.mock("./useChatClient", () => {
     getHealth: vi.fn(),
     createConversation: vi.fn(),
     sendChat: vi.fn(),
+    sendChatStream: vi.fn(),
   };
 });
 
 const mockedGetHealth = vi.mocked(getHealth);
 const mockedCreateConversation = vi.mocked(createConversation);
 const mockedSendChat = vi.mocked(sendChat);
+const mockedSendChatStream = vi.mocked(sendChatStream);
 
 describe("useChatController", () => {
   beforeEach(() => {
@@ -25,6 +32,9 @@ describe("useChatController", () => {
       title: "Test conversation",
       created_at: 123,
       messages: [],
+    });
+    mockedSendChatStream.mockImplementation(async function* () {
+      // default stream yields no chunks
     });
   });
 
@@ -82,7 +92,7 @@ describe("useChatController", () => {
     await waitFor(() => expect(result.current.conversationId).toBe("conv-1"));
 
     await act(async () => {
-      await result.current.send("Hello");
+      await result.current.send("Hello", false);
     });
 
     expect(mockedSendChat).toHaveBeenCalledWith("conv-1", "Hello");
@@ -102,11 +112,11 @@ describe("useChatController", () => {
     await waitFor(() => expect(result.current.conversationId).toBe("conv-1"));
 
     await act(async () => {
-      await result.current.send("Hello");
+      await result.current.send("Hello", false);
     });
 
     expect(mockedSendChat).toHaveBeenCalledWith("conv-1", "Hello");
-    expect(result.current.error).toBe("Failed to send message");
+    expect(result.current.error).toBe("network error");
     expect(result.current.pending).toBe(false);
   });
 });

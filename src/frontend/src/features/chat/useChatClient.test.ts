@@ -32,7 +32,7 @@ describe("useChatClient", () => {
 
     const result = await getHealth();
 
-    expect(fetchSpy).toHaveBeenCalledWith("/v1/health");
+    expect(fetchSpy).toHaveBeenCalledWith("/v1/system/health");
     expect(result).toEqual(expected);
   });
 

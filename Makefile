@@ -1,4 +1,4 @@
-.PHONY: help install sync clean test test-config test-e2e lint format type-check check run demo-hitl pre-commit-install dev backend frontend-install frontend-dev validate-agents
+.PHONY: help install sync clean test test-config test-e2e lint format type-check check run demo-hitl pre-commit-install dev backend frontend-install frontend-dev build-frontend validate-agents
 
 # Default target
 help:
@@ -16,6 +16,7 @@ help:
 	@echo "  make dev               Run backend + frontend together (full stack)"
 	@echo "  make backend           Run backend only (port 8000)"
 	@echo "  make frontend-dev      Run frontend only (port 5173)"
+	@echo "  make build-frontend    Build frontend for production (outputs to backend/ui)"
 	@echo "  make test              Run all tests"
 	@echo "  make test-config       Run configuration validation"
 	@echo "  make test-e2e          Run end-to-end frontend tests (requires dev running)"
@@ -53,7 +54,7 @@ sync:
 
 frontend-install:
 	@echo "Installing frontend dependencies..."
-	cd src/frontend && npm install
+	cd src/frontend/src && npm install
 	@echo "✓ Frontend dependencies installed"
 
 # Run application
@@ -69,20 +70,29 @@ dev:
 	@echo ""
 	@echo "Press Ctrl+C to stop both services"
 	@echo ""
-	@trap 'kill 0' INT; \
-	uv run uvicorn agentic_fleet.server:app --reload --port 8000 & \
-	cd src/frontend && npm run dev
+	@bash -c ' \
+		trap "kill 0" EXIT INT TERM; \
+		uv run uvicorn agentic_fleet.server:app --reload --port 8000 --log-level info & \
+		sleep 2; \
+		cd src/frontend/src && npm run dev & \
+		wait'
 
 
 # DevUI backend server only
 backend:
 	@echo "Starting minimal backend on http://localhost:8000"
-	uv run uvicorn agentic_fleet.server:app --reload --port 8000
+	uv run uvicorn agentic_fleet.server:app --reload --port 8000 --log-level info
 
 # Frontend dev server only
 frontend-dev:
 	@echo "Starting frontend on http://localhost:5173"
-	cd src/frontend && npm run dev
+	cd src/frontend/src && npm run dev
+
+# Build frontend for production
+build-frontend:
+	@echo "Building frontend for production..."
+	cd src/frontend/src && npm run build
+	@echo "✓ Frontend built to src/agentic_fleet/ui"
 
 # Testing
 test:

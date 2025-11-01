@@ -2,7 +2,8 @@ version = 1
 revision = 3
 requires-python = ">=3.12, <4"
 resolution-markers = [
-    "python_full_version >= '3.13'",
+    "python_full_version >= '3.14'",
+    "python_full_version == '3.13.*'",
     "python_full_version < '3.13'",
 ]
 
@@ -544,7 +545,7 @@ wheels = [
 
 [[package]]
 name = "azure-ai-evaluation"
-version = "1.12.0"
+version = "1.13.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "aiohttp" },
@@ -560,9 +561,9 @@ dependencies = [
     { name = "pyjwt" },
     { name = "ruamel-yaml" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/1e/7e/5c520eaa31cfb440819f8e127ad1df0a219dbbf18e8a2ee9069ee6ef6ad5/azure_ai_evaluation-1.12.0.tar.gz", hash = "sha256:c2046de267b7810fb218aca1e0b819419a82129a378fb35ed681cbeb264f59e0", size = 1114747, upload-time = "2025-10-02T17:10:15.257Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/47/7e/03a4121f8162e8d1f318d8aed77202e6401af5865279f10bc0d3a3dfac1a/azure_ai_evaluation-1.13.0.tar.gz", hash = "sha256:81738c59f1b304a88509c580781338ac5d64da53d9633aefdbbe939fef44de62", size = 1214366, upload-time = "2025-10-31T16:19:19.505Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/e2/09/c21cf0e52fa3f067938e11b54fb5aab7c8eeb76b5b5206f0db11e5d21268/azure_ai_evaluation-1.12.0-py3-none-any.whl", hash = "sha256:01f932a2ace194f5fd003681adf7d6a0f5062a30f7ca8862b994934da9ffcaab", size = 1042146, upload-time = "2025-10-02T17:10:17.241Z" },
+    { url = "https://files.pythonhosted.org/packages/8c/d3/3cb75ec811206ca08582ba3b4bc299c421812f3a5cc992d0bcfcd2e05cb0/azure_ai_evaluation-1.13.0-py3-none-any.whl", hash = "sha256:6d6dfa527d4ec75355a2181e58fa2e682018868f56def15d437e6b835789b6bb", size = 1133752, upload-time = "2025-10-31T16:19:21.54Z" },
 ]
 
 [[package]]
@@ -1103,7 +1104,7 @@ wheels = [
 
 [[package]]
 name = "fastapi"
-version = "0.120.3"
+version = "0.120.4"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "annotated-doc" },
@@ -1111,9 +1112,9 @@ dependencies = [
     { name = "starlette" },
     { name = "typing-extensions" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/85/c6/f324c07f5ebe34237b56b6396a94568d2d4a705df8a2ff82fa45029e7252/fastapi-0.120.3.tar.gz", hash = "sha256:17db50718ee86c9e01e54f9d8600abf130f6f762711cd0d8f02eb392668271ba", size = 339363, upload-time = "2025-10-30T20:41:33.072Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/3f/3a/0bf90d5189d7f62dc2bd0523899629ca59b58ff4290d631cd3bb5c8889d4/fastapi-0.120.4.tar.gz", hash = "sha256:2d856bc847893ca4d77896d4504ffdec0fb04312b705065fca9104428eca3868", size = 339716, upload-time = "2025-10-31T18:37:28.81Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/37/3a/1eef3ab55ede5af09186723898545a94d0a32b7ac9ea4e7af7bcb95f132a/fastapi-0.120.3-py3-none-any.whl", hash = "sha256:bfee21c98db9128dc425a686eafd14899e26e4471aab33076bff2427fd6dcd22", size = 108255, upload-time = "2025-10-30T20:41:31.247Z" },
+    { url = "https://files.pythonhosted.org/packages/ed/47/14a76b926edc3957c8a8258423db789d3fa925d2fed800102fce58959413/fastapi-0.120.4-py3-none-any.whl", hash = "sha256:9bdf192308676480d3593e10fd05094e56d6fdc7d9283db26053d8104d5f82a0", size = 108235, upload-time = "2025-10-31T18:37:27.038Z" },
 ]
 
 [[package]]
@@ -1928,31 +1929,31 @@ wheels = [
 
 [[package]]
 name = "microsoft-agents-activity"
-version = "0.6.0.dev7"
+version = "0.6.0.dev8"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "pydantic" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/c3/a0/5131f51b989ba5b640bfc62a4900e44d22f98a973019c0a4c5807a2d7c6a/microsoft_agents_activity-0.6.0.dev7.tar.gz", hash = "sha256:ad07978794092b216e64b3373ff30f9ce2acd569c55cf86bd806cf6e1d864d64", size = 56661, upload-time = "2025-10-29T09:06:03.435Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/b1/ec/e5addfbd87f98a2a5d6a09f0d8f43e9216bbfccff89b3622bfe8aae9ec5b/microsoft_agents_activity-0.6.0.dev8.tar.gz", hash = "sha256:d002cfa273ce3742a37f7bf47e84be8125b3a731bd1934713179729edf6fbe41", size = 56670, upload-time = "2025-10-31T09:05:12.714Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/31/d8/bc3e31072acbc9e16f3b633f60dc76bf7cd36014bb0f23ea9b9df1ccf254/microsoft_agents_activity-0.6.0.dev7-py3-none-any.whl", hash = "sha256:8c20a004e075e3d3de19c1acf7629067ecdb5f6a8049cfe5e7ede858fbc1bb6f", size = 128981, upload-time = "2025-10-29T09:06:14.007Z" },
+    { url = "https://files.pythonhosted.org/packages/8a/94/14e17eb9a28e5c5cc8b42e843367431cdf6ce86b9fb806258af87f263f66/microsoft_agents_activity-0.6.0.dev8-py3-none-any.whl", hash = "sha256:43c10d4aed755eb389eb8eaf66cb57cb1ea428f43605506be6746094b8fbcf2a", size = 129000, upload-time = "2025-10-31T09:05:24.428Z" },
 ]
 
 [[package]]
 name = "microsoft-agents-copilotstudio-client"
-version = "0.6.0.dev7"
+version = "0.6.0.dev8"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "microsoft-agents-hosting-core" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/40/83/ecd9b045b5f4c621ded199f93d9a5539372cc6819f8199010c41ffb721ee/microsoft_agents_copilotstudio_client-0.6.0.dev7.tar.gz", hash = "sha256:97e196f7e43c7fa0bdc31bdfe5ae307721283df9a952e0c86029b8600c2d3ba4", size = 11148, upload-time = "2025-10-29T09:06:05.142Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/d5/64/2f7eb33c54c53cfecdffdf760a932e6460f036af75ab7575d04d24570dfe/microsoft_agents_copilotstudio_client-0.6.0.dev8.tar.gz", hash = "sha256:55a8fc41affa73c15f0b219efbc964e0fa297b42080453628365590220d4a447", size = 11144, upload-time = "2025-10-31T09:05:15.062Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/68/3d/4a1ee3a3a214c6abcabaad63f50c0987b33fad82149363cf20cb7c94020e/microsoft_agents_copilotstudio_client-0.6.0.dev7-py3-none-any.whl", hash = "sha256:2430e8aa84b76a488f2b495bfafaef53b59e7bb8548cd4cf1d29bd21f821342f", size = 11150, upload-time = "2025-10-29T09:06:16.447Z" },
+    { url = "https://files.pythonhosted.org/packages/36/90/c35bcbfd20e7a9bf2013e6c4f7ed333fcd24a99190c7e5973c807546ea0a/microsoft_agents_copilotstudio_client-0.6.0.dev8-py3-none-any.whl", hash = "sha256:5d728bbede1bc781f7d170874250f935fbd27b3560e1cd171181a18ecbcd8863", size = 11150, upload-time = "2025-10-31T09:05:26.21Z" },
 ]
 
 [[package]]
 name = "microsoft-agents-hosting-core"
-version = "0.6.0.dev7"
+version = "0.6.0.dev8"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "azure-core" },
@@ -1961,9 +1962,9 @@ dependencies = [
     { name = "pyjwt" },
     { name = "python-dotenv" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/d4/71/04bfe3b7af642bb8c17436e5168f37c8bc5e4e0b9e91d6c760ec3e790f57/microsoft_agents_hosting_core-0.6.0.dev7.tar.gz", hash = "sha256:718290640a6b65a8a498599a84a3cd577b1507414d7e4295c44ae35283860715", size = 81773, upload-time = "2025-10-29T09:06:07.131Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/ee/db/cc7c421723c99756cb47c12e1d6a86a5ff616326e36ae4ddeee4be049476/microsoft_agents_hosting_core-0.6.0.dev8.tar.gz", hash = "sha256:d8549f680e5a84c2b26d1e5629330d3cce1f222f9ac0bd3d5db8a1cb3966cbe0", size = 81794, upload-time = "2025-10-31T09:05:17.458Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/2f/be/ed51d6135f63aa47254b83c53b460c1e8564c3142845eb8aeec770219d80/microsoft_agents_hosting_core-0.6.0.dev7-py3-none-any.whl", hash = "sha256:4a6d7d6fa370b37dde7174c1e0aa8e92653f1ad4f996db2b6563d32049a8870f", size = 120642, upload-time = "2025-10-29T09:06:18.538Z" },
+    { url = "https://files.pythonhosted.org/packages/6c/45/48f3977070dad3335c6b558d82cabf49063a57446e91917d0e1b9815801b/microsoft_agents_hosting_core-0.6.0.dev8-py3-none-any.whl", hash = "sha256:156908dd5814c8a0ed8067f88760d46a88eb9200a896ce78c261fbb9fa00e5d5", size = 120668, upload-time = "2025-10-31T09:05:28.298Z" },
 ]
 
 [[package]]

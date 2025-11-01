@@ -1,9 +1,6 @@
 import React from "react";
 import { createRoot } from "react-dom/client";
-import ChatPage from "./features/chat/ChatPage";
+import App from "./App.tsx";
+import "./index.css";
 
-createRoot(document.getElementById("root")!).render(
-  <React.StrictMode>
-    <ChatPage />
-  </React.StrictMode>,
-);
+createRoot(document.getElementById("root")!).render(<App />);
