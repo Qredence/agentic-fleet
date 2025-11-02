@@ -1,36 +1,38 @@
-# Frontend Overview
+# Repository Guidelines
 
-`src/frontend/` is the staging area for the React/Vite client. The actual application lives under `src/frontend/src`, while this directory keeps build artifacts (`dist/`), the local npm lockfile, and documentation for contributors. Production builds end up in `src/agentic_fleet/ui/` so the FastAPI backend can serve the SPA.
+## Project Structure & Module Organization
 
-## Layout
+- Backend lives under `src/agentic_fleet/` with FastAPI routers in `api/`, workflow logic in `workflow/`, agents in `agents/`, and shared models in `models/`.
+- Frontend sits in `src/frontend/src/` (Vite + React). UI components live in `components/`, state in `stores/`, reusable logic in `lib/`, and route-level views in `pages/`.
+- Default workflows are defined in `src/agentic_fleet/workflow.yaml`; overrides can be supplied via `config/workflows.yaml` or `AF_WORKFLOW_CONFIG`.
+- Tests reside in `tests/` with API, workflow, SSE, CLI, and load-testing suites; Vitest specs live alongside components in the frontend source tree.
 
-- `src/frontend/src/` — Vite project (see `src/frontend/src/AGENTS.md` for deep-dive guidance, component ownership, and testing strategy).
-- `dist/` — Latest build output from `npm run build` (cleaned & re-created as part of release flows).
-- `node_modules/` — Installed dependencies for the outer workspace (mainly shadcn tooling). The Vite project maintains its own `node_modules` inside `src/frontend/src/`.
-- `AGENTS.md` (this file) — High-level instructions; defer to nested docs for implementation details.
+## Build, Test, and Development Commands
 
-## Commands
+- `make dev` launches FastAPI on port 8000 and `npm run dev` on 5173 for full-stack work.
+- `uv run uvicorn agentic_fleet.server:app --reload --port 8000` handles backend-only loops; `make backend` wraps the same.
+- `make frontend-dev` serves the SPA; produce production bundles with `make build-frontend`.
+- Run backend tests with `make test` (`uv run pytest -v`) and workflow smoke checks via `make test-config`; execute Vitest with `npm run test`.
 
-- `make frontend-install` — Runs `npm install` inside `src/frontend/src`. Always execute this after cloning or whenever `package.json` changes.
-- `make frontend-dev` — Starts `npm run dev` in `src/frontend/src` (Vite dev server on port 5173).
-- `make build-frontend` — Builds the UI (`npm run build`) and copies the output into `src/agentic_fleet/ui/` for FastAPI to serve.
-- `npm run lint`, `npm run test`, `npm run format` — Run from `src/frontend/src` when working directly in that directory.
-- Full stack development remains `make dev`, which spins up both backend and frontend with hot reload.
+## Coding Style & Naming Conventions
 
-## Coordination with the backend
+- Python targets 3.12 with Ruff + Black; keep type hints explicit (`str | None`) and respect module-level `__all__` exports.
+- Frontend code uses TypeScript strict mode, ESLint, and shadcn/ui primitives. Prefer 2-space indentation, PascalCase for components, and prefix custom hooks with `use`.
+- Do not hardcode model IDs or tool bindings; keep workflow, agent, and tool configuration YAML-driven and return Pydantic models from tools.
 
-- The UI consumes the OpenAI-compatible Responses API served from `/v1/responses`. Schema changes must stay synchronized with `src/agentic_fleet/api/responses/` and the bridge in `src/agentic_fleet/workflow/events.py`.
-- Configuration-driven workflows surface through `/v1/entities`; if you add a new workflow ID in YAML, update the frontend entity queries (`src/frontend/src/lib/queries/entityQueries.ts`) accordingly.
-- Production builds need the backend running with the `ui/` directory in place. After `make build-frontend`, verify that `uv run uvicorn agentic_fleet.server:app --reload` serves the Vite assets locally.
+## Testing Guidelines
 
-## Quality gates
+- Co-locate Vitest specs near React modules and mirror file names with `.test.tsx` or `.test.ts`.
+- Backend tests rely on Pytest; target meaningful fixtures and consider `uv run pytest --cov` when coverage metrics matter.
+- After workflow or agent changes, rerun `make test-config` and the SSE bridge tests to keep schemas aligned.
 
-- Keep React changes aligned with `src/frontend/src/AGENTS.md` guidance (shadcn/ui conventions, Zustand stores, SSE handling).
-- Run `npm run lint` and `npm run test` within `src/frontend/src` for any UI-affecting change; capture Vitest coverage with `npm run test:coverage` when appropriate.
-- Remember to run `uv run python tools/scripts/validate_agents_docs.py` after editing this or any nested AGENTS documentation.
+## Commit & Pull Request Guidelines
 
-## When to update this file
+- Follow Conventional Commits (`feat(frontend):`, `fix(workflow):`, `chore:`) with imperative summaries under 72 characters and optional scope.
+- Reference issues in the body, describe impacts, and attach screenshots or terminal captures for UI/UX changes.
+- Ensure CI-critical commands (`make check`, `npm run lint`) pass before requesting review and note any skipped validations.
 
-- Document new top-level build commands, dependency flows, or deviations in the layout of `src/frontend/`.
-- Cross-link to new deep-dive docs living under `src/frontend/src/` whenever the substructure changes (e.g., new feature areas, store reorganisations).
-- Note interactions with backend deployments (e.g., additional static assets or environment variables) so agents updating the backend know where to look.
+## Security & Configuration Tips
+
+- Duplicate `.env.example` to `.env`, populate `OPENAI_API_KEY` and `OPENAI_BASE_URL`, and prefer managed identity for Azure resources.
+- Add tracing with `ENABLE_OTEL=true` and `OTLP_ENDPOINT`; never commit secrets—use env vars or managed stores instead.

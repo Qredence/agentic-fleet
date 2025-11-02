@@ -1,14 +1,10 @@
-import {
-  Avatar,
-  AvatarFallback,
-  AvatarImage,
-} from "@/components/ui/shadcn/avatar";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
   Tooltip,
   TooltipContent,
   TooltipProvider,
   TooltipTrigger,
-} from "@/components/ui/shadcn/tooltip";
+} from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
 import { Markdown } from "./markdown";
 
@@ -18,7 +14,7 @@ export type MessageProps = {
 } & React.HTMLProps<HTMLDivElement>;
 
 const Message = ({ children, className, ...props }: MessageProps) => (
-  <div className={cn("flex gap-3 items-start", className)} {...props}>
+  <div className={cn("flex gap-3", className)} {...props}>
     {children}
   </div>
 );
@@ -62,9 +58,7 @@ const MessageContent = ({
   ...props
 }: MessageContentProps) => {
   const classNames = cn(
-    "rounded-lg p-2 text-foreground bg-secondary break-words whitespace-normal",
-    markdown &&
-      "prose prose-sm dark:prose-invert max-w-none prose-headings:font-semibold prose-p:leading-relaxed prose-pre:p-0 prose-pre:bg-transparent prose-code:bg-muted prose-code:px-1 prose-code:py-0.5 prose-code:rounded prose-code:before:content-none prose-code:after:content-none",
+    "rounded-lg p-2 text-foreground bg-secondary prose break-words whitespace-normal",
     className,
   );
 
@@ -125,8 +119,8 @@ const MessageAction = ({
 
 export {
   Message,
-  MessageAction,
-  MessageActions,
   MessageAvatar,
   MessageContent,
+  MessageActions,
+  MessageAction,
 };
