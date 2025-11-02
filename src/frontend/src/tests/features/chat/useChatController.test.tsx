@@ -6,10 +6,10 @@ import {
   getHealth,
   sendChat,
   sendChatStream,
-} from "./useChatClient";
-import { useChatController } from "./useChatController";
+} from "@/features/chat/useChatClient";
+import { useChatController } from "@/features/chat/useChatController";
 
-vi.mock("./useChatClient", () => {
+vi.mock("@/features/chat/useChatClient", () => {
   return {
     getHealth: vi.fn(),
     createConversation: vi.fn(),

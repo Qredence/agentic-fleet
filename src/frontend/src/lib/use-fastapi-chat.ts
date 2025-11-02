@@ -25,7 +25,27 @@ import {
 import { useConversationHistory } from "../hooks/useConversationHistory";
 import { useMessageState, type Message } from "../hooks/useMessageState";
 import { API_ENDPOINTS, buildApiUrl } from "./api-config";
-import { type SSEEvent } from "./hooks/useSSEConnection";
+// SSE Event type matching backend format
+type SSEEvent = {
+  type?: string;
+  data?: unknown;
+  delta?: string | { content?: string; agent_id?: string };
+  content?: string;
+  actor?: string;
+  agent_id?: string;
+  item_id?: string;
+  message_id?: string;
+  text?: string;
+  error?: { message?: string; type?: string };
+  message?: string;
+  response?: { conversation_id?: string } | string;
+  metrics?: {
+    phase?: string;
+    inflight?: number;
+    queued?: number;
+    max_parallel?: number;
+  };
+};
 
 // ============================================================================
 // Retry Logic & Utilities
@@ -286,23 +306,135 @@ export function useFastAPIChat({
   /**
    * Handle individual SSE events from the backend
    */
+  // Track the current streaming message ID to ensure we reuse it
+  const streamingMessageIdRef = useRef<string | null>(null);
+
   const handleSSEEvent = useCallback(
     (event: SSEEvent) => {
+      console.log("[SSE] Received event:", event.type, event);
+
       switch (event.type) {
-        case "response.output_text.delta": {
-          if (!messageState.isStreaming()) {
-            messageState.startStreamingMessage(
-              event.item_id,
-              event.delta,
-              event.actor,
-            );
+        case "response.output_text.delta":
+        case "response.delta": {
+          // Handle both old and new event formats
+          let deltaText = "";
+          let agentId: string | undefined;
+
+          // Extract agent_id from multiple possible locations (priority order)
+          // 1. Top-level agent_id (backend format: {"type": "response.delta", "delta": "...", "agent_id": "planner"})
+          if (typeof event.agent_id === "string") {
+            agentId = event.agent_id;
+          }
+          // 2. Nested in delta object (backward compatibility)
+          else if (
+            event.delta &&
+            typeof event.delta === "object" &&
+            "agent_id" in event.delta
+          ) {
+            agentId =
+              typeof event.delta.agent_id === "string"
+                ? event.delta.agent_id
+                : undefined;
+          }
+          // 3. In data object (if delta is nested in data)
+          else if (
+            event.data &&
+            typeof event.data === "object" &&
+            "agent_id" in event.data
+          ) {
+            const dataObj = event.data as { agent_id?: string };
+            agentId =
+              typeof dataObj.agent_id === "string"
+                ? dataObj.agent_id
+                : undefined;
+          }
+
+          // Extract delta text
+          if (typeof event.delta === "string") {
+            // Old format: direct string delta
+            deltaText = event.delta;
+          } else if (
+            event.delta &&
+            typeof event.delta === "object" &&
+            "content" in event.delta
+          ) {
+            // New format: {delta: {content: "...", agent_id: "..."}}
+            deltaText =
+              typeof event.delta.content === "string"
+                ? event.delta.content
+                : "";
+          }
+
+          if (!deltaText) {
+            // Try alternative paths
+            if (typeof event.content === "string") {
+              deltaText = event.content;
+            } else if (
+              event.data &&
+              typeof event.data === "object" &&
+              "delta" in event.data
+            ) {
+              const nestedDelta = event.data.delta;
+              if (typeof nestedDelta === "string") {
+                deltaText = nestedDelta;
+              } else if (
+                nestedDelta &&
+                typeof nestedDelta === "object" &&
+                "content" in nestedDelta
+              ) {
+                deltaText =
+                  typeof nestedDelta.content === "string"
+                    ? nestedDelta.content
+                    : "";
+              }
+            }
+          }
+
+          if (deltaText) {
+            // Use existing streaming message ID if available, otherwise create new one
+            const itemId =
+              streamingMessageIdRef.current ||
+              event.item_id ||
+              `assistant-${Date.now()}`;
+            if (!streamingMessageIdRef.current) {
+              streamingMessageIdRef.current = itemId;
+            }
+
+            // Final actor resolution: agentId → event.actor → default
+            const actor = agentId || event.actor || "assistant";
+
+            console.log("[SSE] Processing delta:", {
+              itemId,
+              deltaLength: deltaText.length,
+              actor,
+              isStreaming: messageState.isStreaming(),
+              currentStreamingId: streamingMessageIdRef.current,
+            });
+
+            // If we're streaming the same message, append delta
+            // Otherwise, start streaming (which will update existing message if it exists)
+            const isCurrentlyStreaming = messageState.isStreaming();
+            const isSameMessage = streamingMessageIdRef.current === itemId;
+
+            // If we're streaming the same message, append delta
+            // Otherwise, start streaming (which will update existing message if it exists)
+            if (isCurrentlyStreaming && isSameMessage) {
+              messageState.appendDelta(deltaText);
+            } else {
+              // startStreamingMessage will handle updating existing message if it exists
+              messageState.startStreamingMessage(itemId, deltaText, actor);
+            }
           } else {
-            messageState.appendDelta(event.delta);
+            console.warn("[SSE] Delta event had no extractable text:", event);
           }
           break;
         }
 
         case "workflow.event": {
+          if (!event.text) {
+            break;
+          }
+
           const textLower = event.text.toLowerCase();
           const isPlanIndicator =
             event.actor?.toLowerCase().includes("plan") ||
@@ -319,7 +451,7 @@ export function useFastAPIChat({
 
             if (planSteps.length > 0) {
               setCurrentPlan({
-                id: event.message_id,
+                id: event.message_id || `plan-${Date.now()}`,
                 title: planTitle,
                 description: undefined,
                 steps: planSteps,
@@ -335,7 +467,7 @@ export function useFastAPIChat({
             workerMatches.forEach((workerText, index) => {
               const cleanedText = workerText.replace(/^Worker:\s*/, "");
               const systemMessage: Message = {
-                id: `${event.message_id}-worker-${index}`,
+                id: `${event.message_id || `worker-${Date.now()}`}-worker-${index}`,
                 role: "system",
                 content: cleanedText,
                 actor: event.actor || "Worker",
@@ -345,10 +477,10 @@ export function useFastAPIChat({
             });
           } else {
             const systemMessage: Message = {
-              id: event.message_id,
+              id: event.message_id || `system-${Date.now()}`,
               role: "system",
               content: event.text,
-              actor: event.actor,
+              actor: event.actor || "system",
               isNew: true,
             };
             messageState.addMessage(systemMessage);
@@ -357,11 +489,23 @@ export function useFastAPIChat({
         }
 
         case "response.completed": {
+          console.log("[SSE] Response completed:", event);
           messageState.finishStreaming();
+          streamingMessageIdRef.current = null; // Reset streaming ID
           setCurrentPlan((prev) =>
             prev ? { ...prev, isStreaming: false } : null,
           );
-          const responseConvId = event.response.conversation_id;
+          // Handle response which can be string or object
+          let responseConvId: string | undefined;
+          if (typeof event.response === "string") {
+            responseConvId = event.response;
+          } else if (
+            event.response &&
+            typeof event.response === "object" &&
+            "conversation_id" in event.response
+          ) {
+            responseConvId = event.response.conversation_id;
+          }
           if (responseConvId) {
             setConversationId(responseConvId);
           }
@@ -372,12 +516,116 @@ export function useFastAPIChat({
 
         case "response.function_approval.requested":
         case "approval_request": {
-          approvalWorkflow.handleApprovalRequested(event);
+          // Extract approval request data from SSE event
+          const requestId =
+            (event.data &&
+            typeof event.data === "object" &&
+            "request_id" in event.data
+              ? String(event.data.request_id)
+              : event.item_id) || "";
+
+          if (!requestId) {
+            console.warn("[SSE] Approval request missing request_id:", event);
+            break;
+          }
+
+          // Extract request details
+          const requestData =
+            event.data &&
+            typeof event.data === "object" &&
+            "request" in event.data
+              ? event.data.request
+              : event.data;
+
+          if (requestData && typeof requestData === "object") {
+            const approvalRequest = {
+              id: requestId,
+              operation_type:
+                "operation_type" in requestData
+                  ? String(requestData.operation_type)
+                  : "unknown",
+              description:
+                "description" in requestData
+                  ? String(requestData.description)
+                  : "",
+              details:
+                "details" in requestData &&
+                typeof requestData.details === "object"
+                  ? (requestData.details as Record<string, unknown>)
+                  : {},
+              timeout_seconds:
+                "timeout_seconds" in requestData &&
+                typeof requestData.timeout_seconds === "number"
+                  ? requestData.timeout_seconds
+                  : undefined,
+              requested_at:
+                "requested_at" in requestData
+                  ? String(requestData.requested_at)
+                  : undefined,
+            };
+
+            approvalWorkflow.handleApprovalRequested({
+              request_id: requestId,
+              request: approvalRequest,
+            });
+          } else {
+            console.warn("[SSE] Approval request missing request data:", event);
+          }
           break;
         }
 
         case "response.function_approval.responded": {
-          approvalWorkflow.handleApprovalResponded(event);
+          // Extract approval response data from SSE event
+          const requestId =
+            (event.data &&
+            typeof event.data === "object" &&
+            "request_id" in event.data
+              ? String(event.data.request_id)
+              : event.item_id) || "";
+
+          if (!requestId) {
+            console.warn("[SSE] Approval response missing request_id:", event);
+            break;
+          }
+
+          // Extract response details
+          const responseData =
+            event.data &&
+            typeof event.data === "object" &&
+            "response" in event.data
+              ? event.data.response
+              : event.data;
+
+          if (responseData && typeof responseData === "object") {
+            const approvalResponse: ApprovalResponsePayload = {
+              decision:
+                "decision" in responseData &&
+                (responseData.decision === "approve" ||
+                  responseData.decision === "reject" ||
+                  responseData.decision === "modify")
+                  ? responseData.decision
+                  : "approve",
+              modified_details:
+                "modified_details" in responseData &&
+                typeof responseData.modified_details === "object"
+                  ? (responseData.modified_details as Record<string, unknown>)
+                  : undefined,
+              reason:
+                "reason" in responseData
+                  ? String(responseData.reason)
+                  : undefined,
+            };
+
+            approvalWorkflow.handleApprovalResponded({
+              request_id: requestId,
+              response: approvalResponse,
+            });
+          } else {
+            console.warn(
+              "[SSE] Approval response missing response data:",
+              event,
+            );
+          }
           break;
         }
 
@@ -458,6 +706,7 @@ export function useFastAPIChat({
 
         // Reset streaming state for new response
         messageState.resetStreaming();
+        streamingMessageIdRef.current = null; // Reset streaming message ID
 
         // Create abort controller for this request
         const controller = new AbortController();
@@ -551,9 +800,20 @@ export function useFastAPIChat({
               // Keep the last part (may be incomplete)
               buffer = parts.pop() || "";
 
-              // Process complete events
+              // Process complete events (each part is separated by \n\n)
               for (const part of parts) {
+                // Skip empty parts
+                if (!part.trim()) {
+                  continue;
+                }
+
+                // Find "data:" line(s) in this part
+                // Standard SSE format: "data: {json}\n\n"
+                // But handle cases where JSON might span multiple "data:" lines
                 const lines = part.split("\n");
+                let currentData = eventBuffer; // Start with any buffered data from previous chunk
+                eventBuffer = ""; // Clear eventBuffer since we're using it
+
                 for (const line of lines) {
                   if (!line.trim() || line.startsWith(":")) {
                     // Skip empty lines and comments (heartbeats)
@@ -564,37 +824,114 @@ export function useFastAPIChat({
                     const data = line.slice(6);
 
                     if (data === "[DONE]") {
+                      console.log("[SSE] Received [DONE] signal");
+                      // Ensure streaming is finished
+                      if (messageState.isStreaming()) {
+                        messageState.finishStreaming();
+                      }
+                      streamingMessageIdRef.current = null;
                       setChatStatus("ready");
+                      currentData = "";
+                      eventBuffer = ""; // Clear buffers
                       continue;
                     }
 
-                    // Accumulate potential multi-line JSON
-                    eventBuffer += data;
-
-                    try {
-                      const event: SSEEvent = JSON.parse(eventBuffer);
-                      handleSSEEvent(event);
-                      eventBuffer = "";
-                    } catch (parseError) {
-                      // JSON might be incomplete, wait for more data
-                      // Only log if we have accumulated a lot of data (likely malformed)
-                      if (eventBuffer.length > 10000) {
-                        console.error(
-                          "SSE event buffer exceeded limit, discarding:",
-                          eventBuffer.substring(0, 100),
-                          parseError,
+                    // If we have accumulated data, try to parse it first
+                    if (currentData) {
+                      try {
+                        const event: SSEEvent = JSON.parse(currentData);
+                        console.log(
+                          "[SSE] Parsed event successfully:",
+                          event.type,
+                          event,
                         );
-                        eventBuffer = "";
+                        handleSSEEvent(event);
+                        currentData = ""; // Clear after successful parse
+                      } catch (e) {
+                        // Not complete JSON yet, continue accumulating
+                        currentData += data;
                       }
+                    } else {
+                      // Start new data accumulation
+                      currentData = data;
                     }
+                  } else if (currentData) {
+                    // Continuation line (JSON spans multiple lines)
+                    currentData += "\n" + line;
+                  }
+                }
+
+                // Try to parse any remaining accumulated data
+                if (currentData.trim()) {
+                  try {
+                    const event: SSEEvent = JSON.parse(currentData);
+                    console.log(
+                      "[SSE] Parsed event successfully:",
+                      event.type,
+                      event,
+                    );
+                    handleSSEEvent(event);
+                    currentData = "";
+                  } catch (parseError) {
+                    // JSON spans multiple SSE chunks - accumulate in eventBuffer for next chunk
+                    eventBuffer = currentData;
+
+                    // Check if we have balanced braces (complete JSON)
+                    const openBraces = (eventBuffer.match(/\{/g) || []).length;
+                    const closeBraces = (eventBuffer.match(/\}/g) || []).length;
+
+                    if (
+                      openBraces === closeBraces &&
+                      eventBuffer.trim().length > 0
+                    ) {
+                      // Balanced braces - try parsing
+                      try {
+                        const event: SSEEvent = JSON.parse(eventBuffer);
+                        console.log(
+                          "[SSE] Parsed buffered event:",
+                          event.type,
+                          event,
+                        );
+                        handleSSEEvent(event);
+                        eventBuffer = "";
+                      } catch (retryError) {
+                        console.error(
+                          "[SSE] Failed to parse complete JSON:",
+                          retryError,
+                          "Buffer:",
+                          eventBuffer.substring(0, 200),
+                        );
+                        eventBuffer = ""; // Discard malformed data
+                      }
+                    } else if (eventBuffer.length > 10000) {
+                      // Buffer too large, likely malformed
+                      console.error(
+                        "[SSE] Event buffer exceeded limit, discarding:",
+                        eventBuffer.substring(0, 100),
+                      );
+                      eventBuffer = "";
+                    }
+                    // Otherwise, continue accumulating in eventBuffer for next chunk
                   }
                 }
               }
             }
 
             // Ensure status is set to ready if still streaming
-            if (statusRef.current === "streaming") {
+            // Check message state directly since statusRef may have been updated by event handlers
+            if (messageState.isStreaming()) {
+              console.log("[SSE] Stream ended, finishing streaming");
+              messageState.finishStreaming();
+              streamingMessageIdRef.current = null;
               setChatStatus("ready");
+            } else {
+              // Ensure status is reset even if message state was already finished
+              const currentStatus = statusRef.current;
+              if (currentStatus !== "ready" && currentStatus !== "error") {
+                console.log("[SSE] Stream ended, resetting status");
+                streamingMessageIdRef.current = null;
+                setChatStatus("ready");
+              }
             }
           } catch (streamError) {
             if (controller.signal.aborted) {

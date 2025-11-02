@@ -1,7 +1,7 @@
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
-import { ChatInput } from "./ChatInput";
+import { ChatInput } from "@/components/features/chat/ChatInput";
 
 describe("ChatInput", () => {
   it("should render input field", () => {

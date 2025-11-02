@@ -1,10 +1,10 @@
 import { act, renderHook, waitFor } from "@testing-library/react";
 import { describe, expect, it, vi, beforeEach, afterEach } from "vitest";
-import { useConversationHistory } from "./useConversationHistory";
-import { API_ENDPOINTS, buildApiUrl } from "../lib/api-config";
+import { useConversationHistory } from "@/hooks/useConversationHistory";
+import { API_ENDPOINTS, buildApiUrl } from "@/lib/api-config";
 
 // Mock the API config
-vi.mock("../lib/api-config", () => ({
+vi.mock("@/lib/api-config", () => ({
   API_ENDPOINTS: {
     CONVERSATION_MESSAGES: (id: string) => `/v1/conversations/${id}/messages`,
   },

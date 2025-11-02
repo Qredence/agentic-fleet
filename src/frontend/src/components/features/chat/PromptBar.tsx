@@ -4,7 +4,7 @@ import {
   PromptInputTextarea,
   PromptInputActions,
   PromptInputAction,
-} from "@/components/prompt-kit/prompt-input";
+} from "@/components/ui/prompt-input";
 import { PromptSuggestion } from "@/components/ui/prompt-suggestion";
 import { Button } from "@/components/ui/button";
 

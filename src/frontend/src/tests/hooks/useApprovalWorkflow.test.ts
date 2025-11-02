@@ -3,11 +3,12 @@ import { describe, expect, it, vi, beforeEach, afterEach } from "vitest";
 import {
   useApprovalWorkflow,
   type PendingApproval,
-} from "./useApprovalWorkflow";
-import { API_ENDPOINTS, buildApiUrl } from "../lib/api-config";
+} from "@/hooks/useApprovalWorkflow";
+import { API_ENDPOINTS, buildApiUrl } from "@/lib/api-config";
+import { useApprovalStore } from "@/stores/approvalStore";
 
 // Mock the API config
-vi.mock("../lib/api-config", () => ({
+vi.mock("@/lib/api-config", () => ({
   API_ENDPOINTS: {
     APPROVALS: "/v1/approvals",
     APPROVAL_RESPONSE: (id: string) => `/v1/approvals/${id}/respond`,
@@ -19,10 +20,20 @@ describe("useApprovalWorkflow", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     global.fetch = vi.fn();
+    // Reset the Zustand store state between tests
+    useApprovalStore.setState({
+      pendingApprovals: [],
+      approvalStatuses: {},
+    });
   });
 
   afterEach(() => {
     vi.restoreAllMocks();
+    // Reset the Zustand store state after each test
+    useApprovalStore.setState({
+      pendingApprovals: [],
+      approvalStatuses: {},
+    });
   });
 
   it("should initialize with empty approvals", () => {
@@ -193,9 +204,8 @@ describe("useApprovalWorkflow", () => {
 
     await waitFor(() => {
       expect(result.current.approvalStatuses["req-1"]).toBe("completed");
+      expect(result.current.pendingApprovals).toHaveLength(0);
     });
-
-    expect(result.current.pendingApprovals).toHaveLength(0);
     expect(global.fetch).toHaveBeenCalledWith(
       buildApiUrl(API_ENDPOINTS.APPROVAL_RESPONSE("req-1")),
       expect.objectContaining({

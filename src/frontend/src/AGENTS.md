@@ -13,7 +13,7 @@
 make frontend-install  # Install dependencies
 make frontend-dev      # Start dev server (port 5173)
 
-# From src/frontend/:
+# From src/frontend/src/:
 npm install      # Install dependencies
 npm run dev      # Start dev server
 npm run build    # Production build
@@ -21,9 +21,9 @@ npm run lint     # Check code
 npm run lint:fix # Auto-fix issues
 
 # Test integration with backend:
-# Terminal 1: uv run agentic-fleet (full stack)
-# OR Terminal 1: make haxui-server (backend only)
-# Terminal 2: npm run dev (if not using agentic-fleet)
+# Terminal 1: make dev        (full stack)
+# OR Terminal 1: make backend (API only)
+# Terminal 2: npm run dev     (if backend already running)
 ```
 
 ---
@@ -60,37 +60,48 @@ This file documents how an agent should safely modify, extend, and validate the 
 ## 3. Directory Layout (High Signal)
 
 ```
-src/frontend/
-├── src/
-│   ├── components/
-│   │   ├── features/           # Feature-specific components (business logic)
-│   │   │   ├── chat/          # Chat feature: ChatContainer, ChatMessage, ChatInput, ChatHeader, ChatSidebar
-│   │   │   ├── approval/      # HITL approval: ApprovalPrompt
-│   │   │   └── shared/        # Shared features: ErrorBoundary, ConnectionStatusIndicator
-│   │   ├── ai/                # AI visualization components (plans, reasoning, tools, steps, streaming)
-│   │   └── ui/
-│   │       ├── shadcn/        # shadcn/ui primitives (DON'T MODIFY - managed by CLI)
-│   │       └── custom/        # App-specific UI components (safe to modify)
-│   ├── hooks/                 # Streaming + approval state hooks
-│   ├── lib/                   # Helper utilities (formatters, SSE parser, API clients)
-│   ├── pages/                 # Router-level pages (Index, NotFound)
-│   └── app/                   # App state (chat-store, API primitives)
-├── index.html                 # Vite entry
-├── vite.config.ts             # Build + alias config (@/ alias → src/)
-├── tailwind.config.ts         # Tailwind + shadcn integration
-└── components.json            # shadcn component registry
+src/frontend/src
+├── App.tsx / main.tsx          # Application shell + bootstrap
+├── api/                        # REST helpers (e.g., chatApi.ts)
+├── components/
+│   ├── ai/                     # Plan, reasoning, stream visualisations
+│   ├── features/               # UI composites (chat, approval, shared)
+│   └── ui/
+│       ├── shadcn/             # Generated primitives (managed via CLI)
+│       └── custom/             # App-specific UI atoms/molecules
+├── features/
+│   └── chat/                   # Domain hooks (useChatController, useChatClient)
+├── hooks/                      # Cross-cutting hooks (approval, history, SSE)
+├── lib/                        # API config, TanStack Query wrappers, use-fastapi-chat orchestrator, utilities
+├── pages/                      # Route-level components (ChatPage, fallback)
+├── stores/                     # Zustand stores (chatStore, approvalStore, conversationStore)
+├── utils/                      # Formatting helpers, constants
+├── test/                       # Vitest setup/helpers
+├── tests/                      # Test files organized by source structure
+│   ├── lib/                    # Tests for lib/ modules
+│   ├── hooks/                  # Tests for hooks/ modules
+│   ├── components/features/     # Tests for components/features/ modules
+│   └── features/               # Tests for features/ modules
+├── public/                     # Static assets served by Vite
+├── dist/                       # Generated build output (ignored in git)
+├── index.html                  # Vite entry
+├── vite.config.ts              # Build + alias config (`@` → `src/`)
+├── tailwind.config.ts          # Tailwind + shadcn integration
+└── components.json             # shadcn component registry
 
-**Import Conventions:**
-- Features: `import { ChatContainer } from '@/components/features/chat'` (barrel exports)
-- AI: `import { Plan, Reasoning } from '@/components/ai'` (barrel exports)
-- shadcn: `import { Button } from '@/components/ui/shadcn/button'` (individual imports, no barrel)
-- Custom UI: `import { Message } from '@/components/ui/custom/message'` (individual imports)
+**Import conventions:**
+- Feature composites: `import { ChatContainer } from '@/components/features/chat'`
+- Domain hooks: `import { useChatController } from '@/features/chat'`
+- AI widgets: `import { Plan } from '@/components/ai'`
+- shadcn primitives: `import { Button } from '@/components/ui/shadcn/button'` (no barrel)
+- Custom UI atoms: `import { Message } from '@/components/ui/custom/message'`
 
-**Component Ownership:**
-- `features/` - Safe to modify, application business logic
-- `ai/` - Safe to modify, AI-specific visualization
-- `ui/shadcn/` - DO NOT MODIFY, use shadcn CLI for updates
-- `ui/custom/` - Safe to modify, app-specific UI building blocks
+**Ownership notes:**
+- `components/features/*` — UI surfaces bound to business logic (safe to iterate).
+- `features/*` — Hook orchestration and domain logic; update alongside corresponding stores.
+- `components/ui/shadcn/*` — Generated; modify via `npx shadcn-ui` workflows only.
+- `stores/` — Centralised Zustand stores. Keep selectors memoized and state minimal.
+- `lib/` — Shared orchestrators (`use-fastapi-chat`), API config, TanStack query helpers; treat as single source of truth for network requests.
 ```
 
 ---
@@ -119,67 +130,68 @@ If adding new env keys:
 # Install deps (from repo root)
 make frontend-install
 # or manually
-cd src/frontend && npm install
+cd src/frontend/src && npm install
 
 # Dev server (5173 or 8080 depending on config)
-npm run dev
+cd src/frontend/src && npm run dev
 
 # Production build
-npm run build
+cd src/frontend/src && npm run build
 
 # Development (unminified) build
-npm run build:dev
+cd src/frontend/src && npm run build:dev
 
 # Preview build output
-npm run preview
+cd src/frontend/src && npm run preview
 
 # Lint / format
-npm run lint
-npm run lint:fix
-npm run format
+cd src/frontend/src && npm run lint
+cd src/frontend/src && npm run lint:fix
+cd src/frontend/src && npm run format
 ```
 
 ---
 
 ## 6. Streaming & Event Model
 
-The backend emits OpenAI **Responses API** style SSE events. Common types consumed:
+The backend emits OpenAI **Responses API**-compatible SSE messages plus a few Fleet-specific helpers. Events you must handle:
 
-| Event Type                  | Purpose                  | Action in UI                    |
-| --------------------------- | ------------------------ | ------------------------------- |
-| `content_block_delta`       | Partial token text       | Append to active message buffer |
-| `response_output_item_done` | Message segment complete | Seal current block              |
-| `approval_required`         | HITL operation pending   | Trigger approval modal & queue  |
-| `tool_call_delta`           | Tool streaming output    | Render tool scratch panel       |
-| `response_completed`        | Workflow finished        | Unlock input / flush state      |
+| Event Type             | Purpose                                             | UI Action                                                      |
+| ---------------------- | --------------------------------------------------- | -------------------------------------------------------------- |
+| `response.delta`       | Streaming token/segment from a specialist agent     | Append to active streaming message; attribute by `agent_id`.   |
+| `orchestrator.message` | Manager narration (plan ledger, progress notes)     | Render in sidebar / timeline (`Plan`, `Progress` panes).       |
+| `progress`             | Synthetic helper emitted when agents start/complete | Update status indicators (`planning`, `agent.starting`, etc.). |
+| `response.completed`   | Final assistant message with aggregated content     | Finalize message, unlock composer, persist to history.         |
+| `error`                | Execution failure                                   | Surface toast + mark conversation errored; stop streaming.     |
 
-Parser MUST be resilient to unknown event types (log + ignore). When modifying event handling:
+The stream always terminates with `data: [DONE]`. Parser MUST remain tolerant of additional keys (log + ignore). When adding new event types:
 
-- Keep backward compatibility (feature-detect new types)
-- Do not block UI on unknown payloads
+1. Extend discriminated union in `lib/use-fastapi-chat.ts` and `hooks/useMessageState.ts`.
+2. Update reducers/stores as needed.
+3. Add Vitest coverage for regression (`tests/hooks/useMessageState.test.ts`, `tests/lib/use-fastapi-chat.test.ts`).
 
 ---
 
-## 7. HITL Approval Flow (Frontend Perspective)
+## 7. HITL approval flow (frontend perspective)
 
-1. Receive `approval_required` event with `request_id`, `operation_type`, `details`.
-2. Store in approval queue store (`zustand`).
-3. Present modal (include operation preview — e.g. code snippet, dataset summary).
-4. User picks APPROVE / REJECT / MODIFY.
-5. POST decision to backend endpoint (ensure proper JSON schema):
+1. Listen for `response.function_approval.requested` (new Responses format) or legacy `approval_request`.
+2. Extract `{ request_id, request }` and push into the Zustand approval queue via `useApprovalWorkflow.handleApprovalRequested`.
+3. Render modal (`components/features/approval/ApprovalPrompt.tsx`) with the provided context.
+4. User selects Approve / Reject / Modify; disable actions while `respondToApproval` posts to `/v1/approvals/{request_id}`.
+5. The backend replies with `response.function_approval.responded`; remove the request through `handleApprovalResponded`.
+6. Surface transport errors and allow retry—never silently drop responses.
 
 ```json
 {
-  "request_id": "...",
   "decision": "approve|reject|modify",
-  "modified_data": { "code": "<optional>" }
+  "modified_details": {
+    "code": "... optional ..."
+  },
+  "reason": "optional reviewer note"
 }
 ```
 
-6. Disable buttons while awaiting 200 OK.
-7. Optimistically reflect decision (with rollback on failure).
-
-Never silently drop approval responses. Log transport errors with user hint.
+The approval store (`src/frontend/src/stores/approvalStore.ts`) already tracks optimistic states; keep selectors memoized so modals update efficiently.
 
 ---
 
@@ -236,13 +248,17 @@ Checklist:
 
 ---
 
-## 13. Testing Strategy (Frontend)
+## 13. Testing strategy (frontend)
 
-(Current repo emphasizes backend pytest; frontend test infra may be minimal.) If adding tests:
-
-- Use Playwright for E2E (already present under `tests/e2e/`).
-- Keep potential future unit tests colocated: `*.test.tsx` (Vitest / Jest if introduced).
-- Mock SSE layer with an event emitter abstraction.
+- Test files are organized in `tests/` directory, mirroring the source directory structure:
+  - `tests/lib/` — Tests for `lib/` modules (e.g., `use-fastapi-chat.test.ts`)
+  - `tests/hooks/` — Tests for `hooks/` modules (e.g., `useApprovalWorkflow.test.ts`, `useMessageState.test.ts`)
+  - `tests/components/features/` — Tests for `components/features/` modules (e.g., `chat/ChatContainer.test.tsx`, `approval/ApprovalPrompt.test.tsx`)
+  - `tests/features/` — Tests for `features/` modules (e.g., `chat/useChatClient.test.ts`)
+- All test files use the `@/` alias for imports (e.g., `import { useFastAPIChat } from "@/lib/use-fastapi-chat"`).
+- Run `npm run test` or `npm run test -- --watch` from `src/frontend/src`. Use `npm run test:ui` for focused debugging and `npm run test:coverage` to surface regressions.
+- When simulating SSE, stub the event stream via the utilities in `test/sseTestUtils.ts` (or extend if additional helpers are required).
+- Full-stack Playwright coverage resides in the Python suite (`tests/test_backend_e2e.py`). Execute it via `make test-e2e` once the dev stack is running.
 
 ---
 
@@ -258,10 +274,11 @@ Checklist:
 
 ## 15. API Integration Rules
 
-- Centralize fetch logic (e.g., `lib/api.ts`).
-- Always include `Content-Type: application/json` for POST.
-- Abort stale requests on model switch / session reset.
-- SSE: Use native `EventSource` or `fetch + ReadableStream` poly (depending on backend). Ensure reconnection strategy is **manual** (do not auto-reconnect mid-approval).
+- Centralize fetch logic: use `lib/api-config.ts` for endpoints/URLs and the helpers in `api/chatApi.ts` (or extend that module).
+- POST payloads **must** include `Content-Type: application/json`; use `fetchWithRetry` in `lib/use-fastapi-chat.ts` for resilient submissions.
+- Abort stale requests when switching models or resetting conversations (call `AbortController` via `use-fastapi-chat` utilities).
+- SSE uses `fetch + ReadableStream`; reconnection remains manual—do not auto-retry while approvals are pending.
+- When introducing new endpoints, add matching TanStack Query entries in `lib/queries/` and document fallback behaviour.
 
 ---
 
@@ -288,12 +305,12 @@ Never expose raw stack traces to end user UI.
 
 ## 18. Safe Automation Guardrails (For Agents)
 
-| Action                  | Check Before Proceeding                                                 |
-| ----------------------- | ----------------------------------------------------------------------- |
-| Modifying SSE parser    | Confirm backend event schema unchanged (search for `approval_required`) |
-| Adding dependency       | Ensure not duplicating existing functionality; update lock + docs       |
-| Editing Tailwind config | Verify no class name collisions / remove dead tokens                    |
-| Changing build config   | Run `npm run build` and manual smoke (open `dist/`)                     |
+| Action                  | Check Before Proceeding                                                          |
+| ----------------------- | -------------------------------------------------------------------------------- |
+| Modifying SSE parser    | Confirm backend event schema unchanged (search for `response.function_approval`) |
+| Adding dependency       | Ensure not duplicating existing functionality; update lock + docs                |
+| Editing Tailwind config | Verify no class name collisions / remove dead tokens                             |
+| Changing build config   | Run `npm run build` and manual smoke (open `dist/`)                              |
 
 ---
 
@@ -301,13 +318,17 @@ Never expose raw stack traces to end user UI.
 
 ```bash
 # Install & run
-make frontend-install && npm run dev
+make frontend-install
+cd src/frontend/src && npm run dev
 
 # Lint & format
-npm run lint && npm run lint:fix && npm run format
+cd src/frontend/src && npm run lint
+cd src/frontend/src && npm run lint:fix
+cd src/frontend/src && npm run format
 
 # Build / preview
-npm run build && npm run preview
+cd src/frontend/src && npm run build
+cd src/frontend/src && npm run preview
 ```
 
 ---

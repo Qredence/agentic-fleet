@@ -1,6 +1,6 @@
 import { screen, waitFor } from "@testing-library/react";
 import { describe, expect, it, vi, beforeEach } from "vitest";
-import { ChatContainer } from "./ChatContainer";
+import { ChatContainer } from "@/components/features/chat/ChatContainer";
 import { renderWithProviders } from "@/test/utils";
 
 // Mock the useFastAPIChat hook

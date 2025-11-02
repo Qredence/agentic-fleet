@@ -1,43 +1,36 @@
-# Repository Guidelines
+# Frontend Overview
 
-## Project Structure & Module Organization
+`src/frontend/` is the staging area for the React/Vite client. The actual application lives under `src/frontend/src`, while this directory keeps build artifacts (`dist/`), the local npm lockfile, and documentation for contributors. Production builds end up in `src/agentic_fleet/ui/` so the FastAPI backend can serve the SPA.
 
-- `config/workflows.yaml` and `src/agentic_fleet/agents/*/config.yaml` define all agent behavior; adjust YAML rather than hardcoding logic.
-- Backend code lives in `src/agentic_fleet/`, with tests in `tests/` and utilities under `tools/`.
-- The React/Vite frontend resides in `src/frontend/src`, static assets in `src/frontend/public`, and build output in `src/frontend/dist`.
-- Shared documentation sits in `docs/` and `src/frontend/AGENTS.md`; keep this file updated alongside related guides.
+## Layout
 
-## Build, Test, and Development Commands
+- `src/frontend/src/` — Vite project (see `src/frontend/src/AGENTS.md` for deep-dive guidance, component ownership, and testing strategy).
+- `dist/` — Latest build output from `npm run build` (cleaned & re-created as part of release flows).
+- `node_modules/` — Installed dependencies for the outer workspace (mainly shadcn tooling). The Vite project maintains its own `node_modules` inside `src/frontend/src/`.
+- `AGENTS.md` (this file) — High-level instructions; defer to nested docs for implementation details.
 
-- `make install` — sync Python dependencies via `uv`; rerun after lockfile updates.
-- `make dev` — launch FastAPI (port 8000) and Vite (port 5173) with hot reload.
-- `uv run uvicorn agentic_fleet.server:app --reload --port 8000` — backend-only loop for API work.
-- `make frontend-install` then `npm run dev` — install and run the frontend in isolation.
-- `make test`, `make test-config`, and `npm run test` — run backend pytest, config hydration guardrails, and Vitest respectively.
+## Commands
 
-## Coding Style & Naming Conventions
+- `make frontend-install` — Runs `npm install` inside `src/frontend/src`. Always execute this after cloning or whenever `package.json` changes.
+- `make frontend-dev` — Starts `npm run dev` in `src/frontend/src` (Vite dev server on port 5173).
+- `make build-frontend` — Builds the UI (`npm run build`) and copies the output into `src/agentic_fleet/ui/` for FastAPI to serve.
+- `npm run lint`, `npm run test`, `npm run format` — Run from `src/frontend/src` when working directly in that directory.
+- Full stack development remains `make dev`, which spins up both backend and frontend with hot reload.
 
-- Target Python 3.12 with explicit type hints (`str | None` style) and prefer data classes or Pydantic models declared in `core/code_types.py`.
-- All Python tooling, linters, and scripts run through `uv run …`; never invoke `python` directly.
-- Use Ruff and Black (`make format`) plus Mypy (`make type-check`); keep YAML declarative and avoid embedding prompts or model IDs in code.
-- Follow React conventions: PascalCase components in `src/frontend/src/components`, camelCase hooks/utilities, and 2-space indentation.
+## Coordination with the backend
 
-## Testing Guidelines
+- The UI consumes the OpenAI-compatible Responses API served from `/v1/responses`. Schema changes must stay synchronized with `src/agentic_fleet/api/responses/` and the bridge in `src/agentic_fleet/workflow/events.py`.
+- Configuration-driven workflows surface through `/v1/entities`; if you add a new workflow ID in YAML, update the frontend entity queries (`src/frontend/src/lib/queries/entityQueries.ts`) accordingly.
+- Production builds need the backend running with the `ui/` directory in place. After `make build-frontend`, verify that `uv run uvicorn agentic_fleet.server:app --reload` serves the Vite assets locally.
 
-- Backend uses `pytest`; name modules `test_*.py` and co-locate fixtures in `tests/conftest.py`.
-- Frontend relies on Vitest and Testing Library; name specs `*.test.ts(x)` beside the component.
-- Run `make test-config` after any YAML or AGENTS.md change to ensure workflows hydrate correctly.
-- Optional coverage is available with `uv run pytest --cov`; keep failures reproducible by recording seed or env flags when relevant.
+## Quality gates
 
-## Commit & Pull Request Guidelines
+- Keep React changes aligned with `src/frontend/src/AGENTS.md` guidance (shadcn/ui conventions, Zustand stores, SSE handling).
+- Run `npm run lint` and `npm run test` within `src/frontend/src` for any UI-affecting change; capture Vitest coverage with `npm run test:coverage` when appropriate.
+- Remember to run `uv run python tools/scripts/validate_agents_docs.py` after editing this or any nested AGENTS documentation.
 
-- Write concise imperative subjects (e.g., `Add planner retry budget`) and reference issues or PRs with `(#123)` when applicable.
-- Bundle related changes only; ensure lint, tests, and `make test-config` pass before requesting review.
-- PRs should describe intent, call out config or schema updates, and include screenshots or CLI output for UI-affecting work.
-- After editing AGENTS documentation, run `uv run python tools/scripts/validate_agents_docs.py` and attach the passing snippet in the PR.
+## When to update this file
 
-## Security & Configuration Tips
-
-- Copy `.env.example` to `.env`, provide `OPENAI_API_KEY`, and rely on managed identities for Azure secrets; never commit credentials.
-- Set `AF_WORKFLOW_CONFIG` when using custom workflow files and validate with `make test-config` before deploying.
-- Enable tracing by exporting `ENABLE_OTEL=true` and pointing `OTLP_ENDPOINT` at a running collector (`tools/observability/run-otel-collector.sh`).
+- Document new top-level build commands, dependency flows, or deviations in the layout of `src/frontend/`.
+- Cross-link to new deep-dive docs living under `src/frontend/src/` whenever the substructure changes (e.g., new feature areas, store reorganisations).
+- Note interactions with backend deployments (e.g., additional static assets or environment variables) so agents updating the backend know where to look.

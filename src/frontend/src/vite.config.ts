@@ -52,6 +52,7 @@ export default defineConfig(() => ({
       exclude: [
         "node_modules/",
         "test/",
+        "tests/",
         "**/*.test.ts",
         "**/*.test.tsx",
         "**/*.config.*",

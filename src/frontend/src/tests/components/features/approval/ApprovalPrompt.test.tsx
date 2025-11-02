@@ -1,7 +1,7 @@
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
-import { ApprovalPrompt } from "./ApprovalPrompt";
+import { ApprovalPrompt } from "@/components/features/approval/ApprovalPrompt";
 
 describe("ApprovalPrompt", () => {
   const defaultProps = {

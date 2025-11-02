@@ -5,7 +5,7 @@
  * Now includes batched delta updates for better performance
  */
 
-import { useState, useCallback, useRef } from "react";
+import { useCallback, useRef, useState } from "react";
 
 export interface ToolCall {
   id: string;
@@ -69,14 +69,33 @@ export function useMessageState(): UseMessageStateReturn {
 
   const startStreamingMessage = useCallback(
     (itemId: string, delta: string, actor?: string) => {
-      const newMessage: Message = {
-        id: itemId,
-        role: "assistant",
-        content: delta,
-        actor,
-        isNew: true,
-      };
-      setMessages((prev) => [...prev, newMessage]);
+      setMessages((prev) => {
+        // Check if message with this ID already exists
+        const existingIndex = prev.findIndex((msg) => msg.id === itemId);
+
+        if (existingIndex !== -1) {
+          // Update existing message instead of creating new one
+          return prev.map((msg, index) =>
+            index === existingIndex
+              ? {
+                  ...msg,
+                  content: msg.content + delta,
+                  actor: actor || msg.actor,
+                }
+              : msg,
+          );
+        }
+
+        // Create new message only if it doesn't exist
+        const newMessage: Message = {
+          id: itemId,
+          role: "assistant",
+          content: delta,
+          actor,
+          isNew: true,
+        };
+        return [...prev, newMessage];
+      });
       setCurrentStreamingId(itemId);
       deltaBufferRef.current = ""; // Clear buffer for new message
     },
@@ -90,20 +109,22 @@ export function useMessageState(): UseMessageStateReturn {
     deltaBufferRef.current = "";
 
     setMessages((prev) => {
-      const lastMessage = prev[prev.length - 1];
-      if (!lastMessage) return prev;
+      // Find the message with currentStreamingId instead of assuming it's the last one
+      const streamingId = currentStreamingId;
+      if (!streamingId) return prev;
 
-      return [
-        ...prev.slice(0, -1),
-        {
-          ...lastMessage,
-          content: lastMessage.content + deltaToAppend,
-        },
-      ];
+      const streamingIndex = prev.findIndex((msg) => msg.id === streamingId);
+      if (streamingIndex === -1) return prev;
+
+      return prev.map((msg, index) =>
+        index === streamingIndex
+          ? { ...msg, content: msg.content + deltaToAppend }
+          : msg,
+      );
     });
 
     rafIdRef.current = null;
-  }, []);
+  }, [currentStreamingId]);
 
   const appendDelta = useCallback(
     (delta: string) => {

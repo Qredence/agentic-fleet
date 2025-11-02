@@ -4,7 +4,7 @@ import {
   getConversation,
   getHealth,
   sendChat,
-} from "./useChatClient";
+} from "@/features/chat/useChatClient";
 
 const originalFetch = globalThis.fetch;
 

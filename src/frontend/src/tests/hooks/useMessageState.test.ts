@@ -1,6 +1,6 @@
 import { act, renderHook, waitFor } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
-import { useMessageState, type Message } from "./useMessageState";
+import { useMessageState, type Message } from "@/hooks/useMessageState";
 
 describe("useMessageState", () => {
   it("should initialize with empty messages", () => {

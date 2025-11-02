@@ -8,7 +8,7 @@
     "ignoreDeprecations": "5.0",
     "baseUrl": ".",
     "paths": {
-      "@/*": ["./src/*"]
+      "@/*": ["./*"]
     },
     "forceConsistentCasingInFileNames": true,
     "noImplicitAny": true,
