@@ -129,7 +129,7 @@ async def create_workflow(
 
         factory = WorkflowFactory()
         workflow = await factory.create_from_yaml_async(workflow_id)
-        logger.info("Created workflow '%s' from YAML configuration", workflow_id)
+        logger.info("Created workflow '%s' from YAML configuration", _sanitize_for_log(workflow_id))
         return workflow
     except Exception as exc:  # Broad catch to ensure graceful fallback
         logger.error(
