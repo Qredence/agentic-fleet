@@ -57,7 +57,8 @@ async def _stream_response(entity_id: str, input_data: str | dict[str, Any]) -> 
                 yield sse_line
         except Exception as exc:
             # Log the actual error message and stack trace on the server
-            logging.exception("Error in response stream for entity '%s'", entity_id)
+            safe_entity_id = str(entity_id).replace('\n', '').replace('\r', '')
+            logging.exception("Error in response stream for entity '%s'", safe_entity_id)
             # Send generic error message to client as SSE event
             error_event = {
                 "type": "error",
