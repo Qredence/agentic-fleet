@@ -113,7 +113,7 @@ async def stream_workflow(workflow_id: str):
 
         except Exception as e:
             logger.error(f"Error in workflow stream: {e}", exc_info=True)
-            error_event = json.dumps({"type": "error", "data": {"message": f"Stream error: {e!s}"}})
+            error_event = json.dumps({"type": "error", "data": {"message": "An internal error occurred while streaming the workflow."}})
             yield f"data: {error_event}\n\n"
 
     return StreamingResponse(
