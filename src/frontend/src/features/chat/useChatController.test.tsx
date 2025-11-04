@@ -60,7 +60,6 @@ describe("useChatController - Integration Tests", () => {
     });
 
     // Try to send with an invalid conversation ID
-    const invalidConvId = result.current.conversationId;
     result.current.conversationId = "invalid-id-that-does-not-exist";
 
     await act(async () => {

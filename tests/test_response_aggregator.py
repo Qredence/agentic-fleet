@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import json
 from collections.abc import AsyncGenerator
-from typing import Any
+from typing import Any, cast
 
 import pytest
 
@@ -15,7 +15,7 @@ from agentic_fleet.models.events import WorkflowEvent
 async def generate_mock_events(events: list[dict[str, Any]]) -> AsyncGenerator[WorkflowEvent, None]:
     """Helper to generate mock workflow events."""
     for event in events:
-        yield WorkflowEvent(event)  # type: ignore[misc]
+        yield cast(WorkflowEvent, event)
 
 
 @pytest.mark.asyncio

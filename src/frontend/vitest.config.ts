@@ -34,9 +34,6 @@ export default defineConfig({
         },
       },
     },
-    globals: true,
-    testTimeout: 15000, // Increased timeout for real API calls
-    hookTimeout: 15000,
     include: ["src/**/*.{test,spec}.{js,ts,jsx,tsx}"],
     exclude: ["node_modules/", "dist/", "**/*.d.ts"],
   },
