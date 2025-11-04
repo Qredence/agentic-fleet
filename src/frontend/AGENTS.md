@@ -2,55 +2,82 @@
 
 ## Overview
 
-The frontend is a Vite 5 + React 18 application using TypeScript, shadcn/ui components, Tailwind utilities, and SSE streams from the FastAPI backend. It lives entirely in this folder and expects the backend API at `http://localhost:8000/v1`. Anything that mutates chat state, renders streaming responses, or touches shared UI primitives belongs here.
+The frontend lives in `src/frontend/src/` and is built with Vite + React + TypeScript. It renders the
+Agentic Fleet chat surface, consumes the backend Responses SSE stream, and visualises agent-specific
+progress (chain of thought, reasoning, and orchestrator messages). This document covers structure,
+state management, and development workflow for the SPA.
 
-## Environment & Setup
+## Directory Map
 
-1. Install Node.js 20+ (the repo assumes npm 10+). If you are using Volta or nvm, pin to the version declared in `.tool-versions` when available.
-2. Install dependencies once via `npm install` (or from repo root with `make frontend-install`).
-3. Ensure the backend is running (`make dev` or `uv run uvicorn agentic_fleet.server:app --reload --port 8000`) before exercising API-dependent features.
-4. Environment variables for the frontend reside in `src/frontend/.env` (not committed). Copy `index.html` meta tags or `vite.config.ts` aliases carefully if you need additional variables; Vite requires them to be prefixed with `VITE_`.
+| Path                  | Purpose                                                                                                                                                                           |
+| --------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `App.tsx`, `main.tsx` | Application shell that injects routing/context and mounts the chat page.                                                                                                          |
+| `pages/ChatPage.tsx`  | Top-level layout for the chat experience; wires stores, components, and prompts.                                                                                                  |
+| `components/`         | Feature components. `components/chat/` renders message streams, `components/prompt-kit/` houses prompt helpers, `components/ui/` wraps shadcn/ui primitives plus custom UI atoms. |
+| `stores/chatStore.ts` | Zustand store managing conversation state, SSE deltas, orchestrator messages, and errors.                                                                                         |
+| `lib/api/`            | REST + SSE clients (`chat.ts`, `magentic-workflow.ts`). All backend calls flow through here.                                                                                      |
+| `lib/parsers/`        | Helpers that translate Responses payloads into frontend-friendly shapes.                                                                                                          |
+| `lib/config.ts`       | Resolves `API_BASE_URL` from environment variables (`VITE_API_BASE_URL`).                                                                                                         |
+| `hooks/`              | Future custom hooks live here. (Empty by default to keep structure consistent with backend docs.)                                                                                 |
+| `types/`              | Shared TypeScript types for chat payloads, workflow entities, and SSE event envelopes.                                                                                            |
+| `assets/`             | Images or static resources consumed by the SPA.                                                                                                                                   |
+| `test/`               | Vitest setup utilities (msw handlers, test utils).                                                                                                                                |
 
-## Development Commands
+## Development Workflow
 
-- Start hot reload: `npm run dev` (defaults to port 5173). Use `npm run dev -- --host` when testing from other devices.
-- Build for production: `npm run build` emits static assets in `dist/`.
-- Preview built assets locally: `npm run preview -- --port 5173`.
-- Format code: `npm run format` (prettier over the entire tree).
-- Linting is currently a stub (`npm run lint`), so rely on TypeScript and editor tooling; update the script before enabling additional linters.
+- Install dependencies from the repo root: `make frontend-install` (runs `npm install` inside
+  `src/frontend/src`). Use `make dev-setup` to bundle backend + frontend prerequisites.
+- Local dev: `make dev` to launch backend + frontend together, or `make frontend-dev` to run only the
+  SPA on http://localhost:5173.
+- Production build: `make build-frontend` (internally calls `npm run build` and copies assets into
+  `src/agentic_fleet/ui`).
+- Environment configuration lives in `.env` (root) or `.env.local` (frontend). Set `VITE_API_BASE_URL`
+  to point at the backend (`http://localhost:8000` by default).
+- When adjusting bundler or lint settings, update `vite.config.ts`, `tsconfig.json`, and
+  `package.json` scripts together.
 
-## Testing Strategy
+## State & Data Flow
 
-- Component and hook tests use Vitest with React Testing Library. Run `npm run test` for a one-off pass or `npm run test -- --watch` for interactive mode.
-- Tests requiring DOM APIs rely on jsdom; avoid using browser-only globals unless they are polyfilled in `src/frontend/test/setup.ts`.
-- Keep network calls mocked. Hooks such as `useChatClient` wrap API fetches; expose the HTTP layer through dependency injection if you need deterministic tests.
+- The SPA creates conversations via `lib/api/chat.createConversation()` and streams responses through
+  `lib/api/chat.streamChatResponse()`, which implements an SSE reader that emits deltas,
+  orchestrator updates, and agent completion events.
+- `stores/chatStore.ts` (Zustand) is the single source of truth for messages, streaming deltas, and
+  orchestration metadata. Always go through store actions (`sendMessage`, `reset`, etc.) rather than
+  mutating React state directly.
+- Types under `types/chat.ts` define the shared payload structures. Keep them in sync with backend
+  Pydantic models located in `src/agentic_fleet/models/`.
+- Parsers in `lib/parsers/` translate raw Responses events into the UI-friendly format (chain of
+  thought display, reasoning breakdown, etc.). Update these alongside backend event schema changes.
 
-## UI & State Conventions
+## UI Patterns
 
-- Shared primitives live under `src/components/ui/`; extend them rather than duplicating markup in feature-level components.
-- Feature code (e.g. `features/chat/`) combines hooks (`useChatController.ts`) with presentational components. Maintain this split to avoid large, stateful monoliths.
-- Tailwind is configured in `tailwind.config.ts`; favor utility classes with `tailwind-merge` helpers, and avoid inline styles except for dynamic values that cannot be expressed via classes.
-- Syntax highlighting leverages Shiki; when adding languages, update `src/components/ui/code-block.tsx` accordingly.
+- Components in `components/chat/` render agent messages, chain-of-thought reveals, structured content
+  blocks, and reasoned steps. They are designed to be dumb—business logic stays in the store or `lib/`.
+- `components/ui/` hosts re-exported shadcn/ui primitives plus bespoke atoms (prompt input, streaming
+  indicator, markdown renderer, tool badges). Prefer composing these atoms rather than creating ad-hoc
+  styling in pages.
+- `components/prompt-kit/` holds prompt suggestions and saved prompt utilities; keep data-driven
+  content here for reuse across surfaces.
+- CSS lives in `App.css`, `index.css`, and component-level styles (mostly Tailwind utility classes).
+  Update `src/frontend/src/assets` when introducing new images or icons.
 
-## API Integration Notes
+## Testing & Quality
 
-- All HTTP calls flow through the chat client utilities in `features/chat/`. Respect the existing SSE parsing logic in `response-stream.tsx`; new endpoints should follow the same incremental chunk handling.
-- Backend routes live under `/v1/...`. Keep URL literals centralized in `useChatClient.ts` to make future rewrites easier.
-- When adjustments require backend changes, coordinate with `src/agentic_fleet/AGENTS.md` policies—especially around workflow IDs and approval flows.
+- Unit and component tests: run `npm run test` (Vitest). Specs live alongside components (`*.test.tsx`)
+  or in dedicated `__tests__` folders (e.g. `stores/__tests__/chatStore.test.ts`).
+- Linting & formatting: `npm run lint` executes ESLint with the same config as CI; Prettier runs via
+  IDE integration. Keep formatting-only changes separate from logic updates.
+- End-to-end flows: `make test-e2e` (Playwright) requires both backend and frontend running via
+  `make dev`. Update fixtures in `tests/e2e/` when UI behaviours change.
+- Snapshot updates or large UI changes should include screenshots in the PR description per the root
+  documentation guidelines.
 
-## Quick Reference
+## Update Checklist
 
-- `npm install` — Install dependencies.
-- `npm run dev` — Start the Vite dev server.
-- `npm run test` — Run Vitest suite.
-- `npm run test -- --watch` — Watch mode for tests.
-- `npm run build` — Generate production bundle in `dist/`.
-- `npm run preview -- --port 5173` — Serve built assets locally.
-- `npm run format` — Format source files with Prettier.
-
-## Troubleshooting
-
-- Blank screen during development? Check the browser console for CORS errors—ensure the backend is running on port 8000 and that the CORS middleware allows `http://localhost:5173`.
-- SSE stream stalls typically mean the backend cancelled the workflow; inspect the Network tab for `event: error` payloads.
-- TypeScript path resolution issues? Run `npm install` again to refresh `node_modules/@types`, then restart `tsc --watch` or your editor's language server.
-- If UI assets look outdated after dependency upgrades, delete `.vite` cache and rerun `npm run dev`.
+- Backend API, workflow, or SSE schema changes must update `lib/api/`, `lib/parsers/`, relevant store
+  actions, and the documentation chain (`src/agentic_fleet/AGENTS.md`, `tests/AGENTS.md`).
+- Adding visual features? Extend `components/ui/` or `components/chat/` and update the accessibility
+  affordances (focus states, aria labels).
+- Introducing new global state? Add a typed store or hook—avoid prop drilling through `ChatPage`.
+- After touching docs or store logic, run `make validate-agents`, `npm run lint`, and `npm run test`
+  before committing.
