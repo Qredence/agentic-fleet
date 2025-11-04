@@ -1,0 +1,236 @@
+name: Copilot Automated Feedback
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+    paths:
+      - '**.py'
+      - 'pyproject.toml'
+      - 'src/**'
+      - 'tests/**'
+
+permissions:
+  contents: read
+  pull-requests: write
+  issues: write
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  automated-feedback:
+    name: Run Automated Code Review
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v5
+        with:
+          fetch-depth: 0  # Fetch all history for better analysis
+      
+      - name: Install uv
+        uses: astral-sh/setup-uv@v7
+        with:
+          enable-cache: true
+          cache-dependency-glob: "uv.lock"
+      
+      - name: Set up Python
+        run: uv python install 3.12
+      
+      - name: Install dependencies
+        run: uv sync --all-extras
+      
+      - name: Run automated feedback analysis
+        id: feedback
+        run: |
+          uv run python tools/scripts/automated_feedback.py --dir src --format json > feedback.json
+          echo "feedback-generated=true" >> $GITHUB_OUTPUT
+        continue-on-error: true
+      
+      - name: Run linting checks
+        id: lint
+        run: |
+          uv run ruff check . --output-format=json > ruff-report.json || true
+          uv run ruff check . --output-format=github
+        continue-on-error: true
+      
+      - name: Run type checking
+        id: typecheck
+        run: |
+          uv run mypy src --no-error-summary 2>&1 | tee mypy-report.txt || true
+        continue-on-error: true
+      
+      - name: Check test coverage
+        id: coverage
+        run: |
+          uv run pytest --cov=src/agentic_fleet --cov-report=json --cov-report=term-missing > coverage-report.txt || true
+        continue-on-error: true
+      
+      - name: Generate feedback summary
+        id: summary
+        run: |
+          cat << 'EOF' > feedback-summary.md
+          ## 🤖 Copilot Automated Feedback
+          
+          This automated analysis provides feedback on code quality, security, performance, and documentation.
+          
+          ### 📊 Analysis Results
+          
+          EOF
+          
+          # Add custom feedback results
+          if [ -f feedback.json ]; then
+            python3 << 'PYTHON_SCRIPT'
+          import json
+          with open('feedback.json', 'r') as f:
+              data = json.load(f)
+              summary = data.get('summary', {})
+              print(f"\n**Custom Analysis:**")
+              print(f"- Files analyzed: {summary.get('files_analyzed', 0)}")
+              print(f"- Total issues: {summary.get('total_issues', 0)}")
+              print(f"- Errors: ❌ {summary.get('errors', 0)}")
+              print(f"- Warnings: ⚠️ {summary.get('warnings', 0)}")
+              print(f"- Info: ℹ️ {summary.get('info', 0)}")
+              print()
+          PYTHON_SCRIPT
+          fi >> feedback-summary.md
+          
+          # Add linting results
+          if [ -f ruff-report.json ]; then
+            python3 << 'PYTHON_SCRIPT'
+          import json
+          try:
+              with open('ruff-report.json', 'r') as f:
+                  data = json.load(f)
+                  issue_count = len(data) if isinstance(data, list) else 0
+                  print(f"\n**Ruff Linting:**")
+                  print(f"- Issues found: {issue_count}")
+                  if issue_count > 0:
+                      print(f"- Run `make format` to auto-fix some issues")
+                  else:
+                      print(f"- ✅ No linting issues found")
+                  print()
+          except Exception as e:
+              print(f"\n**Ruff Linting:** Could not parse report\n")
+          PYTHON_SCRIPT
+          fi >> feedback-summary.md
+          
+          # Add type checking results
+          if [ -f mypy-report.txt ]; then
+            ERROR_COUNT=$(grep -c "error:" mypy-report.txt || echo "0")
+            echo "" >> feedback-summary.md
+            echo "**Type Checking (mypy):**" >> feedback-summary.md
+            if [ "$ERROR_COUNT" -eq "0" ]; then
+              echo "- ✅ No type errors found" >> feedback-summary.md
+            else
+              echo "- ❌ Type errors found: $ERROR_COUNT" >> feedback-summary.md
+              echo "- Run \`make type-check\` locally to see details" >> feedback-summary.md
+            fi
+            echo "" >> feedback-summary.md
+          fi
+          
+          # Add coverage results
+          if [ -f coverage.json ]; then
+            python3 << 'PYTHON_SCRIPT'
+          import json
+          try:
+              with open('coverage.json', 'r') as f:
+                  data = json.load(f)
+                  coverage = data.get('totals', {}).get('percent_covered', 0)
+                  print(f"\n**Test Coverage:**")
+                  print(f"- Coverage: {coverage:.1f}%")
+                  if coverage >= 90:
+                      print(f"- ✅ Coverage meets target (≥90%)")
+                  else:
+                      print(f"- ⚠️ Coverage below target (≥90%)")
+                  print()
+          except Exception as e:
+              print(f"\n**Test Coverage:** Could not parse report\n")
+          PYTHON_SCRIPT
+          fi >> feedback-summary.md
+          
+          cat << 'EOF' >> feedback-summary.md
+          
+          ### 📋 Code Quality Checklist
+          
+          Please ensure your PR addresses the following:
+          
+          - [ ] All functions and classes have docstrings
+          - [ ] Type hints are present for all parameters and return values
+          - [ ] No hardcoded secrets or credentials
+          - [ ] Error handling uses specific exception types
+          - [ ] Tests cover new functionality
+          - [ ] Documentation is updated
+          
+          ### 📚 Resources
+          
+          - [Code Review Guidelines](../docs/CODE_REVIEW_GUIDELINES.md)
+          - [Contributing Guide](../CONTRIBUTING.md)
+          - [Testing Guide](../tests/TESTING_GUIDE.md)
+          
+          ---
+          *This is an automated analysis. For questions, please review the [guidelines](../docs/CODE_REVIEW_GUIDELINES.md) or ask in the PR comments.*
+          EOF
+      
+      - name: Comment on PR
+        uses: actions/github-script@v7
+        if: always()
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const fs = require('fs');
+            const summary = fs.readFileSync('feedback-summary.md', 'utf8');
+            
+            // Find existing comment
+            const { data: comments } = await github.rest.issues.listComments({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+            });
+            
+            const botComment = comments.find(comment => 
+              comment.user.type === 'Bot' && 
+              comment.body.includes('🤖 Copilot Automated Feedback')
+            );
+            
+            // Create or update comment
+            if (botComment) {
+              await github.rest.issues.updateComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                comment_id: botComment.id,
+                body: summary
+              });
+            } else {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: context.issue.number,
+                body: summary
+              });
+            }
+      
+      - name: Upload analysis artifacts
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: automated-feedback-results
+          path: |
+            feedback.json
+            ruff-report.json
+            mypy-report.txt
+            coverage-report.txt
+            feedback-summary.md
+          retention-days: 30
+      
+      - name: Check if errors were found
+        if: steps.feedback.outputs.feedback-generated == 'true'
+        run: |
+          ERRORS=$(python3 -c "import json; data=json.load(open('feedback.json')); print(data['summary']['errors'])")
+          if [ "$ERRORS" -gt "0" ]; then
+            echo "❌ Found $ERRORS critical issues that must be fixed"
+            exit 1
+          fi
+          echo "✅ No critical issues found"

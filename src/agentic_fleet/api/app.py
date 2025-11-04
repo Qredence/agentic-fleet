@@ -11,6 +11,18 @@ from agentic_fleet.api.workflows.routes import router as workflows_router
 
 
 def create_app() -> FastAPI:
+    """Create and configure the FastAPI application.
+    
+    Sets up the AgenticFleet API with CORS middleware and all route handlers
+    for conversations, chat, workflows, approvals, and system endpoints.
+    
+    Returns:
+        FastAPI: Configured FastAPI application instance
+        
+    Example:
+        >>> app = create_app()
+        >>> # Run with: uvicorn agentic_fleet.server:app
+    """
     app = FastAPI(title="AgenticFleet API")
 
     app.add_middleware(

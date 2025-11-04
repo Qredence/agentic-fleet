@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 import logging
 from collections.abc import AsyncGenerator
 
@@ -31,8 +32,26 @@ class WorkflowService:
         try:
             events = workflow.run(message)
             return await self.process_workflow_events(events)
+        except HTTPException:
+            # Re-raise HTTP exceptions as-is
+            raise
+        except (ValueError, TypeError) as exc:
+            logger.error("Invalid workflow input: %s", exc, exc_info=True)
+            raise HTTPException(
+                status_code=400, detail=f"Invalid input: {exc}"
+            ) from exc
+        except (TimeoutError, asyncio.CancelledError) as exc:
+            logger.error("Workflow execution cancelled or timed out", exc_info=True)
+            raise HTTPException(
+                status_code=504, detail="Request timed out"
+            ) from exc
+        except OSError as exc:
+            logger.error("System error during workflow execution", exc_info=True)
+            raise HTTPException(
+                status_code=503, detail="Service temporarily unavailable"
+            ) from exc
         except Exception as exc:
-            logger.error("Workflow execution failed", exc_info=True)
+            logger.error("Unexpected workflow execution error: %s", exc, exc_info=True)
             raise HTTPException(
                 status_code=500, detail="An error occurred while processing your request"
             ) from exc
