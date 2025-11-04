@@ -113,9 +113,13 @@ async def create_workflow(
         logger.info("Created workflow '%s' from YAML configuration", workflow_id)
         return workflow
     except Exception as exc:  # Broad catch to ensure graceful fallback
+        def _sanitize_for_log(value: str) -> str:
+            """Remove line breaks and carriage returns for logging."""
+            return value.replace('\n', '').replace('\r', '') if isinstance(value, str) else value
+
         logger.error(
             "Failed to create workflow '%s': %s - falling back to stub",
-            workflow_id,
+            _sanitize_for_log(workflow_id),
             exc,
             exc_info=True,
         )
