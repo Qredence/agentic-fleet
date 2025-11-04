@@ -38,8 +38,6 @@ class MagenticFleetWorkflow(RunsWorkflow):
         Yields:
             WorkflowEvent instances as workflow executes
         """
-        # Placeholder for correlation ID - needs implementation (unused for now)
-
         try:
             last_agent_id: str | None = None
             last_kind: str | None = None
