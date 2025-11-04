@@ -1,0 +1,39 @@
+# AgenticFleet Workflows Configuration (Package Default)
+# Precedence Order:
+#   1. AF_WORKFLOW_CONFIG (absolute path to an alternative YAML)
+#   2. This packaged default (workflows.yaml)
+#
+# Notes:
+# - Repo-level override (config/workflows.yaml) removed to prevent drift.
+# - Multiple workflows may be defined; only one is typically active per request.
+# - Runtime selection is parameter-based (workflow_id) — no env var selector.
+
+workflows:
+  magentic_fleet:
+    name: "Magentic Fleet Workflow"
+    description: "Five-agent orchestration with planner, executor, coder, verifier, and generator"
+    factory: "create_magentic_fleet_workflow" # Backward-compatible factory label
+
+    agents:
+      planner: "agents.planner"
+      executor: "agents.executor"
+      coder: "agents.coder"
+      verifier: "agents.verifier"
+      generator: "agents.generator"
+
+    manager:
+      model: "gpt-5-mini"
+      instructions: |
+        You are the orchestrator managing a five-agent team: planner, executor, coder,
+        verifier, and generator. Coordinate their work strategically to deliver comprehensive
+        solutions. Leverage the planner for decomposition, executor for implementation,
+        coder for technical tasks, verifier for quality assurance, and generator for synthesis.
+      reasoning:
+        effort: "medium"
+        verbosity: "verbose"
+      temperature: 0.6
+      max_tokens: 8192
+      store: true
+      max_round_count: 6
+      max_stall_count: 3
+      max_reset_count: 2
