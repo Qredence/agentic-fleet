@@ -30,3 +30,26 @@ def setup_logging(level: str | int | None = None) -> None:
 
     logger = logging.getLogger(__name__)
     logger.info(f"Logging configured at {logging.getLevelName(numeric_level)} level")
+
+
+def sanitize_for_log(value: str) -> str:
+    """Sanitize string for safe logging: remove all ASCII control characters and mark user input clearly.
+
+    Strips ASCII control characters (0x00-0x1F, 0x7F), newlines, carriage returns, Unicode line/paragraph
+    separators, NEL, and escape codes. Encloses user input in <angle brackets> to prevent log confusion.
+
+    Args:
+        value: String to sanitize
+
+    Returns:
+        Sanitized and clearly marked string
+    """
+    if not isinstance(value, str):
+        to_clean = str(value)
+    else:
+        to_clean = value
+    # Build translation table for ASCII controls (0-31, 127) + documented Unicode separators
+    controls = ''.join(chr(i) for i in range(0, 32)) + chr(0x7f) + '\u2028\u2029\u0085'
+    cleaned = to_clean.translate(str.maketrans('', '', controls))
+    # Enclose the sanitized input in angle brackets for visibility
+    return f"<{cleaned}>"

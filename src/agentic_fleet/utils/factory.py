@@ -200,7 +200,7 @@ class WorkflowFactory:
             if workflow_id != DEFAULT_WORKFLOW_ID:
                 logger.warning(
                     "Unknown workflow_id '%s'; falling back to default '%s'",
-                    workflow_id,
+                    sanitize_for_log(workflow_id),
                     DEFAULT_WORKFLOW_ID,
                 )
                 config = await self.get_workflow_config_async(DEFAULT_WORKFLOW_ID)

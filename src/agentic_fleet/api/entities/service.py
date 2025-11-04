@@ -9,6 +9,7 @@ from typing import Any, TypeVar
 from agentic_fleet.api.entities.schemas import EntityInfo, InputSchema
 from agentic_fleet.api.workflows import service as workflows_service
 from agentic_fleet.utils.factory import WorkflowFactory
+from agentic_fleet.utils.logging import sanitize_for_log
 
 logger = logging.getLogger(__name__)
 
@@ -131,7 +132,7 @@ class EntityDiscovery:
             await self._factory.get_workflow_config_async(entity_id)
         except ValueError as exc:
             raise ValueError(f"Entity '{entity_id}' not found after reload") from exc
-        logger.info(f"Reloaded entity: {entity_id}")
+        logger.info(f"Reloaded entity: {sanitize_for_log(entity_id)}")
 
     async def get_workflow_instance_async(self, entity_id: str) -> Any:
         if entity_id in self._workflow_cache:

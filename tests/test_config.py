@@ -579,7 +579,7 @@ class TestSecurityConfiguration:
             if pattern in config_str:
                 # This is a simple check - in production you'd want more sophisticated analysis
                 # For now, just warn about potential secrets
-                print(f"Warning: Potential security-sensitive '{pattern}' found in configuration")
+                print("Warning: Potential security-sensitive item found in configuration")
 
     @pytest.mark.asyncio
     async def test_safe_model_references(self):
