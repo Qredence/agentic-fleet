@@ -3,8 +3,16 @@ permissions:
   contents: read
 
 on:
+  push:
+    branches:
+      - main
+      - magentic-integration
+      - "feature/**"
+  pull_request:
+    branches:
+      - main
   release:
-    types: [created]
+    types: [published]
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -12,6 +20,10 @@ concurrency:
 
 env:
   OPENAI_RESPONSES_MODEL_ID: gpt-5-codex
+  # Skip LFS downloads to avoid missing object errors
+  # in microsoft/agent-framework. See:
+  # https://github.com/microsoft/agent-framework/issues/1832
+  GIT_LFS_SKIP_SMUDGE: 1
 
 jobs:
   lint:
@@ -115,10 +127,36 @@ jobs:
           AZURE_OPENAI_EMBEDDING_DEPLOYED_MODEL_NAME: ${{ secrets.AZURE_OPENAI_EMBEDDING_DEPLOYED_MODEL_NAME }}
         run: uv run pytest -v --tb=short -m "not e2e" --cov=src/agenticfleet --cov-report=xml --cov-report=term-missing
 
+  frontend-test:
+    name: Frontend Tests
+    runs-on: ubuntu-latest
+    needs: [test]
+    steps:
+      - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # ratchet:actions/checkout@v5
+
+      - name: Setup Node.js
+        uses: actions/setup-node@39370e3970a6d050c480ffad4ff0ed4d3fdee5af # ratchet:actions/setup-node@v4
+        with:
+          node-version: "20.x"
+          cache: "npm"
+          cache-dependency-path: "src/frontend/package-lock.json"
+
+      - name: Install frontend dependencies
+        working-directory: src/frontend
+        run: npm ci
+
+      - name: Run frontend tests
+        working-directory: src/frontend
+        run: npm test
+
+      - name: Run frontend linting
+        working-directory: src/frontend
+        run: npm run lint
+
   build:
     name: Build Package
     runs-on: ubuntu-latest
-    needs: [lint, type-check, test]
+    needs: [lint, type-check, test, frontend-test]
     steps:
       - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # ratchet:actions/checkout@v5
 
@@ -161,9 +199,8 @@ jobs:
       - name: Run Bandit security linter
         run: |
           uv pip install bandit[toml]
-          uv run bandit -r src/ -f json -o bandit-report.json || true
+          uv run bandit -r src/ -f json -o bandit-report.json
           uv run bandit -r src/ -f txt
-        continue-on-error: true
 
       - name: Upload security report
         if: always()

@@ -1,127 +1,219 @@
-import {
-  HoverCard,
-  HoverCardContent,
-  HoverCardTrigger,
-} from "@/components/ui/hover-card";
+import * as React from "react";
+import { ExternalLink, Globe } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { createContext, useContext } from "react";
+import { Button } from "@/components/ui/button";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 
-const SourceContext = createContext<{
-  href: string;
-  domain: string;
-} | null>(null);
-
-function useSourceContext() {
-  const ctx = useContext(SourceContext);
-  if (!ctx) throw new Error("Source.* must be used inside <Source>");
-  return ctx;
-}
-
-export type SourceProps = {
-  href: string;
-  children: React.ReactNode;
-};
-
-export function Source({ href, children }: SourceProps) {
-  let domain = "";
-  try {
-    domain = new URL(href).hostname;
-  } catch {
-    domain = href.split("/").pop() || href;
-  }
-
-  return (
-    <SourceContext.Provider value={{ href, domain }}>
-      <HoverCard openDelay={150} closeDelay={0}>
-        {children}
-      </HoverCard>
-    </SourceContext.Provider>
-  );
-}
-
-export type SourceTriggerProps = {
-  label?: string | number;
+export interface SourceProps {
+  url: string;
+  title?: string;
+  description?: string;
+  favicon?: string;
+  domain?: string;
+  showDomain?: boolean;
   showFavicon?: boolean;
   className?: string;
-};
-
-export function SourceTrigger({
-  label,
-  showFavicon = false,
-  className,
-}: SourceTriggerProps) {
-  const { href, domain } = useSourceContext();
-  const labelToShow = label ?? domain.replace("www.", "");
-
-  return (
-    <HoverCardTrigger asChild>
-      <a
-        href={href}
-        target="_blank"
-        rel="noopener noreferrer"
-        className={cn(
-          "bg-muted text-muted-foreground hover:bg-muted-foreground/30 hover:text-primary inline-flex h-5 max-w-32 items-center gap-1 overflow-hidden rounded-full py-0 text-xs leading-none no-underline transition-colors duration-150",
-          showFavicon ? "pr-2 pl-1" : "px-1",
-          className,
-        )}
-      >
-        {showFavicon && (
-          <img
-            src={`https://www.google.com/s2/favicons?sz=64&domain_url=${encodeURIComponent(
-              href,
-            )}`}
-            alt="favicon"
-            width={14}
-            height={14}
-            className="size-3.5 rounded-full"
-          />
-        )}
-        <span className="truncate text-center font-normal">{labelToShow}</span>
-      </a>
-    </HoverCardTrigger>
-  );
+  variant?: "default" | "compact" | "card";
 }
 
-export type SourceContentProps = {
-  title: string;
-  description: string;
-  className?: string;
-};
+const Source = React.forwardRef<HTMLDivElement, SourceProps>(
+  (
+    {
+      url,
+      title,
+      description,
+      favicon,
+      domain,
+      showDomain = true,
+      showFavicon = true,
+      className,
+      variant = "default",
+      ...props
+    },
+    ref,
+  ) => {
+    const [imageError, setImageError] = React.useState(false);
+    const [faviconUrl, setFaviconUrl] = React.useState<string | null>(null);
 
-export function SourceContent({
-  title,
-  description,
-  className,
-}: SourceContentProps) {
-  const { href, domain } = useSourceContext();
+    // Extract domain from URL if not provided
+    const extractDomain = React.useCallback((urlString: string) => {
+      try {
+        const urlObj = new URL(urlString);
+        return urlObj.hostname.replace("www.", "");
+      } catch {
+        return urlString;
+      }
+    }, []);
 
-  return (
-    <HoverCardContent className={cn("w-80 p-0 shadow-xs", className)}>
-      <a
-        href={href}
-        target="_blank"
-        rel="noopener noreferrer"
-        className="flex flex-col gap-2 p-3"
-      >
-        <div className="flex items-center gap-1.5">
+    const displayDomain = domain || extractDomain(url);
+
+    // Generate favicon URL if not provided
+    React.useEffect(() => {
+      if (!favicon && showFavicon && displayDomain) {
+        try {
+          const urlObj = new URL(url);
+          const faviconUrl = `${urlObj.origin}/favicon.ico`;
+          setFaviconUrl(faviconUrl);
+        } catch {
+          setFaviconUrl(null);
+        }
+      }
+    }, [url, favicon, showFavicon, displayDomain]);
+
+    const handleFaviconError = () => {
+      setImageError(true);
+    };
+
+    const handleClick = () => {
+      window.open(url, "_blank", "noopener,noreferrer");
+    };
+
+    const renderFavicon = () => {
+      if (!showFavicon) return null;
+
+      if (favicon && !imageError) {
+        return (
           <img
-            src={`https://www.google.com/s2/favicons?sz=64&domain_url=${encodeURIComponent(
-              href,
-            )}`}
-            alt="favicon"
-            className="size-4 rounded-full"
-            width={16}
-            height={16}
+            src={favicon}
+            alt=""
+            className="h-4 w-4 rounded-sm flex-shrink-0"
+            onError={handleFaviconError}
           />
-          <div className="text-primary truncate text-sm">
-            {domain.replace("www.", "")}
+        );
+      }
+
+      if (faviconUrl && !imageError) {
+        return (
+          <img
+            src={faviconUrl}
+            alt=""
+            className="h-4 w-4 rounded-sm flex-shrink-0"
+            onError={handleFaviconError}
+          />
+        );
+      }
+
+      return <Globe className="h-4 w-4 text-gray-400 flex-shrink-0" />;
+    };
+
+    if (variant === "compact") {
+      return (
+        <TooltipProvider>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleClick}
+                className={cn(
+                  "h-7 px-2 gap-1 text-xs font-normal bg-gray-50 hover:bg-gray-100 border-gray-200",
+                  className,
+                )}
+                {...props}
+              >
+                {renderFavicon()}
+                {showDomain && (
+                  <span className="truncate max-w-[120px]">
+                    {displayDomain}
+                  </span>
+                )}
+                <ExternalLink className="h-3 w-3 flex-shrink-0" />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent side="top" className="max-w-xs">
+              <div className="space-y-1">
+                <p className="font-medium">{title || displayDomain}</p>
+                {description && (
+                  <p className="text-xs text-gray-600 line-clamp-2">
+                    {description}
+                  </p>
+                )}
+                <p className="text-xs text-gray-500">{url}</p>
+              </div>
+            </TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
+      );
+    }
+
+    if (variant === "card") {
+      return (
+        <div
+          ref={ref}
+          className={cn(
+            "border rounded-lg p-4 bg-white shadow-sm hover:shadow-md transition-shadow cursor-pointer",
+            className,
+          )}
+          onClick={handleClick}
+          {...props}
+        >
+          <div className="flex items-start space-x-3">
+            <div className="flex-shrink-0 mt-1">{renderFavicon()}</div>
+            <div className="flex-1 min-w-0">
+              <h3 className="text-sm font-medium text-gray-900 line-clamp-2 mb-1">
+                {title || displayDomain}
+              </h3>
+              {description && (
+                <p className="text-xs text-gray-600 line-clamp-3 mb-2">
+                  {description}
+                </p>
+              )}
+              <div className="flex items-center space-x-2 text-xs text-gray-500">
+                {showDomain && (
+                  <span className="truncate">{displayDomain}</span>
+                )}
+                <ExternalLink className="h-3 w-3 flex-shrink-0" />
+              </div>
+            </div>
           </div>
         </div>
-        <div className="line-clamp-2 text-sm font-medium">{title}</div>
-        <div className="text-muted-foreground line-clamp-2 text-sm">
-          {description}
-        </div>
-      </a>
-    </HoverCardContent>
-  );
-}
+      );
+    }
+
+    // Default variant - pill style
+    return (
+      <TooltipProvider>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <div
+              ref={ref}
+              className={cn(
+                "inline-flex items-center gap-2 px-3 py-1.5 bg-gray-100 hover:bg-gray-200 rounded-full text-sm text-gray-700 cursor-pointer transition-colors border border-gray-200",
+                className,
+              )}
+              onClick={handleClick}
+              {...props}
+            >
+              {renderFavicon()}
+              {showDomain && (
+                <span className="truncate max-w-[150px] font-medium">
+                  {displayDomain}
+                </span>
+              )}
+              <ExternalLink className="h-3 w-3 flex-shrink-0 text-gray-500" />
+            </div>
+          </TooltipTrigger>
+          <TooltipContent side="top" className="max-w-xs">
+            <div className="space-y-1">
+              {title && <p className="font-medium">{title}</p>}
+              {description && (
+                <p className="text-xs text-gray-600 line-clamp-2">
+                  {description}
+                </p>
+              )}
+              <p className="text-xs text-gray-500">{url}</p>
+            </div>
+          </TooltipContent>
+        </Tooltip>
+      </TooltipProvider>
+    );
+  },
+);
+Source.displayName = "Source";
+
+export { Source };

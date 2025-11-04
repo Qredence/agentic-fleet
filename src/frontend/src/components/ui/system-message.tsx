@@ -1,131 +1,239 @@
-import { Button } from "@/components/ui/button";
+import * as React from "react";
+import {
+  AlertTriangle,
+  Info,
+  CheckCircle,
+  XCircle,
+  AlertCircle,
+  X,
+} from "lucide-react";
 import { cn } from "@/lib/utils";
-import { cva, type VariantProps } from "class-variance-authority";
-import { AlertCircle, AlertTriangle, Info } from "lucide-react";
-import React from "react";
+import { Button } from "@/components/ui/button";
 
-const systemMessageVariants = cva(
-  "flex flex-row items-center gap-3 rounded-[12px] border py-2 pr-2 pl-3",
-  {
-    variants: {
-      variant: {
-        action: "text-zinc-700 dark:text-zinc-300",
-        error: "text-red-700 dark:text-red-800",
-        warning: "text-amber-700 dark:text-amber-700",
-      },
-      fill: {
-        true: "bg-background",
-        false: "",
-      },
-    },
-    compoundVariants: [
-      {
-        variant: "action",
-        fill: true,
-        class: "bg-zinc-100 dark:bg-zinc-900 border-transparent",
-      },
-      {
-        variant: "error",
-        fill: true,
-        class: "bg-red-100 dark:bg-red-900/20 border-transparent",
-      },
-      {
-        variant: "warning",
-        fill: true,
-        class: "bg-amber-100 dark:bg-amber-900/20 border-transparent",
-      },
-      {
-        variant: "action",
-        fill: false,
-        class: "border-zinc-200 dark:border-zinc-800",
-      },
-      {
-        variant: "error",
-        fill: false,
-        class: "border-red-600 dark:border-red-900",
-      },
-      {
-        variant: "warning",
-        fill: false,
-        class: "border-amber-600 dark:border-amber-900",
-      },
-    ],
-    defaultVariants: {
-      variant: "action",
-      fill: false,
-    },
-  },
-);
+export interface SystemMessageProps {
+  variant?: "action" | "error" | "warning" | "success" | "info";
+  title?: string;
+  description?: string;
+  children?: React.ReactNode;
+  className?: string;
+  closable?: boolean;
+  onClose?: () => void;
+  icon?: React.ReactNode;
+  action?: {
+    label: string;
+    onClick: () => void;
+    variant?: "default" | "outline" | "secondary" | "ghost" | "destructive";
+  };
+  size?: "sm" | "md" | "lg";
+}
 
-export type SystemMessageProps = React.ComponentProps<"div"> &
-  VariantProps<typeof systemMessageVariants> & {
-    icon?: React.ReactNode;
-    isIconHidden?: boolean;
-    cta?: {
-      label: string;
-      onClick?: () => void;
-      variant?: "solid" | "outline" | "ghost";
+const SystemMessage = React.forwardRef<HTMLDivElement, SystemMessageProps>(
+  (
+    {
+      variant = "info",
+      title,
+      description,
+      children,
+      className,
+      closable = false,
+      onClose,
+      icon,
+      action,
+      size = "md",
+      ...props
+    },
+    ref,
+  ) => {
+    const [isVisible, setIsVisible] = React.useState(true);
+
+    const handleClose = () => {
+      setIsVisible(false);
+      onClose?.();
     };
-  };
 
-export function SystemMessage({
-  children,
-  variant = "action",
-  fill = false,
-  icon,
-  isIconHidden = false,
-  cta,
-  className,
-  ...props
-}: SystemMessageProps) {
-  const getDefaultIcon = () => {
-    if (isIconHidden) return null;
+    const getVariantStyles = () => {
+      switch (variant) {
+        case "action":
+          return {
+            container: "bg-blue-50 border-blue-200 text-blue-800",
+            icon: "text-blue-600",
+            title: "text-blue-900",
+            description: "text-blue-700",
+            action:
+              "bg-blue-100 hover:bg-blue-200 text-blue-800 border-blue-200",
+          };
+        case "error":
+          return {
+            container: "bg-red-50 border-red-200 text-red-800",
+            icon: "text-red-600",
+            title: "text-red-900",
+            description: "text-red-700",
+            action: "bg-red-100 hover:bg-red-200 text-red-800 border-red-200",
+          };
+        case "warning":
+          return {
+            container: "bg-yellow-50 border-yellow-200 text-yellow-800",
+            icon: "text-yellow-600",
+            title: "text-yellow-900",
+            description: "text-yellow-700",
+            action:
+              "bg-yellow-100 hover:bg-yellow-200 text-yellow-800 border-yellow-200",
+          };
+        case "success":
+          return {
+            container: "bg-green-50 border-green-200 text-green-800",
+            icon: "text-green-600",
+            title: "text-green-900",
+            description: "text-green-700",
+            action:
+              "bg-green-100 hover:bg-green-200 text-green-800 border-green-200",
+          };
+        case "info":
+        default:
+          return {
+            container: "bg-gray-50 border-gray-200 text-gray-800",
+            icon: "text-gray-600",
+            title: "text-gray-900",
+            description: "text-gray-700",
+            action:
+              "bg-gray-100 hover:bg-gray-200 text-gray-800 border-gray-200",
+          };
+      }
+    };
 
-    switch (variant) {
-      case "error":
-        return <AlertCircle className="size-4" />;
-      case "warning":
-        return <AlertTriangle className="size-4" />;
-      default:
-        return <Info className="size-4" />;
+    const getDefaultIcon = () => {
+      switch (variant) {
+        case "action":
+          return <AlertCircle className="h-5 w-5" />;
+        case "error":
+          return <XCircle className="h-5 w-5" />;
+        case "warning":
+          return <AlertTriangle className="h-5 w-5" />;
+        case "success":
+          return <CheckCircle className="h-5 w-5" />;
+        case "info":
+        default:
+          return <Info className="h-5 w-5" />;
+      }
+    };
+
+    const getSizeStyles = () => {
+      switch (size) {
+        case "sm":
+          return {
+            container: "p-3",
+            title: "text-sm font-medium",
+            description: "text-xs",
+            icon: "h-4 w-4",
+          };
+        case "lg":
+          return {
+            container: "p-6",
+            title: "text-lg font-medium",
+            description: "text-base",
+            icon: "h-6 w-6",
+          };
+        case "md":
+        default:
+          return {
+            container: "p-4",
+            title: "text-sm font-medium",
+            description: "text-sm",
+            icon: "h-5 w-5",
+          };
+      }
+    };
+
+    const variantStyles = getVariantStyles();
+    const sizeStyles = getSizeStyles();
+    const displayIcon = icon || getDefaultIcon();
+
+    if (!isVisible) {
+      return null;
     }
-  };
 
-  const getIconToShow = () => {
-    if (isIconHidden) return null;
-    if (icon) return icon;
-    return getDefaultIcon();
-  };
-
-  const shouldShowIcon = getIconToShow() !== null;
-
-  return (
-    <div
-      className={cn(systemMessageVariants({ variant, fill }), className)}
-      {...props}
-    >
-      <div className="flex flex-1 flex-row items-center gap-3 leading-normal">
-        {shouldShowIcon && (
-          <div className="flex h-[1lh] shrink-0 items-center justify-center self-start">
-            {getIconToShow()}
-          </div>
+    return (
+      <div
+        ref={ref}
+        className={cn(
+          "relative rounded-lg border transition-all duration-200",
+          variantStyles.container,
+          sizeStyles.container,
+          className,
         )}
+        {...props}
+      >
+        <div className="flex items-start space-x-3">
+          <div className={cn("flex-shrink-0 mt-0.5", variantStyles.icon)}>
+            {React.isValidElement(displayIcon) &&
+              React.cloneElement(displayIcon, {
+                className: cn(
+                  sizeStyles.icon,
+                  (displayIcon.props as { className?: string }).className,
+                ),
+              } as { className: string })}
+          </div>
 
-        <div
-          className={cn(
-            "flex min-w-0 flex-1 items-center",
-            shouldShowIcon ? "gap-3" : "gap-0",
+          <div className="flex-1 min-w-0">
+            {title && (
+              <h3
+                className={cn(
+                  "font-semibold mb-1",
+                  variantStyles.title,
+                  sizeStyles.title,
+                )}
+              >
+                {title}
+              </h3>
+            )}
+
+            {description && (
+              <p
+                className={cn(
+                  "mb-3",
+                  variantStyles.description,
+                  sizeStyles.description,
+                )}
+              >
+                {description}
+              </p>
+            )}
+
+            {children && <div className="mb-3">{children}</div>}
+
+            {action && (
+              <div className="flex items-center space-x-2">
+                <Button
+                  size={size === "sm" ? "sm" : size === "lg" ? "lg" : "default"}
+                  variant={action.variant || "default"}
+                  onClick={action.onClick}
+                  className={variantStyles.action}
+                >
+                  {action.label}
+                </Button>
+              </div>
+            )}
+          </div>
+
+          {closable && (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={handleClose}
+              className={cn(
+                "absolute top-2 right-2 h-6 w-6 p-0 rounded-full opacity-70 hover:opacity-100",
+                variantStyles.icon,
+              )}
+            >
+              <X className="h-3 w-3" />
+              <span className="sr-only">Dismiss</span>
+            </Button>
           )}
-        >
-          <div className="text-sm">{children}</div>
         </div>
       </div>
+    );
+  },
+);
+SystemMessage.displayName = "SystemMessage";
 
-      {cta && (
-        <Button variant="default" size="sm" onClick={cta.onClick}>
-          {cta.label}
-        </Button>
-      )}
-    </div>
-  );
-}
+export { SystemMessage };

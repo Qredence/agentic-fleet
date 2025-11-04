@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import asyncio
 from dataclasses import asdict
+
 from agentic_fleet.api.conversations.service import get_store
 from agentic_fleet.api.workflow_factory import WorkflowFactory
 from agentic_fleet.api.workflows.service import WorkflowEvent, create_magentic_fleet_workflow
