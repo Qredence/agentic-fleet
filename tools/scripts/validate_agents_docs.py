@@ -39,11 +39,10 @@ REPO_ROOT = Path(__file__).resolve().parents[2]
 
 REQUIRED_AGENT_FILES = [
     REPO_ROOT / "AGENTS.md",
-    REPO_ROOT / "src" / "agenticfleet" / "AGENTS.md",
-    REPO_ROOT / "tests" / "AGENTS.md",
+    REPO_ROOT / "docs" / "AGENTS.md",
+    REPO_ROOT / "src" / "agentic_fleet" / "AGENTS.md",
     REPO_ROOT / "src" / "frontend" / "AGENTS.md",
-    REPO_ROOT / "src" / "agenticfleet" / "agents" / "AGENTS.md",
-    REPO_ROOT / "src" / "agenticfleet" / "workflows" / "AGENTS.md",
+    REPO_ROOT / "tests" / "AGENTS.md",
 ]
 
 ROOT_REQUIRED_SECTIONS = [
@@ -64,7 +63,7 @@ FUNCTION_DEF_NO_RETURN = re.compile(r"^def\s+\w+\s*\([^)]{0,500}\)\s*:(?!\s*->)"
 
 TABLE_HEADER_PATTERN = re.compile(r"^\|.+\|\s*$")
 
-PY_TOOL_DIRS = [REPO_ROOT / "src" / "agenticfleet" / "agents"]
+PY_TOOL_DIRS = [REPO_ROOT / "src" / "agentic_fleet" / "agents"]
 
 
 @dataclass
@@ -124,8 +123,11 @@ def check_markdown_table_spacing() -> list[Finding]:
         lines = path.read_text(encoding="utf-8").splitlines()
         for idx, line in enumerate(lines):
             if TABLE_HEADER_PATTERN.match(line.strip()):
+                prev_line = lines[idx - 1].strip() if idx > 0 else ""
+                if TABLE_HEADER_PATTERN.match(prev_line):
+                    continue
                 # Check previous line blank
-                prev_blank = idx == 0 or lines[idx - 1].strip() == ""
+                prev_blank = idx == 0 or prev_line == ""
                 # We'll only enforce preceding blank line (markdownlint MD058 heuristic)
                 if not prev_blank:
                     findings.append(

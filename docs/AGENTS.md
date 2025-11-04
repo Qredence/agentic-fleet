@@ -2,43 +2,64 @@
 
 ## Scope
 
-This guide applies to everything inside `docs/`. Use it whenever you edit developer documentation, API references, or architecture notes. Markdown files here are consumed by humans and coding agents alike, so accuracy, relative linking, and command hygiene (`uv run …` for Python tooling) are non-negotiable.
+This guide applies to everything inside `docs/`. Reference it whenever you author architecture notes,
+API references, CLI usage docs, or supporting design specs. All root-level invariants from
+`../AGENTS.md` apply here—especially the requirement to run Python commands through `uv run …` and to
+keep documentation synchronized with the codebase.
 
 ## Directory Map
 
-- `docs/api/` — FastAPI endpoints, backend integration, and error-handling guides.
-- `docs/cli/` — Workflow CLI usage and implementation notes.
-- `docs/configuration-guide.md` — Central reference for environment variables and YAML configs.
-- `docs/responsive-design-implementation.md` — Frontend UI/UX considerations.
+- `docs/api/` — FastAPI endpoint contracts, streaming semantics, error handling, and integration
+  examples.
+- `docs/cli/` — Typer CLI walkthroughs, scripted workflow samples, and troubleshooting.
+- `docs/configuration-guide.md` — Central reference for environment variables, workflow resolution
+  order, and deployment knobs.
+- `docs/responsive-design-implementation.md` — Frontend layout constraints, breakpoints, and design
+  tokens consumed by the SPA.
+- `docs/release-checklist.md`, `docs/testing-playbook.md` (if present) — link these back into PR
+  templates or `README.md` when updated.
 
-## Authoring Guidelines
+## Writing Standards
 
-- Prefer concise, task-focused sections. Link to source files (e.g. `src/agentic_fleet/api/workflows/service.py`) using relative paths so links remain valid in forks.
-- Commands interacting with Python must include the `uv run` prefix (e.g. `uv run pytest`). JavaScript tooling should run via npm scripts from the correct directory.
-- Describe configuration changes in terms of `config/workflows.yaml` and agent-specific YAML, not hardcoded Python constants.
-- Highlight required environment variables explicitly; reference `.env.example` instead of restating secrets inline.
-- When documenting Azure Cosmos DB or other cloud dependencies, reiterate the partitioning and retry guidance listed in `.env.example` and `azurecosmosdb.instructions.md`.
-- Use fenced code blocks for multi-line examples, and leave a blank line before and after tables to satisfy markdown lint heuristics.
+- Keep sections task-focused and prefer relative links to code (`../src/agentic_fleet/api/...`) so
+  forks and documentation previews remain valid.
+- Commands that touch Python, pytest, or Ruff **must** include `uv run`. JavaScript tooling belongs in
+  `src/frontend/src` and should be invoked through the provided npm scripts.
+- Describe the configuration chain accurately: `AF_WORKFLOW_CONFIG` (absolute path) → packaged
+  `src/agentic_fleet/workflows.yaml`. Mention the relevant `agents/*.py` modules exposing
+  `get_config()` whenever you document a workflow.
+- Highlight required environment variables explicitly. Point to `.env.example` instead of copying
+  secrets, and reference cloud-specific guidance (for example
+  `docs/azurecosmosdb.instructions.md`) when applicable.
+- Use fenced code blocks for multi-line examples and leave blank lines around tables to satisfy the
+  markdown lint heuristic enforced by `validate_agents_docs.py`.
+- When adding diagrams or screenshots, store them in `assets/` and use relative paths so GitHub,
+  Markdown preview, and docs tooling stay in sync.
 
 ## Previewing & Validation
 
-- Install optional tooling with `npm install --global markdownlint-cli` if you want live linting, but it is not a hard dependency.
-- Ensure links resolve by opening docs in VS Code's Markdown preview (`⌘K V`).
-- Run `uv run python tools/scripts/validate_agents_docs.py` from the repo root after adjusting any AGENTS or docs content; the script warns about missing tables, `uv run` omissions, or undocumented sections.
-- If you introduce new command sequences, test them locally before publishing. For example, validate backend snippets with `uv run python -m agentic_fleet` and frontend snippets from `src/frontend`.
+- Optional: install `markdownlint-cli` (`npm install --global markdownlint-cli`) for local linting.
+- Open files in VS Code’s Markdown preview (`⌘K V`) before merging to verify anchors and relative
+  links.
+- Run `uv run python tools/scripts/validate_agents_docs.py` (or `make validate-agents`) after any doc
+  edits. Address blocking errors before publishing; warnings should be triaged in follow-up tasks.
+- Exercise new command sequences locally. Validate backend snippets with `uv run python -m agentic_fleet`
+  and frontend sequences from `src/frontend/src`.
 
-## Contribution Checklist
+## Update Triggers
 
-1. Confirm the relevant section already exists; prefer updating existing guidance over duplicating content.
-2. Keep headings sentence case (e.g. “FastAPI error handling” rather than title case) to align with the rest of the docs set.
-3. When adding screenshots or assets, place them inside `assets/` and reference them relatively.
-4. Update cross-references (e.g. README or root `AGENTS.md`) if new workflows, scripts, or commands are introduced.
-5. Re-run `make validate-agents` (calls the documentation audit script) and address any reported findings before submitting a PR.
+- New endpoint, workflow, or CLI behaviour needs a corresponding update in `docs/api/` or `docs/cli/`.
+- Configuration changes (env vars, YAML overrides, secrets management) must update
+  `docs/configuration-guide.md` and cross-reference the root `AGENTS.md`.
+- UI/UX adjustments that affect responsive behaviour or mock flows should refresh the relevant doc
+  under `docs/`.
+- Any material change in documentation structure should also touch the root index (README) and the
+  AGENTS guides for backend, tests, or frontend if they reference the same feature.
 
 ## Escalation
 
-Documentation questions usually map to one of three code owners:
-
-- Backend workflows → see `src/agentic_fleet/AGENTS.md`.
-- Frontend/app shell → see `src/frontend/AGENTS.md`.
-- Release process, CI, or repo-wide policy → refer back to the root `AGENTS.md` and `.github` workflows.
+- Backend workflows and orchestration concerns: start with `src/agentic_fleet/AGENTS.md`.
+- Frontend shell or streaming UI questions: see `src/frontend/AGENTS.md`.
+- Test coverage, fixtures, or load scenarios: reference `tests/AGENTS.md`.
+- Repository-wide process, CI, or release policy: fall back to the root `AGENTS.md` and the automation
+  notes in `.github/`.
