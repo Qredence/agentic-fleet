@@ -29,7 +29,7 @@
         "--context",
         "ide-assistant",
         "--project",
-        "/Volumes/Samsung-SSD-T7/Workspaces/Github/qredence/agent-framework/v0.5/AgenticFleet"
+        "${PROJECT_PATH}"
       ]
     },
     "deepwiki": {
