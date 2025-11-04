@@ -100,7 +100,7 @@ HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
   CMD uv run python -c "import requests; requests.get('http://localhost:8000/v1/system/health', timeout=5).raise_for_status()" || exit 1
 
 # Start command
-CMD ["uv", "run", "uvicorn", "agentic_fleet.server:app", "--host", "0.0.0.0", "--port", "8000"]
+CMD ["uv", "run", "uvicorn", "agenticfleet.server:app", "--host", "0.0.0.0", "--port", "8000"]
 ```
 
 ### Docker Compose Deployment

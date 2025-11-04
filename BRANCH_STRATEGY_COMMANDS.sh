@@ -29,9 +29,9 @@ git checkout -b feature/magentic-core
 
 # Reset and stage only core files
 git reset HEAD .
-git add src/agentic_fleet/core/
-git add src/agentic_fleet/console.py
-git add src/agentic_fleet/main.py
+git add src/agenticfleet/core/
+git add src/agenticfleet/console.py
+git add src/agenticfleet/main.py
 git add pyproject.toml uv.lock Makefile
 git add CHANGELOG.md AGENTS.md README.md
 

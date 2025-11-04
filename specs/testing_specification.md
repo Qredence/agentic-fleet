@@ -235,13 +235,13 @@ uv run pytest tests/test_config.py -v
 uv run pytest -k "magentic"
 
 # Run with coverage reporting
-uv run pytest --cov=src/agentic_fleet --cov-report=term-missing
+uv run pytest --cov=src/agenticfleet --cov-report=term-missing
 
 # Frontend unit tests
-cd src/frontend/src && npm run test
+cd src/frontend && npm run test
 
 # Frontend build test
-cd src/frontend/src && npm run build
+cd src/frontend && npm run build
 ```
 
 ### CI/CD Testing Pipeline
