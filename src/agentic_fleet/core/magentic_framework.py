@@ -92,9 +92,11 @@ class MagenticOrchestrator:
     def _create_client(self) -> OpenAIResponsesClient:
         """Create OpenAI client following framework patterns"""
         import os
-
+        api_key = os.getenv("OPENAI_API_KEY")
+        if not api_key:
+            raise ValueError("OPENAI_API_KEY environment variable is required")
         return OpenAIResponsesClient(
-            model=self.config.fleet.manager.model, api_key=os.getenv("OPENAI_API_KEY")
+            model=self.config.fleet.manager.model, api_key=api_key
         )
 
     def _create_manager(self) -> ChatAgent:

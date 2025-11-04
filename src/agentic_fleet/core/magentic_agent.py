@@ -188,7 +188,7 @@ class MagenticAgentFramework:
         Returns:
             Workflow instance
         """
-        from agentic_fleet.utils.factory import WorkflowFactory
+        from agentic_fleet.api.workflow_factory import WorkflowFactory
 
         factory = WorkflowFactory()
         workflow = factory.create_from_yaml(workflow_id)

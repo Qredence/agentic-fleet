@@ -108,7 +108,7 @@ test:
 	uv run pytest -v
 
 test-config:
-	uv run python -c "from agentic_fleet.utils.factory import WorkflowFactory; factory = WorkflowFactory(); print(f'✓ Loaded {len(factory.list_available_workflows())} workflows from config')"
+	uv run python -c "from agentic_fleet.api.workflow_factory import WorkflowFactory; factory = WorkflowFactory(); print(f'✓ Loaded {len(factory.list_available_workflows())} workflows from config')"
 
 test-e2e:
 	@echo "Running E2E tests (requires backend + frontend running)..."

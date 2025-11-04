@@ -12,7 +12,7 @@ from agentic_fleet.agents.coordinator import AgentFactory
 from agentic_fleet.models.events import RunsWorkflow, WorkflowEvent
 from agentic_fleet.models.workflow import WorkflowConfig
 from agentic_fleet.tools.registry import ToolRegistry
-from agentic_fleet.utils.factory import WorkflowFactory
+from agentic_fleet.api.workflow_factory import WorkflowFactory
 from agentic_fleet.workflow.events import WorkflowEventBridge
 from agentic_fleet.workflow.magentic_workflow import (
     MagenticFleetWorkflow,

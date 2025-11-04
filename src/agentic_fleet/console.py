@@ -10,7 +10,7 @@ from typing import Any
 
 import typer
 
-from agentic_fleet.utils.factory import WorkflowFactory
+from agentic_fleet.api.workflow_factory import WorkflowFactory
 from agentic_fleet.utils.logging import setup_logging
 
 app = typer.Typer(add_completion=False, no_args_is_help=True)

@@ -174,7 +174,7 @@ AgenticFleet implements the **Magentic One** workflow pattern with two orchestra
 3. **EVALUATE** – Progress ledger checks: request satisfied? in a loop? who acts next?
 4. **ACT** – Selected specialist executes with domain-specific tools, returns findings
 5. **OBSERVE** – Manager reviews response, updates context, decides next action
-6. **REPEAT** – Continues until completion or limits reached (configurable in `workflows.yaml`)
+6. **REPEAT** – Continues until completion or limits reached (configurable in `workflow.yaml`)
 
 ### Agent Specialists
 
