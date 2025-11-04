@@ -114,8 +114,13 @@ async def create_workflow(
         return workflow
     except Exception as exc:  # Broad catch to ensure graceful fallback
         def _sanitize_for_log(value: str) -> str:
-            """Remove line breaks and carriage returns for logging."""
-            return value.replace('\n', '').replace('\r', '') if isinstance(value, str) else value
+            """Remove all line breaks, carriage returns, and major control characters for logging."""
+            if not isinstance(value, str):
+                return value
+            # Remove ASCII CR/LF, Unicode line/paragraph separators, and tabs
+            for ch in ['\n', '\r', '\u2028', '\u2029', '\u0085', '\t']:
+                value = value.replace(ch, '')
+            return value
 
         logger.error(
             "Failed to create workflow '%s': %s - falling back to stub",
