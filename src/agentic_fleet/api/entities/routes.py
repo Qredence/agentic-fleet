@@ -5,7 +5,7 @@ from __future__ import annotations
 from fastapi import APIRouter, HTTPException
 
 from agentic_fleet.api.entities.service import EntityDiscovery
-from agentic_fleet.models.entities import DiscoveryResponse, EntityInfo, EntityReloadResponse
+from agentic_fleet.api.entities.schemas import DiscoveryResponse, EntityInfo, EntityReloadResponse
 
 router = APIRouter()
 

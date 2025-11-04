@@ -10,7 +10,7 @@ from fastapi.responses import StreamingResponse
 
 from agentic_fleet.api.entities.routes import get_entity_discovery
 from agentic_fleet.api.responses.service import ResponseAggregator
-from agentic_fleet.models.responses import ResponseCompleteResponse, ResponseRequest
+from agentic_fleet.api.responses.schemas import ResponseCompleteResponse, ResponseRequest
 
 router = APIRouter()
 
@@ -98,7 +98,7 @@ async def _get_complete_response(
 
     # Convert input to string if needed
     if isinstance(input_data, dict):
-        message = input_data.get("input", "") if isinstance(input_data, dict) else str(input_data)
+        message = input_data.get("input", "")
     else:
         message = str(input_data)
 

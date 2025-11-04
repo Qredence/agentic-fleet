@@ -11,7 +11,7 @@ from fastapi.responses import StreamingResponse
 
 from agentic_fleet.api.chat.service import get_workflow_service
 from agentic_fleet.api.conversations.service import ConversationNotFoundError, get_store
-from agentic_fleet.models.chat import ChatMessagePayload, ChatRequest, ChatResponse
+from agentic_fleet.api.chat.schemas import ChatMessagePayload, ChatRequest, ChatResponse
 
 logger = logging.getLogger(__name__)
 router = APIRouter()

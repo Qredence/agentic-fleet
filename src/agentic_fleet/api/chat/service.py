@@ -40,13 +40,9 @@ class WorkflowService:
             logger.debug(f"[WORKFLOW] Cache hit for workflow_id: {workflow_id}")
             return self._workflow_cache[workflow_id]
 
-        # Cache miss - create workflow (use deprecated alias for default to allow test monkey-patching)
+        # Cache miss - create workflow
         logger.info(f"[WORKFLOW] Cache miss - creating workflow: {workflow_id}")
-        if workflow_id == "magentic_fleet":
-            maybe_workflow = create_magentic_fleet_workflow()
-        else:
-            maybe_workflow = create_workflow(workflow_id=workflow_id)
-        workflow = await maybe_workflow if inspect.isawaitable(maybe_workflow) else maybe_workflow
+        workflow = await create_workflow(workflow_id=workflow_id)
         self._workflow_cache[workflow_id] = workflow
         logger.info(f"[WORKFLOW] Workflow cached successfully: {workflow_id}")
         return workflow

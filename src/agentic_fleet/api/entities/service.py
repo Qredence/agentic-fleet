@@ -6,7 +6,7 @@ import logging
 from typing import Any
 
 from agentic_fleet.api.workflows import service as workflows_service
-from agentic_fleet.models.entities import EntityInfo, InputSchema
+from agentic_fleet.api.entities.schemas import EntityInfo, InputSchema
 from agentic_fleet.utils.factory import WorkflowFactory
 
 logger = logging.getLogger(__name__)

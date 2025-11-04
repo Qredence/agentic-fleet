@@ -14,7 +14,7 @@ try:
 except ImportError:
     pass  # dotenv not available, rely on system/env vars
 
-from agentic_fleet.models.events import RunsWorkflow, WorkflowEvent
+from agentic_fleet.workflows.events import RunsWorkflow, WorkflowEvent
 
 DEFAULT_WORKFLOW_ID = "magentic_fleet"
 
