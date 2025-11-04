@@ -38,7 +38,6 @@ Your workflow follows the Magentic pattern with four phases:
    - Prepare for the next evaluation cycle
 
 Available Specialist Agents:
-- coordinator: High-level task coordination and delegation
 - planner: Creates detailed execution plans and strategies
 - executor: Runs code and commands in a safe environment
 - generator: Generates code, content, and documentation
