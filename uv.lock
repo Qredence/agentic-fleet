@@ -174,7 +174,6 @@ dependencies = [
     { name = "fastapi" },
     { name = "httpx" },
     { name = "ipykernel" },
-    { name = "k6" },
     { name = "locust" },
     { name = "matplotlib" },
     { name = "mem0ai" },
@@ -283,7 +282,6 @@ requires-dist = [
     { name = "fastapi", specifier = ">=0.120.1,<1.0" },
     { name = "httpx", specifier = ">=0.24.0" },
     { name = "ipykernel", specifier = ">=7.0.1,<8.0" },
-    { name = "k6", specifier = ">=0.45.0" },
     { name = "locust", specifier = ">=2.15.0" },
     { name = "matplotlib", specifier = ">=3.6.0" },
     { name = "mem0ai", specifier = "==1.0.0" },
@@ -2070,20 +2068,6 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/02/49/9d1284d0dc65e2c757b74c6687b6d319b02f822ad039e5c512df9194d9dd/jupyter_core-5.9.1.tar.gz", hash = "sha256:4d09aaff303b9566c3ce657f580bd089ff5c91f5f89cf7d8846c3cdf465b5508", size = 89814, upload-time = "2025-10-16T19:19:18.444Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/e7/e7/80988e32bf6f73919a113473a604f5a8f09094de312b9d52b79c2df7612b/jupyter_core-5.9.1-py3-none-any.whl", hash = "sha256:ebf87fdc6073d142e114c72c9e29a9d7ca03fad818c5d300ce2adc1fb0743407", size = 29032, upload-time = "2025-10-16T19:19:16.783Z" },
-]
-
-[[package]]
-name = "k6"
-version = "1.1.0"
-source = { registry = "https://pypi.org/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/cd/4d/a0feffba7690789cb198696194426402a0e87cd01680dcdd255866aa5d49/k6-1.1.0.tar.gz", hash = "sha256:a29c9e27e9e80fba1d333b02c113ac44b7e1c3e6c228d61fec3c8af1684f708d", size = 6371, upload-time = "2025-09-12T23:03:52.78Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/05/a0/895e6bfc87465fa5430eaad5d0d28662784a354aeb389dd56e39f395c702/k6-1.1.0-py3-none-macosx_11_0_arm64.whl", hash = "sha256:a9b79dee5c30792469512d635ef8f285e12a2c2e53fed747740997a1e336a221", size = 29689287, upload-time = "2025-09-12T22:42:06.474Z" },
-    { url = "https://files.pythonhosted.org/packages/52/40/716dc74a87e8443e96f63713fbd328e3bfd2e730196de727b007c4e886eb/k6-1.1.0-py3-none-macosx_11_0_x86_64.whl", hash = "sha256:4cfce21a4854c26c717d4790587aa8a285f51049a7a796599e365a18fd28770d", size = 31157812, upload-time = "2025-09-12T22:42:11.873Z" },
-    { url = "https://files.pythonhosted.org/packages/c6/79/5efb9ba1e4102b3321871912177e0735353d4c48c78be76421576f5242bc/k6-1.1.0-py3-none-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:a6f752b793e3e6ae8055a828358e144324bc6e21706075a6d3bad7075259a0e3", size = 29054640, upload-time = "2025-09-12T22:42:16.797Z" },
-    { url = "https://files.pythonhosted.org/packages/c2/6d/b535da0cf5155cd30111efc8288636534d94beae27e3fefeed6bc57b7c97/k6-1.1.0-py3-none-manylinux_2_5_x86_64.manylinux1_x86_64.manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:beebf45cdf76dce1a4a140ba71a1026b52b860a0fc7ca4ef92d94caa8e2ffa04", size = 31091810, upload-time = "2025-09-12T22:42:22.276Z" },
-    { url = "https://files.pythonhosted.org/packages/0a/f9/940e5474bdc11f8ff7df17ba99ce380c78f934388cab50add51fcbec767b/k6-1.1.0-py3-none-musllinux_1_2_aarch64.whl", hash = "sha256:04021d3c34d4f41104c0d247e80989b82df5cf182feab6a7345d20840f13305a", size = 29054631, upload-time = "2025-09-12T22:42:31.183Z" },
-    { url = "https://files.pythonhosted.org/packages/80/3f/e9ca0cf1f39678ca7fda76f195fac9f5fc0ddda6cf1706dfabc04a2f8433/k6-1.1.0-py3-none-musllinux_1_2_x86_64.whl", hash = "sha256:59e7427608af58bbf1377326eb4f1b8f483612526fc57c439c8b1b94483fab9e", size = 31091792, upload-time = "2025-09-12T22:42:42.248Z" },
 ]
 
 [[package]]

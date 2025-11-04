@@ -39,6 +39,21 @@ class MagenticWorkflowService:
         self.fleet: MagenticFleet | None = None
         logger.info("MagenticWorkflowService initialized")
 
+    @staticmethod
+    def _sanitize_for_logging(value: str) -> str:
+        """
+        Sanitize user-controlled input for safe logging.
+
+        Removes carriage return and newline characters to prevent log injection attacks.
+
+        Args:
+            value: The string to sanitize
+
+        Returns:
+            Sanitized string with \r and \n characters removed
+        """
+        return value.replace("\r", "").replace("\n", "")
+
     def _ensure_fleet(self) -> None:
         """Lazy-load fleet on first use."""
         if self.fleet is None:
@@ -99,7 +114,8 @@ class MagenticWorkflowService:
             WorkflowEvent objects for SSE streaming
         """
         if workflow_id not in self.active_workflows:
-            yield WorkflowEvent(type="error", data={"message": f"Workflow {workflow_id} not found"})
+            safe_workflow_id = self._sanitize_for_logging(workflow_id)
+            yield WorkflowEvent(type="error", data={"message": f"Workflow {safe_workflow_id} not found"})
             return
 
         workflow = self.active_workflows[workflow_id]
