@@ -22,6 +22,25 @@ DEFAULT_WORKFLOW_ID = "magentic_fleet"
 logger = logging.getLogger(__name__)
 
 
+def _sanitize_for_log(value: str) -> str:
+    """Remove control characters from strings for safe logging.
+    
+    Strips newlines, carriage returns, and other control characters that could
+    be used for log injection attacks.
+    
+    Args:
+        value: String to sanitize
+        
+    Returns:
+        Sanitized string with control characters removed
+    """
+    if not isinstance(value, str):
+        return str(value)
+    # Use translate for efficient removal of control characters
+    # Removes: \n, \r, Unicode line/paragraph separators, NEL, and tabs
+    return value.translate(str.maketrans('', '', '\n\r\u2028\u2029\u0085\t'))
+
+
 class StubMagenticFleetWorkflow(RunsWorkflow):
     """Deterministic stub workflow used in tests and fallback scenarios.
 
