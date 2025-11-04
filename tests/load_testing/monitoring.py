@@ -203,7 +203,10 @@ class PerformanceMonitor:
                             "health_check_response_time",
                             response_time,
                             "ms",
-                            {"endpoint": "health", "status": f"{'healthy' if response.status == 200 else f'error_{response.status}'}"},
+                            {
+                                "endpoint": "health",
+                                "status": f"{'healthy' if response.status == 200 else f'error_{response.status}'}",
+                            },
                         )
 
                         if response.status == 200:

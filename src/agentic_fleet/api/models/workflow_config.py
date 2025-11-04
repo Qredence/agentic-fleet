@@ -16,3 +16,7 @@ class WorkflowConfig:
     factory: str
     agents: dict[str, Any]
     manager: dict[str, Any]
+    fleet: dict[str, Any] | None = None
+    checkpointing: Any | None = None
+    approval: Any | None = None
+    agent_config_registry: dict[str, Any] | None = None

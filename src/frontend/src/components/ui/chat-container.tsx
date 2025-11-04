@@ -62,19 +62,4 @@ function ChatContainerScrollAnchor({
   );
 }
 
-type ChatContainerComponent = typeof ChatContainerRoot & {
-  Content: typeof ChatContainerContent;
-  ScrollAnchor: typeof ChatContainerScrollAnchor;
-};
-
-const ChatContainer = Object.assign(ChatContainerRoot, {
-  Content: ChatContainerContent,
-  ScrollAnchor: ChatContainerScrollAnchor,
-}) as ChatContainerComponent;
-
-export {
-  ChatContainer,
-  ChatContainerContent,
-  ChatContainerRoot,
-  ChatContainerScrollAnchor,
-};
+export { ChatContainerRoot, ChatContainerContent, ChatContainerScrollAnchor };

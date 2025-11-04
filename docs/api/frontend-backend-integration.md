@@ -56,15 +56,22 @@ Frontend (useFastAPIChat hook)
 
 ### 2. SSE Event Streaming
 
-The backend streams events via SSE:
+The backend opens the stream with a `: keep-alive` comment, then emits the OpenAI-compatible events summarised below. See the **SSE Event Taxonomy** table for exact payloads and sequencing guarantees.
 
-- `connection` - Initial connection event
-- `delta` - Streaming text chunks from agents
-- `agent_message` - Complete agent response
-- `orchestrator_message` - Manager coordination messages
-- `workflow.completed` - Workflow finished
-- `error` - Error occurred
-- `heartbeat` - Keep-alive signal
+### SSE Event Taxonomy
+
+| Event type               | Emitted by            | Payload shape                                                                              | Notes                                                                                                                                                    |
+| ------------------------ | --------------------- | ------------------------------------------------------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `response.delta`         | `ResponseAggregator`  | `{ "type": "response.delta", "delta": { "content": string, "agent_id": string \| null } }` | Streams token-sized text chunks from the active agent. `agent_id` identifies the specialist emitting the chunk.                                          |
+| `agent.message.complete` | Workflow event bridge | `{ "type": "agent.message.complete", "agent_id": string, "content": string }`              | Signals that an agent finished its turn so the UI can finalize that agent's message bubble.                                                              |
+| `orchestrator.message`   | Workflow event bridge | `{ "type": "orchestrator.message", "message": string, "kind": string \| null }`            | Manager narration such as planning or replanning updates. `kind` mirrors workflow status (plan, replan, status, etc.).                                   |
+| `response.completed`     | `ResponseAggregator`  | `{ "type": "response.completed", "response": { "role": "assistant", "content": string } }` | Final assistant message synthesized from streamed deltas or workflow result payloads. Always followed by `[DONE]`.                                       |
+| `error`                  | `ResponseAggregator`  | `{ "type": "error", "error": { "message": string, "type": string } }`                      | Surfaced when orchestration or tool execution raises. The stream closes immediately after emitting the error and `[DONE]`.                               |
+| `response.*` (forwarded) | Workflow event bridge | `{ "type": "response.tool_output", ... }`                                                  | Any OpenAI Responses-compatible events (e.g., tool outputs, code interpreter logs) are forwarded verbatim with their original payload for UI extensions. |
+
+`data: [DONE]` is the terminal sentinel sent after every stream to mirror OpenAI Responses API behavior.
+
+> **Zero-delta completions.** Even if no `response.delta` chunks arrive (for example, a workflow returns an empty string directly from `message.done`), the aggregator still emits a `response.completed` event with an empty `response.content` followed by `data: [DONE]`. This guarantees deterministic teardown for the frontend stream handler.
 
 ### 3. Event Processing
 
@@ -112,12 +119,14 @@ proxy: {
     target: "http://localhost:8000",
     changeOrigin: true,
   },
-  "/health": {
-    target: "http://localhost:8000",
-    changeOrigin: true,
-  },
 }
 ```
+
+### Streaming feature flags
+
+- `STREAM_AGENT_DELTAS` (default `1`): emit per-agent `agent.delta` events in addition to the universal `response.delta` stream. Disable if the frontend does not render segmented agent output.
+- `STREAM_REASONING` (default `0`): forward `orchestrator.message` reasoning updates to clients and persist them to the conversation log. Leave off in production if sensitive planning traces should remain server-side.
+- Both flags are optional; the Responses stream (`response.delta`, `response.completed`, `error`, `[DONE]`) remains spec-compliant regardless of their values.
 
 ## Troubleshooting
 
@@ -170,13 +179,7 @@ proxy: {
 
 ### Manual API Testing
 
-Use the test script:
-
-```bash
-uv run python scripts/test-api-endpoints.py
-```
-
-Or test manually:
+Test endpoints manually:
 
 ```bash
 # Health check

@@ -325,9 +325,9 @@ describe('{component_name}', () => {{
 
         for i, test_case in enumerate(test_cases):
             test_template += f"""
-    it('{test_case['description']}', async () => {{
-        render(<{component_name} {{...{{{test_case['props']}}}}} />);
-        {test_case['assertions']}
+    it('{test_case["description"]}', async () => {{
+        render(<{component_name} {{...{{{test_case["props"]}}}}} />);
+        {test_case["assertions"]}
     }});
 """
 
@@ -391,7 +391,6 @@ def with_performance_thresholds(thresholds: PerformanceThresholds):
     """Decorator to add performance testing to test functions."""
 
     def decorator(test_func):
-
         def wrapper(*args, **kwargs):
             start_time = time.time()
             try:
@@ -495,7 +494,9 @@ if __name__ == "__main__":
     print(f"Configuration validation: {'✅ PASSED' if config_results['valid'] else '❌ FAILED'}")
 
     # Test performance validator
-    perf_validator = PerformanceValidator(thresholds=PerformanceThresholds(max_response_time_ms=1000))
+    perf_validator = PerformanceValidator(
+        thresholds=PerformanceThresholds(max_response_time_ms=1000)
+    )
     summary = perf_validator.get_performance_summary()
     print(f"Performance validation ready: {'✅ YES' if summary else '❌ NO METRICS'}")
 
