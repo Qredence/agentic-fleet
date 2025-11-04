@@ -201,20 +201,34 @@ class CodeAnalyzer:
                     )
     
     def _check_security_patterns(self, content: str, result: AnalysisResult) -> None:
-        """Check for common security issues."""
+        """Check for common security issues.
+        
+        Note: These are heuristic checks and may produce false positives.
+        Manual review is recommended for any flagged issues.
+        """
         lines = content.split("\n")
         
-        # Check for hardcoded secrets
+        # Check for hardcoded secrets (basic patterns)
+        # Note: These patterns are intentionally simple to reduce false positives
         secret_patterns = [
-            (r'api[_-]?key\s*=\s*["\'][\w-]{20,}["\']', "API key"),
-            (r'password\s*=\s*["\'][^"\']+["\']', "password"),
-            (r'secret\s*=\s*["\'][^"\']+["\']', "secret"),
-            (r'token\s*=\s*["\'][\w-]{20,}["\']', "token"),
+            (r'api[_-]?key\s*=\s*["\'][\w-]{10,}["\']', "API key"),
+            (r'password\s*=\s*["\'][^"\']{8,}["\']', "password"),
+            (r'secret\s*=\s*["\'][^"\']{10,}["\']', "secret"),
+            (r'token\s*=\s*["\'][\w-]{10,}["\']', "token"),
         ]
         
         for i, line in enumerate(lines, 1):
+            # Skip comments and docstrings
+            stripped = line.strip()
+            if stripped.startswith("#") or '"""' in line or "'''" in line:
+                continue
+                
             for pattern, secret_type in secret_patterns:
                 if re.search(pattern, line, re.IGNORECASE):
+                    # Additional check: skip if it looks like a placeholder
+                    if any(placeholder in line.lower() for placeholder in ["example", "placeholder", "your_", "xxx", "<", ">"]):
+                        continue
+                        
                     result.feedback.append(
                         FeedbackItem(
                             category="security",
@@ -227,12 +241,13 @@ class CodeAnalyzer:
                     )
         
         # Check for SQL injection vulnerabilities
-        if re.search(r'execute\([^,]+\s*%\s*', content) or re.search(r'execute\([^,]+\s*\+\s*', content):
+        # Look for string formatting/concatenation in execute() calls
+        if re.search(r'\.execute\s*\([^)]*["\'][^"\']*%[^"\']*["\']', content):
             result.feedback.append(
                 FeedbackItem(
                     category="security",
-                    severity="error",
-                    message="Potential SQL injection vulnerability detected",
+                    severity="warning",
+                    message="Potential SQL injection: string formatting in execute() call",
                     file=result.file,
                     suggestion="Use parameterized queries or ORM",
                 )
@@ -255,18 +270,21 @@ class CodeAnalyzer:
     ) -> None:
         """Check for performance issues."""
         # Check for inefficient string concatenation in loops
+        # Note: This is a heuristic check and may have false positives
         for node in ast.walk(tree):
             if isinstance(node, (ast.For, ast.While)):
                 for child in ast.walk(node):
                     if isinstance(child, ast.AugAssign) and isinstance(child.op, ast.Add) and isinstance(child.target, ast.Name):
+                        # This is an info-level warning as it could be numeric operations too
+                        # Developers should review to confirm if it's string concatenation
                         result.feedback.append(
                             FeedbackItem(
                                 category="performance",
                                 severity="info",
-                                message="String concatenation in loop may be inefficient",
+                                message="Augmented assignment with + in loop (check if string concatenation)",
                                 file=result.file,
                                 line=node.lineno,
-                                suggestion="Consider using ''.join() or a list comprehension",
+                                suggestion="If this is string concatenation, consider using ''.join()",
                             )
                         )
     

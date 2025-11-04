@@ -65,7 +65,7 @@ jobs:
       - name: Check test coverage
         id: coverage
         run: |
-          uv run pytest --cov=src/agentic_fleet --cov-report=json --cov-report=term-missing > coverage-report.txt || true
+          uv run pytest --cov=src/agentic_fleet --cov-report=json --cov-report=term-missing 2>&1 | tee coverage-report.txt || true
         continue-on-error: true
       
       - name: Generate feedback summary
