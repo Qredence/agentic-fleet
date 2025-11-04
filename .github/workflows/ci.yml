@@ -20,8 +20,9 @@ concurrency:
 
 env:
   OPENAI_RESPONSES_MODEL_ID: gpt-5-codex
-  # Skip LFS downloads to avoid missing object errors in microsoft/agent-framework
-  # See: https://github.com/microsoft/agent-framework/issues/1832
+  # Skip LFS downloads to avoid missing object errors
+  # in microsoft/agent-framework. See:
+  # https://github.com/microsoft/agent-framework/issues/1832
   GIT_LFS_SKIP_SMUDGE: 1
 
 jobs:
