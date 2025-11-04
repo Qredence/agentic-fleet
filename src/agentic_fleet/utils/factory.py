@@ -28,6 +28,7 @@ from typing import Any, TypeVar
 import yaml
 
 from agentic_fleet.models.workflow import WorkflowConfig
+from agentic_fleet.utils.logging import sanitize_for_log
 from agentic_fleet.utils.performance import async_timer
 
 T = TypeVar("T")
@@ -200,12 +201,9 @@ class WorkflowFactory:
             config = await self.get_workflow_config_async(workflow_id)
         except ValueError:
             if workflow_id != DEFAULT_WORKFLOW_ID:
-                workflow_id_sanitized = (
-                    workflow_id.replace('\r\n','').replace('\n','').replace('\r','')
-                )
                 logger.warning(
                     "Unknown workflow_id '%s'; falling back to default '%s'",
-                    workflow_id_sanitized,
+                    sanitize_for_log(workflow_id),
                     DEFAULT_WORKFLOW_ID,
                 )
                 config = await self.get_workflow_config_async(DEFAULT_WORKFLOW_ID)

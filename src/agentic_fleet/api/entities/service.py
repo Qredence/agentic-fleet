@@ -8,17 +8,13 @@ from typing import Any
 from agentic_fleet.api.workflows import service as workflows_service
 from agentic_fleet.api.entities.schemas import EntityInfo, InputSchema
 from agentic_fleet.utils.factory import WorkflowFactory
+from agentic_fleet.utils.logging import sanitize_for_log
 
 logger = logging.getLogger(__name__)
 
 
 class EntityDiscovery:
     """Service for discovering and managing workflow entities.
-
-    @staticmethod
-    def _sanitize_for_log(val: str) -> str:
-        # Remove carriage returns and newlines to prevent log injection
-        return val.replace('\r', '').replace('\n', '')
 
     Provides both synchronous and asynchronous APIs to maintain backward
     compatibility with earlier tests that invoked methods synchronously.
@@ -134,7 +130,7 @@ class EntityDiscovery:
             await self._factory.get_workflow_config_async(entity_id)
         except ValueError as exc:
             raise ValueError(f"Entity '{entity_id}' not found after reload") from exc
-        logger.info(f"Reloaded entity: {self._sanitize_for_log(entity_id)}")
+        logger.info(f"Reloaded entity: {sanitize_for_log(entity_id)}")
 
     async def get_workflow_instance_async(self, entity_id: str) -> Any:
         if entity_id in self._workflow_cache:

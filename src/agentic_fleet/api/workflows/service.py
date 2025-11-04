@@ -15,35 +15,11 @@ except ImportError:
     pass  # dotenv not available, rely on system/env vars
 
 from agentic_fleet.workflows.events import RunsWorkflow, WorkflowEvent
+from agentic_fleet.utils.logging import sanitize_for_log
 
 DEFAULT_WORKFLOW_ID = "magentic_fleet"
 
 logger = logging.getLogger(__name__)
-
-
-def _sanitize_for_log(value: str) -> str:
-    """Sanitize string for safe logging: remove all ASCII control characters and mark user input clearly.
-
-    Strips ASCII control characters (0x00-0x1F, 0x7F), newlines, carriage returns, Unicode line/paragraph
-    separators, NEL, tabs, and escape codes. Encloses user input in <angle brackets> to prevent log confusion.
-
-    Args:
-        value: String to sanitize
-
-    Returns:
-        Sanitized and clearly marked string
-    """
-    if not isinstance(value, str):
-        to_clean = str(value)
-    else:
-        to_clean = value
-    # Build translation table for ASCII controls + documented Unicode
-    controls = ''.join(chr(i) for i in range(0,32)) + chr(0x7f) + '\u2028\u2029\u0085\t'
-    cleaned = to_clean.translate(str.maketrans('', '', controls))
-    # Additionally, remove escape character \x1b if present
-    cleaned = cleaned.replace('\x1b', '')
-    # Enclose the sanitized input in angle brackets for visibility
-    return f"<{cleaned}>"
 
 
 class StubMagenticFleetWorkflow(RunsWorkflow):
@@ -135,12 +111,12 @@ async def create_workflow(
 
         factory = WorkflowFactory()
         workflow = await factory.create_from_yaml_async(workflow_id)
-        logger.info("Created workflow '%s' from YAML configuration", _sanitize_for_log(workflow_id))
+        logger.info("Created workflow '%s' from YAML configuration", sanitize_for_log(workflow_id))
         return workflow
     except Exception as exc:  # Broad catch to ensure graceful fallback
         logger.error(
             "Failed to create workflow '%s': %s - falling back to stub",
-            _sanitize_for_log(workflow_id),
+            sanitize_for_log(workflow_id),
             exc,
             exc_info=True,
         )
