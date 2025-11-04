@@ -90,13 +90,13 @@ class WorkflowFactory:
                 return Path(pkg_path)
         except (ModuleNotFoundError, FileNotFoundError) as exc:
             # Fallback: try relative to this file (development workspace)
-            default_path = Path(__file__).parent.parent.parent / "workflows.yaml"
+            default_path = Path(__file__).parent.parent.parent / "workflow.yaml"
             if default_path.exists():
                 return default_path
             raise FileNotFoundError(
                 "No workflow configuration found. Checked:\n"
                 "  1. AF_WORKFLOW_CONFIG environment variable\n"
-                "  2. Packaged default agentic_fleet/workflows.yaml"
+                "  2. Packaged default agentic_fleet/workflow.yaml"
             ) from exc
 
     def list_available_workflows(self) -> list[dict[str, Any]]:
@@ -206,7 +206,6 @@ class WorkflowFactory:
                     DEFAULT_WORKFLOW_ID,
                 )
                 config = await self.get_workflow_config_async(DEFAULT_WORKFLOW_ID)
-                workflow_id = DEFAULT_WORKFLOW_ID
             else:  # pragma: no cover - defensive, should not happen
                 raise
 
@@ -244,8 +243,6 @@ class WorkflowFactory:
         def __await__(self):  # pragma: no cover - trivial
             async def _coro():  # type: ignore[no-untyped-def]
                 # Yield control once to satisfy linters about async context
-                import asyncio
-
                 await asyncio.sleep(0)
                 return self
 

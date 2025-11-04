@@ -11,7 +11,4 @@ except ImportError as e:
         "agent-framework package is required. Install with: uv add agent-framework"
     ) from e
 
-# Re-export for convenience
-HostedCodeInterpreterTool: type[Any] = HostedCodeInterpreterTool
-
 __all__ = ["HostedCodeInterpreterTool"]
