@@ -14,6 +14,7 @@ from uuid import uuid4
 
 from agentic_fleet.core.magentic_framework import MagenticContext
 from agentic_fleet.models.events import WorkflowEvent
+from agentic_fleet.utils.logging_sanitize import sanitize_log_value
 from agentic_fleet.workflow.magentic_builder import MagenticFleet, create_default_fleet
 
 logger = logging.getLogger(__name__)
@@ -92,9 +93,11 @@ class MagenticWorkflowService:
             "updated_at": None,
         }
 
-        safe_workflow_id = self._sanitize_for_logging(workflow_id)
-        safe_task = self._sanitize_for_logging(task[:100])
-        logger.info(f"Created workflow {safe_workflow_id} for task: {safe_task}")
+        logger.info(
+            "Created workflow %s for task: %s",
+            sanitize_log_value(workflow_id),
+            sanitize_log_value(task[:100]),
+        )
         return workflow_id
 
     async def execute_workflow(self, workflow_id: str) -> AsyncIterator[WorkflowEvent]:
@@ -144,8 +147,12 @@ class MagenticWorkflowService:
                     workflow["status"] = "failed"
 
         except Exception as e:
-            safe_workflow_id = self._sanitize_for_logging(workflow_id)
-            logger.error(f"Error executing workflow {safe_workflow_id}: {e}", exc_info=True)
+            logger.error(
+                "Error executing workflow %s: %s",
+                sanitize_log_value(workflow_id),
+                e,
+                exc_info=True,
+            )
             workflow["status"] = "failed"
             yield WorkflowEvent(
                 type="error",
@@ -203,8 +210,7 @@ class MagenticWorkflowService:
         """
         if workflow_id in self.active_workflows:
             del self.active_workflows[workflow_id]
-            safe_workflow_id = self._sanitize_for_logging(workflow_id)
-            logger.info(f"Deleted workflow {safe_workflow_id}")
+            logger.info("Deleted workflow %s", sanitize_log_value(workflow_id))
             return True
         return False
 
@@ -227,8 +233,7 @@ class MagenticWorkflowService:
         workflow = self.active_workflows[workflow_id]
         workflow["status"] = "paused"
 
-        safe_workflow_id = self._sanitize_for_logging(workflow_id)
-        logger.info(f"Paused workflow {safe_workflow_id}")
+        logger.info("Paused workflow %s", sanitize_log_value(workflow_id))
         return await self.get_workflow_status(workflow_id)
 
     async def resume_workflow(self, workflow_id: str) -> AsyncIterator[WorkflowEvent]:
@@ -253,8 +258,7 @@ class MagenticWorkflowService:
             )
             return
 
-        safe_workflow_id = self._sanitize_for_logging(workflow_id)
-        logger.info(f"Resuming workflow {safe_workflow_id}")
+        logger.info("Resuming workflow %s", sanitize_log_value(workflow_id))
 
         # Resume by continuing execution with existing context
         async for event in self.execute_workflow(workflow_id):

@@ -14,8 +14,8 @@ try:
 except ImportError:
     pass  # dotenv not available, rely on system/env vars
 
-from agentic_fleet.workflows.events import RunsWorkflow, WorkflowEvent
-from agentic_fleet.utils.logging import sanitize_for_log
+from agentic_fleet.models.events import RunsWorkflow, WorkflowEvent
+from agentic_fleet.utils.logging_sanitize import sanitize_log_value
 
 DEFAULT_WORKFLOW_ID = "magentic_fleet"
 
@@ -23,43 +23,53 @@ logger = logging.getLogger(__name__)
 
 
 class StubMagenticFleetWorkflow(RunsWorkflow):
-    """Stub implementation for MagenticFleetWorkflow.
+    """Deterministic stub workflow used in tests and fallback scenarios.
 
-    This class does not perform any real workflow processing.
-    The magic number for truncating the message is configurable via `max_delta_length`.
-    API responses are marked to indicate stub behavior.
+    Parameters:
+        max_delta_length: Truncation length for the delta content.
+        include_agent_events: Whether to emit per-agent completion events.
+
+    Behavioral contract:
+    - Synchronous legacy factory (``create_magentic_fleet_workflow``) expects ONLY
+      two events: ``message.delta`` then ``message.done``.
+    - Asynchronous factory (``create_workflow``) used by chat streaming emits
+      ``message.delta`` + optional ``agent.message.complete`` + ``message.done`` so
+      segmented streaming tests can assert agent-level events.
     """
 
-    def __init__(self, max_delta_length: int = 16):
+    def __init__(self, max_delta_length: int = 16, *, include_agent_events: bool = True):
         self.max_delta_length = max_delta_length
+        self.include_agent_events = include_agent_events
 
     async def run(self, message: str) -> AsyncGenerator[WorkflowEvent, None]:
-        # STUB: This implementation only returns the first `max_delta_length` characters of the message.
-        # No actual workflow processing is performed.
+        truncated = message[: self.max_delta_length]
+
+        # Always emit a message.delta (with agent_id to enable optional agent.delta SSE events)
         yield {
             "type": "message.delta",
             "data": {
-                "delta": message[: self.max_delta_length],
+                "delta": truncated,
                 "agent_id": "stub-agent",
                 "stub": True,
-                "note": "Stub implementation: no real workflow processing performed.",
             },
         }
-        # Emit an agent completion event to exercise segmented streaming logic in tests
-        yield {
-            "type": "agent.message.complete",
-            "data": {
-                "agent_id": "stub-agent",
-                "content": message[: self.max_delta_length],
-                "stub": True,
-                "note": "Stub agent completion event for segmented streaming tests.",
-            },
-        }
+
+        # Emit agent completion event only when enabled (segmented streaming path)
+        if self.include_agent_events:
+            yield {
+                "type": "agent.message.complete",
+                "data": {
+                    "agent_id": "stub-agent",
+                    "content": truncated,
+                    "stub": True,
+                },
+            }
+
+        # Terminal done event
         yield {
             "type": "message.done",
             "data": {
                 "stub": True,
-                "note": "Stub implementation: no real workflow processing performed.",
             },
         }
 
@@ -100,31 +110,46 @@ async def create_workflow(
     # Forced stub (pytest determinism or explicit override)
     if _should_force_stub():
         logger.info("Forcing stub workflow (test or override mode)")
-        return StubMagenticFleetWorkflow(max_delta_length=max_delta_length)
+        return StubMagenticFleetWorkflow(
+            max_delta_length=max_delta_length, include_agent_events=True
+        )
 
     if not os.getenv("OPENAI_API_KEY"):
         logger.info("OPENAI_API_KEY not set, using stub workflow")
-        return StubMagenticFleetWorkflow(max_delta_length=max_delta_length)
+        return StubMagenticFleetWorkflow(
+            max_delta_length=max_delta_length, include_agent_events=True
+        )
 
     try:
         from agentic_fleet.utils.factory import WorkflowFactory
 
         factory = WorkflowFactory()
         workflow = await factory.create_from_yaml_async(workflow_id)
-        logger.info("Created workflow '%s' from YAML configuration", sanitize_for_log(workflow_id))
+        logger.info(
+            "Created workflow '%s' from YAML configuration",
+            sanitize_log_value(workflow_id),
+        )
         return workflow
     except Exception as exc:  # Broad catch to ensure graceful fallback
         logger.error(
             "Failed to create workflow '%s': %s - falling back to stub",
-            sanitize_for_log(workflow_id),
+            sanitize_log_value(workflow_id),
             exc,
             exc_info=True,
         )
-        return StubMagenticFleetWorkflow(max_delta_length=max_delta_length)
+        return StubMagenticFleetWorkflow(
+            max_delta_length=max_delta_length, include_agent_events=True
+        )
 
 
-async def create_magentic_fleet_workflow(max_delta_length: int = 16) -> RunsWorkflow:
-    """Deprecated alias; prefer :func:`create_workflow` with *workflow_id* parameter."""
+def create_magentic_fleet_workflow(
+    max_delta_length: int = 16,
+) -> RunsWorkflow:  # pragma: no cover - legacy sync alias
+    """Synchronous backward-compatible factory returning a minimal stub.
+
+    Legacy tests invoke this without ``await`` and expect ONLY two events
+    (delta + done). We therefore disable per-agent completion events here.
+    """
     import warnings
 
     warnings.warn(
@@ -132,4 +157,14 @@ async def create_magentic_fleet_workflow(max_delta_length: int = 16) -> RunsWork
         DeprecationWarning,
         stacklevel=2,
     )
-    return await create_workflow(DEFAULT_WORKFLOW_ID, max_delta_length=max_delta_length)
+    return StubMagenticFleetWorkflow(max_delta_length=max_delta_length, include_agent_events=False)
+
+
+# Explicit re-exports for downstream modules performing attribute lookups on this service module.
+__all__ = [
+    "RunsWorkflow",
+    "StubMagenticFleetWorkflow",
+    "WorkflowEvent",
+    "create_magentic_fleet_workflow",
+    "create_workflow",
+]

@@ -12,16 +12,14 @@ import functools
 import logging
 import time
 import uuid
-from collections.abc import Callable
+from collections.abc import Awaitable, Callable
 from contextvars import ContextVar
-from typing import Any, TypeVar
+from typing import Any, ParamSpec, TypeVar
 
 logger = logging.getLogger(__name__)
 
 # Context variable for request correlation tracking
 _correlation_id_var: ContextVar[str | None] = ContextVar("correlation_id", default=None)
-
-T = TypeVar("T")
 
 
 def get_correlation_id() -> str | None:
@@ -53,7 +51,12 @@ def clear_correlation_id() -> None:
     _correlation_id_var.set(None)
 
 
-def async_timer(func: Callable[..., Any]) -> Callable[..., Any]:
+# Type variables for async_timer decorator
+T = TypeVar("T")
+P = ParamSpec("P")
+
+
+def async_timer(func: Callable[P, Awaitable[T]]) -> Callable[P, Awaitable[T]]:
     """Decorator to time async function execution with structured logging.
 
     Logs execution time with structured fields for observability:
@@ -75,7 +78,7 @@ def async_timer(func: Callable[..., Any]) -> Callable[..., Any]:
     """
 
     @functools.wraps(func)
-    async def wrapper(*args: Any, **kwargs: Any) -> Any:
+    async def wrapper(*args: P.args, **kwargs: P.kwargs) -> T:
         start_time = time.perf_counter()
         correlation_id = get_correlation_id()
 

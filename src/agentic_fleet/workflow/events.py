@@ -5,7 +5,7 @@ from __future__ import annotations
 import logging
 from typing import TYPE_CHECKING, Any
 
-from agentic_fleet.api.workflows.service import WorkflowEvent
+from agentic_fleet.models.events import WorkflowEvent
 
 if TYPE_CHECKING:
     from agent_framework import (
@@ -103,7 +103,7 @@ class WorkflowEventBridge:
             }
             # Add OpenAI-compatible type if requested
             if openai_format:
-                delta_event["openai_type"] = "response.delta"  # type: ignore[typeddict-unknown-key]
+                delta_event["openai_type"] = "response.delta"
             logger.debug(
                 f"Converted MagenticAgentDeltaEvent to message.delta: "
                 f"agent={event.agent_id}, delta_length={len(event.text or '')}"
@@ -123,7 +123,7 @@ class WorkflowEventBridge:
             }
             # Add OpenAI-compatible type if requested
             if openai_format:
-                complete_event["openai_type"] = "agent.message.complete"  # type: ignore[typeddict-unknown-key]
+                complete_event["openai_type"] = "agent.message.complete"
             logger.debug(
                 f"Converted MagenticAgentMessageEvent to agent.message.complete: "
                 f"agent={event.agent_id}, text_length={len(text)}"
@@ -142,7 +142,7 @@ class WorkflowEventBridge:
             }
             # Add OpenAI-compatible type if requested
             if openai_format:
-                orchestrator_event["openai_type"] = "orchestrator.message"  # type: ignore[typeddict-unknown-key]
+                orchestrator_event["openai_type"] = "orchestrator.message"
             logger.debug(
                 f"Converted MagenticOrchestratorMessageEvent to orchestrator.message: kind={kind}"
             )
@@ -158,7 +158,7 @@ class WorkflowEventBridge:
             }
             # Add OpenAI-compatible type if requested
             if openai_format:
-                final_event["openai_type"] = "response.completed"  # type: ignore[typeddict-unknown-key]
+                final_event["openai_type"] = "response.completed"
             logger.debug(
                 f"Converted MagenticFinalResultEvent to message.done: text_length={len(text)}"
             )
@@ -197,7 +197,7 @@ class WorkflowEventBridge:
             }
             # Add OpenAI-compatible type if requested
             if openai_format:
-                output_event["openai_type"] = "response.completed"  # type: ignore[typeddict-unknown-key]
+                output_event["openai_type"] = "response.completed"
             logger.debug(
                 f"Converted WorkflowOutputEvent to message.done: output_length={len(output)}"
             )
@@ -215,7 +215,7 @@ class WorkflowEventBridge:
                     "data": payload if isinstance(payload, dict) else {"value": payload},
                 }
                 if openai_format:
-                    response_event["openai_type"] = response_event_type  # type: ignore[typeddict-unknown-key]
+                    response_event["openai_type"] = response_event_type
                 logger.debug("Converted OpenAI response event: type=%s", response_event_type)
                 return response_event
 

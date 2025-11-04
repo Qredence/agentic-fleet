@@ -13,7 +13,9 @@ from agentic_fleet.api.workflow_factory import WorkflowFactory
 
 @pytest.fixture
 def mock_workflow_factory() -> Mock:
-    """Create a mock WorkflowFactory."""
+    """Create a mock WorkflowFactory with both sync and async method support."""
+    from unittest.mock import AsyncMock
+
     factory = Mock(spec=WorkflowFactory)
     factory.list_available_workflows.return_value = [
         {
@@ -31,6 +33,17 @@ def mock_workflow_factory() -> Mock:
         factory="create_magentic_fleet_workflow",
         agents={},
         manager={},
+    )
+    # Add async variants
+    factory.get_workflow_config_async = AsyncMock(
+        return_value=WorkflowConfig(
+            id="magentic_fleet",
+            name="Magentic Fleet Workflow",
+            description="Test workflow",
+            factory="create_magentic_fleet_workflow",
+            agents={},
+            manager={},
+        )
     )
     factory._load_config.return_value = {"workflows": {}}
     factory._config = {}
@@ -102,6 +115,9 @@ def test_get_entity_info_not_found(
 ) -> None:
     """Test getting non-existent entity raises ValueError."""
     mock_workflow_factory.get_workflow_config.side_effect = ValueError(
+        "Entity 'nonexistent' not found"
+    )
+    mock_workflow_factory.get_workflow_config_async.side_effect = ValueError(
         "Entity 'nonexistent' not found"
     )
 

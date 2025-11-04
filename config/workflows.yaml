@@ -31,3 +31,30 @@ workflows:
       max_round_count: 6
       max_stall_count: 3
       max_reset_count: 2
+
+  collaboration:
+    name: "Collaboration Workflow"
+    description: "Simplified collaborative multi-agent workflow"
+    factory: "create_magentic_fleet_workflow"
+
+    agents:
+      planner: "agents.planner"
+      executor: "agents.executor"
+      coder: "agents.coder"
+      verifier: "agents.verifier"
+      generator: "agents.generator"
+
+    manager:
+      model: "gpt-5-mini"
+      instructions: |
+        You are a coordination-focused orchestrator facilitating structured collaboration
+        among a team of agents. Emphasize clear decomposition and verification.
+      reasoning:
+        effort: "medium"
+        verbosity: "concise"
+      temperature: 0.5
+      max_tokens: 4096
+      store: true
+      max_round_count: 4
+      max_stall_count: 2
+      max_reset_count: 1

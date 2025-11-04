@@ -12,7 +12,9 @@
     "test:ui": "vitest --ui",
     "test:coverage": "vitest --coverage",
     "test:run": "vitest run",
-    "test:watch": "vitest --watch"
+    "test:watch": "vitest --watch",
+    "test:unit": "vitest run --grep \"Unit Tests\"",
+    "test:integration": "vitest run --grep \"Integration Tests\""
   },
   "dependencies": {
     "@radix-ui/react-avatar": "^1.1.10",

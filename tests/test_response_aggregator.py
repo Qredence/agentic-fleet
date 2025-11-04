@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 from collections.abc import AsyncGenerator
+from typing import Any, cast
 
 import pytest
 
@@ -11,10 +12,10 @@ from agentic_fleet.api.responses.service import ResponseAggregator
 from agentic_fleet.models.events import WorkflowEvent
 
 
-async def generate_mock_events(events: list[WorkflowEvent]) -> AsyncGenerator[WorkflowEvent, None]:
+async def generate_mock_events(events: list[dict[str, Any]]) -> AsyncGenerator[WorkflowEvent, None]:
     """Helper to generate mock workflow events."""
     for event in events:
-        yield event
+        yield cast(WorkflowEvent, event)
 
 
 @pytest.mark.asyncio
@@ -33,8 +34,8 @@ async def test_convert_stream_delta_events() -> None:
         lines.append(line)
 
     # Should have delta events and completion
-    assert len([l for l in lines if "response.delta" in l]) == 2
-    assert any("[DONE]" in l for l in lines)
+    assert len([line for line in lines if "response.delta" in line]) == 2
+    assert any("[DONE]" in line for line in lines)
 
 
 @pytest.mark.asyncio
@@ -55,9 +56,9 @@ async def test_convert_stream_orchestrator_events() -> None:
         lines.append(line)
 
     # Should have orchestrator event
-    assert any("orchestrator.message" in l for l in lines)
-    assert any("Planning task" in l for l in lines)
-    assert any("[DONE]" in l for l in lines)
+    assert any("orchestrator.message" in line for line in lines)
+    assert any("Planning task" in line for line in lines)
+    assert any("[DONE]" in line for line in lines)
 
 
 @pytest.mark.asyncio
@@ -76,8 +77,8 @@ async def test_convert_stream_completion() -> None:
         lines.append(line)
 
     # Should have completion event
-    assert any("response.completed" in l for l in lines)
-    assert any("[DONE]" in l for l in lines)
+    assert any("response.completed" in line for line in lines)
+    assert any("[DONE]" in line for line in lines)
     # [DONE] should be last
     assert lines[-1].strip() == "data: [DONE]"
 
@@ -140,9 +141,9 @@ async def test_convert_stream_error_handling() -> None:
         lines.append(line)
 
     # Should have error event
-    assert any("error" in l for l in lines)
-    assert any("Test error" in l for l in lines)
-    assert any("[DONE]" in l for l in lines)
+    assert any("error" in line for line in lines)
+    assert any("Test error" in line for line in lines)
+    assert any("[DONE]" in line for line in lines)
 
 
 @pytest.mark.asyncio
@@ -162,7 +163,7 @@ async def test_convert_stream_accumulation() -> None:
         lines.append(line)
 
     # Should have accumulated content in completion
-    completion_lines = [l for l in lines if "response.completed" in l]
+    completion_lines = [line for line in lines if "response.completed" in line]
     assert len(completion_lines) > 0
     completion_data = json.loads(completion_lines[0].replace("data: ", ""))
     assert "Hello World" in completion_data["response"]["content"]
@@ -184,8 +185,8 @@ async def test_convert_stream_missing_done_event() -> None:
         lines.append(line)
 
     # Should still send completion
-    assert any("response.completed" in l for l in lines)
-    assert any("[DONE]" in l for l in lines)
+    assert any("response.completed" in line for line in lines)
+    assert any("[DONE]" in line for line in lines)
 
 
 @pytest.mark.asyncio
@@ -276,5 +277,5 @@ async def test_exception_handling() -> None:
         lines.append(line)
 
     # Should have error event
-    assert any("error" in l for l in lines)
-    assert any("[DONE]" in l for l in lines)
+    assert any("error" in line for line in lines)
+    assert any("[DONE]" in line for line in lines)

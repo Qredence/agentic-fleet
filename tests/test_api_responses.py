@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import contextlib
 import json
 
 import pytest
@@ -19,10 +20,8 @@ def parse_sse_stream(content: str) -> list[dict]:
             if data == "[DONE]":
                 events.append({"type": "done"})
             else:
-                try:
+                with contextlib.suppress(json.JSONDecodeError):
                     events.append(json.loads(data))
-                except json.JSONDecodeError:
-                    pass
     return events
 
 
@@ -153,15 +152,18 @@ async def test_sse_content_extraction() -> None:
 
         events = parse_sse_stream(content.decode("utf-8"))
         # Should have events with content
-        has_content = False
-        for event in events:
-            if isinstance(event, dict):
-                if ("delta" in event and event.get("delta", {}).get("content")) or (
-                    "response" in event and event.get("response", {}).get("content")
-                ):
-                    has_content = True
-        # At least some content should be present (might be empty for stub workflow)
-        assert True  # Just verify stream completes successfully
+        # At least confirm parsing logic did not raise; content may be empty for stub workflow.
+        assert (
+            any(
+                isinstance(event, dict)
+                and (
+                    ("delta" in event and event.get("delta", {}).get("content"))
+                    or ("response" in event and event.get("response", {}).get("content"))
+                )
+                for event in events
+            )
+            or True
+        )  # Maintain original permissive assertion semantics
 
 
 @pytest.mark.asyncio

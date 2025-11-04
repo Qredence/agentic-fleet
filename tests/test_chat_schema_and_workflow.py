@@ -64,17 +64,19 @@ class TestChatSchemas:
 @pytest.mark.asyncio
 async def test_stub_workflow_yields_delta_then_done() -> None:
     workflow = create_magentic_fleet_workflow()
+    # Legacy synchronous factory returns instance directly (no await needed)
     assert isinstance(workflow, StubMagenticFleetWorkflow)
 
-    events: list[dict] = []
+    events: list[WorkflowEvent] = []
     stream = workflow.run("Summarise AgenticFleet")
     assert isinstance(stream, AsyncGenerator)
 
     async for event in stream:
         events.append(event)
 
-    assert [event["type"] for event in events] == ["message.delta", "message.done"]
-    assert "delta" in events[0]["data"]
+    # Legacy stub emits only delta + done (no agent completion event)
+    assert [event.get("type") for event in events] == ["message.delta", "message.done"]
+    assert "delta" in events[0].get("data", {})
 
 
 class TestWorkflowService:
@@ -121,11 +123,8 @@ class TestWorkflowService:
                 raise RuntimeError("Workflow failed")
                 yield  # pragma: no cover
 
-        # Monkey-patch the create function temporarily
-        # service_module already imported above
-
-        original_create = service_module.create_magentic_fleet_workflow
-        service_module.create_magentic_fleet_workflow = lambda: FailingWorkflow()
+        # Directly inject failing workflow into cache (bypassing factory logic)
+        service._workflow_cache["magentic_fleet"] = FailingWorkflow()  # type: ignore[arg-type]
 
         try:
             with pytest.raises(HTTPException) as exc_info:
@@ -133,7 +132,7 @@ class TestWorkflowService:
             assert exc_info.value.status_code == 500
             assert exc_info.value.detail == "An error occurred while processing your request"
         finally:
-            service_module.create_magentic_fleet_workflow = original_create
+            service._workflow_cache.clear()  # Clean up for subsequent tests
 
     def test_get_workflow_service_returns_singleton(self) -> None:
         service1 = service_module.get_workflow_service()

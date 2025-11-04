@@ -786,10 +786,10 @@ open profile.svg
 
 ## Resources
 
-- **pytest Documentation**: https://docs.pytest.org/
-- **Locust Load Testing**: https://locust.io/
-- **Mock Documentation**: https://docs.python.org/3/library/unittest.mock.html
-- **Coverage.py**: https://coverage.readthedocs.io/
-- **Test Automation**: https://test-automation.io/
+- **pytest Documentation**: <https://docs.pytest.org/>
+- **Locust Load Testing**: <https://locust.io/>
+- **Mock Documentation**: <https://docs.python.org/3/library/unittest.mock.html>
+- **Coverage.py**: <https://coverage.readthedocs.io/>
+- **Test Automation**: <https://test-automation.io/>
 
 For specific questions or issues, refer to the test files in the `tests/` directory or consult the development team.
