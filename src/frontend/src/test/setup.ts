@@ -1,5 +1,5 @@
 import "@testing-library/jest-dom";
-import { beforeAll, afterEach, afterAll } from "vitest";
+import { afterAll, afterEach, beforeAll, vi } from "vitest";
 
 // Mock fetch for API calls
 global.fetch = vi.fn();
@@ -33,7 +33,7 @@ global.IntersectionObserver = vi.fn().mockImplementation(() => ({
 // Mock window.matchMedia
 Object.defineProperty(window, "matchMedia", {
   writable: true,
-  value: vi.fn().mockImplementation((query) => ({
+  value: vi.fn().mockImplementation((query: string) => ({
     matches: false,
     media: query,
     onchange: null,
