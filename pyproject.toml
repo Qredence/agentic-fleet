@@ -22,9 +22,9 @@ dependencies = [
     "azure-identity>=1.25.1,<2.0",
     "azure-cosmos>=4.8.0,<5.0",
     "python-dotenv>=1.1.1,<2.0",
-    "pyyaml>=6.0.3,<7.0",
-    "requests>=2.32.5,<3.0",
-    "pydantic>=2.12.0,<3.0",
+    "pyyaml>=6.0",
+    "requests>=2.28.0",
+    "pydantic>=1.10.0",
     "tiktoken>=0.12.0,<1.0",
     "agent-framework",
     "agent-framework-core",
@@ -33,23 +33,44 @@ dependencies = [
     "agent-framework-mem0",
     "agent-framework-redis",
     "agent-framework-devui",
-    "mem0ai==1.0.0",                    # Pinned for stable memory API
-    "rich>=13.7.0,<14.2",
+    "mem0ai==1.0.0", # Pinned for stable memory API
+    "rich>=12.6.0",
     "prompt-toolkit>=3.0.47,<4.0",
     "ipykernel>=7.0.1,<8.0",
-    "openai>=1.99.0,<2.6.1",            # Compatible with agent-framework requirements
+    "openai>=1.99.0,<2.6.1", # Compatible with agent-framework requirements
     "azure-ai-evaluation>=1.12.0,<2.0",
     "fastapi>=0.120.1,<1.0",
     "uvicorn[standard]>=0.24.0",
-    "httpx>=0.24.0,<1.0",
+    "httpx>=0.24.0",
     "sse-starlette>=2.0.0",
     "sqlalchemy>=2.0.0,<3.0",
     "databases[asyncpg]>=0.7.0,<1.0",
     "aiofiles>=24.1.0",
     "pydantic-settings>=2.3.2,<3.0",
     "redis[hiredis]>=6.4.0,<7.0",
-    "websockets>=15.0.1,<16.0",
+    "websockets>=10.4",
     "typer>=0.20.0",
+    "locust>=2.15.0",
+    "k6>=0.45.0",
+    "aiohttp>=3.9.0",
+    "prometheus-client>=0.16.0",
+    "psutil>=5.9.0",
+    "statsd>=3.3.0",
+    "pandas>=1.5.0",
+    "numpy>=1.24.0",
+    "scipy>=1.9.0",
+    "click>=8.1.0",
+    "asyncio-mqtt>=0.11.0",
+    "matplotlib>=3.6.0",
+    "seaborn>=0.11.0",
+    "plotly>=5.10.0",
+    "pytest>=7.2.0",
+    "pytest-asyncio>=0.20.0",
+    "pytest-cov>=4.0.0",
+    "black>=22.0.0",
+    "ruff>=0.0.200",
+    "mypy>=0.991",
+    "pytz>=2024.1",
 ]
 requires-python = ">=3.12,<4"
 
@@ -122,7 +143,17 @@ dev = [
     "pre-commit>=3.5.0",
     "types-PyYAML>=6.0.0",
     "types-requests>=2.31.0",
+    "types-aiofiles>=25.1.0.20251011",
 ]
+
+[tool.uv.sources]
+"agent-framework-core" = { git = "https://github.com/microsoft/agent-framework.git", branch = "main", subdirectory = "python/packages/core" }
+"agent-framework-azure-ai" = { git = "https://github.com/microsoft/agent-framework.git", branch = "main", subdirectory = "python/packages/azure-ai" }
+"agent-framework-a2a" = { git = "https://github.com/microsoft/agent-framework.git", branch = "main", subdirectory = "python/packages/a2a" }
+"agent-framework-copilotstudio" = { git = "https://github.com/microsoft/agent-framework.git", branch = "main", subdirectory = "python/packages/copilotstudio" }
+"agent-framework-mem0" = { git = "https://github.com/microsoft/agent-framework.git", branch = "main", subdirectory = "python/packages/mem0" }
+"agent-framework-redis" = { git = "https://github.com/microsoft/agent-framework.git", branch = "main", subdirectory = "python/packages/redis" }
+"agent-framework-devui" = { git = "https://github.com/microsoft/agent-framework.git", branch = "main", subdirectory = "python/packages/devui" }
 
 [tool.black]
 target-version = ['py312']

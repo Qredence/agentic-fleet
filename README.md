@@ -64,7 +64,7 @@ uv run agentic-fleet
 - **🔧 Declarative Configuration** – YAML-based agent configuration for non-engineers to tune prompts and tools
 - **🎨 Multiple Interfaces** – CLI, web frontend, and notebooks for different workflows
 - **🎭 Browser Automation** – Playwright MCP server for web testing, scraping, and automation (NEW!)
-- **🧩 Enhanced UI Components** – shadcn prompt-kit integration for modern chat interfaces (NEW!)
+- **🎨 Enhanced UI Components** – shadcn/ui v3.5 with Tailwind CSS 4.x for modern, accessible interfaces
 
 ---
 
@@ -174,7 +174,7 @@ AgenticFleet implements the **Magentic One** workflow pattern with two orchestra
 3. **EVALUATE** – Progress ledger checks: request satisfied? in a loop? who acts next?
 4. **ACT** – Selected specialist executes with domain-specific tools, returns findings
 5. **OBSERVE** – Manager reviews response, updates context, decides next action
-6. **REPEAT** – Continues until completion or limits reached (configurable in `workflow.yaml`)
+6. **REPEAT** – Continues until completion or limits reached (configurable in `workflows.yaml`)
 
 ### Agent Specialists
 
@@ -192,11 +192,11 @@ See **[Architecture Documentation](docs/architecture/magentic-fleet.md)** for de
 ### Technology Stack
 
 - **Backend**: Python 3.12+, Microsoft Agent Framework, FastAPI, Pydantic, Azure AI integration
-- **Frontend**: React 18.3+, TypeScript, Vite 7.x, shadcn/ui, Tailwind CSS, React Hook Form
+- **Frontend**: React 19.1+, TypeScript, Vite 7.x, shadcn/ui, Tailwind CSS 4.x, Zustand state management
 - **Package Management**: `uv` for Python dependencies, npm for frontend dependencies
-- **Communication**: Async HTTP (non-streaming) between backend and frontend
+- **Communication**: Server-Sent Events (SSE) for real-time streaming, REST API for conversations and approvals
 - **Build System**: Hatchling for Python packages, Vite 7.x for frontend assets with optimized builds
-- **State Management**: Custom hook architecture with extracted, maintainable state management patterns
+- **State Management**: Zustand stores with custom hook architecture for maintainable patterns
 - **Error Handling**: Exponential backoff retry logic and robust error recovery across all operations
 
 ---
@@ -205,7 +205,7 @@ See **[Architecture Documentation](docs/architecture/magentic-fleet.md)** for de
 
 AgenticFleet uses a **declarative YAML-first** approach:
 
-### Workflow Configuration (`config/workflow.yaml`)
+### Workflow Configuration (`src/agentic_fleet/workflows.yaml`)
 
 ```yaml
 fleet:
@@ -338,8 +338,12 @@ Comprehensive documentation organized by audience:
 
 ## 🆕 Release Notes
 
-### v0.5.5 (2025-10-29)
+### v0.5.5 (2025-11-03)
 
+- **Normalized SSE Handling**: Frontend now uses camelCase `agentId` exclusively for consistent event attribution
+- **Metrics Store Scaffolding**: Introduced placeholder `useMetricsStore` for future streaming telemetry integration
+- **Test Suite Modernization**: Retired legacy chat store and component tests, archived expectations for reference
+- **Event Type Alignment**: API client and types fully aligned with backend SSE events after identifier normalization
 - **Vite 7.x Migration**: Complete frontend infrastructure upgrade with modern build tooling
 - **Production-Grade Error Handling**: Exponential backoff retry logic across all API operations
 - **Frontend Hook Architecture**: Extracted custom hooks for maintainable state management (51.4% code reduction)
