@@ -60,7 +60,8 @@ function PromptInput({
   onValueChange,
   onSubmit,
   children,
-}: PromptInputProps) {
+  disabled = false,
+}: PromptInputProps & { disabled?: boolean }) {
   const [internalValue, setInternalValue] = useState(value || "");
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
@@ -78,12 +79,13 @@ function PromptInput({
           setValue: onValueChange ?? handleChange,
           maxHeight,
           onSubmit,
+          disabled,
           textareaRef,
         }}
       >
         <div
           className={cn(
-            "border-input bg-background cursor-text rounded-3xl border p-2 shadow-xs",
+            "border-input bg-background cursor-text rounded-3xl border p-2 shadow-sm",
             className,
           )}
           onClick={() => textareaRef.current?.focus()}
@@ -121,7 +123,7 @@ function PromptInputTextarea({
       typeof maxHeight === "number"
         ? `${Math.min(textareaRef.current.scrollHeight, maxHeight)}px`
         : `min(${textareaRef.current.scrollHeight}px, ${maxHeight})`;
-  }, [value, maxHeight, disableAutosize]);
+  }, [value, maxHeight, disableAutosize, textareaRef]);
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     if (e.key === "Enter" && !e.shiftKey) {
@@ -194,9 +196,30 @@ function PromptInputAction({
   );
 }
 
+type PromptInputFooterProps = React.HTMLAttributes<HTMLDivElement>;
+
+function PromptInputFooter({
+  children,
+  className,
+  ...props
+}: PromptInputFooterProps) {
+  return (
+    <div
+      className={cn(
+        "flex items-center gap-2 text-xs text-muted-foreground px-2",
+        className,
+      )}
+      {...props}
+    >
+      {children}
+    </div>
+  );
+}
+
 export {
   PromptInput,
-  PromptInputTextarea,
-  PromptInputActions,
   PromptInputAction,
+  PromptInputActions,
+  PromptInputFooter,
+  PromptInputTextarea,
 };

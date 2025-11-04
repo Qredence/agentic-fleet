@@ -1,0 +1,26 @@
+# AgenticFleet Load Testing Configuration
+environment: local
+base_url: http://localhost:8000
+
+scenarios:
+  smoke_test:
+    description: Quick smoke test
+    users: 5
+    duration: 30s
+
+  load_test:
+    description: Normal load test
+    users: 50
+    duration: 5m
+
+  stress_test:
+    description: Stress test
+    users: 200
+    duration: 10m
+
+monitoring:
+  enabled: true
+  prometheus_port: 9090
+  alerting:
+    error_rate_threshold: 5.0
+    response_time_threshold: 5000

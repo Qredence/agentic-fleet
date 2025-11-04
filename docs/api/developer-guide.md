@@ -352,10 +352,10 @@ if settings.new_feature_enabled:
 
 ### Adding Dependency Checks
 
-Extend the health check in `src/agenticfleet/api/routes/system.py`:
+Extend the health check in `src/agentic_fleet/api/system/routes.py`:
 
 ```python
-@router.get("/health")
+@router.get("/health")  # Mounted at /v1/system in app.py
 async def health(state: BackendState = Depends(get_backend)) -> JSONResponse:
     """Comprehensive health check."""
     health_status = {
