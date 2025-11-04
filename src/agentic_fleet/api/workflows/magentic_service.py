@@ -81,7 +81,7 @@ class MagenticWorkflowService:
         logger.info(
             "Created workflow %s for task: %s",
             sanitize_log_value(workflow_id),
-            task[:100],
+            sanitize_log_value(task[:100]),
         )
         return workflow_id
 
