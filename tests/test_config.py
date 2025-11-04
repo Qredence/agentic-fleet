@@ -428,8 +428,7 @@ class TestConfigurationValidation:
         for agent_name, agent_config in config.agents.items():
             if isinstance(agent_config, dict) and "temperature" in agent_config:
                 temp = agent_config["temperature"]
-                # Ruff UP038 (non-pep604-isinstance) may require PEP 604 unions on older pinned
-                # versions; use int | float for compatibility with stricter pre-commit hooks.
+                # Use PEP 604 union syntax (int | float) per project standards
                 assert isinstance(
                     temp, int | float
                 ), f"Temperature should be numeric for {agent_name}"
