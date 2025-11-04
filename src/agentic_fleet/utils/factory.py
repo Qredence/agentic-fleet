@@ -21,14 +21,14 @@ import importlib.resources
 import logging
 import os
 import warnings
-from collections.abc import Callable, Coroutine
+from collections.abc import Callable, Coroutine, Iterator
 from pathlib import Path
-from typing import Any, TypeVar
+from typing import Any, TypeVar, cast
 
 import yaml
 
+from agentic_fleet.models.events import RunsWorkflow
 from agentic_fleet.models.workflow import WorkflowConfig
-from agentic_fleet.utils.performance import async_timer
 
 T = TypeVar("T")
 
@@ -56,7 +56,7 @@ class WorkflowFactory:
 
         with open(self.config_path, encoding="utf-8") as f:
             content = f.read()
-            self._config = yaml.safe_load(content) or {}
+            self._config: dict[str, Any] = yaml.safe_load(content) or {}
 
     def _determine_config_path(self, override: Path | None) -> Path:
         """Determine which configuration path to use."""
@@ -134,7 +134,6 @@ class WorkflowFactory:
 
         return self._run_blocking(lambda: self.get_workflow_config_async(workflow_id))
 
-    @async_timer
     async def get_workflow_config_async(self, workflow_id: str) -> WorkflowConfig:
         """Get workflow configuration for a specific workflow ID.
 
@@ -176,13 +175,12 @@ class WorkflowFactory:
             manager=workflow_data.get("manager", {}),
         )
 
-    def create_from_yaml(self, workflow_id: str) -> Any:
+    def create_from_yaml(self, workflow_id: str) -> RunsWorkflow:
         """Synchronous wrapper around :meth:`create_from_yaml_async`."""
 
         return self._run_blocking(lambda: self.create_from_yaml_async(workflow_id))
 
-    @async_timer
-    async def create_from_yaml_async(self, workflow_id: str) -> Any:
+    async def create_from_yaml_async(self, workflow_id: str) -> RunsWorkflow:
         """Create a workflow instance from YAML configuration.
 
         Attempt to build the requested workflow. If the *creation* phase fails
@@ -230,7 +228,7 @@ class WorkflowFactory:
 
         return MagenticFleetWorkflowBuilder().build(config)
 
-    class _AwaitableDict(dict):  # type: ignore[too-many-ancestors]
+    class _AwaitableDict(dict[str, Any]):
         """Dict subclass that is also awaitable.
 
         Some legacy tests *await* the private ``_resolve_agent_config`` method while
@@ -240,8 +238,8 @@ class WorkflowFactory:
         of this awaitable dict.  When awaited it simply yields itself.
         """
 
-        def __await__(self):  # pragma: no cover - trivial
-            async def _coro():  # type: ignore[no-untyped-def]
+        def __await__(self) -> Iterator[Any]:  # pragma: no cover - trivial
+            async def _coro() -> WorkflowFactory._AwaitableDict:
                 # Yield control once to satisfy linters about async context
                 await asyncio.sleep(0)
                 return self
@@ -318,7 +316,8 @@ class WorkflowFactory:
         Older tests patch or inspect this helper. Kept as a thin shim to avoid
         modifying historical test expectations.
         """
-        return getattr(self, "_config", {})
+        config = getattr(self, "_config", {})
+        return cast(dict[str, Any], config)
 
     def _run_blocking(self, coroutine_factory: Callable[[], Coroutine[Any, Any, T]]) -> T:
         """Execute coroutine in blocking context, avoiding nested event loops."""

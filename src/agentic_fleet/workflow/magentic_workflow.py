@@ -10,14 +10,14 @@ from typing import Any
 from agent_framework import MagenticBuilder
 from agent_framework.openai import OpenAIResponsesClient
 
-from agentic_fleet.api.models.workflow_config import WorkflowConfig
-from agentic_fleet.api.workflows.service import WorkflowEvent
+from agentic_fleet.models.events import RunsWorkflow, WorkflowEvent
+from agentic_fleet.models.workflow import WorkflowConfig
 from agentic_fleet.workflow.events import WorkflowEventBridge
 
 logger = logging.getLogger(__name__)
 
 
-class MagenticFleetWorkflow:
+class MagenticFleetWorkflow(RunsWorkflow):
     """Magentic Fleet workflow implementation."""
 
     def __init__(self, workflow: Any) -> None:
@@ -38,8 +38,7 @@ class MagenticFleetWorkflow:
         Yields:
             WorkflowEvent instances as workflow executes
         """
-        # Placeholder for correlation ID - needs implementation
-        correlation_id = None
+        # Placeholder for correlation ID - needs implementation (unused for now)
 
         try:
             last_agent_id: str | None = None
@@ -115,7 +114,9 @@ class MagenticFleetWorkflowBuilder:
 
     def __init__(self) -> None:
         """Initialize workflow builder."""
-        pass
+        from agentic_fleet.agents import AgentFactory
+
+        self.agent_factory = AgentFactory()
 
     def build(self, config: WorkflowConfig) -> MagenticFleetWorkflow:
         """Build a Magentic Fleet workflow from configuration.
@@ -135,28 +136,23 @@ class MagenticFleetWorkflowBuilder:
             )
 
         # Create specialist agents
+        # Note: config.agents is already resolved by WorkflowFactory, no need to resolve strings
         specialist_agents: dict[str, Any] = {}
         for agent_name, agent_config in config.agents.items():
-            # Resolve string references to agent config dicts
-            if isinstance(agent_config, str):
-                # Attempt to resolve from agent config registry
-                registry = getattr(config, "agent_config_registry", None)
-                if registry is None:
-                    raise ValueError(
-                        f"Agent config for '{agent_name}' is a string reference ('{agent_config}'), "
-                        "but no agent_config_registry is available in WorkflowConfig."
-                    )
-                resolved_config = registry.get(agent_config)
-                if resolved_config is None:
-                    raise ValueError(
-                        f"Agent config reference '{agent_config}' for '{agent_name}' not found in agent_config_registry."
-                    )
-                agent_config = resolved_config
+            # agent_config should already be a dict from WorkflowFactory resolution
+            if not isinstance(agent_config, dict):
+                raise ValueError(
+                    f"Agent config for '{agent_name}' must be a dict, got {type(agent_config).__name__}"
+                )
 
-            # For now, skip agent creation since AgentFactory doesn't exist
-            # This will need to be implemented based on actual agent factory patterns
-            logger.warning(f"Agent creation for '{agent_name}' is not yet implemented")
-            specialist_agents[agent_name] = None
+            # Create agent using AgentFactory
+            try:
+                agent = self.agent_factory.create_agent(agent_name, agent_config)
+                specialist_agents[agent_name] = agent
+                logger.info(f"Created agent '{agent_name}' successfully")
+            except Exception as e:
+                logger.error(f"Failed to create agent '{agent_name}': {e}")
+                raise ValueError(f"Agent creation failed for '{agent_name}': {e}") from e
 
         # Create manager agent
         manager_config = config.manager

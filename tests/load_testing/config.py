@@ -7,6 +7,7 @@ Central configuration for load testing parameters, scenarios, and targets.
 import os
 from dataclasses import dataclass
 from enum import Enum
+from typing import ClassVar
 
 
 class TestType(Enum):
@@ -246,9 +247,13 @@ class LoadTestConfig:
 
 # Test data for load testing
 class TestData:
-    """Static test data for load testing scenarios."""
+    """Static test data for load testing scenarios.
 
-    CHAT_MESSAGES = [
+    Class-level constants annotated with ClassVar to satisfy RUF012 (mutable class attributes).
+    These containers are treated as read-only test fixtures.
+    """
+
+    CHAT_MESSAGES: ClassVar[list[str]] = [
         "What are the key principles of microservices architecture?",
         "Explain the benefits of using FastAPI for web development",
         "How do I optimize database queries for better performance?",
@@ -266,14 +271,14 @@ class TestData:
         "What are the best practices for API versioning?",
     ]
 
-    WORKFLOW_QUERIES = [
+    WORKFLOW_QUERIES: ClassVar[list[str]] = [
         "What workflows are available?",
         "Show me the magentic fleet workflow configuration",
         "Get details for the workflow system",
         "List all available workflows with their configurations",
     ]
 
-    USER_CONTEXTS = [
+    USER_CONTEXTS: ClassVar[list[dict[str, str]]] = [
         {"role": "developer", "experience": "intermediate"},
         {"role": "architect", "experience": "senior"},
         {"role": "student", "experience": "beginner"},

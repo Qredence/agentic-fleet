@@ -3,14 +3,15 @@
 from __future__ import annotations
 
 import time
-from typing import Any
+from collections.abc import AsyncGenerator
+from typing import Any, no_type_check
 
 from fastapi import APIRouter, HTTPException, Request
 from fastapi.responses import StreamingResponse
 
 from agentic_fleet.api.entities.routes import get_entity_discovery
-from agentic_fleet.api.responses.service import ResponseAggregator
 from agentic_fleet.api.responses.schemas import ResponseCompleteResponse, ResponseRequest
+from agentic_fleet.api.responses.service import ResponseAggregator
 
 router = APIRouter()
 
@@ -34,11 +35,8 @@ async def _stream_response(entity_id: str, input_data: str | dict[str, Any]) -> 
         raise HTTPException(status_code=404, detail=f"Entity '{entity_id}' not found") from exc
 
     # Convert input to string if needed
-    if isinstance(input_data, dict):
-        # Extract message from structured input
-        message = input_data.get("input", "") if isinstance(input_data, dict) else str(input_data)
-    else:
-        message = str(input_data)
+    # Extract message from structured input or cast to string
+    message = input_data.get("input", "") if isinstance(input_data, dict) else str(input_data)
 
     if not message:
         raise HTTPException(status_code=400, detail="Input message is required")
@@ -46,7 +44,7 @@ async def _stream_response(entity_id: str, input_data: str | dict[str, Any]) -> 
     # Create aggregator
     aggregator = ResponseAggregator()
 
-    async def generate_stream():  # type: ignore[no-untyped-def]
+    async def generate_stream() -> AsyncGenerator[str, None]:
         """Generate SSE stream from workflow events."""
         try:
             # Run workflow and get events
@@ -97,10 +95,7 @@ async def _get_complete_response(
         raise HTTPException(status_code=404, detail=f"Entity '{entity_id}' not found") from exc
 
     # Convert input to string if needed
-    if isinstance(input_data, dict):
-        message = input_data.get("input", "")
-    else:
-        message = str(input_data)
+    message = input_data.get("input", "") if isinstance(input_data, dict) else str(input_data)
 
     if not message:
         raise HTTPException(status_code=400, detail="Input message is required")
@@ -111,7 +106,7 @@ async def _get_complete_response(
     # Consume the workflow stream through the aggregator to reuse identical logic
     events = workflow.run(message)
     async for _ in aggregator.convert_stream(events):
-        # Drain the stream – we only care about the aggregated final content
+        # Drain the stream - we only care about the aggregated final content
         pass
 
     final_content = aggregator.get_final_response()
@@ -124,6 +119,7 @@ async def _get_complete_response(
     )
 
 
+@no_type_check
 @router.post("/responses", response_model=None)
 async def create_response(
     req: ResponseRequest, request: Request

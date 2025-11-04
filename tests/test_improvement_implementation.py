@@ -15,6 +15,7 @@ Improvements Addressed:
 
 from __future__ import annotations
 
+import asyncio
 import time
 from collections.abc import AsyncGenerator
 from pathlib import Path
@@ -110,12 +111,9 @@ class ConfigurationValidator:
 
     def _validate_factory_methods(self, config: Any, workflow_id: str, results: dict[str, Any]):
         """Validate factory method references."""
-        if hasattr(config, "factory") and config.factory:
-            # Factory method can be a simple name (resolved by builder)
-            # Just check it's not empty
-            if not config.factory.strip():
-                results["errors"].append(f"Factory method for workflow '{workflow_id}' is empty")
-                results["valid"] = False
+        if hasattr(config, "factory") and config.factory and not config.factory.strip():
+            results["errors"].append(f"Factory method for workflow '{workflow_id}' is empty")
+            results["valid"] = False
 
 
 class PerformanceValidator:
@@ -165,7 +163,7 @@ class PerformanceValidator:
 
             return wrapper
 
-        return decorator
+        return decorator  # type: ignore[return-value]
 
     def get_performance_summary(self) -> dict[str, Any]:
         """Generate performance test summary."""
@@ -207,7 +205,7 @@ class EnhancedMockFactory:
         agent = AsyncMock()
 
         # Setup realistic response patterns
-        def create_mock_response(content: str, tool_calls: list = None):
+        def create_mock_response(content: str, tool_calls: list[str] | None = None):
             response = Mock()
             response.content = content
             response.tool_calls = tool_calls or []
@@ -263,11 +261,9 @@ class ContractTestingFramework:
         # Simplified contract validation
         # In production, integrate with tools like Bravado or Schemathesis
 
-        if status_code >= 400:
-            # Error responses should have error structure
-            if isinstance(response_data, dict) and "detail" not in response_data:
-                self.contract_errors.append(f"Error response missing 'detail' field for {endpoint}")
-                return False
+        if status_code >= 400 and isinstance(response_data, dict) and "detail" not in response_data:
+            self.contract_errors.append(f"Error response missing 'detail' field for {endpoint}")
+            return False
 
         return True
 
@@ -323,7 +319,7 @@ import {component_name} from './{component_name}';
 describe('{component_name}', () => {{
 """
 
-        for i, test_case in enumerate(test_cases):
+        for _i, test_case in enumerate(test_cases):
             test_template += f"""
     it('{test_case["description"]}', async () => {{
         render(<{component_name} {{...{{{test_case["props"]}}}}} />);
@@ -388,10 +384,10 @@ def database_helper():
 
 # Enhanced test decorators
 def with_performance_thresholds(thresholds: PerformanceThresholds):
-    """Decorator to add performance testing to test functions."""
+    """Decorator factory adding performance threshold validation to test functions."""
 
     def decorator(test_func):
-        def wrapper(*args, **kwargs):
+        def wrapper(*args: Any, **kwargs: Any):
             start_time = time.time()
             try:
                 result = test_func(*args, **kwargs)
@@ -416,10 +412,10 @@ def with_performance_thresholds(thresholds: PerformanceThresholds):
 
 
 def with_contract_validation(endpoint: str):
-    """Decorator to add contract validation to API tests."""
+    """Decorator factory adding contract validation to API test functions."""
 
     def decorator(test_func):
-        def wrapper(*args, **kwargs):
+        def wrapper(*args: Any, **kwargs: Any):
             result = test_func(*args, **kwargs)
 
             # Validate response contract

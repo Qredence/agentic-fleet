@@ -4,14 +4,15 @@ import json
 import logging
 import os
 import time
-from typing import Any
+from collections.abc import AsyncGenerator
+from typing import Any, no_type_check
 
 from fastapi import APIRouter, HTTPException, Request
 from fastapi.responses import StreamingResponse
 
+from agentic_fleet.api.chat.schemas import ChatMessagePayload, ChatRequest, ChatResponse
 from agentic_fleet.api.chat.service import get_workflow_service
 from agentic_fleet.api.conversations.service import ConversationNotFoundError, get_store
-from agentic_fleet.api.chat.schemas import ChatMessagePayload, ChatRequest, ChatResponse
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
@@ -41,7 +42,7 @@ async def _stream_chat_response(req: ChatRequest) -> StreamingResponse:
     store.add_message(req.conversation_id, role="user", content=req.message)
     logger.info(f"[CHAT] User message saved. Elapsed: {time.time() - start_time:.2f}s")
 
-    async def generate_stream():  # type: ignore[no-untyped-def]
+    async def generate_stream() -> AsyncGenerator[str, None]:
         # Send initial keep-alive comment to establish connection
         yield ": keep-alive\n\n"
         # Accumulate global content (legacy single assistant message)
@@ -187,11 +188,11 @@ async def _stream_chat_response(req: ChatRequest) -> StreamingResponse:
                             f"[CHAT] Using result from message.done event: {len(result)} chars"
                         )
                         # Send the result as a delta to the frontend so it can display it
-                        payload: dict[str, Any] = {
+                        result_payload: dict[str, Any] = {
                             "type": "response.delta",
                             "delta": result,
                         }
-                        yield f"data: {json.dumps(payload)}\n\n"
+                        yield f"data: {json.dumps(result_payload)}\n\n"
                     elif result and accumulated_content:
                         logger.warning(
                             f"[CHAT] message.done has result ({len(result)} chars) but accumulated_content "
@@ -278,7 +279,7 @@ async def _stream_chat_response(req: ChatRequest) -> StreamingResponse:
     )
 
 
-async def chat(req: ChatRequest, request: Request):
+async def chat(req: ChatRequest, request: Request) -> ChatResponse | StreamingResponse:
     """Handle chat request with optional streaming support."""
     # Check if client wants streaming (via Accept header or stream param)
     accept_header = request.headers.get("accept", "")
@@ -325,8 +326,9 @@ async def chat(req: ChatRequest, request: Request):
 router.post("/chat", response_model=None)(chat)
 
 
+@no_type_check
 @router.get("/chat/stream")
-async def chat_stream_get(message: str, conversation_id: str = "default"):
+async def chat_stream_get(message: str, conversation_id: str = "default") -> StreamingResponse:
     """GET endpoint for SSE streaming (for testing with EventSource).
 
     Args:

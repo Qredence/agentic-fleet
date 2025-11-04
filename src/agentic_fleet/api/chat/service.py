@@ -2,9 +2,9 @@
 
 from __future__ import annotations
 
-import inspect
 import logging
 from collections.abc import AsyncGenerator
+from typing import Any
 
 from fastapi import HTTPException
 
@@ -113,6 +113,18 @@ def get_workflow_service() -> WorkflowService:
     return _workflow_service
 
 
-# Backward compatibility: some tests monkey-patch this symbol on chat.service
-async def create_magentic_fleet_workflow(*args, **kwargs):  # pragma: no cover - shim
-    return await _deprecated_workflow_alias(*args, **kwargs)
+# Backward compatibility: some tests monkey-patch this symbol on chat.service.
+# This now returns the synchronous stub immediately to match legacy behavior.
+def create_magentic_fleet_workflow(
+    *args: Any, **kwargs: Any
+) -> RunsWorkflow:  # pragma: no cover - shim
+    """Backward-compatible synchronous workflow factory alias.
+
+    Args:
+        *args: Positional arguments forwarded to legacy factory
+        **kwargs: Keyword arguments forwarded to legacy factory
+
+    Returns:
+        Stub workflow implementing RunsWorkflow protocol.
+    """
+    return _deprecated_workflow_alias(*args, **kwargs)

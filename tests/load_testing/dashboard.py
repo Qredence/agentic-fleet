@@ -6,6 +6,7 @@ Web-based dashboard for real-time monitoring and visualization of load test resu
 """
 
 import asyncio
+import contextlib
 import json
 from datetime import datetime
 from typing import Any
@@ -44,11 +45,8 @@ class ConnectionManager:
 
     async def broadcast(self, message: str):
         for connection in self.active_connections:
-            try:
+            with contextlib.suppress(Exception):
                 await connection.send_text(message)
-            except Exception:
-                # Connection might be closed
-                pass
 
 
 manager = ConnectionManager()

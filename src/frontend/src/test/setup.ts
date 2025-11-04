@@ -1,58 +1,48 @@
 import "@testing-library/jest-dom";
-import { beforeAll, afterEach, afterAll } from "vitest";
+import { afterAll, beforeAll } from "vitest";
 
-// Mock fetch for API calls
-global.fetch = vi.fn();
+// Polyfill for browser APIs that don't exist in jsdom but don't need mocking
 
-// Mock Server-Sent Events
-global.EventSource = vi.fn().mockImplementation(() => ({
-  addEventListener: vi.fn(),
-  removeEventListener: vi.fn(),
-  close: vi.fn(),
-  readyState: 1,
-  CONNECTING: 0,
-  OPEN: 1,
-  CLOSING: 2,
-  CLOSED: 3,
-}));
+// ResizeObserver polyfill for DOM tests
+global.ResizeObserver =
+  global.ResizeObserver ||
+  class ResizeObserver {
+    observe() {}
+    unobserve() {}
+    disconnect() {}
+  };
 
-// Mock ResizeObserver
-global.ResizeObserver = vi.fn().mockImplementation(() => ({
-  observe: vi.fn(),
-  unobserve: vi.fn(),
-  disconnect: vi.fn(),
-}));
+// IntersectionObserver polyfill for DOM tests
+global.IntersectionObserver =
+  global.IntersectionObserver ||
+  class IntersectionObserver {
+    observe() {}
+    unobserve() {}
+    disconnect() {}
+  };
 
-// Mock IntersectionObserver
-global.IntersectionObserver = vi.fn().mockImplementation(() => ({
-  observe: vi.fn(),
-  unobserve: vi.fn(),
-  disconnect: vi.fn(),
-}));
-
-// Mock window.matchMedia
+// matchMedia polyfill for DOM tests
 Object.defineProperty(window, "matchMedia", {
   writable: true,
-  value: vi.fn().mockImplementation((query) => ({
+  value: (query: string) => ({
     matches: false,
     media: query,
     onchange: null,
-    addListener: vi.fn(), // deprecated
-    removeListener: vi.fn(), // deprecated
-    addEventListener: vi.fn(),
-    removeEventListener: vi.fn(),
-    dispatchEvent: vi.fn(),
-  })),
+    addListener: () => {},
+    removeListener: () => {},
+    addEventListener: () => {},
+    removeEventListener: () => {},
+    dispatchEvent: () => true,
+  }),
 });
 
 beforeAll(() => {
-  // Global test setup
-  console.log("🧪 Setting up frontend test environment");
-});
-
-afterEach(() => {
-  // Clean up mocks after each test
-  vi.clearAllMocks();
+  // Global test setup - using real API connections
+  console.log("🧪 Setting up frontend test environment with real API");
+  console.log(
+    "📡 Backend API URL:",
+    import.meta.env.VITE_API_URL || "http://localhost:8000",
+  );
 });
 
 afterAll(() => {

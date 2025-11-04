@@ -68,6 +68,7 @@ class PerformanceMonitor:
 
         # System monitoring
         self.system_monitor_task = None
+        self.application_health_monitor_task = None
 
         # Custom alerting rules
         self.alert_rules = {
@@ -148,14 +149,18 @@ class PerformanceMonitor:
         # Start system monitoring task
         self.system_monitor_task = asyncio.create_task(self.system_monitoring_loop())
 
-        # Start application health monitoring
-        asyncio.create_task(self.application_health_monitor())
+        # Start application health monitoring (store task reference per RUF006)
+        self.application_health_monitor_task = asyncio.create_task(
+            self.application_health_monitor()
+        )
 
     async def stop_monitoring(self):
         """Stop the monitoring system."""
         self.is_running = False
         if self.system_monitor_task:
             self.system_monitor_task.cancel()
+        if self.application_health_monitor_task:
+            self.application_health_monitor_task.cancel()
 
         self.logger.info("Performance monitoring stopped")
 
@@ -191,38 +196,39 @@ class PerformanceMonitor:
         """Monitor application health and availability."""
         while self.is_running:
             try:
-                async with aiohttp.ClientSession() as session:
-                    # Check health endpoint
-                    start_time = time.time()
-                    async with session.get(
+                start_time = time.time()
+                async with (
+                    aiohttp.ClientSession() as session,
+                    session.get(
                         f"{self.test_run_info.target_url}/v1/system/health",
                         timeout=aiohttp.ClientTimeout(total=10),
-                    ) as response:
-                        response_time = (time.time() - start_time) * 1000
-                        self.record_metric(
-                            "health_check_response_time",
-                            response_time,
-                            "ms",
-                            {
-                                "endpoint": "health",
-                                "status": f"{'healthy' if response.status == 200 else f'error_{response.status}'}",
-                            },
-                        )
+                    ) as response,
+                ):
+                    response_time = (time.time() - start_time) * 1000
+                    self.record_metric(
+                        "health_check_response_time",
+                        response_time,
+                        "ms",
+                        {
+                            "endpoint": "health",
+                            "status": f"{'healthy' if response.status == 200 else f'error_{response.status}'}",
+                        },
+                    )
 
-                        if response.status == 200:
-                            self.record_metric(
-                                "health_check_success",
-                                1,
-                                "count",
-                                {"endpoint": "health", "status": "healthy"},
-                            )
-                        else:
-                            self.record_metric(
-                                "health_check_failure",
-                                1,
-                                "count",
-                                {"endpoint": "health", "status": f"error_{response.status}"},
-                            )
+                    if response.status == 200:
+                        self.record_metric(
+                            "health_check_success",
+                            1,
+                            "count",
+                            {"endpoint": "health", "status": "healthy"},
+                        )
+                    else:
+                        self.record_metric(
+                            "health_check_failure",
+                            1,
+                            "count",
+                            {"endpoint": "health", "status": f"error_{response.status}"},
+                        )
 
             except Exception as e:
                 self.record_metric(
@@ -240,7 +246,7 @@ class PerformanceMonitor:
         name: str,
         value: float,
         unit: str,
-        tags: dict[str, str] = None,
+        tags: dict[str, str] | None = None,
         context: dict[str, Any] | None = None,
     ):
         """Record a performance metric."""
@@ -257,7 +263,7 @@ class PerformanceMonitor:
         self.metrics_history.append(metric)
 
         # Update Prometheus metrics
-        self.update_prometheus_metrics(name, value, tags)
+        self.update_prometheus_metrics(name, value, tags or {})
 
     def update_prometheus_metrics(self, name: str, value: float, tags: dict[str, str]):
         """Update Prometheus metrics based on the metric name."""
@@ -414,9 +420,9 @@ class PerformanceMonitor:
             "alerts": self.alerts[-5:],  # Last 5 alerts
         }
 
-    def export_metrics(self, format: str = "json") -> str:
+    def export_metrics(self, export_format: str = "json") -> str:
         """Export metrics in the specified format."""
-        if format == "json":
+        if export_format == "json":
             return json.dumps(
                 {
                     "test_run": asdict(self.test_run_info),
@@ -428,7 +434,7 @@ class PerformanceMonitor:
                 indent=2,
             )
         else:
-            raise ValueError(f"Unsupported export format: {format}")
+            raise ValueError(f"Unsupported export format: {export_format}")
 
 
 class MetricsCollector:
@@ -443,11 +449,13 @@ class MetricsCollector:
     ):
         """Collect metrics from Locust web interface."""
         try:
-            async with aiohttp.ClientSession() as session:
-                async with session.get(locust_stats_url) as response:
-                    if response.status == 200:
-                        stats = await response.json()
-                        await self.process_locust_stats(stats)
+            async with (
+                aiohttp.ClientSession() as session,
+                session.get(locust_stats_url) as response,
+            ):
+                if response.status == 200:
+                    stats = await response.json()
+                    await self.process_locust_stats(stats)
         except Exception as e:
             print(f"Error collecting Locust metrics: {e}")
 
@@ -515,7 +523,7 @@ async def run_monitoring_session(test_run_info: TestRunInfo, duration_minutes: i
         print(json.dumps(summary, indent=2, default=str))
         print("=" * 50)
 
-        return monitor
+    return monitor
 
 
 if __name__ == "__main__":

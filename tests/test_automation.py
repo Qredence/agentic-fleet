@@ -35,11 +35,7 @@ from rich.table import Table
 # Add parent directory to path for imports
 sys.path.append(str(Path(__file__).parent))
 
-from test_improvement_implementation import (
-    ConfigurationValidator,
-    PerformanceThresholds,
-    PerformanceValidator,
-)
+from test_improvement_implementation import ConfigurationValidator, PerformanceThresholds
 
 
 class TestAutomationConfig:
@@ -161,9 +157,7 @@ class TestExecutor:
     async def _run_configuration_validation(self):
         """Run configuration validation tests."""
         self.console.print("🔧 Running configuration validation...")
-
-        validator = ConfigurationValidator()
-        config_results = validator.validate_workflow_configuration()
+        config_results = ConfigurationValidator().validate_workflow_configuration()
 
         if config_results["valid"]:
             self.console.print(
@@ -223,11 +217,10 @@ class TestExecutor:
     async def _run_performance_tests(self):
         """Run performance SLA tests."""
         self.console.print("⚡ Running performance SLA tests...")
-
         thresholds = PerformanceThresholds(
             **self.config.config["test_execution"]["performance_thresholds"]
         )
-        validator = PerformanceValidator(thresholds)
+        # Instantiate validator only if future validation method calls are needed; current logic performs manual checks
 
         # Mock performance test execution
         # In real implementation, this would run actual performance tests

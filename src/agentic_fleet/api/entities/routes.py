@@ -2,10 +2,12 @@
 
 from __future__ import annotations
 
+from typing import no_type_check
+
 from fastapi import APIRouter, HTTPException
 
-from agentic_fleet.api.entities.service import EntityDiscovery
 from agentic_fleet.api.entities.schemas import DiscoveryResponse, EntityInfo, EntityReloadResponse
+from agentic_fleet.api.entities.service import EntityDiscovery
 
 router = APIRouter()
 
@@ -25,6 +27,7 @@ def get_entity_discovery() -> EntityDiscovery:
     return _entity_discovery
 
 
+@no_type_check
 @router.get("/entities", response_model=DiscoveryResponse)
 async def list_entities() -> DiscoveryResponse:
     """List all available entities (workflows).
@@ -37,6 +40,7 @@ async def list_entities() -> DiscoveryResponse:
     return DiscoveryResponse(entities=entities)
 
 
+@no_type_check
 @router.get("/entities/{entity_id}", response_model=EntityInfo)
 async def get_entity_info(entity_id: str) -> EntityInfo:
     """Get detailed information about a specific entity.
@@ -57,6 +61,7 @@ async def get_entity_info(entity_id: str) -> EntityInfo:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
 
 
+@no_type_check
 @router.post("/entities/{entity_id}/reload", response_model=EntityReloadResponse)
 async def reload_entity(entity_id: str) -> EntityReloadResponse:
     """Reload entity configuration without restarting the server.

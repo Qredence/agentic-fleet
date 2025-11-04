@@ -2,7 +2,9 @@ from __future__ import annotations
 
 import logging
 import uuid
+from collections.abc import Awaitable, Callable
 from pathlib import Path
+from typing import no_type_check
 
 from fastapi import FastAPI, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
@@ -22,10 +24,12 @@ from agentic_fleet.utils.performance import clear_correlation_id, set_correlatio
 logger = logging.getLogger(__name__)
 
 
-class CorrelationMiddleware(BaseHTTPMiddleware):
+class CorrelationMiddleware(BaseHTTPMiddleware):  # type: ignore[misc]
     """Middleware to inject correlation IDs into all requests."""
 
-    async def dispatch(self, request: Request, call_next) -> Response:  # type: ignore[no-untyped-def]
+    async def dispatch(
+        self, request: Request, call_next: Callable[[Request], Awaitable[Response]]
+    ) -> Response:
         """Process request with correlation ID."""
         # Generate unique correlation ID for this request
         correlation_id = str(uuid.uuid4())
@@ -69,8 +73,9 @@ def create_app() -> FastAPI:
     )
 
     # Add explicit OPTIONS handlers to resolve preflight 400 responses
+    @no_type_check
     @app.options("/{path:path}")
-    async def preflight_handler(path: str):
+    async def preflight_handler(path: str) -> dict[str, str]:
         """Handle CORS preflight requests."""
         return {"status": "ok"}
 

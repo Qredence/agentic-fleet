@@ -49,7 +49,7 @@ logs
 .ruff_cache/
 .coverage
 htmlcov/
-
+.npm-cache/
 # Logs
 *.log
 
@@ -115,3 +115,9 @@ src/frontend/src/.npm-cache/_cacache/index-v5/86/47/86e70a82678db0560ecf5dfeb70e
 .claude/skills/webapp-testing/scripts/with_server.py
 .claude/mcp.json
 .github/agents/my-agent.md
+src/frontend/.npm-cache/_update-notifier-last-checked
+src/frontend/.npm-cache/_cacache/content-v2/sha512/a1/aa/eecc84e4509201aff202c0a82ef8bf14a16da08d086c8bb4a624d6b1f4dc28de449eddc94b4ed8bb64b9f20a181345799c6d94dfbfa4a20c49e9651e9cf6
+src/frontend/.npm-cache/_cacache/index-v5/86/47/86e70a82678db0560ecf5dfeb70e5cc20b3ec3d7c203d10eed6c0718455e
+src/frontend/src/.npm-cache/_update-notifier-last-checked
+src/frontend/src/.npm-cache/_cacache/content-v2/sha512/a1/aa/eecc84e4509201aff202c0a82ef8bf14a16da08d086c8bb4a624d6b1f4dc28de449eddc94b4ed8bb64b9f20a181345799c6d94dfbfa4a20c49e9651e9cf6
+src/frontend/src/.npm-cache/_cacache/index-v5/86/47/86e70a82678db0560ecf5dfeb70e5cc20b3ec3d7c203d10eed6c0718455e

@@ -136,7 +136,7 @@ class AgentFactory:
 
         return tools
 
-    def _resolve_instructions(self, instructions: str) -> str:
+    def _resolve_instructions(self, instructions: Any) -> str:
         """Resolve instructions from Python module reference or return as-is.
 
         Supports:
@@ -150,7 +150,8 @@ class AgentFactory:
             Resolved instructions string
         """
         if not isinstance(instructions, str):
-            return instructions
+            # Coerce non-string instructions to string to satisfy return type contract.
+            return str(instructions)
 
         # Check if it's a prompt module reference (e.g., "prompts.planner")
         if instructions.startswith("prompts."):
@@ -161,7 +162,8 @@ class AgentFactory:
 
                 prompt_module = importlib.import_module(f"agentic_fleet.prompts.{module_name}")
                 if hasattr(prompt_module, "get_instructions"):
-                    resolved_instructions = prompt_module.get_instructions()
+                    # Cast return to str to satisfy strict typing (legacy modules may return Any)
+                    resolved_instructions = str(prompt_module.get_instructions())
                     logger.debug(
                         f"Resolved instructions from module 'prompts.{module_name}' "
                         f"({len(resolved_instructions)} chars)"
@@ -175,7 +177,7 @@ class AgentFactory:
                     return instructions
             except ImportError as e:
                 logger.warning(
-                    f"Failed to import prompt module 'prompts.{instructions[len('prompts.'):]}': {e}, "
+                    f"Failed to import prompt module 'prompts.{instructions[len('prompts.') :]}': {e}, "
                     "using instructions as-is"
                 )
                 return instructions
