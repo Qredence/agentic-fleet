@@ -66,7 +66,8 @@ var/
 gha-creds-*.json
 AgenticFleet.code-workspace
 AgenticFleet.code-workspace
-
+.claude/
+.cursor/
 # Node modules
 node_modules/
 
@@ -79,7 +80,7 @@ memory-bank/
 .pre-commit-config.yaml
 .github/agents/expert-react-frontend-engineer.agent.md
 .playwright-mcp/page-2025-10-29T05-03-16-472Z.png
-
+.github/agents/
 # Playwright
 /test-results/
 /playwright-report/
