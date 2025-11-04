@@ -38,7 +38,7 @@ logger = logging.getLogger(__name__)
 def _json_safe_value(value: Any) -> Any:
     """Best-effort conversion of arbitrary values into JSON-safe structures."""
 
-    if value is None or isinstance(value, (str, int, float, bool)):
+    if value is None or isinstance(value, str | int | float | bool):
         return value
 
     if hasattr(value, "model_dump") and callable(value.model_dump):  # Pydantic models
@@ -47,7 +47,7 @@ def _json_safe_value(value: Any) -> Any:
     if isinstance(value, dict):
         return {str(key): _json_safe_value(item) for key, item in value.items()}
 
-    if isinstance(value, (list, tuple, set)):
+    if isinstance(value, list | tuple | set):
         return [_json_safe_value(item) for item in value]
 
     if hasattr(value, "__dict__"):
