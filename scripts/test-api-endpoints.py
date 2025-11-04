@@ -46,7 +46,7 @@ async def main() -> None:
     async with httpx.AsyncClient() as client:
         checks: Sequence[Endpoint] = (
             Endpoint("Root", "GET", "/"),
-            Endpoint("Health", "GET", "/health"),
+            Endpoint("Health", "GET", "/v1/system/health"),
             Endpoint("Create Session", "POST", "/v1/sessions"),
             Endpoint("List Conversations", "GET", "/v1/conversations"),
             Endpoint("Create Conversation", "POST", "/v1/conversations", {"json": {}}),
