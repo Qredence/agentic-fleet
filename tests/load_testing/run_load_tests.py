@@ -21,8 +21,8 @@ from pydantic import BaseModel
 # Add parent directory to path to import config and monitoring
 sys.path.append(str(Path(__file__).parent))
 
-from config import LoadTestConfig, TestEnvironment
 from monitoring import create_test_run_info, run_monitoring_session
+from tests.load_testing.config import LoadTestConfig, TestEnvironment
 
 
 class TestResult(BaseModel):
@@ -115,7 +115,7 @@ class LoadTestRunner:
                 stderr=asyncio.subprocess.PIPE,
             )
 
-            stdout, stderr = await process.communicate()
+            _stdout, stderr = await process.communicate()
 
             if process.returncode == 0:
                 print("Locust test completed successfully")
@@ -164,7 +164,7 @@ class LoadTestRunner:
                 stderr=asyncio.subprocess.PIPE,
             )
 
-            stdout, stderr = await process.communicate()
+            _stdout, stderr = await process.communicate()
 
             if process.returncode == 0:
                 print("k6 test completed successfully")
@@ -368,6 +368,9 @@ async def main():
 
     args = parser.parse_args()
 
+    # Initialize success flag to avoid possible 'unbound' warnings.
+    success = False
+
     # Create runner
     runner = LoadTestRunner()
     runner.config.environment = TestEnvironment(args.environment)
@@ -384,10 +387,9 @@ async def main():
         return
 
     # Run health check if requested
-    if args.health_check:
-        if not await runner.run_health_check():
-            print("Health check failed. Exiting.")
-            return
+    if args.health_check and not await runner.run_health_check():
+        print("Health check failed. Exiting.")
+        return
 
     # Run test
     if args.tool == "locust":

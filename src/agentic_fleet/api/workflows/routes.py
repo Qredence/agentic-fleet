@@ -4,7 +4,9 @@ Workflow API routes with SSE streaming support for Magentic workflows.
 
 import json
 import logging
+from collections.abc import AsyncGenerator
 from dataclasses import asdict
+from typing import no_type_check
 
 from fastapi import APIRouter, HTTPException
 from fastapi.responses import StreamingResponse
@@ -65,6 +67,7 @@ async def get_workflow(workflow_id: str) -> dict[str, object]:
 
 
 # Magentic workflow routes (active workflow management)
+@no_type_check
 @router.post("/workflows/instances", response_model=CreateWorkflowResponse, status_code=201)
 async def create_workflow(request: CreateWorkflowRequest) -> CreateWorkflowResponse:
     """
@@ -83,8 +86,9 @@ async def create_workflow(request: CreateWorkflowRequest) -> CreateWorkflowRespo
         raise HTTPException(status_code=500, detail=f"Failed to create workflow: {e!s}") from None
 
 
+@no_type_check
 @router.get("/workflows/instances/{workflow_id}/stream")
-async def stream_workflow(workflow_id: str):
+async def stream_workflow(workflow_id: str) -> StreamingResponse:
     """
     Execute workflow with SSE streaming.
 
@@ -102,7 +106,7 @@ async def stream_workflow(workflow_id: str):
     """
     service = get_workflow_service()
 
-    async def event_generator():
+    async def event_generator() -> AsyncGenerator[str, None]:
         """Generate SSE events from workflow execution."""
         try:
             async for event in service.execute_workflow(workflow_id):
@@ -113,7 +117,7 @@ async def stream_workflow(workflow_id: str):
 
         except Exception as e:
             logger.error(f"Error in workflow stream: {e}", exc_info=True)
-            error_event = json.dumps({"type": "error", "data": {"message": f"Stream error: {e!s}"}})
+            error_event = json.dumps({"type": "error", "data": {"message": "An internal error occurred while streaming the workflow."}})
             yield f"data: {error_event}\n\n"
 
     return StreamingResponse(
@@ -127,6 +131,7 @@ async def stream_workflow(workflow_id: str):
     )
 
 
+@no_type_check
 @router.get("/workflows/instances/{workflow_id}/status", response_model=WorkflowStatusResponse)
 async def get_workflow_status(workflow_id: str) -> WorkflowStatusResponse:
     """
@@ -145,6 +150,7 @@ async def get_workflow_status(workflow_id: str) -> WorkflowStatusResponse:
     return WorkflowStatusResponse(**status)
 
 
+@no_type_check
 @router.get("/workflows/instances", response_model=dict[str, list[dict[str, object]]])
 async def list_active_workflows() -> dict[str, list[dict[str, object]]]:
     """
@@ -158,8 +164,9 @@ async def list_active_workflows() -> dict[str, list[dict[str, object]]]:
     return {"workflows": workflows}
 
 
+@no_type_check
 @router.delete("/workflows/instances/{workflow_id}", status_code=204)
-async def delete_workflow(workflow_id: str):
+async def delete_workflow(workflow_id: str) -> None:
     """
     Delete a workflow instance.
 
@@ -176,6 +183,7 @@ async def delete_workflow(workflow_id: str):
     return None
 
 
+@no_type_check
 @router.post("/workflows/instances/{workflow_id}/pause", response_model=WorkflowStatusResponse)
 async def pause_workflow(workflow_id: str) -> WorkflowStatusResponse:
     """
@@ -193,8 +201,9 @@ async def pause_workflow(workflow_id: str) -> WorkflowStatusResponse:
     return WorkflowStatusResponse(**status)
 
 
+@no_type_check
 @router.post("/workflows/instances/{workflow_id}/resume")
-async def resume_workflow(workflow_id: str):
+async def resume_workflow(workflow_id: str) -> StreamingResponse:
     """
     Resume paused workflow instance with SSE streaming.
 
@@ -202,7 +211,7 @@ async def resume_workflow(workflow_id: str):
     """
     service = get_workflow_service()
 
-    async def event_generator():
+    async def event_generator() -> AsyncGenerator[str, None]:
         """Generate SSE events from resumed workflow."""
         try:
             async for event in service.resume_workflow(workflow_id):
@@ -210,7 +219,7 @@ async def resume_workflow(workflow_id: str):
                 yield f"data: {event_json}\n\n"
         except Exception as e:
             logger.error(f"Error resuming workflow: {e}", exc_info=True)
-            error_event = json.dumps({"type": "error", "data": {"message": f"Resume error: {e!s}"}})
+            error_event = json.dumps({"type": "error", "data": {"message": "Resume error: An internal error occurred."}})
             yield f"data: {error_event}\n\n"
 
     return StreamingResponse(

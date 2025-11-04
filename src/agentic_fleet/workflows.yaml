@@ -1,7 +1,11 @@
-# AgenticFleet Workflow Configurations
-# Package default configuration - can be overridden by:
-# 1. AF_WORKFLOW_CONFIG environment variable (absolute path)
-# 2. config/workflows.yaml (repo/deploy-level override)
+# AgenticFleet Packaged Workflow Configurations (plural)
+# This file provides the packaged default multi-workflow configuration
+# referenced by utils.factory.WorkflowFactory resolution order:
+# 1. AF_WORKFLOW_CONFIG (absolute path override)
+# 2. Packaged default agentic_fleet/workflows.yaml (this file)
+#
+# Maintainers: Keep this in sync with repo-level override at config/workflows.yaml
+# unless intentional divergence is documented.
 
 workflows:
   magentic_fleet:

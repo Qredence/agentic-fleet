@@ -444,6 +444,38 @@ environment:
 
 Periodically rotate API keys and database credentials.
 
+### 4. Logging Security
+
+To prevent log injection and terminal escape manipulation, all workflow identifiers
+and other user-controlled values are sanitized before logging using
+`agentic_fleet.utils.logging_sanitize.sanitize_log_value`.
+
+Removed characters:
+
+```text
+\n (newline)
+\r (carriage return)
+     (tab)
+\u2028 (Unicode line separator)
+\u2029 (Unicode paragraph separator)
+\u0085 (next line)
+\f (form feed)
+\v (vertical tab)
+\x1b (ESC / ANSI escape initiator)
+```
+
+Example usage in code:
+
+```python
+from agentic_fleet.utils.logging_sanitize import sanitize_log_value
+logger.info("Created workflow %s", sanitize_log_value(workflow_id))
+```
+
+Sanitization affects only log output; internal IDs remain unchanged for lookup
+and persistence. If future requirements expand the set of disallowed characters,
+update `REMOVED_LOG_CHARS` in `logging_sanitize.py` and extend tests in
+`tests/test_logging_sanitization.py`.
+
 ---
 
 ## Additional Resources

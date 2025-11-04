@@ -11,7 +11,7 @@ import logging
 from collections.abc import AsyncIterator
 from dataclasses import dataclass, field
 from enum import Enum
-from typing import Any
+from typing import Any, cast, no_type_check
 
 from agent_framework import ChatAgent, ai_function
 from agent_framework.openai import OpenAIResponsesClient
@@ -92,12 +92,11 @@ class MagenticOrchestrator:
     def _create_client(self) -> OpenAIResponsesClient:
         """Create OpenAI client following framework patterns"""
         import os
+
         api_key = os.getenv("OPENAI_API_KEY")
         if not api_key:
             raise ValueError("OPENAI_API_KEY environment variable is required")
-        return OpenAIResponsesClient(
-            model=self.config.fleet.manager.model, api_key=api_key
-        )
+        return OpenAIResponsesClient(model=self.config.fleet.manager.model, api_key=api_key)
 
     def _create_manager(self) -> ChatAgent:
         """
@@ -163,6 +162,7 @@ Guidelines:
     def _create_progress_evaluator_tool(self) -> Any:
         """Create the evaluate_progress tool for the manager agent"""
 
+        @no_type_check
         @ai_function
         def evaluate_progress(
             request_satisfied: bool,
@@ -398,7 +398,8 @@ Consider:
 Provide a structured plan with clear, actionable milestones."""
 
         response = await self.manager_agent.run(prompt)
-        context.plan = response.content  # type: ignore[attr-defined]
+        # response.content attribute exists on agent framework responses.
+        context.plan = getattr(response, "content", None)
 
         logger.info(f"Plan created: {context.plan[:200] if context.plan else 'None'}...")
 
@@ -439,15 +440,16 @@ Be honest about progress. If stuck, try a different approach or agent."""
         response = await self.manager_agent.run(prompt)
 
         # Extract evaluation from tool call
-        if response.tool_calls:  # type: ignore[attr-defined]
-            evaluation = response.tool_calls[0].result  # type: ignore[attr-defined]
+        tool_calls = getattr(response, "tool_calls", None)
+        if tool_calls:
+            evaluation = cast(dict[str, Any], tool_calls[0].result)
             logger.info(
                 f"Evaluation: satisfied={evaluation.get('request_satisfied')}, "
                 f"loop={evaluation.get('in_infinite_loop')}, "
                 f"progress={evaluation.get('making_progress')}, "
                 f"next={evaluation.get('next_agent')}"
             )
-            return evaluation  # type: ignore[no-any-return]
+            return evaluation
         else:
             # Fallback if no tool call
             logger.warning("No tool call in evaluation, using defaults")
@@ -488,7 +490,8 @@ Be honest about progress. If stuck, try a different approach or agent."""
         # Execute with agent
         try:
             response = await agent.run(instruction)
-            result = response.content  # type: ignore[attr-defined]
+            # Tool/agent responses supply a .content attribute; treat as str.
+            result = getattr(response, "content", "")
 
             logger.info(f"Agent {agent_name} response: {result[:200] if result else 'None'}...")
 
@@ -500,7 +503,7 @@ Be honest about progress. If stuck, try a different approach or agent."""
                     )
                 )
 
-            return result  # type: ignore[no-any-return]
+            return result
 
         except Exception as e:
             logger.error(f"Agent {agent_name} error: {e}", exc_info=True)

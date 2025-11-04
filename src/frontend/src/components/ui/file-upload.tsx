@@ -50,7 +50,7 @@ const FileUpload = React.forwardRef<HTMLDivElement, FileUploadProps>(
             console.warn(`File ${file.name} is too large`);
             return false;
           }
-          if (accept && !file.type.match(accept.replace("*", ".*"))) {
+          if (accept && !file.type.match(accept.replace(/\*/g, ".*"))) {
             console.warn(`File ${file.name} has invalid type`);
             return false;
           }

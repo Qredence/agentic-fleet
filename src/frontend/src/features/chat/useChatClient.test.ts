@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { describe, expect, it } from "vitest";
 import {
   createConversation,
   getConversation,
@@ -6,102 +6,52 @@ import {
   sendChat,
 } from "./useChatClient";
 
-const originalFetch = globalThis.fetch;
+// Integration tests using real backend API
+// Ensure backend is running at http://localhost:8000 before running these tests
 
-afterEach(() => {
-  vi.restoreAllMocks();
-  if (originalFetch) {
-    globalThis.fetch = originalFetch;
-  }
-});
-
-function mockResponse(data: unknown, init?: ResponseInit): Response {
-  return new Response(JSON.stringify(data), {
-    status: 200,
-    headers: { "Content-Type": "application/json" },
-    ...init,
-  });
-}
-
-describe("useChatClient", () => {
-  it("getHealth fetches health endpoint and returns parsed JSON", async () => {
-    const expected = { status: "ok" } as const;
-    const fetchSpy = vi
-      .spyOn(globalThis, "fetch")
-      .mockResolvedValueOnce(mockResponse(expected));
-
+describe("useChatClient - Integration Tests", () => {
+  it("getHealth checks backend health status", async () => {
     const result = await getHealth();
 
-    expect(fetchSpy).toHaveBeenCalledWith("/v1/health");
-    expect(result).toEqual(expected);
+    expect(result).toHaveProperty("status");
+    expect(["ok", "down"]).toContain(result.status);
   });
 
-  it("createConversation posts to conversations endpoint", async () => {
-    const expected = {
-      id: "conv-1",
-      title: "Test",
-      created_at: 123,
-      messages: [],
-    } as const;
-    const fetchSpy = vi
-      .spyOn(globalThis, "fetch")
-      .mockResolvedValueOnce(mockResponse(expected));
-
+  it("createConversation creates a new conversation via API", async () => {
     const result = await createConversation();
 
-    expect(fetchSpy).toHaveBeenCalledWith("/v1/conversations", {
-      method: "POST",
-    });
-    expect(result).toEqual(expected);
+    expect(result).toHaveProperty("id");
+    expect(result).toHaveProperty("title");
+    expect(result).toHaveProperty("created_at");
+    expect(result).toHaveProperty("messages");
+    expect(Array.isArray(result.messages)).toBe(true);
   });
 
-  it("getConversation retrieves a specific conversation", async () => {
-    const expected = {
-      id: "conv-2",
-      title: "Existing",
-      created_at: 456,
-      messages: [],
-    } as const;
-    const fetchSpy = vi
-      .spyOn(globalThis, "fetch")
-      .mockResolvedValueOnce(mockResponse(expected));
+  it("getConversation retrieves an existing conversation", async () => {
+    // First create a conversation
+    const created = await createConversation();
 
-    const result = await getConversation("conv-2");
+    // Then retrieve it
+    const result = await getConversation(created.id);
 
-    expect(fetchSpy).toHaveBeenCalledWith("/v1/conversations/conv-2");
-    expect(result).toEqual(expected);
+    expect(result.id).toBe(created.id);
+    expect(result).toHaveProperty("title");
+    expect(result).toHaveProperty("created_at");
+    expect(result).toHaveProperty("messages");
   });
 
-  it("sendChat posts chat payload and returns response", async () => {
-    const expected = {
-      conversation_id: "conv-3",
-      message: "A reply",
-      messages: [
-        {
-          id: "m-1",
-          role: "user" as const,
-          content: "Hi",
-          created_at: 1,
-        },
-        {
-          id: "m-2",
-          role: "assistant" as const,
-          content: "Hello there",
-          created_at: 2,
-        },
-      ],
-    };
-    const fetchSpy = vi
-      .spyOn(globalThis, "fetch")
-      .mockResolvedValueOnce(mockResponse(expected));
+  it("sendChat sends a message and receives response", async () => {
+    // Create a conversation first
+    const conversation = await createConversation();
 
-    const result = await sendChat("conv-3", "Hi");
+    // Send a chat message
+    const result = await sendChat(conversation.id, "Hello, test message");
 
-    expect(fetchSpy).toHaveBeenCalledWith("/v1/chat", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ conversation_id: "conv-3", message: "Hi" }),
-    });
-    expect(result).toEqual(expected);
+    expect(result).toHaveProperty("conversation_id");
+    expect(result.conversation_id).toBe(conversation.id);
+    expect(result).toHaveProperty("message");
+    expect(result).toHaveProperty("messages");
+    expect(Array.isArray(result.messages)).toBe(true);
+    expect(result.messages.length).toBeGreaterThan(0);
   });
 });

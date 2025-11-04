@@ -28,7 +28,7 @@ state management, and development workflow for the SPA.
 - Install dependencies from the repo root: `make frontend-install` (runs `npm install` inside
   `src/frontend/src`). Use `make dev-setup` to bundle backend + frontend prerequisites.
 - Local dev: `make dev` to launch backend + frontend together, or `make frontend-dev` to run only the
-  SPA on http://localhost:5173.
+  SPA on <http://localhost:5173>.
 - Production build: `make build-frontend` (internally calls `npm run build` and copies assets into
   `src/agentic_fleet/ui`).
 - Environment configuration lives in `.env` (root) or `.env.local` (frontend). Set `VITE_API_BASE_URL`

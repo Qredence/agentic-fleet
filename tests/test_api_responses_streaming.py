@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import contextlib
 import json
 
 import pytest
@@ -19,10 +20,8 @@ def parse_sse_events(content: str) -> list[dict]:
             if data == "[DONE]":
                 events.append({"type": "done"})
             else:
-                try:
+                with contextlib.suppress(json.JSONDecodeError):
                     events.append(json.loads(data))
-                except json.JSONDecodeError:
-                    pass
     return events
 
 
@@ -202,9 +201,9 @@ async def test_multiple_delta_events() -> None:
                 break
 
         events = parse_sse_events(content.decode("utf-8"))
-        delta_events = [
-            e for e in events if isinstance(e, dict) and e.get("type") == "response.delta"
-        ]
-
-        # Should have at least some events (may be empty for stub workflow)
-        assert True  # Just verify stream completes
+        # Count delta events (may be zero depending on workflow)
+        _delta_count = sum(
+            1 for e in events if isinstance(e, dict) and e.get("type") == "response.delta"
+        )
+        # Maintain permissive original assertion semantics while removing unused variable warning
+        assert _delta_count >= 0

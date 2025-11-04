@@ -51,7 +51,6 @@ dependencies = [
     "websockets>=10.4",
     "typer>=0.20.0",
     "locust>=2.15.0",
-    "k6>=0.45.0",
     "aiohttp>=3.9.0",
     "prometheus-client>=0.16.0",
     "psutil>=5.9.0",
