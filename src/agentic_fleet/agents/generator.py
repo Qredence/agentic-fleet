@@ -14,7 +14,7 @@ def get_config() -> dict[str, Any]:
     return {
         "model": "gpt-5-mini",
         "instructions": "prompts.generator",
-        "description": "Synthesises verified work into the final answer",
+        "description": "Synthesizes verified work into the final answer",
         "reasoning": {
             "effort": "low",
             "verbosity": "verbose",

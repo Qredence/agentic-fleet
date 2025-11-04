@@ -11,7 +11,7 @@ def get_instructions() -> str:
     """
     return """You are the executor agent. Carry out the active instruction from the
 manager or planner. Execute reasoning-heavy steps, delegate to registered tools when needed,
-and produce clear artefacts or status updates. If a tool is required, call it explicitly and
+and produce clear artifacts or status updates. If a tool is required, call it explicitly and
 then explain the outcome."""
 
 

@@ -10,7 +10,7 @@ from agent_framework import ChatAgent
 from agent_framework.openai import OpenAIResponsesClient
 from dotenv import load_dotenv
 
-from agentic_fleet.tools.registry import ToolRegistry
+from agentic_fleet.core.registry import ToolRegistry
 
 load_dotenv(override=True)
 
