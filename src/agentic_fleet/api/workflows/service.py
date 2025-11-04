@@ -22,22 +22,28 @@ logger = logging.getLogger(__name__)
 
 
 def _sanitize_for_log(value: str) -> str:
-    """Remove control characters from strings for safe logging.
-    
-    Strips newlines, carriage returns, and other control characters that could
-    be used for log injection attacks.
-    
+    """Sanitize string for safe logging: remove all ASCII control characters and mark user input clearly.
+
+    Strips ASCII control characters (0x00-0x1F, 0x7F), newlines, carriage returns, Unicode line/paragraph
+    separators, NEL, tabs, and escape codes. Encloses user input in <angle brackets> to prevent log confusion.
+
     Args:
         value: String to sanitize
-        
+
     Returns:
-        Sanitized string with control characters removed
+        Sanitized and clearly marked string
     """
     if not isinstance(value, str):
-        return str(value)
-    # Use translate for efficient removal of control characters
-    # Removes: \n, \r, Unicode line/paragraph separators, NEL, and tabs
-    return value.translate(str.maketrans('', '', '\n\r\u2028\u2029\u0085\t'))
+        to_clean = str(value)
+    else:
+        to_clean = value
+    # Build translation table for ASCII controls + documented Unicode
+    controls = ''.join(chr(i) for i in range(0,32)) + chr(0x7f) + '\u2028\u2029\u0085\t'
+    cleaned = to_clean.translate(str.maketrans('', '', controls))
+    # Additionally, remove escape character \x1b if present
+    cleaned = cleaned.replace('\x1b', '')
+    # Enclose the sanitized input in angle brackets for visibility
+    return f"<{cleaned}>"
 
 
 class StubMagenticFleetWorkflow(RunsWorkflow):
