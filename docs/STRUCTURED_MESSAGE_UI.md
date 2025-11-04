@@ -170,7 +170,7 @@ Therefore, the recommendation is to use microservices architecture.
 1. **Start the development server:**
 
    ```bash
-   cd /Volumes/Samsung-SSD-T7/Workspaces/Github/qredence/agent-framework/v0.5/AgenticFleet
+   cd <path-to-your-local-clone-of-AgenticFleet>
    make dev
    ```
 
