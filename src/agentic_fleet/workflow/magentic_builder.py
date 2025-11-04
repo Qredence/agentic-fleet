@@ -13,7 +13,7 @@ Provides builder pattern for constructing Magentic workflows with:
 from __future__ import annotations
 
 import logging
-from collections.abc import Callable
+from collections.abc import AsyncGenerator, Callable
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
@@ -46,7 +46,7 @@ class MagenticFleetBuilder:
         ```
     """
 
-    def __init__(self):
+    def __init__(self) -> None:
         self._config: WorkflowConfig | None = None
         self._event_callbacks: list[Callable[[WorkflowEvent], None]] = []
         self._checkpointing_enabled = False
@@ -267,7 +267,7 @@ class MagenticFleet:
     approval_enabled: bool = False
     callbacks: list[Callable[[WorkflowEvent], None]] = None  # type: ignore[assignment]
 
-    def __post_init__(self):
+    def __post_init__(self) -> None:
         """Initialize callbacks list if None."""
         if self.callbacks is None:
             self.callbacks = []
@@ -283,11 +283,13 @@ class MagenticFleet:
             task: The task to execute
             context: Optional existing context to continue from (TODO: MagenticContext)
         """
-        async for event in self.orchestrator.execute(task, context):
+        async for _event in self.orchestrator.execute(task, context):
             # Events are handled by event bus subscribers
             pass
 
-    async def run_with_streaming(self, task: str, context: Any | None = None):
+    async def run_with_streaming(
+        self, task: str, context: Any | None = None
+    ) -> AsyncGenerator[Any, None]:
         """
         Execute workflow with event streaming.
 
@@ -327,7 +329,6 @@ def create_default_fleet(config_path: str = "workflows.yaml") -> MagenticFleet:
         await fleet.run("Research quantum computing")
         ```
     """
-    from pathlib import Path
 
     from agentic_fleet.api.workflow_factory import WorkflowFactory
 

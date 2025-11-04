@@ -94,7 +94,7 @@ class WorkflowEventBridge:
         if isinstance(event, MagenticAgentDeltaEvent):
             # Convert agent deltas to message.delta so they appear as streaming assistant messages
             # Each agent's output will be accumulated separately by the frontend
-            base_event: WorkflowEvent = {
+            delta_event: WorkflowEvent = {
                 "type": "message.delta",
                 "data": {
                     "delta": event.text or "",
@@ -103,18 +103,18 @@ class WorkflowEventBridge:
             }
             # Add OpenAI-compatible type if requested
             if openai_format:
-                base_event["openai_type"] = "response.delta"  # type: ignore[typeddict-item]
+                delta_event["openai_type"] = "response.delta"  # type: ignore[typeddict-unknown-key]
             logger.debug(
                 f"Converted MagenticAgentDeltaEvent to message.delta: "
                 f"agent={event.agent_id}, delta_length={len(event.text or '')}"
             )
-            return base_event
+            return delta_event
 
         elif isinstance(event, MagenticAgentMessageEvent):
             # Signal agent message completion - frontend should finalize this agent's message
             # This marks the end of one agent's work and allows the frontend to create a separate message
             text = event.message.text if event.message else ""
-            base_event: WorkflowEvent = {
+            complete_event: WorkflowEvent = {
                 "type": "agent.message.complete",
                 "data": {
                     "agent_id": event.agent_id,
@@ -123,17 +123,17 @@ class WorkflowEventBridge:
             }
             # Add OpenAI-compatible type if requested
             if openai_format:
-                base_event["openai_type"] = "agent.message.complete"  # type: ignore[typeddict-item]
+                complete_event["openai_type"] = "agent.message.complete"  # type: ignore[typeddict-unknown-key]
             logger.debug(
                 f"Converted MagenticAgentMessageEvent to agent.message.complete: "
                 f"agent={event.agent_id}, text_length={len(text)}"
             )
-            return base_event
+            return complete_event
 
         elif isinstance(event, MagenticOrchestratorMessageEvent):
             text = event.message.text if event.message else ""
             kind = getattr(event, "kind", "unknown")
-            base_event: WorkflowEvent = {
+            orchestrator_event: WorkflowEvent = {
                 "type": "orchestrator.message",
                 "data": {
                     "message": text,
@@ -142,15 +142,15 @@ class WorkflowEventBridge:
             }
             # Add OpenAI-compatible type if requested
             if openai_format:
-                base_event["openai_type"] = "orchestrator.message"  # type: ignore[typeddict-item]
+                orchestrator_event["openai_type"] = "orchestrator.message"  # type: ignore[typeddict-unknown-key]
             logger.debug(
                 f"Converted MagenticOrchestratorMessageEvent to orchestrator.message: kind={kind}"
             )
-            return base_event
+            return orchestrator_event
 
         elif isinstance(event, MagenticFinalResultEvent):
             text = event.message.text if event.message else ""
-            base_event: WorkflowEvent = {
+            final_event: WorkflowEvent = {
                 "type": "message.done",
                 "data": {
                     "result": text,
@@ -158,11 +158,11 @@ class WorkflowEventBridge:
             }
             # Add OpenAI-compatible type if requested
             if openai_format:
-                base_event["openai_type"] = "response.completed"  # type: ignore[typeddict-item]
+                final_event["openai_type"] = "response.completed"  # type: ignore[typeddict-unknown-key]
             logger.debug(
                 f"Converted MagenticFinalResultEvent to message.done: text_length={len(text)}"
             )
-            return base_event
+            return final_event
 
         elif WorkflowOutputEvent is not None and isinstance(event, WorkflowOutputEvent):
             # Handle workflow output event (final result from workflow)
@@ -189,7 +189,7 @@ class WorkflowEventBridge:
             else:
                 output = ""
 
-            base_event: WorkflowEvent = {
+            output_event: WorkflowEvent = {
                 "type": "message.done",
                 "data": {
                     "result": output,
@@ -197,11 +197,11 @@ class WorkflowEventBridge:
             }
             # Add OpenAI-compatible type if requested
             if openai_format:
-                base_event["openai_type"] = "response.completed"  # type: ignore[typeddict-item]
+                output_event["openai_type"] = "response.completed"  # type: ignore[typeddict-unknown-key]
             logger.debug(
                 f"Converted WorkflowOutputEvent to message.done: output_length={len(output)}"
             )
-            return base_event
+            return output_event
 
         else:
             # Check for additional Response API compatible events
@@ -210,14 +210,14 @@ class WorkflowEventBridge:
                 payload = _json_safe_value(event)
                 if isinstance(payload, dict):
                     payload.pop("type", None)
-                base_event = {
+                response_event: WorkflowEvent = {
                     "type": response_event_type,
                     "data": payload if isinstance(payload, dict) else {"value": payload},
                 }
                 if openai_format:
-                    base_event["openai_type"] = response_event_type  # type: ignore[typeddict-item]
+                    response_event["openai_type"] = response_event_type  # type: ignore[typeddict-unknown-key]
                 logger.debug("Converted OpenAI response event: type=%s", response_event_type)
-                return base_event
+                return response_event
 
             # Check for ExecutorInvokedEvent and ExecutorCompletedEvent
             event_type_name = type(event).__name__
