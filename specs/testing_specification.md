@@ -329,16 +329,19 @@ Each test must:
 ### Common Test Failures
 
 1. **Configuration Validation Errors**:
+
    - Check YAML syntax and agent factory exports
    - Verify environment variables in test environment
    - Run `make test-config` for detailed error information
 
 2. **Import Errors**:
+
    - Verify `uv sync` completed successfully
    - Check Python path configuration
    - Ensure all dependencies are installed
 
 3. **Mock Failures**:
+
    - Verify mock patch paths are correct
    - Check that mock objects have required attributes
    - Validate mock return values match expected structure
