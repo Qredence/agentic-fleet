@@ -5,7 +5,7 @@ from __future__ import annotations
 import logging
 from typing import TYPE_CHECKING, Any
 
-from agentic_fleet.models.events import WorkflowEvent
+from agentic_fleet.api.workflows.service import WorkflowEvent
 
 if TYPE_CHECKING:
     from agent_framework import (

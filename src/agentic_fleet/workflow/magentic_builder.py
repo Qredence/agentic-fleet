@@ -15,11 +15,11 @@ from __future__ import annotations
 import logging
 from collections.abc import Callable
 from dataclasses import dataclass
+from pathlib import Path
 from typing import Any
 
-from agentic_fleet.core.magentic_framework import MagenticContext, MagenticOrchestrator
-from agentic_fleet.models.events import WorkflowEvent
-from agentic_fleet.models.workflow import WorkflowConfig
+from agentic_fleet.api.models.workflow_config import WorkflowConfig
+from agentic_fleet.api.workflows.service import WorkflowEvent
 from agentic_fleet.workflow.executor import WorkflowExecutor
 
 logger = logging.getLogger(__name__)
@@ -83,7 +83,16 @@ class MagenticFleetBuilder:
         if not self._config:
             raise ValueError("Config must be set before manager configuration")
 
-        self._config.fleet.manager = manager_config
+        # Defensive: ensure fleet exists
+        if not hasattr(self._config, "fleet") or self._config.fleet is None:
+            self._config.fleet = {}
+
+        # If fleet is a dict, set 'manager' key; if object, set attribute
+        if isinstance(self._config.fleet, dict):
+            self._config.fleet["manager"] = manager_config
+        else:
+            self._config.fleet.manager = manager_config
+
         logger.info("Manager configuration updated")
         return self
 
@@ -103,7 +112,15 @@ class MagenticFleetBuilder:
         if not self._config:
             raise ValueError("Config must be set before agents")
 
-        self._config.fleet.agents = agents
+        # Defensive: ensure fleet exists and is a dict/object with 'agents'
+        if not hasattr(self._config, "fleet") or self._config.fleet is None:
+            # If WorkflowConfig expects a dict, initialize as dict
+            self._config.fleet = {}
+        # If fleet is a dict, set 'agents' key; if object, set attribute
+        if isinstance(self._config.fleet, dict):
+            self._config.fleet["agents"] = agents
+        else:
+            self._config.fleet.agents = agents
         logger.info(f"Configured {len(agents)} specialist agents")
         return self
 
@@ -189,32 +206,41 @@ class MagenticFleetBuilder:
 
         Raises:
             ValueError: If configuration is missing
+            NotImplementedError: MagenticOrchestrator not yet implemented
         """
         if not self._config:
             raise ValueError("Configuration required to build fleet")
 
         logger.info("Building Magentic fleet...")
 
-        # Create orchestrator (implements RunsWorkflow protocol)
-        orchestrator = MagenticOrchestrator(
-            config=self._config,
-            event_bus=None,  # Event bus is optional
+        # TODO: Implement MagenticOrchestrator that wraps agent_framework.MagenticBuilder
+        # For now, this is a stub that needs the actual orchestrator implementation
+        raise NotImplementedError(
+            "MagenticOrchestrator not yet implemented. "
+            "This builder requires the orchestrator class that wraps agent_framework.MagenticBuilder "
+            "and implements the RunsWorkflow protocol."
         )
 
-        # Create executor - just wraps the orchestrator
-        executor = WorkflowExecutor(workflow=orchestrator)
-
-        fleet = MagenticFleet(
-            orchestrator=orchestrator,
-            executor=executor,
-            config=self._config,
-            checkpointing_enabled=self._checkpointing_enabled,
-            approval_enabled=self._approval_enabled,
-            callbacks=self._event_callbacks,
-        )
-
-        logger.info("Magentic fleet built successfully")
-        return fleet
+        # # Create orchestrator (implements RunsWorkflow protocol)
+        # orchestrator = MagenticOrchestrator(
+        #     config=self._config,
+        #     event_bus=None,  # Event bus is optional
+        # )
+        #
+        # # Create executor - just wraps the orchestrator
+        # executor = WorkflowExecutor(workflow=orchestrator)
+        #
+        # fleet = MagenticFleet(
+        #     orchestrator=orchestrator,
+        #     executor=executor,
+        #     config=self._config,
+        #     checkpointing_enabled=self._checkpointing_enabled,
+        #     approval_enabled=self._approval_enabled,
+        #     callbacks=self._event_callbacks,
+        # )
+        #
+        # logger.info("Magentic fleet built successfully")
+        # return fleet
 
 
 @dataclass
@@ -226,7 +252,7 @@ class MagenticFleet:
     into a single interface for workflow execution.
 
     Attributes:
-        orchestrator: MagenticOrchestrator instance
+        orchestrator: Orchestrator instance (TODO: will be MagenticOrchestrator)
         executor: WorkflowExecutor instance
         config: WorkflowConfig instance
         checkpointing_enabled: Whether checkpointing is enabled
@@ -234,7 +260,7 @@ class MagenticFleet:
         callbacks: List of event callback functions
     """
 
-    orchestrator: MagenticOrchestrator
+    orchestrator: Any  # TODO: MagenticOrchestrator when implemented
     executor: WorkflowExecutor
     config: WorkflowConfig
     checkpointing_enabled: bool = False
@@ -246,7 +272,7 @@ class MagenticFleet:
         if self.callbacks is None:
             self.callbacks = []
 
-    async def run(self, task: str, context: MagenticContext | None = None) -> None:
+    async def run(self, task: str, context: Any | None = None) -> None:
         """
         Execute workflow for given task.
 
@@ -255,13 +281,13 @@ class MagenticFleet:
 
         Args:
             task: The task to execute
-            context: Optional existing context to continue from
+            context: Optional existing context to continue from (TODO: MagenticContext)
         """
         async for event in self.orchestrator.execute(task, context):
             # Events are handled by event bus subscribers
             pass
 
-    async def run_with_streaming(self, task: str, context: MagenticContext | None = None):
+    async def run_with_streaming(self, task: str, context: Any | None = None):
         """
         Execute workflow with event streaming.
 
@@ -270,7 +296,7 @@ class MagenticFleet:
 
         Args:
             task: The task to execute
-            context: Optional existing context to continue from
+            context: Optional existing context to continue from (TODO: MagenticContext)
 
         Yields:
             WorkflowEvent objects for each significant event
@@ -292,24 +318,32 @@ def create_default_fleet(config_path: str = "workflows.yaml") -> MagenticFleet:
     Returns:
         MagenticFleet instance ready for use
 
+    Raises:
+        NotImplementedError: Until MagenticOrchestrator is implemented
+
     Example:
         ```python
         fleet = create_default_fleet()
         await fleet.run("Research quantum computing")
         ```
     """
-    from agentic_fleet.utils.config import load_workflow_config
+    from pathlib import Path
+
+    from agentic_fleet.api.workflow_factory import WorkflowFactory
 
     logger.info(f"Creating default fleet from {config_path}")
-    config = load_workflow_config(config_path)
+    factory = WorkflowFactory(Path(config_path) if config_path else None)
+    config = factory.get_workflow_config("magentic_fleet")
 
     builder = MagenticFleetBuilder()
     fleet = (
         builder.with_config(config)
-        .with_checkpointing(config.checkpointing.enabled)
-        .with_approval_gates(config.approval.enabled)
-        .with_callbacks([lambda event: logger.debug(f"[EVENT] {event.type}: {event.data}")])
-        .build()
+        .with_checkpointing(getattr(getattr(config, "checkpointing", None), "enabled", False))
+        .with_approval_gates(getattr(getattr(config, "approval", None), "enabled", False))
+        .with_callbacks(
+            [lambda event: logger.debug(f"[EVENT] {event['type']}: {event.get('data')}")]
+        )
+        .build()  # Will raise NotImplementedError until orchestrator is implemented
     )
 
     return fleet

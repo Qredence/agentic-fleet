@@ -10,10 +10,8 @@ from typing import Any
 from agent_framework import MagenticBuilder
 from agent_framework.openai import OpenAIResponsesClient
 
-from agentic_fleet.agents.coordinator import AgentFactory
-from agentic_fleet.models.events import WorkflowEvent
-from agentic_fleet.models.workflow import WorkflowConfig
-from agentic_fleet.utils.performance import get_correlation_id
+from agentic_fleet.api.models.workflow_config import WorkflowConfig
+from agentic_fleet.api.workflows.service import WorkflowEvent
 from agentic_fleet.workflow.events import WorkflowEventBridge
 
 logger = logging.getLogger(__name__)
@@ -40,8 +38,8 @@ class MagenticFleetWorkflow:
         Yields:
             WorkflowEvent instances as workflow executes
         """
-        # Get correlation ID for request tracking
-        correlation_id = get_correlation_id()
+        # Placeholder for correlation ID - needs implementation
+        correlation_id = None
 
         try:
             last_agent_id: str | None = None
@@ -49,10 +47,6 @@ class MagenticFleetWorkflow:
             async for event in self._workflow.run_stream(message):
                 # Zero-copy conversion: convert and yield immediately
                 converted_event = self._event_bridge.convert_event(event, openai_format=True)
-
-                # Inject correlation_id into event for request tracing
-                if correlation_id and isinstance(converted_event, dict):
-                    converted_event["correlation_id"] = correlation_id
 
                 # Emit progress events based on orchestrator message kind
                 if converted_event.get("type") == "orchestrator.message":
@@ -64,7 +58,6 @@ class MagenticFleetWorkflow:
                                 "data": {
                                     "stage": "planning",
                                     "message": "Manager creating task plan",
-                                    "correlation_id": correlation_id,
                                 },
                             }
                         elif kind == "progress_ledger":
@@ -73,7 +66,6 @@ class MagenticFleetWorkflow:
                                 "data": {
                                     "stage": "evaluating",
                                     "message": "Manager evaluating progress",
-                                    "correlation_id": correlation_id,
                                 },
                             }
                         last_kind = kind
@@ -90,7 +82,6 @@ class MagenticFleetWorkflow:
                                     "stage": "agent.complete",
                                     "agent_id": last_agent_id,
                                     "message": f"{last_agent_id} completed",
-                                    "correlation_id": correlation_id,
                                 },
                             }
                         yield {
@@ -99,7 +90,6 @@ class MagenticFleetWorkflow:
                                 "stage": "agent.starting",
                                 "agent_id": agent_id,
                                 "message": f"{agent_id} starting",
-                                "correlation_id": correlation_id,
                             },
                         }
                         last_agent_id = agent_id
@@ -111,13 +101,11 @@ class MagenticFleetWorkflow:
             logger.exception(
                 "Workflow execution failed",
                 exc_info=True,
-                extra={"correlation_id": correlation_id},
             )
             yield {
                 "type": "error",
                 "data": {
                     "error": str(e),
-                    "correlation_id": correlation_id,
                 },
             }
 
@@ -125,13 +113,9 @@ class MagenticFleetWorkflow:
 class MagenticFleetWorkflowBuilder:
     """Builder for creating Magentic Fleet workflows from configuration."""
 
-    def __init__(self, agent_factory: AgentFactory | None = None) -> None:
-        """Initialize workflow builder.
-
-        Args:
-            agent_factory: Optional agent factory. If None, creates a default one.
-        """
-        self.agent_factory = agent_factory or AgentFactory()
+    def __init__(self) -> None:
+        """Initialize workflow builder."""
+        pass
 
     def build(self, config: WorkflowConfig) -> MagenticFleetWorkflow:
         """Build a Magentic Fleet workflow from configuration.
@@ -153,8 +137,26 @@ class MagenticFleetWorkflowBuilder:
         # Create specialist agents
         specialist_agents: dict[str, Any] = {}
         for agent_name, agent_config in config.agents.items():
-            agent = self.agent_factory.create_agent(agent_name, agent_config)
-            specialist_agents[agent_name] = agent
+            # Resolve string references to agent config dicts
+            if isinstance(agent_config, str):
+                # Attempt to resolve from agent config registry
+                registry = getattr(config, "agent_config_registry", None)
+                if registry is None:
+                    raise ValueError(
+                        f"Agent config for '{agent_name}' is a string reference ('{agent_config}'), "
+                        "but no agent_config_registry is available in WorkflowConfig."
+                    )
+                resolved_config = registry.get(agent_config)
+                if resolved_config is None:
+                    raise ValueError(
+                        f"Agent config reference '{agent_config}' for '{agent_name}' not found in agent_config_registry."
+                    )
+                agent_config = resolved_config
+
+            # For now, skip agent creation since AgentFactory doesn't exist
+            # This will need to be implemented based on actual agent factory patterns
+            logger.warning(f"Agent creation for '{agent_name}' is not yet implemented")
+            specialist_agents[agent_name] = None
 
         # Create manager agent
         manager_config = config.manager

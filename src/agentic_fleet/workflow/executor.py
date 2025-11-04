@@ -5,7 +5,7 @@ from __future__ import annotations
 import logging
 from collections.abc import AsyncGenerator
 
-from agentic_fleet.models.events import RunsWorkflow, WorkflowEvent
+from agentic_fleet.api.workflows.service import RunsWorkflow, WorkflowEvent
 
 logger = logging.getLogger(__name__)
 
