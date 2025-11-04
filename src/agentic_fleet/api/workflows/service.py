@@ -15,29 +15,11 @@ except ImportError:
     pass  # dotenv not available, rely on system/env vars
 
 from agentic_fleet.workflows.events import RunsWorkflow, WorkflowEvent
+from agentic_fleet.utils.logging import sanitize_for_log
 
 DEFAULT_WORKFLOW_ID = "magentic_fleet"
 
 logger = logging.getLogger(__name__)
-
-
-def _sanitize_for_log(value: str) -> str:
-    """Remove control characters from strings for safe logging.
-    
-    Strips newlines, carriage returns, and other control characters that could
-    be used for log injection attacks.
-    
-    Args:
-        value: String to sanitize
-        
-    Returns:
-        Sanitized string with control characters removed
-    """
-    if not isinstance(value, str):
-        return str(value)
-    # Use translate for efficient removal of control characters
-    # Removes: \n, \r, Unicode line/paragraph separators, NEL, and tabs
-    return value.translate(str.maketrans('', '', '\n\r\u2028\u2029\u0085\t'))
 
 
 class StubMagenticFleetWorkflow(RunsWorkflow):
@@ -129,12 +111,12 @@ async def create_workflow(
 
         factory = WorkflowFactory()
         workflow = await factory.create_from_yaml_async(workflow_id)
-        logger.info("Created workflow '%s' from YAML configuration", workflow_id)
+        logger.info("Created workflow '%s' from YAML configuration", sanitize_for_log(workflow_id))
         return workflow
     except Exception as exc:  # Broad catch to ensure graceful fallback
         logger.error(
             "Failed to create workflow '%s': %s - falling back to stub",
-            _sanitize_for_log(workflow_id),
+            sanitize_for_log(workflow_id),
             exc,
             exc_info=True,
         )

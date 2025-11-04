@@ -261,8 +261,8 @@ async def _stream_chat_response(req: ChatRequest) -> StreamingResponse:
 
         except Exception as exc:
             logger.error(f"[CHAT] Error in workflow execution: {exc}", exc_info=True)
-            # Send error as SSE event with proper type
-            error_payload = {"type": "error", "error": str(exc)}
+            # Send a generic error as SSE event with proper type
+            error_payload = {"type": "error", "error": "An internal error occurred"}
             yield f"data: {json.dumps(error_payload)}\n\n"
             yield "data: [DONE]\n\n"
             logger.error(f"[CHAT] Request failed after {time.time() - start_time:.2f}s")
