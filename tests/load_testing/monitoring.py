@@ -199,6 +199,12 @@ class PerformanceMonitor:
                         timeout=aiohttp.ClientTimeout(total=10),
                     ) as response:
                         response_time = (time.time() - start_time) * 1000
+                        self.record_metric(
+                            "health_check_response_time",
+                            response_time,
+                            "ms",
+                            {"endpoint": "health", "status": f"{'healthy' if response.status == 200 else f'error_{response.status}'}"},
+                        )
 
                         if response.status == 200:
                             self.record_metric(
@@ -232,7 +238,7 @@ class PerformanceMonitor:
         value: float,
         unit: str,
         tags: dict[str, str] = None,
-        context: dict[str, Any] = None,
+        context: dict[str, Any] | None = None,
     ):
         """Record a performance metric."""
         metric = PerformanceMetric(

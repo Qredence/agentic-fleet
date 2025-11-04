@@ -57,7 +57,10 @@ class LoadTestRunner:
             with open(self.config_file) as f:
                 config_data = yaml.safe_load(f)
                 # Convert dict to config object (simplified)
-                return LoadTestConfig()
+                if config_data is not None:
+                    return LoadTestConfig(**config_data)
+                else:
+                    return LoadTestConfig()
         return LoadTestConfig()
 
     async def run_locust_test(
@@ -145,8 +148,6 @@ class LoadTestRunner:
         # Add options as command line arguments
         if "stages" in options:
             # Convert stages to JSON string
-            import json
-
             k6_cmd.extend(["--", json.dumps({"stages": options["stages"]})])
 
         try:

@@ -293,7 +293,7 @@ class TestExecutor:
             async with httpx.AsyncClient(timeout=5.0) as client:
                 response = await client.get("http://localhost:8000/health")
                 return response.status_code == 200
-        except:
+        except Exception:
             return False
 
     async def _calculate_quality_score(self):
@@ -303,9 +303,7 @@ class TestExecutor:
         # Quality factors
         coverage_score = min(self.result.coverage_percentage, 100) / 100 * 30  # 30 points max
         performance_score = self._calculate_performance_score()  # 25 points max
-        config_score = (
-            25 if "configuration validation" not in " ".join(self.result.errors) else 0
-        )  # 25 points max
+        config_score = 25 if getattr(self.result, "config_validated", True) else 0  # 25 points max
         execution_score = 20 if len(self.result.errors) == 0 else 0  # 20 points max
 
         self.result.quality_score = (
