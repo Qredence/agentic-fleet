@@ -19,7 +19,10 @@ Future enhancements can introduce a logging Filter for automatic sanitization.
 
 from __future__ import annotations
 
+import logging
 from typing import Any
+
+logger = logging.getLogger(__name__)
 
 REMOVED_LOG_CHARS: tuple[str, ...] = (
     "\n",
@@ -48,7 +51,12 @@ def sanitize_log_value(value: Any) -> str:
     """
     try:
         s = str(value)
-    except Exception:
+    except Exception as e:
         # Fallback - ensure logging never raises
+        logger.debug(
+            "Failed to convert value to string for logging: %s (type: %s)",
+            type(value).__name__,
+            e.__class__.__name__,
+        )
         s = "<unrepresentable>"
     return s.translate(_SANITIZE_TRANS)
