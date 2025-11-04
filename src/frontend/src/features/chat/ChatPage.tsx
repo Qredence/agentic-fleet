@@ -1,4 +1,7 @@
-import { ChatContainer } from "@/components/ui/chat-container";
+import {
+  ChatContainerContent,
+  ChatContainerRoot,
+} from "@/components/ui/chat-container";
 import { Loader } from "@/components/ui/loader";
 import { SystemMessage } from "@/components/ui/system-message";
 import { MessageList } from "./MessageList";
@@ -34,10 +37,12 @@ export default function ChatPage() {
 
       {error && <SystemMessage>{error}</SystemMessage>}
 
-      <ChatContainer>
-        {pending && <Loader />}
-        <MessageList items={messages} />
-      </ChatContainer>
+      <ChatContainerRoot>
+        <ChatContainerContent>
+          {pending && <Loader />}
+          <MessageList items={messages} />
+        </ChatContainerContent>
+      </ChatContainerRoot>
 
       <PromptBar disabled={disabled} onSend={send} />
     </div>
