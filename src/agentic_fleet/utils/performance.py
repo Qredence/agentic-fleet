@@ -21,9 +21,6 @@ logger = logging.getLogger(__name__)
 # Context variable for request correlation tracking
 _correlation_id_var: ContextVar[str | None] = ContextVar("correlation_id", default=None)
 
-T = TypeVar("T")
-P = ParamSpec("P")
-
 
 def get_correlation_id() -> str | None:
     """Get the current correlation ID from context.
@@ -52,6 +49,11 @@ def set_correlation_id(correlation_id: str | None = None) -> str:
 def clear_correlation_id() -> None:
     """Clear correlation ID from context."""
     _correlation_id_var.set(None)
+
+
+# Type variables for async_timer decorator
+T = TypeVar("T")
+P = ParamSpec("P")
 
 
 def async_timer(func: Callable[P, Awaitable[T]]) -> Callable[P, Awaitable[T]]:
