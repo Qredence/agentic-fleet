@@ -16,8 +16,8 @@ import pytest
 from fastapi import HTTPException
 from pydantic import ValidationError
 
-from agentic_fleet.api.chat.schemas import ChatMessagePayload, ChatRequest, ChatResponse
 import agentic_fleet.api.chat.service as service_module
+from agentic_fleet.api.chat.schemas import ChatMessagePayload, ChatRequest, ChatResponse
 from agentic_fleet.api.workflows.service import (
     StubMagenticFleetWorkflow,
     WorkflowEvent,

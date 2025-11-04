@@ -22,10 +22,10 @@ from typing import Any
 from unittest.mock import AsyncMock, Mock
 
 import pytest
+from pydantic import BaseModel, Field
 
 # Import AgenticFleet components
 from agentic_fleet.utils.factory import WorkflowFactory
-from pydantic import BaseModel, Field
 
 
 class PerformanceThresholds(BaseModel):
@@ -145,9 +145,9 @@ class PerformanceValidator:
                     )
 
                     # Assert performance threshold
-                    assert execution_time <= self.thresholds.max_response_time_ms, (
-                        f"Operation '{operation_name}' exceeded max response time: {execution_time:.2f}ms"
-                    )
+                    assert (
+                        execution_time <= self.thresholds.max_response_time_ms
+                    ), f"Operation '{operation_name}' exceeded max response time: {execution_time:.2f}ms"
 
                     return result
                 except Exception as e:
@@ -397,9 +397,9 @@ def with_performance_thresholds(thresholds: PerformanceThresholds):
                 result = test_func(*args, **kwargs)
                 execution_time = (time.time() - start_time) * 1000
 
-                assert execution_time <= thresholds.max_response_time_ms, (
-                    f"Test exceeded max execution time: {execution_time:.2f}ms"
-                )
+                assert (
+                    execution_time <= thresholds.max_response_time_ms
+                ), f"Test exceeded max execution time: {execution_time:.2f}ms"
 
                 return result
             except Exception:

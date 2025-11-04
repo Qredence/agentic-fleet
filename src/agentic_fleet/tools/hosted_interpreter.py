@@ -2,8 +2,6 @@
 
 from __future__ import annotations
 
-from typing import Any
-
 try:
     from agent_framework import HostedCodeInterpreterTool
 except ImportError as e:
