@@ -18,11 +18,13 @@ export type SSEEventType =
   | "agent.message.complete"
   | "error";
 
-/** SSE Event structure */
+/** SSE Event structure
+ * Backend events emit `agent_id`; the frontend normalises to camelCase `agentId`
+ * inside `streamChatResponse` before state updates.
+ */
 export interface SSEEvent {
   type: SSEEventType;
   delta?: string;
-  agent_id?: string;
   agentId?: string;
   error?: string;
   message?: string;
@@ -34,7 +36,7 @@ export interface SSEEvent {
 export interface ResponseDeltaEvent {
   type: "response.delta";
   delta: string;
-  agent_id?: string;
+  agentId?: string;
 }
 
 /** Response completed event */
@@ -51,7 +53,7 @@ export interface OrchestratorMessageEvent {
 
 export interface AgentMessageCompleteEvent {
   type: "agent.message.complete";
-  agent_id: string;
+  agentId: string;
   content: string;
 }
 
@@ -73,6 +75,8 @@ export interface ChatState {
   messages: ChatMessage[];
   currentStreamingMessage: string;
   currentAgentId?: string;
+  currentStreamingMessageId?: string;
+  currentStreamingTimestamp?: number;
   orchestratorMessages: OrchestratorMessage[];
   isLoading: boolean;
   error: string | null;
@@ -114,6 +118,7 @@ export interface StepItem {
   content: string;
   substeps?: StepItem[];
   completed?: boolean;
+  label?: string;
 }
 
 /** Reasoning section structure */

@@ -1,18 +1,7 @@
-"""Workflow configuration models."""
+"""Backward compatibility alias for models.workflow."""
 
 from __future__ import annotations
 
-from dataclasses import dataclass
-from typing import Any
+from agentic_fleet.models.workflow import WorkflowConfig
 
-
-@dataclass
-class WorkflowConfig:
-    """Configuration for a workflow definition."""
-
-    id: str
-    name: str
-    description: str
-    factory: str
-    agents: dict[str, Any]
-    manager: dict[str, Any]
+__all__ = ["WorkflowConfig"]

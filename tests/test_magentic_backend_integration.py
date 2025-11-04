@@ -29,7 +29,7 @@ def test_workflow_factory_catalog() -> None:
 async def test_stub_workflow_emits_delta_and_done() -> None:
     """Stub workflow yields a delta event followed by a done event."""
 
-    workflow = create_magentic_fleet_workflow()
+    workflow = await create_magentic_fleet_workflow()
     events = []
     stream = cast(AsyncGenerator[dict, None], workflow.run("Summarise AgenticFleet"))
     async for event in stream:

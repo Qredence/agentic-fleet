@@ -1,4 +1,4 @@
-.PHONY: help install sync clean test test-config test-e2e lint format type-check check run demo-hitl pre-commit-install dev backend frontend-install frontend-dev build-frontend validate-agents
+.PHONY: help install sync clean test test-config test-e2e test-frontend test-automation lint format type-check check run demo-hitl pre-commit-install dev backend frontend-install frontend-dev build-frontend validate-agents load-test-setup load-test-smoke load-test-load load-test-stress load-test-dashboard
 
 # Default target
 help:
@@ -20,6 +20,8 @@ help:
 	@echo "  make test              Run all tests"
 	@echo "  make test-config       Run configuration validation"
 	@echo "  make test-e2e          Run end-to-end frontend tests (requires dev running)"
+	@echo "  make test-frontend     Run frontend unit tests"
+	@echo "  make test-automation   Run automated test suite with quality monitoring"
 	@echo ""
 	@echo "Code Quality:"
 	@echo "  make lint              Run Ruff linter"
@@ -33,10 +35,17 @@ help:
 	@echo "  make demo-hitl         Run the HITL walkthrough example"
 	@echo "  make validate-agents   Validate AGENTS.md invariants"
 	@echo ""
+	@echo "Load Testing:"
+	@echo "  make load-test-setup  Setup load testing environment"
+	@echo "  make load-test-smoke  Run smoke test (quick validation)"
+	@echo "  make load-test-load   Run normal load test"
+	@echo "  make load-test-stress Run stress test"
+	@echo "  make load-test-dashboard Start performance dashboard"
+	@echo ""
 
 # Setup commands
 install:
-	uv sync --pre --all-extras --upgrade
+	GIT_LFS_SKIP_SMUDGE=1 uv sync --pre --all-extras --upgrade
 	@echo "✓ Python dependencies installed"
 	@echo ""
 	@echo "Next: Run 'make frontend-install' to install frontend dependencies"
@@ -50,7 +59,7 @@ dev-setup: install frontend-install pre-commit-install
 	@echo "  3. Run 'make dev' to start the application"
 
 sync:
-	uv sync
+	GIT_LFS_SKIP_SMUDGE=1 uv sync
 
 frontend-install:
 	@echo "Installing frontend dependencies..."
@@ -99,11 +108,19 @@ test:
 	uv run pytest -v
 
 test-config:
-	uv run python -c "from agenticfleet.api.workflow_factory import WorkflowFactory; factory = WorkflowFactory(); print(f'\u2713 Loaded {len(factory.list_available_workflows())} workflows from config')"
+	uv run python -c "from agentic_fleet.utils.factory import WorkflowFactory; factory = WorkflowFactory(); print(f'✓ Loaded {len(factory.list_available_workflows())} workflows from config')"
 
 test-e2e:
 	@echo "Running E2E tests (requires backend + frontend running)..."
 	uv run python tests/e2e/playwright_test_workflow.py
+
+test-frontend:
+	@echo "Running frontend unit tests..."
+	cd src/frontend/src && npm test
+
+test-automation:
+	@echo "Running automated test suite with quality monitoring..."
+	uv run python tests/test_automation.py
 
 # Code quality
 lint:
@@ -137,3 +154,27 @@ clean:
 	find . -type d -name ".mypy_cache" -exec rm -rf {} + 2>/dev/null || true
 	find . -type d -name ".ruff_cache" -exec rm -rf {} + 2>/dev/null || true
 	@echo "✓ Cleaned cache directories"
+
+# Load Testing
+load-test-setup:
+	@echo "🚀 Setting up load testing environment..."
+	cd tests/load_testing && ./setup.sh
+
+load-test-smoke:
+	@echo "🔍 Running smoke test..."
+	@echo "Note: Make sure the backend is running with 'make backend'"
+	cd tests/load_testing && python3 run_load_tests.py --scenario smoke_test --health-check
+
+load-test-load:
+	@echo "⚡ Running load test..."
+	@echo "Note: Make sure the backend is running with 'make backend'"
+	cd tests/load_testing && python3 run_load_tests.py --scenario normal_load --health-check
+
+load-test-stress:
+	@echo "💪 Running stress test..."
+	@echo "Note: Make sure the backend is running with 'make backend'"
+	cd tests/load_testing && python3 run_load_tests.py --scenario stress_test --health-check
+
+load-test-dashboard:
+	@echo "📊 Starting performance dashboard..."
+	cd tests/load_testing && python3 dashboard.py

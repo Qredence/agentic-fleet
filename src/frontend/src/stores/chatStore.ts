@@ -14,6 +14,8 @@ export const useChatStore = create<ChatStore>((set, get) => ({
   messages: [],
   currentStreamingMessage: "",
   currentAgentId: undefined,
+  currentStreamingMessageId: undefined,
+  currentStreamingTimestamp: undefined,
   orchestratorMessages: [],
   isLoading: false,
   error: null,
@@ -60,6 +62,8 @@ export const useChatStore = create<ChatStore>((set, get) => ({
       error: null,
       currentStreamingMessage: "",
       currentAgentId: undefined,
+      currentStreamingMessageId: undefined,
+      currentStreamingTimestamp: undefined,
     });
 
     // Stream the response
@@ -76,47 +80,77 @@ export const useChatStore = create<ChatStore>((set, get) => ({
           ) {
             if (currentState.currentStreamingMessage) {
               const agentMessage: ChatMessage = {
-                id: `agent-${currentState.currentAgentId}-${Date.now()}`,
+                id: `assistant-${
+                  currentState.currentStreamingTimestamp ?? Date.now()
+                }`,
                 role: "assistant",
                 content: currentState.currentStreamingMessage,
-                createdAt: Date.now(),
+                createdAt: currentState.currentStreamingTimestamp ?? Date.now(),
                 agentId: currentState.currentAgentId,
               };
+              const timestamp = Date.now();
               set({
                 messages: [...currentState.messages, agentMessage],
                 currentStreamingMessage: delta,
                 currentAgentId: agentId,
+                currentStreamingMessageId: `streaming-${timestamp}`,
+                currentStreamingTimestamp: timestamp,
               });
             } else {
+              const timestamp = Date.now();
               set({
                 currentStreamingMessage: delta,
                 currentAgentId: agentId,
+                currentStreamingMessageId: `streaming-${timestamp}`,
+                currentStreamingTimestamp: timestamp,
               });
             }
           } else {
             // Same agent or no agent ID change - just accumulate
-            set((state) => ({
-              currentStreamingMessage: state.currentStreamingMessage + delta,
-              currentAgentId: agentId || state.currentAgentId,
-            }));
+            set((state) => {
+              const timestamp = state.currentStreamingTimestamp ?? Date.now();
+              return {
+                currentStreamingMessage: state.currentStreamingMessage + delta,
+                currentAgentId: agentId || state.currentAgentId,
+                currentStreamingMessageId:
+                  state.currentStreamingMessageId ?? `streaming-${timestamp}`,
+                currentStreamingTimestamp: timestamp,
+              };
+            });
           }
         },
         onAgentComplete: (agentId, content) => {
           const currentState = get();
 
-          // Finalize the current agent's message
-          if (currentState.currentStreamingMessage) {
+          const messageContent =
+            currentState.currentAgentId === agentId &&
+            currentState.currentStreamingMessage
+              ? currentState.currentStreamingMessage
+              : content;
+
+          if (messageContent) {
             const agentMessage: ChatMessage = {
-              id: `agent-${agentId}-${Date.now()}`,
+              id: `assistant-${
+                currentState.currentStreamingTimestamp ?? Date.now()
+              }`,
               role: "assistant",
-              content: currentState.currentStreamingMessage,
-              createdAt: Date.now(),
+              content: messageContent,
+              createdAt: currentState.currentStreamingTimestamp ?? Date.now(),
               agentId: agentId,
             };
             set({
               messages: [...currentState.messages, agentMessage],
               currentStreamingMessage: "",
               currentAgentId: undefined,
+              currentStreamingMessageId: undefined,
+              currentStreamingTimestamp: undefined,
+            });
+          } else {
+            set({
+              currentStreamingMessage: "",
+              currentAgentId: undefined,
+              currentStreamingMessageId: undefined,
+              currentStreamingTimestamp: undefined,
             });
           }
         },
@@ -129,7 +163,7 @@ export const useChatStore = create<ChatStore>((set, get) => ({
               id: `assistant-${Date.now()}`,
               role: "assistant",
               content: currentState.currentStreamingMessage,
-              createdAt: Date.now(),
+              createdAt: currentState.currentStreamingTimestamp ?? Date.now(),
               agentId: currentState.currentAgentId,
             };
 
@@ -137,10 +171,16 @@ export const useChatStore = create<ChatStore>((set, get) => ({
               messages: [...currentState.messages, assistantMessage],
               currentStreamingMessage: "",
               currentAgentId: undefined,
+              currentStreamingMessageId: undefined,
+              currentStreamingTimestamp: undefined,
               isLoading: false,
             });
           } else {
-            set({ isLoading: false });
+            set({
+              isLoading: false,
+              currentStreamingMessageId: undefined,
+              currentStreamingTimestamp: undefined,
+            });
           }
         },
         onOrchestrator: (message, kind) => {
@@ -151,18 +191,34 @@ export const useChatStore = create<ChatStore>((set, get) => ({
             timestamp: Date.now(),
           };
 
-          set((state) => ({
-            orchestratorMessages: [
-              ...state.orchestratorMessages,
-              orchestratorMessage,
-            ],
-          }));
+          set((state) => {
+            const existing = state.orchestratorMessages.find(
+              (msg) =>
+                msg.kind === orchestratorMessage.kind &&
+                msg.message === orchestratorMessage.message,
+            );
+
+            if (existing) {
+              return {};
+            }
+
+            return {
+              orchestratorMessages: [
+                ...state.orchestratorMessages,
+                orchestratorMessage,
+              ],
+              currentStreamingMessageId: state.currentStreamingMessageId,
+              currentStreamingTimestamp: state.currentStreamingTimestamp,
+            };
+          });
         },
         onError: (error) => {
           set({
             error,
             isLoading: false,
             currentStreamingMessage: "",
+            currentStreamingMessageId: undefined,
+            currentStreamingTimestamp: undefined,
           });
         },
       });
@@ -172,15 +228,23 @@ export const useChatStore = create<ChatStore>((set, get) => ({
           error instanceof Error ? error.message : "Failed to send message",
         isLoading: false,
         currentStreamingMessage: "",
+        currentStreamingMessageId: undefined,
+        currentStreamingTimestamp: undefined,
       });
     }
   },
 
   appendDelta: (delta: string, agentId?: string) => {
-    set((state) => ({
-      currentStreamingMessage: state.currentStreamingMessage + delta,
-      currentAgentId: agentId || state.currentAgentId,
-    }));
+    set((state) => {
+      const timestamp = state.currentStreamingTimestamp ?? Date.now();
+      return {
+        currentStreamingMessage: state.currentStreamingMessage + delta,
+        currentAgentId: agentId || state.currentAgentId,
+        currentStreamingMessageId:
+          state.currentStreamingMessageId ?? `streaming-${timestamp}`,
+        currentStreamingTimestamp: timestamp,
+      };
+    });
   },
 
   addMessage: (message: Omit<ChatMessage, "id" | "createdAt">) => {
@@ -230,7 +294,7 @@ export const useChatStore = create<ChatStore>((set, get) => ({
         id: `assistant-${Date.now()}`,
         role: "assistant",
         content: state.currentStreamingMessage,
-        createdAt: Date.now(),
+        createdAt: state.currentStreamingTimestamp ?? Date.now(),
         agentId: state.currentAgentId,
       };
 
@@ -238,10 +302,16 @@ export const useChatStore = create<ChatStore>((set, get) => ({
         messages: [...state.messages, assistantMessage],
         currentStreamingMessage: "",
         currentAgentId: undefined,
+        currentStreamingMessageId: undefined,
+        currentStreamingTimestamp: undefined,
         isLoading: false,
       });
     } else {
-      set({ isLoading: false });
+      set({
+        isLoading: false,
+        currentStreamingMessageId: undefined,
+        currentStreamingTimestamp: undefined,
+      });
     }
   },
 
@@ -250,6 +320,8 @@ export const useChatStore = create<ChatStore>((set, get) => ({
       messages: [],
       currentStreamingMessage: "",
       currentAgentId: undefined,
+      currentStreamingMessageId: undefined,
+      currentStreamingTimestamp: undefined,
       orchestratorMessages: [],
       isLoading: false,
       error: null,

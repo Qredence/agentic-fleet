@@ -39,7 +39,7 @@ export function StepsDisplay({
             <div key={`step-${step.index}-${index}`}>
               <StepsItem className="flex items-start gap-2">
                 <span className="font-medium text-foreground">
-                  {step.index + 1}.
+                  {step.label ? `${step.label}.` : `${step.index + 1}.`}
                 </span>
                 <span className="flex-1">{step.content}</span>
               </StepsItem>

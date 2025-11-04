@@ -90,6 +90,6 @@ class TestHealthEndpoint:
     """Smoke tests around the health endpoint contract."""
 
     def test_health_structure(self, client: TestClient) -> None:
-        response = client.get("/v1/health")
+        response = client.get("/v1/system/health")
         assert response.status_code == status.HTTP_200_OK
         assert response.json() == {"status": "ok"}

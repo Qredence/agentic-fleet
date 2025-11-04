@@ -12,6 +12,10 @@
       "env": {
         "REGISTRY_URL": "https://www.prompt-kit.com/c/registry.json"
       }
+    },
+    "sequential-thinking": {
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-sequential-thinking"]
     }
   }
 }

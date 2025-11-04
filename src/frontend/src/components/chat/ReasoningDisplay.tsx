@@ -10,6 +10,8 @@ interface ReasoningDisplayProps {
   sections: ReasoningSection[];
   isStreaming?: boolean;
   defaultOpen?: boolean;
+  maxSections?: number;
+  truncateLength?: number;
 }
 
 /**
@@ -20,14 +22,18 @@ export function ReasoningDisplay({
   sections,
   isStreaming = false,
   defaultOpen = false,
+  maxSections = 6,
+  truncateLength = 600,
 }: ReasoningDisplayProps) {
   if (sections.length === 0) {
     return null;
   }
 
+  const limitedSections = sections.slice(0, maxSections);
+
   return (
     <div className="space-y-3">
-      {sections.map((section, index) => (
+      {limitedSections.map((section, index) => (
         <Reasoning
           key={`reasoning-${index}`}
           open={defaultOpen || isStreaming}
@@ -38,10 +44,23 @@ export function ReasoningDisplay({
             <span className="font-medium capitalize">{section.title}</span>
           </ReasoningTrigger>
           <ReasoningContent markdown className="mt-2">
-            {section.content}
+            {truncateIfNeeded(section.content, truncateLength)}
           </ReasoningContent>
         </Reasoning>
       ))}
     </div>
   );
+}
+
+function truncateIfNeeded(content: string, maxLength: number): string {
+  if (content.length <= maxLength) {
+    return content;
+  }
+  const slice = content.slice(0, maxLength);
+  const lastBreak = Math.max(
+    slice.lastIndexOf("\n\n"),
+    slice.lastIndexOf(". "),
+  );
+  const endIndex = lastBreak > maxLength * 0.6 ? lastBreak + 1 : slice.length;
+  return `${slice.slice(0, endIndex).trim()}\n\n…`;
 }

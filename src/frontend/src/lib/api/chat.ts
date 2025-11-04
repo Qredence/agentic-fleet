@@ -42,6 +42,7 @@ export async function streamChatResponse(
     onCompleted?: SSECompletedCallback;
     onOrchestrator?: SSEOrchestratorCallback;
     onError?: SSEErrorCallback;
+    onAgentComplete?: (agentId: string, content: string) => void;
   },
 ): Promise<void> {
   const response = await fetch(`${API_BASE_URL}/chat`, {
@@ -97,19 +98,23 @@ export async function streamChatResponse(
           }
 
           try {
-            const event: {
+            const rawEvent: {
               type: string;
               delta?: string;
               agent_id?: string;
+              agentId?: string;
               error?: string;
               message?: string;
               kind?: string;
+              content?: string;
             } = JSON.parse(data);
 
-            switch (event.type) {
+            const agentId = rawEvent.agentId ?? rawEvent.agent_id;
+
+            switch (rawEvent.type) {
               case "response.delta":
-                if (event.delta) {
-                  callbacks.onDelta?.(event.delta, event.agent_id);
+                if (rawEvent.delta) {
+                  callbacks.onDelta?.(rawEvent.delta, agentId);
                 }
                 break;
 
@@ -118,19 +123,19 @@ export async function streamChatResponse(
                 break;
 
               case "orchestrator.message":
-                if (event.message) {
-                  callbacks.onOrchestrator?.(event.message, event.kind);
+                if (rawEvent.message) {
+                  callbacks.onOrchestrator?.(rawEvent.message, rawEvent.kind);
                 }
                 break;
 
               case "agent.message.complete":
-                if (event.agent_id && event.content) {
-                  callbacks.onAgentComplete?.(event.agent_id, event.content);
+                if (agentId && rawEvent.content) {
+                  callbacks.onAgentComplete?.(agentId, rawEvent.content);
                 }
                 break;
 
               case "error":
-                callbacks.onError?.(event.error || "Unknown error");
+                callbacks.onError?.(rawEvent.error || "Unknown error");
                 break;
 
               default:

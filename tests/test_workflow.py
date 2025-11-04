@@ -22,7 +22,7 @@ def test_workflows_endpoint_lists_defined_workflows(client: TestClient) -> None:
     data = response.json()
     workflows = data["workflows"]
     workflow_ids = {item["id"] for item in workflows}
-    assert workflow_ids == {"collaboration", "magentic_fleet"}
+    assert workflow_ids == {"magentic_fleet"}
 
 
 def test_workflows_endpoint_returns_specific_config(client: TestClient) -> None:

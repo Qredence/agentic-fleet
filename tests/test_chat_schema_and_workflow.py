@@ -16,13 +16,13 @@ import pytest
 from fastapi import HTTPException
 from pydantic import ValidationError
 
-from agentic_fleet.api.chat.schemas import ChatMessagePayload, ChatRequest, ChatResponse
 import agentic_fleet.api.chat.service as service_module
 from agentic_fleet.api.workflows.service import (
     StubMagenticFleetWorkflow,
-    WorkflowEvent,
     create_magentic_fleet_workflow,
 )
+from agentic_fleet.models.chat import ChatMessagePayload, ChatRequest, ChatResponse
+from agentic_fleet.models.events import WorkflowEvent
 
 
 class TestChatSchemas:
@@ -63,7 +63,7 @@ class TestChatSchemas:
 
 @pytest.mark.asyncio
 async def test_stub_workflow_yields_delta_then_done() -> None:
-    workflow = create_magentic_fleet_workflow()
+    workflow = await create_magentic_fleet_workflow()
     assert isinstance(workflow, StubMagenticFleetWorkflow)
 
     events: list[dict] = []
@@ -73,7 +73,10 @@ async def test_stub_workflow_yields_delta_then_done() -> None:
     async for event in stream:
         events.append(event)
 
-    assert [event["type"] for event in events] == ["message.delta", "message.done"]
+    types = [event["type"] for event in events]
+    # First event should be a delta, last should be done; optionally an agent.message.complete in between
+    assert types[0] == "message.delta"
+    assert types[-1] == "message.done"
     assert "delta" in events[0]["data"]
 
 
