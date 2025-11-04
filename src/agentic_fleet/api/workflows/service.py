@@ -21,6 +21,25 @@ DEFAULT_WORKFLOW_ID = "magentic_fleet"
 logger = logging.getLogger(__name__)
 
 
+def _sanitize_for_log(value: str) -> str:
+    """Remove control characters from strings for safe logging.
+    
+    Strips newlines, carriage returns, and other control characters that could
+    be used for log injection attacks.
+    
+    Args:
+        value: String to sanitize
+        
+    Returns:
+        Sanitized string with control characters removed
+    """
+    if not isinstance(value, str):
+        return str(value)
+    # Use translate for efficient removal of control characters
+    # Removes: \n, \r, Unicode line/paragraph separators, NEL, and tabs
+    return value.translate(str.maketrans('', '', '\n\r\u2028\u2029\u0085\t'))
+
+
 class StubMagenticFleetWorkflow(RunsWorkflow):
     """Stub implementation for MagenticFleetWorkflow.
 
@@ -113,15 +132,6 @@ async def create_workflow(
         logger.info("Created workflow '%s' from YAML configuration", workflow_id)
         return workflow
     except Exception as exc:  # Broad catch to ensure graceful fallback
-        def _sanitize_for_log(value: str) -> str:
-            """Remove all line breaks, carriage returns, and major control characters for logging."""
-            if not isinstance(value, str):
-                return value
-            # Remove ASCII CR/LF, Unicode line/paragraph separators, and tabs
-            for ch in ['\n', '\r', '\u2028', '\u2029', '\u0085', '\t']:
-                value = value.replace(ch, '')
-            return value
-
         logger.error(
             "Failed to create workflow '%s': %s - falling back to stub",
             _sanitize_for_log(workflow_id),
