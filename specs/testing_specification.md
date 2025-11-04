@@ -8,7 +8,7 @@ This document specifies the comprehensive testing strategy and infrastructure fo
 
 ### Core Principles
 
-1. **Mock External Dependencies**: Never hit real APIs in tests - all external services (OpenAI, Azure, etc.) are mocked
+1. **Mock External Dependencies**: Never hit real APIs in standard tests—all external services (OpenAI, Azure, etc.) are mocked. Where mocks risk missing critical or breaking upstream changes, a separate integration/contract test suite (explicitly marked and isolated from default runs) may be employed to safely validate against real APIs as needed.
 2. **Configuration Validation**: Every test must validate YAML configuration and agent factory wiring
 3. **Type Safety**: All tests must pass MyPy strict type checking
 4. **Isolation**: Tests should be independent and runnable in any order
@@ -34,7 +34,9 @@ def mock_openai_client():
 **Testing Framework**: pytest with async support
 **Type Checking**: MyPy strict mode (100% compliance requirement)
 **Code Quality**: Ruff linting + Black formatting
-**Coverage**: pytest-cov with target >80% coverage
+**Coverage**: pytest-cov with target >80% coverage  
+_Exclusions_: Files that are auto-generated, external dependencies, or configuration/initialization shims may be explicitly excluded from coverage analysis, provided exclusions are documented and justified.  
+_Exceptions_: If specific modules cannot feasibly achieve 80% coverage (e.g., due to platform-specific code paths or intentional no-op branches), rationale must be documented in pull requests for reviewer approval.
 
 ### Frontend Testing Stack
 
