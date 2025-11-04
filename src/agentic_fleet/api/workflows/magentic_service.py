@@ -38,6 +38,21 @@ class MagenticWorkflowService:
         self.fleet: MagenticFleet | None = None
         logger.info("MagenticWorkflowService initialized")
 
+    @staticmethod
+    def _sanitize_for_logging(value: str) -> str:
+        """
+        Sanitize user-controlled input for safe logging.
+
+        Removes carriage return and newline characters to prevent log injection attacks.
+
+        Args:
+            value: The string to sanitize
+
+        Returns:
+            Sanitized string with \r and \n characters removed
+        """
+        return value.replace("\r", "").replace("\n", "")
+
     def _ensure_fleet(self) -> None:
         """Lazy-load fleet on first use."""
         if self.fleet is None:
@@ -77,7 +92,9 @@ class MagenticWorkflowService:
             "updated_at": None,
         }
 
-        logger.info(f"Created workflow {workflow_id} for task: {task[:100]}")
+        safe_workflow_id = self._sanitize_for_logging(workflow_id)
+        safe_task = self._sanitize_for_logging(task[:100])
+        logger.info(f"Created workflow {safe_workflow_id} for task: {safe_task}")
         return workflow_id
 
     async def execute_workflow(self, workflow_id: str) -> AsyncIterator[WorkflowEvent]:
@@ -94,7 +111,8 @@ class MagenticWorkflowService:
             WorkflowEvent objects for SSE streaming
         """
         if workflow_id not in self.active_workflows:
-            yield WorkflowEvent(type="error", data={"message": f"Workflow {workflow_id} not found"})
+            safe_workflow_id = self._sanitize_for_logging(workflow_id)
+            yield WorkflowEvent(type="error", data={"message": f"Workflow {safe_workflow_id} not found"})
             return
 
         workflow = self.active_workflows[workflow_id]
@@ -126,7 +144,8 @@ class MagenticWorkflowService:
                     workflow["status"] = "failed"
 
         except Exception as e:
-            logger.error(f"Error executing workflow {workflow_id}: {e}", exc_info=True)
+            safe_workflow_id = self._sanitize_for_logging(workflow_id)
+            logger.error(f"Error executing workflow {safe_workflow_id}: {e}", exc_info=True)
             workflow["status"] = "failed"
             yield WorkflowEvent(
                 type="error",
@@ -184,7 +203,8 @@ class MagenticWorkflowService:
         """
         if workflow_id in self.active_workflows:
             del self.active_workflows[workflow_id]
-            logger.info(f"Deleted workflow {workflow_id}")
+            safe_workflow_id = self._sanitize_for_logging(workflow_id)
+            logger.info(f"Deleted workflow {safe_workflow_id}")
             return True
         return False
 
@@ -207,7 +227,8 @@ class MagenticWorkflowService:
         workflow = self.active_workflows[workflow_id]
         workflow["status"] = "paused"
 
-        logger.info(f"Paused workflow {workflow_id}")
+        safe_workflow_id = self._sanitize_for_logging(workflow_id)
+        logger.info(f"Paused workflow {safe_workflow_id}")
         return await self.get_workflow_status(workflow_id)
 
     async def resume_workflow(self, workflow_id: str) -> AsyncIterator[WorkflowEvent]:
@@ -232,7 +253,8 @@ class MagenticWorkflowService:
             )
             return
 
-        logger.info(f"Resuming workflow {workflow_id}")
+        safe_workflow_id = self._sanitize_for_logging(workflow_id)
+        logger.info(f"Resuming workflow {safe_workflow_id}")
 
         # Resume by continuing execution with existing context
         async for event in self.execute_workflow(workflow_id):
