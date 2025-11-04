@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import time
 from typing import Any
-
+import logging
 from fastapi import APIRouter, HTTPException, Request
 from fastapi.responses import StreamingResponse
 
@@ -56,10 +56,12 @@ async def _stream_response(entity_id: str, input_data: str | dict[str, Any]) -> 
             async for sse_line in aggregator.convert_stream(events):
                 yield sse_line
         except Exception as exc:
-            # Send error as SSE event
+            # Log the actual error message and stack trace on the server
+            logging.exception("Error in response stream for entity '%s'", entity_id)
+            # Send generic error message to client as SSE event
             error_event = {
                 "type": "error",
-                "error": {"message": str(exc), "type": "execution_error"},
+                "error": {"message": "An internal error has occurred.", "type": "execution_error"},
             }
             import json
 
