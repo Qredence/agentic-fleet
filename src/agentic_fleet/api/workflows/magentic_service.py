@@ -232,7 +232,8 @@ class MagenticWorkflowService:
             )
             return
 
-        logger.info(f"Resuming workflow {workflow_id}")
+        safe_workflow_id = workflow_id.replace("\r", "").replace("\n", "")
+        logger.info(f"Resuming workflow {safe_workflow_id}")
 
         # Resume by continuing execution with existing context
         async for event in self.execute_workflow(workflow_id):
