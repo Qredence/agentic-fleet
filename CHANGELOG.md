@@ -1,29 +1,18 @@
 # Changelog
 
-## 2025-11-03
+## v0.5.5 (2025-11-05)
 
-### Summary
+### Highlights
 
-- Normalised frontend SSE handling to use camelCase `agentId` exclusively.
-- Introduced a placeholder metrics store (`useMetricsStore`) for future streaming telemetry.
-- Retired the legacy chat store and API/component Vitest suites, archiving their expectations for reference.
-- Added documentation artefacts to explain the removals and new store scaffolding.
+- Frontend SSE payloads now expose `agentId` exclusively in camelCase to match backend event schemas.
+- New `useMetricsStore` placeholder lays the groundwork for upcoming streaming telemetry without impacting current UI flows.
+- Documentation refreshed to capture the chat store retirement and metrics store hand-off.
 
-### Rationale
+### Changes
 
-- Remove obsolete workflow/persistence expectations that blocked frontend refactors.
-- Prepare a dedicated state slice for upcoming performance instrumentation without affecting current UI behaviour.
-- Ensure the API client and types align with backend events after normalising identifier casing.
-
-### Impact
-
-- No breaking API changes. Frontend state relies solely on `agentId` for attribution.
-- Test coverage will be rebuilt around the modern chat store flow in subsequent commits.
-
-### Migration Notes
-
-- Consumers should depend on the new `useMetricsStore` when adding telemetry, rather than extending `chatStore` directly.
-- Historic workflow assertions live in `docs/archive/chatStore_legacy_tests.md` and `docs/archive/frontend_api_and_component_tests.md` if reintroduction becomes necessary.
+- Normalised the Responses event bridge and frontend consumers to rely on camelCase identifiers.
+- Archived the legacy chat store, API client, and component Vitest suites to unblock modernised coverage.
+- Added guidance around the metrics store scaffolding and removal rationale to the docs set.
 
 ### Removed
 
@@ -31,7 +20,12 @@
 - `src/frontend/src/lib/__tests__/api.test.ts`
 - `src/frontend/src/components/chat/__tests__/ChatMessage.test.tsx`
 
-### Follow-up Considerations
+### Migration Notes
 
-- Rebuild the chat store Vitest coverage using streaming scenarios and orchestrator event cases.
-- Instrument `useMetricsStore` once performance events are ready to wire in.
+- Extend telemetry features from the new `useMetricsStore` instead of the deprecated chat store state.
+- Historical assertions remain available under `docs/archive/chatStore_legacy_tests.md` and `docs/archive/frontend_api_and_component_tests.md` should you need to reference them.
+
+### Follow-up
+
+- Rebuild streaming-focused chat store coverage aligned with the new architecture.
+- Hook performance event instrumentation into `useMetricsStore` once the telemetry pipeline lands.

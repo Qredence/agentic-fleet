@@ -8,6 +8,7 @@ import pytest
 import yaml
 
 from agentic_fleet.api.workflow_factory import WorkflowFactory
+from agentic_fleet.workflow.magentic_workflow import MagenticFleetWorkflow
 
 
 def test_workflow_factory_initialization() -> None:
@@ -51,11 +52,14 @@ def test_get_workflow_config_not_found() -> None:
         factory.get_workflow_config("nonexistent")
 
 
-def test_create_from_yaml_magentic_fleet() -> None:
+def test_create_from_yaml_magentic_fleet(monkeypatch: pytest.MonkeyPatch) -> None:
     """Test creating magentic fleet workflow from YAML."""
+    monkeypatch.setenv("OPENAI_API_KEY", "test-key")
+
     factory = WorkflowFactory()
-    with pytest.raises(NotImplementedError):
-        factory.create_from_yaml("magentic_fleet")
+    workflow = factory.create_from_yaml("magentic_fleet")
+
+    assert isinstance(workflow, MagenticFleetWorkflow)
 
 
 def test_build_magentic_fleet_args() -> None:

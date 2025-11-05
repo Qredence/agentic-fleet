@@ -58,7 +58,8 @@ body:
       label: Version
       description: What version of AgenticFleet are you running?
       options:
-        - 0.5.0 (latest)
+        - 0.5.5 (latest)
+        - 0.5.0
         - 0.4.x
         - main branch (development)
         - Other (please specify in additional context)
