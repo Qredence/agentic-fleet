@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import json
+import logging
 import time
 from collections.abc import AsyncGenerator
 from typing import Any, no_type_check
@@ -12,6 +14,7 @@ from fastapi.responses import StreamingResponse
 from agentic_fleet.api.entities.routes import get_entity_discovery
 from agentic_fleet.api.responses.schemas import ResponseCompleteResponse, ResponseRequest
 from agentic_fleet.api.responses.service import ResponseAggregator
+from agentic_fleet.utils.logging import sanitize_for_log
 
 router = APIRouter()
 
@@ -53,16 +56,16 @@ async def _stream_response(entity_id: str, input_data: str | dict[str, Any]) -> 
             # Convert events to OpenAI-compatible SSE format
             async for sse_line in aggregator.convert_stream(events):
                 yield sse_line
-        except Exception as exc:
+        except Exception:
             # Log the actual error message and stack trace on the server
-            logging.exception("Error in response stream for entity '%s'", sanitize_for_log(entity_id))
+            logging.exception(
+                "Error in response stream for entity '%s'", sanitize_for_log(entity_id)
+            )
             # Send generic error message to client as SSE event
             error_event = {
                 "type": "error",
                 "error": {"message": "An internal error has occurred.", "type": "execution_error"},
             }
-            import json
-
             yield f"data: {json.dumps(error_event)}\n\n"
             yield "data: [DONE]\n\n"
 

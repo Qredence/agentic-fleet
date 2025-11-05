@@ -6,7 +6,8 @@ import asyncio
 import json
 import logging
 import sys
-from typing import Any
+from collections.abc import Callable
+from typing import TYPE_CHECKING, Any, TypeVar
 
 import typer
 
@@ -16,8 +17,20 @@ from agentic_fleet.utils.logging import setup_logging
 app = typer.Typer(add_completion=False, no_args_is_help=True)
 logger = logging.getLogger(__name__)
 
+F = TypeVar("F", bound=Callable[..., Any])
 
-@app.command()
+if TYPE_CHECKING:
+
+    def command(*args: Any, **kwargs: Any) -> Callable[[F], F]: ...
+
+    def callback(*args: Any, **kwargs: Any) -> Callable[[F], F]: ...
+
+else:
+    command = app.command
+    callback = app.callback
+
+
+@command()
 def workflow(
     workflow_id: str = typer.Argument("magentic_fleet", help="Workflow ID to run"),
     message: str = typer.Option("", "--message", "-m", help="Message to process"),
@@ -55,6 +68,21 @@ def workflow(
         logger.error(f"Error: {e}", exc_info=True)
         typer.echo(f"Error: {e}", err=True)
         raise typer.Exit(1) from e
+
+
+@callback()
+def _default(ctx: typer.Context) -> None:
+    """Default action: start interactive workflow if no subcommand provided."""
+    if ctx.invoked_subcommand is None:
+        # Start interactive session with defaults
+        try:
+            workflow()
+        except SystemExit:
+            # Allow Typer to handle exit codes from nested call
+            raise
+        except Exception as e:  # pragma: no cover - defensive
+            logger.error(f"CLI error: {e}")
+            raise typer.Exit(1) from e
 
 
 async def _run_workflow_message(workflow_instance: Any, message: str, stream: bool) -> None:
@@ -109,7 +137,7 @@ async def _run_workflow_message(workflow_instance: Any, message: str, stream: bo
         typer.echo(f"\n[Result]\n{full_result}")
 
 
-@app.command()
+@command()
 def list_workflows() -> None:
     """List all available workflows."""
     setup_logging()
