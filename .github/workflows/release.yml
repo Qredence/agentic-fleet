@@ -32,6 +32,8 @@ jobs:
 
       - name: Install dependencies
         run: uv sync --all-extras
+        env:
+          GIT_LFS_SKIP_SMUDGE: "1"
 
       - name: Validate version tag matches package version
         if: github.event_name == 'push'
