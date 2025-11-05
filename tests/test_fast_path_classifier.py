@@ -2,7 +2,7 @@
 
 import pytest
 
-from agentic_fleet.utils.message_classifier import MessageClassifier, should_use_fast_path
+import agentic_fleet.utils.message_classifier as module
 
 
 class TestMessageClassifier:
@@ -10,7 +10,7 @@ class TestMessageClassifier:
 
     def test_simple_acknowledgments(self):
         """Test that simple acknowledgments are classified for fast-path."""
-        classifier = MessageClassifier(enabled=True)
+        classifier = module.MessageClassifier(enabled=True)
 
         simple_messages = [
             "ok",
@@ -34,7 +34,7 @@ class TestMessageClassifier:
 
     def test_complexity_patterns(self):
         """Test that messages with complexity patterns are rejected."""
-        classifier = MessageClassifier(enabled=True)
+        classifier = module.MessageClassifier(enabled=True)
 
         complex_messages = [
             "implement a new feature",
@@ -103,7 +103,7 @@ class TestMessageClassifier:
 
     def test_has_complexity_indicators(self):
         """Test complexity indicator detection."""
-        classifier = MessageClassifier()
+        classifier = module.MessageClassifier()
 
         assert classifier.has_complexity_indicators("write code")
         assert classifier.has_complexity_indicators("implement feature")
@@ -121,7 +121,7 @@ class TestShouldUseFastPath:
 
         module._classifier = None
 
-        assert should_use_fast_path("ok")
+        assert module.should_use_fast_path("ok")
 
     def test_environment_variable_disabled(self, monkeypatch):
         """Test that ENABLE_FAST_PATH=0 disables fast-path."""
@@ -131,7 +131,7 @@ class TestShouldUseFastPath:
 
         module._classifier = None
 
-        assert not should_use_fast_path("ok")
+        assert not module.should_use_fast_path("ok")
 
     def test_max_length_from_env(self, monkeypatch):
         """Test that FAST_PATH_MAX_LENGTH env var is respected."""
@@ -143,10 +143,10 @@ class TestShouldUseFastPath:
         module._classifier = None
 
         short = "short"
-        assert should_use_fast_path(short)
+        assert module.should_use_fast_path(short)
 
         long = "this message is longer than twenty characters"
-        assert not should_use_fast_path(long)
+        assert not module.should_use_fast_path(long)
 
     def test_real_world_examples(self, monkeypatch):
         """Test classification on real-world message examples."""
@@ -166,7 +166,7 @@ class TestShouldUseFastPath:
         ]
 
         for msg in fast_path_messages:
-            assert should_use_fast_path(msg), f"Should use fast-path: {msg}"
+            assert module.should_use_fast_path(msg), f"Should use fast-path: {msg}"
 
         # Should use full orchestration
         full_orchestration_messages = [
@@ -178,7 +178,7 @@ class TestShouldUseFastPath:
         ]
 
         for msg in full_orchestration_messages:
-            assert not should_use_fast_path(msg), f"Should use full orchestration: {msg}"
+            assert not module.should_use_fast_path(msg), f"Should use full orchestration: {msg}"
 
 
 @pytest.fixture(autouse=True)
