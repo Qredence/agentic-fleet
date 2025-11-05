@@ -2,7 +2,6 @@
 
 import pytest
 
-from agentic_fleet.utils.message_classifier import MessageClassifier
 import agentic_fleet.utils.message_classifier as module
 
 
@@ -57,7 +56,7 @@ class TestMessageClassifier:
 
     def test_length_threshold(self):
         """Test that long messages are rejected."""
-        classifier = MessageClassifier(max_length=50, enabled=True)
+        classifier = module.MessageClassifier(max_length=50, enabled=True)
 
         # Short message should pass
         short = "what time is it"
@@ -69,7 +68,7 @@ class TestMessageClassifier:
 
     def test_multiple_sentences(self):
         """Test that multi-sentence messages are rejected."""
-        classifier = MessageClassifier(enabled=True)
+        classifier = module.MessageClassifier(enabled=True)
 
         single_sentence = "what is the weather today"
         assert classifier.classify(single_sentence)
@@ -79,7 +78,7 @@ class TestMessageClassifier:
 
     def test_disabled_classifier(self):
         """Test that disabled classifier always returns False."""
-        classifier = MessageClassifier(enabled=False)
+        classifier = module.MessageClassifier(enabled=False)
 
         assert not classifier.classify("ok")
         assert not classifier.classify("simple question")
@@ -87,14 +86,14 @@ class TestMessageClassifier:
     def test_custom_patterns(self):
         """Test that custom complexity patterns work."""
         custom = [r"\bfoobar\b"]
-        classifier = MessageClassifier(enabled=True, custom_patterns=custom)
+        classifier = module.MessageClassifier(enabled=True, custom_patterns=custom)
 
         assert not classifier.classify("this has foobar in it")
         assert classifier.classify("this is clean")
 
     def test_is_simple_acknowledgment(self):
         """Test simple acknowledgment detection."""
-        classifier = MessageClassifier()
+        classifier = module.MessageClassifier()
 
         assert classifier.is_simple_acknowledgment("ok")
         assert classifier.is_simple_acknowledgment("OK")
