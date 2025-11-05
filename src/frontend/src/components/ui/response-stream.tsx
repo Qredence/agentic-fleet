@@ -328,7 +328,7 @@ function ResponseStream({
     }
   }, [isComplete]);
 
-  // fadeStyle is the style for the fade animation
+  // CSS keyframes and animation styles for fade-in word animation
   const fadeStyle = `
     @keyframes fadeIn {
       from { opacity: 0; }
