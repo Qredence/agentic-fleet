@@ -145,7 +145,7 @@ def _get_classifier() -> MessageClassifier:
     """
     global _classifier
     if _classifier is None:
-        enabled = os.getenv("ENABLE_FAST_PATH", "1") in {"1", "true", "True", "yes"}
+        enabled = os.getenv("ENABLE_FAST_PATH", "true").lower() in {"1", "true", "yes"}
         max_length = int(os.getenv("FAST_PATH_MAX_LENGTH", "100"))
         _classifier = MessageClassifier(max_length=max_length, enabled=enabled)
     return _classifier
@@ -156,7 +156,8 @@ def should_use_fast_path(message: str) -> bool:
 
     This is the main entry point for fast-path classification.
     It uses environment variables for configuration:
-    - ENABLE_FAST_PATH: Enable/disable fast-path (default: 1)
+    - ENABLE_FAST_PATH: Enable/disable fast-path (default: true)
+      Accepted values: "1", "true", "yes" (case-insensitive) for enabled
     - FAST_PATH_MAX_LENGTH: Maximum message length (default: 100)
 
     Args:

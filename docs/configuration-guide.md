@@ -495,8 +495,10 @@ fast_path_model: str = "gpt-5-mini"
 **Environment Variables**:
 
 ```bash
-# Enable/disable fast-path optimization
-ENABLE_FAST_PATH=1
+# Enable/disable fast-path optimization (default: true)
+# Accepted values: "1", "true", "yes" (case-insensitive) for enabled
+# Any other value disables fast-path
+ENABLE_FAST_PATH=true
 
 # Maximum message length for fast-path eligibility (characters)
 FAST_PATH_MAX_LENGTH=100
