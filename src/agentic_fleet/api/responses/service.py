@@ -36,7 +36,7 @@ class ResponseAggregator:
         if isinstance(value, str):
             return value
 
-        if isinstance(value, (int, float, bool)):
+        if isinstance(value, int | float | bool):
             return str(value)
 
         if isinstance(value, dict):
@@ -50,7 +50,7 @@ class ResponseAggregator:
             parts = [ResponseAggregator._extract_text(item) for item in value.values()]
             return "".join(part for part in parts if part)
 
-        if isinstance(value, (list, tuple, set)):
+        if isinstance(value, list | tuple | set):
             parts = [ResponseAggregator._extract_text(item) for item in value]
             return "".join(part for part in parts if part)
 

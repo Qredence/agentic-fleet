@@ -155,15 +155,15 @@ import { useChatController } from "./useChatController";
 // Mock the API client
 vi.mock("./useChatClient", () => ({
   getHealth: vi.fn(() => Promise.resolve({ status: "ok" })),
-  createConversation: vi.fn(() => 
-    Promise.resolve({ id: "test-id", title: "Test", messages: [] })
+  createConversation: vi.fn(() =>
+    Promise.resolve({ id: "test-id", title: "Test", messages: [] }),
   ),
 }));
 
 describe("useChatController - Unit Tests", () => {
   it("initializes with default state", () => {
     const { result } = renderHook(() => useChatController());
-    
+
     expect(result.current.messages).toEqual([]);
     expect(result.current.pending).toBe(false);
   });
@@ -211,12 +211,12 @@ Example:
 ```typescript
 vi.mock("./useChatClient", () => ({
   getHealth: vi.fn(() => Promise.resolve({ status: "ok" })),
-  sendChat: vi.fn((conversationId, message) => 
-    Promise.resolve({ 
+  sendChat: vi.fn((conversationId, message) =>
+    Promise.resolve({
       conversation_id: conversationId,
       message: { role: "assistant", content: "Mocked response" },
-      messages: []
-    })
+      messages: [],
+    }),
   ),
 }));
 
@@ -242,7 +242,7 @@ describe("useChatClient - Integration Tests", () => {
   it("creates conversation and sends message", async () => {
     const conversation = await createConversation();
     const result = await sendChat(conversation.id, "Test message");
-    
+
     expect(result.conversation_id).toBe(conversation.id);
     expect(result.messages.length).toBeGreaterThan(0);
   });
@@ -323,22 +323,22 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      
+
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: "20.x"
           cache: "npm"
           cache-dependency-path: "src/frontend/package-lock.json"
-      
+
       - name: Install dependencies
         working-directory: src/frontend
         run: npm ci
-      
+
       - name: Run unit tests
         working-directory: src/frontend
         run: npm run test:unit
-      
+
       - name: Run linting
         working-directory: src/frontend
         run: npm run lint
@@ -346,28 +346,28 @@ jobs:
   frontend-integration-tests:
     name: Frontend Integration Tests
     runs-on: ubuntu-latest
-    needs: [backend-build]  # Ensure backend is ready
+    needs: [backend-build] # Ensure backend is ready
     steps:
       - uses: actions/checkout@v4
-      
+
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: "20.x"
           cache: "npm"
           cache-dependency-path: "src/frontend/package-lock.json"
-      
+
       - name: Install dependencies
         working-directory: src/frontend
         run: npm ci
-      
+
       - name: Start Backend
         run: make backend &
-      
+
       - name: Wait for Backend
         run: |
           timeout 60 bash -c 'until curl -f http://localhost:8000/v1/health; do sleep 2; done'
-      
+
       - name: Run integration tests
         working-directory: src/frontend
         run: npm run test:integration
@@ -410,17 +410,20 @@ jobs:
 Potential improvements:
 
 ### Unit Testing
+
 - Expand unit test coverage for all components and hooks
 - Add snapshot testing for UI components
 - Mock React Query for data fetching tests
 
 ### Integration Testing
+
 - Test database seeding for predictable state
 - Parallel test execution with isolated backend instances
 - Performance benchmarking of critical paths
 - Visual regression testing with Playwright
 
 ### CI/CD
+
 - Separate unit and integration test jobs (recommended)
 - Make integration tests opt-in or scheduled
 - Add test result reporting and trends

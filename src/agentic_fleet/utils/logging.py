@@ -44,12 +44,9 @@ def sanitize_for_log(value: str) -> str:
     Returns:
         Sanitized and clearly marked string
     """
-    if not isinstance(value, str):
-        to_clean = str(value)
-    else:
-        to_clean = value
+    to_clean = value if isinstance(value, str) else str(value)
     # Build translation table for ASCII controls (0-31, 127) + documented Unicode separators
-    controls = ''.join(chr(i) for i in range(0, 32)) + chr(0x7f) + '\u2028\u2029\u0085'
-    cleaned = to_clean.translate(str.maketrans('', '', controls))
+    controls = "".join(chr(i) for i in range(0, 32)) + chr(0x7F) + "\u2028\u2029\u0085"
+    cleaned = to_clean.translate(str.maketrans("", "", controls))
     # Enclose the sanitized input in angle brackets for visibility
     return f"<{cleaned}>"

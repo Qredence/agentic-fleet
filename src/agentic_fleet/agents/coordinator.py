@@ -18,9 +18,8 @@ OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 if not OPENAI_API_KEY:
     raise ValueError("OPENAI_API_KEY is not set")
 
+# Base URL is optional; default OpenAI endpoint is used when unset.
 OPENAI_BASE_URL = os.getenv("OPENAI_BASE_URL")
-if not OPENAI_BASE_URL:
-    raise ValueError("OPENAI_BASE_URL is not set")
 
 logger = logging.getLogger(__name__)
 
@@ -79,7 +78,7 @@ class AgentFactory:
         chat_client = OpenAIResponsesClient(
             model_id=model_id,
             api_key=OPENAI_API_KEY,
-            base_url=OPENAI_BASE_URL,
+            base_url=OPENAI_BASE_URL or None,
             reasoning_effort=reasoning_effort,
             reasoning_verbosity=reasoning_verbosity,
             store=store,

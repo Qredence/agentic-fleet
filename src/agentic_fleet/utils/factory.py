@@ -214,8 +214,8 @@ class WorkflowFactory:
         # can be added to this dispatch map keyed by factory label.
         if factory_label == "create_magentic_fleet_workflow":
             from agentic_fleet.workflow.magentic_workflow import (
-                MagenticFleetWorkflowBuilder,  # local import to avoid cycle
-            )
+                MagenticFleetWorkflowBuilder,
+            )  # local import to avoid cycle
 
             builder = MagenticFleetWorkflowBuilder()
             return builder.build(config)

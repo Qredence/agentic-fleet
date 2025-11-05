@@ -162,9 +162,7 @@ class WorkflowFactory:
         factory_name = (resolved_cfg.factory or "").strip()
 
         if factory_name in {"create_magentic_fleet_workflow", "magentic_fleet"}:
-            from agentic_fleet.workflow.magentic_workflow import (
-                MagenticFleetWorkflowBuilder,
-            )
+            from agentic_fleet.workflow.magentic_workflow import MagenticFleetWorkflowBuilder
 
             builder = MagenticFleetWorkflowBuilder()
             return builder.build(backend_cfg)

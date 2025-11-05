@@ -1,6 +1,6 @@
 import { ChainOfThought } from "@/components/chat/ChainOfThought";
-import { StructuredMessageContent } from "@/components/chat/StructuredMessageContent";
 import { LoadingIndicator } from "@/components/chat/LoadingIndicator";
+import { StructuredMessageContent } from "@/components/chat/StructuredMessageContent";
 import { Button } from "@/components/ui/button";
 import {
   ChatContainerContent,
@@ -107,10 +107,10 @@ export function ChatPage() {
 
       {/* Messages area */}
       <ChatContainerRoot className="relative flex-1 space-y-0 overflow-y-auto px-4 py-12">
-        <ChatContainerContent className="space-y-12 px-4 py-12">
+        <ChatContainerContent className="space-y-12 px-4 py-12 mx-auto max-w-[700px]">
           {/* Render orchestrator messages (chain-of-thought) */}
           {orchestratorMessages.length > 0 && (
-            <div className="mx-auto w-full max-w-3xl">
+            <div className="mx-auto w-full max-w-[700px]">
               <ChainOfThought messages={orchestratorMessages} />
             </div>
           )}
@@ -153,7 +153,7 @@ export function ChatPage() {
               <Message
                 key={message.id}
                 className={cn(
-                  "group w-full max-w-3xl items-start gap-3 md:gap-4",
+                  "group w-full max-w-[700px] items-start gap-3 md:gap-4",
                   isUser ? "ml-auto flex-row-reverse" : "mr-auto",
                 )}
               >
@@ -200,10 +200,10 @@ export function ChatPage() {
                   >
                     <div
                       className={cn(
-                        "max-w-[90%] rounded-3xl px-5 py-3 text-sm leading-relaxed shadow-sm sm:max-w-[75%]",
+                        "max-w-[90%] rounded-3xl px-5 py-3 text-sm leading-relaxed shadow-none sm:max-w-[75%]",
                         isUser
-                          ? "bg-primary/10 text-foreground border border-primary/20"
-                          : "bg-muted text-foreground",
+                          ? "bg-[#F4F4F5] text-foreground border border-transparent"
+                          : "bg-transparent text-foreground border border-transparent",
                       )}
                     >
                       <StructuredMessageContent
@@ -277,7 +277,7 @@ export function ChatPage() {
 
           {/* Loading indicator */}
           {isLoading && !currentStreamingMessage && (
-            <div className="mx-auto w-full max-w-3xl">
+            <div className="mx-auto w-full max-w-[700px]">
               <LoadingIndicator />
             </div>
           )}
@@ -285,7 +285,7 @@ export function ChatPage() {
       </ChatContainerRoot>
 
       {/* Input area */}
-      <div className="inset-x-0 bottom-0 mx-auto w-full max-w-3xl shrink-0 px-3 pb-3 md:px-5 md:pb-5">
+      <div className="inset-x-0 bottom-0 mx-auto w-full max-w-[700px] shrink-0 px-3 pb-3 md:px-5 md:pb-5">
         <PromptInput
           isLoading={isLoading}
           value={inputMessage}

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import importlib
 import logging
 import os
 from collections.abc import Callable
@@ -9,15 +10,23 @@ from typing import Any
 
 from agentic_fleet.api.app import app
 
-try:
-    from dotenv import load_dotenv
-except ImportError:  # pragma: no cover - optional dependency
-    load_dotenv = None  # type: ignore[assignment]
+OptionalHook = Callable[..., Any] | None
 
-try:
-    from agent_framework.observability import setup_observability
-except ImportError:  # pragma: no cover - optional dependency
-    setup_observability = None  # type: ignore[assignment]
+
+def _resolve_optional_callable(module_name: str, attribute: str) -> OptionalHook:
+    try:
+        module = importlib.import_module(module_name)
+    except ImportError:  # pragma: no cover - optional dependency
+        return None
+
+    value = getattr(module, attribute, None)
+    return value if callable(value) else None
+
+
+load_dotenv_hook = _resolve_optional_callable("dotenv", "load_dotenv")
+setup_observability_hook = _resolve_optional_callable(
+    "agent_framework.observability", "setup_observability"
+)
 
 
 def _optional_call(func: Callable[..., Any] | None) -> None:
@@ -26,8 +35,8 @@ def _optional_call(func: Callable[..., Any] | None) -> None:
 
 
 # Load environment as early as possible to support uvicorn workers.
-_optional_call(load_dotenv)
-_optional_call(setup_observability)
+_optional_call(load_dotenv_hook)
+_optional_call(setup_observability_hook)
 
 
 def main() -> None:

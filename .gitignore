@@ -81,6 +81,7 @@ memory-bank/
 .github/agents/expert-react-frontend-engineer.agent.md
 .playwright-mcp/page-2025-10-29T05-03-16-472Z.png
 .github/agents/
+.claude/
 # Playwright
 /test-results/
 /playwright-report/
@@ -122,3 +123,19 @@ src/frontend/.npm-cache/_cacache/index-v5/86/47/86e70a82678db0560ecf5dfeb70e5cc2
 src/frontend/src/.npm-cache/_update-notifier-last-checked
 src/frontend/src/.npm-cache/_cacache/content-v2/sha512/a1/aa/eecc84e4509201aff202c0a82ef8bf14a16da08d086c8bb4a624d6b1f4dc28de449eddc94b4ed8bb64b9f20a181345799c6d94dfbfa4a20c49e9651e9cf6
 src/frontend/src/.npm-cache/_cacache/index-v5/86/47/86e70a82678db0560ecf5dfeb70e5cc20b3ec3d7c203d10eed6c0718455e
+.claude/commands/refactor-code.md
+.claude/commands/update-docs.md
+.claude/skills/webapp-testing/LICENSE.txt
+.claude/skills/webapp-testing/SKILL.md
+.claude/skills/webapp-testing/examples/console_logging.py
+.claude/skills/webapp-testing/examples/element_discovery.py
+.claude/skills/webapp-testing/examples/static_html_automation.py
+.claude/skills/webapp-testing/scripts/with_server.py
+.claude/commands/refactor-code.md
+.claude/commands/update-docs.md
+.claude/skills/webapp-testing/LICENSE.txt
+.claude/skills/webapp-testing/SKILL.md
+.claude/skills/webapp-testing/examples/console_logging.py
+.claude/skills/webapp-testing/examples/element_discovery.py
+.claude/skills/webapp-testing/examples/static_html_automation.py
+.claude/skills/webapp-testing/scripts/with_server.py

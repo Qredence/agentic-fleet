@@ -115,7 +115,9 @@ class MagenticWorkflowService:
         """
         if workflow_id not in self.active_workflows:
             safe_workflow_id = self._sanitize_for_logging(workflow_id)
-            yield WorkflowEvent(type="error", data={"message": f"Workflow {safe_workflow_id} not found"})
+            yield WorkflowEvent(
+                type="error", data={"message": f"Workflow {safe_workflow_id} not found"}
+            )
             return
 
         workflow = self.active_workflows[workflow_id]

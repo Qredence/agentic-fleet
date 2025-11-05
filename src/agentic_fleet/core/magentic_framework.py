@@ -8,7 +8,7 @@ Core workflow cycle: PLAN → EVALUATE → ACT → OBSERVE → (repeat or comple
 """
 
 import logging
-from collections.abc import AsyncIterator
+from collections.abc import AsyncIterator, Callable
 from dataclasses import dataclass, field
 from enum import Enum
 from typing import Any, cast, no_type_check
@@ -200,44 +200,55 @@ Guidelines:
 
         Loads agent factories and creates instances based on YAML config.
         """
-        agents = {}
+        agents: dict[str, ChatAgent] = {}
 
-        # Import agent factories (if available)
-        # Note: These factories are optional and not yet implemented
-        # Fallback to basic agents will be used
+        # Import agent factories (if available). These factories are optional, so we
+        # attempt a dynamic import and gracefully fall back to basic ChatAgent
+        # instances when functions are absent.
         try:
-            from agentic_fleet.agents import (  # type: ignore[attr-defined]
-                create_coder_agent,
-                create_coordinator_agent,
-                create_executor_agent,
-                create_generator_agent,
-                create_planner_agent,
-                create_verifier_agent,
-            )
+            import importlib
 
-            # Create agents based on config
-            agent_creators = {
-                "coordinator": create_coordinator_agent,
-                "planner": create_planner_agent,
-                "executor": create_executor_agent,
-                "generator": create_generator_agent,
-                "verifier": create_verifier_agent,
-                "coder": create_coder_agent,
+            agents_module = importlib.import_module("agentic_fleet.agents")
+        except ImportError as exc:
+            logger.warning(f"Could not import agent factories: {exc}")
+        else:
+            factory_attribute_names = {
+                "coordinator": "create_coordinator_agent",
+                "planner": "create_planner_agent",
+                "executor": "create_executor_agent",
+                "generator": "create_generator_agent",
+                "verifier": "create_verifier_agent",
+                "coder": "create_coder_agent",
             }
 
-            for agent_name in self.config.fleet.agents:
-                if agent_name in agent_creators:
-                    agents[agent_name] = agent_creators[agent_name](self.config)
-                    logger.info(f"Created specialist agent: {agent_name}")
+            agent_creators: dict[str, Callable[[Any], ChatAgent]] = {}
+            for agent_key, attr_name in factory_attribute_names.items():
+                creator = getattr(agents_module, attr_name, None)
+                if callable(creator):
+                    agent_creators[agent_key] = cast(Callable[[Any], ChatAgent], creator)
 
-        except ImportError as e:
-            logger.warning(f"Could not import agent factories: {e}")
-            # Fallback: create basic agents
             for agent_name in self.config.fleet.agents:
-                agents[agent_name] = self.client.create_agent(
-                    name=agent_name.title(),
-                    instructions=f"You are a {agent_name} specialist agent.",
-                )
+                creator = agent_creators.get(agent_name)
+                if creator is None:
+                    continue
+                try:
+                    agents[agent_name] = creator(self.config)
+                    logger.info(f"Created specialist agent: {agent_name}")
+                except Exception as exc:  # pragma: no cover - defensive logging
+                    logger.warning(
+                        "Failed to create specialist agent '%s' via factory: %s",
+                        agent_name,
+                        exc,
+                    )
+
+        # Fallback: create basic agents for any remaining identifiers
+        for agent_name in self.config.fleet.agents:
+            if agent_name in agents:
+                continue
+            agents[agent_name] = self.client.create_agent(
+                name=agent_name.title(),
+                instructions=f"You are a {agent_name} specialist agent.",
+            )
 
         return agents
 
