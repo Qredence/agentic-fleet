@@ -34,8 +34,8 @@ def mock_openai_client():
 **Testing Framework**: pytest with async support
 **Type Checking**: MyPy strict mode (100% compliance requirement)
 **Code Quality**: Ruff linting + Black formatting
-**Coverage**: pytest-cov with target >80% coverage  
-_Exclusions_: Files that are auto-generated, external dependencies, or configuration/initialization shims may be explicitly excluded from coverage analysis, provided exclusions are documented and justified.  
+**Coverage**: pytest-cov with target >80% coverage
+_Exclusions_: Files that are auto-generated, external dependencies, or configuration/initialization shims may be explicitly excluded from coverage analysis, provided exclusions are documented and justified.
 _Exceptions_: If specific modules cannot feasibly achieve 80% coverage (e.g., due to platform-specific code paths or intentional no-op branches), rationale must be documented in pull requests for reviewer approval.
 
 ### Frontend Testing Stack
@@ -331,19 +331,16 @@ Each test must:
 ### Common Test Failures
 
 1. **Configuration Validation Errors**:
-
    - Check YAML syntax and agent factory exports
    - Verify environment variables in test environment
    - Run `make test-config` for detailed error information
 
 2. **Import Errors**:
-
    - Verify `uv sync` completed successfully
    - Check Python path configuration
    - Ensure all dependencies are installed
 
 3. **Mock Failures**:
-
    - Verify mock patch paths are correct
    - Check that mock objects have required attributes
    - Validate mock return values match expected structure
