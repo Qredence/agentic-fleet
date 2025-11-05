@@ -2,6 +2,7 @@
 
 import pytest
 
+from agentic_fleet.utils.message_classifier import MessageClassifier
 import agentic_fleet.utils.message_classifier as module
 
 
@@ -117,8 +118,6 @@ class TestShouldUseFastPath:
         """Test that ENABLE_FAST_PATH env var controls behavior."""
         monkeypatch.setenv("ENABLE_FAST_PATH", "1")
         # Reset global classifier
-        import agentic_fleet.utils.message_classifier as module
-
         module._classifier = None
 
         assert module.should_use_fast_path("ok")
@@ -127,8 +126,6 @@ class TestShouldUseFastPath:
         """Test that ENABLE_FAST_PATH=0 disables fast-path."""
         monkeypatch.setenv("ENABLE_FAST_PATH", "0")
         # Reset global classifier
-        import agentic_fleet.utils.message_classifier as module
-
         module._classifier = None
 
         assert not module.should_use_fast_path("ok")
@@ -138,8 +135,6 @@ class TestShouldUseFastPath:
         monkeypatch.setenv("ENABLE_FAST_PATH", "1")
         monkeypatch.setenv("FAST_PATH_MAX_LENGTH", "20")
         # Reset global classifier
-        import agentic_fleet.utils.message_classifier as module
-
         module._classifier = None
 
         short = "short"
@@ -152,8 +147,6 @@ class TestShouldUseFastPath:
         """Test classification on real-world message examples."""
         monkeypatch.setenv("ENABLE_FAST_PATH", "1")
         # Reset global classifier
-        import agentic_fleet.utils.message_classifier as module
-
         module._classifier = None
 
         # Should use fast-path
@@ -184,8 +177,6 @@ class TestShouldUseFastPath:
 @pytest.fixture(autouse=True)
 def reset_classifier():
     """Reset the global classifier before each test."""
-    import agentic_fleet.utils.message_classifier as module
-
     module._classifier = None
     yield
     module._classifier = None

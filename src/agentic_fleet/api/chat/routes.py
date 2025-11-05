@@ -53,17 +53,18 @@ async def _stream_chat_response(req: ChatRequest) -> StreamingResponse:
         agent_buffers: dict[str, str] = {}
         # Track orchestrator reasoning messages if enabled
         reasoning_events: list[dict[str, Any]] = []
-        workflow_start = time.time()
-        logger.info("[CHAT] Getting workflow from cache...")
-        workflow = await workflow_service.get_workflow()
-        workflow_elapsed = time.time() - workflow_start
-        logger.info(f"[CHAT] Workflow retrieved. Elapsed: {workflow_elapsed:.3f}s")
-
+        
         # Check if message should use fast-path
         use_fast_path = should_use_fast_path(req.message)
         if use_fast_path:
             logger.info(f"[CHAT] Using fast-path for simple query: {req.message[:100]}")
             workflow = create_fast_path_workflow()
+        else:
+            workflow_start = time.time()
+            logger.info("[CHAT] Getting workflow from cache...")
+            workflow = await workflow_service.get_workflow()
+            workflow_elapsed = time.time() - workflow_start
+            logger.info(f"[CHAT] Workflow retrieved. Elapsed: {workflow_elapsed:.3f}s")
 
         try:
             # Get workflow events stream
