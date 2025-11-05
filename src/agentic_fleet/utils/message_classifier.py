@@ -158,7 +158,8 @@ def should_use_fast_path(message: str) -> bool:
 
     This is the main entry point for fast-path classification.
     It uses environment variables for configuration:
-    - ENABLE_FAST_PATH: Enable/disable fast-path (default: 1)
+    - ENABLE_FAST_PATH: Enable/disable fast-path (default: true)
+      Accepted values: "1", "true", "yes" (case-insensitive) for enabled
     - FAST_PATH_MAX_LENGTH: Maximum message length (default: 100)
 
     Args:
