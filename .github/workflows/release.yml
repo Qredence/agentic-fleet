@@ -62,7 +62,7 @@ jobs:
     needs: build
     runs-on: ubuntu-latest
     environment:
-      name: pypi
+      name: pypi-production
       url: https://pypi.org/p/agentic-fleet
     permissions:
       id-token: write # IMPORTANT: mandatory for trusted publishing
