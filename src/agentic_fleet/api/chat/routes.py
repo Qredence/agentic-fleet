@@ -54,7 +54,6 @@ async def _stream_chat_response(req: ChatRequest) -> StreamingResponse:
         agent_buffers: dict[str, str] = {}
         # Track orchestrator reasoning messages if enabled
         reasoning_events: list[dict[str, Any]] = []
-        
         # Check if message should use fast-path
         use_fast_path = should_use_fast_path(req.message)
         if use_fast_path:
