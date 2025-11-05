@@ -71,7 +71,8 @@ class FastPathWorkflow(RunsWorkflow):
             WorkflowEvent instances (message.delta and message.done)
         """
         try:
-            logger.info(f"[FAST-PATH] Processing message with {self.model}: {message[:100]}")
+            sanitized_message = message[:100].replace('\n', '').replace('\r', '')
+            logger.info(f"[FAST-PATH] Processing message with {self.model}: {sanitized_message}")
 
             # Use the Responses API streaming
             from agent_framework import ChatMessage, ChatOptions, TextContent
