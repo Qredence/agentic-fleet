@@ -31,14 +31,6 @@ async def _stream_response(entity_id: str, input_data: str | dict[str, Any]) -> 
     Returns:
         StreamingResponse with SSE events
     """
-    discovery = get_entity_discovery()
-
-    # Get workflow instance
-    try:
-        workflow = await discovery.get_workflow_instance_async(entity_id)
-    except ValueError as exc:
-        raise HTTPException(status_code=404, detail=f"Entity '{entity_id}' not found") from exc
-
     # Convert input to string if needed
     # Extract message from structured input or cast to string
     message = input_data.get("input", "") if isinstance(input_data, dict) else str(input_data)
@@ -51,6 +43,13 @@ async def _stream_response(entity_id: str, input_data: str | dict[str, Any]) -> 
     if use_fast_path:
         logging.info(f"[RESPONSES] Using fast-path for simple query: {sanitize_for_log(message[:100])}")
         workflow = create_fast_path_workflow()
+    else:
+        # Get workflow instance from entity discovery
+        discovery = get_entity_discovery()
+        try:
+            workflow = await discovery.get_workflow_instance_async(entity_id)
+        except ValueError as exc:
+            raise HTTPException(status_code=404, detail=f"Entity '{entity_id}' not found") from exc
 
     # Create aggregator
     aggregator = ResponseAggregator()
