@@ -478,6 +478,80 @@ update `REMOVED_LOG_CHARS` in `logging_sanitize.py` and extend tests in
 
 ---
 
+---
+
+### Fast-Path Optimization
+
+**Available Since**: 0.5.6
+
+AgenticFleet supports fast-path routing for simple queries, bypassing the full multi-agent orchestration to provide sub-second responses.
+
+```python
+enable_fast_path: bool = True
+fast_path_max_length: int = 100
+fast_path_model: str = "gpt-5-mini"
+```
+
+**Environment Variables**:
+
+```bash
+# Enable/disable fast-path optimization
+ENABLE_FAST_PATH=1
+
+# Maximum message length for fast-path eligibility (characters)
+FAST_PATH_MAX_LENGTH=100
+
+# OpenAI model to use for fast-path responses
+FAST_PATH_MODEL=gpt-5-mini
+```
+
+**Usage**:
+
+Fast-path automatically detects simple queries like:
+
+- Simple acknowledgments: "ok", "thanks", "yes", "no"
+- Short questions without complexity indicators
+- Messages under 100 characters without code/implementation keywords
+
+Complex queries requiring full orchestration:
+
+- Messages containing keywords like "implement", "create", "code", "analyze"
+- Multi-sentence requests
+- Messages over 100 characters
+- Technical or multi-step tasks
+
+**Example**:
+
+```bash
+# Enable fast-path with custom model and length
+ENABLE_FAST_PATH=1
+FAST_PATH_MAX_LENGTH=150
+FAST_PATH_MODEL=gpt-5-mini
+
+# OpenAI credentials (required for fast-path)
+OPENAI_API_KEY=your-api-key
+# Optional: Use custom endpoint
+OPENAI_BASE_URL=https://custom.openai.endpoint.com
+```
+
+**Performance Impact**:
+
+- Simple queries: < 1 second (fast-path)
+- Complex queries: 10-45 seconds (full orchestration with 5 agents)
+- Fast-path uses a lightweight single LLM call vs multi-agent coordination
+
+**Monitoring**:
+
+Check logs for fast-path usage:
+
+```text
+[CHAT] Using fast-path for simple query: ok
+[FAST-PATH] Processing message with gpt-5-mini: ok
+[FAST-PATH] Completed response (15 chars)
+```
+
+---
+
 ## Additional Resources
 
 - [Pydantic Settings Docs](https://docs.pydantic.dev/latest/concepts/pydantic_settings/)

@@ -8,6 +8,10 @@ export interface ChatMessage {
   content: string;
   createdAt: number;
   agentId?: string;
+  /** Optional reasoning content from o1/o3 models */
+  reasoning?: string;
+  /** Whether the reasoning is currently streaming */
+  reasoningStreaming?: boolean;
 }
 
 /** SSE Event types from backend */
@@ -16,6 +20,8 @@ export type SSEEventType =
   | "response.completed"
   | "orchestrator.message"
   | "agent.message.complete"
+  | "reasoning.delta"
+  | "reasoning.completed"
   | "error";
 
 /** SSE Event structure
@@ -30,6 +36,8 @@ export interface SSEEvent {
   message?: string;
   kind?: string;
   content?: string;
+  /** Optional reasoning delta from o1/o3 models */
+  reasoning?: string;
 }
 
 /** Response delta event */

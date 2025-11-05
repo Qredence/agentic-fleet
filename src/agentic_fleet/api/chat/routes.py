@@ -13,6 +13,8 @@ from fastapi.responses import StreamingResponse
 from agentic_fleet.api.chat.schemas import ChatMessagePayload, ChatRequest, ChatResponse
 from agentic_fleet.api.chat.service import get_workflow_service
 from agentic_fleet.api.conversations.service import ConversationNotFoundError, get_store
+from agentic_fleet.utils.message_classifier import should_use_fast_path
+from agentic_fleet.workflow.fast_path import create_fast_path_workflow
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
@@ -57,9 +59,15 @@ async def _stream_chat_response(req: ChatRequest) -> StreamingResponse:
         workflow_elapsed = time.time() - workflow_start
         logger.info(f"[CHAT] Workflow retrieved. Elapsed: {workflow_elapsed:.3f}s")
 
+        # Check if message should use fast-path
+        use_fast_path = should_use_fast_path(req.message)
+        if use_fast_path:
+            logger.info(f"[CHAT] Using fast-path for simple query: {req.message[:100]}")
+            workflow = create_fast_path_workflow()
+
         try:
             # Get workflow events stream
-            logger.info("[CHAT] Starting workflow.run()...")
+            logger.info(f"[CHAT] Starting workflow.run() (fast_path={use_fast_path})...")
             run_start = time.time()
             events = workflow.run(req.message)
             logger.info(f"[CHAT] workflow.run() returned. Elapsed: {time.time() - run_start:.3f}s")

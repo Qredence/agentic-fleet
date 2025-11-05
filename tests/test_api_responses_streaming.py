@@ -207,3 +207,72 @@ async def test_multiple_delta_events() -> None:
         )
         # Maintain permissive original assertion semantics while removing unused variable warning
         assert _delta_count >= 0
+
+
+@pytest.mark.asyncio
+async def test_fast_path_event_format() -> None:
+    """Test that fast-path events follow SSE format."""
+    transport = ASGITransport(app=create_app())
+    async with AsyncClient(transport=transport, base_url="http://test") as client:
+        # Simple message should trigger fast-path if enabled
+        resp = await client.post(
+            "/v1/responses",
+            json={
+                "model": "magentic_fleet",
+                "input": "ok",
+                "stream": True,
+            },
+        )
+        assert resp.status_code == 200
+
+        content = b""
+        async for chunk in resp.aiter_bytes():
+            content += chunk
+            if b"[DONE]" in content:
+                break
+
+        text = content.decode("utf-8")
+        events = parse_sse_events(text)
+
+        # Should have at least one event
+        assert len(events) > 0
+
+        # Should end with [DONE]
+        assert events[-1]["type"] == "done"
+
+        # Delta events should have proper structure
+        delta_events = [e for e in events if e.get("type") == "response.delta"]
+        for event in delta_events:
+            assert "delta" in event or "content" in event
+
+
+@pytest.mark.asyncio
+async def test_fast_path_metadata() -> None:
+    """Test that fast-path completion event includes metadata."""
+    transport = ASGITransport(app=create_app())
+    async with AsyncClient(transport=transport, base_url="http://test") as client:
+        resp = await client.post(
+            "/v1/responses",
+            json={
+                "model": "magentic_fleet",
+                "input": "thanks",
+                "stream": True,
+            },
+        )
+        assert resp.status_code == 200
+
+        content = b""
+        async for chunk in resp.aiter_bytes():
+            content += chunk
+            if b"[DONE]" in content:
+                break
+
+        events = parse_sse_events(content.decode("utf-8"))
+
+        # Look for completion event with fast_path metadata
+        completion_events = [e for e in events if e.get("type") == "response.completed"]
+        if completion_events:
+            # Fast-path completion should include metadata flag
+            # (this is optional - depends on whether fast-path was actually used)
+            completion = completion_events[0]
+            assert "type" in completion

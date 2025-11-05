@@ -1,5 +1,12 @@
+import {
+  ChainOfThoughtContent,
+  ChainOfThoughtItem,
+  ChainOfThoughtStep,
+  ChainOfThoughtTrigger,
+  ChainOfThought as ChainOfThoughtUI,
+} from "@/components/ui/chain-of-thought";
 import type { OrchestratorMessage } from "@/types/chat";
-import { SystemMessage } from "@/components/ui/system-message";
+import { Clock, Info, Lightbulb, ListChecks } from "lucide-react";
 import { StructuredMessageContent } from "./StructuredMessageContent";
 
 interface ChainOfThoughtProps {
@@ -10,24 +17,27 @@ const KIND_METADATA: Record<
   string,
   {
     title: string;
-    variant: "info" | "warning" | "success" | "action" | "error";
+    icon: React.ReactNode;
   }
 > = {
-  task_ledger: { title: "Task Plan", variant: "action" },
-  progress_ledger: { title: "Progress Evaluation", variant: "warning" },
-  facts: { title: "Facts & Reasoning", variant: "info" },
-  default: { title: "Manager Update", variant: "info" },
+  task_ledger: { title: "Task Plan", icon: <ListChecks className="size-4" /> },
+  progress_ledger: {
+    title: "Progress Evaluation",
+    icon: <Clock className="size-4" />,
+  },
+  facts: { title: "Facts & Reasoning", icon: <Lightbulb className="size-4" /> },
+  default: { title: "Manager Update", icon: <Info className="size-4" /> },
 };
 
-/** Renders orchestrator / manager messages in dedicated system cards. */
+/** Renders orchestrator / manager messages using Prompt Kit ChainOfThought. */
 export function ChainOfThought({ messages }: ChainOfThoughtProps) {
   if (!messages.length) {
     return null;
   }
 
   return (
-    <div className="space-y-3">
-      {messages.map((message) => {
+    <ChainOfThoughtUI className="rounded-lg border border-border bg-card p-4">
+      {messages.map((message, index) => {
         const meta =
           KIND_METADATA[message.kind || "default"] ?? KIND_METADATA.default;
         const timestamp =
@@ -35,25 +45,36 @@ export function ChainOfThought({ messages }: ChainOfThoughtProps) {
             ? new Date(message.timestamp).toLocaleTimeString([], {
                 hour: "2-digit",
                 minute: "2-digit",
+                second: "2-digit",
               })
             : undefined;
 
         return (
-          <SystemMessage
+          <ChainOfThoughtStep
             key={message.id}
-            title={timestamp ? `${meta.title} · ${timestamp}` : meta.title}
-            variant={meta.variant}
-            size="md"
-            className="shadow-sm"
+            defaultOpen={index === messages.length - 1}
           >
-            <StructuredMessageContent
-              content={message.message}
-              kind={message.kind}
-              isStreaming={false}
-            />
-          </SystemMessage>
+            <ChainOfThoughtTrigger leftIcon={meta.icon}>
+              <span className="font-medium">{meta.title}</span>
+              {timestamp && (
+                <span className="ml-2 text-xs text-muted-foreground">
+                  {timestamp}
+                </span>
+              )}
+            </ChainOfThoughtTrigger>
+            <ChainOfThoughtContent>
+              <ChainOfThoughtItem>
+                <StructuredMessageContent
+                  content={message.message}
+                  kind={message.kind}
+                  isStreaming={false}
+                  className="text-sm"
+                />
+              </ChainOfThoughtItem>
+            </ChainOfThoughtContent>
+          </ChainOfThoughtStep>
         );
       })}
-    </div>
+    </ChainOfThoughtUI>
   );
 }

@@ -15,6 +15,8 @@ from agentic_fleet.api.entities.routes import get_entity_discovery
 from agentic_fleet.api.responses.schemas import ResponseCompleteResponse, ResponseRequest
 from agentic_fleet.api.responses.service import ResponseAggregator
 from agentic_fleet.utils.logging import sanitize_for_log
+from agentic_fleet.utils.message_classifier import should_use_fast_path
+from agentic_fleet.workflow.fast_path import create_fast_path_workflow
 
 router = APIRouter()
 
@@ -43,6 +45,12 @@ async def _stream_response(entity_id: str, input_data: str | dict[str, Any]) -> 
 
     if not message:
         raise HTTPException(status_code=400, detail="Input message is required")
+
+    # Check if message should use fast-path
+    use_fast_path = should_use_fast_path(message)
+    if use_fast_path:
+        logging.info(f"[RESPONSES] Using fast-path for simple query: {message[:100]}")
+        workflow = create_fast_path_workflow()
 
     # Create aggregator
     aggregator = ResponseAggregator()
