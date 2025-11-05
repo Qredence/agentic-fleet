@@ -49,7 +49,7 @@ async def _stream_response(entity_id: str, input_data: str | dict[str, Any]) -> 
     # Check if message should use fast-path
     use_fast_path = should_use_fast_path(message)
     if use_fast_path:
-        logging.info(f"[RESPONSES] Using fast-path for simple query: {message[:100]}")
+        logging.info(f"[RESPONSES] Using fast-path for simple query: {sanitize_for_log(message[:100])}")
         workflow = create_fast_path_workflow()
 
     # Create aggregator
