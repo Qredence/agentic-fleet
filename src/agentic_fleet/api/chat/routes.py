@@ -5,15 +5,16 @@ import logging
 import os
 import time
 from collections.abc import AsyncGenerator
-from typing import Any, no_type_check
+from typing import Any
 
-from fastapi import APIRouter, HTTPException, Request
+from fastapi import APIRouter, Request
 from fastapi.responses import StreamingResponse
 
 from agentic_fleet.api.chat.schemas import ChatMessagePayload, ChatRequest, ChatResponse
 from agentic_fleet.api.chat.service import get_workflow_service
 from agentic_fleet.api.conversations.persistence_adapter import get_persistence_adapter
 from agentic_fleet.api.conversations.service import ConversationNotFoundError
+from agentic_fleet.api.exceptions import ConversationMissingError
 from agentic_fleet.models.events import RunsWorkflow
 from agentic_fleet.utils.logging import sanitize_for_log
 from agentic_fleet.utils.message_classifier import should_use_fast_path
@@ -42,7 +43,7 @@ async def _stream_chat_response(req: ChatRequest) -> StreamingResponse:
         conversation = await persistence_adapter.get(req.conversation_id)
     except ConversationNotFoundError as exc:
         logger.error(f"[CHAT] Conversation not found: {req.conversation_id}")
-        raise HTTPException(status_code=404, detail="Conversation not found") from exc
+        raise ConversationMissingError(req.conversation_id) from exc
 
     # Save user message
     await persistence_adapter.add_message(req.conversation_id, role="user", content=req.message)
@@ -371,7 +372,7 @@ async def chat(req: ChatRequest, request: Request) -> ChatResponse | StreamingRe
     try:
         await persistence_adapter.get(req.conversation_id)
     except ConversationNotFoundError as exc:
-        raise HTTPException(status_code=404, detail="Conversation not found") from exc
+        raise ConversationMissingError(req.conversation_id) from exc
 
     await persistence_adapter.add_message(req.conversation_id, role="user", content=req.message)
 
@@ -417,7 +418,6 @@ async def chat(req: ChatRequest, request: Request) -> ChatResponse | StreamingRe
 router.post("/chat", response_model=None)(chat)
 
 
-@no_type_check
 @router.get("/chat/stream")
 async def chat_stream_get(message: str, conversation_id: str = "default") -> StreamingResponse:
     """GET endpoint for SSE streaming (for testing with EventSource).

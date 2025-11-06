@@ -6,14 +6,14 @@ import json
 import logging
 from collections.abc import AsyncGenerator
 from dataclasses import asdict
-from typing import no_type_check
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, Field
 
+from agentic_fleet.api.exceptions import WorkflowExecutionError, WorkflowNotFoundError
 from agentic_fleet.api.workflows.magentic_service import get_workflow_service
-from agentic_fleet.utils.factory import WorkflowFactory
+from agentic_fleet.utils.factory import get_workflow_factory
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
@@ -52,22 +52,21 @@ class WorkflowStatusResponse(BaseModel):
 # YAML-based workflow routes (legacy)
 async def list_workflows() -> dict[str, list[dict[str, object]]]:
     """Return all workflows available in the YAML configuration."""
-    factory = WorkflowFactory()
+    factory = await get_workflow_factory()
     return {"workflows": await factory.list_available_workflows_async()}
 
 
 async def get_workflow(workflow_id: str) -> dict[str, object]:
     """Return detailed configuration for a specific workflow."""
-    factory = WorkflowFactory()
+    factory = await get_workflow_factory()
     try:
         config = await factory.get_workflow_config_async(workflow_id)
     except ValueError as exc:
-        raise HTTPException(status_code=404, detail=str(exc)) from exc
+        raise WorkflowNotFoundError(workflow_id) from exc
     return asdict(config)
 
 
 # Magentic workflow routes (active workflow management)
-@no_type_check
 @router.post("/workflows/instances", response_model=CreateWorkflowResponse, status_code=201)
 async def create_workflow(request: CreateWorkflowRequest) -> CreateWorkflowResponse:
     """
@@ -83,10 +82,9 @@ async def create_workflow(request: CreateWorkflowRequest) -> CreateWorkflowRespo
         return CreateWorkflowResponse(workflow_id=workflow_id, task=request.task, status="created")
     except Exception as e:
         logger.error(f"Failed to create workflow: {e}", exc_info=True)
-        raise HTTPException(status_code=500, detail=f"Failed to create workflow: {e!s}") from None
+        raise WorkflowExecutionError(str(e)) from None
 
 
-@no_type_check
 @router.get("/workflows/instances/{workflow_id}/stream")
 async def stream_workflow(workflow_id: str) -> StreamingResponse:
     """
@@ -136,7 +134,6 @@ async def stream_workflow(workflow_id: str) -> StreamingResponse:
     )
 
 
-@no_type_check
 @router.get("/workflows/instances/{workflow_id}/status", response_model=WorkflowStatusResponse)
 async def get_workflow_status(workflow_id: str) -> WorkflowStatusResponse:
     """
@@ -150,12 +147,11 @@ async def get_workflow_status(workflow_id: str) -> WorkflowStatusResponse:
     status = await service.get_workflow_status(workflow_id)
 
     if "error" in status:
-        raise HTTPException(status_code=404, detail=status["error"])
+        raise WorkflowNotFoundError(workflow_id, status["error"])
 
     return WorkflowStatusResponse(**status)
 
 
-@no_type_check
 @router.get("/workflows/instances", response_model=dict[str, list[dict[str, object]]])
 async def list_active_workflows() -> dict[str, list[dict[str, object]]]:
     """
@@ -169,7 +165,6 @@ async def list_active_workflows() -> dict[str, list[dict[str, object]]]:
     return {"workflows": workflows}
 
 
-@no_type_check
 @router.delete("/workflows/instances/{workflow_id}", status_code=204)
 async def delete_workflow(workflow_id: str) -> None:
     """
@@ -183,12 +178,11 @@ async def delete_workflow(workflow_id: str) -> None:
     deleted = await service.delete_workflow(workflow_id)
 
     if not deleted:
-        raise HTTPException(status_code=404, detail="Workflow not found")
+        raise WorkflowNotFoundError(workflow_id)
 
     return None
 
 
-@no_type_check
 @router.post("/workflows/instances/{workflow_id}/pause", response_model=WorkflowStatusResponse)
 async def pause_workflow(workflow_id: str) -> WorkflowStatusResponse:
     """
@@ -201,12 +195,11 @@ async def pause_workflow(workflow_id: str) -> WorkflowStatusResponse:
     status = await service.pause_workflow(workflow_id)
 
     if "error" in status:
-        raise HTTPException(status_code=404, detail=status["error"])
+        raise WorkflowNotFoundError(workflow_id, status["error"])
 
     return WorkflowStatusResponse(**status)
 
 
-@no_type_check
 @router.post("/workflows/instances/{workflow_id}/resume")
 async def resume_workflow(workflow_id: str) -> StreamingResponse:
     """

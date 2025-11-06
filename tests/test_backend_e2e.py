@@ -47,7 +47,10 @@ def test_chat_requires_existing_conversation() -> None:
         json={"conversation_id": "missing", "message": "Hello"},
     )
     assert response.status_code == 404
-    assert response.json()["detail"] == "Conversation not found"
+    body = response.json()
+    assert "error" in body
+    assert body["error"]["code"] == "conversation_not_found"
+    assert "Conversation" in body["error"]["message"]
 
 
 def test_workflow_endpoints() -> None:

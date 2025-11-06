@@ -2,12 +2,15 @@
 
 from __future__ import annotations
 
-from typing import no_type_check
+from fastapi import APIRouter
 
-from fastapi import APIRouter, HTTPException
-
-from agentic_fleet.api.entities.schemas import DiscoveryResponse, EntityInfo, EntityReloadResponse
+from agentic_fleet.api.entities.schemas import (
+    EntityDetailResponse,
+    EntityListResponse,
+    EntityReloadResponse,
+)
 from agentic_fleet.api.entities.service import EntityDiscovery
+from agentic_fleet.api.exceptions import EntityNotFoundError
 
 router = APIRouter()
 
@@ -27,9 +30,8 @@ def get_entity_discovery() -> EntityDiscovery:
     return _entity_discovery
 
 
-@no_type_check
-@router.get("/entities", response_model=DiscoveryResponse)
-async def list_entities() -> DiscoveryResponse:
+@router.get("/entities", response_model=EntityListResponse)
+async def list_entities() -> EntityListResponse:
     """List all available entities (workflows).
 
     Returns:
@@ -37,12 +39,11 @@ async def list_entities() -> DiscoveryResponse:
     """
     discovery = get_entity_discovery()
     entities = await discovery.list_entities_async()
-    return DiscoveryResponse(entities=entities)
+    return EntityListResponse(entities=entities)
 
 
-@no_type_check
-@router.get("/entities/{entity_id}", response_model=EntityInfo)
-async def get_entity_info(entity_id: str) -> EntityInfo:
+@router.get("/entities/{entity_id}", response_model=EntityDetailResponse)
+async def get_entity_info(entity_id: str) -> EntityDetailResponse:
     """Get detailed information about a specific entity.
 
     Args:
@@ -58,10 +59,9 @@ async def get_entity_info(entity_id: str) -> EntityInfo:
     try:
         return await discovery.get_entity_info_async(entity_id)
     except ValueError as exc:
-        raise HTTPException(status_code=404, detail=str(exc)) from exc
+        raise EntityNotFoundError(entity_id) from exc
 
 
-@no_type_check
 @router.post("/entities/{entity_id}/reload", response_model=EntityReloadResponse)
 async def reload_entity(entity_id: str) -> EntityReloadResponse:
     """Reload entity configuration without restarting the server.
@@ -84,4 +84,4 @@ async def reload_entity(entity_id: str) -> EntityReloadResponse:
             message=f"Entity '{entity_id}' reloaded successfully",
         )
     except ValueError as exc:
-        raise HTTPException(status_code=404, detail=str(exc)) from exc
+        raise EntityNotFoundError(entity_id) from exc

@@ -13,11 +13,11 @@ from __future__ import annotations
 from collections.abc import AsyncGenerator
 
 import pytest
-from fastapi import HTTPException
 from pydantic import ValidationError
 
 import agentic_fleet.api.chat.service as service_module
 from agentic_fleet.api.chat.schemas import ChatMessagePayload, ChatRequest, ChatResponse
+from agentic_fleet.api.exceptions import WorkflowExecutionError
 from agentic_fleet.api.workflows.service import (
     StubMagenticFleetWorkflow,
     WorkflowEvent,
@@ -114,7 +114,7 @@ class TestWorkflowService:
         assert result == "Keep"
 
     @pytest.mark.asyncio
-    async def test_execute_workflow_raises_http_exception_on_error(self) -> None:
+    async def test_execute_workflow_raises_domain_exception_on_error(self) -> None:
         service = service_module.WorkflowService()
 
         # Create a mock workflow that raises an exception
@@ -127,10 +127,10 @@ class TestWorkflowService:
         service._workflow_cache["magentic_fleet"] = FailingWorkflow()  # type: ignore[arg-type]
 
         try:
-            with pytest.raises(HTTPException) as exc_info:
+            with pytest.raises(WorkflowExecutionError) as exc_info:
                 await service.execute_workflow("Test")
-            assert exc_info.value.status_code == 500
-            assert exc_info.value.detail == "An error occurred while processing your request"
+            # Domain exception exposes message via str(exc)
+            assert "An error occurred while processing" in str(exc_info.value)
         finally:
             service._workflow_cache.clear()  # Clean up for subsequent tests
 
