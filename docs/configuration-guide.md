@@ -478,8 +478,6 @@ update `REMOVED_LOG_CHARS` in `logging_sanitize.py` and extend tests in
 
 ---
 
----
-
 ### Fast-Path Optimization
 
 **Available Since**: 0.5.6

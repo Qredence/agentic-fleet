@@ -114,7 +114,7 @@ npx shadcn@latest add https://www.prompt-kit.com/c/chain-of-thought.json
 ```
 
 **Configuration**: The `components.json` file was updated to remove the unsupported `registries` field for compatibility with Prompt Kit and shadcn CLI.  
-> Note: The `registries` field was deprecated by the shadcn CLI as of v1.2.0 ([see changelog](https://github.com/shadcn-ui/ui/releases)), and must be removed to avoid installation errors with new component sources.
+> Note: The `registries` field is no longer supported by the shadcn CLI ([see releases](https://github.com/shadcn-ui/ui/releases)), and may cause installation errors with new component sources if present.
 
 ## Backend Integration
 
