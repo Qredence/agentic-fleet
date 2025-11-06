@@ -6,8 +6,7 @@ import logging
 from collections.abc import AsyncGenerator
 from typing import Any
 
-from fastapi import HTTPException
-
+from agentic_fleet.api.exceptions import WorkflowExecutionError
 from agentic_fleet.api.workflows.service import (
     create_magentic_fleet_workflow as _deprecated_workflow_alias,
 )
@@ -72,7 +71,7 @@ class WorkflowService:
             The final workflow result as a string
 
         Raises:
-            HTTPException: If workflow execution fails
+            WorkflowExecutionError: If workflow execution fails
         """
         workflow = await self.get_workflow()
         try:
@@ -80,9 +79,7 @@ class WorkflowService:
             return await self.process_workflow_events(events)
         except Exception as exc:
             logger.error("Workflow execution failed", exc_info=True)
-            raise HTTPException(
-                status_code=500, detail="An error occurred while processing your request"
-            ) from exc
+            raise WorkflowExecutionError("An error occurred while processing your request") from exc
 
     async def process_workflow_events(self, events: AsyncGenerator[WorkflowEvent, None]) -> str:
         """Process workflow events and aggregate the result.

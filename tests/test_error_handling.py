@@ -23,7 +23,9 @@ async def test_invalid_entity_id() -> None:
         )
         assert resp.status_code == 404
         data = resp.json()
-        assert "detail" in data
+        assert "error" in data
+        assert data["error"]["code"] == "entity_not_found"
+        assert "invalid_entity_id" in data["error"]["message"]
 
 
 @pytest.mark.asyncio
@@ -132,5 +134,6 @@ async def test_entity_not_found_error_message() -> None:
         resp = await client.get("/v1/entities/nonexistent")
         assert resp.status_code == 404
         data = resp.json()
-        assert "detail" in data
-        assert "nonexistent" in data["detail"].lower()
+        assert "error" in data
+        assert data["error"]["code"] == "entity_not_found"
+        assert "nonexistent" in data["error"]["message"].lower()

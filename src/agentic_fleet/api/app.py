@@ -4,7 +4,6 @@ import logging
 import uuid
 from collections.abc import Awaitable, Callable
 from pathlib import Path
-from typing import no_type_check
 
 from fastapi import FastAPI, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
@@ -15,6 +14,7 @@ from agentic_fleet.api.approvals.routes import router as approvals_router
 from agentic_fleet.api.chat.routes import router as chat_router
 from agentic_fleet.api.conversations.routes import router as conversations_router
 from agentic_fleet.api.entities.routes import router as entities_router
+from agentic_fleet.api.exceptions import register_exception_handlers
 from agentic_fleet.api.responses.routes import router as responses_router
 from agentic_fleet.api.system.routes import router as system_router
 from agentic_fleet.api.workflows.routes import router as workflows_router
@@ -73,7 +73,6 @@ def create_app() -> FastAPI:
     )
 
     # Add explicit OPTIONS handlers to resolve preflight 400 responses
-    @no_type_check
     @app.options("/{path:path}")
     async def preflight_handler(path: str) -> dict[str, str]:
         """Handle CORS preflight requests."""
@@ -91,6 +90,9 @@ def create_app() -> FastAPI:
     # Register new OpenAI-compatible endpoints
     app.include_router(entities_router, prefix="/v1")
     app.include_router(responses_router, prefix="/v1")
+
+    # Register centralized exception handlers
+    register_exception_handlers(app)
 
     # Mount static files for production builds (UI directory)
     # Only mount if UI directory exists and we're in production mode

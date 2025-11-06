@@ -58,7 +58,6 @@ def _extract_reasoning_from_contents(contents: Any) -> str | None:
             if isinstance(content, TextReasoningContent):
                 return content.text if hasattr(content, "text") else None
     except (TypeError, AttributeError):
-        # It's not iterable or contents have unexpected attributes; treat as no reasoning found
         pass
 
     return None

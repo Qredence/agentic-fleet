@@ -15,6 +15,7 @@ except ImportError:
     pass  # dotenv not available, rely on system/env vars
 
 from agentic_fleet.models.events import RunsWorkflow, WorkflowEvent
+from agentic_fleet.utils.factory import get_workflow_factory
 from agentic_fleet.utils.logging_sanitize import sanitize_log_value
 
 DEFAULT_WORKFLOW_ID = "magentic_fleet"
@@ -121,9 +122,7 @@ async def create_workflow(
         )
 
     try:
-        from agentic_fleet.utils.factory import WorkflowFactory
-
-        factory = WorkflowFactory()
+        factory = await get_workflow_factory()
         workflow = await factory.create_from_yaml_async(workflow_id)
         logger.info(
             "Created workflow '%s' from YAML configuration",

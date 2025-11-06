@@ -28,13 +28,13 @@ class PersistenceAdapter:
 
     def __init__(
         self,
-        persistence_service: ConversationPersistenceService | None,
+        persistence_service: ConversationPersistenceService,
         fallback_store: ConversationStore | None = None,
     ) -> None:
         """Initialize persistence adapter.
 
         Args:
-            persistence_service: SQLite persistence service, or None when persistence disabled
+            persistence_service: SQLite persistence service
             fallback_store: Optional in-memory store for fallback when persistence disabled
         """
         self._persistence = persistence_service
@@ -49,12 +49,6 @@ class PersistenceAdapter:
         Returns:
             Created conversation
         """
-        # Use fallback store if persistence is disabled
-        if self._persistence is None:
-            if self._fallback is None:
-                raise RuntimeError("Persistence disabled and no fallback store available")
-            return await self._fallback.create(title)
-        
         workflow_id = "magentic_fleet"  # Default workflow
         conv_id = await self._persistence.create_conversation(
             workflow_id=workflow_id, metadata={"title": title or "Untitled"}
@@ -73,12 +67,6 @@ class PersistenceAdapter:
         Returns:
             List of conversations ordered by most recent first
         """
-        # Use fallback store if persistence is disabled
-        if self._persistence is None:
-            if self._fallback is None:
-                raise RuntimeError("Persistence disabled and no fallback store available")
-            return await self._fallback.list()
-        
         from agentic_fleet.persistence.repositories import ConversationRepository
 
         async with self._persistence.db_manager.connection() as db:
@@ -120,12 +108,6 @@ class PersistenceAdapter:
         Raises:
             ConversationNotFoundError: If conversation doesn't exist
         """
-        # Use fallback store if persistence is disabled
-        if self._persistence is None:
-            if self._fallback is None:
-                raise RuntimeError("Persistence disabled and no fallback store available")
-            return await self._fallback.get(conversation_id)
-        
         from agentic_fleet.api.conversations.service import ConversationNotFoundError
         from agentic_fleet.persistence.repositories import ConversationRepository
 
@@ -188,12 +170,6 @@ class PersistenceAdapter:
         Returns:
             Created message
         """
-        # Use fallback store if persistence is disabled
-        if self._persistence is None:
-            if self._fallback is None:
-                raise RuntimeError("Persistence disabled and no fallback store available")
-            return await self._fallback.add_message(conversation_id, role, content, reasoning)
-        
         message = await self._persistence.add_message(
             conversation_id=conversation_id,
             role=role,
@@ -219,12 +195,6 @@ class PersistenceAdapter:
         Returns:
             Formatted conversation history string
         """
-        # Use fallback store if persistence is disabled
-        if self._persistence is None:
-            if self._fallback is None:
-                raise RuntimeError("Persistence disabled and no fallback store available")
-            return await self._fallback.get_formatted_history(conversation_id, max_messages)
-        
         history = await self._persistence.get_conversation_history(
             conversation_id, include_reasoning=False
         )
@@ -258,7 +228,7 @@ def create_persistence_adapter() -> PersistenceAdapter:
         from agentic_fleet.api.conversations.service import get_store
 
         return PersistenceAdapter(
-            persistence_service=None,
+            persistence_service=None,  # type: ignore
             fallback_store=get_store(),
         )
 

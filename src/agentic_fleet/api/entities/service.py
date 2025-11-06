@@ -6,7 +6,7 @@ import logging
 from collections.abc import Callable, Coroutine
 from typing import Any, TypeVar
 
-from agentic_fleet.api.entities.schemas import EntityInfo, InputSchema
+from agentic_fleet.api.entities.schemas import EntityDetailResponse, InputSchema
 from agentic_fleet.api.workflows import service as workflows_service
 from agentic_fleet.utils.factory import WorkflowFactory
 from agentic_fleet.utils.logging import sanitize_for_log
@@ -23,13 +23,13 @@ class EntityDiscovery:
 
     def __init__(self, workflow_factory: WorkflowFactory | None = None) -> None:
         self._factory = workflow_factory or WorkflowFactory()
-        self._entity_cache: dict[str, EntityInfo] = {}
+        self._entity_cache: dict[str, EntityDetailResponse] = {}
         self._workflow_cache: dict[str, Any] = {}
 
     # ---------------------- Synchronous public API ---------------------- #
-    def list_entities(self) -> list[EntityInfo]:  # pragma: no cover - exercised via tests
+    def list_entities(self) -> list[EntityDetailResponse]:  # pragma: no cover - exercised via tests
         """List entities using synchronous factory API (test/backward compat path)."""
-        entities: list[EntityInfo] = []
+        entities: list[EntityDetailResponse] = []
         try:
             workflows = self._factory.list_available_workflows()
         except Exception:  # Fallback to async if sync unavailable
@@ -44,7 +44,7 @@ class EntityDiscovery:
                 entities.append(info)
         return entities
 
-    def get_entity_info(self, entity_id: str) -> EntityInfo:  # pragma: no cover
+    def get_entity_info(self, entity_id: str) -> EntityDetailResponse:  # pragma: no cover
         """Get entity info synchronously (test/backward compat path)."""
         if entity_id in self._entity_cache:
             return self._entity_cache[entity_id]
@@ -95,8 +95,8 @@ class EntityDiscovery:
         return workflow
 
     # ---------------------- Asynchronous implementation ----------------- #
-    async def list_entities_async(self) -> list[EntityInfo]:
-        entities: list[EntityInfo] = []
+    async def list_entities_async(self) -> list[EntityDetailResponse]:
+        entities: list[EntityDetailResponse] = []
         workflows = await self._factory.list_available_workflows_async()
         for wf in workflows:
             entity_id = wf["id"]
@@ -108,7 +108,7 @@ class EntityDiscovery:
                 entities.append(info)
         return entities
 
-    async def get_entity_info_async(self, entity_id: str) -> EntityInfo:
+    async def get_entity_info_async(self, entity_id: str) -> EntityDetailResponse:
         if entity_id in self._entity_cache:
             return self._entity_cache[entity_id]
         try:
@@ -167,7 +167,9 @@ class EntityDiscovery:
             "Use the '*_async' variant instead."
         )
 
-    def _create_entity_info(self, entity_id: str, workflow_dict: dict[str, Any]) -> EntityInfo:
+    def _create_entity_info(
+        self, entity_id: str, workflow_dict: dict[str, Any]
+    ) -> EntityDetailResponse:
         """Create EntityInfo from workflow dictionary.
 
         Args:
@@ -194,7 +196,7 @@ class EntityDiscovery:
             required=["input"],
         )
 
-        return EntityInfo(
+        return EntityDetailResponse(
             id=entity_id,
             name=workflow_dict.get("name", entity_id),
             description=workflow_dict.get("description", ""),

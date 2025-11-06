@@ -41,10 +41,10 @@ single source of truth for cross-cutting rules; subdirectory guides drill into d
 
 - **Setup**: `make install` then `make frontend-install`. Use `make dev-setup` for the bundled flow.
 - **Daily loop**: Run `make dev` for full-stack work or `make backend` / `make frontend-dev` to focus
-  on one side. The backend reads configuration from `.env` and the packaged `src/agentic_fleet/workflow.yaml` (or a path supplied via `AF_WORKFLOW_CONFIG`).
+  on one side. The backend reads configuration from `.env` and the packaged `src/agentic_fleet/workflows.yaml` (or a path supplied via `AF_WORKFLOW_CONFIG`).
 - **CLI**: `uv run agentic-fleet` (aliased to `uv run fleet`) exposes scripted interactions and quick
   workflow checks. Add new commands under `src/agentic_fleet/cli/`.
-- **Config overrides**: Point `AF_WORKFLOW_CONFIG` to an absolute YAML file if you need an alternate workflow set. Otherwise edit `src/agentic_fleet/workflow.yaml`. Avoid committing environment-specific overrides.
+- **Config overrides**: Point `AF_WORKFLOW_CONFIG` to an absolute YAML file if you need an alternate workflow set. Otherwise edit `src/agentic_fleet/workflows.yaml`. Avoid committing environment-specific overrides.
 
 ## Coding Standards
 

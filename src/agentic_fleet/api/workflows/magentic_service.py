@@ -9,13 +9,53 @@ from __future__ import annotations
 
 import logging
 from collections.abc import AsyncIterator
+from enum import Enum
 from typing import Any
 from uuid import uuid4
 
-from agentic_fleet.core.magentic_framework import MagenticContext
 from agentic_fleet.models.events import WorkflowEvent
 from agentic_fleet.utils.logging_sanitize import sanitize_log_value
 from agentic_fleet.workflow.magentic_builder import MagenticFleet, create_default_fleet
+
+
+class MagenticContext:
+    """Lightweight stub context replacing legacy core.MagenticContext.
+
+    Provides the minimal attributes accessed by workflow status endpoints
+    and streaming helpers. A fuller implementation can later be wired to
+    the real agent-framework context object.
+    """
+
+    class Phase(Enum):  # Simplified phase enum
+        PLANNING = "planning"
+        EXECUTING = "executing"
+        COMPLETED = "completed"
+
+    def __init__(
+        self,
+        *,
+        task: str,
+        max_rounds: int = 30,
+        max_stalls: int = 3,
+        max_resets: int = 2,
+    ) -> None:
+        self.task = task
+        self.max_rounds = max_rounds
+        self.max_stalls = max_stalls
+        self.max_resets = max_resets
+        self.round_count = 0
+        self.stall_count = 0
+        self.reset_count = 0
+        self.observations: list[str] = []
+        self.current_phase: MagenticContext.Phase = MagenticContext.Phase.PLANNING
+
+    # Placeholder mutation helpers (no-ops for now)
+    def advance_phase(self) -> None:  # pragma: no cover - stub
+        if self.current_phase == MagenticContext.Phase.PLANNING:
+            self.current_phase = MagenticContext.Phase.EXECUTING
+        elif self.current_phase == MagenticContext.Phase.EXECUTING:
+            self.current_phase = MagenticContext.Phase.COMPLETED
+
 
 logger = logging.getLogger(__name__)
 

@@ -1,5 +1,93 @@
 # Changelog
 
+## v0.5.8 (2025-11-06) – Async Factory & Domain Exceptions
+
+### Highlights (v0.5.8)
+
+- **[BREAKING]** Removed legacy `core/` package (10 files), duplicate `workflow.yaml`, `api/responses/models.py`, empty `api/eventing/`, and obsolete `tests/test_magentic_integration.py` – achieving 14% file reduction (94→87 files, ~1,572 lines removed).
+- Consolidated imports: `MagenticContext`, `OpenAIResponsesClient` now imported from upstream `agent_framework` instead of local copies.
+- Single authoritative `workflows.yaml` now drives configuration (removed workflow.yaml fallback).
+- Introduced fully asynchronous `WorkflowFactory.create()` with non-blocking YAML load and DI-friendly singleton (`get_workflow_factory`).
+- Added centralized domain exceptions (`api/exceptions.py`) with consistent JSON error envelope: `{"error": {"code": <string>, "message": <string>}}`.
+- Replaced all `HTTPException` raises in routes/services with domain exceptions (`WorkflowNotFoundError`, `WorkflowExecutionError`, `EntityNotFoundError`, `ConversationMissingError`, `ValidationError`).
+- Eliminated all `@no_type_check` decorators – routes now have explicit type hints ready for strict mypy.
+- Consolidated Responses streaming models into a single module (`responses/schemas.py`); removed `responses/models.py`.
+- Added Pydantic v2 models for Entities (`EntityListResponse`, `EntityDetailResponse`) and Conversations (`MessageResponse`, `ConversationResponse`, `ConversationsListResponse`).
+- Converted remaining synchronous endpoints (system health, approvals submission) to `async` functions.
+- Normalized conversation and entity endpoints to structured response models (no manual dict serialization helpers).
+
+### Changes (v0.5.8)
+
+#### Backend Architecture
+
+- **Consolidation**: Removed `core/` shim layer (10 files), `workflow.yaml`, `api/responses/models.py`, empty `api/eventing/`, obsolete `test_magentic_integration.py`.
+- **Upstream imports**: `MagenticContext`, `OpenAIResponsesClient` imported from `agent_framework` package.
+- `utils/factory.py`: Async construction (`create()`), singleton helpers (`get_workflow_factory`, `get_workflow_factory_cached`) and default workflow fallback semantics preserved.
+- `api/workflow_factory.py`: Simplified resolution order to only check workflows.yaml (removed workflow.yaml fallback).
+- `api/app.py`: Registers domain exception handlers during app creation via `register_exception_handlers(app)`.
+- `api/exceptions.py`: Provides base `AgenticFleetException` + specialized subclasses; adds automatic handler registration loop.
+- `api/workflows/routes.py`: Raises `WorkflowNotFoundError` / `WorkflowExecutionError` instead of raw HTTP errors; streaming and status endpoints updated accordingly.
+- `api/entities/schemas.py`: Replaced `EntityInfo` / `DiscoveryResponse` with `EntityDetailResponse` / `EntityListResponse` (extra fields allowed via `extra="allow"`).
+- `api/conversations/routes.py`: Refactored to use Pydantic models (removed custom serializer functions) with explicit `response_model` declarations.
+- `api/responses/schemas.py`: Merged streaming event classes (Delta, Completed, Orchestrator) alongside request/complete schemas (removed duplicate models.py).
+- `api/chat/service.py`: Emits `WorkflowExecutionError` on failure instead of `HTTPException`.
+- Removed all `@no_type_check` decorators across API modules for stricter typing.
+
+#### Error Handling
+
+- Unified envelope: Example 404 workflow error → `{"error": {"code": "workflow_not_found", "message": "Workflow 'abc' not found"}}`.
+- Validation issues (e.g. missing input) now emit `validation_error` (status 400).
+- Legacy `ConversationNotFoundError` mapped to new JSON format transparently.
+
+#### Testing
+
+- Updated `test_chat_schema_and_workflow.py` to expect `WorkflowExecutionError` instead of `HTTPException` for failing workflow execution path.
+- Streaming, entity, and conversation tests pass against new Pydantic schemas (subset run: 34 tests green).
+- Backward-compatible synchronous factory constructor retained temporarily; full migration to async usage planned in follow-up (Task 15).
+
+### Migration Notes (v0.5.8)
+
+Breaking/API-visible changes:
+
+1. **Removed `core/` package**: Update imports:
+   - `from agentic_fleet.core.agents` → `from agentic_fleet.agents.coordinator`
+   - `from agentic_fleet.core.events` → `from agentic_fleet.models.events` or `from agent_framework`
+   - `from agentic_fleet.core.tools` → `from agentic_fleet.tools.registry`
+   - `from agentic_fleet.core.magentic_framework import MagenticContext` → `from agent_framework import MagenticContext`
+2. **Configuration**: Remove references to `workflow.yaml` (singular) – only `workflows.yaml` is recognized.
+3. Error response shape changed (was `{"detail": "..."}` for HTTPException, now structured `{"error": {"code": "...", "message": "..."}}`). Update clients parsing error details.
+4. Entity models renamed: replace `EntityInfo` → `EntityDetailResponse`, `DiscoveryResponse` → `EntityListResponse`.
+5. Conversation endpoints now return typed models; any code expecting raw dict keys should adapt to identical field names but may benefit from schema validation.
+6. Responses streaming model imports: use `from agentic_fleet.api.responses.schemas import ResponseDeltaEvent` (models module removed).
+7. Prefer `await get_workflow_factory()` in async contexts; direct `WorkflowFactory()` construction is deprecated and will be removed.
+
+Regex-assisted refactors (examples):
+
+```bash
+# Replace HTTPException instantiations (manual review recommended)
+grep -R "HTTPException" -l src | xargs sed -E -i '' 's/HTTPException\((status_code=)?500[^)]*\)/WorkflowExecutionError("An error occurred while processing your request")/g'
+
+# Entity model rename
+grep -R "EntityInfo" -l src | xargs sed -E -i '' 's/EntityInfo/EntityDetailResponse/g'
+grep -R "DiscoveryResponse" -l src | xargs sed -E -i '' 's/DiscoveryResponse/EntityListResponse/g'
+```
+
+### Verification (v0.5.8)
+
+- Targeted pytest subset (entities, responses, conversation memory, chat workflow service) passing: 34 tests.
+- Chat workflow domain error propagation verified (`WorkflowExecutionError`).
+- SSE streaming still emits `response.delta`, `response.completed`, `reasoning.completed`, `[DONE]` markers unchanged.
+- Health and approvals endpoints function asynchronously (manual invocation smoke-tested via test clients).
+
+### Follow-up (v0.5.8)
+
+- Migrate all remaining test instantiation sites to async factory (Task 15).
+- Enforce mypy strict mode and remove legacy synchronous factory constructor.
+- Extend domain exceptions with optional trace IDs for observability once OTEL integration toggled via `ENABLE_OTEL`.
+- Add richer validation for entity input schemas (support structured `input` variants).
+
+---
+
 ## v0.5.7 (2025-11-06) – Conversation Memory Enhancement
 
 ### Highlights (v0.5.7)

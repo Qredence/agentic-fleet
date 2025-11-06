@@ -3,7 +3,7 @@
 Configuration resolution order:
 1. AF_WORKFLOW_CONFIG environment variable (absolute path)
 2. config/workflows.yaml (repo/deploy-level override)
-3. Package default agentic_fleet/workflows.yaml, falling back to workflow.yaml
+3. Package default agentic_fleet/workflows.yaml
 """
 
 from __future__ import annotations
@@ -44,7 +44,7 @@ class WorkflowFactory:
         Priority:
         1. AF_WORKFLOW_CONFIG environment variable (absolute path)
         2. config/workflows.yaml (repo/deploy-level override)
-        3. Package default agentic_fleet/workflow.yaml
+        3. Package default agentic_fleet/workflows.yaml
         """
         # Priority 1: Environment variable
         env_path = os.getenv("AF_WORKFLOW_CONFIG")
@@ -58,26 +58,25 @@ class WorkflowFactory:
         if repo_config.exists():
             return repo_config
 
-        # Priority 3: Packaged defaults (prefer plural, then singular)
-        for candidate in ("workflows.yaml", "workflow.yaml"):
-            try:
-                with importlib.resources.path("agentic_fleet", candidate) as pkg_path:
-                    if Path(pkg_path).exists():
-                        return Path(pkg_path)
-            except (ModuleNotFoundError, FileNotFoundError):
-                continue
+        # Priority 3: Packaged default workflows.yaml
+        try:
+            with importlib.resources.path("agentic_fleet", "workflows.yaml") as pkg_path:
+                if Path(pkg_path).exists():
+                    return Path(pkg_path)
+        except (ModuleNotFoundError, FileNotFoundError):
+            # If packaged config isn't found, try next fallback location(s).
+            pass
 
         # Fallback: try relative to this file (developer installs)
-        for local in ("workflows.yaml", "workflow.yaml"):
-            default_path = Path(__file__).parent.parent / local
-            if default_path.exists():
-                return default_path
+        default_path = Path(__file__).parent.parent / "workflows.yaml"
+        if default_path.exists():
+            return default_path
 
         raise FileNotFoundError(
             "No workflow configuration found. Checked:\n"
             "  1. AF_WORKFLOW_CONFIG environment variable\n"
             "  2. config/workflows.yaml\n"
-            "  3. Packaged defaults: agentic_fleet/(workflows.yaml|workflow.yaml)"
+            "  3. Packaged default: agentic_fleet/workflows.yaml"
         )
 
     def _load_config(self) -> dict[str, Any]:
