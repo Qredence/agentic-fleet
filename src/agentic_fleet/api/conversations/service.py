@@ -15,6 +15,7 @@ class ConversationMessage:
     role: MessageRole
     content: str
     created_at: int = field(default_factory=lambda: int(time.time()))
+    reasoning: str | None = None  # Optional reasoning trace from gpt-5-mini
 
 
 @dataclass(slots=True)
@@ -55,10 +56,12 @@ class ConversationStore:
             raise ConversationNotFoundError(conversation_id) from exc
 
     def add_message(
-        self, conversation_id: str, role: MessageRole, content: str
+        self, conversation_id: str, role: MessageRole, content: str, reasoning: str | None = None
     ) -> ConversationMessage:
         conversation = self.get(conversation_id)
-        message = ConversationMessage(id=str(uuid.uuid4()), role=role, content=content)
+        message = ConversationMessage(
+            id=str(uuid.uuid4()), role=role, content=content, reasoning=reasoning
+        )
         conversation.messages.append(message)
         return message
 

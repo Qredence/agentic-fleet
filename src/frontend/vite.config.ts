@@ -19,4 +19,43 @@ export default defineConfig({
       },
     },
   },
+  build: {
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          // Core React libraries
+          "vendor-react": ["react", "react-dom", "react/jsx-runtime"],
+          // State management
+          "vendor-state": ["zustand", "@tanstack/react-query"],
+          // UI component library (radix-ui primitives)
+          "vendor-ui": [
+            "@radix-ui/react-avatar",
+            "@radix-ui/react-collapsible",
+            "@radix-ui/react-hover-card",
+            "@radix-ui/react-slot",
+            "@radix-ui/react-tooltip",
+          ],
+          // Markdown rendering
+          "vendor-markdown": [
+            "react-markdown",
+            "remark-gfm",
+            "remark-breaks",
+            "marked",
+          ],
+          // Syntax highlighting for code blocks
+          "vendor-syntax": ["react-syntax-highlighter", "shiki"],
+          // Icons and animations
+          "vendor-icons": ["lucide-react", "framer-motion", "motion"],
+          // Utilities
+          "vendor-utils": [
+            "clsx",
+            "tailwind-merge",
+            "class-variance-authority",
+          ],
+        },
+      },
+    },
+    // Target chunk size of 800KB to accommodate extensive vendor splitting
+    chunkSizeWarningLimit: 800,
+  },
 });

@@ -16,6 +16,8 @@ export const useChatStore = create<ChatStore>((set, get) => ({
   currentAgentId: undefined,
   currentStreamingMessageId: undefined,
   currentStreamingTimestamp: undefined,
+  currentReasoningContent: undefined,
+  currentReasoningStreaming: false,
   orchestratorMessages: [],
   isLoading: false,
   error: null,
@@ -219,7 +221,13 @@ export const useChatStore = create<ChatStore>((set, get) => ({
             currentStreamingMessage: "",
             currentStreamingMessageId: undefined,
             currentStreamingTimestamp: undefined,
+            currentReasoningContent: undefined,
+            currentReasoningStreaming: false,
           });
+        },
+        onReasoningCompleted: (reasoning) => {
+          // Store reasoning for the current streaming message
+          get().completeReasoning(reasoning);
         },
       });
     } catch (error) {
@@ -230,6 +238,8 @@ export const useChatStore = create<ChatStore>((set, get) => ({
         currentStreamingMessage: "",
         currentStreamingMessageId: undefined,
         currentStreamingTimestamp: undefined,
+        currentReasoningContent: undefined,
+        currentReasoningStreaming: false,
       });
     }
   },
@@ -287,6 +297,22 @@ export const useChatStore = create<ChatStore>((set, get) => ({
     set({ conversationId: id });
   },
 
+  appendReasoningDelta: (reasoning: string) => {
+    const state = get();
+    set({
+      currentReasoningContent:
+        (state.currentReasoningContent || "") + reasoning,
+      currentReasoningStreaming: true,
+    });
+  },
+
+  completeReasoning: (reasoning: string) => {
+    set({
+      currentReasoningContent: reasoning,
+      currentReasoningStreaming: false,
+    });
+  },
+
   completeStreaming: () => {
     const state = get();
     if (state.currentStreamingMessage) {
@@ -296,6 +322,8 @@ export const useChatStore = create<ChatStore>((set, get) => ({
         content: state.currentStreamingMessage,
         createdAt: state.currentStreamingTimestamp ?? Date.now(),
         agentId: state.currentAgentId,
+        reasoning: state.currentReasoningContent,
+        reasoningStreaming: false,
       };
 
       set({
@@ -304,6 +332,8 @@ export const useChatStore = create<ChatStore>((set, get) => ({
         currentAgentId: undefined,
         currentStreamingMessageId: undefined,
         currentStreamingTimestamp: undefined,
+        currentReasoningContent: undefined,
+        currentReasoningStreaming: false,
         isLoading: false,
       });
     } else {
@@ -311,6 +341,8 @@ export const useChatStore = create<ChatStore>((set, get) => ({
         isLoading: false,
         currentStreamingMessageId: undefined,
         currentStreamingTimestamp: undefined,
+        currentReasoningContent: undefined,
+        currentReasoningStreaming: false,
       });
     }
   },
@@ -322,6 +354,8 @@ export const useChatStore = create<ChatStore>((set, get) => ({
       currentAgentId: undefined,
       currentStreamingMessageId: undefined,
       currentStreamingTimestamp: undefined,
+      currentReasoningContent: undefined,
+      currentReasoningStreaming: false,
       orchestratorMessages: [],
       isLoading: false,
       error: null,

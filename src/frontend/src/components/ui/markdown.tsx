@@ -1,10 +1,17 @@
 import { cn } from "@/lib/utils";
 import { marked } from "marked";
-import { memo, useId, useMemo } from "react";
+import { lazy, memo, Suspense, useId, useMemo } from "react";
 import ReactMarkdown, { type Components } from "react-markdown";
 import remarkBreaks from "remark-breaks";
 import remarkGfm from "remark-gfm";
-import { CodeBlock, CodeBlockCode } from "./code-block";
+
+// Lazy load CodeBlock for better bundle splitting
+const CodeBlock = lazy(() =>
+  import("./code-block").then((mod) => ({ default: mod.CodeBlock })),
+);
+const CodeBlockCode = lazy(() =>
+  import("./code-block").then((mod) => ({ default: mod.CodeBlockCode })),
+);
 
 export type MarkdownProps = {
   children: string;
@@ -47,9 +54,17 @@ const INITIAL_COMPONENTS: Partial<Components> = {
     const language = extractLanguage(className);
 
     return (
-      <CodeBlock className={className}>
-        <CodeBlockCode code={children as string} language={language} />
-      </CodeBlock>
+      <Suspense
+        fallback={
+          <div className="animate-pulse rounded-lg bg-muted p-4">
+            <div className="h-20 w-full rounded bg-muted-foreground/10" />
+          </div>
+        }
+      >
+        <CodeBlock className={className}>
+          <CodeBlockCode code={children as string} language={language} />
+        </CodeBlock>
+      </Suspense>
     );
   },
   pre: function PreComponent({ children }) {

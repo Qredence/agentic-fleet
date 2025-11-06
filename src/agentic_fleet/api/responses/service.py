@@ -116,6 +116,19 @@ class ResponseAggregator:
                     final_content = result_text if result_text else self._accumulated_content
                     self._accumulated_content = final_content
 
+                    # Check for reasoning content
+                    reasoning = (
+                        event_data.get("reasoning") if isinstance(event_data, dict) else None
+                    )
+
+                    # Emit reasoning.completed event if reasoning is present
+                    if reasoning:
+                        reasoning_event = {
+                            "type": "reasoning.completed",
+                            "reasoning": str(reasoning),
+                        }
+                        yield f"data: {json.dumps(reasoning_event)}\n\n"
+
                     completed_event = ResponseCompletedEvent(
                         type="response.completed",
                         response=ResponseMessage(

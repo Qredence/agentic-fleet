@@ -56,7 +56,7 @@ T = TypeVar("T")
 P = ParamSpec("P")
 
 
-def async_timer(func: Callable[P, Awaitable[T]]) -> Callable[P, Awaitable[T]]:
+def async_timer[**P, T](func: Callable[P, Awaitable[T]]) -> Callable[P, Awaitable[T]]:
     """Decorator to time async function execution with structured logging.
 
     Logs execution time with structured fields for observability:

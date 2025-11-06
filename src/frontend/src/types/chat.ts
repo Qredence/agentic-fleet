@@ -85,6 +85,10 @@ export interface ChatState {
   currentAgentId?: string;
   currentStreamingMessageId?: string;
   currentStreamingTimestamp?: number;
+  /** Current reasoning content being accumulated from gpt-5-mini */
+  currentReasoningContent?: string;
+  /** Whether reasoning is currently streaming */
+  currentReasoningStreaming: boolean;
   orchestratorMessages: OrchestratorMessage[];
   isLoading: boolean;
   error: string | null;
@@ -103,6 +107,10 @@ export interface OrchestratorMessage {
 export interface ChatActions {
   sendMessage: (message: string) => Promise<void>;
   appendDelta: (delta: string, agentId?: string) => void;
+  /** Append reasoning delta token from gpt-5-mini */
+  appendReasoningDelta: (reasoning: string) => void;
+  /** Complete reasoning stream and attach to current message */
+  completeReasoning: (reasoning: string) => void;
   addMessage: (message: Omit<ChatMessage, "id" | "createdAt">) => void;
   addOrchestratorMessage: (message: string, kind?: string) => void;
   setLoading: (loading: boolean) => void;

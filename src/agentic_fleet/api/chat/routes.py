@@ -12,7 +12,9 @@ from fastapi.responses import StreamingResponse
 
 from agentic_fleet.api.chat.schemas import ChatMessagePayload, ChatRequest, ChatResponse
 from agentic_fleet.api.chat.service import get_workflow_service
-from agentic_fleet.api.conversations.service import ConversationNotFoundError, get_store
+from agentic_fleet.api.conversations.persistence_adapter import get_persistence_adapter
+from agentic_fleet.api.conversations.service import ConversationNotFoundError
+from agentic_fleet.models.events import RunsWorkflow
 from agentic_fleet.utils.logging import sanitize_for_log
 from agentic_fleet.utils.message_classifier import should_use_fast_path
 from agentic_fleet.workflow.fast_path import create_fast_path_workflow
@@ -33,31 +35,47 @@ async def _stream_chat_response(req: ChatRequest) -> StreamingResponse:
         f"[CHAT] Starting chat request - conversation_id: {req.conversation_id}, message: {req.message[:50]}..."
     )
 
-    store = get_store()
+    persistence_adapter = get_persistence_adapter()
     workflow_service = get_workflow_service()
 
     try:
-        store.get(req.conversation_id)
+        conversation = await persistence_adapter.get(req.conversation_id)
     except ConversationNotFoundError as exc:
         logger.error(f"[CHAT] Conversation not found: {req.conversation_id}")
         raise HTTPException(status_code=404, detail="Conversation not found") from exc
 
-    store.add_message(req.conversation_id, role="user", content=req.message)
+    # Save user message
+    await persistence_adapter.add_message(req.conversation_id, role="user", content=req.message)
     logger.info(f"[CHAT] User message saved. Elapsed: {time.time() - start_time:.2f}s")
+
+    # Get conversation history for context
+    conversation_history = await persistence_adapter.get_formatted_history(
+        req.conversation_id, max_messages=10
+    )
+    logger.info(
+        f"[CHAT] Loaded conversation history: {len(conversation_history)} chars, "
+        f"{len(conversation.messages)} total messages"
+    )
 
     async def generate_stream() -> AsyncGenerator[str, None]:
         # Send initial keep-alive comment to establish connection
         yield ": keep-alive\n\n"
         # Accumulate global content (legacy single assistant message)
         accumulated_content = ""
+        # Accumulate reasoning content from gpt-5-mini
+        accumulated_reasoning: str | None = None
         # Per-agent buffers for segmented output
         agent_buffers: dict[str, str] = {}
         # Track orchestrator reasoning messages if enabled
         reasoning_events: list[dict[str, Any]] = []
         # Check if message should use fast-path
+        workflow_start: float | None = None
         use_fast_path = should_use_fast_path(req.message)
+        workflow: RunsWorkflow
         if use_fast_path:
-            logger.info(f"[CHAT] Using fast-path for simple query: {sanitize_for_log(req.message)[:100]}")
+            logger.info(
+                f"[CHAT] Using fast-path for simple query: {sanitize_for_log(req.message)[:100]}"
+            )
             workflow = create_fast_path_workflow()
         else:
             workflow_start = time.time()
@@ -67,10 +85,19 @@ async def _stream_chat_response(req: ChatRequest) -> StreamingResponse:
             logger.info(f"[CHAT] Workflow retrieved. Elapsed: {workflow_elapsed:.3f}s")
 
         try:
-            # Get workflow events stream
+            # Get workflow events stream with conversation history
             logger.info(f"[CHAT] Starting workflow.run() (fast_path={use_fast_path})...")
             run_start = time.time()
-            events = workflow.run(req.message)
+            # Inject conversation history into workflow
+            message_with_context = req.message
+            if conversation_history and not use_fast_path:
+                # For non-fast-path workflows, prepend history
+                message_with_context = (
+                    f"Previous conversation:\n{conversation_history}\n\n"
+                    f"User's current message: {req.message}"
+                )
+                logger.info(f"[CHAT] Injected {len(conversation_history)} chars of history")
+            events = workflow.run(message_with_context)
             logger.info(f"[CHAT] workflow.run() returned. Elapsed: {time.time() - run_start:.3f}s")
 
             event_count = 0
@@ -159,10 +186,24 @@ async def _stream_chat_response(req: ChatRequest) -> StreamingResponse:
                     # Agent completed its message - send completion signal to frontend
                     agent_id = event_data.get("agent_id") if isinstance(event_data, dict) else None
                     content = event_data.get("content", "") if isinstance(event_data, dict) else ""
+                    reasoning = (
+                        event_data.get("reasoning") if isinstance(event_data, dict) else None
+                    )
+
                     # If event has empty content but we buffered per-agent deltas, fallback
                     if not content and agent_id and agent_id in agent_buffers:
                         content = agent_buffers[agent_id]
                     logger.info(f"[CHAT] Agent {agent_id} completed message: {len(content)} chars")
+
+                    # Emit reasoning if present
+                    if reasoning:
+                        accumulated_reasoning = reasoning  # Store for final persistence
+                        reasoning_payload: dict[str, Any] = {
+                            "type": "reasoning.completed",
+                            "reasoning": reasoning,
+                        }
+                        yield f"data: {json.dumps(reasoning_payload)}\n\n"
+                        logger.debug(f"[CHAT] Emitted reasoning: {len(reasoning)} chars")
 
                     # Forward the agent completion event to frontend
                     completion_payload: dict[str, Any] = {
@@ -171,9 +212,9 @@ async def _stream_chat_response(req: ChatRequest) -> StreamingResponse:
                         "content": content,
                     }
                     yield f"data: {json.dumps(completion_payload)}\n\n"
-                    # Persist segmented agent message to conversation store (prefix with agent id)
+                    # Persist segmented agent message to persistence (prefix with agent id)
                     if agent_id and content:
-                        store.add_message(
+                        await persistence_adapter.add_message(
                             req.conversation_id,
                             role="assistant",
                             content=f"[{agent_id}] {content}",
@@ -182,12 +223,27 @@ async def _stream_chat_response(req: ChatRequest) -> StreamingResponse:
                 elif event_type == "message.done":
                     # Extract result from message.done event if present
                     result = event_data.get("result", "") if isinstance(event_data, dict) else ""
+                    reasoning = (
+                        event_data.get("reasoning") if isinstance(event_data, dict) else None
+                    )
 
                     # Debug: Log the result content
                     if result:
                         logger.debug(f"[CHAT] message.done result preview: {result[:200]}...")
                         logger.debug(
                             f"[CHAT] accumulated_content so far: {len(accumulated_content)} chars"
+                        )
+
+                    # Emit reasoning if present
+                    if reasoning:
+                        accumulated_reasoning = reasoning  # Store for final persistence
+                        reasoning_done_payload: dict[str, Any] = {
+                            "type": "reasoning.completed",
+                            "reasoning": reasoning,
+                        }
+                        yield f"data: {json.dumps(reasoning_done_payload)}\n\n"
+                        logger.info(
+                            f"[CHAT] Emitted reasoning in message.done: {len(reasoning)} chars"
                         )
 
                     # If result is provided but no deltas were sent, use the result as final content
@@ -208,7 +264,10 @@ async def _stream_chat_response(req: ChatRequest) -> StreamingResponse:
                             f"already has {len(accumulated_content)} chars - using accumulated_content"
                         )
 
-                    workflow_elapsed = time.time() - workflow_start
+                    workflow_started_at = (
+                        workflow_start if workflow_start is not None else run_start
+                    )
+                    workflow_elapsed = time.time() - workflow_started_at
                     total_time = time.time() - start_time
                     ttft_str = (
                         f"{first_token_time - start_time:.3f}s" if first_token_time else "N/A"
@@ -223,16 +282,23 @@ async def _stream_chat_response(req: ChatRequest) -> StreamingResponse:
                         f"Total time: {total_time:.3f}s"
                     )
 
-                    # Save final message to store
+                    # Save final message to persistence
                     store_save_start = time.time()
-                    # Persist final aggregated assistant message (legacy combined output)
-                    store.add_message(
-                        req.conversation_id, role="assistant", content=accumulated_content
+                    # Persist final aggregated assistant message
+                    await persistence_adapter.add_message(
+                        req.conversation_id,
+                        role="assistant",
+                        content=accumulated_content,
+                        reasoning=accumulated_reasoning,
                     )
                     store_save_elapsed = time.time() - store_save_start
                     logger.info(
                         f"[CHAT] Message saved to store. Elapsed: {store_save_elapsed:.3f}s"
                     )
+                    if accumulated_reasoning:
+                        logger.info(
+                            f"[CHAT] Reasoning persisted: {len(accumulated_reasoning)} chars"
+                        )
 
                     # Send completion signal with proper event type
                     # Frontend expects: {type: "response.completed"} or [DONE]
@@ -255,7 +321,7 @@ async def _stream_chat_response(req: ChatRequest) -> StreamingResponse:
                         yield f"data: {json.dumps(reasoning_payload)}\n\n"
                         # Persist reasoning as system message for later retrieval
                         if text:
-                            store.add_message(
+                            await persistence_adapter.add_message(
                                 req.conversation_id,
                                 role="system",
                                 content=f"[orchestrator:{kind}] {text}",
@@ -299,20 +365,36 @@ async def chat(req: ChatRequest, request: Request) -> ChatResponse | StreamingRe
         return await _stream_chat_response(req)
 
     # Otherwise, return standard JSON response
-    store = get_store()
+    persistence_adapter = get_persistence_adapter()
     workflow_service = get_workflow_service()
 
     try:
-        store.get(req.conversation_id)
+        await persistence_adapter.get(req.conversation_id)
     except ConversationNotFoundError as exc:
         raise HTTPException(status_code=404, detail="Conversation not found") from exc
 
-    store.add_message(req.conversation_id, role="user", content=req.message)
+    await persistence_adapter.add_message(req.conversation_id, role="user", content=req.message)
 
-    assistant_message = await workflow_service.execute_workflow(req.message)
-    store.add_message(req.conversation_id, role="assistant", content=assistant_message)
+    # Get conversation history for context
+    conversation_history = await persistence_adapter.get_formatted_history(
+        req.conversation_id, max_messages=10
+    )
 
-    conversation = store.get(req.conversation_id)
+    # Inject history into message
+    message_with_context = req.message
+    if conversation_history:
+        message_with_context = (
+            f"Previous conversation:\n{conversation_history}\n\n"
+            f"User's current message: {req.message}"
+        )
+
+    assistant_message = await workflow_service.execute_workflow(message_with_context)
+    await persistence_adapter.add_message(
+        req.conversation_id, role="assistant", content=assistant_message
+    )
+
+    # Reload conversation with new messages
+    conversation = await persistence_adapter.get(req.conversation_id)
 
     response_messages = [
         ChatMessagePayload(

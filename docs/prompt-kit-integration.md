@@ -113,7 +113,8 @@ npx shadcn@latest add https://www.prompt-kit.com/c/reasoning.json
 npx shadcn@latest add https://www.prompt-kit.com/c/chain-of-thought.json
 ```
 
-**Configuration**: The `components.json` file was updated to remove the unsupported `registries` field for compatibility with Prompt Kit and shadcn CLI.  
+**Configuration**: The `components.json` file was updated to remove the unsupported `registries` field for compatibility with Prompt Kit and shadcn CLI.
+
 > Note: The `registries` field is no longer supported by the shadcn CLI ([see releases](https://github.com/shadcn-ui/ui/releases)), and may cause installation errors with new component sources if present.
 
 ## Backend Integration
@@ -306,8 +307,9 @@ Verify:
 
 ## Change History
 
-- **v0.5.7**: Initial Prompt Kit integration
-  - ChainOfThought component with collapsible steps
-  - ReasoningDisplay component with dual modes
-  - Type system updates for reasoning tokens
-  - Frontend quality improvements
+Integrated as part of the v0.5.6 release:
+
+- ChainOfThought component with collapsible steps
+- ReasoningDisplay component (single final reasoning trace, no incremental deltas)
+- Type system updates adding optional `reasoning` field and `reasoning.completed` event
+- Frontend quality improvements and auto-close reasoning behavior
