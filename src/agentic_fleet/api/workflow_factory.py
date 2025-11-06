@@ -64,6 +64,7 @@ class WorkflowFactory:
                 if Path(pkg_path).exists():
                     return Path(pkg_path)
         except (ModuleNotFoundError, FileNotFoundError):
+            # If packaged config isn't found, try next fallback location(s).
             pass
 
         # Fallback: try relative to this file (developer installs)
