@@ -26,7 +26,7 @@ state management, and development workflow for the SPA.
 ## Development Workflow
 
 - Install dependencies from the repo root: `make frontend-install` (runs `npm install` inside
-  `src/frontend/src`). Use `make dev-setup` to bundle backend + frontend prerequisites.
+  `src/frontend`). Use `make dev-setup` to bundle backend + frontend prerequisites.
 - Local dev: `make dev` to launch backend + frontend together, or `make frontend-dev` to run only the
   SPA on <http://localhost:5173>.
 - Production build: `make build-frontend` (internally calls `npm run build` and copies assets into
@@ -63,8 +63,8 @@ state management, and development workflow for the SPA.
 
 ## Testing & Quality
 
-- Unit and component tests: run `npm run test` (Vitest). Specs live alongside components (`*.test.tsx`)
-  or in dedicated `__tests__` folders (e.g. `stores/__tests__/chatStore.test.ts`).
+- Unit and component tests: run `npm run test` (Vitest) from `src/frontend`. Specs live alongside
+  components (`*.test.tsx`) or in dedicated `__tests__` folders (e.g. `stores/__tests__/chatStore.test.ts`).
 - Linting & formatting: `npm run lint` executes ESLint with the same config as CI; Prettier runs via
   IDE integration. Keep formatting-only changes separate from logic updates.
 - End-to-end flows: `make test-e2e` (Playwright) requires both backend and frontend running via

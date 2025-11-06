@@ -7,7 +7,7 @@ single source of truth for cross-cutting rules; subdirectory guides drill into d
 ## Invariants (DO NOT VIOLATE)
 
 - Always invoke Python tooling through `uv run …` (e.g. `uv run pytest`, `uv run ruff`). For JavaScript
-  tasks, execute commands from `src/frontend/src/`.
+  tasks, execute commands from `src/frontend/`.
 - Keep workflows, docs, and tests synchronized. Any new or renamed agent/workflow must update
   `src/agentic_fleet/AGENTS.md`, `tests/AGENTS.md`, `docs/AGENTS.md`, and `src/frontend/AGENTS.md`.
 - Configuration remains YAML-driven. Do not hardcode model IDs, prompts, or tool lists in Python or
@@ -20,7 +20,7 @@ single source of truth for cross-cutting rules; subdirectory guides drill into d
 | Command                 | Purpose                                                              |
 | ----------------------- | -------------------------------------------------------------------- |
 | `make install`          | Sync Python dependencies via uv (rerun after `uv.lock` updates).     |
-| `make frontend-install` | Install frontend dependencies in `src/frontend/src`.                 |
+| `make frontend-install` | Install frontend dependencies in `src/frontend`.                     |
 | `make dev`              | Launch backend (port 8000) and frontend (port 5173) with hot reload. |
 | `make check`            | Run lint (`ruff`), format (`black`), type-check (`mypy`), and tests. |
 | `make test-config`      | Instantiate `WorkflowFactory` to validate YAML + agent wiring.       |
@@ -63,7 +63,7 @@ single source of truth for cross-cutting rules; subdirectory guides drill into d
   focused runs and `uv run pytest --cov=src/agentic_fleet --cov-report=term-missing` when tracking
   coverage.
 - Start both services (`make dev`) before `make test-e2e` to execute Playwright flows.
-- `npm run test` from `src/frontend/src` drives Vitest suites. Snapshot updates require reviewer
+- `npm run test` from `src/frontend` drives Vitest suites. Snapshot updates require reviewer
   acknowledgement.
 - Load testing lives under `tests/load_testing/`; run `make load-test-smoke|load|stress` with the API
   running locally.

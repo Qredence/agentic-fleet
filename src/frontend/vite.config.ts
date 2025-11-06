@@ -20,6 +20,8 @@ export default defineConfig({
     },
   },
   build: {
+    outDir: path.resolve(__dirname, "../agentic_fleet/ui"),
+    emptyOutDir: true,
     rollupOptions: {
       output: {
         manualChunks: {

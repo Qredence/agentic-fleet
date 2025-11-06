@@ -63,7 +63,7 @@ sync:
 
 frontend-install:
 	@echo "Installing frontend dependencies..."
-	cd src/frontend/src && npm install
+	cd src/frontend && npm install
 	@echo "✓ Frontend dependencies installed"
 
 # Run application
@@ -83,7 +83,7 @@ dev:
 		trap "kill 0" EXIT INT TERM; \
 		uv run uvicorn agentic_fleet.server:app --reload --port 8000 --log-level info & \
 		sleep 2; \
-		cd src/frontend/src && npm run dev & \
+		cd src/frontend && npm run dev & \
 		wait'
 
 
@@ -95,12 +95,12 @@ backend:
 # Frontend dev server only
 frontend-dev:
 	@echo "Starting frontend on http://localhost:5173"
-	cd src/frontend/src && npm run dev
+	cd src/frontend && npm run dev
 
 # Build frontend for production
 build-frontend:
 	@echo "Building frontend for production..."
-	cd src/frontend/src && npm run build
+	cd src/frontend && npm run build
 	@echo "✓ Frontend built to src/agentic_fleet/ui"
 
 # Testing
@@ -116,7 +116,7 @@ test-e2e:
 
 test-frontend:
 	@echo "Running frontend unit tests..."
-	cd src/frontend/src && npm test
+	cd src/frontend && npm test
 
 test-automation:
 	@echo "Running automated test suite with quality monitoring..."
