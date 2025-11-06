@@ -28,13 +28,13 @@ class PersistenceAdapter:
 
     def __init__(
         self,
-        persistence_service: ConversationPersistenceService,
+        persistence_service: ConversationPersistenceService | None,
         fallback_store: ConversationStore | None = None,
     ) -> None:
         """Initialize persistence adapter.
 
         Args:
-            persistence_service: SQLite persistence service
+            persistence_service: SQLite persistence service, or None when persistence disabled
             fallback_store: Optional in-memory store for fallback when persistence disabled
         """
         self._persistence = persistence_service
@@ -258,7 +258,7 @@ def create_persistence_adapter() -> PersistenceAdapter:
         from agentic_fleet.api.conversations.service import get_store
 
         return PersistenceAdapter(
-            persistence_service=None,  # type: ignore
+            persistence_service=None,
             fallback_store=get_store(),
         )
 
