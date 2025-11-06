@@ -504,7 +504,7 @@ class MagenticFleet:
         async for event in self.orchestrator.execute(task):
             yield event
 
-def create_default_fleet(config_path: str = "workflow.yaml") -> MagenticFleet:
+def create_default_fleet(config_path: str = "workflows.yaml") -> MagenticFleet:
     """
     Factory function to create default Magentic fleet.
     Following Microsoft Agent Framework patterns.

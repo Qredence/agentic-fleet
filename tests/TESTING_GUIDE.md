@@ -684,10 +684,10 @@ make test
 
 ```bash
 # Check configuration file exists
-ls -la src/agentic_fleet/workflow.yaml
+ls -la src/agentic_fleet/workflows.yaml
 
 # Validate YAML syntax
-python -c "import yaml; yaml.safe_load(open('src/agentic_fleet/workflow.yaml'))"
+python -c "import yaml; yaml.safe_load(open('src/agentic_fleet/workflows.yaml'))"
 
 # Run configuration validation
 make test-config
