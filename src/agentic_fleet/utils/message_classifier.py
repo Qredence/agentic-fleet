@@ -145,9 +145,9 @@ def _get_classifier() -> MessageClassifier:
     """
     global _classifier
     if _classifier is None:
-        # Parse boolean: accept "1"/"0" or "true"/"false" (case-insensitive)
+        # Parse boolean: accept "1"/"0", "true"/"false", or "yes"/"no" (case-insensitive)
         enabled_str = os.getenv("ENABLE_FAST_PATH", "1").lower()
-        enabled = enabled_str in {"1", "true"}
+        enabled = enabled_str in {"1", "true", "yes"}
         max_length = int(os.getenv("FAST_PATH_MAX_LENGTH", "100"))
         _classifier = MessageClassifier(max_length=max_length, enabled=enabled)
     return _classifier
