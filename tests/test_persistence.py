@@ -309,7 +309,7 @@ async def test_reasoning_repository(db_manager):
             reasoning_text="Detailed trace",
             effort="high",
             verbosity="verbose",
-            model="gpt-4o-mini",
+            model="gpt-5-mini",
             metadata={"tokens": 1000},
         )
 
