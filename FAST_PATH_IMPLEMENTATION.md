@@ -47,7 +47,7 @@ Implemented fast-path routing for AgenticFleet to address the 45+ second Time-To
 ### Environment Variables
 
 ```bash
-# Enable/disable fast-path (default: disabled)
+# Enable/disable fast-path (default: enabled)
 ENABLE_FAST_PATH=1
 
 # Maximum message length for fast-path eligibility
@@ -65,7 +65,7 @@ OPENAI_BASE_URL=https://custom.openai.endpoint.com
 
 ## Implementation Details
 
-### OpenAI Client Configuration
+### Agent Framework OpenAI Client Configuration
 
 The implementation uses the Agent Framework OpenAI client (`OpenAIResponsesClient` from `agent_framework.openai`):
 
@@ -74,9 +74,13 @@ from agent_framework.openai import OpenAIResponsesClient
 import os
 
 client = OpenAIResponsesClient(
+    model_id=os.environ.get("FAST_PATH_MODEL", "gpt-5-mini"),
     api_key=os.environ["OPENAI_API_KEY"],
     base_url=os.environ.get("OPENAI_BASE_URL"),  # Optional
 )
+```
+
+**Note**: This implementation uses the Agent Framework OpenAI client, NOT the standard OpenAI SDK. The environment variables are:
 
 - `OPENAI_API_KEY` (required)
 - `OPENAI_BASE_URL` (optional, for custom endpoints)

@@ -18,4 +18,6 @@
     "lib": "@/lib",
     "hooks": "@/hooks"
   }
+  // Note: The 'registries' field has been removed for compatibility with Prompt Kit
+  // and the shadcn CLI. Prompt Kit components are installed via direct URLs instead.
 }
