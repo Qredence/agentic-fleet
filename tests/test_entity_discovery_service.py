@@ -8,7 +8,7 @@ import pytest
 
 from agentic_fleet.api.entities.service import EntityDiscovery
 from agentic_fleet.api.models.workflow_config import WorkflowConfig
-from agentic_fleet.api.workflow_factory import WorkflowFactory
+from agentic_fleet.utils.factory import WorkflowFactory
 
 
 @pytest.fixture

@@ -21,7 +21,7 @@ from agentic_fleet.utils.message_classifier import should_use_fast_path
 from agentic_fleet.workflow.fast_path import create_fast_path_workflow
 
 logger = logging.getLogger(__name__)
-router = APIRouter()
+router: APIRouter = APIRouter()
 
 
 TRUTHY = {"1", "true", "yes", "on"}

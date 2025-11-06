@@ -8,8 +8,8 @@ from typing import Any
 from agent_framework import MagenticBuilder
 from agent_framework.openai import OpenAIResponsesClient
 
+from agentic_fleet.models import WorkflowConfig
 from agentic_fleet.models.events import RunsWorkflow, WorkflowEvent
-from agentic_fleet.models.workflow import WorkflowConfig
 from agentic_fleet.workflow.events import WorkflowEventBridge
 
 logger = logging.getLogger(__name__)

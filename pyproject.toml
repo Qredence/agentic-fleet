@@ -233,6 +233,16 @@ disallow_untyped_defs = false
 module = "agentic_fleet.api.app"
 warn_unused_ignores = false
 
+[[tool.mypy.overrides]]
+module = "agentic_fleet.api.conversations.routes"
+disallow_untyped_decorators = false
+
+
+[[tool.mypy.overrides]]
+module = "aiofiles"
+ignore_missing_imports = true
+disallow_untyped_decorators = false
+
 # Tests are executable validation artifacts rather than library code; relax typing strictness
 # to prioritize production package guarantees while allowing incremental test annotation.
 [[tool.mypy.overrides]]

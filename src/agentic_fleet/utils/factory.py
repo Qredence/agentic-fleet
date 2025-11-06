@@ -29,8 +29,8 @@ from typing import Any, TypeVar, cast
 import aiofiles
 import yaml
 
+from agentic_fleet.models import WorkflowConfig
 from agentic_fleet.models.events import RunsWorkflow
-from agentic_fleet.models.workflow import WorkflowConfig
 from agentic_fleet.utils.logging import sanitize_for_log
 
 T = TypeVar("T")
@@ -66,7 +66,7 @@ class WorkflowFactory:
         Performs non-blocking file IO when loading the YAML configuration.
         """
         self = cls.__new__(cls)
-        self.config_path = cls._determine_config_path(self, config_path)  # type: ignore[arg-type]
+        self.config_path = cls._determine_config_path(self, config_path)
         async with aiofiles.open(self.config_path, encoding="utf-8") as f:
             content = await f.read()
         self._config = yaml.safe_load(content) or {}

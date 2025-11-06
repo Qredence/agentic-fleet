@@ -11,7 +11,7 @@ from agentic_fleet.api.conversations.schemas import (
 from agentic_fleet.api.conversations.service import ConversationNotFoundError
 from agentic_fleet.api.exceptions import ConversationMissingError
 
-router = APIRouter()
+router: APIRouter = APIRouter()
 
 
 @router.post("/conversations", response_model=ConversationResponse, status_code=201)
