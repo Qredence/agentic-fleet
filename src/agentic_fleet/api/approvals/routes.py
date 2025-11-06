@@ -11,7 +11,7 @@ class ApprovalDecision(BaseModel):
     reason: str | None = None
 
 
-def submit_approval(request_id: str, decision: ApprovalDecision) -> dict[str, str]:
+async def submit_approval(request_id: str, decision: ApprovalDecision) -> dict[str, str]:
     # Stub: persist decision later; emit event to stream
     return {
         "request_id": request_id,

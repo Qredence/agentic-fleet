@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 
 class InputSchema(BaseModel):
@@ -15,8 +15,10 @@ class InputSchema(BaseModel):
     required: list[str] = Field(default_factory=list, description="Required fields")
 
 
-class EntityInfo(BaseModel):
+class EntityDetailResponse(BaseModel):
     """Entity information matching OpenAI Responses API format."""
+
+    model_config = ConfigDict(extra="allow")
 
     id: str = Field(description="Entity identifier (workflow ID)")
     name: str = Field(description="Entity display name")
@@ -24,10 +26,11 @@ class EntityInfo(BaseModel):
     input_schema: InputSchema = Field(description="Input schema for the entity")
 
 
-class DiscoveryResponse(BaseModel):
+class EntityListResponse(BaseModel):
     """Response containing list of available entities."""
 
-    entities: list[EntityInfo] = Field(description="List of available entities")
+    model_config = ConfigDict(extra="allow")
+    entities: list[EntityDetailResponse] = Field(description="List of available entities")
 
 
 class EntityReloadResponse(BaseModel):

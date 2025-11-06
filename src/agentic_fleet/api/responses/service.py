@@ -6,7 +6,7 @@ import json
 import logging
 from collections.abc import AsyncGenerator
 
-from agentic_fleet.api.responses.models import (
+from agentic_fleet.api.responses.schemas import (
     OrchestratorMessageEvent,
     ResponseCompletedEvent,
     ResponseDelta,

@@ -6,12 +6,13 @@ import json
 import logging
 import time
 from collections.abc import AsyncGenerator
-from typing import Any, no_type_check
+from typing import Any
 
-from fastapi import APIRouter, HTTPException, Request
+from fastapi import APIRouter, Request
 from fastapi.responses import StreamingResponse
 
 from agentic_fleet.api.entities.routes import get_entity_discovery
+from agentic_fleet.api.exceptions import EntityNotFoundError, ValidationError
 from agentic_fleet.api.responses.schemas import ResponseCompleteResponse, ResponseRequest
 from agentic_fleet.api.responses.service import ResponseAggregator
 from agentic_fleet.utils.logging import sanitize_for_log
@@ -36,7 +37,7 @@ async def _stream_response(entity_id: str, input_data: str | dict[str, Any]) -> 
     message = input_data.get("input", "") if isinstance(input_data, dict) else str(input_data)
 
     if not message:
-        raise HTTPException(status_code=400, detail="Input message is required")
+        raise ValidationError("Input message is required")
 
     # Check if message should use fast-path
     use_fast_path = should_use_fast_path(message)
@@ -51,7 +52,7 @@ async def _stream_response(entity_id: str, input_data: str | dict[str, Any]) -> 
         try:
             workflow = await discovery.get_workflow_instance_async(entity_id)
         except ValueError as exc:
-            raise HTTPException(status_code=404, detail=f"Entity '{entity_id}' not found") from exc
+            raise EntityNotFoundError(entity_id) from exc
 
     # Create aggregator
     aggregator = ResponseAggregator()
@@ -106,13 +107,13 @@ async def _get_complete_response(
     try:
         workflow = await discovery.get_workflow_instance_async(entity_id)
     except ValueError as exc:
-        raise HTTPException(status_code=404, detail=f"Entity '{entity_id}' not found") from exc
+        raise EntityNotFoundError(entity_id) from exc
 
     # Convert input to string if needed
     message = input_data.get("input", "") if isinstance(input_data, dict) else str(input_data)
 
     if not message:
-        raise HTTPException(status_code=400, detail="Input message is required")
+        raise ValidationError("Input message is required")
 
     # Create aggregator
     aggregator = ResponseAggregator()
@@ -133,7 +134,6 @@ async def _get_complete_response(
     )
 
 
-@no_type_check
 @router.post("/responses", response_model=None)
 async def create_response(
     req: ResponseRequest, request: Request

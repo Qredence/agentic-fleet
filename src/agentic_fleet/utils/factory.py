@@ -22,9 +22,11 @@ import logging
 import os
 import warnings
 from collections.abc import Callable, Coroutine, Iterator
+from functools import lru_cache
 from pathlib import Path
 from typing import Any, TypeVar, cast
 
+import aiofiles
 import yaml
 
 from agentic_fleet.models import WorkflowConfig
@@ -45,19 +47,30 @@ DEFAULT_WORKFLOW_ID = "magentic_fleet"
 class WorkflowFactory:
     """Factory for creating workflows from YAML configuration."""
 
-    def __init__(self, config_path: Path | None = None) -> None:
-        """Initialize WorkflowFactory.
+    def __init__(self, config_path: Path | None = None) -> None:  # pragma: no cover - legacy path
+        """Synchronous initializer (deprecated).
 
-        Args:
-            config_path: Optional explicit config path. If not provided, uses
-                resolution order: env var -> packaged default.
+        Prefer ``await WorkflowFactory.create()`` for non-blocking IO. This
+        path remains temporarily to avoid hard breaks for any residual imports
+        while tests are being migrated.
         """
-
         self.config_path = self._determine_config_path(config_path)
-
-        with open(self.config_path, encoding="utf-8") as f:
+        with open(self.config_path, encoding="utf-8") as f:  # blocking fallback
             content = f.read()
-            self._config: dict[str, Any] = yaml.safe_load(content) or {}
+        self._config: dict[str, Any] = yaml.safe_load(content) or {}
+
+    @classmethod
+    async def create(cls, config_path: Path | None = None) -> WorkflowFactory:
+        """Asynchronously construct a WorkflowFactory instance.
+
+        Performs non-blocking file IO when loading the YAML configuration.
+        """
+        self = cls.__new__(cls)
+        self.config_path = cls._determine_config_path(self, config_path)
+        async with aiofiles.open(self.config_path, encoding="utf-8") as f:
+            content = await f.read()
+        self._config = yaml.safe_load(content) or {}
+        return self
 
     def _determine_config_path(self, override: Path | None) -> Path:
         """Determine which configuration path to use."""
@@ -91,13 +104,13 @@ class WorkflowFactory:
                 return Path(pkg_path)
         except (ModuleNotFoundError, FileNotFoundError) as exc:
             # Fallback: try relative to this file (development workspace)
-            default_path = Path(__file__).parent.parent.parent / "workflow.yaml"
+            default_path = Path(__file__).parent.parent.parent / "workflows.yaml"
             if default_path.exists():
                 return default_path
             raise FileNotFoundError(
                 "No workflow configuration found. Checked:\n"
                 "  1. AF_WORKFLOW_CONFIG environment variable\n"
-                "  2. Packaged default agentic_fleet/workflow.yaml"
+                "  2. Packaged default agentic_fleet/workflows.yaml"
             ) from exc
 
     def list_available_workflows(self) -> list[dict[str, Any]]:
@@ -214,8 +227,8 @@ class WorkflowFactory:
         # can be added to this dispatch map keyed by factory label.
         if factory_label == "create_magentic_fleet_workflow":
             from agentic_fleet.workflow.magentic_workflow import (
-                MagenticFleetWorkflowBuilder,
-            )  # local import to avoid cycle
+                MagenticFleetWorkflowBuilder,  # local import to avoid cycle
+            )
 
             builder = MagenticFleetWorkflowBuilder()
             return builder.build(config)
@@ -333,3 +346,38 @@ class WorkflowFactory:
             "WorkflowFactory synchronous method called inside running event loop. "
             "Use the '*_async' variant instead."
         )
+
+
+# ---------------- Singleton helpers (DI friendly) -----------------
+_factory_singleton: WorkflowFactory | None = None
+_factory_lock = asyncio.Lock()
+
+
+async def get_workflow_factory() -> WorkflowFactory:
+    """Return singleton WorkflowFactory instance, creating it asynchronously if needed."""
+    global _factory_singleton
+    if _factory_singleton is None:
+        async with _factory_lock:
+            if _factory_singleton is None:  # double-checked
+                _factory_singleton = await WorkflowFactory.create()
+    return _factory_singleton
+
+
+@lru_cache(maxsize=1)
+def get_workflow_factory_cached() -> WorkflowFactory:  # pragma: no cover - legacy sync accessor
+    """Synchronous cached accessor for cases where DI requires a sync factory.
+
+    Must be preceded by an awaited call to ``get_workflow_factory`` during startup.
+    """
+    if _factory_singleton is None:  # defensive
+        raise RuntimeError(
+            "WorkflowFactory singleton not initialized; call await get_workflow_factory() first"
+        )
+    return _factory_singleton
+
+
+__all__ = [
+    "WorkflowFactory",
+    "get_workflow_factory",
+    "get_workflow_factory_cached",
+]

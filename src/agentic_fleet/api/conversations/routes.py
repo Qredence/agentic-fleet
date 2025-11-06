@@ -1,59 +1,84 @@
 from __future__ import annotations
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter
 
 from agentic_fleet.api.conversations.persistence_adapter import get_persistence_adapter
-from agentic_fleet.api.conversations.service import (
-    Conversation,
-    ConversationMessage,
-    ConversationNotFoundError,
+from agentic_fleet.api.conversations.schemas import (
+    ConversationResponse,
+    ConversationsListResponse,
+    MessageResponse,
 )
+from agentic_fleet.api.conversations.service import ConversationNotFoundError
+from agentic_fleet.api.exceptions import ConversationMissingError
 
-router = APIRouter()
-
-
-def _serialize_message(message: ConversationMessage) -> dict[str, str | int | None]:
-    result: dict[str, str | int | None] = {
-        "id": message.id,
-        "role": message.role,
-        "content": message.content,
-        "created_at": message.created_at,
-    }
-    if message.reasoning is not None:
-        result["reasoning"] = message.reasoning
-    return result
+router: APIRouter = APIRouter()
 
 
-def _serialize_conversation(conversation: Conversation) -> dict[str, object]:
-    return {
-        "id": conversation.id,
-        "title": conversation.title,
-        "created_at": conversation.created_at,
-        "messages": [_serialize_message(msg) for msg in conversation.messages],
-    }
-
-
-async def create_conversation() -> dict[str, object]:
+@router.post("/conversations", response_model=ConversationResponse, status_code=201)
+async def create_conversation() -> ConversationResponse:
     persistence_adapter = get_persistence_adapter()
     conversation = await persistence_adapter.create()
-    return _serialize_conversation(conversation)
+    return ConversationResponse(
+        id=conversation.id,
+        title=conversation.title,
+        created_at=conversation.created_at,
+        messages=[
+            MessageResponse(
+                id=msg.id,
+                role=msg.role,
+                content=msg.content,
+                created_at=msg.created_at,
+                reasoning=msg.reasoning,
+            )
+            for msg in conversation.messages
+        ],
+    )
 
 
-async def list_conversations() -> dict[str, list[dict[str, object]]]:
+@router.get("/conversations", response_model=ConversationsListResponse)
+async def list_conversations() -> ConversationsListResponse:
     persistence_adapter = get_persistence_adapter()
-    items = [_serialize_conversation(conv) for conv in await persistence_adapter.list()]
-    return {"items": items}
+    items: list[ConversationResponse] = []
+    for conv in await persistence_adapter.list():
+        items.append(
+            ConversationResponse(
+                id=conv.id,
+                title=conv.title,
+                created_at=conv.created_at,
+                messages=[
+                    MessageResponse(
+                        id=msg.id,
+                        role=msg.role,
+                        content=msg.content,
+                        created_at=msg.created_at,
+                        reasoning=msg.reasoning,
+                    )
+                    for msg in conv.messages
+                ],
+            )
+        )
+    return ConversationsListResponse(items=items)
 
 
-async def get_conversation(conversation_id: str) -> dict[str, object]:
+@router.get("/conversations/{conversation_id}", response_model=ConversationResponse)
+async def get_conversation(conversation_id: str) -> ConversationResponse:
     persistence_adapter = get_persistence_adapter()
     try:
         conversation = await persistence_adapter.get(conversation_id)
     except ConversationNotFoundError as exc:
-        raise HTTPException(status_code=404, detail="Conversation not found") from exc
-    return _serialize_conversation(conversation)
-
-
-router.post("/conversations", status_code=201)(create_conversation)
-router.get("/conversations")(list_conversations)
-router.get("/conversations/{conversation_id}")(get_conversation)
+        raise ConversationMissingError(conversation_id) from exc
+    return ConversationResponse(
+        id=conversation.id,
+        title=conversation.title,
+        created_at=conversation.created_at,
+        messages=[
+            MessageResponse(
+                id=msg.id,
+                role=msg.role,
+                content=msg.content,
+                created_at=msg.created_at,
+                reasoning=msg.reasoning,
+            )
+            for msg in conversation.messages
+        ],
+    )

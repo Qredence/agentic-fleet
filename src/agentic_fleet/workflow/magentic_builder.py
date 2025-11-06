@@ -18,8 +18,8 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
-from agentic_fleet.api.models.workflow_config import WorkflowConfig
 from agentic_fleet.api.workflows.service import WorkflowEvent
+from agentic_fleet.models.workflow import WorkflowConfig
 from agentic_fleet.workflow.executor import WorkflowExecutor
 
 logger = logging.getLogger(__name__)
@@ -82,18 +82,9 @@ class MagenticFleetBuilder:
         """
         if not self._config:
             raise ValueError("Config must be set before manager configuration")
-
-        # Defensive: ensure fleet exists
-        if not hasattr(self._config, "fleet") or self._config.fleet is None:
-            self._config.fleet = {}
-
-        # If fleet is a dict, set 'manager' key; if object, set attribute
-        if isinstance(self._config.fleet, dict):
-            self._config.fleet["manager"] = manager_config
-        else:
-            self._config.fleet.manager = manager_config
-
-        logger.info("Manager configuration updated")
+        # Current WorkflowConfig exposes a 'manager' dict directly.
+        self._config.manager = manager_config
+        logger.info("Manager configuration updated (applied to WorkflowConfig.manager)")
         return self
 
     def with_agents(self, agents: list[str]) -> MagenticFleetBuilder:
@@ -111,17 +102,11 @@ class MagenticFleetBuilder:
         """
         if not self._config:
             raise ValueError("Config must be set before agents")
-
-        # Defensive: ensure fleet exists and is a dict/object with 'agents'
-        if not hasattr(self._config, "fleet") or self._config.fleet is None:
-            # If WorkflowConfig expects a dict, initialize as dict
-            self._config.fleet = {}
-        # If fleet is a dict, set 'agents' key; if object, set attribute
-        if isinstance(self._config.fleet, dict):
-            self._config.fleet["agents"] = agents
-        else:
-            self._config.fleet.agents = agents
-        logger.info(f"Configured {len(agents)} specialist agents")
+        # WorkflowConfig.agents already stores a mapping. Ensure the requested
+        # agent names exist (create minimal placeholder configs if missing).
+        for name in agents:
+            self._config.agents.setdefault(name, {"instructions": ""})
+        logger.info(f"Configured/verified {len(agents)} specialist agents")
         return self
 
     def with_checkpointing(self, enabled: bool = True) -> MagenticFleetBuilder:
@@ -342,7 +327,7 @@ def create_default_fleet(config_path: str = "workflows.yaml") -> MagenticFleet:
         .with_checkpointing(getattr(getattr(config, "checkpointing", None), "enabled", False))
         .with_approval_gates(getattr(getattr(config, "approval", None), "enabled", False))
         .with_callbacks(
-            [lambda event: logger.debug(f"[EVENT] {event['type']}: {event.get('data')}")]
+            [lambda event: logger.debug(f"[EVENT] {event.get('type')}: {event.get('data')}")]
         )
         .build()  # Will raise NotImplementedError until orchestrator is implemented
     )

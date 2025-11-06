@@ -5,7 +5,7 @@ from fastapi import APIRouter
 router = APIRouter()
 
 
-def health() -> dict[str, str]:
+async def health() -> dict[str, str]:
     return {"status": "ok"}
 
 
