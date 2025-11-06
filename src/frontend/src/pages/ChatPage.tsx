@@ -1,5 +1,6 @@
 import { ChainOfThought } from "@/components/chat/ChainOfThought";
 import { LoadingIndicator } from "@/components/chat/LoadingIndicator";
+import { ReasoningDisplay } from "@/components/chat/ReasoningDisplay";
 import { StructuredMessageContent } from "@/components/chat/StructuredMessageContent";
 import { Button } from "@/components/ui/button";
 import {
@@ -31,6 +32,8 @@ export function ChatPage() {
     currentAgentId,
     currentStreamingMessageId,
     currentStreamingTimestamp,
+    currentReasoningContent,
+    currentReasoningStreaming,
     orchestratorMessages,
     isLoading,
     error,
@@ -194,10 +197,32 @@ export function ChatPage() {
 
                   <div
                     className={cn(
-                      "flex w-full",
-                      isUser ? "justify-end" : "justify-start",
+                      "flex w-full flex-col gap-3",
+                      isUser ? "items-end" : "items-start",
                     )}
                   >
+                    {/* Display reasoning before message content for assistant messages */}
+                    {isAssistant &&
+                      (message.reasoning ||
+                        (isStreamingMessage && currentReasoningContent)) && (
+                        <div className="w-full">
+                          <ReasoningDisplay
+                            content={
+                              isStreamingMessage && currentReasoningContent
+                                ? currentReasoningContent
+                                : message.reasoning
+                            }
+                            isStreaming={
+                              isStreamingMessage && currentReasoningStreaming
+                            }
+                            triggerText="Model reasoning"
+                            defaultOpen={
+                              isStreamingMessage && currentReasoningStreaming
+                            }
+                          />
+                        </div>
+                      )}
+
                     <div
                       className={cn(
                         "max-w-[90%] rounded-3xl px-5 py-3 text-sm leading-relaxed shadow-none sm:max-w-[75%]",

@@ -13,6 +13,7 @@ if TYPE_CHECKING:
         MagenticAgentMessageEvent,
         MagenticFinalResultEvent,
         MagenticOrchestratorMessageEvent,
+        TextReasoningContent,
         WorkflowOutputEvent,
     )
 else:
@@ -22,6 +23,7 @@ else:
             MagenticAgentMessageEvent,
             MagenticFinalResultEvent,
             MagenticOrchestratorMessageEvent,
+            TextReasoningContent,
             WorkflowOutputEvent,
         )
     except ImportError:
@@ -30,9 +32,35 @@ else:
         MagenticAgentMessageEvent = None  # type: ignore[assignment,misc]
         MagenticFinalResultEvent = None  # type: ignore[assignment,misc]
         MagenticOrchestratorMessageEvent = None  # type: ignore[assignment,misc]
+        TextReasoningContent = None  # type: ignore[assignment,misc]
         WorkflowOutputEvent = None  # type: ignore[assignment,misc]
 
 logger = logging.getLogger(__name__)
+
+
+def _extract_reasoning_from_contents(contents: Any) -> str | None:
+    """Extract reasoning text from content list if TextReasoningContent is present.
+
+    Args:
+        contents: List of content objects (TextContent, TextReasoningContent, etc.)
+
+    Returns:
+        Reasoning text if found, None otherwise
+    """
+    if TextReasoningContent is None:
+        return None
+
+    if isinstance(contents, str) or not hasattr(contents, "__iter__"):
+        return None
+
+    try:
+        for content in contents:
+            if isinstance(content, TextReasoningContent):
+                return content.text if hasattr(content, "text") else None
+    except (TypeError, AttributeError):
+        pass
+
+    return None
 
 
 def _json_safe_value(value: Any) -> Any:
@@ -114,6 +142,12 @@ class WorkflowEventBridge:
             # Signal agent message completion - frontend should finalize this agent's message
             # This marks the end of one agent's work and allows the frontend to create a separate message
             text = event.message.text if event.message else ""
+
+            # Check for reasoning content in the message
+            reasoning = None
+            if event.message and hasattr(event.message, "contents"):
+                reasoning = _extract_reasoning_from_contents(event.message.contents)
+
             complete_event: WorkflowEvent = {
                 "type": "agent.message.complete",
                 "data": {
@@ -121,6 +155,12 @@ class WorkflowEventBridge:
                     "content": text,
                 },
             }
+
+            # Add reasoning to event data if present
+            if reasoning:
+                complete_event["data"]["reasoning"] = reasoning
+                logger.debug(f"Reasoning content found in agent message: length={len(reasoning)}")
+
             # Add OpenAI-compatible type if requested
             if openai_format:
                 complete_event["openai_type"] = "agent.message.complete"
@@ -150,12 +190,24 @@ class WorkflowEventBridge:
 
         elif isinstance(event, MagenticFinalResultEvent):
             text = event.message.text if event.message else ""
+
+            # Check for reasoning content in the final result
+            reasoning = None
+            if event.message and hasattr(event.message, "contents"):
+                reasoning = _extract_reasoning_from_contents(event.message.contents)
+
             final_event: WorkflowEvent = {
                 "type": "message.done",
                 "data": {
                     "result": text,
                 },
             }
+
+            # Add reasoning to event data if present
+            if reasoning:
+                final_event["data"]["reasoning"] = reasoning
+                logger.debug(f"Reasoning content found in final result: length={len(reasoning)}")
+
             # Add OpenAI-compatible type if requested
             if openai_format:
                 final_event["openai_type"] = "response.completed"

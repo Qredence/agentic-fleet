@@ -1,135 +1,104 @@
 # Changelog
 
-## v0.5.7 (2025-11-05)
+## v0.5.7 (2025-11-06) – Conversation Memory Enhancement
 
-### Highlights
+### Highlights (v0.5.7)
 
-- **Prompt Kit Integration**: Implemented official Prompt Kit Reasoning and ChainOfThought components for proper AI interface patterns
-- **Enhanced Orchestrator Visualization**: Chain-of-thought steps now use collapsible Prompt Kit components with icons and improved UX
-- **Reasoning Token Support**: Added type definitions and component infrastructure for future o1/o3 reasoning token display
-- **Frontend Quality**: Fixed linting issues and improved TypeScript type safety
+- Fixed conversation retrieval bug preventing empty conversations from being loaded
+- Implemented full conversation listing functionality via `PersistenceAdapter.list()`
+- Added `ConversationRepository.list_all()` for retrieving all conversations
+- Conversation history now correctly injects into workflow context for multi-turn interactions
+- Added regression test `test_empty_conversation_retrieval()` to prevent future bugs
 
-### Changes
+### Changes (v0.5.7)
 
-#### Frontend Components
+#### Backend
 
-- **ChainOfThought Component**: Replaced custom SystemMessage-based implementation with Prompt Kit ChainOfThought
-  - Collapsible steps with icons (ListChecks, Clock, Lightbulb, Info)
-  - Auto-expands latest step by default
-  - Maps orchestrator message kinds (task_ledger, progress_ledger, facts) to appropriate icons and labels
-  - Better visual hierarchy with border and card styling
+- **PersistenceAdapter.get()**: Now checks conversation table first before loading messages, allowing empty conversations to be retrieved
+- **PersistenceAdapter.list()**: Fully implemented using `ConversationRepository.list_all()`, returns conversations without loading messages for performance
+- **ConversationRepository.list_all()**: New method returning all conversations ordered by `updated_at DESC`
+- **Conversation Memory**: History formatted as "ROLE: content" pairs, prepended to current message with format "Previous conversation:\n{history}\n\nUser's current message: {message}"
+- **Metadata Extraction**: Conversation title and timestamps now extracted from conversation record instead of first message
 
-- **ReasoningDisplay Component**: Enhanced to support two modes
-  - Section-based: Multiple reasoning sections from orchestrator (existing)
-  - Content-based: Raw reasoning content from o1/o3 models (new)
-  - Auto-close behavior when streaming completes via `isStreaming` prop
-  - Markdown rendering support with truncation
+#### Tests
 
-#### Type System Updates
+- Added `test_empty_conversation_retrieval()` regression test to `test_conversation_memory.py`
+- All 18 tests passing (11 persistence + 6 conversation memory + 1 API CRUD)
+- End-to-end UI testing verified with Chrome DevTools
 
-- Added `reasoning` and `reasoningStreaming` fields to `ChatMessage`
-- Extended `SSEEventType` with `reasoning.delta` and `reasoning.completed`
-- Updated `SSEEvent` interface to include optional `reasoning` field
-- Type-safe imports fixed in markdown.tsx using `type` keyword
+#### Docs
 
-#### Prompt Kit Components
+- Updated conversation memory implementation notes
+- Documented history injection format and workflow integration
 
-- Installed official Prompt Kit Reasoning component via shadcn CLI
-- Installed official Prompt Kit ChainOfThought component via shadcn CLI
-- Fixed components.json to remove unsupported `registries` field
-- Updated response-stream.tsx with proper hook dependency and lint exemptions
+### Bug Fixes (v0.5.7)
 
-### Technical Details
+- Fixed "Conversation not found" error when retrieving newly created conversations before first message
+- Fixed conversation listing returning empty results despite existing conversations
 
-- Backend already configures `reasoning_effort` and `reasoning_verbosity` for o1/o3 models
-- Reasoning tokens not yet exposed in SSE events (planned enhancement)
-- Frontend infrastructure ready for reasoning token display when backend support is added
-- Components follow Prompt Kit patterns for auto-close, collapsibility, and markdown rendering
+### Migration Notes (v0.5.7)
 
-### Quality Improvements
+No action required. Existing conversations continue working. New conversations now properly support immediate retrieval.
 
-- Fixed ESLint warnings: added `onError` to useCallback dependencies
-- Fixed TypeScript verbatimModuleSyntax error in markdown.tsx
-- Added lint exemption for response-stream.tsx hook/component co-location
-- All frontend builds passing cleanly
+### Verification (v0.5.7)
 
-### Testing
+Production testing completed:
 
-- Frontend linting clean (no errors)
-- TypeScript compilation successful
-- Production build completed successfully (4.13s)
+- Two-turn conversation tested: "What is the Monty Hall problem?" followed by "Why should I switch? Isn't it 50-50 after the host reveals a goat?"
+- Backend logs confirmed history injection working correctly
+- Agent responses demonstrated full context awareness
+- Follow-up questions answered appropriately using previous message context
 
-### Future Enhancements
+## v0.5.6 (2025-11-06) – Reasoning Integration
 
-- Expose o1/o3 reasoning tokens in backend SSE events
-- Add reasoning.delta and reasoning.completed event handlers
-- Wire reasoning content to ReasoningDisplay content mode
-- Consider performance optimizations for large reasoning traces
+### Highlights (v0.5.6)
 
-### Documentation
+- Unified reasoning integration: backend extraction, single SSE emission (`reasoning.completed`), persistence, and dual UI surfaces (Reasoning panel + ChainOfThought).
+- Reasoning trace appears before assistant content and is stored with the message for auditability.
+- Backward compatible: models without reasoning simply omit the panel; no client changes required.
+- Stability: workflow_start timing initialization removes potential elapsed-time inconsistencies in fast-path streaming.
 
-- ReasoningDisplay includes comprehensive JSDoc with usage examples
-- ChainOfThought documented with Prompt Kit component patterns
-- Type definitions include reasoning field descriptions
+### Changes (v0.5.6)
 
-## v0.5.6 (2025-11-05)
+#### Core Backend
 
-### Highlights
+- Added reasoning trace extraction helper in workflow events.
+- Emitted a single `reasoning.completed` SSE event prior to assistant message finalization.
+- Extended conversation message persistence with optional `reasoning` field (non-breaking).
 
-- **Improved Magentic Workflow Responsiveness**: Aligned multi-agent orchestration streaming with fast-path responsiveness patterns
-- **Accumulated Content Tracking**: Both workflows now track and report accumulated content in delta events for better frontend state management
-- **Enhanced Logging**: Added detailed workflow execution logs with timing metrics for performance monitoring
+#### Frontend
 
-### Changes
+- Added transient reasoning state (content + completion) with automatic panel collapse.
+- Retained ChainOfThought for structured orchestration; reasoning panel used for model-internal trace.
+- Ensured rendering order shows reasoning before assistant message content.
 
-#### Magentic Workflow Improvements
+#### Types & Contracts
 
-- Added accumulated content tracking in `MagenticFleetWorkflow.run()` to match fast-path behavior
-- Implemented per-agent content buffering for better agent transition tracking
-- Enhanced progress events with accumulated content metadata
-- Added `agent_accumulated` field to delta events for per-agent content tracking
-- Improved logging with workflow start/completion messages and metrics
-- Consistent error handling with detailed error messages matching fast-path pattern
+- Added `reasoning` to serialized messages.
+- Registered only final `reasoning.completed` (no incremental streaming events).
 
-#### Fast-Path Workflow
+#### Documentation
 
-- Migrated from raw `AsyncOpenAI` to agent-framework's `OpenAIResponsesClient`
-- Updated to use proper agent-framework types: `ChatMessage`, `ChatOptions`, `TextContent`
-- Removed unsupported parameters for gpt-5-mini compatibility
-- Updated all tests to work with new client structure
+- Consolidated earlier reasoning notes into this single release entry.
+- Removed transitional version entries (0.5.7 / 0.5.8) to reduce fragmentation.
 
-### Technical Details
+### Migration Notes (v0.5.6)
 
-- `accumulated` field: Global content accumulation across all agents
-- `agent_accumulated` field: Per-agent content accumulation
-- Progress events now include accumulated content on agent completion
-- Both workflows emit consistent event structures for frontend consumption
-
-### Testing
-
-- All 96 workflow and event-related tests passing
-- 32 fast-path tests passing (11 unit + 7 integration + 14 classifier)
-- Updated test fixtures to use actual agent-framework types
-
-### Performance
-
-- Zero-copy event passthrough maintained
-- Immediate yielding without buffering
-- Detailed timing logs for TTFT and total workflow duration
+No action required. Reasoning appears only when provided; absence yields unchanged responses.
 
 ## v0.5.5 (2025-11-05)
 
-### Highlights
+### Highlights (v0.5.5)
 
 - Frontend SSE payloads now expose `agentId` exclusively in camelCase to match backend event schemas.
-- New `useMetricsStore` placeholder lays the groundwork for upcoming streaming telemetry without impacting current UI flows.
-- Documentation refreshed to capture the chat store retirement and metrics store hand-off.
+- New `useMetricsStore` placeholder lays groundwork for upcoming streaming telemetry without impacting current UI flows.
+- Documentation refreshed to capture chat store retirement and metrics store hand-off.
 
-### Changes
+### Changes (v0.5.5)
 
-- Normalised the Responses event bridge and frontend consumers to rely on camelCase identifiers.
-- Archived the legacy chat store, API client, and component Vitest suites to unblock modernised coverage.
-- Added guidance around the metrics store scaffolding and removal rationale to the docs set.
+- Normalised Responses event bridge and frontend consumers to rely on camelCase identifiers.
+- Archived legacy chat store, API client, and component Vitest suites to unblock modernised coverage.
+- Added guidance around metrics store scaffolding and removal rationale to docs set.
 
 ### Removed
 
@@ -137,12 +106,12 @@
 - `src/frontend/src/lib/__tests__/api.test.ts`
 - `src/frontend/src/components/chat/__tests__/ChatMessage.test.tsx`
 
-### Migration Notes
+### Migration Notes (v0.5.5)
 
-- Extend telemetry features from the new `useMetricsStore` instead of the deprecated chat store state.
-- Historical assertions remain available under `docs/archive/chatStore_legacy_tests.md` and `docs/archive/frontend_api_and_component_tests.md` should you need to reference them.
+- Extend telemetry features from new `useMetricsStore` instead of deprecated chat store state.
+- Historical assertions remain available under `docs/archive/chatStore_legacy_tests.md` and `docs/archive/frontend_api_and_component_tests.md` for reference.
 
-### Follow-up
+### Follow-up (v0.5.5)
 
-- Rebuild streaming-focused chat store coverage aligned with the new architecture.
-- Hook performance event instrumentation into `useMetricsStore` once the telemetry pipeline lands.
+- Rebuild streaming-focused chat store coverage aligned with new architecture.
+- Hook performance event instrumentation into `useMetricsStore` once telemetry pipeline lands.

@@ -43,6 +43,7 @@ export async function streamChatResponse(
     onOrchestrator?: SSEOrchestratorCallback;
     onError?: SSEErrorCallback;
     onAgentComplete?: (agentId: string, content: string) => void;
+    onReasoningCompleted?: (reasoning: string) => void;
   },
 ): Promise<void> {
   const response = await fetch(`${API_BASE_URL}/chat`, {
@@ -131,6 +132,27 @@ export async function streamChatResponse(
               case "agent.message.complete":
                 if (agentId && rawEvent.content) {
                   callbacks.onAgentComplete?.(agentId, rawEvent.content);
+                }
+                break;
+
+              case "reasoning.completed":
+                if (callbacks.onReasoningCompleted) {
+                  interface ReasoningCompletedEvent {
+                    type: "reasoning.completed";
+                    reasoning?: string;
+                  }
+                  function isReasoningCompletedEvent(
+                    event: any,
+                  ): event is ReasoningCompletedEvent {
+                    return (
+                      event &&
+                      event.type === "reasoning.completed" &&
+                      typeof event.reasoning === "string"
+                    );
+                  }
+                  if (isReasoningCompletedEvent(rawEvent)) {
+                    callbacks.onReasoningCompleted(rawEvent.reasoning);
+                  }
                 }
                 break;
 

@@ -1112,6 +1112,25 @@ src/agentic_fleet/
 - Advanced monitoring and alerting
 - Custom model provider integrations
 
+## Reasoning Integration (v0.5.6)
+
+Reasoning visibility is now part of the 0.5.6 release:
+
+- Extract final reasoning trace from model response contents (TextReasoningContent) into workflow events.
+- Emit a single `reasoning.completed` SSE event before assistant message finalization (no incremental `reasoning.delta`).
+- Persist the reasoning trace with each assistant message for audit and later contextual retrieval.
+- Dual interpretability UI: ChainOfThought for workflow phase progression; Reasoning panel for model internal trace—rendered before the assistant reply and auto-collapsing after completion.
+- Backward compatible: if a model supplies no reasoning, the panel is simply omitted.
+
+### Future Work (Unversioned)
+
+- Unified workflow ledger (progress + status) surface.
+- Monotonic sequence counters for events and messages (replay / resume safety).
+- Streaming resilience: reconnect & resume via last event id.
+- Rolling summarization to constrain long conversation histories.
+- Reasoning truncation / summarization policy for very long traces.
+- E2E accessibility & interaction tests for interpretability components.
+
 ## 📈 **Project Success Summary**
 
 AgenticFleet has successfully achieved production-ready status with a comprehensive implementation that **exceeds** the original Microsoft Agent Framework Magentic pattern integration goals. The system delivers:
@@ -1121,8 +1140,53 @@ AgenticFleet has successfully achieved production-ready status with a comprehens
 - **✅ Enterprise Features**: Type safety, testing, observability, security
 - **✅ Production Readiness**: Performance, scalability, reliability
 - **✅ Developer Experience**: Comprehensive documentation, tooling, and workflows
+- **✅ Conversation Memory**: Multi-turn context retention with history injection (v0.5.7)
 
 **The project is now ready for enterprise adoption and continued evolution.**
+
+## 🔄 **Recent Enhancements (v0.5.7)**
+
+### Conversation Memory System
+
+**Status**: ✅ **PRODUCTION READY AND VERIFIED**
+
+#### Implementation Details
+
+- **PersistenceAdapter Enhancements**:
+  - `get()` method now checks conversation table first, enabling empty conversation retrieval
+  - `list()` method fully implemented using `ConversationRepository.list_all()`
+  - Metadata extraction from conversation records instead of message history
+  - Handles conversations with zero messages correctly
+
+- **Repository Layer**:
+  - Added `ConversationRepository.list_all()` returning conversations ordered by `updated_at DESC`
+  - Efficient query avoiding message joins for listing operations
+  - Proper async/await patterns throughout
+
+- **History Injection**:
+  - Format: `"Previous conversation:\n{ROLE: content pairs}\n\nUser's current message: {message}"`
+  - Maximum 10 recent messages included in history
+  - Automatic trigger for conversations with 2+ messages
+  - Seamless integration with workflow context
+
+#### Testing & Verification
+
+- **Unit Tests**: 18/18 passing (11 persistence + 6 conversation memory + 1 API CRUD)
+- **Regression Test**: `test_empty_conversation_retrieval()` prevents future bugs
+- **Production Testing**: Multi-turn conversation verified via Chrome DevTools
+  - First message: "What is the Monty Hall problem?"
+  - Follow-up: "Why should I switch? Isn't it 50-50 after the host reveals a goat?"
+  - Backend logs confirmed history injection working
+  - Agent responses demonstrated full context awareness
+
+#### Key Success Metrics
+
+- ✅ Empty conversations retrievable immediately after creation
+- ✅ Conversation listing returns all conversations without loading messages
+- ✅ History correctly formatted and injected into workflow context
+- ✅ Multi-turn conversations maintain continuity
+- ✅ No performance degradation with conversation history
+- ✅ Zero errors in production usage
 
 ---
 

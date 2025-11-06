@@ -68,6 +68,8 @@ single source of truth for cross-cutting rules; subdirectory guides drill into d
 - Load testing lives under `tests/load_testing/`; run `make load-test-smoke|load|stress` with the API
   running locally.
 - Refresh documentation invariants with `make validate-agents` whenever AGENTS content changes.
+- For conversation memory testing, use `uv run pytest tests/test_conversation_memory.py -v` to verify
+  history injection, context retention, and multi-turn interactions.
 
 ## Documentation Chain
 
