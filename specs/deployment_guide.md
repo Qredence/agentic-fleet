@@ -789,7 +789,7 @@ CONFIG_BACKUP="$BACKUP_DIR/config_backup_$DATE.tar.gz"
 tar -czf "$CONFIG_BACKUP" \
     .env \
     config/ \
-    src/agentic_fleet/workflow.yaml
+    src/agentic_fleet/workflows.yaml
 
 echo "Configuration backup completed: $CONFIG_BACKUP"
 
