@@ -15,6 +15,8 @@ from agentic_fleet.api.entities.routes import get_entity_discovery
 from agentic_fleet.api.responses.schemas import ResponseCompleteResponse, ResponseRequest
 from agentic_fleet.api.responses.service import ResponseAggregator
 from agentic_fleet.utils.logging import sanitize_for_log
+from agentic_fleet.utils.message_classifier import should_use_fast_path
+from agentic_fleet.workflow.fast_path import create_fast_path_workflow
 
 router = APIRouter()
 
@@ -29,20 +31,25 @@ async def _stream_response(entity_id: str, input_data: str | dict[str, Any]) -> 
     Returns:
         StreamingResponse with SSE events
     """
-    discovery = get_entity_discovery()
-
-    # Get workflow instance
-    try:
-        workflow = await discovery.get_workflow_instance_async(entity_id)
-    except ValueError as exc:
-        raise HTTPException(status_code=404, detail=f"Entity '{entity_id}' not found") from exc
-
     # Convert input to string if needed
     # Extract message from structured input or cast to string
     message = input_data.get("input", "") if isinstance(input_data, dict) else str(input_data)
 
     if not message:
         raise HTTPException(status_code=400, detail="Input message is required")
+
+    # Check if message should use fast-path
+    use_fast_path = should_use_fast_path(message)
+    if use_fast_path:
+        logging.info(f"[RESPONSES] Using fast-path for simple query: {sanitize_for_log(message)[:100]}")
+        workflow = create_fast_path_workflow()
+    else:
+        # Get workflow instance from entity discovery
+        discovery = get_entity_discovery()
+        try:
+            workflow = await discovery.get_workflow_instance_async(entity_id)
+        except ValueError as exc:
+            raise HTTPException(status_code=404, detail=f"Entity '{entity_id}' not found") from exc
 
     # Create aggregator
     aggregator = ResponseAggregator()

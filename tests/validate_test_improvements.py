@@ -270,7 +270,7 @@ def generate_validation_report(results: dict[str, bool]):
     print(f"  Total Validations: {total_tests}")
     print(f"  Passed: {passed_tests} ✅")
     print(f"  Failed: {failed_tests} ❌")
-    print(f"  Success Rate: {(passed_tests/total_tests)*100:.1f}%")
+    print(f"  Success Rate: {(passed_tests / total_tests) * 100:.1f}%")
 
     print("\n📋 Detailed Results:")
     for test_name, passed in results.items():

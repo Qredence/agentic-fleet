@@ -1,30 +1,86 @@
 import {
   Reasoning,
-  ReasoningTrigger,
   ReasoningContent,
+  ReasoningTrigger,
 } from "@/components/ui/reasoning";
-import { Lightbulb } from "lucide-react";
 import type { ReasoningSection } from "@/types/chat";
+import { Brain, Lightbulb } from "lucide-react";
 
 interface ReasoningDisplayProps {
-  sections: ReasoningSection[];
+  /** Reasoning sections to display */
+  sections?: ReasoningSection[];
+  /** Raw reasoning content (for o1/o3 model reasoning tokens) */
+  content?: string;
+  /** Whether the reasoning is currently streaming */
   isStreaming?: boolean;
+  /** Whether to start open by default */
   defaultOpen?: boolean;
+  /** Maximum number of sections to display */
   maxSections?: number;
+  /** Maximum content length before truncation */
   truncateLength?: number;
+  /** Custom trigger text */
+  triggerText?: string;
+  /** Custom className */
+  className?: string;
 }
 
 /**
  * ReasoningDisplay component wraps PromptKit Reasoning to display
- * explanations, rationales, and reasoning from orchestrator messages
+ * model reasoning traces, explanations, and rationales.
+ *
+ * Supports two modes:
+ * 1. Section-based: Display multiple ReasoningSection objects (orchestrator reasoning)
+ * 2. Content-based: Display raw reasoning content (o1/o3 reasoning tokens)
+ *
+ * The component auto-closes when streaming completes (isStreaming changes to false).
+ *
+ * Usage:
+ * ```tsx
+ * // Section-based (orchestrator reasoning)
+ * <ReasoningDisplay
+ *   sections={reasoningSections}
+ *   isStreaming={isCurrentlyStreaming}
+ * />
+ *
+ * // Content-based (o1/o3 reasoning tokens)
+ * <ReasoningDisplay
+ *   content={reasoningContent}
+ *   isStreaming={isCurrentlyStreaming}
+ *   triggerText="Model reasoning"
+ * />
+ * ```
  */
 export function ReasoningDisplay({
-  sections,
+  sections = [],
+  content,
   isStreaming = false,
   defaultOpen = false,
   maxSections = 6,
   truncateLength = 600,
+  triggerText,
+  className,
 }: ReasoningDisplayProps) {
+  // If raw content is provided, render single Reasoning component
+  if (content && content.trim() !== "") {
+    return (
+      <Reasoning
+        open={defaultOpen}
+        isStreaming={isStreaming}
+        className={className}
+      >
+        <ReasoningTrigger className="flex items-center gap-2">
+          <Brain className="size-4" />
+          <span className="font-medium">{triggerText || "View reasoning"}</span>
+        </ReasoningTrigger>
+        <ReasoningContent markdown className="mt-2">
+          {truncateIfNeeded(content, truncateLength)}
+        </ReasoningContent>
+      </Reasoning>
+    );
+  }
+
+  // Section-based display
   if (sections.length === 0) {
     return null;
   }
@@ -38,6 +94,7 @@ export function ReasoningDisplay({
           key={`reasoning-${index}`}
           open={defaultOpen || isStreaming}
           isStreaming={isStreaming}
+          className={className}
         >
           <ReasoningTrigger className="flex items-center gap-2">
             <Lightbulb className="size-4" />

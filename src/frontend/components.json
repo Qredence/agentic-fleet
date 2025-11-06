@@ -17,9 +17,7 @@
     "ui": "@/components/ui",
     "lib": "@/lib",
     "hooks": "@/hooks"
-  },
-  "registries": {
-    "@prompt-kit": "https://www.prompt-kit.com/c/registry.json",
-    "@motion-primitives": "https://motion-primitives.com/c/registry.json"
   }
+  // Note: The 'registries' field has been removed for compatibility with Prompt Kit
+  // and the shadcn CLI. Prompt Kit components are installed via direct URLs instead.
 }

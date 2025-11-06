@@ -1,7 +1,5 @@
 """Magentic Fleet workflow builder and implementation."""
 
-from __future__ import annotations
-
 import logging
 import os
 from collections.abc import AsyncGenerator
@@ -39,8 +37,15 @@ class MagenticFleetWorkflow(RunsWorkflow):
             WorkflowEvent instances as workflow executes
         """
         try:
+            logger.info(
+                f"[MAGENTIC] Processing message with multi-agent orchestration: {message[:100]}"
+            )
+
             last_agent_id: str | None = None
             last_kind: str | None = None
+            accumulated_content = ""
+            agent_buffers: dict[str, str] = {}
+
             async for event in self._workflow.run_stream(message):
                 # Zero-copy conversion: convert and yield immediately
                 converted_event = self._event_bridge.convert_event(event, openai_format=True)
@@ -67,9 +72,19 @@ class MagenticFleetWorkflow(RunsWorkflow):
                             }
                         last_kind = kind
 
-                # Emit progress events for agent transitions
+                # Track accumulated content for delta events (similar to fast-path)
                 if converted_event.get("type") == "message.delta":
                     agent_id = converted_event.get("data", {}).get("agent_id")
+                    delta = converted_event.get("data", {}).get("delta", "")
+
+                    # Accumulate content globally and per-agent
+                    if delta:
+                        accumulated_content += delta
+                        if agent_id:
+                            agent_buffers.setdefault(agent_id, "")
+                            agent_buffers[agent_id] += delta
+
+                    # Emit progress events for agent transitions
                     if agent_id and agent_id != last_agent_id:
                         # Agent change detected - emit progress event
                         if last_agent_id is not None:
@@ -79,6 +94,7 @@ class MagenticFleetWorkflow(RunsWorkflow):
                                     "stage": "agent.complete",
                                     "agent_id": last_agent_id,
                                     "message": f"{last_agent_id} completed",
+                                    "accumulated": agent_buffers.get(last_agent_id, ""),
                                 },
                             }
                         yield {
@@ -91,20 +107,33 @@ class MagenticFleetWorkflow(RunsWorkflow):
                         }
                         last_agent_id = agent_id
 
+                    # Add accumulated content to delta event (matching fast-path pattern)
+                    converted_event["data"]["accumulated"] = accumulated_content
+                    if agent_id:
+                        converted_event["data"]["agent_accumulated"] = agent_buffers.get(
+                            agent_id, ""
+                        )
+
                 # Yield immediately without buffering (zero-copy passthrough)
                 yield converted_event
 
-        except Exception as e:
-            logger.exception(
-                "Workflow execution failed",
-                exc_info=True,
+            # Log completion with metrics (similar to fast-path)
+            logger.info(
+                f"[MAGENTIC] Completed response ({len(accumulated_content)} chars total, "
+                f"{len(agent_buffers)} agents participated)"
             )
+
+        except Exception as e:
+            logger.error(f"[MAGENTIC] Workflow execution failed: {e}")
+            logger.exception("Full traceback:", exc_info=True)
             yield {
                 "type": "error",
                 "data": {
+                    "message": f"Magentic workflow error: {e!s}",
                     "error": str(e),
                 },
             }
+            raise
 
 
 class MagenticFleetWorkflowBuilder:

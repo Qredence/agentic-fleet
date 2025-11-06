@@ -79,7 +79,7 @@ class MagenticAgentFramework:
         api_key = os.getenv("OPENAI_API_KEY")
         if not api_key:
             raise ValueError(
-                "OPENAI_API_KEY environment variable is required. " "Set it before creating agents."
+                "OPENAI_API_KEY environment variable is required. Set it before creating agents."
             )
 
         chat_client = OpenAIResponsesClient(
@@ -101,8 +101,7 @@ class MagenticAgentFramework:
         )
 
         logger.debug(
-            f"Created agent '{name}' with model '{model_id}', "
-            f"reasoning_effort='{reasoning_effort}'"
+            f"Created agent '{name}' with model '{model_id}', reasoning_effort='{reasoning_effort}'"
         )
 
         return agent
@@ -142,8 +141,7 @@ class MagenticAgentFramework:
         api_key = os.getenv("OPENAI_API_KEY")
         if not api_key:
             raise ValueError(
-                "OPENAI_API_KEY environment variable is required. "
-                "Set it before creating workflows."
+                "OPENAI_API_KEY environment variable is required. Set it before creating workflows."
             )
 
         manager_client = OpenAIResponsesClient(
