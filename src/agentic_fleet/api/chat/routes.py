@@ -369,7 +369,7 @@ async def chat(req: ChatRequest, request: Request) -> ChatResponse | StreamingRe
     workflow_service = get_workflow_service()
 
     try:
-        conversation = await persistence_adapter.get(req.conversation_id)
+        await persistence_adapter.get(req.conversation_id)
     except ConversationNotFoundError as exc:
         raise HTTPException(status_code=404, detail="Conversation not found") from exc
 
