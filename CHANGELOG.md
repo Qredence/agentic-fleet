@@ -209,8 +209,7 @@ grep -R "DiscoveryResponse" -l src | xargs sed -E -i '' 's/DiscoveryResponse/Ent
 
 ### Migration Notes (v0.5.7)
 
-> > > > > > > origin/main
-> > > > > > > No action required. Existing conversations continue working. New conversations now properly support immediate retrieval.
+No action required. Existing conversations continue working. New conversations now properly support immediate retrieval.
 
 ### Verification (v0.5.7)
 
