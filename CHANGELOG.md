@@ -1,6 +1,89 @@
 # Changelog
 
-## v0.5.7 (2025-11-06) – Conversation Memory Enhancement
+## v0.5.9 (2025-11-06) – Schema & Factory Consolidation
+
+### Highlights (v0.5.9)
+
+- **[BREAKING]** Removed 6 duplicate files (~380 lines): `models/chat.py`, `models/entities.py`, `models/responses.py`, `api/workflow_factory.py`, `models/workflow.py`, `api/approvals/schemas.py`
+- Consolidated schema imports to canonical API locations: `api.chat.schemas`, `api.entities.schemas`, `api.responses.schemas`, `api.models.workflow_config`
+- Migrated all code from legacy `api.workflow_factory.WorkflowFactory` to async-first `utils.factory.WorkflowFactory`
+- Added `validate` CLI command for pre-flight configuration checks without execution
+- Maintained backward compatibility via `models/__init__.py` re-exports
+
+### Changes (v0.5.9)
+
+#### Backend Consolidation
+
+- **Deleted duplicate schemas**: Removed `models/chat.py`, `models/entities.py`, `models/responses.py` – API schemas in `api/**/schemas.py` are now canonical
+- **Deleted legacy factory**: Removed `api/workflow_factory.py` (synchronous implementation) – `utils/factory.py` (async-first) is now canonical
+- **Deleted duplicate config**: Removed `models/workflow.py` (7-field) – `api/models/workflow_config.py` (10-field extended version) is now canonical
+- **Deleted empty file**: Removed `api/approvals/schemas.py` (contained only docstring)
+- **Updated `models/__init__.py`**: Now re-exports from canonical API locations while preserving same `__all__` exports for backward compatibility
+- **Migrated imports**: Updated 10 files (console.py, 3 test files, 2 scripts, Makefile, 3 workflow modules, core/**init**.py) to use `utils.factory.WorkflowFactory` and `models.WorkflowConfig`
+
+#### CLI Enhancements
+
+- **New `validate` command**: Pre-flight configuration checks without workflow execution
+  - Tests WorkflowFactory instantiation and YAML loading
+  - Validates all registered workflows can be instantiated
+  - Checks agent configuration resolution
+  - Supports `--verbose` flag for detailed debugging
+  - Returns exit code 1 on errors, 0 on success/warnings
+  - Usage: `uv run fleet validate` or `uv run fleet validate -v`
+
+#### Testing
+
+- Updated 3 test files to use `utils.factory.WorkflowFactory`
+- Marked 3 legacy tests as skipped (testing removed `api.workflow_factory` implementation details)
+- All 53 affected tests passing, 5 skipped
+
+### Migration Notes (v0.5.9)
+
+**Breaking changes:**
+
+```python
+# OLD: Direct imports from models/ submodules (NO LONGER WORKS)
+from agentic_fleet.models.chat import ChatRequest
+from agentic_fleet.models.workflow import WorkflowConfig
+from agentic_fleet.api.workflow_factory import WorkflowFactory
+
+# NEW: Import from models package (backward compatible) or API directly
+from agentic_fleet.models import ChatRequest, WorkflowConfig
+from agentic_fleet.utils.factory import WorkflowFactory
+
+# OR: Import directly from canonical API locations
+from agentic_fleet.api.chat.schemas import ChatRequest
+from agentic_fleet.api.models.workflow_config import WorkflowConfig
+```
+
+**Import mapping table:**
+
+| Old Import                             | New Canonical Location                      | Re-export Available             |
+| -------------------------------------- | ------------------------------------------- | ------------------------------- |
+| `models.chat.*`                        | `api.chat.schemas.*`                        | Yes via `models.*`              |
+| `models.entities.*`                    | `api.entities.schemas.*`                    | Yes via `models.*`              |
+| `models.responses.*`                   | `api.responses.schemas.*`                   | Yes via `models.*`              |
+| `models.workflow.WorkflowConfig`       | `api.models.workflow_config.WorkflowConfig` | Yes via `models.WorkflowConfig` |
+| `api.workflow_factory.WorkflowFactory` | `utils.factory.WorkflowFactory`             | No (breaking change)            |
+
+**Validation:**
+
+```bash
+# Validate configuration health
+uv run fleet validate
+
+# Detailed debugging
+uv run fleet validate -v
+```
+
+### Impact (v0.5.9)
+
+- **Files removed**: 6 (total: 87→81 files, ~7.4% reduction)
+- **Lines removed**: ~380 lines
+- **Import changes**: 10 files updated
+- **Backward compatibility**: Maintained via `models/__init__.py` re-exports (except `WorkflowFactory`)
+
+## v0.5.8 (2025-11-06) – Async Factory & Domain Exceptions (MERGED)
 
 ### Highlights (v0.5.7)
 

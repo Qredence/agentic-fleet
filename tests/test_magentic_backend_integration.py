@@ -7,8 +7,8 @@ from typing import cast
 
 import pytest
 
-from agentic_fleet.api.workflow_factory import WorkflowFactory
 from agentic_fleet.api.workflows.service import create_magentic_fleet_workflow
+from agentic_fleet.utils.factory import WorkflowFactory
 
 
 def test_workflow_factory_catalog() -> None:

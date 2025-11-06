@@ -27,7 +27,7 @@ def __getattr__(name: str) -> Any:  # pragma: no cover - import-time behavior
 
         return _AgentFactory
     if name == "WorkflowFactory":
-        from agentic_fleet.api.workflow_factory import WorkflowFactory as _WorkflowFactory
+        from agentic_fleet.utils.factory import WorkflowFactory as _WorkflowFactory
 
         return _WorkflowFactory
     if name in {"RunsWorkflow", "WorkflowEvent"}:
@@ -36,7 +36,7 @@ def __getattr__(name: str) -> Any:  # pragma: no cover - import-time behavior
 
         return {"RunsWorkflow": _RunsWorkflow, "WorkflowEvent": _WorkflowEvent}[name]
     if name == "WorkflowConfig":
-        from agentic_fleet.models.workflow import WorkflowConfig as _WorkflowConfig
+        from agentic_fleet.models import WorkflowConfig as _WorkflowConfig
 
         return _WorkflowConfig
     if name == "ToolRegistry":

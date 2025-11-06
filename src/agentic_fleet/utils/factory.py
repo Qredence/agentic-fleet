@@ -27,8 +27,8 @@ from typing import Any, TypeVar, cast
 
 import yaml
 
+from agentic_fleet.models import WorkflowConfig
 from agentic_fleet.models.events import RunsWorkflow
-from agentic_fleet.models.workflow import WorkflowConfig
 from agentic_fleet.utils.logging import sanitize_for_log
 
 T = TypeVar("T")

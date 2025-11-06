@@ -330,7 +330,7 @@ def create_default_fleet(config_path: str = "workflows.yaml") -> MagenticFleet:
         ```
     """
 
-    from agentic_fleet.api.workflow_factory import WorkflowFactory
+    from agentic_fleet.utils.factory import WorkflowFactory
 
     logger.info(f"Creating default fleet from {config_path}")
     factory = WorkflowFactory(Path(config_path) if config_path else None)
