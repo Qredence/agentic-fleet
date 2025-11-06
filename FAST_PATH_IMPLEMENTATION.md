@@ -65,20 +65,18 @@ OPENAI_BASE_URL=https://custom.openai.endpoint.com
 
 ## Implementation Details
 
-### OpenAI SDK Configuration
+### OpenAI Client Configuration
 
-The implementation uses the standard OpenAI Python SDK (`openai` package):
+The implementation uses the Agent Framework OpenAI client (`OpenAIResponsesClient` from `agent_framework.openai`):
 
 ```python
-from openai import AsyncOpenAI
+from agent_framework.openai import OpenAIResponsesClient
+import os
 
-client = AsyncOpenAI(
+client = OpenAIResponsesClient(
     api_key=os.environ["OPENAI_API_KEY"],
     base_url=os.environ.get("OPENAI_BASE_URL"),  # Optional
 )
-```
-
-**Note**: This implementation uses standard OpenAI configuration, NOT Azure OpenAI. The environment variables are:
 
 - `OPENAI_API_KEY` (required)
 - `OPENAI_BASE_URL` (optional, for custom endpoints)
