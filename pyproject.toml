@@ -237,8 +237,6 @@ warn_unused_ignores = false
 module = "agentic_fleet.api.conversations.routes"
 disallow_untyped_decorators = false
 
-[[tool.mypy.overrides]]
-module = "agentic_fleet.api.chat.routes"
 
 [[tool.mypy.overrides]]
 module = "aiofiles"
