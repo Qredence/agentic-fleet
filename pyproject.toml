@@ -229,6 +229,10 @@ disallow_untyped_decorators = false
 module = "agenticfleet.persistance.database"
 disallow_untyped_defs = false
 
+[[tool.mypy.overrides]]
+module = "agentic_fleet.api.app"
+warn_unused_ignores = false
+
 # Tests are executable validation artifacts rather than library code; relax typing strictness
 # to prioritize production package guarantees while allowing incremental test annotation.
 [[tool.mypy.overrides]]
