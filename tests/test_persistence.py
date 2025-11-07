@@ -30,24 +30,29 @@ async def temp_db():
 
 
 @pytest.fixture
-def db_manager(temp_db):
+async def db_manager(temp_db):
     """Create database manager."""
     return DatabaseManager(temp_db, init_schema=False)
 
 
 @pytest.fixture
 def persistence_service(db_manager):
-    """Create persistence service."""
-    settings = PersistenceSettings()
-    settings.enabled = True
-    settings.summary_threshold = 10  # Lower threshold for testing
-    return ConversationPersistenceService(db_manager, settings)
+    """Factory fixture to create persistence service with customizable settings."""
+    def _factory(summary_threshold=10, summary_keep_recent=None):
+        settings = PersistenceSettings()
+        settings.enabled = True
+        settings.summary_threshold = summary_threshold
+        if summary_keep_recent is not None:
+            settings.summary_keep_recent = summary_keep_recent
+        return ConversationPersistenceService(db_manager, settings)
+    return _factory
 
 
 @pytest.mark.asyncio
 async def test_create_conversation(persistence_service):
     """Test conversation creation."""
-    conv_id = await persistence_service.create_conversation(
+    svc = persistence_service()
+    conv_id = await svc.create_conversation(
         workflow_id="test-workflow",
         metadata={"test": "data"},
     )
@@ -59,10 +64,11 @@ async def test_create_conversation(persistence_service):
 @pytest.mark.asyncio
 async def test_add_message_with_sequence(persistence_service):
     """Test adding message with automatic sequencing."""
-    conv_id = await persistence_service.create_conversation(workflow_id="test-workflow")
+    svc = persistence_service()
+    conv_id = await svc.create_conversation(workflow_id="test-workflow")
 
     # Add first message
-    msg1 = await persistence_service.add_message(
+    msg1 = await svc.add_message(
         conversation_id=conv_id,
         role="user",
         content="Hello",
@@ -70,7 +76,7 @@ async def test_add_message_with_sequence(persistence_service):
     assert msg1["sequence"] == 0
 
     # Add second message
-    msg2 = await persistence_service.add_message(
+    msg2 = await svc.add_message(
         conversation_id=conv_id,
         role="assistant",
         content="Hi there",
@@ -125,18 +131,19 @@ async def test_concurrent_sequence_allocation(db_manager):
 @pytest.mark.asyncio
 async def test_message_history_ordering(persistence_service):
     """Test that message history maintains sequence order."""
-    conv_id = await persistence_service.create_conversation(workflow_id="test-workflow")
+    svc = persistence_service()
+    conv_id = await svc.create_conversation(workflow_id="test-workflow")
 
     # Add messages
     for i in range(5):
-        await persistence_service.add_message(
+        await svc.add_message(
             conversation_id=conv_id,
             role="user" if i % 2 == 0 else "assistant",
             content=f"Message {i}",
         )
 
     # Get history
-    history = await persistence_service.get_conversation_history(conv_id)
+    history = await svc.get_conversation_history(conv_id)
 
     # Verify order
     assert len(history) == 5
@@ -148,10 +155,11 @@ async def test_message_history_ordering(persistence_service):
 @pytest.mark.asyncio
 async def test_ledger_snapshot(persistence_service):
     """Test ledger snapshot storage."""
-    conv_id = await persistence_service.create_conversation(workflow_id="test-workflow")
+    svc = persistence_service()
+    conv_id = await svc.create_conversation(workflow_id="test-workflow")
 
     # Add ledger snapshots
-    await persistence_service.add_ledger_snapshot(
+    await svc.add_ledger_snapshot(
         conversation_id=conv_id,
         task_id="task-1",
         goal="Complete task 1",
@@ -159,7 +167,7 @@ async def test_ledger_snapshot(persistence_service):
         snapshot_data={"progress": 50},
     )
 
-    await persistence_service.add_ledger_snapshot(
+    await svc.add_ledger_snapshot(
         conversation_id=conv_id,
         task_id="task-1",
         goal="Complete task 1",
@@ -168,7 +176,7 @@ async def test_ledger_snapshot(persistence_service):
     )
 
     # Get latest state
-    ledger = await persistence_service.get_ledger_state(conv_id)
+    ledger = await svc.get_ledger_state(conv_id)
 
     # Should only get latest snapshot per task
     assert len(ledger) == 1
@@ -179,16 +187,17 @@ async def test_ledger_snapshot(persistence_service):
 @pytest.mark.asyncio
 async def test_event_storage(persistence_service):
     """Test event storage with sequencing."""
-    conv_id = await persistence_service.create_conversation(workflow_id="test-workflow")
+    svc = persistence_service()
+    conv_id = await svc.create_conversation(workflow_id="test-workflow")
 
     # Add events
-    seq1 = await persistence_service.add_event(
+    seq1 = await svc.add_event(
         conversation_id=conv_id,
         event_type="workflow.start",
         event_data={"workflow_id": "test"},
     )
 
-    seq2 = await persistence_service.add_event(
+    seq2 = await svc.add_event(
         conversation_id=conv_id,
         event_type="agent.message",
         event_data={"agent": "planner"},
@@ -199,7 +208,7 @@ async def test_event_storage(persistence_service):
     assert seq2 == 1
 
     # Get event history
-    events = await persistence_service.get_event_history(conv_id)
+    events = await svc.get_event_history(conv_id)
     assert len(events) == 2
     assert events[0]["event_type"] == "workflow.start"
     assert events[1]["event_type"] == "agent.message"
@@ -208,10 +217,11 @@ async def test_event_storage(persistence_service):
 @pytest.mark.asyncio
 async def test_reasoning_trace_storage(persistence_service):
     """Test reasoning trace storage separate from messages."""
-    conv_id = await persistence_service.create_conversation(workflow_id="test-workflow")
+    svc = persistence_service()
+    conv_id = await svc.create_conversation(workflow_id="test-workflow")
 
     # Add message with reasoning
-    await persistence_service.add_message(
+    await svc.add_message(
         conversation_id=conv_id,
         role="assistant",
         content="Answer",
@@ -219,7 +229,7 @@ async def test_reasoning_trace_storage(persistence_service):
     )
 
     # Get history with reasoning
-    history = await persistence_service.get_conversation_history(conv_id, include_reasoning=True)
+    history = await svc.get_conversation_history(conv_id, include_reasoning=True)
 
     assert len(history) == 1
     assert history[0]["reasoning"] == "Detailed reasoning trace"
@@ -229,32 +239,36 @@ async def test_reasoning_trace_storage(persistence_service):
 @pytest.mark.asyncio
 async def test_summarization_threshold(persistence_service):
     """Test automatic summarization at threshold."""
-    # Use low threshold - need to update both settings and policy
-    persistence_service.settings.summary_threshold = 8
-    persistence_service.settings.summary_keep_recent = 2
-    persistence_service.summarization_policy.threshold = 8
-    persistence_service.summarization_policy.keep_recent = 2
+    # Use custom configuration via factory, do not mutate internals directly
+    svc = persistence_service(summary_threshold=8, summary_keep_recent=2)
 
-    conv_id = await persistence_service.create_conversation(workflow_id="test-workflow")
+    conv_id = await svc.create_conversation(workflow_id="test-workflow")
 
     # Add messages up to threshold
     for i in range(10):
-        await persistence_service.add_message(
+        await svc.add_message(
             conversation_id=conv_id,
             role="user" if i % 2 == 0 else "assistant",
             content=f"Message {i}",
         )
 
     # Get history - should have summary + recent messages
-    history = await persistence_service.get_conversation_history(conv_id)
+    history = await svc.get_conversation_history(conv_id)
 
     # Should have triggered summarization: summary message + 2 recent messages = 3
     # (8 messages summarized, keeping last 2)
-    assert len(history) <= 4  # Summary + up to 2 recent messages + margin
+    assert len(history) == 3  # Summary + 2 recent messages
 
     # Check if a summary message exists
+    # Prefer robust field checks: 'type' or 'is_summary' if they exist, fallback to strict matching
     summary_messages = [
-        m for m in history if m["role"] == "system" and "summarized" in m["content"].lower()
+        m for m in history
+        if m["role"] == "system"
+        and (
+            m.get("type") == "summary"
+            or m.get("is_summary") is True
+            or m["content"].lower().startswith("summary:")
+        )
     ]
     assert len(summary_messages) >= 1, "Expected at least one summary message"
 
@@ -262,18 +276,19 @@ async def test_summarization_threshold(persistence_service):
 @pytest.mark.asyncio
 async def test_event_replay(persistence_service):
     """Test event replay from specific sequence."""
-    conv_id = await persistence_service.create_conversation(workflow_id="test-workflow")
+    svc = persistence_service()
+    conv_id = await svc.create_conversation(workflow_id="test-workflow")
 
     # Add events
     for i in range(5):
-        await persistence_service.add_event(
+        await svc.add_event(
             conversation_id=conv_id,
             event_type=f"event-{i}",
             event_data={"index": i},
         )
 
     # Replay from sequence 2
-    events = await persistence_service.get_event_history(conv_id, from_sequence=2)
+    events = await svc.get_event_history(conv_id, from_sequence=2)
 
     assert len(events) == 3
     assert events[0]["event_type"] == "event-2"
@@ -309,7 +324,7 @@ async def test_reasoning_repository(db_manager):
             reasoning_text="Detailed trace",
             effort="high",
             verbosity="verbose",
-            model="gpt-5-mini",
+            model="test-model",
             metadata={"tokens": 1000},
         )
 
@@ -318,7 +333,7 @@ async def test_reasoning_repository(db_manager):
         assert trace is not None
         assert trace["reasoning_text"] == "Detailed trace"
         assert trace["effort"] == "high"
-        assert trace["model"] == "gpt-5-mini"
+        assert trace["model"] == "test-model"
 
 
 if __name__ == "__main__":
