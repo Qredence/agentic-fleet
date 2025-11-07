@@ -131,7 +131,7 @@ if [ -f "pyproject.toml" ]; then
     echo -e "${GREEN}✓${NC} pyproject.toml exists"
 
     # Extract package name from pyproject.toml
-    PKG_NAME=$(awk -F' *= *' '/^name = / {gsub(/"/, "", $2); print $2; exit}' pyproject.toml)
+    PKG_NAME=$(awk -F' *= *' '/^name[[:space:]]*=/ {gsub(/"/, "", $2); print $2; exit}' pyproject.toml)
     if [ "$PKG_NAME" = "$PYPI_PROJECT_NAME" ]; then
         echo -e "${GREEN}✓${NC} Package name: $PKG_NAME"
     else
