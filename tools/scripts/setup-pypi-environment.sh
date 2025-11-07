@@ -8,6 +8,29 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "${SCRIPT_DIR}/../.." && pwd)"
 cd "${REPO_ROOT}"
 
+# Extract project name from pyproject.toml
+PYPROJECT_TOML="pyproject.toml"
+PYPI_PROJECT_NAME=""
+if [ -f "$PYPROJECT_TOML" ]; then
+    # Extract project name under [project] section. Works for PEP 621-compliant files.
+    PYPI_PROJECT_NAME=$(awk '
+        $0 ~ /^\[project\]/ { in_project=1; next }
+        in_project && $0 ~ /^name[[:space:]]*=/ {
+            sub(/name[[:space:]]*=[[:space:]]*["'\'']/, "", $0)
+            sub(/["'\''].*$/, "", $0)
+            print $0; exit
+        }
+    ' "$PYPROJECT_TOML")
+fi
+if [ -z "$PYPI_PROJECT_NAME" ]; then
+    echo -e "${RED}Error: Could not determine project name from pyproject.toml${NC}"
+    exit 1
+fi
+
+# Set repository name from argument, env variable, or default value
+REPO="${1:-${REPO:-Qredence/AgenticFleet}}"
+REPO_OWNER="${REPO%%/*}"
+
 # Colors for output
 RED='\033[0;31m'
 GREEN='\033[0;32m'
@@ -16,7 +39,7 @@ BLUE='\033[0;34m'
 NC='\033[0m' # No Color
 
 echo -e "${BLUE}================================${NC}"
-echo -e "${BLUE}PyPI Environment Setup for AgenticFleet${NC}"
+echo -e "${BLUE}PyPI Environment Setup for ${REPO}${NC}"
 echo -e "${BLUE}================================${NC}"
 echo ""
 
@@ -34,15 +57,13 @@ if ! gh auth status &> /dev/null; then
     exit 1
 fi
 
-REPO="Qredence/AgenticFleet"
-
 echo -e "${GREEN}✓${NC} GitHub CLI is installed and authenticated"
 echo ""
 
 echo -e "${YELLOW}Step 1: PyPI Environment Setup${NC}"
 echo "GitHub environments must be created through the web UI."
 echo ""
-echo -e "${BLUE}To create the 'pypi' environment:${NC}"
+echo -e "${BLUE}To create the 'pypi' environment for '${REPO}':${NC}"
 echo ""
 echo "1. Go to: https://github.com/${REPO}/settings/environments"
 echo "2. Click 'New environment'"
@@ -64,9 +85,9 @@ echo ""
 echo "1. Go to: ${BLUE}https://pypi.org/manage/account/publishing/${NC}"
 echo "2. Scroll to 'Add a new pending publisher'"
 echo "3. Fill in:"
-echo "   - PyPI Project Name: ${GREEN}agentic-fleet${NC}"
-echo "   - Owner: ${GREEN}Qredence${NC}"
-echo "   - Repository name: ${GREEN}AgenticFleet${NC}"
+echo "   - PyPI Project Name: ${GREEN}${PYPI_PROJECT_NAME}${NC}"
+echo "   - Owner: ${GREEN}${REPO_OWNER}${NC}"
+echo "   - Repository name: ${GREEN}${REPO##*/}${NC}"
 echo "   - Workflow name: ${GREEN}release.yml${NC}"
 echo "   - Environment name: ${GREEN}pypi${NC}"
 echo "4. Click 'Add'"
@@ -109,11 +130,12 @@ fi
 if [ -f "pyproject.toml" ]; then
     echo -e "${GREEN}✓${NC} pyproject.toml exists"
 
-    # Check package name
-    if grep -q 'name = "agentic-fleet"' pyproject.toml; then
-        echo -e "${GREEN}✓${NC} Package name: agentic-fleet"
+    # Extract package name from pyproject.toml
+    PKG_NAME=$(awk -F' *= *' '/^name[[:space:]]*=/ {gsub(/"/, "", $2); print $2; exit}' pyproject.toml)
+    if [ "$PKG_NAME" = "$PYPI_PROJECT_NAME" ]; then
+        echo -e "${GREEN}✓${NC} Package name: $PKG_NAME"
     else
-        echo -e "${YELLOW}!${NC} Package name not found or different"
+        echo -e "${YELLOW}!${NC} Package name in pyproject.toml ('$PKG_NAME') does not match expected ('$PYPI_PROJECT_NAME')"
     fi
 
     # Check version

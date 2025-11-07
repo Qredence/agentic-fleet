@@ -18,8 +18,7 @@ import sys
 import time
 from pathlib import Path
 
-# Add current directory to path for imports
-sys.path.append(str(Path(__file__).parent))
+# If you encounter import errors, run this script with 'PYTHONPATH=.' or install the package in editable mode.
 
 
 def validate_config_testing():
