@@ -18,8 +18,8 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
+from agentic_fleet.api.models.workflow_config import WorkflowConfig
 from agentic_fleet.api.workflows.service import WorkflowEvent
-from agentic_fleet.models.workflow import WorkflowConfig
 from agentic_fleet.workflow.executor import WorkflowExecutor
 
 logger = logging.getLogger(__name__)

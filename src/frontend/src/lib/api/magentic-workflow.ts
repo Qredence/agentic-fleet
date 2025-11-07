@@ -98,7 +98,7 @@ export class MagenticWorkflowClient {
   async createWorkflow(
     request: CreateWorkflowRequest,
   ): Promise<CreateWorkflowResponse> {
-    const response = await fetch(`${this.baseUrl}/v1/workflows`, {
+    const response = await fetch(`${this.baseUrl}/workflows`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -157,7 +157,7 @@ export class MagenticWorkflowClient {
     this.disconnect();
 
     // Create new SSE connection
-    const url = `${this.baseUrl}/v1/workflows/${workflowId}/stream`;
+    const url = `${this.baseUrl}/workflows/${workflowId}/stream`;
     this.eventSource = new EventSource(url);
 
     // Handle messages
@@ -194,7 +194,7 @@ export class MagenticWorkflowClient {
    */
   async getWorkflowStatus(workflowId: string): Promise<WorkflowStatus> {
     const response = await fetch(
-      `${this.baseUrl}/v1/workflows/${workflowId}/status`,
+      `${this.baseUrl}/workflows/${workflowId}/status`,
     );
 
     if (!response.ok) {
@@ -213,7 +213,7 @@ export class MagenticWorkflowClient {
    * @returns Promise resolving to list of workflow statuses
    */
   async listWorkflows(): Promise<WorkflowStatus[]> {
-    const response = await fetch(`${this.baseUrl}/v1/workflows`);
+    const response = await fetch(`${this.baseUrl}/workflows`);
 
     if (!response.ok) {
       throw new Error(`Failed to list workflows: ${response.statusText}`);
@@ -233,7 +233,7 @@ export class MagenticWorkflowClient {
    * @throws Error if deletion fails
    */
   async deleteWorkflow(workflowId: string): Promise<void> {
-    const response = await fetch(`${this.baseUrl}/v1/workflows/${workflowId}`, {
+    const response = await fetch(`${this.baseUrl}/workflows/${workflowId}`, {
       method: "DELETE",
     });
 
@@ -256,7 +256,7 @@ export class MagenticWorkflowClient {
    */
   async pauseWorkflow(workflowId: string): Promise<WorkflowStatus> {
     const response = await fetch(
-      `${this.baseUrl}/v1/workflows/${workflowId}/pause`,
+      `${this.baseUrl}/workflows/${workflowId}/pause`,
       {
         method: "POST",
       },
@@ -289,7 +289,7 @@ export class MagenticWorkflowClient {
     this.disconnect();
 
     // Create SSE connection to resume endpoint
-    const url = `${this.baseUrl}/v1/workflows/${workflowId}/resume`;
+    const url = `${this.baseUrl}/workflows/${workflowId}/resume`;
     this.eventSource = new EventSource(url);
 
     this.eventSource.onmessage = (messageEvent) => {

@@ -1,6 +1,6 @@
 [project]
 name = "agentic-fleet"
-version = "0.5.6"
+version = "0.5.5"
 description = "Multi-agent orchestration system built with Microsoft Agent Framework's Magentic Fleet pattern"
 authors = [{ name = "Qredence", email = "contact@qredence.ai" }]
 readme = "README.md"

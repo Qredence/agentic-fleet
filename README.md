@@ -1,4 +1,3 @@
-# AgenticFleet
 
 ![AgenticFleet Architecture](assets/banner.png)
 
@@ -73,6 +72,7 @@ make validate-agents  # verify AGENTS docs invariants
 
 - Backend: src/agentic_fleet/AGENTS.md
 - Frontend: src/frontend/AGENTS.md
+- Frontend docs index: docs/frontend/index.md
 - Tests: tests/AGENTS.md
 - Docs index: docs/README.md
 
@@ -80,4 +80,3 @@ make validate-agents  # verify AGENTS docs invariants
 
 ## License
 
-MIT — see LICENSE for details.

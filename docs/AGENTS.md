@@ -24,7 +24,7 @@ keep documentation synchronized with the codebase.
 - Keep sections task-focused and prefer relative links to code (`../src/agentic_fleet/api/...`) so
   forks and documentation previews remain valid.
 - Commands that touch Python, pytest, or Ruff **must** include `uv run`. JavaScript tooling belongs in
-  `src/frontend/src` and should be invoked through the provided npm scripts.
+  `src/frontend` and should be invoked through the provided npm scripts.
 - Describe the configuration chain accurately: `AF_WORKFLOW_CONFIG` (absolute path) → packaged
   `src/agentic_fleet/workflows.yaml`. Mention the relevant `agents/*.py` modules exposing
   `get_config()` whenever you document a workflow.
@@ -44,7 +44,7 @@ keep documentation synchronized with the codebase.
 - Run `uv run python tools/scripts/validate_agents_docs.py` (or `make validate-agents`) after any doc
   edits. Address blocking errors before publishing; warnings should be triaged in follow-up tasks.
 - Exercise new command sequences locally. Validate backend snippets with `uv run python -m agentic_fleet`
-  and frontend sequences from `src/frontend/src`.
+  and frontend sequences from `src/frontend`.
 
 ## Update Triggers
 

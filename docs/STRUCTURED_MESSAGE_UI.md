@@ -266,7 +266,7 @@ Consider adding Vitest tests for:
 **Solutions**:
 
 1. Verify PromptKit components are installed: check `components/ui/`
-2. Run `npm install` in `src/frontend/src/`
+2. Run `npm install` in `src/frontend/`
 3. Check browser console for import errors
 4. Verify registry URLs in `components.json`
 

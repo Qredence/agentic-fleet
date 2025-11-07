@@ -9,7 +9,8 @@ The `tests/` directory houses backend API, workflow, memory, and integration tes
 - `test_api_*.py` — FastAPI endpoints (health, chat, SSE) with HTTPX async clients.
 - `test_workflow*.py` — Workflow factory coverage and orchestration behaviour.
 - `test_memory_system.py` — Mem0 provider regression tests.
-- `test_backend_e2e.py` & `tests/e2e` — Playwright-backed end-to-end checks (require backend/frontend running).
+- `test_backend_e2e.py` — Backend surface-level integration checks (no browser automation).
+- `performance/` — Manual and semi-automated performance probes (`test_sse_performance.py`).
 - `test_improvements.py` — Regression tests for bugfixes collected from production issues.
 
 ## Running Tests
@@ -18,7 +19,8 @@ The `tests/` directory houses backend API, workflow, memory, and integration tes
 - Focused module: `uv run pytest tests/test_api_conversations.py -k happy_path`.
 - With coverage: `uv run pytest --cov=src/agentic_fleet --cov-report=term-missing`.
 - Configuration validation: `uv run python tests/test_config.py` (invoked via `make test-config`).
-- Playwright e2e: start stack (`make dev`), then `uv run python tests/e2e/playwright_test_workflow.py` or `make test-e2e`.
+- Playwright e2e: start stack (`make dev`), then run the frontend harness (`cd src/frontend && npx playwright test`). Root-level configs (`playwright*.config.ts`) are temporary until the Playwright suite is folded under `src/frontend/tests/e2e/`.
+- SSE performance smoke: `uv run python tests/performance/test_sse_performance.py` (expects local backend).
 
 ## Guidelines
 
