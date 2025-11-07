@@ -18,11 +18,11 @@ import {
   PromptInputActions,
   PromptInputTextarea,
 } from "@/components/ui/prompt-input";
-import { createConversation } from "@/lib/api/chat";
+import { useConversationInitialization } from "@/hooks/useConversationInitialization";
 import { cn } from "@/lib/utils";
 import { useChatStore } from "@/stores/chatStore";
 import { ArrowUp, Copy, ThumbsDown, ThumbsUp } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 
 /** Main chat page component */
 export function ChatPage() {
@@ -39,28 +39,12 @@ export function ChatPage() {
     error,
     conversationId,
     sendMessage,
-    setConversationId,
-    setError,
   } = useChatStore();
+  const { initializing } = useConversationInitialization();
 
   const [inputMessage, setInputMessage] = useState("");
 
-  // Initialize conversation on mount
-  useEffect(() => {
-    if (!conversationId) {
-      createConversation()
-        .then((conv) => {
-          setConversationId(conv.id);
-        })
-        .catch((err) => {
-          setError(
-            err instanceof Error
-              ? err.message
-              : "Failed to create conversation",
-          );
-        });
-    }
-  }, [conversationId, setConversationId, setError]);
+  // Conversation initialization moved to hook
 
   const handleSend = async () => {
     if (!inputMessage.trim() || isLoading || !conversationId) {
@@ -238,8 +222,8 @@ export function ChatPage() {
                         className={cn(
                           "max-w-none leading-relaxed",
                           isUser
-                            ? "[--tw-prose-body:theme(colors.primary.foreground)] [--tw-prose-headings:theme(colors.primary.foreground)] prose-strong:text-primary-foreground"
-                            : "[--tw-prose-body:theme(colors.foreground)] [--tw-prose-headings:theme(colors.foreground)]",
+                            ? "[--tw-prose-body:var(--color-primary-foreground)] [--tw-prose-headings:var(--color-primary-foreground)] prose-strong:text-primary-foreground"
+                            : "[--tw-prose-body:var(--color-foreground)] [--tw-prose-headings:var(--color-foreground)]",
                         )}
                       />
                     </div>
@@ -322,11 +306,11 @@ export function ChatPage() {
           <div className="flex flex-col">
             <PromptInputTextarea
               placeholder={
-                !conversationId
+                initializing || !conversationId
                   ? "Initializing conversation..."
                   : "Ask anything"
               }
-              className="min-h-[44px] pt-3 pl-4 text-base leading-[1.3] sm:text-base md:text-base"
+              className="min-h-11 pt-3 pl-4 text-base leading-[1.3] sm:text-base md:text-base"
             />
 
             <PromptInputActions className="mt-5 flex w-full items-center justify-between gap-2 px-3 pb-3">

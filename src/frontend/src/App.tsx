@@ -1,6 +1,5 @@
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { ChatPage } from "@/pages/ChatPage";
-import "./App.css";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 
 // Create a query client for React Query (available for future use)
 const queryClient = new QueryClient({

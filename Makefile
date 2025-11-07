@@ -1,4 +1,8 @@
-.PHONY: help install sync clean test test-config test-e2e test-frontend test-automation lint format type-check check run demo-hitl pre-commit-install dev backend frontend-install frontend-dev build-frontend validate-agents load-test-setup load-test-smoke load-test-load load-test-stress load-test-dashboard
+ .PHONY: help install sync clean test test-config test-e2e test-frontend test-automation lint format type-check check run demo-hitl pre-commit-install dev backend frontend-install frontend-dev build-frontend validate-agents load-test-setup load-test-smoke load-test-load load-test-stress load-test-dashboard
+
+# Centralized frontend directory variable to avoid repeating literal path strings.
+# Update here if the frontend root moves.
+FRONTEND_DIR := src/frontend
 
 # Default target
 help:
@@ -63,7 +67,7 @@ sync:
 
 frontend-install:
 	@echo "Installing frontend dependencies..."
-	cd src/frontend && npm install
+	cd $(FRONTEND_DIR) && npm install
 	@echo "✓ Frontend dependencies installed"
 
 # Run application
@@ -83,7 +87,7 @@ dev:
 		trap "kill 0" EXIT INT TERM; \
 		uv run uvicorn agentic_fleet.server:app --reload --port 8000 --log-level info & \
 		sleep 2; \
-		cd src/frontend && npm run dev & \
+		cd $(FRONTEND_DIR) && npm run dev & \
 		wait'
 
 
@@ -95,12 +99,12 @@ backend:
 # Frontend dev server only
 frontend-dev:
 	@echo "Starting frontend on http://localhost:5173"
-	cd src/frontend && npm run dev
+	cd $(FRONTEND_DIR) && npm run dev
 
 # Build frontend for production
 build-frontend:
 	@echo "Building frontend for production..."
-	cd src/frontend && npm run build
+	cd $(FRONTEND_DIR) && npm run build
 	@echo "✓ Frontend built to src/agentic_fleet/ui"
 
 # Testing
@@ -112,11 +116,11 @@ test-config:
 
 test-e2e:
 	@echo "Running E2E tests (requires backend + frontend running)..."
-	uv run python tests/e2e/playwright_test_workflow.py
+	cd src/frontend && npx playwright test
 
 test-frontend:
 	@echo "Running frontend unit tests..."
-	cd src/frontend && npm test
+	cd $(FRONTEND_DIR) && npm test
 
 test-automation:
 	@echo "Running automated test suite with quality monitoring..."

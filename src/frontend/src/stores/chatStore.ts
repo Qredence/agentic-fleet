@@ -1,4 +1,5 @@
-import { createConversation, streamChatResponse } from "@/lib/api/chat";
+import { createConversation } from "@/lib/api/chat";
+import { streamChatWithStore } from "@/lib/streaming/streamHandlers";
 import type {
   ChatActions,
   ChatMessage,
@@ -26,13 +27,7 @@ export const useChatStore = create<ChatStore>((set, get) => ({
   // Actions
   sendMessage: async (message: string) => {
     const state = get();
-
-    // Validate input
-    if (!message.trim()) {
-      return;
-    }
-
-    // Ensure we have a conversation ID
+    if (!message.trim()) return;
     let conversationId = state.conversationId;
     if (!conversationId) {
       try {
@@ -49,15 +44,12 @@ export const useChatStore = create<ChatStore>((set, get) => ({
         return;
       }
     }
-
-    // Add user message to state
     const userMessage: ChatMessage = {
       id: `user-${Date.now()}`,
       role: "user",
       content: message,
       createdAt: Date.now(),
     };
-
     set({
       messages: [...state.messages, userMessage],
       isLoading: true,
@@ -67,181 +59,23 @@ export const useChatStore = create<ChatStore>((set, get) => ({
       currentStreamingMessageId: undefined,
       currentStreamingTimestamp: undefined,
     });
-
-    // Stream the response
-    try {
-      await streamChatResponse(conversationId, message, {
-        onDelta: (delta, agentId) => {
-          const currentState = get();
-
-          // If agent changed and we have accumulated content, save the previous agent's message
-          if (
-            agentId &&
-            currentState.currentAgentId &&
-            agentId !== currentState.currentAgentId
-          ) {
-            if (currentState.currentStreamingMessage) {
-              const agentMessage: ChatMessage = {
-                id: `assistant-${
-                  currentState.currentStreamingTimestamp ?? Date.now()
-                }`,
-                role: "assistant",
-                content: currentState.currentStreamingMessage,
-                createdAt: currentState.currentStreamingTimestamp ?? Date.now(),
-                agentId: currentState.currentAgentId,
-              };
-              const timestamp = Date.now();
-              set({
-                messages: [...currentState.messages, agentMessage],
-                currentStreamingMessage: delta,
-                currentAgentId: agentId,
-                currentStreamingMessageId: `streaming-${timestamp}`,
-                currentStreamingTimestamp: timestamp,
-              });
-            } else {
-              const timestamp = Date.now();
-              set({
-                currentStreamingMessage: delta,
-                currentAgentId: agentId,
-                currentStreamingMessageId: `streaming-${timestamp}`,
-                currentStreamingTimestamp: timestamp,
-              });
-            }
-          } else {
-            // Same agent or no agent ID change - just accumulate
-            set((state) => {
-              const timestamp = state.currentStreamingTimestamp ?? Date.now();
-              return {
-                currentStreamingMessage: state.currentStreamingMessage + delta,
-                currentAgentId: agentId || state.currentAgentId,
-                currentStreamingMessageId:
-                  state.currentStreamingMessageId ?? `streaming-${timestamp}`,
-                currentStreamingTimestamp: timestamp,
-              };
-            });
-          }
-        },
-        onAgentComplete: (agentId, content) => {
-          const currentState = get();
-
-          const messageContent =
-            currentState.currentAgentId === agentId &&
-            currentState.currentStreamingMessage
-              ? currentState.currentStreamingMessage
-              : content;
-
-          if (messageContent) {
-            const agentMessage: ChatMessage = {
-              id: `assistant-${
-                currentState.currentStreamingTimestamp ?? Date.now()
-              }`,
-              role: "assistant",
-              content: messageContent,
-              createdAt: currentState.currentStreamingTimestamp ?? Date.now(),
-              agentId: agentId,
-            };
-            set({
-              messages: [...currentState.messages, agentMessage],
-              currentStreamingMessage: "",
-              currentAgentId: undefined,
-              currentStreamingMessageId: undefined,
-              currentStreamingTimestamp: undefined,
-            });
-          } else {
-            set({
-              currentStreamingMessage: "",
-              currentAgentId: undefined,
-              currentStreamingMessageId: undefined,
-              currentStreamingTimestamp: undefined,
-            });
-          }
-        },
-        onCompleted: () => {
-          const currentState = get();
-          // Only create final message if there's remaining streaming content
-          // (this handles the final orchestrator result if any)
-          if (currentState.currentStreamingMessage) {
-            const assistantMessage: ChatMessage = {
-              id: `assistant-${Date.now()}`,
-              role: "assistant",
-              content: currentState.currentStreamingMessage,
-              createdAt: currentState.currentStreamingTimestamp ?? Date.now(),
-              agentId: currentState.currentAgentId,
-            };
-
-            set({
-              messages: [...currentState.messages, assistantMessage],
-              currentStreamingMessage: "",
-              currentAgentId: undefined,
-              currentStreamingMessageId: undefined,
-              currentStreamingTimestamp: undefined,
-              isLoading: false,
-            });
-          } else {
-            set({
-              isLoading: false,
-              currentStreamingMessageId: undefined,
-              currentStreamingTimestamp: undefined,
-            });
-          }
-        },
-        onOrchestrator: (message, kind) => {
-          const orchestratorMessage: OrchestratorMessage = {
-            id: `orchestrator-${Date.now()}-${Math.random()}`,
-            message,
-            kind,
-            timestamp: Date.now(),
-          };
-
-          set((state) => {
-            const existing = state.orchestratorMessages.find(
-              (msg) =>
-                msg.kind === orchestratorMessage.kind &&
-                msg.message === orchestratorMessage.message,
-            );
-
-            if (existing) {
-              return {};
-            }
-
-            return {
-              orchestratorMessages: [
-                ...state.orchestratorMessages,
-                orchestratorMessage,
-              ],
-              currentStreamingMessageId: state.currentStreamingMessageId,
-              currentStreamingTimestamp: state.currentStreamingTimestamp,
-            };
-          });
-        },
-        onError: (error) => {
-          set({
-            error,
-            isLoading: false,
-            currentStreamingMessage: "",
-            currentStreamingMessageId: undefined,
-            currentStreamingTimestamp: undefined,
-            currentReasoningContent: undefined,
-            currentReasoningStreaming: false,
-          });
-        },
-        onReasoningCompleted: (reasoning) => {
-          // Store reasoning for the current streaming message
-          get().completeReasoning(reasoning);
-        },
-      });
-    } catch (error) {
-      set({
-        error:
-          error instanceof Error ? error.message : "Failed to send message",
-        isLoading: false,
-        currentStreamingMessage: "",
-        currentStreamingMessageId: undefined,
-        currentStreamingTimestamp: undefined,
-        currentReasoningContent: undefined,
-        currentReasoningStreaming: false,
-      });
-    }
+    await streamChatWithStore(conversationId!, message, {
+      get,
+      set,
+      completeReasoning: (reasoning: string) =>
+        set({
+          currentReasoningContent: reasoning,
+          currentReasoningStreaming: false,
+        }),
+      appendReasoningDelta: (reasoning: string) => {
+        const state = get();
+        set({
+          currentReasoningContent:
+            (state.currentReasoningContent || "") + reasoning,
+          currentReasoningStreaming: true,
+        });
+      },
+    });
   },
 
   appendDelta: (delta: string, agentId?: string) => {
