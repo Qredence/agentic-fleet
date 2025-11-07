@@ -11,6 +11,14 @@ from agentic_fleet.utils.factory import WorkflowFactory
 from agentic_fleet.workflow.magentic_workflow import MagenticFleetWorkflow
 
 
+def _validate_workflow_dict(workflow: dict) -> None:
+    assert "id" in workflow
+    assert "name" in workflow
+    assert "description" in workflow
+    assert "factory" in workflow
+    assert "agent_count" in workflow
+
+
 def test_workflow_factory_initialization() -> None:
     """Test WorkflowFactory initializes correctly."""
     factory = WorkflowFactory()
@@ -24,15 +32,11 @@ def test_list_available_workflows() -> None:
     workflows = factory.list_available_workflows()
 
     assert isinstance(workflows, list)
-    workflow_ids = {w["id"] for w in workflows}
+    workflow_ids = {workflow["id"] for workflow in workflows}
     assert workflow_ids == {"collaboration", "magentic_fleet"}
 
     for workflow in workflows:
-        assert "id" in workflow
-        assert "name" in workflow
-        assert "description" in workflow
-        assert "factory" in workflow
-        assert "agent_count" in workflow
+        _validate_workflow_dict(workflow)
 
 
 def test_get_workflow_config_magentic_fleet() -> None:
@@ -65,22 +69,13 @@ def test_create_from_yaml_magentic_fleet(monkeypatch: pytest.MonkeyPatch) -> Non
 @pytest.mark.skip(reason="Legacy test for removed api.workflow_factory implementation")
 def test_build_magentic_fleet_args() -> None:
     """Test building arguments for magentic fleet workflow."""
-    factory = WorkflowFactory()
-    config = factory.get_workflow_config("magentic_fleet")
-
-    kwargs = factory._build_magentic_fleet_args(config)
-
-    assert isinstance(kwargs, dict)
+    pass
 
 
 @pytest.mark.skip(reason="utils.factory.WorkflowFactory doesn't check config/ directory anymore")
 def test_workflow_factory_with_custom_path() -> None:
     """Test WorkflowFactory with custom config path to repo override."""
-    config_path = Path(__file__).parent.parent / "config" / "workflows.yaml"
-    factory = WorkflowFactory(config_path=config_path)
-
-    assert factory.config_path == config_path
-    assert factory._config is not None
+    pass
 
 
 def test_workflow_factory_missing_config_file() -> None:
@@ -126,12 +121,4 @@ def test_workflow_factory_env_override(tmp_path: Path, monkeypatch: pytest.Monke
 @pytest.mark.skip(reason="utils.factory.WorkflowFactory uses package default, not config/ fallback")
 def test_workflow_factory_env_invalid_path_falls_back(monkeypatch: pytest.MonkeyPatch) -> None:
     """Invalid AF_WORKFLOW_CONFIG should fall back to repo configuration."""
-
-    repo_config = Path(__file__).parent.parent / "config" / "workflows.yaml"
-    monkeypatch.setenv("AF_WORKFLOW_CONFIG", str(Path("/definitely/missing.yaml")))
-
-    factory = WorkflowFactory()
-
-    assert factory.config_path == repo_config
-    workflows = {workflow["id"] for workflow in factory.list_available_workflows()}
-    assert workflows == {"collaboration", "magentic_fleet"}
+    pass

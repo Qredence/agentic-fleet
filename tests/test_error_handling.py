@@ -7,6 +7,10 @@ from httpx import ASGITransport, AsyncClient
 
 from agentic_fleet.api.app import create_app
 
+# Use shared constants for model names used in tests
+MODEL_NAME = "agentic_fleet"
+INVALID_ENTITY_ID = "invalid_entity_id"
+
 
 @pytest.mark.asyncio
 async def test_invalid_entity_id() -> None:
@@ -16,7 +20,7 @@ async def test_invalid_entity_id() -> None:
         resp = await client.post(
             "/v1/responses",
             json={
-                "model": "invalid_entity_id",
+                "model": INVALID_ENTITY_ID,
                 "input": "Test",
                 "stream": False,
             },
@@ -25,7 +29,7 @@ async def test_invalid_entity_id() -> None:
         data = resp.json()
         assert "error" in data
         assert data["error"]["code"] == "entity_not_found"
-        assert "invalid_entity_id" in data["error"]["message"]
+        assert INVALID_ENTITY_ID in data["error"]["message"]
 
 
 @pytest.mark.asyncio
@@ -36,7 +40,7 @@ async def test_invalid_request_body() -> None:
         resp = await client.post(
             "/v1/responses",
             json={
-                "model": "magentic_fleet",
+                "model": MODEL_NAME,
                 # Missing required "input" field
             },
         )
@@ -61,7 +65,7 @@ async def test_missing_required_fields() -> None:
         resp = await client.post(
             "/v1/responses",
             json={
-                "model": "magentic_fleet",
+                "model": MODEL_NAME,
             },
         )
         assert resp.status_code == 422
@@ -75,7 +79,7 @@ async def test_workflow_error_propagation() -> None:
         resp = await client.post(
             "/v1/responses",
             json={
-                "model": "magentic_fleet",
+                "model": MODEL_NAME,
                 "input": "Test",
                 "stream": True,
             },
@@ -103,14 +107,13 @@ async def test_malformed_sse_events() -> None:
         resp = await client.post(
             "/v1/responses",
             json={
-                "model": "magentic_fleet",
+                "model": MODEL_NAME,
                 "input": "Test",
                 "stream": True,
             },
         )
         assert resp.status_code == 200
         # Server should handle stream properly
-        assert True
 
 
 @pytest.mark.asyncio
