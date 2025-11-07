@@ -1,4 +1,3 @@
-# AgenticFleet
 
 ![AgenticFleet Architecture](assets/banner.png)
 
@@ -81,4 +80,3 @@ make validate-agents  # verify AGENTS docs invariants
 
 ## License
 
-MIT — see LICENSE for details.
