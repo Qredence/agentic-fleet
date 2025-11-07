@@ -38,6 +38,7 @@ async def db_manager(temp_db):
 @pytest.fixture
 def persistence_service(db_manager):
     """Factory fixture to create persistence service with customizable settings."""
+
     def _factory(summary_threshold=10, summary_keep_recent=None):
         settings = PersistenceSettings()
         settings.enabled = True
@@ -45,6 +46,7 @@ def persistence_service(db_manager):
         if summary_keep_recent is not None:
             settings.summary_keep_recent = summary_keep_recent
         return ConversationPersistenceService(db_manager, settings)
+
     return _factory
 
 
@@ -262,7 +264,8 @@ async def test_summarization_threshold(persistence_service):
     # Check if a summary message exists
     # Prefer robust field checks: 'type' or 'is_summary' if they exist, fallback to strict matching
     summary_messages = [
-        m for m in history
+        m
+        for m in history
         if m["role"] == "system"
         and (
             m.get("type") == "summary"
