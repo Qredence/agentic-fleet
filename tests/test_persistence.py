@@ -30,7 +30,7 @@ async def temp_db():
 
 
 @pytest.fixture
-async def db_manager(temp_db):
+def db_manager(temp_db):
     """Create database manager."""
     return DatabaseManager(temp_db, init_schema=False)
 

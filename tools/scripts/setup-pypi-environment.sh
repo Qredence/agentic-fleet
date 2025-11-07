@@ -27,6 +27,10 @@ if [ -z "$PYPI_PROJECT_NAME" ]; then
     exit 1
 fi
 
+# Set repository name from argument, env variable, or default value
+REPO="${1:-${REPO:-Qredence/AgenticFleet}}"
+REPO_OWNER="${REPO%%/*}"
+
 # Colors for output
 RED='\033[0;31m'
 GREEN='\033[0;32m'
@@ -52,10 +56,6 @@ if ! gh auth status &> /dev/null; then
     echo "Please run: gh auth login"
     exit 1
 fi
-
-# Set repository name from argument, env variable, or default value
-REPO="${1:-${REPO:-Qredence/AgenticFleet}}"
-REPO_OWNER="${REPO%%/*}"
 
 echo -e "${GREEN}✓${NC} GitHub CLI is installed and authenticated"
 echo ""
