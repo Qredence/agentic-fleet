@@ -132,11 +132,10 @@ if [ -f "pyproject.toml" ]; then
 
     # Extract package name from pyproject.toml
     PKG_NAME=$(awk -F' *= *' '/^name = / {gsub(/"/, "", $2); print $2; exit}' pyproject.toml)
-    EXPECTED_NAME="${PACKAGE_NAME:-agentic-fleet}"
-    if [ "$PKG_NAME" = "$EXPECTED_NAME" ]; then
+    if [ "$PKG_NAME" = "$PYPI_PROJECT_NAME" ]; then
         echo -e "${GREEN}✓${NC} Package name: $PKG_NAME"
     else
-        echo -e "${YELLOW}!${NC} Package name in pyproject.toml ('$PKG_NAME') does not match expected ('$EXPECTED_NAME')"
+        echo -e "${YELLOW}!${NC} Package name in pyproject.toml ('$PKG_NAME') does not match expected ('$PYPI_PROJECT_NAME')"
     fi
 
     # Check version

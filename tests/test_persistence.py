@@ -246,7 +246,7 @@ async def test_summarization_threshold(persistence_service):
 
     conv_id = await svc.create_conversation(workflow_id="test-workflow")
 
-    # Add messages up to threshold
+    # Add messages beyond threshold to trigger summarization (10 > 8)
     for i in range(10):
         await svc.add_message(
             conversation_id=conv_id,
