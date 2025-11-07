@@ -161,7 +161,7 @@ uv run pytest tests/test_specific_file.py
 uv run pytest --cov=agentic_fleet
 
 # Frontend tests
-cd src/frontend && npm test
+cd src/frontend/src && npm test
 ```
 
 ### 4. Check Code Quality
