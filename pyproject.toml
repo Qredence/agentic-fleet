@@ -33,21 +33,21 @@ dependencies = [
     "agent-framework-mem0",
     "agent-framework-redis",
     "agent-framework-devui",
-    "mem0ai==1.0.0",                    # Pinned for stable memory API
+    "mem0ai==1.0.0", # Pinned for stable memory API
     "rich>=12.6.0",
     "prompt-toolkit>=3.0.47,<4.0",
     "ipykernel>=7.0.1,<8.0",
-    "openai>=1.99.0,<2.6.1",            # Compatible with agent-framework requirements
+    "openai>=1.99.0,<2.6.1", # Compatible with agent-framework requirements
     "azure-ai-evaluation>=1.12.0,<2.0",
     "fastapi>=0.120.1,<1.0",
     "uvicorn[standard]>=0.24.0",
     "httpx>=0.24.0",
     "sse-starlette>=2.0.0",
-    "sqlalchemy>=2.0.0,<3.0",
+    "redis[hiredis]>=6.0.0,<7.0.0",
+    "fastapi-limiter>=0.1.6,<1.0",
     "databases[asyncpg]>=0.7.0,<1.0",
     "aiofiles>=24.1.0",
     "pydantic-settings>=2.3.2,<3.0",
-    "redis[hiredis]>=6.4.0,<7.0",
     "websockets>=10.4",
     "typer>=0.20.0",
     "locust>=2.15.0",
@@ -71,6 +71,8 @@ dependencies = [
     "ruff>=0.0.200",
     "mypy>=0.991",
     "pytz>=2024.1",
+    "setuptools>=80.9.0",
+    "langcache>=0.10.1",
 ]
 requires-python = ">=3.12,<4"
 
