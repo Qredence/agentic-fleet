@@ -468,9 +468,7 @@ class TestConfigurationErrorHandling:
                     "malformed": {
                         "name": "Malformed Workflow",
                         # Missing required fields
-                        "agents": {
-                            "test": {}  # Empty agent config
-                        },
+                        "agents": {"test": {}},  # Empty agent config
                     }
                 }
             }
@@ -499,9 +497,7 @@ class TestConfigurationErrorHandling:
                     "circular": {
                         "name": "Circular Reference Test",
                         "factory": "agents.planner",  # Invalid factory method
-                        "agents": {
-                            "self": "circular"  # Self-reference
-                        },
+                        "agents": {"self": "circular"},  # Self-reference
                     }
                 }
             }

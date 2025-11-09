@@ -178,16 +178,17 @@ class PerformanceValidator:
             "successful_operations": len(successful_operations),
             "failed_operations": len(failed_operations),
             "success_rate_percent": (len(successful_operations) / len(self.metrics)) * 100,
-            "avg_response_time_ms": sum(m["duration_ms"] for m in successful_operations)
-            / len(successful_operations)
-            if successful_operations
-            else 0,
-            "max_response_time_ms": max(m["duration_ms"] for m in successful_operations)
-            if successful_operations
-            else 0,
-            "min_response_time_ms": min(m["duration_ms"] for m in successful_operations)
-            if successful_operations
-            else 0,
+            "avg_response_time_ms": (
+                sum(m["duration_ms"] for m in successful_operations) / len(successful_operations)
+                if successful_operations
+                else 0
+            ),
+            "max_response_time_ms": (
+                max(m["duration_ms"] for m in successful_operations) if successful_operations else 0
+            ),
+            "min_response_time_ms": (
+                min(m["duration_ms"] for m in successful_operations) if successful_operations else 0
+            ),
             "performance_thresholds_met": all(
                 m["duration_ms"] <= self.thresholds.max_response_time_ms
                 for m in successful_operations
