@@ -217,7 +217,6 @@ def create_app() -> FastAPI:
             dict: Status of the service and Redis connection
         """
         redis_enabled = is_redis_enabled()
-        redis_status = "disabled"
         rate_limiting_status = "disabled"
 
         if redis_enabled:
