@@ -28,7 +28,9 @@ export function MessageList({
     if (!currentStreamingMessage) {
       return messages;
     }
-    const streamingId = currentStreamingMessageId ?? "streaming-current";
+    const streamingId =
+      currentStreamingMessageId ??
+      `streaming-${currentStreamingTimestamp ?? Date.now()}`;
     return [
       ...messages,
       {

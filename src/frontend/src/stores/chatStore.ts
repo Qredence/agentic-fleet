@@ -221,15 +221,15 @@ export const useChatStore = create<ChatStore>((set, get) => ({
     abortController?.abort();
     abortController = null;
 
-    try {
-      await get().loadConversationHistory(conversationId);
-      await get().loadConversations();
-    } catch (error) {
-      throw error;
-    }
+    // Load conversation history
+    await get().loadConversationHistory(conversationId);
+
+    // Reload conversations list to ensure it's up to date
+    await get().loadConversations();
   },
 
   createNewConversation: async () => {
+    // Abort any active stream before creating new conversation
     abortController?.abort();
     abortController = null;
 
