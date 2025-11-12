@@ -89,7 +89,7 @@ class AgentInitializationError(AgenticFleetError):
     error_code = "agent_initialization_error"
 
     def __init__(self, name: str, reason: str | None = None) -> None:
-        message = reason or f"Failed to initialize agent '{name}'"
+        message = reason if reason is not None else f"Failed to initialize agent '{name}'"
         super().__init__(message)
         self.agent_name = name
 

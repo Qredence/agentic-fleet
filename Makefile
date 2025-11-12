@@ -116,7 +116,7 @@ test-config:
 
 test-e2e:
 	@echo "Running E2E tests (requires backend + frontend running)..."
-	cd src/frontend && npx playwright test
+	cd $(FRONTEND_DIR) && npx playwright test
 
 test-frontend:
 	@echo "Running frontend unit tests..."

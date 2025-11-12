@@ -48,7 +48,13 @@ class MagenticFleetWorkflow(RunsWorkflow):
         self._cache_ttl_ms: int | None = None
 
         if cache_config and cache_config.get("enabled", False):
-            ttl_seconds = int(cache_config.get("ttl_seconds", 3600))
+            try:
+                ttl_seconds = int(cache_config.get("ttl_seconds", 3600))
+            except (ValueError, TypeError) as e:
+                logger.warning(
+                    "[MAGENTIC] Invalid ttl_seconds in cache config, using default: %s", e
+                )
+                ttl_seconds = 3600
             self._cache_ttl_ms = max(ttl_seconds, 0) * 1000 if ttl_seconds else None
             try:
                 self._langcache = get_redis_cache().langcache

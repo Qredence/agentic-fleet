@@ -50,17 +50,17 @@ async def get_workflow_config(workflow_id: str) -> dict[str, Any]:
 @router.post("/{workflow_id}/run")  # type: ignore
 async def run_workflow(workflow_id: str, request: WorkflowRunRequest) -> EventSourceResponse:
     """Execute a workflow and stream events."""
-    logger.info(f"Received request to run workflow: {workflow_id}")
-    logger.debug(f"Request details: {request!s}")
+    logger.info("Received request to run workflow: %s", workflow_id)
+    logger.debug("Request details: %s", request)
 
     try:
         # Legacy route path: adapt to current WorkflowRunRequest (no files/stream fields)
         workflow = await create_workflow(workflow_id=workflow_id)
     except WorkflowNotFoundError as e:
-        logger.warning(f"Workflow '{workflow_id}' not found.")
+        logger.warning("Workflow '%s' not found.", workflow_id)
         raise HTTPException(status_code=404, detail="Workflow not found") from e
     except Exception as e:
-        logger.exception(f"Error creating workflow '{workflow_id}': {e!s}")
+        logger.exception("Error creating workflow '%s': %s", workflow_id, e)
         raise HTTPException(status_code=500, detail="Internal Server Error") from e
 
     # Provide message payload from request; fallback to empty string satisfies protocol

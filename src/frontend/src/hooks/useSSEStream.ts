@@ -1,4 +1,4 @@
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import {
   streamChatResponse,
   type SSEDeltaCallback,
@@ -69,7 +69,7 @@ export function useSSEStream(options: UseSSEStreamOptions = {}) {
           err instanceof Error ? err.message : "Unknown streaming error";
         // If aborted, treat as graceful stop
         if ((err as any)?.name === "AbortError") {
-          options.onCompleted?.();
+          // Graceful abort - no error, no completion
         } else {
           setError(msg);
           options.onError?.(msg);
@@ -96,6 +96,16 @@ export function useSSEStream(options: UseSSEStreamOptions = {}) {
       abortControllerRef.current = null;
     }
     setIsStreaming(false);
+  }, []);
+
+  // Cleanup effect to abort in-flight stream on component unmount
+  useEffect(() => {
+    return () => {
+      if (abortControllerRef.current) {
+        abortControllerRef.current.abort();
+        abortControllerRef.current = null;
+      }
+    };
   }, []);
 
   return { stream, cancel, isStreaming, error };

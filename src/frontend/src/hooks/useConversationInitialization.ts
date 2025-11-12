@@ -31,6 +31,14 @@ export function useConversationInitialization(
   const startedRef = useRef(false);
   const loadingHistoryRef = useRef(false);
 
+  const onSuccessRef = useRef(onSuccess);
+  const onErrorRef = useRef(onError);
+
+  useEffect(() => {
+    onSuccessRef.current = onSuccess;
+    onErrorRef.current = onError;
+  });
+
   // Load conversation history if conversationId exists but messages are empty
   useEffect(() => {
     if (!enabled || loadingHistoryRef.current) return;
@@ -43,7 +51,7 @@ export function useConversationInitialization(
     (async () => {
       try {
         await loadConversationHistory(conversationId);
-        onSuccess?.(conversationId);
+        onSuccessRef.current?.(conversationId);
       } catch (err) {
         const error =
           err instanceof Error
@@ -53,7 +61,7 @@ export function useConversationInitialization(
         if (!error.message.includes("not found")) {
           setError(error.message);
         }
-        onError?.(error);
+        onErrorRef.current?.(error);
       } finally {
         setInitializing(false);
         loadingHistoryRef.current = false;
@@ -64,8 +72,6 @@ export function useConversationInitialization(
     conversationId,
     messages.length,
     loadConversationHistory,
-    onSuccess,
-    onError,
     setError,
   ]);
 
@@ -81,26 +87,19 @@ export function useConversationInitialization(
       try {
         const conversation = await createConversation();
         setConversationId(conversation.id);
-        onSuccess?.(conversation.id);
+        onSuccessRef.current?.(conversation.id);
       } catch (err) {
         const error =
           err instanceof Error
             ? err
             : new Error("Failed to create conversation");
         setError(error.message);
-        onError?.(error);
+        onErrorRef.current?.(error);
       } finally {
         setInitializing(false);
       }
     })();
-  }, [
-    enabled,
-    conversationId,
-    onSuccess,
-    onError,
-    setConversationId,
-    setError,
-  ]);
+  }, [enabled, conversationId, setConversationId, setError]);
 
   return { conversationId, initializing };
 }

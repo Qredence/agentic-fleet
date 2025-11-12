@@ -10,7 +10,7 @@ logger = logging.getLogger(__name__)
 
 try:
     from packaging.version import InvalidVersion, Version
-except Exception:  # broad fallback if packaging not available
+except ImportError:  # fallback if packaging not available
     logger.warning(
         "Could not import 'packaging.version.Version'. "
         "Falling back to simple string comparison for version checks. "
