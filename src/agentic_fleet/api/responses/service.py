@@ -5,6 +5,7 @@ from __future__ import annotations
 import json
 import logging
 from collections.abc import AsyncGenerator
+from typing import Any
 
 from agentic_fleet.api.responses.schemas import (
     OrchestratorMessageEvent,
@@ -14,6 +15,7 @@ from agentic_fleet.api.responses.schemas import (
     ResponseMessage,
 )
 from agentic_fleet.models.events import WorkflowEvent
+from agentic_fleet.models.requests import WorkflowRunRequest, WorkflowRunResponse
 
 logger = logging.getLogger(__name__)
 
@@ -21,10 +23,27 @@ logger = logging.getLogger(__name__)
 class ResponseAggregator:
     """Aggregates workflow events into OpenAI-compatible response format."""
 
-    def __init__(self) -> None:
-        """Initialize ResponseAggregator."""
+    def __init__(
+        self,
+        workflow_id: str | None = None,
+        request: WorkflowRunRequest | None = None,
+    ) -> None:
+        self._workflow_id = workflow_id
+        self._request = request
+        self._response_metadata: WorkflowRunResponse | None = None
         self._accumulated_content = ""
         self._agent_id: str | None = None
+        self._reasoning_agent_id: str | None = None
+        self._accumulated_reasoning = ""
+        self._cached = False
+        self._metadata_payload: dict[str, Any] = {}
+        self._last_completion_metadata: dict[str, Any] | None = None
+
+    def set_request_context(self, workflow_id: str, request: WorkflowRunRequest) -> None:
+        """Bind workflow/request context for subsequent aggregation."""
+
+        self._workflow_id = workflow_id
+        self._request = request
 
     @staticmethod
     def _extract_text(value: object) -> str:
@@ -69,6 +88,7 @@ class ResponseAggregator:
         """
         # Ensure each invocation starts from a clean state so the aggregator can be reused
         self.reset()
+        self._initialize_response_metadata()
         completed_sent = False
 
         try:
@@ -76,12 +96,24 @@ class ResponseAggregator:
                 event_type = event.get("type")
                 event_data = event.get("data", {})
                 openai_type = event.get("openai_type")
+                event_metadata = (
+                    event_data.get("metadata") if isinstance(event_data, dict) else None
+                )
+
+                if event_metadata and isinstance(event_metadata, dict):
+                    self._metadata_payload.update(event_metadata)
+
+                correlation_id = event.get("correlation_id")
+                if correlation_id and self._response_metadata is not None:
+                    self._response_metadata.correlation_id = correlation_id
 
                 if event_type == "message.delta":
                     # Handle delta events
                     delta_value = event_data.get("delta") if isinstance(event_data, dict) else ""
                     delta_text = self._extract_text(delta_value)
                     agent_id = event_data.get("agent_id") if isinstance(event_data, dict) else None
+                    if isinstance(event_data, dict) and event_data.get("cached"):
+                        self._cached = True
 
                     if delta_text:
                         self._accumulated_content += delta_text
@@ -90,9 +122,39 @@ class ResponseAggregator:
                         # Emit OpenAI-compatible delta event
                         delta_event = ResponseDeltaEvent(
                             type="response.delta",
-                            delta=ResponseDelta(content=delta_text, agent_id=agent_id),
+                            delta=ResponseDelta(
+                                content=delta_text,
+                                agent_id=agent_id,
+                                cached=self._cached or bool(event_data.get("cached")),
+                            ),
                         )
-                        yield f"data: {delta_event.model_dump_json()}\n\n"
+                        yield f"data: {delta_event.model_dump_json(exclude_none=True)}\n\n"
+
+                elif event_type == "reasoning.delta":
+                    delta_value = event_data.get("delta") if isinstance(event_data, dict) else ""
+                    delta_text = self._extract_text(delta_value)
+
+                    if isinstance(event_data, dict) and event_data.get("cached"):
+                        self._cached = True
+
+                    if delta_text:
+                        self._accumulated_reasoning += delta_text
+                        agent_id = (
+                            event_data.get("agent_id") if isinstance(event_data, dict) else None
+                        )
+                        if agent_id:
+                            self._reasoning_agent_id = agent_id
+                        reasoning_event: dict[str, Any] = {
+                            "type": "reasoning.delta",
+                            "reasoning": delta_text,
+                        }
+                        if self._reasoning_agent_id:
+                            reasoning_event["agent_id"] = self._reasoning_agent_id
+                        if self._cached:
+                            reasoning_event["cached"] = True
+
+                        yield f"data: {json.dumps(reasoning_event)}\n\n"
+                    continue
 
                 elif event_type == "orchestrator.message":
                     # Handle orchestrator messages
@@ -116,10 +178,21 @@ class ResponseAggregator:
                     final_content = result_text if result_text else self._accumulated_content
                     self._accumulated_content = final_content
 
+                    if isinstance(event_data, dict) and event_data.get("cached"):
+                        self._cached = True
+
                     # Check for reasoning content
                     reasoning = (
                         event_data.get("reasoning") if isinstance(event_data, dict) else None
                     )
+                    if not reasoning and self._accumulated_reasoning:
+                        reasoning = self._accumulated_reasoning
+
+                    agent_id = None
+                    if isinstance(event_data, dict):
+                        agent_id = event_data.get("agent_id")
+                    if agent_id is None:
+                        agent_id = self._reasoning_agent_id or self._agent_id
 
                     # Emit reasoning.completed event if reasoning is present
                     if reasoning:
@@ -127,7 +200,13 @@ class ResponseAggregator:
                             "type": "reasoning.completed",
                             "reasoning": str(reasoning),
                         }
+                        if agent_id:
+                            reasoning_event["agent_id"] = agent_id
+                        if self._cached:
+                            reasoning_event["cached"] = True
                         yield f"data: {json.dumps(reasoning_event)}\n\n"
+                    self._accumulated_reasoning = ""
+                    self._reasoning_agent_id = None
 
                     completed_event = ResponseCompletedEvent(
                         type="response.completed",
@@ -135,8 +214,9 @@ class ResponseAggregator:
                             role="assistant",
                             content=final_content,
                         ),
+                        metadata=self._build_completion_metadata(),
                     )
-                    yield f"data: {completed_event.model_dump_json()}\n\n"
+                    yield f"data: {completed_event.model_dump_json(exclude_none=True)}\n\n"
                     yield "data: [DONE]\n\n"
                     completed_sent = True
                     break
@@ -176,6 +256,8 @@ class ResponseAggregator:
                             final_text = self._extract_text(event_data)
                         if final_text:
                             self._accumulated_content = final_text
+                        if isinstance(event_data, dict) and event_data.get("cached"):
+                            self._cached = True
                         completed_sent = True
                         yield "data: [DONE]\n\n"
                         break
@@ -192,8 +274,9 @@ class ResponseAggregator:
                         role="assistant",
                         content=self._accumulated_content,
                     ),
+                    metadata=self._build_completion_metadata(),
                 )
-                yield f"data: {completed_event.model_dump_json()}\n\n"
+                yield f"data: {completed_event.model_dump_json(exclude_none=True)}\n\n"
                 yield "data: [DONE]\n\n"
 
         except Exception as exc:
@@ -213,7 +296,64 @@ class ResponseAggregator:
         """
         return self._accumulated_content
 
+    def get_response_metadata(self) -> WorkflowRunResponse | None:
+        """Return workflow response metadata if available."""
+
+        if self._response_metadata is not None:
+            self._response_metadata.cached = self._cached
+        return self._response_metadata
+
     def reset(self) -> None:
         """Reset aggregator state."""
         self._accumulated_content = ""
         self._agent_id = None
+        self._reasoning_agent_id = None
+        self._accumulated_reasoning = ""
+        self._cached = False
+        self._metadata_payload = {}
+        self._last_completion_metadata = None
+
+    def _initialize_response_metadata(self) -> None:
+        if self._workflow_id is None:
+            self._response_metadata = None
+            return
+
+        conversation_id = self._request.conversation_id if self._request else None
+        correlation_id = self._request.correlation_id if self._request else None
+        self._response_metadata = WorkflowRunResponse(
+            workflow_id=self._workflow_id,
+            conversation_id=conversation_id,
+            correlation_id=correlation_id,
+        )
+
+        if self._request:
+            if self._request.metadata:
+                self._metadata_payload.update(self._request.metadata)
+            if self._request.context:
+                self._metadata_payload.setdefault("context", {}).update(self._request.context)
+
+    def _build_completion_metadata(self) -> dict[str, Any] | None:
+        metadata: dict[str, Any] = {}
+
+        if self._response_metadata is not None:
+            self._response_metadata.cached = self._cached
+            metadata["workflow_id"] = self._response_metadata.workflow_id
+            if self._response_metadata.conversation_id is not None:
+                metadata["conversation_id"] = self._response_metadata.conversation_id
+            if self._response_metadata.correlation_id is not None:
+                metadata["correlation_id"] = self._response_metadata.correlation_id
+            metadata["cached"] = self._cached
+            metadata["started_at"] = self._response_metadata.started_at.isoformat()
+        elif self._cached:
+            metadata["cached"] = True
+
+        if self._metadata_payload:
+            metadata.setdefault("details", {}).update(self._metadata_payload)
+
+        self._last_completion_metadata = metadata or None
+        return self._last_completion_metadata
+
+    def get_completion_metadata(self) -> dict[str, Any] | None:
+        """Return metadata emitted with completion events."""
+
+        return self._last_completion_metadata

@@ -1,14 +1,21 @@
-import { createConversation } from "@/lib/api/chat";
+import {
+  createConversation,
+  getConversation,
+  listConversations,
+} from "@/lib/api/chat";
 import { streamChatWithStore } from "@/lib/streaming/streamHandlers";
 import type {
   ChatActions,
   ChatMessage,
   ChatState,
+  Conversation,
   OrchestratorMessage,
 } from "@/types/chat";
 import { create } from "zustand";
 
 interface ChatStore extends ChatState, ChatActions {}
+
+let abortController: AbortController | null = null;
 
 export const useChatStore = create<ChatStore>((set, get) => ({
   // Initial state
@@ -23,6 +30,8 @@ export const useChatStore = create<ChatStore>((set, get) => ({
   isLoading: false,
   error: null,
   conversationId: null,
+  conversations: [],
+  isLoadingConversations: false,
 
   // Actions
   sendMessage: async (message: string) => {
@@ -59,23 +68,32 @@ export const useChatStore = create<ChatStore>((set, get) => ({
       currentStreamingMessageId: undefined,
       currentStreamingTimestamp: undefined,
     });
-    await streamChatWithStore(conversationId!, message, {
-      get,
-      set,
-      completeReasoning: (reasoning: string) =>
-        set({
-          currentReasoningContent: reasoning,
-          currentReasoningStreaming: false,
-        }),
-      appendReasoningDelta: (reasoning: string) => {
-        const state = get();
-        set({
-          currentReasoningContent:
-            (state.currentReasoningContent || "") + reasoning,
-          currentReasoningStreaming: true,
-        });
+    // Abort any active stream before starting a new one
+    abortController?.abort();
+    abortController = new AbortController();
+
+    await streamChatWithStore(
+      conversationId!,
+      message,
+      {
+        get,
+        set,
+        completeReasoning: (reasoning: string) =>
+          set({
+            currentReasoningContent: reasoning,
+            currentReasoningStreaming: false,
+          }),
+        appendReasoningDelta: (reasoning: string) => {
+          const state = get();
+          set({
+            currentReasoningContent:
+              (state.currentReasoningContent || "") + reasoning,
+            currentReasoningStreaming: true,
+          });
+        },
       },
-    });
+      abortController.signal,
+    );
   },
 
   appendDelta: (delta: string, agentId?: string) => {
@@ -131,6 +149,134 @@ export const useChatStore = create<ChatStore>((set, get) => ({
     set({ conversationId: id });
   },
 
+  loadConversationHistory: async (conversationId: string) => {
+    try {
+      const conversation = await getConversation(conversationId);
+
+      // Map backend messages to frontend ChatMessage format
+      const messages: ChatMessage[] = conversation.messages.map((msg) => ({
+        id: msg.id,
+        role: msg.role,
+        content: msg.content,
+        createdAt: msg.created_at,
+        reasoning: msg.reasoning || undefined,
+        // Note: agentId is not in backend response, so it will be undefined
+        // This is fine as agentId is only set during streaming
+      }));
+
+      set({
+        conversationId: conversation.id,
+        messages,
+        error: null,
+      });
+    } catch (error) {
+      set({
+        error:
+          error instanceof Error
+            ? error.message
+            : "Failed to load conversation history",
+      });
+      throw error;
+    }
+  },
+
+  loadConversations: async () => {
+    set({ isLoadingConversations: true });
+    try {
+      const response = await listConversations();
+
+      // Map backend conversations to frontend Conversation format
+      const conversations: Conversation[] = response.items.map((conv) => ({
+        id: conv.id,
+        title: conv.title,
+        created_at: conv.created_at,
+        messages: conv.messages.map((msg) => ({
+          id: msg.id,
+          role: msg.role,
+          content: msg.content,
+          createdAt: msg.created_at,
+          reasoning: msg.reasoning || undefined,
+        })),
+      }));
+
+      set({
+        conversations,
+        isLoadingConversations: false,
+        error: null,
+      });
+    } catch (error) {
+      set({
+        isLoadingConversations: false,
+        error:
+          error instanceof Error
+            ? error.message
+            : "Failed to load conversations",
+      });
+    }
+  },
+
+  switchConversation: async (conversationId: string) => {
+    const state = get();
+
+    // Don't switch if already on this conversation
+    if (state.conversationId === conversationId) {
+      return;
+    }
+
+    // Abort any active stream before switching
+    abortController?.abort();
+    abortController = null;
+
+    try {
+      // Load conversation history
+      await get().loadConversationHistory(conversationId);
+
+      // Reload conversations list to ensure it's up to date
+      await get().loadConversations();
+    } catch (error) {
+      // Error already set by loadConversationHistory
+      throw error;
+    }
+  },
+
+  createNewConversation: async () => {
+    const state = get();
+
+    // Abort any active stream before creating new conversation
+    abortController?.abort();
+    abortController = null;
+
+    try {
+      const conversation = await createConversation();
+
+      // Reset current conversation state
+      set({
+        conversationId: conversation.id,
+        messages: [],
+        currentStreamingMessage: "",
+        currentAgentId: undefined,
+        currentStreamingMessageId: undefined,
+        currentStreamingTimestamp: undefined,
+        currentReasoningContent: undefined,
+        currentReasoningStreaming: false,
+        orchestratorMessages: [],
+        isLoading: false,
+        error: null,
+      });
+
+      // Reload conversations list to include the new one
+      await get().loadConversations();
+    } catch (error) {
+      set({
+        error:
+          error instanceof Error
+            ? error.message
+            : "Failed to create new conversation",
+      });
+      throw error;
+    }
+  },
+
   appendReasoningDelta: (reasoning: string) => {
     const state = get();
     set({
@@ -181,7 +327,28 @@ export const useChatStore = create<ChatStore>((set, get) => ({
     }
   },
 
+  /** Abort active SSE stream and cleanup streaming state */
+  cancelStreaming: () => {
+    // Abort controller and clear reference
+    abortController?.abort();
+    abortController = null;
+
+    set({
+      isLoading: false,
+      currentStreamingMessage: "",
+      currentAgentId: undefined,
+      currentStreamingMessageId: undefined,
+      currentStreamingTimestamp: undefined,
+      currentReasoningContent: undefined,
+      currentReasoningStreaming: false,
+    });
+  },
+
   reset: () => {
+    // Abort any active stream on reset
+    abortController?.abort();
+    abortController = null;
+
     set({
       messages: [],
       currentStreamingMessage: "",
@@ -194,6 +361,8 @@ export const useChatStore = create<ChatStore>((set, get) => ({
       isLoading: false,
       error: null,
       conversationId: null,
+      conversations: [],
+      isLoadingConversations: false,
     });
   },
 }));

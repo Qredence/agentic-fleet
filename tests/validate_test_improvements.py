@@ -31,8 +31,8 @@ def validate_config_testing():
         # Create test instance
         test_instance = TestWorkflowFactoryCore()
 
-        # Test basic functionality
-        test_instance.test_factory_initialization_with_default_config()
+        # Execute async test method within its own event loop
+        asyncio.run(test_instance.test_factory_initialization_with_default_config())
 
         print("✅ Configuration testing validation passed")
         return True
@@ -132,7 +132,7 @@ def validate_performance_testing():
         validator = PerformanceValidator(thresholds)
 
         # Test performance measurement decorator
-        @validator.measure_request_performance("test_operation")
+        @validator.measure_request_performance("test_operation")  # type: ignore[misc]
         def test_function():
             time.sleep(0.1)  # Simulate work
             return "success"
@@ -169,9 +169,17 @@ def validate_mock_strategies():
         assert callable(openai_mock.create_agent)
 
         # Test agent mock
-        agent = openai_mock.create_agent.return_value
+        # Access mock's create_agent safely (MagicMock may or may not provide return_value attr)
+        agent = None
+        if hasattr(openai_mock, "create_agent") and callable(openai_mock.create_agent):
+            try:
+                agent = openai_mock.create_agent()
+            except Exception:
+                agent = None
         assert hasattr(agent, "run")
-        assert callable(agent.run)
+        if agent is not None and hasattr(agent, "run"):
+            run_attr = agent.run
+            assert callable(run_attr)
 
         # Test SSE response mock
         sse_mock = mock_factory.create_sse_response_mock()
@@ -196,8 +204,10 @@ def validate_quality_metrics():
 
         # Create test result
         result = TestExecutionResult()
-        result.start_time = time.time()
-        result.end_time = time.time() + 60  # 1 minute duration
+        from datetime import datetime, timedelta
+
+        result.start_time = datetime.utcnow()
+        result.end_time = result.start_time + timedelta(minutes=1)
         result.coverage_percentage = 85.0
         result.quality_score = 88.5
         result.errors = []

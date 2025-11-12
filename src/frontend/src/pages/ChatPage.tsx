@@ -1,27 +1,20 @@
 import { ChainOfThought } from "@/components/chat/ChainOfThought";
 import { LoadingIndicator } from "@/components/chat/LoadingIndicator";
-import { ReasoningDisplay } from "@/components/chat/ReasoningDisplay";
-import { StructuredMessageContent } from "@/components/chat/StructuredMessageContent";
+import { ConversationsSidebar } from "@/components/chat/ConversationsSidebar";
 import { Button } from "@/components/ui/button";
 import {
   ChatContainerContent,
   ChatContainerRoot,
 } from "@/components/ui/chat-container";
 import {
-  Message,
-  MessageAction,
-  MessageActions,
-  MessageAvatar,
-} from "@/components/ui/message";
-import {
   PromptInput,
   PromptInputActions,
   PromptInputTextarea,
 } from "@/components/ui/prompt-input";
+import { MessageList } from "@/components/chat/MessageList";
 import { useConversationInitialization } from "@/hooks/useConversationInitialization";
-import { cn } from "@/lib/utils";
 import { useChatStore } from "@/stores/chatStore";
-import { ArrowUp, Copy, ThumbsDown, ThumbsUp } from "lucide-react";
+import { ArrowUp, CircleStop, Menu } from "lucide-react";
 import { useState } from "react";
 
 /** Main chat page component */
@@ -39,10 +32,12 @@ export function ChatPage() {
     error,
     conversationId,
     sendMessage,
+    cancelStreaming,
   } = useChatStore();
   const { initializing } = useConversationInitialization();
 
   const [inputMessage, setInputMessage] = useState("");
+  const [sidebarOpen, setSidebarOpen] = useState(false);
 
   // Conversation initialization moved to hook
 
@@ -56,286 +51,152 @@ export function ChatPage() {
     await sendMessage(message);
   };
 
-  const allMessages = [
-    ...messages,
-    ...(currentStreamingMessage
-      ? [
-          {
-            id:
-              currentStreamingMessageId ??
-              `streaming-${currentStreamingTimestamp ?? Date.now()}`,
-            role: "assistant" as const,
-            content: currentStreamingMessage,
-            agentId: currentAgentId,
-            createdAt: currentStreamingTimestamp ?? Date.now(),
-          },
-        ]
-      : []),
-  ];
-
   return (
-    <div className="flex h-screen flex-col overflow-hidden">
-      {/* Header */}
-      <header className="flex items-center justify-between border-b border-border px-6 py-4">
-        <div className="flex items-center gap-2">
-          <h1 className="text-lg font-semibold">AgenticFleet Chat</h1>
-          {conversationId && (
-            <span className="text-xs text-muted-foreground">
-              ({conversationId.slice(0, 8)}...)
-            </span>
-          )}
-        </div>
-        {error && (
-          <div className="rounded-md bg-destructive/10 px-3 py-1 text-sm text-destructive">
-            {error}
+    <div className="flex h-screen overflow-hidden">
+      {/* Sidebar */}
+      <ConversationsSidebar
+        isOpen={sidebarOpen}
+        onClose={() => setSidebarOpen(false)}
+      />
+
+      {/* Mobile overlay */}
+      {sidebarOpen && (
+        <div
+          className="fixed inset-0 z-30 bg-black/50 md:hidden"
+          onClick={() => setSidebarOpen(false)}
+          aria-hidden="true"
+        />
+      )}
+
+      {/* Main content area */}
+      <div className="flex flex-1 flex-col overflow-hidden md:ml-[280px]">
+        {/* Header */}
+        <header className="flex items-center justify-between border-b border-border px-6 py-4">
+          <div className="flex items-center gap-2">
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => setSidebarOpen(!sidebarOpen)}
+              className="md:hidden"
+              aria-label="Toggle sidebar"
+            >
+              <Menu size={20} />
+            </Button>
+            <h1 className="text-lg font-semibold">AgenticFleet Chat</h1>
+            {conversationId && (
+              <span className="text-xs text-muted-foreground">
+                ({conversationId.slice(0, 8)}...)
+              </span>
+            )}
           </div>
-        )}
-      </header>
-
-      {/* Messages area */}
-      <ChatContainerRoot className="relative flex-1 space-y-0 overflow-y-auto px-4 py-12">
-        <ChatContainerContent className="space-y-12 px-4 py-12 mx-auto max-w-[700px]">
-          {/* Render orchestrator messages (chain-of-thought) */}
-          {orchestratorMessages.length > 0 && (
-            <div className="mx-auto w-full max-w-[700px]">
-              <ChainOfThought messages={orchestratorMessages} />
+          {error && (
+            <div className="rounded-md bg-destructive/10 px-3 py-1 text-sm text-destructive">
+              {error}
             </div>
           )}
+        </header>
 
-          {/* Render messages */}
-          {allMessages.length === 0 && !isLoading && (
-            <div className="flex h-full items-center justify-center">
-              <div className="text-center">
-                <h2 className="mb-2 text-xl font-semibold">
-                  Welcome to AgenticFleet
-                </h2>
-                <p className="text-muted-foreground">
-                  Start a conversation by typing a message below.
-                </p>
+        {/* Messages area */}
+        <ChatContainerRoot className="relative flex-1 space-y-0 overflow-y-auto px-4 py-12">
+          <ChatContainerContent className="space-y-12 px-4 py-12 mx-auto max-w-[700px]">
+            {/* Render orchestrator messages (chain-of-thought) */}
+            {orchestratorMessages.length > 0 && (
+              <div className="mx-auto w-full max-w-[700px]">
+                <ChainOfThought messages={orchestratorMessages} />
               </div>
-            </div>
-          )}
+            )}
 
-          {allMessages.map((message, index) => {
-            const isUser = message.role === "user";
-            const isAssistant = message.role === "assistant";
-            const isStreamingMessage =
-              Boolean(currentStreamingMessageId) &&
-              message.id === currentStreamingMessageId;
-            const isLastMessage = index === allMessages.length - 1;
-            const isFinalAssistantMessage =
-              isAssistant && isLastMessage && !isStreamingMessage;
-            const timestamp = new Date(message.createdAt).toLocaleTimeString(
-              [],
-              {
-                hour: "2-digit",
-                minute: "2-digit",
-              },
-            );
-            const avatarFallback = isUser
-              ? "Y"
-              : (message.agentId?.slice(0, 2).toUpperCase() ?? "AI");
-
-            return (
-              <Message
-                key={message.id}
-                className={cn(
-                  "group w-full max-w-[700px] items-start gap-3 md:gap-4",
-                  isUser ? "ml-auto flex-row-reverse" : "mr-auto",
-                )}
-              >
-                <MessageAvatar
-                  src=""
-                  alt={isUser ? "User avatar" : "Assistant avatar"}
-                  fallback={avatarFallback}
-                  className={cn(
-                    "border border-border",
-                    isUser
-                      ? "bg-primary text-primary-foreground"
-                      : "bg-secondary text-secondary-foreground",
-                  )}
-                />
-
-                <div
-                  className={cn(
-                    "flex min-w-0 flex-1 flex-col gap-2",
-                    isUser ? "items-end text-right" : "items-start text-left",
-                  )}
-                >
-                  <div
-                    className={cn(
-                      "flex flex-wrap items-center gap-2 text-xs text-muted-foreground",
-                      isUser ? "justify-end" : "justify-start",
-                    )}
-                  >
-                    <span className="font-medium text-foreground">
-                      {isUser ? "You" : "Assistant"}
-                    </span>
-                    {isAssistant && message.agentId && (
-                      <span className="text-muted-foreground">
-                        · {message.agentId}
-                      </span>
-                    )}
-                    <span>{timestamp}</span>
+            {/* Render messages */}
+            {messages.length === 0 &&
+              !currentStreamingMessage &&
+              !isLoading && (
+                <div className="flex h-full items-center justify-center">
+                  <div className="text-center">
+                    <h2 className="mb-2 text-xl font-semibold">
+                      Welcome to AgenticFleet
+                    </h2>
+                    <p className="text-muted-foreground">
+                      Start a conversation by typing a message below.
+                    </p>
                   </div>
-
-                  <div
-                    className={cn(
-                      "flex w-full flex-col gap-3",
-                      isUser ? "items-end" : "items-start",
-                    )}
-                  >
-                    {/* Display reasoning before message content for assistant messages */}
-                    {isAssistant &&
-                      (message.reasoning ||
-                        (isStreamingMessage && currentReasoningContent)) && (
-                        <div className="w-full">
-                          <ReasoningDisplay
-                            content={
-                              isStreamingMessage && currentReasoningContent
-                                ? currentReasoningContent
-                                : message.reasoning
-                            }
-                            isStreaming={
-                              isStreamingMessage && currentReasoningStreaming
-                            }
-                            triggerText="Model reasoning"
-                            defaultOpen={
-                              isStreamingMessage && currentReasoningStreaming
-                            }
-                          />
-                        </div>
-                      )}
-
-                    <div
-                      className={cn(
-                        "max-w-[90%] rounded-3xl px-5 py-3 text-sm leading-relaxed shadow-none sm:max-w-[75%]",
-                        isUser
-                          ? "bg-[#F4F4F5] text-foreground border border-transparent"
-                          : "bg-transparent text-foreground border border-transparent",
-                      )}
-                    >
-                      <StructuredMessageContent
-                        content={message.content}
-                        isStreaming={isStreamingMessage}
-                        forcePlain={isFinalAssistantMessage}
-                        className={cn(
-                          "max-w-none leading-relaxed",
-                          isUser
-                            ? "[--tw-prose-body:var(--color-primary-foreground)] [--tw-prose-headings:var(--color-primary-foreground)] prose-strong:text-primary-foreground"
-                            : "[--tw-prose-body:var(--color-foreground)] [--tw-prose-headings:var(--color-foreground)]",
-                        )}
-                      />
-                    </div>
-                  </div>
-
-                  {isStreamingMessage && (
-                    <span className="flex items-center gap-2 text-xs text-muted-foreground">
-                      <span className="h-2.5 w-2.5 animate-pulse rounded-full bg-primary" />
-                      {message.agentId
-                        ? `Streaming from ${message.agentId}`
-                        : "Streaming…"}
-                    </span>
-                  )}
-
-                  <MessageActions
-                    className={cn(
-                      "flex gap-1 text-xs text-muted-foreground transition-opacity duration-150",
-                      isUser ? "justify-end" : "justify-start",
-                      isLastMessage || isUser
-                        ? "opacity-100"
-                        : "opacity-0 group-hover:opacity-100",
-                    )}
-                  >
-                    <MessageAction tooltip="Copy" delayDuration={100}>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="rounded-full"
-                      >
-                        <Copy size={16} />
-                      </Button>
-                    </MessageAction>
-                    {isAssistant && (
-                      <>
-                        <MessageAction tooltip="Upvote" delayDuration={100}>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="rounded-full"
-                          >
-                            <ThumbsUp size={16} />
-                          </Button>
-                        </MessageAction>
-                        <MessageAction tooltip="Downvote" delayDuration={100}>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="rounded-full"
-                          >
-                            <ThumbsDown size={16} />
-                          </Button>
-                        </MessageAction>
-                      </>
-                    )}
-                  </MessageActions>
                 </div>
-              </Message>
-            );
-          })}
+              )}
 
-          {/* Loading indicator */}
-          {isLoading && !currentStreamingMessage && (
-            <div className="mx-auto w-full max-w-[700px]">
-              <LoadingIndicator />
-            </div>
-          )}
-        </ChatContainerContent>
-      </ChatContainerRoot>
-
-      {/* Input area */}
-      <div className="inset-x-0 bottom-0 mx-auto w-full max-w-[700px] shrink-0 px-3 pb-3 md:px-5 md:pb-5">
-        <PromptInput
-          isLoading={isLoading}
-          value={inputMessage}
-          onValueChange={setInputMessage}
-          onSubmit={handleSend}
-          disabled={isLoading || !conversationId}
-          className="border-input bg-popover relative z-10 w-full rounded-3xl border p-0 pt-1 shadow-sm"
-        >
-          <div className="flex flex-col">
-            <PromptInputTextarea
-              placeholder={
-                initializing || !conversationId
-                  ? "Initializing conversation..."
-                  : "Ask anything"
-              }
-              className="min-h-11 pt-3 pl-4 text-base leading-[1.3] sm:text-base md:text-base"
+            <MessageList
+              messages={messages}
+              currentStreamingMessage={currentStreamingMessage}
+              currentStreamingMessageId={currentStreamingMessageId}
+              currentStreamingTimestamp={currentStreamingTimestamp}
+              currentAgentId={currentAgentId}
+              currentReasoningContent={currentReasoningContent}
+              currentReasoningStreaming={currentReasoningStreaming}
             />
+            {/* Loading indicator */}
+            {isLoading && !currentStreamingMessage && (
+              <div className="mx-auto w-full max-w-[700px]">
+                <LoadingIndicator />
+              </div>
+            )}
+          </ChatContainerContent>
+        </ChatContainerRoot>
 
-            <PromptInputActions className="mt-5 flex w-full items-center justify-between gap-2 px-3 pb-3">
-              <div className="flex items-center gap-2">
-                {/* Left side actions can be added here */}
-              </div>
-              <div className="flex items-center gap-2">
-                <Button
-                  size="icon"
-                  disabled={
-                    !inputMessage.trim() || isLoading || !conversationId
-                  }
-                  onClick={handleSend}
-                  className="size-9 rounded-full"
-                >
-                  {!isLoading ? (
-                    <ArrowUp size={18} />
-                  ) : (
-                    <span className="size-3 rounded-xs bg-white" />
-                  )}
-                </Button>
-              </div>
-            </PromptInputActions>
-          </div>
-        </PromptInput>
+        {/* Input area */}
+        <div className="inset-x-0 bottom-0 mx-auto w-full max-w-[700px] shrink-0 px-3 pb-3 md:px-5 md:pb-5">
+          <PromptInput
+            isLoading={isLoading}
+            value={inputMessage}
+            onValueChange={setInputMessage}
+            onSubmit={handleSend}
+            disabled={isLoading || !conversationId}
+            className="border-input bg-popover relative z-10 w-full rounded-3xl border p-0 pt-1 shadow-sm"
+          >
+            <div className="flex flex-col">
+              <PromptInputTextarea
+                placeholder={
+                  initializing || !conversationId
+                    ? "Initializing conversation..."
+                    : "Ask anything"
+                }
+                className="min-h-11 pt-3 pl-4 text-base leading-[1.3] sm:text-base md:text-base"
+                data-testid="chat-input"
+              />
+
+              <PromptInputActions className="mt-5 flex w-full items-center justify-between gap-2 px-3 pb-3">
+                <div className="flex items-center gap-2">
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="size-9 rounded-full"
+                    aria-label="Cancel streaming"
+                    data-testid="cancel-button"
+                    onClick={cancelStreaming}
+                    disabled={!isLoading && !currentStreamingMessageId}
+                  >
+                    <CircleStop size={18} />
+                  </Button>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Button
+                    size="icon"
+                    disabled={
+                      !inputMessage.trim() || isLoading || !conversationId
+                    }
+                    onClick={handleSend}
+                    className="size-9 rounded-full"
+                    aria-label="Send message"
+                    data-testid="send-button"
+                  >
+                    {!isLoading ? (
+                      <ArrowUp size={18} />
+                    ) : (
+                      <span className="size-3 rounded-xs bg-white" />
+                    )}
+                  </Button>
+                </div>
+              </PromptInputActions>
+            </div>
+          </PromptInput>
+        </div>
       </div>
     </div>
   );

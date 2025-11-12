@@ -10,8 +10,12 @@ import os
 from collections.abc import AsyncGenerator
 
 from agent_framework.openai import OpenAIResponsesClient
+from dotenv import load_dotenv
 
 from agentic_fleet.models.events import RunsWorkflow, WorkflowEvent
+from agentic_fleet.models.requests import WorkflowRunRequest
+
+load_dotenv(override=True)
 
 logger = logging.getLogger(__name__)
 
@@ -61,15 +65,12 @@ class FastPathWorkflow(RunsWorkflow):
             base_url=base_url,  # Optional, uses default OpenAI endpoint if not provided
         )
 
-    async def run(self, message: str) -> AsyncGenerator[WorkflowEvent, None]:
+    async def run(self, request: WorkflowRunRequest | str) -> AsyncGenerator[WorkflowEvent, None]:
         """Run fast-path workflow with direct Responses API call.
 
-        Args:
-            message: Input message to process
-
-        Yields:
-            WorkflowEvent instances (message.delta and message.done)
+        Accepts ``WorkflowRunRequest`` or raw ``str`` for backward compatibility.
         """
+        message = request.message if isinstance(request, WorkflowRunRequest) else request
         try:
             sanitized_message = message[:100].replace("\n", " ").replace("\r", " ")
             logger.info(f"[FAST-PATH] Processing message with {self.model}: {sanitized_message}")

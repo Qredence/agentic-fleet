@@ -30,7 +30,7 @@ def get_entity_discovery() -> EntityDiscovery:
     return _entity_discovery
 
 
-@router.get("/entities", response_model=EntityListResponse)
+@router.get("/entities", response_model=EntityListResponse)  # type: ignore
 async def list_entities() -> EntityListResponse:
     """List all available entities (workflows).
 
@@ -42,7 +42,7 @@ async def list_entities() -> EntityListResponse:
     return EntityListResponse(entities=entities)
 
 
-@router.get("/entities/{entity_id}", response_model=EntityDetailResponse)
+@router.get("/entities/{entity_id}", response_model=EntityDetailResponse)  # type: ignore
 async def get_entity_info(entity_id: str) -> EntityDetailResponse:
     """Get detailed information about a specific entity.
 
@@ -62,7 +62,7 @@ async def get_entity_info(entity_id: str) -> EntityDetailResponse:
         raise EntityNotFoundError(entity_id) from exc
 
 
-@router.post("/entities/{entity_id}/reload", response_model=EntityReloadResponse)
+@router.post("/entities/{entity_id}/reload", response_model=EntityReloadResponse)  # type: ignore
 async def reload_entity(entity_id: str) -> EntityReloadResponse:
     """Reload entity configuration without restarting the server.
 

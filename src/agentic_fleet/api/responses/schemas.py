@@ -28,6 +28,16 @@ class ResponseCompleteResponse(BaseModel):
     model: str = Field(description="Model/entity ID used")
     response: str = Field(description="Complete response text")
     created: int = Field(description="Unix timestamp")
+    cached: bool = Field(default=False, description="Whether the response was served from cache")
+    conversation_id: str | None = Field(
+        default=None, description="Conversation identifier associated with the response"
+    )
+    correlation_id: str | None = Field(
+        default=None, description="Tracing correlation identifier for the response"
+    )
+    metadata: dict[str, Any] | None = Field(
+        default=None, description="Additional metadata captured during response execution"
+    )
 
 
 # --- Streaming event models (merged from models.py) --- #
@@ -38,6 +48,7 @@ class ResponseDelta(BaseModel):
 
     content: str = Field(default="", description="Delta text content")
     agent_id: str | None = Field(default=None, description="Agent ID that generated this delta")
+    cached: bool | None = Field(default=None, description="Whether the delta came from cache")
 
 
 class ResponseDeltaEvent(BaseModel):
@@ -59,6 +70,9 @@ class ResponseCompletedEvent(BaseModel):
 
     type: str = Field(default="response.completed", description="Event type")
     response: ResponseMessage = Field(description="Completed response")
+    metadata: dict[str, Any] | None = Field(
+        default=None, description="Additional metadata about the completed response"
+    )
 
 
 class OrchestratorMessageEvent(BaseModel):

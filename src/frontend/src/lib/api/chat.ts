@@ -27,6 +27,70 @@ export async function createConversation(): Promise<{
   return response.json();
 }
 
+/** Get conversation by ID with message history */
+export async function getConversation(conversationId: string): Promise<{
+  id: string;
+  title: string;
+  created_at: number;
+  messages: Array<{
+    id: string;
+    role: "user" | "assistant" | "system";
+    content: string;
+    created_at: number;
+    reasoning?: string | null;
+  }>;
+}> {
+  const response = await fetch(
+    `${API_BASE_URL}/conversations/${conversationId}`,
+    {
+      method: "GET",
+      headers: {
+        "Content-Type": "application/json",
+      },
+    },
+  );
+
+  if (!response.ok) {
+    if (response.status === 404) {
+      throw new Error(`Conversation not found: ${conversationId}`);
+    }
+    const error = await response.text();
+    throw new Error(`Failed to get conversation: ${error}`);
+  }
+
+  return response.json();
+}
+
+/** List all conversations */
+export async function listConversations(): Promise<{
+  items: Array<{
+    id: string;
+    title: string;
+    created_at: number;
+    messages: Array<{
+      id: string;
+      role: "user" | "assistant" | "system";
+      content: string;
+      created_at: number;
+      reasoning?: string | null;
+    }>;
+  }>;
+}> {
+  const response = await fetch(`${API_BASE_URL}/conversations`, {
+    method: "GET",
+    headers: {
+      "Content-Type": "application/json",
+    },
+  });
+
+  if (!response.ok) {
+    const error = await response.text();
+    throw new Error(`Failed to list conversations: ${error}`);
+  }
+
+  return response.json();
+}
+
 /** SSE Event callback types */
 export type SSEDeltaCallback = (delta: string, agentId?: string) => void;
 export type SSECompletedCallback = () => void;
@@ -43,8 +107,10 @@ export async function streamChatResponse(
     onOrchestrator?: SSEOrchestratorCallback;
     onError?: SSEErrorCallback;
     onAgentComplete?: (agentId: string, content: string) => void;
+    onReasoningDelta?: (reasoning: string) => void;
     onReasoningCompleted?: (reasoning: string) => void;
   },
+  options?: { signal?: AbortSignal },
 ): Promise<void> {
   const response = await fetch(`${API_BASE_URL}/chat`, {
     method: "POST",
@@ -57,6 +123,7 @@ export async function streamChatResponse(
       message,
       stream: true,
     }),
+    signal: options?.signal,
   });
 
   if (!response.ok) {
@@ -108,6 +175,7 @@ export async function streamChatResponse(
               message?: string;
               kind?: string;
               content?: string;
+              reasoning?: string;
             } = JSON.parse(data);
 
             const agentId = rawEvent.agentId ?? rawEvent.agent_id;
@@ -135,6 +203,12 @@ export async function streamChatResponse(
                 }
                 break;
 
+              case "reasoning.delta":
+                if (rawEvent.reasoning) {
+                  callbacks.onReasoningDelta?.(rawEvent.reasoning);
+                }
+                break;
+
               case "reasoning.completed":
                 if (callbacks.onReasoningCompleted) {
                   interface ReasoningCompletedEvent {
@@ -148,7 +222,8 @@ export async function streamChatResponse(
                       event &&
                         typeof event === "object" &&
                         "type" in event &&
-                        event.type === "reasoning.completed" &&
+                        (event as { type: string }).type ===
+                          "reasoning.completed" &&
                         "reasoning" in event &&
                         typeof (event as { reasoning?: unknown }).reasoning ===
                           "string",

@@ -18,156 +18,167 @@ export async function streamChatWithStore(
   conversationId: string,
   userMessage: string,
   store: StoreApi,
+  signal?: AbortSignal,
 ) {
   const { get, set } = store;
 
   try {
-    await streamChatResponse(conversationId, userMessage, {
-      onDelta: (delta, agentId) => {
-        const currentState = get();
-        // Agent switched mid-stream: persist previous agent's accumulated content
-        if (
-          agentId &&
-          currentState.currentAgentId &&
-          agentId !== currentState.currentAgentId
-        ) {
-          if (currentState.currentStreamingMessage) {
+    await streamChatResponse(
+      conversationId,
+      userMessage,
+      {
+        onDelta: (delta, agentId) => {
+          const currentState = get();
+          // Agent switched mid-stream: persist previous agent's accumulated content
+          if (
+            agentId &&
+            currentState.currentAgentId &&
+            agentId !== currentState.currentAgentId
+          ) {
+            if (currentState.currentStreamingMessage) {
+              const agentMessage: ChatMessage = {
+                id: `assistant-${
+                  currentState.currentStreamingTimestamp ?? Date.now()
+                }`,
+                role: "assistant",
+                content: currentState.currentStreamingMessage,
+                createdAt: currentState.currentStreamingTimestamp ?? Date.now(),
+                agentId: currentState.currentAgentId,
+              };
+              const timestamp = Date.now();
+              set({
+                messages: [...currentState.messages, agentMessage],
+                currentStreamingMessage: delta,
+                currentAgentId: agentId,
+                currentStreamingMessageId: `streaming-${timestamp}`,
+                currentStreamingTimestamp: timestamp,
+              });
+            } else {
+              const timestamp = Date.now();
+              set({
+                currentStreamingMessage: delta,
+                currentAgentId: agentId,
+                currentStreamingMessageId: `streaming-${timestamp}`,
+                currentStreamingTimestamp: timestamp,
+              });
+            }
+          } else {
+            // Same agent or unknown agent – accumulate delta
+            set((state: ChatState) => {
+              const timestamp = state.currentStreamingTimestamp ?? Date.now();
+              return {
+                currentStreamingMessage: state.currentStreamingMessage + delta,
+                currentAgentId: agentId || state.currentAgentId,
+                currentStreamingMessageId:
+                  state.currentStreamingMessageId ?? `streaming-${timestamp}`,
+                currentStreamingTimestamp: timestamp,
+              };
+            });
+          }
+        },
+        onAgentComplete: (agentId, content) => {
+          const currentState = get();
+          const messageContent =
+            currentState.currentAgentId === agentId &&
+            currentState.currentStreamingMessage
+              ? currentState.currentStreamingMessage
+              : content;
+          if (messageContent) {
             const agentMessage: ChatMessage = {
               id: `assistant-${
                 currentState.currentStreamingTimestamp ?? Date.now()
               }`,
               role: "assistant",
+              content: messageContent,
+              createdAt: currentState.currentStreamingTimestamp ?? Date.now(),
+              agentId,
+            };
+            set({
+              messages: [...currentState.messages, agentMessage],
+              currentStreamingMessage: "",
+              currentAgentId: undefined,
+              currentStreamingMessageId: undefined,
+              currentStreamingTimestamp: undefined,
+            });
+          } else {
+            set({
+              currentStreamingMessage: "",
+              currentAgentId: undefined,
+              currentStreamingMessageId: undefined,
+              currentStreamingTimestamp: undefined,
+            });
+          }
+        },
+        onCompleted: () => {
+          const currentState = get();
+          if (currentState.currentStreamingMessage) {
+            const assistantMessage: ChatMessage = {
+              id: `assistant-${Date.now()}`,
+              role: "assistant",
               content: currentState.currentStreamingMessage,
               createdAt: currentState.currentStreamingTimestamp ?? Date.now(),
               agentId: currentState.currentAgentId,
             };
-            const timestamp = Date.now();
             set({
-              messages: [...currentState.messages, agentMessage],
-              currentStreamingMessage: delta,
-              currentAgentId: agentId,
-              currentStreamingMessageId: `streaming-${timestamp}`,
-              currentStreamingTimestamp: timestamp,
+              messages: [...currentState.messages, assistantMessage],
+              currentStreamingMessage: "",
+              currentAgentId: undefined,
+              currentStreamingMessageId: undefined,
+              currentStreamingTimestamp: undefined,
+              isLoading: false,
             });
           } else {
-            const timestamp = Date.now();
             set({
-              currentStreamingMessage: delta,
-              currentAgentId: agentId,
-              currentStreamingMessageId: `streaming-${timestamp}`,
-              currentStreamingTimestamp: timestamp,
+              isLoading: false,
+              currentStreamingMessageId: undefined,
+              currentStreamingTimestamp: undefined,
             });
           }
-        } else {
-          // Same agent or unknown agent – accumulate delta
+        },
+        onOrchestrator: (message, kind) => {
+          const orchestratorMessage: OrchestratorMessage = {
+            id: `orchestrator-${Date.now()}-${Math.random()}`,
+            message,
+            kind,
+            timestamp: Date.now(),
+          };
           set((state: ChatState) => {
-            const timestamp = state.currentStreamingTimestamp ?? Date.now();
+            const exists = state.orchestratorMessages.find(
+              (m: OrchestratorMessage) =>
+                m.kind === orchestratorMessage.kind &&
+                m.message === orchestratorMessage.message,
+            );
+            if (exists) return {};
             return {
-              currentStreamingMessage: state.currentStreamingMessage + delta,
-              currentAgentId: agentId || state.currentAgentId,
-              currentStreamingMessageId:
-                state.currentStreamingMessageId ?? `streaming-${timestamp}`,
-              currentStreamingTimestamp: timestamp,
+              orchestratorMessages: [
+                ...state.orchestratorMessages,
+                orchestratorMessage,
+              ],
             };
           });
-        }
-      },
-      onAgentComplete: (agentId, content) => {
-        const currentState = get();
-        const messageContent =
-          currentState.currentAgentId === agentId &&
-          currentState.currentStreamingMessage
-            ? currentState.currentStreamingMessage
-            : content;
-        if (messageContent) {
-          const agentMessage: ChatMessage = {
-            id: `assistant-${
-              currentState.currentStreamingTimestamp ?? Date.now()
-            }`,
-            role: "assistant",
-            content: messageContent,
-            createdAt: currentState.currentStreamingTimestamp ?? Date.now(),
-            agentId,
-          };
+        },
+        onError: (error) => {
+          const msg = typeof error === "string" ? error.toLowerCase() : "";
+          const isAbort = msg.includes("abort");
           set({
-            messages: [...currentState.messages, agentMessage],
-            currentStreamingMessage: "",
-            currentAgentId: undefined,
-            currentStreamingMessageId: undefined,
-            currentStreamingTimestamp: undefined,
-          });
-        } else {
-          set({
-            currentStreamingMessage: "",
-            currentAgentId: undefined,
-            currentStreamingMessageId: undefined,
-            currentStreamingTimestamp: undefined,
-          });
-        }
-      },
-      onCompleted: () => {
-        const currentState = get();
-        if (currentState.currentStreamingMessage) {
-          const assistantMessage: ChatMessage = {
-            id: `assistant-${Date.now()}`,
-            role: "assistant",
-            content: currentState.currentStreamingMessage,
-            createdAt: currentState.currentStreamingTimestamp ?? Date.now(),
-            agentId: currentState.currentAgentId,
-          };
-          set({
-            messages: [...currentState.messages, assistantMessage],
-            currentStreamingMessage: "",
-            currentAgentId: undefined,
-            currentStreamingMessageId: undefined,
-            currentStreamingTimestamp: undefined,
+            error: isAbort ? null : error,
             isLoading: false,
-          });
-        } else {
-          set({
-            isLoading: false,
+            currentStreamingMessage: "",
             currentStreamingMessageId: undefined,
             currentStreamingTimestamp: undefined,
+            currentReasoningContent: undefined,
+            currentReasoningStreaming: false,
           });
-        }
+        },
+        onReasoningCompleted: (reasoning) => {
+          store.completeReasoning(reasoning);
+        },
+        onReasoningDelta: (chunk) => {
+          store.appendReasoningDelta(chunk);
+        },
       },
-      onOrchestrator: (message, kind) => {
-        const orchestratorMessage: OrchestratorMessage = {
-          id: `orchestrator-${Date.now()}-${Math.random()}`,
-          message,
-          kind,
-          timestamp: Date.now(),
-        };
-        set((state: ChatState) => {
-          const exists = state.orchestratorMessages.find(
-            (m: OrchestratorMessage) =>
-              m.kind === orchestratorMessage.kind &&
-              m.message === orchestratorMessage.message,
-          );
-          if (exists) return {};
-          return {
-            orchestratorMessages: [
-              ...state.orchestratorMessages,
-              orchestratorMessage,
-            ],
-          };
-        });
-      },
-      onError: (error) => {
-        set({
-          error,
-          isLoading: false,
-          currentStreamingMessage: "",
-          currentStreamingMessageId: undefined,
-          currentStreamingTimestamp: undefined,
-          currentReasoningContent: undefined,
-          currentReasoningStreaming: false,
-        });
-      },
-      onReasoningCompleted: (reasoning) => {
-        store.completeReasoning(reasoning);
-      },
-    });
+      { signal },
+    );
   } catch (err) {
     set({
       error: err instanceof Error ? err.message : "Failed to stream message",

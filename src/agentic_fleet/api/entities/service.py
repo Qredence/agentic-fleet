@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import logging
+import os
 from collections.abc import Callable, Coroutine
 from typing import Any, TypeVar
 
@@ -138,7 +139,7 @@ class EntityDiscovery:
         if entity_id in self._workflow_cache:
             return self._workflow_cache[entity_id]
         await self._factory.get_workflow_config_async(entity_id)
-        if workflows_service._should_force_stub():
+        if self._should_force_stub():
             workflow = await workflows_service.create_workflow(entity_id)
         else:
             workflow = await self._factory.create_from_yaml_async(entity_id)
@@ -195,10 +196,15 @@ class EntityDiscovery:
             },
             required=["input"],
         )
-
         return EntityDetailResponse(
             id=entity_id,
             name=workflow_dict.get("name", entity_id),
             description=workflow_dict.get("description", ""),
             input_schema=input_schema,
         )
+
+    def _should_force_stub(self) -> bool:
+        """Return True if stubbing is forced via environment variable."""
+        forced = os.getenv("AF_FORCE_STUB_WORKFLOW", "").lower() in {"1", "true"}
+        logger.debug("AF_FORCE_STUB_WORKFLOW flag evaluated to %s", forced)
+        return forced

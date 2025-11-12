@@ -1,5 +1,6 @@
 """API models for AgenticFleet."""
 
-from agentic_fleet.api.models.workflow_config import WorkflowConfig
+# Import from canonical models location
+from agentic_fleet.models.workflow_config import WorkflowConfig
 
 __all__ = ["WorkflowConfig"]

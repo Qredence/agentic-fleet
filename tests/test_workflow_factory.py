@@ -7,6 +7,7 @@ from pathlib import Path
 import pytest
 import yaml
 
+from agentic_fleet.models.workflow_config import WorkflowConfig
 from agentic_fleet.utils.factory import WorkflowFactory
 from agentic_fleet.workflow.magentic_workflow import MagenticFleetWorkflow
 
@@ -17,6 +18,11 @@ def _validate_workflow_dict(workflow: dict) -> None:
     assert "description" in workflow
     assert "factory" in workflow
     assert "agent_count" in workflow
+
+
+def _write_workflows_yaml(path: Path, workflows: dict[str, dict]) -> None:
+    """Write workflows mapping to a YAML file."""
+    path.write_text(yaml.safe_dump({"workflows": workflows}), encoding="utf-8")
 
 
 def test_workflow_factory_initialization() -> None:
@@ -43,9 +49,32 @@ def test_get_workflow_config_magentic_fleet() -> None:
     """Test getting magentic fleet workflow config."""
     factory = WorkflowFactory()
     config = factory.get_workflow_config("magentic_fleet")
+    assert isinstance(config, WorkflowConfig)
     assert config.name == "Magentic Fleet Workflow"
     assert config.factory == "create_magentic_fleet_workflow"
     assert set(config.agents) >= {"planner", "executor", "coder", "verifier", "generator"}
+
+
+def test_get_workflow_config_serialization_round_trip() -> None:
+    """WorkflowConfig should serialize back to a dictionary."""
+    factory = WorkflowFactory()
+    config = factory.get_workflow_config("magentic_fleet")
+
+    # Support environments running Pydantic v1 (no model_dump) by falling back to dict()
+    # Fallback order: model_dump (pydantic v2) -> export_model (custom) -> raw __dict__ snapshot
+    if hasattr(config, "model_dump"):
+        serialized = config.model_dump()  # type: ignore[assignment]
+    else:
+        serialized = {
+            k: getattr(config, k)
+            for k in dir(config)
+            if not k.startswith("_") and not callable(getattr(config, k))
+        }
+
+    assert serialized["id"] == "magentic_fleet"
+    assert serialized["factory"] == config.factory
+    assert isinstance(serialized["agents"], dict)
+    assert isinstance(serialized["manager"], dict)
 
 
 def test_get_workflow_config_not_found() -> None:
