@@ -414,25 +414,32 @@ class TestReporter:
             perf_table.add_row(
                 "Avg Response Time",
                 f"{report_data['performance']['avg_response_time_ms']:.1f}ms",
-                "✅"
-                if report_data["performance"]["avg_response_time_ms"]
-                <= thresholds["max_response_time_ms"]
-                else "❌",
+                (
+                    "✅"
+                    if report_data["performance"]["avg_response_time_ms"]
+                    <= thresholds["max_response_time_ms"]
+                    else "❌"
+                ),
             )
             perf_table.add_row(
                 "Error Rate",
                 f"{report_data['performance']['error_rate_percent']:.1f}%",
-                "✅"
-                if report_data["performance"]["error_rate_percent"]
-                <= thresholds["max_error_rate_percent"]
-                else "❌",
+                (
+                    "✅"
+                    if report_data["performance"]["error_rate_percent"]
+                    <= thresholds["max_error_rate_percent"]
+                    else "❌"
+                ),
             )
             perf_table.add_row(
                 "Throughput",
                 f"{report_data['performance']['throughput_rps']:.1f} rps",
-                "✅"
-                if report_data["performance"]["throughput_rps"] >= thresholds["min_throughput_rps"]
-                else "❌",
+                (
+                    "✅"
+                    if report_data["performance"]["throughput_rps"]
+                    >= thresholds["min_throughput_rps"]
+                    else "❌"
+                ),
             )
 
             self.console.print(perf_table)

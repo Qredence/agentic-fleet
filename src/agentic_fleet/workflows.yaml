@@ -1,3 +1,4 @@
+# yaml-language-server: $schema=./workflows.schema.json
 # AgenticFleet Packaged Workflow Configurations (plural)
 # This file provides the packaged default multi-workflow configuration
 # referenced by utils.factory.WorkflowFactory resolution order:

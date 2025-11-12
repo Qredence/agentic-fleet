@@ -12,12 +12,19 @@ from agentic_fleet.api.workflows.service import (
 )
 from agentic_fleet.api.workflows.service import create_workflow
 from agentic_fleet.models.events import RunsWorkflow, WorkflowEvent
+from agentic_fleet.utils.telemetry import optional_span
 
 logger = logging.getLogger(__name__)
 
 
 class WorkflowService:
-    """Service for managing workflow execution and event processing."""
+    """Service for managing workflow execution and event processing.
+
+    Provides in-memory workflow caching at the service layer to avoid rebuilding
+    workflows on every request. This caching is separate from WorkflowFactory to
+    maintain separation of concerns: the factory creates workflows, the service
+    manages their lifecycle and caching for API requests.
+    """
 
     def __init__(self) -> None:
         """Initialize WorkflowService with InMemory workflow cache."""
@@ -74,12 +81,27 @@ class WorkflowService:
             WorkflowExecutionError: If workflow execution fails
         """
         workflow = await self.get_workflow()
-        try:
-            events = workflow.run(message)
-            return await self.process_workflow_events(events)
-        except Exception as exc:
-            logger.error("Workflow execution failed", exc_info=True)
-            raise WorkflowExecutionError("An error occurred while processing your request") from exc
+        with optional_span(
+            "WorkflowService.execute_workflow",
+            tracer_name=__name__,
+            attributes={
+                "workflow.id": getattr(workflow, "_workflow_id", "unknown"),
+                "workflow.message_length": len(message),
+            },
+        ) as span:
+            try:
+                events = workflow.run(message)
+                result = await self.process_workflow_events(events)
+                if span is not None:
+                    span.set_attribute("workflow.result_length", len(result))
+                return result
+            except Exception as exc:
+                if span is not None:
+                    span.record_exception(exc)
+                logger.error("Workflow execution failed", exc_info=True)
+                raise WorkflowExecutionError(
+                    "An error occurred while processing your request"
+                ) from exc
 
     async def process_workflow_events(self, events: AsyncGenerator[WorkflowEvent, None]) -> str:
         """Process workflow events and aggregate the result.

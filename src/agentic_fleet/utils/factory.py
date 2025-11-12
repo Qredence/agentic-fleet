@@ -21,7 +21,7 @@ import importlib.resources
 import logging
 import os
 import warnings
-from collections.abc import Callable, Coroutine, Iterator
+from collections.abc import Callable, Coroutine, Generator
 from functools import lru_cache
 from pathlib import Path
 from typing import Any, TypeVar, cast
@@ -114,39 +114,17 @@ class WorkflowFactory:
             ) from exc
 
     def list_available_workflows(self) -> list[dict[str, Any]]:
-        """List workflows synchronously.
+        """List workflows synchronously."""
 
-        Returns:
-            List of workflow metadata dictionaries.
-
-        Raises:
-            RuntimeError: If called from within a running event loop.
-        """
-
-        return self._run_blocking(self.list_available_workflows_async)
+        return self._list_available_workflows()
 
     async def list_available_workflows_async(self) -> list[dict[str, Any]]:
         """List all available workflows from configuration."""
-        assert self._config is not None
-
-        workflows = []
-        for workflow_id, workflow_config in self._config.get("workflows", {}).items():
-            agent_count = len(workflow_config.get("agents", {}))
-            workflows.append(
-                {
-                    "id": workflow_id,
-                    "name": workflow_config.get("name", workflow_id),
-                    "description": workflow_config.get("description", ""),
-                    "factory": workflow_config.get("factory", ""),
-                    "agent_count": agent_count,
-                }
-            )
-        return workflows
+        return self._list_available_workflows()
 
     def get_workflow_config(self, workflow_id: str) -> WorkflowConfig:
         """Synchronous wrapper around :meth:`get_workflow_config_async`."""
-
-        return self._run_blocking(lambda: self.get_workflow_config_async(workflow_id))
+        return self._build_workflow_config(workflow_id)
 
     async def get_workflow_config_async(self, workflow_id: str) -> WorkflowConfig:
         """Get workflow configuration for a specific workflow ID.
@@ -160,39 +138,11 @@ class WorkflowFactory:
         Raises:
             ValueError: If workflow_id is not found
         """
-        assert self._config is not None
-
-        workflows = self._config.get("workflows", {})
-        if workflow_id not in workflows:
-            raise ValueError(f"Workflow '{workflow_id}' not found")
-
-        workflow_data = workflows[workflow_id]
-
-        # Resolve agent configs in parallel (may be Python module references or inline dicts)
-        agents_raw = workflow_data.get("agents", {})
-        agent_names = list(agents_raw.keys())
-        agent_configs = list(agents_raw.values())
-
-        # Parallelize agent config resolution
-        resolved_configs = [self._resolve_agent_config(config) for config in agent_configs]
-
-        agents_resolved: dict[str, dict[str, Any]] = dict(
-            zip(agent_names, resolved_configs, strict=True)
-        )
-
-        return WorkflowConfig(
-            id=workflow_id,
-            name=workflow_data.get("name", workflow_id),
-            description=workflow_data.get("description", ""),
-            factory=workflow_data.get("factory", ""),
-            agents=agents_resolved,
-            manager=workflow_data.get("manager", {}),
-        )
+        return self._build_workflow_config(workflow_id)
 
     def create_from_yaml(self, workflow_id: str) -> RunsWorkflow:
         """Synchronous wrapper around :meth:`create_from_yaml_async`."""
-
-        return self._run_blocking(lambda: self.create_from_yaml_async(workflow_id))
+        return self._build_workflow_instance(workflow_id)
 
     async def create_from_yaml_async(self, workflow_id: str) -> RunsWorkflow:
         """Create a workflow instance from YAML configuration.
@@ -208,39 +158,8 @@ class WorkflowFactory:
         Returns:
             A workflow instance implementing the *RunsWorkflow* protocol.
         """
-        try:
-            config = await self.get_workflow_config_async(workflow_id)
-        except ValueError:
-            if workflow_id != DEFAULT_WORKFLOW_ID:
-                logger.warning(
-                    "Unknown workflow_id '%s'; falling back to default '%s'",
-                    sanitize_for_log(workflow_id),
-                    DEFAULT_WORKFLOW_ID,
-                )
-                config = await self.get_workflow_config_async(DEFAULT_WORKFLOW_ID)
-            else:  # pragma: no cover - defensive, should not happen
-                raise
 
-        factory_label = config.factory or "create_magentic_fleet_workflow"
-
-        # Currently we only support the magentic fleet builder. Future builders
-        # can be added to this dispatch map keyed by factory label.
-        if factory_label == "create_magentic_fleet_workflow":
-            from agentic_fleet.workflow.magentic_workflow import (
-                MagenticFleetWorkflowBuilder,  # local import to avoid cycle
-            )
-
-            builder = MagenticFleetWorkflowBuilder()
-            return builder.build(config)
-
-        warnings.warn(
-            f"Unsupported workflow factory '{factory_label}' - falling back to default builder.",
-            DeprecationWarning,
-            stacklevel=2,
-        )
-        from agentic_fleet.workflow.magentic_workflow import MagenticFleetWorkflowBuilder
-
-        return MagenticFleetWorkflowBuilder().build(config)
+        return self._build_workflow_instance(workflow_id)
 
     class _AwaitableDict(dict[str, Any]):
         """Dict subclass that is also awaitable.
@@ -252,15 +171,18 @@ class WorkflowFactory:
         of this awaitable dict.  When awaited it simply yields itself.
         """
 
-        def __await__(self) -> Iterator[Any]:  # pragma: no cover - trivial
+        def __await__(
+            self,
+        ) -> Generator[Any, None, WorkflowFactory._AwaitableDict]:  # pragma: no cover - trivial
             async def _coro() -> WorkflowFactory._AwaitableDict:
-                # Yield control once to satisfy linters about async context
                 await asyncio.sleep(0)
                 return self
 
             return _coro().__await__()
 
-    def _resolve_agent_config(self, agent_config: str | dict[str, Any]) -> dict[str, Any]:
+    def _resolve_agent_config(
+        self, agent_config: str | dict[str, Any]
+    ) -> WorkflowFactory._AwaitableDict:
         """Resolve agent configuration from Python module reference or return as-is.
 
         Supports:
@@ -339,13 +261,90 @@ class WorkflowFactory:
         try:
             asyncio.get_running_loop()
         except RuntimeError:
-            # No running loop, safe to use asyncio.run
             return asyncio.run(coroutine_factory())
 
+        # If already in an event loop, raise descriptive guidance
         raise RuntimeError(
             "WorkflowFactory synchronous method called inside running event loop. "
-            "Use the '*_async' variant instead."
+            "Await the asynchronous variant instead."
         )
+
+    def _list_available_workflows(self) -> list[dict[str, Any]]:
+        assert self._config is not None
+
+        workflows = []
+        for workflow_id, workflow_config in self._config.get("workflows", {}).items():
+            agent_count = len(workflow_config.get("agents", {}))
+            workflows.append(
+                {
+                    "id": workflow_id,
+                    "name": workflow_config.get("name", workflow_id),
+                    "description": workflow_config.get("description", ""),
+                    "factory": workflow_config.get("factory", ""),
+                    "agent_count": agent_count,
+                }
+            )
+        return workflows
+
+    def _build_workflow_config(self, workflow_id: str) -> WorkflowConfig:
+        assert self._config is not None
+
+        workflows = self._config.get("workflows", {})
+        if workflow_id not in workflows:
+            raise ValueError(f"Workflow '{workflow_id}' not found")
+
+        workflow_data = workflows[workflow_id] or {}
+
+        agents_raw = workflow_data.get("agents", {})
+        agents_resolved: dict[str, dict[str, Any]] = {
+            agent_name: self._resolve_agent_config(agent_config)
+            for agent_name, agent_config in agents_raw.items()
+        }
+
+        return WorkflowConfig(
+            id=workflow_id,
+            name=workflow_data.get("name", workflow_id),
+            description=workflow_data.get("description", ""),
+            factory=workflow_data.get("factory", ""),
+            agents=agents_resolved,
+            manager=workflow_data.get("manager", {}),
+            checkpointing=workflow_data.get("checkpointing"),
+            approval=workflow_data.get("approval"),
+            cache=workflow_data.get("cache"),
+        )
+
+    def _build_workflow_instance(self, workflow_id: str) -> RunsWorkflow:
+        try:
+            config = self._build_workflow_config(workflow_id)
+        except ValueError:
+            if workflow_id != DEFAULT_WORKFLOW_ID:
+                logger.warning(
+                    "Unknown workflow_id '%s'; falling back to default '%s'",
+                    sanitize_for_log(workflow_id),
+                    DEFAULT_WORKFLOW_ID,
+                )
+                config = self._build_workflow_config(DEFAULT_WORKFLOW_ID)
+            else:
+                raise
+
+        factory_label = config.factory or "create_magentic_fleet_workflow"
+
+        if factory_label == "create_magentic_fleet_workflow":
+            from agentic_fleet.workflow.magentic_workflow import (
+                MagenticFleetWorkflowBuilder,
+            )
+
+            builder = MagenticFleetWorkflowBuilder()
+            return builder.build(config)
+
+        warnings.warn(
+            f"Unsupported workflow factory '{factory_label}' - falling back to default builder.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        from agentic_fleet.workflow.magentic_workflow import MagenticFleetWorkflowBuilder
+
+        return MagenticFleetWorkflowBuilder().build(config)
 
 
 # ---------------- Singleton helpers (DI friendly) -----------------

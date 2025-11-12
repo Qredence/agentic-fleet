@@ -287,3 +287,63 @@ async def test_concurrent_requests() -> None:
         for result in results:
             assert "response" in result
             assert "id" in result
+
+
+@pytest.mark.asyncio
+async def test_responses_legacy_alias_normalization_non_streaming() -> None:
+    """Ensure legacy alias 'agentic_fleet' normalizes to canonical 'magentic_fleet' (non-stream)."""
+    transport = ASGITransport(app=create_app())
+    async with AsyncClient(transport=transport, base_url="http://test") as client:
+        resp = await client.post(
+            "/v1/responses",
+            json={
+                "model": "agentic_fleet",
+                "input": "Alias normalization test",
+                "stream": False,
+            },
+        )
+        assert resp.status_code == 200
+        data = resp.json()
+        # Model field should be canonical after normalization
+        assert data["model"] == "magentic_fleet"
+
+
+@pytest.mark.asyncio
+async def test_responses_legacy_alias_normalization_streaming() -> None:
+    """Ensure legacy alias 'agentic_fleet' works for streaming path (SSE terminates properly)."""
+    transport = ASGITransport(app=create_app())
+    async with AsyncClient(transport=transport, base_url="http://test") as client:
+        resp = await client.post(
+            "/v1/responses",
+            json={
+                "model": "agentic_fleet",
+                "input": "Alias streaming test",
+                "stream": True,
+            },
+            headers={"Accept": "text/event-stream"},
+        )
+        assert resp.status_code == 200
+        content = b""
+        async for chunk in resp.aiter_bytes():
+            content += chunk
+            if b"[DONE]" in content:
+                break
+        assert b"[DONE]" in content  # Stream completed successfully
+
+
+@pytest.mark.asyncio
+async def test_responses_legacy_alias_normalization_hyphen() -> None:
+    """Ensure legacy alias with hyphen 'agentic-fleet' also normalizes correctly."""
+    transport = ASGITransport(app=create_app())
+    async with AsyncClient(transport=transport, base_url="http://test") as client:
+        resp = await client.post(
+            "/v1/responses",
+            json={
+                "model": "agentic-fleet",
+                "input": "Hyphen alias normalization test",
+                "stream": False,
+            },
+        )
+        assert resp.status_code == 200
+        data = resp.json()
+        assert data["model"] == "magentic_fleet"

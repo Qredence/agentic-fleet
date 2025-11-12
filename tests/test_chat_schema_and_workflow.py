@@ -85,8 +85,12 @@ class TestWorkflowService:
     @pytest.mark.asyncio
     async def test_execute_workflow_returns_aggregated_result(self) -> None:
         service = service_module.WorkflowService()
+        # Inject stub workflow into cache to test execute_workflow with known behavior
+        stub_workflow = create_magentic_fleet_workflow()
+        service._workflow_cache["magentic_fleet"] = stub_workflow
+
         result = await service.execute_workflow("Test message")
-        # Stub workflow returns first 16 characters by default
+        # Stub workflow returns the full message
         assert result == "Test message"
 
     @pytest.mark.asyncio
@@ -96,7 +100,7 @@ class TestWorkflowService:
         async def mock_events() -> AsyncGenerator[WorkflowEvent, None]:
             yield {"type": "message.delta", "data": {"delta": "Hello "}}
             yield {"type": "message.delta", "data": {"delta": "World"}}
-            yield {"type": "message.done"}
+            yield {"type": "message.done", "data": {}}
 
         result = await service.process_workflow_events(mock_events())
         assert result == "Hello World"
@@ -107,7 +111,7 @@ class TestWorkflowService:
 
         async def mock_events() -> AsyncGenerator[WorkflowEvent, None]:
             yield {"type": "message.delta", "data": {"delta": "Keep"}}
-            yield {"type": "message.done"}
+            yield {"type": "message.done", "data": {}}
             yield {"type": "message.delta", "data": {"delta": "Skip"}}
 
         result = await service.process_workflow_events(mock_events())

@@ -10,6 +10,8 @@ registers handlers via ``register_exception_handlers(app)`` during startup.
 
 from __future__ import annotations
 
+from collections.abc import Sequence
+
 from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
 
@@ -82,6 +84,27 @@ class ConfigurationError(AgenticFleetError):
     error_code = "configuration_error"
 
 
+class AgentInitializationError(AgenticFleetError):
+    status_code = 500
+    error_code = "agent_initialization_error"
+
+    def __init__(self, name: str, reason: str | None = None) -> None:
+        message = reason or f"Failed to initialize agent '{name}'"
+        super().__init__(message)
+        self.agent_name = name
+
+
+class ConfigurationValidationError(ConfigurationError):
+    status_code = 400
+    error_code = "configuration_validation_error"
+
+    def __init__(self, errors: Sequence[str] | str) -> None:
+        error_list = [errors] if isinstance(errors, str) else list(errors)
+        message_body = "; ".join(error_list) if error_list else "Unknown validation error"
+        super().__init__(f"Workflow configuration validation failed: {message_body}")
+        self.errors = error_list
+
+
 class ValidationError(AgenticFleetError):
     status_code = 400
     error_code = "validation_error"
@@ -113,13 +136,14 @@ def register_exception_handlers(app: FastAPI) -> None:
         WorkflowExecutionError,
         PersistenceError,
         ConfigurationError,
+        AgentInitializationError,
         ValidationError,
         *_CONVERSATION_ERROR_TYPES,  # Include legacy store KeyError subclass
     )
 
     for exc_type in exception_types:
 
-        @app.exception_handler(exc_type)
+        @app.exception_handler(exc_type)  # type: ignore
         async def handler(
             request: Request, exc: Exception, _exc_type: type[Exception] = exc_type
         ) -> JSONResponse:
@@ -131,9 +155,11 @@ def register_exception_handlers(app: FastAPI) -> None:
 AgenticFleetException = AgenticFleetError  # pragma: no cover
 
 __all__ = [
+    "AgentInitializationError",
     "AgenticFleetError",
     "AgenticFleetException",  # alias
     "ConfigurationError",
+    "ConfigurationValidationError",
     "ConversationMissingError",
     "EntityNotFoundError",
     "PersistenceError",

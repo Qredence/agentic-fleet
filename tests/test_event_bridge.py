@@ -4,6 +4,8 @@ from __future__ import annotations
 
 from unittest.mock import Mock
 
+import pytest
+
 from agentic_fleet.workflow.events import WorkflowEventBridge
 
 
@@ -80,3 +82,24 @@ def test_event_bridge_handles_missing_event_types() -> None:
 
     assert result["type"] == "unknown"
     assert "raw" in result["data"]
+
+
+def test_agent_run_update_emits_reasoning_delta() -> None:
+    """Agent run updates with reasoning content should yield reasoning delta events."""
+
+    agent_framework = pytest.importorskip("agent_framework")
+    update = agent_framework.AgentRunResponseUpdate(
+        run_id="run-1",
+        response_id="resp-1",
+        contents=[agent_framework.TextReasoningContent(text="Step 1")],
+    )
+    event = agent_framework.AgentRunUpdateEvent(executor_id="agent_planner", data=update)
+
+    result = WorkflowEventBridge.convert_event(event, openai_format=True)
+
+    assert result["type"] == "reasoning.delta"
+    data = result["data"]
+    assert isinstance(data, dict)
+    assert data["delta"] == "Step 1"
+    assert data["agent_id"] == "planner"
+    assert result.get("openai_type") == "reasoning.delta"

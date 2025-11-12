@@ -418,7 +418,7 @@ async def chat(req: ChatRequest, request: Request) -> ChatResponse | StreamingRe
 router.post("/chat", response_model=None)(chat)
 
 
-@router.get("/chat/stream")
+@router.get("/chat/stream")  # type: ignore
 async def chat_stream_get(message: str, conversation_id: str = "default") -> StreamingResponse:
     """GET endpoint for SSE streaming (for testing with EventSource).
 

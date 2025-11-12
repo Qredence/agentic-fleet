@@ -281,15 +281,17 @@ class LoadTestRunner:
             "summary": {
                 "successful_tests": len([t for t in test_results if t.status == "completed"]),
                 "failed_tests": len([t for t in test_results if t.status == "failed"]),
-                "total_duration": sum(
-                    [
-                        (t.end_time - t.start_time).total_seconds()
-                        for t in test_results
-                        if t.end_time
-                    ]
-                )
-                if test_results
-                else 0,
+                "total_duration": (
+                    sum(
+                        [
+                            (t.end_time - t.start_time).total_seconds()
+                            for t in test_results
+                            if t.end_time
+                        ]
+                    )
+                    if test_results
+                    else 0
+                ),
             },
             "results": [result.dict() for result in test_results],
             "recommendations": self._generate_recommendations(test_results),

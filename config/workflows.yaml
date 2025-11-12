@@ -1,3 +1,4 @@
+# yaml-language-server: $schema=../src/agentic_fleet/workflows.schema.json
 # AgenticFleet Workflow Configurations
 # Repo-level configuration override
 # Priority: 2 (after AF_WORKFLOW_CONFIG env var, before package default)
