@@ -48,13 +48,13 @@ class RedisCacheManager:
         """Initialize the Redis cache manager.
 
         Args:
-            redis_url: Optional Redis URL. If not provided, will use REDIS_URL from environment.
-            thread_id: Optional thread ID for conversation tracking. Auto-generated if not provided.
-            max_messages: Maximum number of messages to store per thread before trimming.
-            **kwargs: Additional Redis client parameters. Recognized keys include:
-                - ``langcache_server_url``: Override for LANGCACHE_SERVER_URL
-                - ``langcache_api_key``: Override for LANGCACHE_API_KEY
-                - ``langcache_cache_id``: Override for LANGCACHE_CACHE_ID
+                redis_url: Optional Redis URL. If not provided, will use REDIS_URL from environment.
+                thread_id: Optional thread ID for conversation tracking. Auto-generated if not provided.
+                max_messages: Maximum number of messages to store per thread before trimming.
+                **kwargs: Additional Redis client parameters. Recognized keys include:
+                        - ``langcache_server_url``: Override for LANGCACHE_SERVER_URL
+                        - ``langcache_api_key``: Override for LANGCACHE_API_KEY
+                        - ``langcache_cache_id``: Override for LANGCACHE_CACHE_ID
         """
         if redis_url is None:
             redis_url = os.getenv("REDIS_URL", "redis://localhost:6379/0")
@@ -62,8 +62,8 @@ class RedisCacheManager:
         self.redis_url = redis_url
         self.thread_id = thread_id or f"thread_{uuid4().hex}"
         self.max_messages = max_messages
-        self._client: Redis | None = None  # type: ignore
-        self._async_client: AsyncRedis | None = None  # type: ignore
+        self._client: Redis | None = None  # type: ignore[type-arg]
+        self._async_client: AsyncRedis | None = None  # type: ignore[type-arg]
         self._langcache: LangCache | None = None
 
         self.langcache_server_url: str | None = kwargs.pop(
@@ -86,7 +86,7 @@ class RedisCacheManager:
         return cls._instance
 
     @property
-    def client(self) -> Redis:  # type: ignore
+    def client(self) -> Redis:  # type: ignore[type-arg]
         """Get the synchronous Redis client instance."""
         if self._client is None:
             self._client = Redis.from_url(
@@ -95,7 +95,7 @@ class RedisCacheManager:
         return self._client
 
     @property
-    def async_client(self) -> AsyncRedis:  # type: ignore
+    def async_client(self) -> AsyncRedis:  # type: ignore[type-arg]
         """Get the asynchronous Redis client instance."""
         if self._async_client is None:
             self._async_client = AsyncRedis.from_url(
@@ -140,12 +140,12 @@ class RedisCacheManager:
         """Add a message to the current thread.
 
         Args:
-            role: The role of the message sender (e.g., 'user', 'assistant')
-            content: The message content
-            **metadata: Additional metadata to store with the message
+                role: The role of the message sender (e.g., 'user', 'assistant')
+                content: The message content
+                **metadata: Additional metadata to store with the message
 
         Returns:
-            The ID of the created message
+                The ID of the created message
         """
         message = RedisMessage(
             role=role,
@@ -177,7 +177,7 @@ class RedisCacheManager:
         try:
             async with self.async_client.pipeline() as pipe:
                 # Store message data (Redis pipeline ops return int synchronously)
-                pipe.hset(message_key, mapping=message.model_dump())  # type: ignore
+                pipe.hset(message_key, mapping=message.model_dump())  # type: ignore[arg-type]
                 # Add message ID to thread's message list
                 pipe.lpush(thread_key, message_id)
                 # Trim if needed
@@ -209,14 +209,15 @@ class RedisCacheManager:
         """Get messages from the current thread.
 
         Args:
-            limit: Maximum number of messages to return
-            offset: Number of messages to skip
+                limit: Maximum number of messages to return
+                offset: Number of messages to skip
 
         Returns:
-            List of message dictionaries
+                List of message dictionaries
         """
         thread_key = self._get_thread_key()
-        message_ids = await self.async_client.lrange(thread_key, offset, offset + limit - 1)
+        # redis-py asyncio client methods are coroutines returning plain Python objects
+        message_ids = await self.async_client.lrange(thread_key, offset, offset + limit - 1)  # type: ignore
 
         if not message_ids:
             return []
@@ -224,7 +225,7 @@ class RedisCacheManager:
         messages = []
         for msg_id in message_ids:
             message_key = self._get_message_key(msg_id)
-            message_data = await self.async_client.hgetall(message_key)
+            message_data = await self.async_client.hgetall(message_key)  # type: ignore
             if message_data:
                 messages.append(message_data)
 
@@ -233,7 +234,7 @@ class RedisCacheManager:
     async def clear_messages(self) -> None:
         """Clear all messages from the current thread."""
         thread_key = self._get_thread_key()
-        message_ids = await self.async_client.lrange(thread_key, 0, -1)
+        message_ids = await self.async_client.lrange(thread_key, 0, -1)  # type: ignore
 
         if not message_ids:
             return
@@ -252,9 +253,9 @@ class RedisCacheManager:
             async with self.async_client.pipeline() as pipe:
                 # Delete all message hashes
                 for msg_id in message_ids:
-                    await pipe.delete(self._get_message_key(msg_id))
+                    pipe.delete(self._get_message_key(msg_id))
                 # Delete the thread's message list
-                await pipe.delete(thread_key)
+                pipe.delete(thread_key)
                 result = await pipe.execute()
         except RedisError:
             logger.exception(
@@ -283,7 +284,7 @@ class RedisCacheManager:
     async def close(self) -> None:
         """Close Redis connections."""
         if self._client:
-            self._client.close()
+            await asyncio.to_thread(self._client.close)
             self._client = None
 
         if self._async_client:
@@ -305,6 +306,6 @@ def get_redis_cache() -> RedisCacheManager:
     return RedisCacheManager.get_instance()
 
 
-def get_async_redis_client() -> AsyncRedis:  # type: ignore
+def get_async_redis_client() -> AsyncRedis:  # type: ignore[type-arg]
     """Get an async Redis client for use in FastAPI dependencies."""
     return RedisCacheManager.get_instance().async_client

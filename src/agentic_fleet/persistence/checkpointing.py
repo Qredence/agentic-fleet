@@ -115,8 +115,7 @@ class WorkflowCheckpointService:
         """Delete checkpoint file if it exists."""
 
         path = self.base_dir / f"{checkpoint_id}.json"
-        if path.exists():
-            path.unlink()
+        path.unlink(missing_ok=True)
 
     async def clear(self) -> None:
         """Remove all checkpoints under the managed directory."""

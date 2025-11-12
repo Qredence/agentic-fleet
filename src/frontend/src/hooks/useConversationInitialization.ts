@@ -21,15 +21,23 @@ export function useConversationInitialization(
 ) {
   const { enabled = true, onSuccess, onError } = options;
   const conversationId = useChatStore((s) => s.conversationId);
-  const messages = useChatStore((s) => s.messages);
   const setConversationId = useChatStore((s) => s.setConversationId);
+  const setError = useChatStore((s) => s.setError);
+  const messages = useChatStore((s) => s.messages);
   const loadConversationHistory = useChatStore(
     (s) => s.loadConversationHistory,
   );
-  const setError = useChatStore((s) => s.setError);
   const [initializing, setInitializing] = useState(false);
   const startedRef = useRef(false);
   const loadingHistoryRef = useRef(false);
+
+  const onSuccessRef = useRef(onSuccess);
+  const onErrorRef = useRef(onError);
+
+  useEffect(() => {
+    onSuccessRef.current = onSuccess;
+    onErrorRef.current = onError;
+  }, [onSuccess, onError]);
 
   // Load conversation history if conversationId exists but messages are empty
   useEffect(() => {
@@ -43,7 +51,7 @@ export function useConversationInitialization(
     (async () => {
       try {
         await loadConversationHistory(conversationId);
-        onSuccess?.(conversationId);
+        onSuccessRef.current?.(conversationId);
       } catch (err) {
         const error =
           err instanceof Error
@@ -53,7 +61,7 @@ export function useConversationInitialization(
         if (!error.message.includes("not found")) {
           setError(error.message);
         }
-        onError?.(error);
+        onErrorRef.current?.(error);
       } finally {
         setInitializing(false);
         loadingHistoryRef.current = false;
@@ -81,26 +89,19 @@ export function useConversationInitialization(
       try {
         const conversation = await createConversation();
         setConversationId(conversation.id);
-        onSuccess?.(conversation.id);
+        onSuccessRef.current?.(conversation.id);
       } catch (err) {
         const error =
           err instanceof Error
             ? err
             : new Error("Failed to create conversation");
         setError(error.message);
-        onError?.(error);
+        onErrorRef.current?.(error);
       } finally {
         setInitializing(false);
       }
     })();
-  }, [
-    enabled,
-    conversationId,
-    onSuccess,
-    onError,
-    setConversationId,
-    setError,
-  ]);
+  }, [enabled, conversationId, setConversationId, setError]);
 
   return { conversationId, initializing };
 }

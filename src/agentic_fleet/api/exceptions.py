@@ -84,12 +84,17 @@ class ConfigurationError(AgenticFleetError):
     error_code = "configuration_error"
 
 
+class ValidationError(AgenticFleetError):
+    status_code = 400
+    error_code = "validation_error"
+
+
 class AgentInitializationError(AgenticFleetError):
     status_code = 500
     error_code = "agent_initialization_error"
 
     def __init__(self, name: str, reason: str | None = None) -> None:
-        message = reason or f"Failed to initialize agent '{name}'"
+        message = reason if reason is not None else f"Failed to initialize agent '{name}'"
         super().__init__(message)
         self.agent_name = name
 
@@ -103,11 +108,6 @@ class ConfigurationValidationError(ConfigurationError):
         message_body = "; ".join(error_list) if error_list else "Unknown validation error"
         super().__init__(f"Workflow configuration validation failed: {message_body}")
         self.errors = error_list
-
-
-class ValidationError(AgenticFleetError):
-    status_code = 400
-    error_code = "validation_error"
 
 
 # Backwards compatibility: map existing ConversationNotFoundError from conversation store

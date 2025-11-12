@@ -199,7 +199,7 @@ curl -X POST http://localhost:8000/v1/chat \
 curl -X POST http://localhost:8000/v1/responses \
   -H "Content-Type: application/json" \
   -d '{
-    "model": "magentic_fleet",
+    "model": "gpt-5-mini",
     "input": "thanks",
     "stream": true
   }'
@@ -253,7 +253,7 @@ ENABLE_FAST_PATH=0
 FAST_PATH_MAX_LENGTH=150
 
 # Use different model
-FAST_PATH_MODEL=gpt-4o-mini
+FAST_PATH_MODEL=gpt-5-mini
 ```
 
 ## Future Enhancements

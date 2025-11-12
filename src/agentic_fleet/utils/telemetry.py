@@ -54,7 +54,7 @@ def get_tracer(name: str, *, version: str | None = None) -> Tracer | None:
     """Return an OpenTelemetry tracer for the supplied module name when available."""
     if not tracing_enabled() or _trace_api is None:
         return None
-    return _trace_api.get_tracer(name)
+    return _trace_api.get_tracer(name, version)
 
 
 def optional_span(
