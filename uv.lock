@@ -61,7 +61,7 @@ wheels = [
 [[package]]
 name = "agent-framework-a2a"
 version = "1.0.0b251105"
-source = { git = "https://github.com/microsoft/agent-framework.git?subdirectory=python%2Fpackages%2Fa2a&branch=main#708556e4ee9d4ad3eb1f6241451a224300286004" }
+source = { git = "https://github.com/microsoft/agent-framework.git?subdirectory=python%2Fpackages%2Fa2a&branch=main#6e205445be51c07257e1ac96f4eff2757cc01300" }
 dependencies = [
     { name = "a2a-sdk" },
     { name = "agent-framework-core" },
@@ -98,7 +98,7 @@ wheels = [
 [[package]]
 name = "agent-framework-azure-ai"
 version = "1.0.0b251105"
-source = { git = "https://github.com/microsoft/agent-framework.git?subdirectory=python%2Fpackages%2Fazure-ai&branch=main#708556e4ee9d4ad3eb1f6241451a224300286004" }
+source = { git = "https://github.com/microsoft/agent-framework.git?subdirectory=python%2Fpackages%2Fazure-ai&branch=main#6e205445be51c07257e1ac96f4eff2757cc01300" }
 dependencies = [
     { name = "agent-framework-core" },
     { name = "aiohttp" },
@@ -135,7 +135,7 @@ wheels = [
 [[package]]
 name = "agent-framework-core"
 version = "1.0.0b251105"
-source = { git = "https://github.com/microsoft/agent-framework.git?subdirectory=python%2Fpackages%2Fcore&branch=main#708556e4ee9d4ad3eb1f6241451a224300286004" }
+source = { git = "https://github.com/microsoft/agent-framework.git?subdirectory=python%2Fpackages%2Fcore&branch=main#6e205445be51c07257e1ac96f4eff2757cc01300" }
 dependencies = [
     { name = "azure-identity" },
     { name = "mcp", extra = ["ws"] },
@@ -153,7 +153,7 @@ dependencies = [
 [[package]]
 name = "agent-framework-devui"
 version = "1.0.0b251105"
-source = { git = "https://github.com/microsoft/agent-framework.git?subdirectory=python%2Fpackages%2Fdevui&branch=main#708556e4ee9d4ad3eb1f6241451a224300286004" }
+source = { git = "https://github.com/microsoft/agent-framework.git?subdirectory=python%2Fpackages%2Fdevui&branch=main#6e205445be51c07257e1ac96f4eff2757cc01300" }
 dependencies = [
     { name = "agent-framework-core" },
     { name = "fastapi" },
@@ -176,7 +176,7 @@ wheels = [
 [[package]]
 name = "agent-framework-mem0"
 version = "1.0.0b251105"
-source = { git = "https://github.com/microsoft/agent-framework.git?subdirectory=python%2Fpackages%2Fmem0&branch=main#708556e4ee9d4ad3eb1f6241451a224300286004" }
+source = { git = "https://github.com/microsoft/agent-framework.git?subdirectory=python%2Fpackages%2Fmem0&branch=main#6e205445be51c07257e1ac96f4eff2757cc01300" }
 dependencies = [
     { name = "agent-framework-core" },
     { name = "mem0ai" },
@@ -199,7 +199,7 @@ wheels = [
 [[package]]
 name = "agent-framework-redis"
 version = "1.0.0b251105"
-source = { git = "https://github.com/microsoft/agent-framework.git?subdirectory=python%2Fpackages%2Fredis&branch=main#708556e4ee9d4ad3eb1f6241451a224300286004" }
+source = { git = "https://github.com/microsoft/agent-framework.git?subdirectory=python%2Fpackages%2Fredis&branch=main#6e205445be51c07257e1ac96f4eff2757cc01300" }
 dependencies = [
     { name = "agent-framework-core" },
     { name = "numpy" },
@@ -209,7 +209,7 @@ dependencies = [
 
 [[package]]
 name = "agentic-fleet"
-version = "0.5.6"
+version = "0.5.5"
 source = { editable = "." }
 dependencies = [
     { name = "agent-framework" },
@@ -2256,7 +2256,7 @@ wheels = [
 
 [[package]]
 name = "locust"
-version = "2.42.2.dev15"
+version = "2.42.3.dev1"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "configargparse" },
@@ -2276,14 +2276,14 @@ dependencies = [
     { name = "requests" },
     { name = "werkzeug" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/f0/c6/6dc8bfe030340b3f23440d7a805ad18e43646a551a79c3e7991aa6c6be53/locust-2.42.2.dev15.tar.gz", hash = "sha256:3c3a1829e6a136cc1b1a61c4929ab18f7bb815168b24167e17355428cd96a9e9", size = 1416519, upload-time = "2025-11-03T09:06:25.275Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/53/0b/7b49550df5ec18eca366656aa9f007337db3174b3e2166187ac7afa5922d/locust-2.42.3.dev1.tar.gz", hash = "sha256:a4da9af3998d1d80a2179ffedae69f443769918f040596a5ed0aea27812a53ff", size = 1416501, upload-time = "2025-11-06T11:38:00.598Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/04/c2/5329fbb8824225a50fe1020dc82437de6c0e2229335603e91d85d8415dec/locust-2.42.2.dev15-py3-none-any.whl", hash = "sha256:32598a6b158a6af53bd13c7b0f897b4e62d2561009f0d05bb37a04edc4234707", size = 1435222, upload-time = "2025-11-03T09:06:21.422Z" },
+    { url = "https://files.pythonhosted.org/packages/5b/5f/36e189157004d09ef0454442c51797631a15fb23ff47ed110a930fc51bcb/locust-2.42.3.dev1-py3-none-any.whl", hash = "sha256:4e11acc9ca1fea1b11c3904f2198686044e0a71f3b27df39904ca844fc6febc3", size = 1435210, upload-time = "2025-11-06T11:37:57.595Z" },
 ]
 
 [[package]]
 name = "locust-cloud"
-version = "1.27.13.dev3"
+version = "1.28.1"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "configargparse" },
@@ -2292,9 +2292,9 @@ dependencies = [
     { name = "python-engineio" },
     { name = "python-socketio", extra = ["client"] },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/53/cc/6064d318aa69295400a7f303b6687db8ee7614eed53061ac8d021fb76731/locust_cloud-1.27.13.dev3.tar.gz", hash = "sha256:0d949abb3eb8b95dfbc7861fa96785886855b01de1570b57f9bb7cb55f945e64", size = 457075, upload-time = "2025-11-05T21:59:54.522Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/cf/11/c9b8ebef10a5dd3df11ebf371e1defddbf123cd798f2010dfaeece03c642/locust_cloud-1.28.1.tar.gz", hash = "sha256:c010a80dbd26fbd791a9c1202c63c59ddb96e9f3cc4ff5af48a9ee858057a56c", size = 457093, upload-time = "2025-11-06T11:26:13.558Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/04/87/7b03e7640312893e7a2cac45bedc7908e48821c84478ecf55d48ce24d82b/locust_cloud-1.27.13.dev3-py3-none-any.whl", hash = "sha256:35811901139259e79a01a4b77f8c613651a1c6f027a6596962fa2137a2889004", size = 413173, upload-time = "2025-11-05T21:59:52.839Z" },
+    { url = "https://files.pythonhosted.org/packages/86/ca/9439688ed80ec97ff292e01863cca2bd1c27fc0acd40e6f8751edb0ad6d6/locust_cloud-1.28.1-py3-none-any.whl", hash = "sha256:fadfd423dd83057b96c4332e8fdb94ccacaecbb6b8ae837212c42276b8b5c22e", size = 413154, upload-time = "2025-11-06T11:26:12.068Z" },
 ]
 
 [[package]]
@@ -2495,31 +2495,31 @@ wheels = [
 
 [[package]]
 name = "microsoft-agents-activity"
-version = "0.6.0.dev9"
+version = "0.6.0.dev10"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "pydantic" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/17/13/a0ce46ccd756893180c3b93d937902b9cde45e1a53202a1dab3285408f41/microsoft_agents_activity-0.6.0.dev9.tar.gz", hash = "sha256:93afc89e25ec9ff2160fad9492de6a82a06c860fbcb804d9a03155974ff17eea", size = 56654, upload-time = "2025-11-01T09:04:57.572Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/66/6d/a50188bc3093d7e5a3d0d3b9826a21c5ffc727595266a9d48578ed3d6502/microsoft_agents_activity-0.6.0.dev10.tar.gz", hash = "sha256:918fe96969961aba8a0b8dc88fddb03cf74db16fd09db0a86f2b7615625e7746", size = 57256, upload-time = "2025-11-06T09:05:45.777Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/f5/5e/bae3d00785c9d1dfeb81669538265a35edd5da1cc0d40d1f9b81971fceda/microsoft_agents_activity-0.6.0.dev9-py3-none-any.whl", hash = "sha256:974a58c7ed71e4e3d601f4d6b3e038c3ee8fe1897f68df8ed6f6aac7eae49bf6", size = 128998, upload-time = "2025-11-01T09:05:06.77Z" },
+    { url = "https://files.pythonhosted.org/packages/5d/69/73e7cddb474a3be491430f7a96bdb9a468950c0410687eafc9808c94238f/microsoft_agents_activity-0.6.0.dev10-py3-none-any.whl", hash = "sha256:ee8d004c585d1716e01dbf22107847d50ad2903bf3944f9863970e65238521e8", size = 130248, upload-time = "2025-11-06T09:05:58.031Z" },
 ]
 
 [[package]]
 name = "microsoft-agents-copilotstudio-client"
-version = "0.6.0.dev9"
+version = "0.6.0.dev10"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "microsoft-agents-hosting-core" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/26/14/467626de63dc5937ffb63bbb3ccfbe565790d3c5788aa5309da9c11958ed/microsoft_agents_copilotstudio_client-0.6.0.dev9.tar.gz", hash = "sha256:533b5396754344be8cbc28778b4ef25d45ee21bec2fd9fa0518be859603303b5", size = 11155, upload-time = "2025-11-01T09:04:59.887Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/d6/62/ced344e1ad91e17cfec5cf434c4c046c1aae00424e0fcbdd8cf372e1c26d/microsoft_agents_copilotstudio_client-0.6.0.dev10.tar.gz", hash = "sha256:fc824a48e749c7272dc1546b992562f0a6478086dda2d4b7ee5cb7a768a0c592", size = 11766, upload-time = "2025-11-06T09:05:47.701Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/38/7d/b24490fbfd6938bfc4fedef88577d7f9c5cb7bc9be137de789b22f70ea11/microsoft_agents_copilotstudio_client-0.6.0.dev9-py3-none-any.whl", hash = "sha256:837faa1e5a1cb7f88d349235130eb6f2fc1a5d9cabab26cdc8db3f388b4f4b74", size = 11148, upload-time = "2025-11-01T09:05:09.176Z" },
+    { url = "https://files.pythonhosted.org/packages/ef/17/f856f60ed6f66469e27fc1ac626c6bfcbbf0f19bba2939a69a34c1649824/microsoft_agents_copilotstudio_client-0.6.0.dev10-py3-none-any.whl", hash = "sha256:4948aea49a70866e8845c0e9ba06d268e7a0b21973192c402ca38ec9a7a29fb0", size = 12433, upload-time = "2025-11-06T09:06:00.028Z" },
 ]
 
 [[package]]
 name = "microsoft-agents-hosting-core"
-version = "0.6.0.dev9"
+version = "0.6.0.dev10"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "azure-core" },
@@ -2528,9 +2528,9 @@ dependencies = [
     { name = "pyjwt" },
     { name = "python-dotenv" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/0b/27/0cce9408ba824adf547658ea9de726e0e331618fbecd65a974104a58793b/microsoft_agents_hosting_core-0.6.0.dev9.tar.gz", hash = "sha256:999d756e33a8e3b057fa584e4cf960e2167c123c8bfb2962804884616731a7c6", size = 81827, upload-time = "2025-11-01T09:05:01.826Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/94/c9/5d3b667c26da2814f6dda301b2ed464654c6ef182d2afa80733d720dd7e4/microsoft_agents_hosting_core-0.6.0.dev10.tar.gz", hash = "sha256:01fe08363635563b06011dfccfdfcc40e6c095d5f07b10d7e92da81ad32045d2", size = 83662, upload-time = "2025-11-06T09:05:53.023Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/46/c2/ef1e6711b9c5294772be9ff7882d29f93b5ba81df93470d370aa6353243f/microsoft_agents_hosting_core-0.6.0.dev9-py3-none-any.whl", hash = "sha256:21fea5f861664b633994aa2f173179025bf204d368d08cab26d8398dad3508b8", size = 120669, upload-time = "2025-11-01T09:05:11.23Z" },
+    { url = "https://files.pythonhosted.org/packages/18/3b/32b7e193679496cad7e7f8e3e8b5d9a13e980e18638e7eca3369d8133dcf/microsoft_agents_hosting_core-0.6.0.dev10-py3-none-any.whl", hash = "sha256:85fcde2f168aaac43757e3c5a8824d84fee513d42d86f47a0ee49101a9e2edae", size = 123576, upload-time = "2025-11-06T09:06:02.107Z" },
 ]
 
 [[package]]
@@ -3266,7 +3266,7 @@ wheels = [
 
 [[package]]
 name = "posthog"
-version = "6.8.0"
+version = "6.9.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "backoff" },
@@ -3276,9 +3276,9 @@ dependencies = [
     { name = "six" },
     { name = "typing-extensions" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/6a/26/fbd8a29d094c1b3df109b79f7165ddb20dc37ec1e5b55717585de9ee9b65/posthog-6.8.0.tar.gz", hash = "sha256:40bc3bffe4818d37de63a4f4f13d2e90a78efe14f0d808c962f0ffebc3b15256", size = 122781, upload-time = "2025-11-04T19:43:34.651Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/e0/7f/cb20580e44bc1734a79ffbfa4a32aad6ab7926e37a5972294d650c06dc59/posthog-6.9.0.tar.gz", hash = "sha256:e4e79f2af7e2e976d1931c3f7a539de7d1a909c8a4a44a16f5af4346c5e18f89", size = 126209, upload-time = "2025-11-06T15:12:48.679Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/bb/9a/970fe48b888c53de5768f67524444c2adf2ea86fba97a672434deb8db971/posthog-6.8.0-py3-none-any.whl", hash = "sha256:b30b3cb06234d9177cecabe6f3e04e34e1e15fe7b60428771a67be57920a6308", size = 141210, upload-time = "2025-11-04T19:43:33.375Z" },
+    { url = "https://files.pythonhosted.org/packages/5e/21/0e6d54003eef6694b07d8cf2592ad11770fa2f055b8a6936b433821a26b1/posthog-6.9.0-py3-none-any.whl", hash = "sha256:ab9d1dad78b68b17e4bc239716c1b964b723abe3851f69927a1d4f798bb1f9c7", size = 144467, upload-time = "2025-11-06T15:12:45.836Z" },
 ]
 
 [[package]]

@@ -142,16 +142,20 @@ export async function streamChatResponse(
                     reasoning?: string;
                   }
                   function isReasoningCompletedEvent(
-                    event: any,
+                    event: unknown,
                   ): event is ReasoningCompletedEvent {
-                    return (
+                    return Boolean(
                       event &&
-                      event.type === "reasoning.completed" &&
-                      typeof event.reasoning === "string"
+                        typeof event === "object" &&
+                        "type" in event &&
+                        event.type === "reasoning.completed" &&
+                        "reasoning" in event &&
+                        typeof (event as { reasoning?: unknown }).reasoning ===
+                          "string",
                     );
                   }
                   if (isReasoningCompletedEvent(rawEvent)) {
-                    callbacks.onReasoningCompleted(rawEvent.reasoning);
+                    callbacks.onReasoningCompleted(rawEvent.reasoning || "");
                   }
                 }
                 break;

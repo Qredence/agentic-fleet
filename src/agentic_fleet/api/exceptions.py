@@ -119,7 +119,7 @@ def register_exception_handlers(app: FastAPI) -> None:
 
     for exc_type in exception_types:
 
-        @app.exception_handler(exc_type)  # type: ignore[misc]
+        @app.exception_handler(exc_type)
         async def handler(
             request: Request, exc: Exception, _exc_type: type[Exception] = exc_type
         ) -> JSONResponse:
