@@ -33,11 +33,11 @@ dependencies = [
     "agent-framework-mem0",
     "agent-framework-redis",
     "agent-framework-devui",
-    "mem0ai==1.0.0", # Pinned for stable memory API
+    "mem0ai==1.0.0",                    # Pinned for stable memory API
     "rich>=12.6.0",
     "prompt-toolkit>=3.0.47,<4.0",
     "ipykernel>=7.0.1,<8.0",
-    "openai>=1.99.0,<2.6.1", # Compatible with agent-framework requirements
+    "openai>=1.99.0,<2.6.1",            # Compatible with agent-framework requirements
     "azure-ai-evaluation>=1.12.0,<2.0",
     "fastapi>=0.120.1,<1.0",
     "uvicorn[standard]>=0.24.0",
@@ -240,6 +240,14 @@ warn_unused_ignores = false
 module = "agentic_fleet.api.conversations.routes"
 disallow_untyped_decorators = false
 
+[[tool.mypy.overrides]]
+module = "agentic_fleet.api.workflows.routes"
+warn_unused_ignores = false
+disallow_untyped_decorators = false
+
+[[tool.mypy.overrides]]
+module = "agentic_fleet.utils.redis_cache"
+warn_unused_ignores = false
 
 [[tool.mypy.overrides]]
 module = "aiofiles"

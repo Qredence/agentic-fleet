@@ -46,14 +46,14 @@ def check_package_versions() -> dict[str, dict[str, str | None]]:
     """Return mapping of required package versions and their status.
 
     Structure:
-        {
-            "package_name": {
-                "required": "<required_version>",
-                "installed": "<installed_version>|None",
-                "status": "ok|missing|outdated|error: <msg>"
-            },
-            ...
-        }
+            {
+                    "package_name": {
+                            "required": "<required_version>",
+                            "installed": "<installed_version>|None",
+                            "status": "ok|missing|outdated|error: <msg>"
+                    },
+                    ...
+            }
     """
     results: dict[str, dict[str, str | None]] = {}
     for pkg_name, required_version in REQUIRED_PACKAGES.items():
@@ -85,11 +85,11 @@ def check_framework_health() -> tuple[bool, dict[str, Any]]:
     """Perform framework health checks synchronously.
 
     Returns:
-        (is_healthy, details) where details contains:
-            {
-                "packages": "<package_version_mapping>",
-                "status": "ok" | "degraded" | "error"
-            }
+            (is_healthy, details) where details contains:
+                    {
+                            "packages": "<package_version_mapping>",
+                            "status": "ok" | "degraded" | "error"
+                    }
     """
     try:
         packages = check_package_versions()

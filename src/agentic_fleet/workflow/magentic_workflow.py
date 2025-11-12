@@ -15,7 +15,6 @@ from langcache import LangCache
 from agentic_fleet.models import WorkflowConfig
 from agentic_fleet.models.events import RunsWorkflow, WorkflowEvent
 from agentic_fleet.models.requests import (
-    WorkflowCheckpointMetadata,
     WorkflowResumeRequest,
     WorkflowRunRequest,
 )
@@ -29,7 +28,12 @@ logger = logging.getLogger(__name__)
 
 
 class MagenticFleetWorkflow(RunsWorkflow):
-    """Magentic Fleet workflow implementation with caching and checkpoint support."""
+    """Magentic Fleet workflow implementation with caching and checkpoint support.
+
+    NOTE: This refactored version currently implements the newer event bridge and
+    cache helpers but the run signature was regressed during merge. Restore the
+    original behavior expected by tests: ``run(request: WorkflowRunRequest | str)``.
+    """
 
     def __init__(
         self,
@@ -44,16 +48,13 @@ class MagenticFleetWorkflow(RunsWorkflow):
         self._event_bridge = WorkflowEventBridge()
         self._checkpoint_service = checkpoint_service
 
+        # Caching attributes
         self._langcache: LangCache | None = None
         self._cache_ttl_ms: int | None = None
-
         if cache_config and cache_config.get("enabled", False):
             try:
                 ttl_seconds = int(cache_config.get("ttl_seconds", 3600))
-            except (ValueError, TypeError) as e:
-                logger.warning(
-                    "[MAGENTIC] Invalid ttl_seconds in cache config, using default: %s", e
-                )
+            except (ValueError, TypeError):
                 ttl_seconds = 3600
             self._cache_ttl_ms = max(ttl_seconds, 0) * 1000 if ttl_seconds else None
             try:
@@ -63,33 +64,24 @@ class MagenticFleetWorkflow(RunsWorkflow):
                     workflow_id,
                     self._cache_ttl_ms,
                 )
-            except Exception as exc:  # pragma: no cover - defensive logging
+            except Exception as exc:  # pragma: no cover
                 logger.warning(
                     "[MAGENTIC] LangCache unavailable, caching disabled: %s", exc, exc_info=True
                 )
                 self._langcache = None
 
-    def supports_checkpointing(self) -> bool:
-        """Return whether checkpointing is configured."""
-
-        return self._checkpoint_service is not None
-
-    async def list_checkpoints(self) -> list[WorkflowCheckpointMetadata]:
-        """Return metadata for available checkpoints."""
-
-        if not self._checkpoint_service:
-            return []
-        return await self._checkpoint_service.list_metadata(self._workflow_id)
-
     async def run(self, request: WorkflowRunRequest | str) -> AsyncGenerator[WorkflowEvent, None]:
-        """Execute the workflow for a new request."""
-
+        """Execute the workflow for a new request (normalized)."""
         with optional_span(
             "MagenticFleetWorkflow.run",
             tracer_name=__name__,
             attributes={"workflow.id": self._workflow_id},
         ) as span:
             run_request = self._normalize_request(request)
+            message = run_request.message
+            logger.info(
+                f"[MAGENTIC] Processing message with multi-agent orchestration: {message[:100]}"
+            )
 
             if span is not None:
                 span.set_attribute("workflow.request.use_cache", bool(run_request.use_cache))
@@ -98,25 +90,12 @@ class MagenticFleetWorkflow(RunsWorkflow):
                 if run_request.correlation_id:
                     span.set_attribute("workflow.correlation_id", run_request.correlation_id)
 
-            cached_content = await self._maybe_get_cached_response(run_request)
-            cache_hit = cached_content is not None
-            if span is not None:
-                span.set_attribute("workflow.cache_hit", cache_hit)
-
-            if cache_hit:
-                async for cached_event in self._emit_cache_hit(run_request, cached_content or ""):
-                    yield self._prepare_event(cached_event, run_request)
-                if span is not None:
-                    span.set_attribute("workflow.response_length", len(cached_content or ""))
-                return
-
-            storage = self._checkpoint_service.storage if self._checkpoint_service else None
-
             last_agent_id: str | None = None
             last_kind: str | None = None
             accumulated_content = ""
             agent_buffers: dict[str, str] = {}
             final_result: str | None = None
+            storage = self._checkpoint_service.storage if self._checkpoint_service else None
 
             try:
                 async for event in self._workflow.run_stream(

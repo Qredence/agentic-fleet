@@ -160,8 +160,6 @@ export const useChatStore = create<ChatStore>((set, get) => ({
         content: msg.content,
         createdAt: msg.created_at,
         reasoning: msg.reasoning || undefined,
-        // Note: agentId is not in backend response, so it will be undefined
-        // This is fine as agentId is only set during streaming
       }));
 
       set({
@@ -185,7 +183,6 @@ export const useChatStore = create<ChatStore>((set, get) => ({
     try {
       const response = await listConversations();
 
-      // Map backend conversations to frontend Conversation format
       const conversations: Conversation[] = response.items.map((conv) => ({
         id: conv.id,
         title: conv.title,
@@ -217,39 +214,27 @@ export const useChatStore = create<ChatStore>((set, get) => ({
 
   switchConversation: async (conversationId: string) => {
     const state = get();
-
-    // Don't switch if already on this conversation
     if (state.conversationId === conversationId) {
       return;
     }
 
-    // Abort any active stream before switching
     abortController?.abort();
     abortController = null;
 
     try {
-      // Load conversation history
       await get().loadConversationHistory(conversationId);
-
-      // Reload conversations list to ensure it's up to date
       await get().loadConversations();
     } catch (error) {
-      // Error already set by loadConversationHistory
       throw error;
     }
   },
 
   createNewConversation: async () => {
-    const state = get();
-
-    // Abort any active stream before creating new conversation
     abortController?.abort();
     abortController = null;
 
     try {
       const conversation = await createConversation();
-
-      // Reset current conversation state
       set({
         conversationId: conversation.id,
         messages: [],
@@ -263,8 +248,6 @@ export const useChatStore = create<ChatStore>((set, get) => ({
         isLoading: false,
         error: null,
       });
-
-      // Reload conversations list to include the new one
       await get().loadConversations();
     } catch (error) {
       set({
