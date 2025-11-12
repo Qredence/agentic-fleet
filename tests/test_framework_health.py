@@ -74,7 +74,7 @@ class TestFrameworkHealth(unittest.TestCase):
 
         # The test package should be marked as error with the error message
         self.assertEqual(len(results), 1)
-        self.assertIn("error: ", results["missing-package"]["status"])
+        self.assertIn("error: ", results["missing-package"]["status"] or "")
         self.assertIsNone(results["missing-package"]["installed"])
 
     @patch("agentic_fleet.framework.health.check_package_versions")

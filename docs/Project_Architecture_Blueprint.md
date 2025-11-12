@@ -156,16 +156,17 @@ sequenceDiagram
 
 ## 4. Core Architectural Components
 
-| Component               | Purpose                                                 | Internal Structure                                           | Interaction                                      | Evolution Points                                                       |
-| ----------------------- | ------------------------------------------------------- | ------------------------------------------------------------ | ------------------------------------------------ | ---------------------------------------------------------------------- |
-| `WorkflowFactory`       | Resolve & load workflow YAML                            | Env override + repo + package fallback                       | Supplies `WorkflowConfig` to builders            | Add fields to YAML without touching code; maintain strict mapping type |
-| `MagenticFleetWorkflow` | Wrap underlying MagenticBuilder instance, stream events | Maintains last agent/kind for synthetic progress events      | Provides async generator to API layer            | Extend with richer progress heuristics / instrumentation               |
-| `WorkflowEventBridge`   | Normalize raw framework events → stable API schema      | Type checks multiple event classes; JSON-safe conversion     | Called per event; stateless                      | Add new event types without breaking consumers (open-extension)        |
-| `ResponseAggregator`    | Transform normalized events → OpenAI Responses SSE      | Accumulates content state; emits `[DONE]` fallback if needed | Consumed in `/v1/responses` route                | Extend for tool-specific events (code execution outputs, images)       |
-| `AgentFactory`          | Instantiate ChatAgents with dynamic prompts & tools     | Resolves instructions module references; builds client       | Used during workflow setup                       | Add caching, fallback models, multi-provider support                   |
-| `ConversationStore`     | Lightweight in-memory message tracking                  | Dict keyed by conversation id; append semantics              | Used via `/v1/chat` & `/v1/conversations` routes | Replace with persistent DB, add indexing, retention policies           |
-| Frontend `chatStore.ts` | Manages streaming assembly and orchestrator ledger      | Zustand store with explicit callbacks                        | Consumes SSE; updates UI components              | Introduce virtualization, per-agent diff views, multi-tab state        |
-| `metricsStore.ts`       | Placeholder for telemetry aggregation                   | Counters & per-agent metrics                                 | Updated during streaming / events                | Integrate real-time charts, persistence, thresholds                    |
+| Component               | Purpose                                                 | Internal Structure                                           | Interaction                                             | Evolution Points                                                                         |
+| ----------------------- | ------------------------------------------------------- | ------------------------------------------------------------ | ------------------------------------------------------- | ---------------------------------------------------------------------------------------- |
+| `WorkflowFactory`       | Resolve & load workflow YAML into typed Pydantic models | Parses YAML and validates against `WorkflowConfig` schema    | Supplies validated `WorkflowConfig` objects to builders | Evolve Pydantic models to support new configuration options without breaking validation. |
+| `MagenticFleetWorkflow` | Wrap underlying MagenticBuilder instance, stream events | Maintains last agent/kind for synthetic progress events      | Provides async generator to API layer                   | Extend with richer progress heuristics / instrumentation                                 |
+| `WorkflowEventBridge`   | Normalize raw framework events → stable API schema      | Type checks multiple event classes; JSON-safe conversion     | Called per event; stateless                             | Add new event types without breaking consumers (open-extension)                          |
+| `ResponseAggregator`    | Transform normalized events → OpenAI Responses SSE      | Accumulates content state; emits `[DONE]` fallback if needed | Consumed in `/v1/responses` route                       | Extend for tool-specific events (code execution outputs, images)                         |
+| `AgentFactory`          | Instantiate ChatAgents with dynamic prompts & tools     | Resolves instructions module references; builds client       | Used during workflow setup                              | Add caching, fallback models, multi-provider support                                     |
+| `ConversationStore`     | Lightweight in-memory message tracking                  | Dict keyed by conversation id; append semantics              | Used via `/v1/chat` & `/v1/conversations` routes        | Replace with persistent DB, add indexing, retention policies                             |
+| Frontend `chatStore.ts` | Manages streaming assembly and orchestrator ledger      | Zustand store with explicit callbacks                        | Consumes SSE; updates UI components                     | Introduce virtualization, per-agent diff views, multi-tab state                          |
+| `metricsStore.ts`       | Placeholder for telemetry aggregation                   | Counters & per-agent metrics                                 | Updated during streaming / events                       | Integrate real-time charts, persistence, thresholds                                      |
+| `ProgressEmitter`       | Pluggable interface for custom progress reporting       | Abstract base class with `emit` method                       | Injected into `MagenticFleetWorkflow`                   | Implement custom emitters for logging, metrics, or other side effects                    |
 
 ---
 
@@ -174,7 +175,7 @@ sequenceDiagram
 Layers:
 
 1. Interface Layer: FastAPI routes (`api/.../routes.py`), Typer CLI (`console.py`), static file serving.
-2. Application / Orchestration Layer: Workflow implementation (`magentic_workflow.py`), event bridge, response aggregation.
+2. Application / Orchestration Layer: Workflow implementation (`magentic_workflow.py`), event bridge, response aggregation. This layer includes the pluggable `ProgressEmitter` for custom progress reporting.
 3. Domain Layer: Agent definitions (`agents/*.py`), prompt content (`prompts/*.py`), workflow config resolution, tool registry.
 4. Infrastructure Layer: External service clients (`OpenAIResponsesClient`), logging, correlation middleware, (future) checkpoint persistence.
 5. Presentation Layer: React SPA (stores, components, hooks) — separate dependency graph.
@@ -230,6 +231,8 @@ Validation Patterns:
 - Defensive type checks in factories and builder (`ValueError` raised on missing model or workflow id mismatch).
 - Tests assert structural integrity (`test_workflow_factory.py`).
 
+- Pydantic models (`WorkflowConfig`) validate the structure and types of the workflow YAML at startup.
+
 ---
 
 ## 7. Cross-Cutting Concerns Implementation
@@ -247,7 +250,7 @@ Error Handling & Resilience:
 Logging & Monitoring:
 
 - Central `setup_logging()` configures uniform format; correlation IDs injected via `CorrelationMiddleware` for request tracing.
-- Optional OpenTelemetry via `setup_observability` (import guarded).
+- Optional OpenTelemetry via `setup_observability` (import guarded). See the [OpenTelemetry Integration Guide](./api/opentelemetry-guide.md) for setup details.
 - Logging sanitization strips control characters to mitigate log injection.
 
 Validation:
@@ -321,6 +324,7 @@ Resilience Patterns:
 Interface Design:
 
 - Protocol-like usage (`RunsWorkflow`) indicates expected `.run()` method returning async generator.
+- The `ProgressEmitter` interface allows for custom, pluggable progress reporting during workflow execution.
 - Conversion functions isolate polymorphic event handling (duck typing + introspection).
 
 Service Implementation:
@@ -480,6 +484,19 @@ async for event in self._workflow.run_stream(message):
 if (rawEvent.type === "response.delta") {
   callbacks.onDelta?.(rawEvent.delta, agentId);
 }
+```
+
+### Example: Custom Progress Emitter
+
+```python
+from agentic_fleet.workflow.workflow import ProgressEmitter
+
+class MyCustomEmitter(ProgressEmitter):
+    def emit(self, event_type: str, data: dict) -> None:
+        print(f"Event: {event_type}, Data: {data}")
+
+# In your workflow setup
+workflow = MagenticFleetWorkflow(..., progress_emitter=MyCustomEmitter())
 ```
 
 ---

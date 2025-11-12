@@ -160,8 +160,7 @@ async def create_summary_message(
         summary_metadata: Summary metadata from check_and_summarize
     """
     summary_content = (
-        f"**Conversation Summary**\n\n"
-        f"{summary_metadata['summary_text']}\n\n"
+        f"Summary: {summary_metadata['summary_text']}\n\n"
         f"_Summarized {summary_metadata['original_message_count']} messages._"
     )
 

@@ -364,8 +364,10 @@ if __name__ == "__main__":
     # Create environment
     env = Environment(host=BASE_URL)
 
-    # Add users
-    env.users = [AgenticFleetUser, AdminUser]
+    # Register user classes (Locust 2.x uses create_local_runner or web UI; direct assignment
+    # to env.users is not part of the public API and triggers static analysis errors.)
+    # We keep a local list for documentation without mutating Environment internals.
+    available_user_classes = [AgenticFleetUser, AdminUser]
 
     print("AgenticFleet Load Testing Suite")
     print("Run with: locust -f locustfile.py --host=http://localhost:8000")

@@ -9,13 +9,21 @@ from agentic_fleet.api.entities.schemas import (
     EntityReloadResponse,
     InputSchema,
 )
-from agentic_fleet.api.models.workflow_config import WorkflowConfig
 from agentic_fleet.api.responses.schemas import (
     ResponseCompleteResponse,
     ResponseDeltaResponse,
     ResponseRequest,
 )
 from agentic_fleet.models.events import RunsWorkflow, WorkflowEvent
+from agentic_fleet.models.requests import (
+    WorkflowCheckpointMetadata,
+    WorkflowResumeRequest,
+    WorkflowRunRequest,
+    WorkflowRunResponse,
+)
+from agentic_fleet.models.workflow_config import (
+    WorkflowConfig,  # use canonical model (with compatibility helpers)
+)
 
 # Backward compatibility aliases
 EntityInfo = EntityDetailResponse
@@ -35,6 +43,10 @@ __all__ = [
     "ResponseDeltaResponse",
     "ResponseRequest",
     "RunsWorkflow",
+    "WorkflowCheckpointMetadata",
     "WorkflowConfig",
     "WorkflowEvent",
+    "WorkflowResumeRequest",
+    "WorkflowRunRequest",
+    "WorkflowRunResponse",
 ]

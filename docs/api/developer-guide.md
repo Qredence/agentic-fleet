@@ -352,7 +352,7 @@ if settings.new_feature_enabled:
 
 ### Adding Dependency Checks
 
-Extend the health check in `src/agentic_fleet/api/system/routes.py`:
+Extend the health check in `src/agentic_fleet/api/routers/health.py`:
 
 ```python
 @router.get("/health")  # Mounted at /v1/system in app.py

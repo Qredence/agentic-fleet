@@ -77,6 +77,68 @@ DEFAULT_WORKFLOW_ID=collaboration
 
 ---
 
+### Typed Workflow Configuration (YAML)
+
+In addition to environment variables, the core behavior of agent workflows is defined in a YAML file, typically `src/agentic_fleet/workflows.yaml`. This file is parsed into strictly-typed Pydantic models at startup, ensuring that the configuration is valid and complete.
+
+#### Schema Overview
+
+The YAML configuration is a list of workflow definitions, each conforming to the `WorkflowConfig` Pydantic model. Here is a breakdown of the key models:
+
+- **`WorkflowConfig`**: The top-level object for a single workflow.
+  - `id`: (Required) A unique identifier for the workflow (e.g., `magentic_fleet`).
+  - `name`: (Required) A human-readable name.
+  - `description`: A brief description of the workflow's purpose.
+  - `factory`: (Required) The Python factory class responsible for building this workflow.
+  - `manager`: (Required) A `WorkflowManagerConfig` object defining the orchestrating agent.
+  - `agents`: A dictionary mapping agent roles to their specific configurations.
+
+- **`WorkflowManagerConfig`**: Defines the manager agent.
+  - `model`: (Required) The language model to use (e.g., `gpt-4-turbo`).
+  - `instructions`: A string containing the manager's system prompt or a reference to a prompt module.
+  - `reasoning`: An optional `ReasoningConfig` object.
+  - Other fields like `temperature`, `max_tokens`, and `max_round_count` are also available.
+
+- **`ReasoningConfig`**: Fine-tunes the manager's reasoning process.
+  - `effort`: Controls the reasoning effort (e.g., `low`, `high`).
+  - `verbosity`: Controls the verbosity of the reasoning process.
+
+#### Example YAML Configuration
+
+Here is an example of a `magentic_fleet` workflow defined in YAML:
+
+```yaml
+- id: "magentic_fleet"
+  name: "Magentic Fleet"
+  description: "A multi-agent workflow for complex task execution."
+  factory: "agentic_fleet.workflow.magentic_workflow.MagenticFleetWorkflow"
+  manager:
+    model: "gpt-4-turbo"
+    instructions: "prompts.manager_instructions"
+    temperature: 0.7
+    reasoning:
+      effort: "high"
+      verbosity: "detailed"
+  agents:
+    planner:
+      model: "gpt-4-turbo"
+      instructions: "prompts.planner_instructions"
+    coder:
+      model: "gpt-4-code-interpreter"
+      instructions: "prompts.coder_instructions"
+      tools: ["code_interpreter"]
+```
+
+#### Validation
+
+When the application starts, the `WorkflowFactory` reads and parses this YAML file. Pydantic automatically performs the following validation:
+
+- **Type Checking**: Ensures that all fields match their defined types (e.g., `temperature` must be a float, `max_round_count` must be an integer).
+- **Required Fields**: Verifies that all required fields (`id`, `name`, `factory`, `manager`, `model`) are present.
+- **Structure**: Confirms that the nested structure (e.g., `manager.reasoning`) is correct.
+
+If validation fails, the application will raise a detailed `ValidationError` at startup, preventing misconfigured workflows from running. This ensures a high degree of reliability and makes debugging configuration issues straightforward.
+
 ### Database Configuration
 
 ```python

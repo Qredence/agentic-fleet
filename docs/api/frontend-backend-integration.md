@@ -56,13 +56,35 @@ Frontend (useFastAPIChat hook)
 
 ### 2. SSE Event Streaming
 
-The backend opens the stream with a `: keep-alive` comment, then emits the OpenAI-compatible events summarised below. See the **SSE Event Taxonomy** table for exact payloads and sequencing guarantees.
+### 2. Dynamic Agent Composition
+
+The `POST /v1/sessions/{id}/chat` endpoint supports dynamic agent composition, allowing the client to select a subset of agents for a specific workflow run. This is achieved by passing an optional `agents` array in the request body, containing the names of the agents to be included.
+
+If the `agents` parameter is omitted, the workflow will run with all the agents defined in its default configuration. If the array is provided, only the specified agents will be loaded and executed.
+
+**Request Body Example:**
+
+```json
+{
+  "message": {
+    "role": "user",
+    "content": "Can you help me plan a new feature and write the code for it?"
+  },
+  "agents": ["planner", "coder"]
+}
+```
+
+In this example, the workflow will only execute the `planner` and `coder` agents, bypassing any other agents that might be part of the default workflow configuration. This feature provides greater flexibility, allowing clients to tailor the workflow to the specific needs of a request.
+
+The backend opens the stream with a `: keep-alive` comment, then emits the OpenAI-compatible events summarised below. See the **SSE Event Taxonomy** table for exact payloads and sequencing guarantees. Reasoning traces now arrive incrementally so the UI can surface chain-of-thought updates while the workflow is still running.
 
 ### SSE Event Taxonomy
 
 | Event type               | Emitted by            | Payload shape                                                                              | Notes                                                                                                                                                    |
 | ------------------------ | --------------------- | ------------------------------------------------------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `response.delta`         | `ResponseAggregator`  | `{ "type": "response.delta", "delta": { "content": string, "agent_id": string \| null } }` | Streams token-sized text chunks from the active agent. `agent_id` identifies the specialist emitting the chunk.                                          |
+| `reasoning.delta`        | Workflow event bridge | `{ "type": "reasoning.delta", "reasoning": string, "agent_id": string \| null }`           | Incremental “thought” updates sourced from `AgentRunUpdateEvent`. Emitted whenever the manager toolkit reveals planning/evaluation text mid-stream.      |
+| `reasoning.completed`    | `ResponseAggregator`  | `{ "type": "reasoning.completed", "reasoning": string, "agent_id": string \| null }`       | Fired once per response with the concatenated reasoning trail and final agent attribution. Always follows any outstanding `reasoning.delta` emissions.   |
 | `agent.message.complete` | Workflow event bridge | `{ "type": "agent.message.complete", "agent_id": string, "content": string }`              | Signals that an agent finished its turn so the UI can finalize that agent's message bubble.                                                              |
 | `orchestrator.message`   | Workflow event bridge | `{ "type": "orchestrator.message", "message": string, "kind": string \| null }`            | Manager narration such as planning or replanning updates. `kind` mirrors workflow status (plan, replan, status, etc.).                                   |
 | `response.completed`     | `ResponseAggregator`  | `{ "type": "response.completed", "response": { "role": "assistant", "content": string } }` | Final assistant message synthesized from streamed deltas or workflow result payloads. Always followed by `[DONE]`.                                       |
@@ -71,7 +93,7 @@ The backend opens the stream with a `: keep-alive` comment, then emits the OpenA
 
 `data: [DONE]` is the terminal sentinel sent after every stream to mirror OpenAI Responses API behavior.
 
-> **Zero-delta completions.** Even if no `response.delta` chunks arrive (for example, a workflow returns an empty string directly from `message.done`), the aggregator still emits a `response.completed` event with an empty `response.content` followed by `data: [DONE]`. This guarantees deterministic teardown for the frontend stream handler.
+> **Zero-delta completions.** Even if no `response.delta` chunks arrive (for example, a workflow returns an empty string directly from `message.done`), the aggregator still emits a `response.completed` event with an empty `response.content` followed by `data: [DONE]`. This guarantees deterministic teardown for the frontend stream handler. When only reasoning deltas are streamed, the aggregator also emits `reasoning.completed` before `[DONE]` so the UI can stash the final thought transcript.
 
 ### 3. Event Processing
 
@@ -125,7 +147,7 @@ proxy: {
 ### Streaming feature flags
 
 - `STREAM_AGENT_DELTAS` (default `1`): emit per-agent `agent.delta` events in addition to the universal `response.delta` stream. Disable if the frontend does not render segmented agent output.
-- `STREAM_REASONING` (default `0`): forward `orchestrator.message` reasoning updates to clients and persist them to the conversation log. Leave off in production if sensitive planning traces should remain server-side.
+- `STREAM_REASONING` (default `0`): forward `orchestrator.message` manager narration to clients and persist it to the conversation log. Incremental `reasoning.delta` events are delivered regardless of this flag so the UI still shows per-agent thought summaries without exposing manager chatter if you keep this disabled.
 - Both flags are optional; the Responses stream (`response.delta`, `response.completed`, `error`, `[DONE]`) remains spec-compliant regardless of their values.
 
 ## Troubleshooting

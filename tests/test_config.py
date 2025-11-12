@@ -26,6 +26,7 @@ from pathlib import Path
 import pytest
 import yaml
 
+from agentic_fleet.models.workflow_config import WorkflowConfig, WorkflowManagerConfig
 from agentic_fleet.utils.factory import WorkflowFactory
 
 
@@ -38,8 +39,8 @@ class TestWorkflowFactoryCore:
         factory = WorkflowFactory()
 
         assert factory.config_path.exists(), "Default config path should exist"
-        assert factory._config is not None, "Config should be loaded"
-        assert isinstance(factory._config, dict), "Config should be a dictionary"
+        config = factory.get_workflow_config("magentic_fleet")
+        assert isinstance(config, WorkflowConfig), "Config should be a WorkflowConfig instance"
 
     @pytest.mark.asyncio
     async def test_factory_initialization_with_custom_config(self):
@@ -155,6 +156,7 @@ class TestWorkflowConfiguration:
         """Test getting configuration for valid workflow."""
         factory = WorkflowFactory()
         config = await factory.get_workflow_config_async("magentic_fleet")
+        assert isinstance(config, WorkflowConfig)
 
         assert config is not None, "Should return config for valid workflow"
         assert config.id == "magentic_fleet", "Should return correct workflow config"
@@ -176,6 +178,7 @@ class TestWorkflowConfiguration:
         """Test workflow configuration has all required fields."""
         factory = WorkflowFactory()
         config = await factory.get_workflow_config_async("magentic_fleet")
+        assert isinstance(config, WorkflowConfig)
 
         required_fields = ["id", "name", "description", "factory"]
         for field in required_fields:
@@ -187,6 +190,7 @@ class TestWorkflowConfiguration:
         """Test workflow agents configuration structure."""
         factory = WorkflowFactory()
         config = await factory.get_workflow_config_async("magentic_fleet")
+        assert isinstance(config, WorkflowConfig)
 
         assert isinstance(config.agents, dict), "Agents should be a dictionary"
         assert len(config.agents) > 0, "Should have at least one agent configured"
@@ -201,11 +205,14 @@ class TestWorkflowConfiguration:
         """Test workflow manager configuration structure."""
         factory = WorkflowFactory()
         config = await factory.get_workflow_config_async("magentic_fleet")
+        assert isinstance(config, WorkflowConfig)
 
         assert hasattr(config, "manager"), "Should have manager configuration"
         manager_config = config.manager
-        assert isinstance(manager_config, dict), "Manager config should be a dict"
-        assert "model" in manager_config, "Manager config should have model"
+        assert isinstance(
+            manager_config, WorkflowManagerConfig
+        ), "Manager config should be a WorkflowManagerConfig instance"
+        assert manager_config.model, "Manager config should define a model"
 
 
 class TestAgentConfigurationResolution:
@@ -272,6 +279,7 @@ class TestFactoryMethodValidation:
         """Test that specified factory methods exist and are callable."""
         factory = WorkflowFactory()
         config = await factory.get_workflow_config_async("magentic_fleet")
+        assert isinstance(config, WorkflowConfig)
 
         factory_method_path = config.factory
         # Factory methods can be simple names (resolved by builder) or module.method format
@@ -376,6 +384,7 @@ class TestConfigurationValidation:
         """Test complete validation of magentic_fleet configuration."""
         factory = WorkflowFactory()
         config = await factory.get_workflow_config_async("magentic_fleet")
+        assert isinstance(config, WorkflowConfig)
 
         # Validate core structure
         assert config.id == "magentic_fleet"
@@ -398,6 +407,7 @@ class TestConfigurationValidation:
         """Test that model references are valid and consistent."""
         factory = WorkflowFactory()
         config = await factory.get_workflow_config_async("magentic_fleet")
+        assert isinstance(config, WorkflowConfig)
 
         # Check that models are valid strings
         all_models = set()
@@ -424,6 +434,7 @@ class TestConfigurationValidation:
         """Test that temperature values are in valid range."""
         factory = WorkflowFactory()
         config = await factory.get_workflow_config_async("magentic_fleet")
+        assert isinstance(config, WorkflowConfig)
 
         for agent_name, agent_config in config.agents.items():
             if isinstance(agent_config, dict) and "temperature" in agent_config:
@@ -441,6 +452,7 @@ class TestConfigurationValidation:
         """Test that instructions are meaningful and not empty."""
         factory = WorkflowFactory()
         config = await factory.get_workflow_config_async("magentic_fleet")
+        assert isinstance(config, WorkflowConfig)
 
         for agent_name, agent_config in config.agents.items():
             if isinstance(agent_config, dict) and "instructions" in agent_config:
@@ -529,6 +541,7 @@ class TestPerformanceConfiguration:
         # If the workflow config has performance settings, validate them
         try:
             config = await factory.get_workflow_config_async("magentic_fleet")
+            assert isinstance(config, WorkflowConfig)
 
             # Check for any performance-related settings
             if hasattr(config, "orchestrator") and config.orchestrator:
@@ -563,6 +576,7 @@ class TestSecurityConfiguration:
         """Test that configuration doesn't contain hardcoded secrets."""
         factory = WorkflowFactory()
         config = await factory.get_workflow_config_async("magentic_fleet")
+        assert isinstance(config, WorkflowConfig)
 
         # Convert config to string for analysis
         config_str = str(config).lower()
@@ -582,6 +596,7 @@ class TestSecurityConfiguration:
         """Test that model references don't contain unsafe characters."""
         factory = WorkflowFactory()
         config = await factory.get_workflow_config_async("magentic_fleet")
+        assert isinstance(config, WorkflowConfig)
 
         all_models = set()
         for agent_config in config.agents.values():

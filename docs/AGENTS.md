@@ -36,6 +36,59 @@ keep documentation synchronized with the codebase.
 - When adding diagrams or screenshots, store them in `assets/` and use relative paths so GitHub,
   Markdown preview, and docs tooling stay in sync.
 
+### Agent Lifecycle Hooks
+
+To support agents that need to manage stateful resources (e.g., database connections, temporary files), the framework provides optional lifecycle hooks through the `AgentLifecycle` protocol. Agents can implement `warmup()` and `teardown()` methods to initialize and release resources at the beginning and end of a workflow run.
+
+- **`warmup()`**: Called once before the agent processes any messages. Use this hook to acquire resources, initialize connections, or perform any setup required for the agent to function.
+- **`teardown()`**: Called once after the workflow run is complete, including in cases of errors or interruptions. This hook should be used to release resources, close connections, and perform cleanup tasks to prevent resource leaks.
+
+#### Example Implementation
+
+Here is an example of a simple agent that manages a temporary file during its lifecycle:
+
+```python
+import tempfile
+from pathlib import Path
+from typing import Protocol
+
+class AgentLifecycle(Protocol):
+    def warmup(self) -> None:
+        ...
+
+    def teardown(self) -> None:
+        ...
+
+class FileProcessingAgent:
+    def __init__(self):
+        self._temp_file = None
+        self._file_path = None
+
+    def warmup(self) -> None:
+        """Create a temporary file for the workflow run."""
+        self._temp_file = tempfile.NamedTemporaryFile(delete=False, mode="w+")
+        self._file_path = Path(self._temp_file.name)
+        print(f"Agent warmed up. Temporary file created at: {self._file_path}")
+
+    def teardown(self) -> None:
+        """Close and delete the temporary file."""
+        if self._temp_file:
+            self._temp_file.close()
+            self._file_path.unlink()
+            print(f"Agent torn down. Temporary file {self._file_path} removed.")
+
+    def process(self, message: str) -> str:
+        """Processes a message and writes it to the temporary file."""
+        if not self._file_path:
+            return "Error: Agent has not been warmed up."
+
+        self._file_path.write_text(message)
+        return f"Message written to {self._file_path}"
+
+```
+
+The workflow runner will automatically detect if an agent implements these methods and call them at the appropriate times.
+
 ## Previewing & Validation
 
 - Optional: install `markdownlint-cli` (`npm install --global markdownlint-cli`) for local linting.

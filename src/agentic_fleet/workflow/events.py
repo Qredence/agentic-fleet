@@ -9,6 +9,7 @@ from agentic_fleet.models.events import WorkflowEvent
 
 if TYPE_CHECKING:
     from agent_framework import (
+        AgentRunUpdateEvent,
         MagenticAgentDeltaEvent,
         MagenticAgentMessageEvent,
         MagenticFinalResultEvent,
@@ -19,6 +20,7 @@ if TYPE_CHECKING:
 else:
     try:
         from agent_framework import (
+            AgentRunUpdateEvent,
             MagenticAgentDeltaEvent,
             MagenticAgentMessageEvent,
             MagenticFinalResultEvent,
@@ -28,6 +30,7 @@ else:
         )
     except ImportError:
         # Event types not available - will handle gracefully
+        AgentRunUpdateEvent = None  # type: ignore[assignment,misc]
         MagenticAgentDeltaEvent = None  # type: ignore[assignment,misc]
         MagenticAgentMessageEvent = None  # type: ignore[assignment,misc]
         MagenticFinalResultEvent = None  # type: ignore[assignment,misc]
@@ -36,6 +39,39 @@ else:
         WorkflowOutputEvent = None  # type: ignore[assignment,misc]
 
 logger = logging.getLogger(__name__)
+# ---------------------------------------------------------------------------
+# Backward Compatibility Stubs (legacy builder.py support)
+# These types were referenced by the deprecated workflow/builder.py module.
+# Modern code uses WorkflowEventBridge and MagenticFleetWorkflow; keep these
+# minimal stubs to satisfy IDE/type checking without affecting runtime logic.
+# ---------------------------------------------------------------------------
+
+
+class BaseEvent(dict[str, Any]):
+    """Legacy base event container (dict subclass).
+
+    This class exists solely for backward compatibility with the deprecated
+    workflow/builder.py module. It is a minimal stub to satisfy IDE/type checking
+    and should not be used in new code. Inherits from dict to match the legacy
+    event pattern.
+    """
+
+
+class EventBridge:
+    """Legacy event bridge that simply dispatches events to registered callbacks.
+
+    callbacks: list of (callback, mode) tuples where callback(event) is invoked.
+    """
+
+    def __init__(self, callbacks: list[tuple[Any, Any]]):
+        self._callbacks = callbacks
+
+    def emit(self, event: BaseEvent) -> None:
+        for cb, _mode in self._callbacks:
+            try:
+                cb(event)
+            except Exception:
+                logger.exception("Legacy EventBridge callback failed", exc_info=True)
 
 
 def _extract_reasoning_from_contents(contents: Any) -> str | None:
@@ -53,14 +89,46 @@ def _extract_reasoning_from_contents(contents: Any) -> str | None:
     if isinstance(contents, str) or not hasattr(contents, "__iter__"):
         return None
 
+    reasoning_chunks: list[str] = []
+
     try:
         for content in contents:
             if isinstance(content, TextReasoningContent):
-                return content.text if hasattr(content, "text") else None
+                text = getattr(content, "text", None)
+                if text:
+                    reasoning_chunks.append(text)
     except (TypeError, AttributeError):
-        pass
+        return None
+
+    if reasoning_chunks:
+        return "".join(reasoning_chunks)
 
     return None
+
+
+def _extract_reasoning_from_update(update: Any) -> str | None:
+    """Extract reasoning text from an AgentRunResponseUpdate instance."""
+
+    if update is None:
+        return None
+
+    contents = getattr(update, "contents", None)
+    if contents is None:
+        return None
+
+    return _extract_reasoning_from_contents(contents)
+
+
+def _agent_id_from_executor(executor_id: str | None) -> str | None:
+    """Normalize executor IDs ("agent_<name>") to agent identifiers."""
+
+    if not executor_id:
+        return None
+
+    if executor_id.startswith("agent_"):
+        return executor_id[len("agent_") :]
+
+    return executor_id
 
 
 def _json_safe_value(value: Any) -> Any:
@@ -119,6 +187,42 @@ class WorkflowEventBridge:
             }
 
         # Handle different event types
+        if AgentRunUpdateEvent is not None and isinstance(event, AgentRunUpdateEvent):
+            update = getattr(event, "data", None)
+            reasoning = _extract_reasoning_from_update(update)
+            agent_id = _agent_id_from_executor(getattr(event, "executor_id", None))
+
+            additional_properties = getattr(update, "additional_properties", None)
+            cached = False
+            if isinstance(additional_properties, dict):
+                cached = bool(additional_properties.get("cached"))
+
+            if reasoning:
+                reasoning_event: WorkflowEvent = {
+                    "type": "reasoning.delta",
+                    "data": {
+                        "delta": reasoning,
+                        "agent_id": agent_id,
+                    },
+                }
+                if cached:
+                    reasoning_event["data"]["cached"] = True
+                if openai_format:
+                    reasoning_event["openai_type"] = "reasoning.delta"
+                logger.debug(
+                    "Converted AgentRunUpdateEvent to reasoning.delta: agent=%s, chunk_length=%s",
+                    agent_id,
+                    len(reasoning),
+                )
+                return reasoning_event
+
+            return {
+                "type": "agent.run_update",
+                "data": {
+                    "agent_id": agent_id,
+                },
+            }
+
         if isinstance(event, MagenticAgentDeltaEvent):
             # Convert agent deltas to message.delta so they appear as streaming assistant messages
             # Each agent's output will be accumulated separately by the frontend

@@ -7,7 +7,7 @@ from unittest.mock import Mock
 import pytest
 
 from agentic_fleet.api.entities.service import EntityDiscovery
-from agentic_fleet.api.models.workflow_config import WorkflowConfig
+from agentic_fleet.models.workflow_config import WorkflowConfig
 from agentic_fleet.utils.factory import WorkflowFactory
 
 

@@ -15,7 +15,7 @@ values in code.
 | -------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `agents/`                  | Agent registry (`coordinator.AgentFactory`) plus specialist configs (`planner.py`, `executor.py`, `coder.py`, `verifier.py`, `generator.py`). Each module exposes `get_config()`. |
 | `prompts/`                 | Prompt modules returning `get_instructions()` strings consumed by the agents and manager.                                                                                         |
-| `api/`                     | FastAPI routers and services: `responses/`, `conversations/`, `entities/`, `chat/`, `approvals/`, `system/`, `workflows/`, and shared wiring (`app.py`, `workflow_factory.py`).   |
+| `api/`                     | FastAPI routers and services: `responses/`, `conversations/`, `entities/`, `chat/`, `approvals/`, `routers/`, `workflows/`, and shared wiring (`app.py`, `workflow_factory.py`).  |
 | `workflow/`                | Builders and orchestration glue (`magentic_workflow.py`, `magentic_builder.py`, `events.py`, `executor.py`).                                                                      |
 | `models/`                  | Pydantic schemas for requests, responses, workflow metadata, SSE envelopes, and OpenAI compatibility.                                                                             |
 | `tools/`                   | Tool registry (`registry.ToolRegistry`) plus concrete adapters such as `hosted_interpreter.py` and MCP bridge stubs.                                                              |
@@ -73,7 +73,9 @@ module, and coverage in `tests/test_workflow_factory.py` plus `tests/test_event_
 
 ## API Surface
 
-- `/v1/system/health`, `/v1/system/info` — Health and metadata probes used by monitoring and CI.
+- `/health` — Basic health check with Redis status (defined in `app.py`).
+- `/v1/system/health` — Framework health check endpoint (from `api/routers/health.py`).
+- `/v1/system/health/detailed` — Detailed framework health including package versions.
 - `/v1/conversations/*` — Backward-compatible REST interface for conversation history.
 - `/v1/chat/completions` — Compatibility shim, routed through the same workflow factory.
 - `/v1/responses` — OpenAI Responses API with optional streaming via SSE.
