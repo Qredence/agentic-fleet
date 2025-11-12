@@ -69,7 +69,7 @@ export function useSSEStream(options: UseSSEStreamOptions = {}) {
           err instanceof Error ? err.message : "Unknown streaming error";
         // If aborted, treat as graceful stop
         if ((err as any)?.name === "AbortError") {
-          // Graceful abort - no error, no completion
+          options.onCompleted?.();
         } else {
           setError(msg);
           options.onError?.(msg);

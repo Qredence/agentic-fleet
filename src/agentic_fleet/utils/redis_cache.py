@@ -252,9 +252,9 @@ class RedisCacheManager:
             async with self.async_client.pipeline() as pipe:
                 # Delete all message hashes
                 for msg_id in message_ids:
-                    pipe.delete(self._get_message_key(msg_id))
+                    await pipe.delete(self._get_message_key(msg_id))
                 # Delete the thread's message list
-                pipe.delete(thread_key)
+                await pipe.delete(thread_key)
                 result = await pipe.execute()
         except RedisError:
             logger.exception(

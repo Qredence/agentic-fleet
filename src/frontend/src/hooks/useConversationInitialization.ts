@@ -72,6 +72,8 @@ export function useConversationInitialization(
     conversationId,
     messages.length,
     loadConversationHistory,
+    onSuccess,
+    onError,
     setError,
   ]);
 
