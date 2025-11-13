@@ -72,7 +72,7 @@
 ### Environment Variables
 
 **Required**: `OPENAI_API_KEY` (in `.env` or env).
-**Optional**: `OPENAI_BASE_URL`, `AF_WORKFLOW_CONFIG`, `ENABLE_OTEL`, `OTLP_ENDPOINT`, `MEM0_HISTORY_DB_PATH`, `REDIS_URL`. Document new vars in `docs/configuration-guide.md`.
+**Optional**: `OPENAI_BASE_URL`, `AF_WORKFLOW_CONFIG`, `ENABLE_OTEL`, `OTLP_ENDPOINT`, `MEM0_HISTORY_DB_PATH`. Document new vars in `docs/configuration-guide.md`.
 
 ### Common Troubleshooting
 

@@ -39,7 +39,7 @@ env/
 logs
 .serena/
 .playwright-mcp/
-
+.trae/
 # Environment variables
 .env
 .env.local

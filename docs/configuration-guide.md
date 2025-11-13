@@ -1,3 +1,23 @@
+# Security Best Practices
+
+### 2. Use Environment Variables in Production
+
+```bash
+# Kubernetes
+env:
+  - name: DATABASE_URL
+    valueFrom:
+      secretKeyRef:
+        name: database-secret
+        key: url
+
+# Docker Compose
+environment:
+  - DATABASE_URL=${DATABASE_URL}
+```
+
+### 3. Rotate Secrets Regularly
+
 # Configuration Guide
 
 **Version**: 0.5.5
@@ -32,32 +52,6 @@ api_description: str = "Multi-agent orchestration system..."
 ```
 
 **Environment Variables**: None (internal use)
-
----
-
-### Redis Configuration
-
-```python
-redis_url: str = "redis://localhost:6379"
-redis_ttl_seconds: int = 3600
-redis_enabled: bool = True
-```
-
-**Environment Variables**:
-
-```bash
-REDIS_URL=redis://your-server:6379
-REDIS_TTL_SECONDS=7200
-REDIS_ENABLED=true
-```
-
-**Example**:
-
-```bash
-# Production Redis Cloud
-REDIS_URL=redis://default:password@redis-12345.c259.us-central1-2.gce.redns.redis-cloud.com:12345
-REDIS_TTL_SECONDS=7200
-```
 
 ---
 
@@ -219,11 +213,6 @@ Create `.env` file in project root:
 # API Keys
 OPENAI_API_KEY=sk-your-key-here
 
-# Redis Configuration
-REDIS_URL=redis://localhost:6379
-REDIS_TTL_SECONDS=3600
-REDIS_ENABLED=true
-
 # Database Configuration
 DATABASE_URL=sqlite:///var/agenticfleet/approvals.db
 
@@ -250,38 +239,34 @@ SERVER_PORT=8000
 ### Direct Access
 
 ```python
-from agenticfleet.core.settings import settings
+import os
 
-# Type-safe access
-redis_url = settings.redis_url
-ttl = settings.redis_ttl_seconds
+workflow_timeout = float(os.getenv("WORKFLOW_TIMEOUT_SECONDS", "300"))
 ```
 
 ### Using in Functions
 
 ```python
-from agenticfleet.core.settings import settings
+import os
+from pathlib import Path
 
-def create_redis_client():
-    """Create Redis client using settings."""
-    return RedisClient(
-        redis_url=settings.redis_url,
-        ttl_seconds=settings.redis_ttl_seconds,
-    )
+def resolve_database_url() -> str:
+  """Return the configured database connection string."""
+  return os.getenv("DATABASE_URL", "sqlite:///var/agenticfleet/approvals.db")
 ```
 
 ### Using in Routes
 
 ```python
-from agenticfleet.core.settings import settings
+import os
 
 @router.get("/config")
 async def get_config():
-    """Return current configuration (without secrets)."""
-    return {
-        "redis_enabled": settings.redis_enabled,
-        "workflow_timeout": settings.workflow_timeout_seconds,
-    }
+  """Return current configuration (without secrets)."""
+  return {
+    "workflow_timeout": float(os.getenv("WORKFLOW_TIMEOUT_SECONDS", "300")),
+    "database_url": os.getenv("DATABASE_URL", "sqlite:///var/agenticfleet/approvals.db"),
+  }
 ```
 
 ---
@@ -292,11 +277,6 @@ async def get_config():
 
 ```bash
 # .env.production
-
-# Redis (Production)
-REDIS_URL=redis://your-production-redis:6379
-REDIS_TTL_SECONDS=7200
-REDIS_ENABLED=true
 
 # Database (Production)
 DATABASE_URL=postgresql://user:pass@db-host:5432/agenticfleet
@@ -320,11 +300,6 @@ WORKFLOW_TIMEOUT_SECONDS=600
 
 ```bash
 # .env.development
-
-# Redis (Local)
-REDIS_URL=redis://localhost:6379
-REDIS_TTL_SECONDS=3600
-REDIS_ENABLED=true
 
 # Database (Local SQLite)
 DATABASE_URL=sqlite:///var/agenticfleet/approvals.db
@@ -350,10 +325,10 @@ Settings are validated at startup:
 
 ```python
 # Invalid: Wrong type
-REDIS_TTL_SECONDS=abc  # Error: must be integer
+WORKFLOW_TIMEOUT_SECONDS=abc  # Error: must be numeric
 
 # Valid: Correct type
-REDIS_TTL_SECONDS=3600  # OK
+WORKFLOW_TIMEOUT_SECONDS=300  # OK
 ```
 
 ### Value Validation
@@ -388,11 +363,7 @@ WORKFLOW_TIMEOUT_SECONDS=300  # OK
 
 ```python
 # ✅ Correct
-redis_url: str = settings.redis_url
-
-# ❌ Wrong - unnecessary type checking
-if isinstance(settings.redis_url, str):
-    redis_url = settings.redis_url
+workflow_timeout: float = settings.workflow_timeout_seconds
 ```
 
 ### List Values Not Working
@@ -454,19 +425,16 @@ Add to this guide under "Available Settings" section.
 
 ## Environment Variable Reference
 
-| Setting          | Environment Variable       | Type         | Default                  | Required |
-| ---------------- | -------------------------- | ------------ | ------------------------ | -------- |
-| Redis URL        | `REDIS_URL`                | string       | `redis://localhost:6379` | No       |
-| Redis TTL        | `REDIS_TTL_SECONDS`        | integer      | `3600`                   | No       |
-| Redis Enabled    | `REDIS_ENABLED`            | boolean      | `true`                   | No       |
-| Database URL     | `DATABASE_URL`             | string       | `sqlite:///...`          | No       |
-| Workflow Timeout | `WORKFLOW_TIMEOUT_SECONDS` | float        | `120.0`                  | No       |
-| Default Workflow | `DEFAULT_WORKFLOW_ID`      | string       | `magentic_fleet`         | No       |
-| CORS Origins     | `CORS_ORIGINS`             | list[string] | `["*"]`                  | No       |
-| CORS Credentials | `CORS_ALLOW_CREDENTIALS`   | boolean      | `true`                   | No       |
-| Log Level        | `LOG_LEVEL`                | string       | `INFO`                   | No       |
-| Server Host      | `SERVER_HOST`              | string       | `0.0.0.0`                | No       |
-| Server Port      | `SERVER_PORT`              | integer      | `8000`                   | No       |
+| Setting          | Environment Variable       | Type         | Default          | Required |
+| ---------------- | -------------------------- | ------------ | ---------------- | -------- |
+| Database URL     | `DATABASE_URL`             | string       | `sqlite:///...`  | No       |
+| Workflow Timeout | `WORKFLOW_TIMEOUT_SECONDS` | float        | `120.0`          | No       |
+| Default Workflow | `DEFAULT_WORKFLOW_ID`      | string       | `magentic_fleet` | No       |
+| CORS Origins     | `CORS_ORIGINS`             | list[string] | `["*"]`          | No       |
+| CORS Credentials | `CORS_ALLOW_CREDENTIALS`   | boolean      | `true`           | No       |
+| Log Level        | `LOG_LEVEL`                | string       | `INFO`           | No       |
+| Server Host      | `SERVER_HOST`              | string       | `0.0.0.0`        | No       |
+| Server Port      | `SERVER_PORT`              | integer      | `8000`           | No       |
 
 ---
 
@@ -490,15 +458,14 @@ Instead of `.env` file, use environment variables:
 ```bash
 # Kubernetes
 env:
-  - name: REDIS_URL
+  - name: DATABASE_URL
     valueFrom:
       secretKeyRef:
-        name: redis-secret
+        name: database-secret
         key: url
 
 # Docker Compose
 environment:
-  - REDIS_URL=${REDIS_URL}
   - DATABASE_URL=${DATABASE_URL}
 ```
 
