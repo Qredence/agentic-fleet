@@ -1,34 +1,17 @@
 """Agent factory for creating ChatAgent instances from YAML configuration."""
 
-from __future__ import annotations
-
-import asyncio
-import inspect
 import logging
 import os
-from collections.abc import Awaitable
-from concurrent.futures import Future, ThreadPoolExecutor
-from typing import Any, TypeVar
+from typing import Any
 
 from agent_framework import ChatAgent
 from agent_framework.openai import OpenAIResponsesClient
 from dotenv import load_dotenv
 
-from agentic_fleet.agents.base import AgentLifecycle, LifecycleHook
-from agentic_fleet.api.exceptions import AgentInitializationError
 from agentic_fleet.tools.registry import ToolRegistry
 from agentic_fleet.utils.telemetry import optional_span
 
-_T = TypeVar("_T")
-
 load_dotenv(override=True)
-
-OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
-if not OPENAI_API_KEY:
-    raise ValueError("OPENAI_API_KEY is not set")
-
-# Base URL is optional; default OpenAI endpoint is used when unset.
-OPENAI_BASE_URL = os.getenv("OPENAI_BASE_URL")
 
 logger = logging.getLogger(__name__)
 
@@ -44,7 +27,6 @@ class AgentFactory:
                 If None, creates a default registry.
         """
         self.tool_registry = tool_registry or ToolRegistry()
-        self._teardown_registry: dict[str, LifecycleHook] = {}
 
     def create_agent(
         self,
@@ -97,11 +79,18 @@ class AgentFactory:
                 if tool_names:
                     span.set_attribute("agent.tool_names", ",".join(tool_names))
 
-            # Create OpenAI client
+            # Get API key at runtime
+            api_key = os.getenv("OPENAI_API_KEY")
+            if not api_key:
+                raise ValueError("OPENAI_API_KEY environment variable is required")
+
+            base_url = os.getenv("OPENAI_BASE_URL") or None
+
+            # Create OpenAI client using agent_framework directly
             chat_client = OpenAIResponsesClient(
                 model_id=model_id,
-                api_key=OPENAI_API_KEY,
-                base_url=OPENAI_BASE_URL or None,
+                api_key=api_key,
+                base_url=base_url,
                 reasoning_effort=reasoning_effort,
                 reasoning_verbosity=reasoning_verbosity,
                 store=store,
@@ -112,16 +101,15 @@ class AgentFactory:
             # Create agent name in PascalCase format
             agent_name = f"{name.capitalize()}Agent"
 
-            # Create ChatAgent
-            # Handle tools: if single tool, pass directly; if multiple, pass as tuple/sequence
-            # ChatAgent accepts tools as a single tool instance or sequence
+            # Handle tools: if single tool, pass directly; if multiple, pass as tuple
             tools_param: Any = None
             if tools:
                 tools_param = tools[0] if len(tools) == 1 else tuple(tools)
 
+            # Create ChatAgent using agent_framework directly
             agent = ChatAgent(
                 name=agent_name,
-                description=description or instructions[:100],  # Use instructions as fallback
+                description=description or instructions[:100],
                 instructions=instructions,
                 chat_client=chat_client,
                 tools=tools_param,
@@ -132,28 +120,7 @@ class AgentFactory:
                 f"reasoning_effort='{reasoning_effort}', {len(tools)} tools"
             )
 
-            self._initialize_lifecycle(agent_name, agent)
-
-            if span is not None:
-                span.set_attribute(
-                    "agent.lifecycle_teardown_registered", agent_name in self._teardown_registry
-                )
-
             return agent
-
-    def teardown_agent(self, name: str) -> None:
-        """Run the registered teardown hook for a previously created agent."""
-        hook = self._teardown_registry.pop(name, None)
-        if hook is None:
-            logger.debug("No teardown hook registered for agent '%s'", name)
-            return
-
-        try:
-            self._execute_hook(hook)
-            logger.debug("Completed teardown for agent '%s'", name)
-        except Exception as exc:  # pragma: no cover - defensive logging
-            logger.error("Teardown for agent '%s' failed: %s", name, exc, exc_info=True)
-            raise
 
     def _resolve_tools(self, tool_names: list[str]) -> list[Any]:
         """Resolve tool names to tool instances.
@@ -233,74 +200,3 @@ class AgentFactory:
 
         # Plain string - return as-is (backward compatible)
         return instructions
-
-    # ------------------------------------------------------------------
-    # Lifecycle management
-    # ------------------------------------------------------------------
-
-    def _initialize_lifecycle(self, agent_name: str, agent: Any) -> None:
-        """Run warmup hook immediately and register teardown hook if present."""
-        self._teardown_registry.pop(agent_name, None)
-
-        if not isinstance(agent, AgentLifecycle):
-            logger.debug("Agent '%s' does not implement AgentLifecycle protocol", agent_name)
-            return
-
-        warmup = getattr(agent, "warmup", None)
-        if callable(warmup):
-            try:
-                self._execute_hook(warmup)
-                logger.debug("Warmup completed for agent '%s'", agent_name)
-            except Exception as exc:
-                logger.error("Warmup for agent '%s' failed: %s", agent_name, exc, exc_info=True)
-                raise AgentInitializationError(name=agent_name, reason=str(exc)) from exc
-
-        teardown = getattr(agent, "teardown", None)
-        if callable(teardown):
-            self._teardown_registry[agent_name] = teardown
-            logger.debug("Registered teardown hook for agent '%s'", agent_name)
-
-    def _execute_hook(self, hook: LifecycleHook) -> None:
-        """Execute a lifecycle hook, awaiting coroutine results when necessary."""
-        result = hook()
-        if inspect.isawaitable(result):
-            self._await_coroutine(result)
-
-    def _await_coroutine(self, awaitable: Awaitable[_T]) -> _T:
-        """Await any awaitable from a synchronous context.
-
-        ``asyncio.run`` only accepts coroutine objects, so we coerce non-coroutine
-        awaitables (e.g. Futures) into a trivial wrapper coroutine.
-        """
-        if not inspect.iscoroutine(awaitable):
-
-            async def _wrap() -> _T:
-                return await awaitable
-
-            coro = _wrap()
-        else:
-            coro = awaitable
-
-        try:
-            loop = asyncio.get_running_loop()
-        except RuntimeError:
-            return asyncio.run(coro)
-
-        if loop.is_running():
-            with ThreadPoolExecutor(max_workers=1) as executor:
-                future: Future[_T] = executor.submit(asyncio.run, coro)
-                return future.result()
-        else:  # pragma: no cover - defensive fallback
-            return loop.run_until_complete(coro)
-
-
-class MagenticCoordinator:
-    """Orchestrator for MagenticFleetWorkflow coordination."""
-
-    def __init__(self, agent_factory: AgentFactory | None = None) -> None:
-        """Initialize coordinator.
-
-        Args:
-            agent_factory: Optional agent factory. If None, creates a default one.
-        """
-        self.agent_factory = agent_factory or AgentFactory()
