@@ -1,7 +1,5 @@
 """Data models and Pydantic schemas."""
 
-from __future__ import annotations
-
 from agentic_fleet.api.chat.schemas import ChatMessagePayload, ChatRequest, ChatResponse
 from agentic_fleet.api.entities.schemas import (
     EntityDetailResponse,

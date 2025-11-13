@@ -1,7 +1,5 @@
 """Request and response models for workflow execution."""
 
-from __future__ import annotations
-
 from datetime import datetime
 from typing import Any
 
