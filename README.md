@@ -78,5 +78,16 @@ make validate-agents  # verify AGENTS docs invariants
 
 ---
 
+## Contributing
+
+We welcome contributions! Please see our [Contributing Guidelines](CONTRIBUTING.md) for details on:
+
+- Setting up your development environment
+- Code quality standards and testing requirements
+- Pull request process and review guidelines
+- How to get help
+
+---
+
 ## License
 
