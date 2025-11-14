@@ -1,0 +1,192 @@
+# DSPy Configuration
+dspy:
+  model: gpt-5-mini
+  temperature: 0.7
+  max_tokens: 2000
+  optimization:
+    enabled: true
+    examples_path: data/supervisor_examples.json
+    metric_threshold: 0.8
+    max_bootstrapped_demos: 4
+    use_gepa: true
+    # GEPA exclusivity: choose EXACTLY ONE of:
+    #   1) gepa_auto: light|medium|heavy   (preset internal iteration budgets)
+    #   2) gepa_max_full_evals: <int>      (hard cap on full evaluation cycles)
+    #   3) gepa_max_metric_calls: <int>    (hard cap on metric scoring calls)
+    # If more than one is set, the console/runner will resolve priority: auto > max_full_evals > max_metric_calls.
+    # For FAST completion we disable auto and metric calls, and set a TINY full eval count.
+    # (Previous long run was due to auto mode performing many internal reflection cycles.)
+    # gepa_auto: light  # DISABLED for speed
+    # Switched from full eval cap (still expensive) to metric call cap for ultra-fast run.
+    # gepa_max_full_evals: 3  # (previous setting) commented out; full eval cycles still slow
+    gepa_max_metric_calls: 5 # ultra-short optimization budget
+    gepa_reflection_model:
+    gepa_log_dir: logs/gepa
+    gepa_perfect_score: 1.0
+    gepa_use_history_examples: true
+    gepa_history_min_quality: 8.0
+    gepa_history_limit: 200
+    gepa_val_split: 0.2
+    gepa_seed: 13
+
+# Workflow Configuration
+workflow:
+  supervisor:
+    max_rounds: 15
+    max_stalls: 3
+    max_resets: 2
+    enable_streaming: true
+    max_task_length: 10000
+    dspy_retry_attempts: 3
+    dspy_retry_backoff_seconds: 1.0
+    analysis_cache_ttl_seconds: 3600
+
+  execution:
+    parallel_threshold: 3
+    timeout_seconds: 60 # Reduced from 300 to 60 seconds
+    retry_attempts: 2
+    enable_parallel: true # Enable parallel agent execution where possible
+    max_parallel_agents: 3 # Maximum concurrent agents
+
+  quality:
+    refinement_threshold: 8.0
+    enable_refinement: true
+    quality_threshold: 7.0 # Lowered from 8.0 to reduce refinement cycles
+    # Judge-based refinement settings
+    judge_threshold: 5.0 # Trigger refinement when Judge score < 5.0
+    enable_judge: true # Enable Judge agent for quality evaluation
+    max_refinement_rounds: 1 # Reduced from 2 to 1 for faster execution
+    judge_model: gpt-5 # Use gpt-5 for reasoning capabilities
+    judge_reasoning_effort: minimal # Changed from medium to minimal for speed
+    refinement_min_improvement: 1.0 # Skip refinement if score doesn't improve by 1 point
+
+  performance:
+    enable_caching: true # Enable response caching
+    enable_performance_tracking: true # Track execution metrics
+    slow_execution_threshold: 30 # Log executions over 30 seconds
+    enable_early_stopping: true # Stop refinement if not improving
+
+  handoffs:
+    enabled: true
+
+# Agent Configuration
+agents:
+  researcher:
+    model: gpt-4.1
+    tools:
+      - TavilySearchTool # Requires TAVILY_API_KEY environment variable
+    temperature: 0.5
+    enable_dspy: true # Enable DSPy task enhancement
+    cache_ttl: 300 # Cache responses for 5 minutes
+    timeout: 30 # Task timeout in seconds
+
+  analyst:
+    model: gpt-4.1
+    tools:
+      - HostedCodeInterpreterTool
+    temperature: 0.3
+    enable_dspy: true
+    cache_ttl: 300
+    timeout: 45 # Longer timeout for computations
+
+  writer:
+    model: gpt-4.1
+    tools: []
+    temperature: 0.7
+    enable_dspy: true
+    cache_ttl: 600 # Cache longer for writing
+    timeout: 30
+
+  reviewer:
+    model: gpt-5-mini
+    tools: []
+    temperature: 0.2
+    enable_dspy: true
+    cache_ttl: 300
+    timeout: 20
+
+  # New expanded agent roster (configuration-driven; keeps legacy agents for compatibility)
+  planner:
+    model: gpt-5-mini
+    tools: []
+    temperature: 0.5
+    instructions: prompts.planner
+    enable_dspy: true
+    cache_ttl: 300
+    timeout: 25
+
+  executor:
+    model: gpt-5-mini
+    tools: []
+    temperature: 0.6
+    instructions: prompts.executor
+    enable_dspy: true
+    cache_ttl: 300
+    timeout: 30
+
+  coder:
+    model: gpt-5-mini
+    tools:
+      - HostedCodeInterpreterTool
+    temperature: 0.3
+    instructions: prompts.coder
+    enable_dspy: true
+    cache_ttl: 300
+    timeout: 45
+
+  verifier:
+    model: gpt-5-mini
+    tools: []
+    temperature: 0.5
+    instructions: prompts.verifier
+    enable_dspy: true
+    cache_ttl: 300
+    timeout: 30
+
+  generator:
+    model: gpt-5-mini
+    tools: []
+    temperature: 0.8
+    instructions: prompts.generator
+    enable_dspy: true
+    cache_ttl: 600
+    timeout: 30
+
+# Tool Configuration
+tools:
+  enable_tool_aware_routing: true
+  pre_analysis_tool_usage: true
+  tool_registry_cache: true
+  tool_usage_tracking: true
+
+# Logging
+logging:
+  level: INFO
+  format: "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+  file: logs/workflow.log
+  save_history: true
+  history_file: logs/execution_history.jsonl
+  verbose: true
+
+# Tracing / Observability
+tracing:
+  enabled: true # Set to false to disable all tracing
+  otlp_endpoint: http://localhost:4317 # AI Toolkit / OpenTelemetry Collector endpoint (corrected port)
+  capture_sensitive: false # Capture prompts & completions (set to true only for debugging - GDPR/privacy risk)
+
+# Evaluation Framework
+evaluation:
+  enabled: true # Enable to run batch evaluations (Option B activated)
+  dataset_path: data/evaluation_tasks.jsonl
+  output_dir: logs/evaluation
+  metrics:
+    - quality_score
+    - keyword_success
+    - latency_seconds
+    - routing_efficiency
+    - refinement_triggered
+    - relevance_score # Fraction of keywords present (semantic proxy)
+    - token_count # Approximate output token count
+    - estimated_cost_usd # Estimated model cost based on token_count
+  max_tasks: 0 # 0 = no limit
+  stop_on_failure: false # Abort early on first failed success metric

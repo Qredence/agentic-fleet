@@ -1,0 +1,38 @@
+"""CLI utility functions."""
+
+from __future__ import annotations
+
+import logging
+from pathlib import Path
+from typing import Any
+
+from ..utils.config_loader import load_config
+
+logger = logging.getLogger(__name__)
+
+
+def init_tracing() -> dict[str, Any]:
+    """Initialize tracing (idempotent). Returns loaded config."""
+    cfg = load_config()
+    try:
+        from ..utils.tracing import initialize_tracing
+
+        initialize_tracing(cfg)
+    except Exception as exc:  # pragma: no cover - tracing optional
+        logger.debug(f"Tracing initialization skipped: {exc}")
+    return cfg
+
+
+def resolve_resource_path(path_like: str | Path) -> Path:
+    """Resolve a resource path from CWD or fall back to packaged data.
+
+    Looks for the provided path relative to current working directory. If it
+    doesn't exist, tries to resolve it relative to the installed package root
+    (i.e., alongside this file).
+    """
+    p = Path(path_like)
+    if p.exists():
+        return p
+    pkg_root = Path(__file__).resolve().parent.parent.parent
+    candidate = pkg_root / p
+    return candidate if candidate.exists() else p
