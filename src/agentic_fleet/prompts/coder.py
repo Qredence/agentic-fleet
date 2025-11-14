@@ -1,5 +1,7 @@
 """Coder agent prompt template."""
 
+from __future__ import annotations
+
 
 def get_instructions() -> str:
     """Get coder agent instructions.
