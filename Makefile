@@ -72,7 +72,7 @@ frontend-install:
 
 # Run application
 run:
-	uv run python -m agenticfleet
+	uv run python -m agentic_fleet
 
 # Full stack development (backend + frontend)
 dev:
@@ -85,7 +85,7 @@ dev:
 	@echo ""
 	@bash -c ' \
 		trap "kill 0" EXIT INT TERM; \
-		uv run uvicorn agentic_fleet.server:app --reload --port 8000 --log-level info & \
+		uv run uvicorn agentic_fleet.main:app --reload --port 8000 --log-level info & \
 		sleep 2; \
 		cd $(FRONTEND_DIR) && npm run dev & \
 		wait'
@@ -94,7 +94,7 @@ dev:
 # DevUI backend server only
 backend:
 	@echo "Starting minimal backend on http://localhost:8000"
-	uv run uvicorn agentic_fleet.server:app --reload --port 8000 --log-level info
+	uv run uvicorn agentic_fleet.main:app --reload --port 8000 --log-level info
 
 # Frontend dev server only
 frontend-dev:
