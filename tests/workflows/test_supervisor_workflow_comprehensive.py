@@ -20,7 +20,7 @@ from agentic_fleet.workflows.supervisor_workflow import (
 @pytest.mark.asyncio
 async def test_run_stream_yields_events():
     """Test that run_stream yields proper event sequence."""
-    workflow = SupervisorWorkflow()
+    workflow = SupervisorWorkflow(WorkflowConfig(), MagicMock())
 
     # Use DummyAgent instead of stub that raises NotImplementedError
     from tests.workflows.test_supervisor_workflow import DummyAgent
@@ -52,7 +52,7 @@ async def test_run_stream_yields_events():
 @pytest.mark.asyncio
 async def test_run_stream_handles_empty_task():
     """Test that run_stream validates empty task."""
-    workflow = SupervisorWorkflow()
+    workflow = SupervisorWorkflow(WorkflowConfig(), MagicMock())
     await workflow.initialize(compile_dspy=False)
 
     with pytest.raises(ValueError, match="cannot be empty"):
@@ -63,7 +63,7 @@ async def test_run_stream_handles_empty_task():
 @pytest.mark.asyncio
 async def test_run_stream_handles_long_task():
     """Test that run_stream validates task length."""
-    workflow = SupervisorWorkflow()
+    workflow = SupervisorWorkflow(WorkflowConfig(), MagicMock())
     await workflow.initialize(compile_dspy=False)
 
     long_task = "x" * 10001
@@ -75,7 +75,7 @@ async def test_run_stream_handles_long_task():
 @pytest.mark.asyncio
 async def test_history_save_failure_handling():
     """Test behavior when history save fails."""
-    workflow = SupervisorWorkflow()
+    workflow = SupervisorWorkflow(WorkflowConfig(), MagicMock())
 
     workflow.current_execution = {"task": "test", "result": "test result"}
 
@@ -93,7 +93,7 @@ async def test_history_save_failure_handling():
 @pytest.mark.asyncio
 async def test_parallel_execution_with_all_agents_failing():
     """Test parallel execution when all agents fail."""
-    workflow = SupervisorWorkflow()
+    workflow = SupervisorWorkflow(WorkflowConfig(), MagicMock())
     await workflow.initialize(compile_dspy=False)
 
     # Mock agents to all fail
