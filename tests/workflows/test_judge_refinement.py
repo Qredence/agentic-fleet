@@ -39,7 +39,7 @@ async def workflow(mock_openai_client, mock_dspy):
         compile_dspy=False,
     )
 
-    workflow = SupervisorWorkflow(config=config)
+    workflow = SupervisorWorkflow(workflow_config=config)
 
     # Mock OpenAI client
     workflow._openai_client = mock_openai_client
