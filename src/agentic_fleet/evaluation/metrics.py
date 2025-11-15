@@ -10,8 +10,8 @@ import re
 from typing import Any
 
 
-def _safe_get(d: dict[str, Any], *path, default=None):
-    cur = d
+def _safe_get(d: dict[str, Any], *path: str, default: Any = None) -> Any:
+    cur: Any = d
     for p in path:
         if not isinstance(cur, dict) or p not in cur:
             return default
@@ -25,7 +25,7 @@ def metric_quality_score(_task: dict[str, Any], metadata: dict[str, Any]) -> flo
         return None
     try:
         # Coerce numeric strings; ignore dict-like accidental values.
-        if isinstance(score, (int, float)):
+        if isinstance(score, int | float):
             return float(score)
         if isinstance(score, str):
             return float(score.split("/")[0]) if "/" in score else float(score)

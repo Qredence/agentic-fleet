@@ -4,10 +4,26 @@ DSPy Signatures for intelligent workflow orchestration.
 
 from __future__ import annotations
 
+from typing import TYPE_CHECKING, Protocol
+
 import dspy
 
+if TYPE_CHECKING:  # pragma: no cover - typing helper
 
-class TaskRouting(dspy.Signature):
+    class SignatureBase(Protocol): ...
+
+    class _Field:
+        def __init__(self, desc: str = ""): ...
+
+    InputField = _Field
+    OutputField = _Field
+else:  # pragma: no cover - runtime path
+    SignatureBase = dspy.Signature
+    InputField = dspy.InputField
+    OutputField = dspy.OutputField
+
+
+class TaskRouting(SignatureBase):
     """Determine optimal routing for a task (handoff-aware).
 
     This signature routes tasks to appropriate agents with correct execution mode.
@@ -46,24 +62,24 @@ class TaskRouting(dspy.Signature):
     - Don't miss TavilySearchTool for time-sensitive queries (check for "latest", "current", dates)
     """
 
-    task = dspy.InputField(desc="task to be routed")
-    team_capabilities = dspy.InputField(desc="available team members and their skills")
-    available_tools = dspy.InputField(desc="available tools and their capabilities")
-    current_context = dspy.InputField(desc="current workflow state and history")
-    handoff_history = dspy.InputField(desc="recent handoff patterns and outcomes")
-    assigned_to = dspy.OutputField(
+    task = InputField(desc="task to be routed")
+    team_capabilities = InputField(desc="available team members and their skills")
+    available_tools = InputField(desc="available tools and their capabilities")
+    current_context = InputField(desc="current workflow state and history")
+    handoff_history = InputField(desc="recent handoff patterns and outcomes")
+    assigned_to = OutputField(
         desc="team member(s) to handle the task (comma-separated if multiple)"
     )
-    execution_mode = dspy.OutputField(
+    execution_mode = OutputField(
         desc="parallel|sequential|delegated - use delegated for single-agent tasks, sequential for dependent steps, parallel for independent subtasks"
     )
-    subtasks = dspy.OutputField(
+    subtasks = OutputField(
         desc="breakdown if parallel execution needed (one per line), empty if delegated"
     )
-    confidence = dspy.OutputField(desc="confidence score (0-1) for the routing decision")
+    confidence = OutputField(desc="confidence score (0-1) for the routing decision")
 
 
-class TaskAnalysis(dspy.Signature):
+class TaskAnalysis(SignatureBase):
     """Analyze task complexity and requirements.
 
     This signature analyzes tasks to determine their complexity, required capabilities,
@@ -92,68 +108,68 @@ class TaskAnalysis(dspy.Signature):
     - Tasks with dependencies: Count sequential steps (e.g., research→analysis→writing = 3 steps)
     """
 
-    task = dspy.InputField(desc="user task to analyze")
-    complexity = dspy.OutputField(
+    task = InputField(desc="user task to analyze")
+    complexity = OutputField(
         desc="simple|moderate|complex - simple for single-step tasks, moderate for multi-step, complex for multi-agent coordination"
     )
-    required_capabilities = dspy.OutputField(
+    required_capabilities = OutputField(
         desc="list of required agent capabilities (comma-separated): research, analysis, writing, review"
     )
-    tool_requirements = dspy.OutputField(
+    tool_requirements = OutputField(
         desc="tools needed for this task (comma-separated): TavilySearchTool for web search, HostedCodeInterpreterTool for code execution, empty if none"
     )
-    estimated_steps = dspy.OutputField(
+    estimated_steps = OutputField(
         desc="number of steps needed (1 for simple, 2-3 for moderate, 4+ for complex)"
     )
 
 
-class ProgressEvaluation(dspy.Signature):
+class ProgressEvaluation(SignatureBase):
     """Evaluate workflow progress and determine next steps."""
 
-    original_task = dspy.InputField(desc="original user request")
-    completed_work = dspy.InputField(desc="work completed so far")
-    current_status = dspy.InputField(desc="current workflow status")
-    next_action = dspy.OutputField(desc="continue|refine|complete|escalate")
-    feedback = dspy.OutputField(desc="specific feedback for team")
+    original_task = InputField(desc="original user request")
+    completed_work = InputField(desc="work completed so far")
+    current_status = InputField(desc="current workflow status")
+    next_action = OutputField(desc="continue|refine|complete|escalate")
+    feedback = OutputField(desc="specific feedback for team")
 
 
-class QualityAssessment(dspy.Signature):
+class QualityAssessment(SignatureBase):
     """Assess quality of results and determine if requirements are met."""
 
-    requirements = dspy.InputField(desc="original requirements")
-    results = dspy.InputField(desc="produced results")
-    quality_score = dspy.OutputField(desc="score from 1-10")
-    missing_elements = dspy.OutputField(desc="what's missing if incomplete")
-    improvement_suggestions = dspy.OutputField(desc="how to improve if needed")
+    requirements = InputField(desc="original requirements")
+    results = InputField(desc="produced results")
+    quality_score = OutputField(desc="score from 1-10")
+    missing_elements = OutputField(desc="what's missing if incomplete")
+    improvement_suggestions = OutputField(desc="how to improve if needed")
 
 
-class ResearchStrategy(dspy.Signature):
+class ResearchStrategy(SignatureBase):
     """Determine research strategy for a given topic."""
 
-    topic = dspy.InputField(desc="research topic or question")
-    context = dspy.InputField(desc="available resources and constraints")
-    strategy = dspy.OutputField(desc="step-by-step research approach")
-    search_queries = dspy.OutputField(desc="list of specific search queries")
+    topic = InputField(desc="research topic or question")
+    context = InputField(desc="available resources and constraints")
+    strategy = OutputField(desc="step-by-step research approach")
+    search_queries = OutputField(desc="list of specific search queries")
 
 
-class DataAnalysisPlan(dspy.Signature):
+class DataAnalysisPlan(SignatureBase):
     """Plan computational analysis for research findings."""
 
-    research_findings = dspy.InputField(desc="collected research data")
-    analysis_goals = dspy.InputField(desc="what to analyze or compute")
-    code_plan = dspy.OutputField(desc="structured plan for code implementation")
-    expected_outputs = dspy.OutputField(desc="expected analysis outputs")
+    research_findings = InputField(desc="collected research data")
+    analysis_goals = InputField(desc="what to analyze or compute")
+    code_plan = OutputField(desc="structured plan for code implementation")
+    expected_outputs = OutputField(desc="expected analysis outputs")
 
 
-class SynthesisStrategy(dspy.Signature):
+class SynthesisStrategy(SignatureBase):
     """Synthesize research and analysis into conclusions."""
 
-    research_data = dspy.InputField(desc="research findings")
-    analysis_results = dspy.InputField(desc="computational results")
-    synthesis = dspy.OutputField(desc="integrated conclusions and recommendations")
+    research_data = InputField(desc="research findings")
+    analysis_results = InputField(desc="computational results")
+    synthesis = OutputField(desc="integrated conclusions and recommendations")
 
 
-class ToolAwareTaskAnalysis(dspy.Signature):
+class ToolAwareTaskAnalysis(SignatureBase):
     """Analyze task with tool usage awareness.
 
     This signature analyzes tasks with explicit awareness of available tools.
@@ -185,23 +201,23 @@ class ToolAwareTaskAnalysis(dspy.Signature):
     - "What is Python?" → needs_web_search=no (general knowledge)
     """
 
-    task = dspy.InputField(desc="user task to analyze")
-    available_tools = dspy.InputField(desc="available tools and their capabilities")
-    needs_web_search = dspy.OutputField(
+    task = InputField(desc="user task to analyze")
+    available_tools = InputField(desc="available tools and their capabilities")
+    needs_web_search = OutputField(
         desc="whether task requires web search (yes/no). Say YES for: current events, recent news, latest data, future predictions, real-time information, facts beyond model's training cutoff date, or when user asks about 'latest', 'current', 'recent', 'today', specific future dates/years"
     )
-    search_query = dspy.OutputField(
+    search_query = OutputField(
         desc="search query if web search is needed (specific and focused), empty otherwise"
     )
-    complexity = dspy.OutputField(
+    complexity = OutputField(
         desc="simple|moderate|complex - simple for single-step tasks, moderate for multi-step, complex for multi-agent coordination"
     )
-    required_capabilities = dspy.OutputField(
+    required_capabilities = OutputField(
         desc="list of required agent capabilities (comma-separated): research, analysis, writing, review"
     )
-    tool_requirements = dspy.OutputField(
+    tool_requirements = OutputField(
         desc="tools needed for this task (comma-separated): TavilySearchTool for web search, HostedCodeInterpreterTool for code execution, empty if none"
     )
-    estimated_steps = dspy.OutputField(
+    estimated_steps = OutputField(
         desc="number of steps needed (1 for simple, 2-3 for moderate, 4+ for complex)"
     )

@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import asyncio
 from pathlib import Path
+from typing import Annotated
 
 import typer
 from rich.console import Console
@@ -18,18 +19,26 @@ console = Console()
 
 
 def evaluate(
-    dataset: Path | None = typer.Option(
-        None, "--dataset", "-d", help="Override dataset path (defaults to config)"
-    ),
-    max_tasks: int = typer.Option(0, "--max-tasks", help="Limit number of tasks (0 = all)"),
-    metrics: str | None = typer.Option(
-        None,
-        "--metrics",
-        help="Comma-separated metric list overriding config (quality_score,keyword_success,latency_seconds,routing_efficiency,refinement_triggered)",
-    ),
-    stop_on_failure: bool = typer.Option(
-        False, "--stop-on-failure", help="Stop when a *success* metric returns 0/None"
-    ),
+    dataset: Annotated[
+        Path | None,
+        typer.Option("--dataset", "-d", help="Override dataset path (defaults to config)"),
+    ] = None,
+    max_tasks: Annotated[
+        int, typer.Option("--max-tasks", help="Limit number of tasks (0 = all)")
+    ] = 0,
+    metrics: Annotated[
+        str | None,
+        typer.Option(
+            "--metrics",
+            help=(
+                "Comma-separated metric list overriding config "
+                "(quality_score,keyword_success,latency_seconds,routing_efficiency,refinement_triggered)"
+            ),
+        ),
+    ] = None,
+    stop_on_failure: Annotated[
+        bool, typer.Option("--stop-on-failure", help="Stop when a *success* metric returns 0/None")
+    ] = False,
 ) -> None:
     """Run batch evaluation over a dataset using configured metrics."""
     cfg = load_config()

@@ -24,18 +24,18 @@ class AnalysisExecutor(Executor):
 
     def __init__(
         self,
-        id: str,
+        executor_id: str,
         supervisor: DSPySupervisor,
         context: SupervisorContext,
     ) -> None:
         """Initialize AnalysisExecutor.
 
         Args:
-            id: Unique executor identifier
+            executor_id: Unique executor identifier
             supervisor: DSPy supervisor instance for task analysis
             context: Supervisor context with configuration and state
         """
-        super().__init__(id=id)
+        super().__init__(id=executor_id)
         self.supervisor = supervisor
         self.context = context
 

@@ -39,6 +39,7 @@ class WorkflowRunner:
         self.console = Console()
         self.current_agents: list[str] = []
         self.progress_callback = RichProgressCallback(console=self.console)
+        self.workflow_config: WorkflowConfig | None = None
 
     async def initialize_workflow(
         self,
@@ -127,7 +128,7 @@ class WorkflowRunner:
             enable_handoffs if enable_handoffs is not None else handoffs_cfg.get("enabled", True)
         )
 
-        config = WorkflowConfig(
+        workflow_config = WorkflowConfig(
             max_rounds=max_rounds,
             max_stalls=yaml_config.get("workflow", {}).get("supervisor", {}).get("max_stalls", 3),
             max_resets=yaml_config.get("workflow", {}).get("supervisor", {}).get("max_resets", 2),
@@ -177,6 +178,7 @@ class WorkflowRunner:
             gepa_options=optimization_options,
             enable_handoffs=handoffs_enabled,
         )
+        self.workflow_config = workflow_config
 
         with self.console.status("[bold green]Initializing DSPy-Enhanced Workflow..."):
             # Note: config is loaded from YAML, but create_supervisor_workflow

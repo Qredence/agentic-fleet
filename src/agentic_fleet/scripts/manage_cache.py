@@ -9,7 +9,7 @@ import argparse
 from pathlib import Path
 
 
-def clear_cache():
+def clear_cache() -> None:
     """Clear the compiled module cache."""
     cache_file = Path("logs/compiled_supervisor.pkl")
     if cache_file.exists():
@@ -19,7 +19,7 @@ def clear_cache():
         print("No cache file found")
 
 
-def show_cache_info():
+def show_cache_info() -> None:
     """Show information about cached module."""
     cache_file = Path("logs/compiled_supervisor.pkl")
     if cache_file.exists():
@@ -35,7 +35,7 @@ def show_cache_info():
         print("No cache file found")
 
 
-def main():
+def main() -> None:
     parser = argparse.ArgumentParser(
         description="Manage DSPy compiled module cache",
         formatter_class=argparse.RawDescriptionHelpFormatter,

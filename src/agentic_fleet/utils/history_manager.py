@@ -183,7 +183,7 @@ class HistoryManager:
         logger.debug(f"Execution history saved to {history_file}")
         return str(history_file)
 
-    async def _rotate_jsonl_async_optimized(self, history_file: Path, max_entries: int):
+    async def _rotate_jsonl_async_optimized(self, history_file: Path, max_entries: int) -> None:
         """Optimized async rotation - only rotate periodically to avoid frequent I/O."""
         try:
             # Only rotate every 100th write to reduce overhead
@@ -199,7 +199,7 @@ class HistoryManager:
             # Use deque for efficient tail extraction
             from collections import deque
 
-            last_lines = deque(maxlen=max_entries)
+            last_lines: deque[str] = deque(maxlen=max_entries)
 
             # Read and keep only last N lines
             async with aiofiles.open(history_file) as f:
@@ -219,7 +219,7 @@ class HistoryManager:
         except Exception as e:
             logger.warning(f"Failed to rotate history file: {e}")
 
-    def _rotate_jsonl(self, history_file: Path, max_entries: int):
+    def _rotate_jsonl(self, history_file: Path, max_entries: int) -> None:
         """Rotate JSONL file to keep only last N entries."""
         try:
             # Use the optimized approach even for sync version

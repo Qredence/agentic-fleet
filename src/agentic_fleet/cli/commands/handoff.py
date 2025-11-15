@@ -66,7 +66,7 @@ def handoff(
             return
 
         # Create case-insensitive agent lookup
-        agent_lookup = {name.lower(): name for name in agents.keys()}
+        agent_lookup = {name.lower(): name for name in agents}
 
         while True:
             from_agent_input = console.input("From agent> ").strip()

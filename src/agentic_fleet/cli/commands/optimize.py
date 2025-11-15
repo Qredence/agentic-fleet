@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from pathlib import Path
+from typing import Annotated
 
 import typer
 from rich.console import Console
@@ -19,56 +20,72 @@ console = Console()
 
 
 def gepa_optimize(
-    examples: Path = typer.Option(
-        Path("data/supervisor_examples.json"),
-        "--examples",
-        "-e",
-        help="Training dataset path",
+    examples: Annotated[
+        Path,
+        typer.Option("--examples", "-e", help="Training dataset path"),
+    ] = Path("data/supervisor_examples.json"),
+    model: Annotated[
+        str | None,
+        typer.Option("--model", "-m", help="Model for DSPy LM (defaults to config dspy.model)"),
+    ] = None,
+    auto: Annotated[
+        str | None,
+        typer.Option(
+            "--auto",
+            help=(
+                "GEPA auto configuration (light|medium|heavy). Mutually exclusive with --max-full-evals "
+                "/ --max-metric-calls. If omitted, you MUST provide one numeric limit."
+            ),
+            case_sensitive=False,
+        ),
+    ] = None,
+    max_full_evals: Annotated[
+        int | None,
+        typer.Option(
+            "--max-full-evals",
+            help="Explicit full GEPA evaluation budget (exclusive with --auto / --max-metric-calls)",
+        ),
+    ] = None,
+    max_metric_calls: Annotated[
+        int | None,
+        typer.Option(
+            "--max-metric-calls",
+            help="Explicit metric call budget (exclusive with --auto / --max-full-evals)",
+        ),
+    ] = None,
+    reflection_model: Annotated[
+        str | None,
+        typer.Option(
+            "--reflection-model", help="Optional LM for reflections (defaults to main LM)"
+        ),
+    ] = None,
+    val_split: Annotated[
+        float, typer.Option("--val-split", help="Validation split (0.0-0.5)")
+    ] = 0.2,
+    use_history: Annotated[
+        bool,
+        typer.Option(
+            "--use-history/--no-history",
+            help="Augment training data with high-quality execution history",
+        ),
+    ] = False,
+    history_min_quality: Annotated[
+        float,
+        typer.Option("--history-min-quality", help="Minimum quality score for harvested history"),
+    ] = 8.0,
+    history_limit: Annotated[
+        int, typer.Option("--history-limit", help="History lookback size")
+    ] = 200,
+    log_dir: Annotated[Path, typer.Option("--log-dir", help="Directory for GEPA logs")] = Path(
+        "logs/gepa"
     ),
-    model: str | None = typer.Option(
-        None,
-        "--model",
-        "-m",
-        help="Model for DSPy LM (defaults to config dspy.model)",
-    ),
-    auto: str | None = typer.Option(
-        None,
-        "--auto",
-        help="GEPA auto configuration (light|medium|heavy). Mutually exclusive with --max-full-evals / --max-metric-calls. If omitted, you MUST provide one numeric limit.",
-        case_sensitive=False,
-    ),
-    max_full_evals: int | None = typer.Option(
-        None,
-        "--max-full-evals",
-        help="Explicit full GEPA evaluation budget (exclusive with --auto / --max-metric-calls)",
-    ),
-    max_metric_calls: int | None = typer.Option(
-        None,
-        "--max-metric-calls",
-        help="Explicit metric call budget (exclusive with --auto / --max-full-evals)",
-    ),
-    reflection_model: str | None = typer.Option(
-        None,
-        "--reflection-model",
-        help="Optional LM for reflections (defaults to main LM)",
-    ),
-    val_split: float = typer.Option(0.2, "--val-split", help="Validation split (0.0-0.5)"),
-    use_history: bool = typer.Option(
-        False,
-        "--use-history/--no-history",
-        help="Augment training data with high-quality execution history",
-    ),
-    history_min_quality: float = typer.Option(
-        8.0, "--history-min-quality", help="Minimum quality score for harvested history"
-    ),
-    history_limit: int = typer.Option(200, "--history-limit", help="History lookback size"),
-    log_dir: Path = typer.Option(Path("logs/gepa"), "--log-dir", help="Directory for GEPA logs"),
-    seed: int = typer.Option(13, "--seed", help="Random seed for dataset shuffle"),
-    no_cache: bool = typer.Option(
-        False,
-        "--no-cache",
-        help="Do not read/write compiled module cache (always recompile)",
-    ),
+    seed: Annotated[int, typer.Option("--seed", help="Random seed for dataset shuffle")] = 13,
+    no_cache: Annotated[
+        bool,
+        typer.Option(
+            "--no-cache", help="Do not read/write compiled module cache (always recompile)"
+        ),
+    ] = False,
 ) -> None:
     """
     Compile the DSPy supervisor using dspy.GEPA for prompt evolution.

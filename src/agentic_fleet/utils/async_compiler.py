@@ -24,6 +24,7 @@ class AsyncCompiler:
         self._compilation_task: asyncio.Future[Any] | None = None
         self._compiled_module: Any | None = None
         self._compilation_error: Exception | None = None
+        self._store_result_task: asyncio.Task[Any] | None = None
 
     async def compile_in_background(
         self,
@@ -85,7 +86,7 @@ class AsyncCompiler:
                 self._compilation_error = e
                 logger.error(f"Background compilation error: {e}")
 
-        asyncio.create_task(_store_result())
+        self._store_result_task = asyncio.create_task(_store_result())
 
     async def wait_for_compilation(self, timeout: float | None = None) -> Any:
         """Wait for compilation to complete.
@@ -115,8 +116,8 @@ class AsyncCompiler:
                 raise self._compilation_error
 
             return self._compiled_module
-        except TimeoutError:
-            raise TimeoutError(f"Compilation did not complete within {timeout}s")
+        except TimeoutError as err:
+            raise TimeoutError(f"Compilation did not complete within {timeout}s") from err
 
     def get_compiled_module(self) -> Any | None:
         """Get compiled module if available.

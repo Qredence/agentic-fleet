@@ -6,26 +6,53 @@ an OpenAI function calling compatible schema and a predictable tool name.
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, Protocol
 
-from agent_framework import HostedCodeInterpreterTool, ToolProtocol
+from agent_framework import HostedCodeInterpreterTool
+
+if TYPE_CHECKING:  # pragma: no cover - typing helper
+
+    class ToolProtocolBase(Protocol):
+        """Protocol describing the methods expected by agent_framework tools."""
+
+        name: str
+        description: str
+
+        @property
+        def schema(self) -> dict[str, Any]: ...
+
+        def to_dict(self, **kwargs: Any) -> dict[str, Any]: ...
+
+    class _SerializationMixinProto(Protocol):
+        def to_dict(self, **kwargs: Any) -> dict[str, Any]: ...
+
+else:
+    from agent_framework import ToolProtocol as ToolProtocolBase
+
+    class _SerializationMixinProto:  # pragma: no cover - runtime placeholder
+        def to_dict(self, **kwargs: Any) -> dict[str, Any]:
+            return {}
+
 
 # Import SerializationMixin with fallback while keeping static analysis happy
-if TYPE_CHECKING:  # pragma: no cover - typing helper
-    from agent_framework._serialization import SerializationMixin
+try:
+    from agent_framework._serialization import SerializationMixin as _RuntimeSerializationMixin
+except (ImportError, ModuleNotFoundError, AttributeError):  # pragma: no cover - optional dep
+
+    class _RuntimeSerializationMixin:  # type: ignore[too-many-ancestors]
+        """Fallback SerializationMixin for environments where agent_framework._serialization is not available."""
+
+        def to_dict(self, **_: Any) -> dict[str, Any]:
+            return {}
+
+
+if TYPE_CHECKING:
+    SerializationMixin = _SerializationMixinProto
 else:
-    try:
-        from agent_framework._serialization import SerializationMixin
-    except (ImportError, ModuleNotFoundError, AttributeError):  # pragma: no cover - optional dep
-
-        class SerializationMixin:  # type: ignore[too-many-ancestors]
-            """Fallback SerializationMixin for environments where agent_framework._serialization is not available."""
-
-            def to_dict(self, **_: Any) -> dict[str, Any]:
-                return {}
+    SerializationMixin = _RuntimeSerializationMixin
 
 
-class HostedCodeInterpreterAdapter(ToolProtocol, SerializationMixin):
+class HostedCodeInterpreterAdapter(ToolProtocolBase, SerializationMixin):
     """Adapter that standardizes the HostedCodeInterpreterTool interface."""
 
     def __init__(self, underlying: HostedCodeInterpreterTool | None = None):

@@ -159,7 +159,7 @@ class Evaluator:
         aggregate: dict[str, list[float]] = {}
         for r in results:
             for k, v in r.metrics.items():
-                if isinstance(v, (int, float)):
+                if isinstance(v, int | float):
                     aggregate.setdefault(k, []).append(float(v))
         metrics_summary = {
             k: {

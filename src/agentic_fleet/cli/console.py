@@ -16,36 +16,9 @@ if __package__ in (None, ""):
     project_root_str = str(project_root)
     if project_root_str not in sys.path:
         sys.path.insert(0, project_root_str)
-    __package__ = "agentic_fleet.cli"
+    globals()["__package__"] = "agentic_fleet.cli"
 
-
-# Suppress OpenTelemetry OTLP log export errors early (before any imports trigger setup)
-logging.getLogger("opentelemetry.exporter.otlp.proto.grpc.exporter").setLevel(logging.CRITICAL)
-logging.getLogger("opentelemetry.sdk._logs._internal").setLevel(logging.CRITICAL)
-
-# Load environment variables
-load_dotenv()
-
-# Validate environment variables early
-try:
-    from ..utils.env import validate_agentic_fleet_env
-
-    validate_agentic_fleet_env()
-except Exception as e:
-    # Log but don't fail immediately - some commands might not need API keys
-    logging.getLogger(__name__).warning(f"Environment validation warning: {e}")
-
-# Re-export WorkflowRunner for tests that patch console.WorkflowRunner
-from .runner import WorkflowRunner  # noqa: F401
-
-# Initialize Typer app
-app = typer.Typer(
-    add_completion=False,
-    no_args_is_help=True,
-    help="DSPy-Agent-Framework CLI - Intelligent Multi-Agent Workflows",
-)
-
-# Register commands from cli/commands modules
+from ..utils.env import validate_agentic_fleet_env
 from .commands import (
     agents,
     analyze,
@@ -56,6 +29,28 @@ from .commands import (
     improve,
     optimize,
     run,
+)
+from .runner import WorkflowRunner  # noqa: F401
+
+# Suppress OpenTelemetry OTLP log export errors early (before any imports trigger setup)
+logging.getLogger("opentelemetry.exporter.otlp.proto.grpc.exporter").setLevel(logging.CRITICAL)
+logging.getLogger("opentelemetry.sdk._logs._internal").setLevel(logging.CRITICAL)
+
+# Load environment variables
+load_dotenv()
+
+# Validate environment variables early
+try:
+    validate_agentic_fleet_env()
+except Exception as e:  # pragma: no cover - defensive logging
+    # Log but don't fail immediately - some commands might not need API keys
+    logging.getLogger(__name__).warning(f"Environment validation warning: {e}")
+
+# Initialize Typer app
+app = typer.Typer(
+    add_completion=False,
+    no_args_is_help=True,
+    help="DSPy-Agent-Framework CLI - Intelligent Multi-Agent Workflows",
 )
 
 app.command(name="run")(run.run)

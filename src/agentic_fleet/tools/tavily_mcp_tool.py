@@ -156,10 +156,13 @@ class TavilyMCPTool(MCPStreamableHTTPTool):
     async def _safe_disconnect(self) -> None:
         """Safely disconnect MCP session with proper error handling."""
         try:
-            if hasattr(self, "session") and getattr(self, "is_connected", False):
+            if (
+                hasattr(self, "session")
+                and getattr(self, "is_connected", False)
+                and hasattr(self, "disconnect")
+            ):
                 # Disconnect in same async context to avoid RuntimeError
-                if hasattr(self, "disconnect"):
-                    await self.disconnect()  # type: ignore[attr-defined]
+                await self.disconnect()  # type: ignore[attr-defined]
         except Exception as e:
             # Log but don't raise - cleanup is best effort
             logger.debug(f"Error during MCP disconnect: {e}")

@@ -1,5 +1,8 @@
 """Generator agent implementation."""
 
+from __future__ import annotations
+
+import os
 from typing import Any
 
 
@@ -10,7 +13,7 @@ def get_config() -> dict[str, Any]:
         Generator agent configuration dictionary
     """
     return {
-        "model": "gpt-5-mini",
+        "model": os.getenv("FAST_PATH_MODEL", "gpt-5-mini"),
         "instructions": "prompts.generator",
         "description": "Synthesizes verified work into the final answer",
         "reasoning": {

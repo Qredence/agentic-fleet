@@ -6,6 +6,7 @@ import asyncio
 import json
 from datetime import datetime
 from pathlib import Path
+from typing import Annotated
 
 import typer
 from rich.console import Console
@@ -17,9 +18,14 @@ console = Console()
 
 
 def export_history(
-    output: Path = typer.Option("workflow_history.json", "--output", "-o", help="Output file path"),
-    task: str = typer.Option("", "--task", "-t", help="Task to run before export"),
-    model: str = typer.Option("gpt-4.1", "--model", help="Model to use for task execution"),
+    output: Annotated[
+        Path,
+        typer.Option("--output", "-o", help="Output file path"),
+    ] = Path("workflow_history.json"),
+    task: Annotated[str, typer.Option("--task", "-t", help="Task to run before export")] = "",
+    model: Annotated[
+        str, typer.Option("--model", help="Model to use for task execution")
+    ] = "gpt-4.1",
 ) -> None:
     """Export workflow execution history to a file."""
 

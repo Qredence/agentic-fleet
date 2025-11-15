@@ -233,7 +233,7 @@ class ValidationError(WorkflowError):
         super().__init__(message, context=error_context)
 
 
-class TimeoutError(WorkflowError):
+class WorkflowTimeoutError(WorkflowError):
     """Raised when an operation times out."""
 
     def __init__(

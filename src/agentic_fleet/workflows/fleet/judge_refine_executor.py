@@ -10,6 +10,7 @@ from typing import TYPE_CHECKING, Any
 from agent_framework import Executor, WorkflowContext, handler
 
 from ...utils.logger import setup_logger
+from ...utils.models import ExecutionMode, RoutingDecision
 from ..quality import (
     call_judge_with_reasoning,
     parse_judge_response,
@@ -28,16 +29,16 @@ class JudgeRefineExecutor(Executor):
 
     def __init__(
         self,
-        id: str,
+        executor_id: str,
         context: SupervisorContext,
     ) -> None:
         """Initialize JudgeRefineExecutor.
 
         Args:
-            id: Unique executor identifier
+            executor_id: Unique executor identifier
             context: Supervisor context with configuration and state
         """
-        super().__init__(id=id)
+        super().__init__(id=executor_id)
         self.context = context
 
     @handler
@@ -182,14 +183,10 @@ class JudgeRefineExecutor(Executor):
             if isinstance(routing_data, RoutingDecision):
                 routing_decision = routing_data
             elif isinstance(routing_data, dict):
-                from ...utils.models import RoutingDecision
-
                 routing_decision = RoutingDecision.from_mapping(routing_data)
 
         # Fallback: create minimal routing decision if not available
         if routing_decision is None:
-            from ...utils.models import ExecutionMode, RoutingDecision
-
             routing_decision = RoutingDecision(
                 task=task,
                 assigned_to=(),

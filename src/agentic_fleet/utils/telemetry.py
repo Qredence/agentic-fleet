@@ -92,10 +92,7 @@ class PerformanceTracker:
         Returns:
             Dictionary with performance metrics
         """
-        if agent_name:
-            executions = self.metrics_by_agent.get(agent_name, [])
-        else:
-            executions = self.executions
+        executions = self.metrics_by_agent.get(agent_name, []) if agent_name else self.executions
 
         if not executions:
             return {

@@ -25,16 +25,16 @@ class ExecutionExecutor(Executor):
 
     def __init__(
         self,
-        id: str,
+        executor_id: str,
         context: SupervisorContext,
     ) -> None:
         """Initialize ExecutionExecutor.
 
         Args:
-            id: Unique executor identifier
+            executor_id: Unique executor identifier
             context: Supervisor context with configuration and state
         """
-        super().__init__(id=id)
+        super().__init__(id=executor_id)
         self.context = context
 
     @handler

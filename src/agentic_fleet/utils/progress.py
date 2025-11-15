@@ -7,6 +7,7 @@ long-running operations like DSPy compilation and agent execution.
 
 from __future__ import annotations
 
+import contextlib
 import logging
 import time
 from typing import Any, Protocol
@@ -296,10 +297,8 @@ class RichProgressCallback:
             return
 
         if self.progress is not None and self.task_id is not None:
-            try:
+            with contextlib.suppress(Exception):
                 self.progress.stop()
-            except Exception:
-                pass
             self.progress = None
             self.task_id = None
 

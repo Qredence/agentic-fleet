@@ -73,9 +73,7 @@ def initialize_tracing(config: dict[str, Any] | None = None) -> bool:
 
     # First attempt: agent-framework helper
     try:
-        from agent_framework.observability import (
-            setup_observability,  # type: ignore
-        )
+        from agent_framework.observability import setup_observability
 
         setup_observability(
             otlp_endpoint=endpoint,
@@ -92,15 +90,11 @@ def initialize_tracing(config: dict[str, Any] | None = None) -> bool:
 
     # Fallback: manual minimal OpenTelemetry init
     try:  # pragma: no cover - minimal instrumentation path
-        from opentelemetry import trace  # type: ignore
-        from opentelemetry.exporter.otlp.proto.grpc.trace_exporter import (
-            OTLPSpanExporter,  # type: ignore
-        )
-        from opentelemetry.sdk.resources import Resource  # type: ignore
-        from opentelemetry.sdk.trace import TracerProvider  # type: ignore
-        from opentelemetry.sdk.trace.export import (
-            BatchSpanProcessor,  # type: ignore
-        )
+        from opentelemetry import trace
+        from opentelemetry.exporter.otlp.proto.grpc.trace_exporter import OTLPSpanExporter
+        from opentelemetry.sdk.resources import Resource
+        from opentelemetry.sdk.trace import TracerProvider
+        from opentelemetry.sdk.trace.export import BatchSpanProcessor
 
         resource = Resource.create({"service.name": "dspy-agent-framework"})
         provider = TracerProvider(resource=resource)

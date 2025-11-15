@@ -40,7 +40,7 @@ class ToolRegistry:
     formatted descriptions for DSPy modules to use in their prompts.
     """
 
-    def __init__(self):
+    def __init__(self) -> None:
         """Initialize an empty tool registry."""
         self._tools: dict[str, ToolMetadata] = {}
         self._agent_tools: dict[str, list[str]] = {}
@@ -63,10 +63,8 @@ class ToolRegistry:
             capabilities: List of capability tags (e.g., ["web_search", "real_time"])
             use_cases: List of use case descriptions
         """
-        schema: dict[str, Any] = tool.schema if hasattr(tool, "schema") else {}  # type: ignore[attr-defined]
-        description: str = (
-            tool.description if hasattr(tool, "description") else "No description"  # type: ignore[attr-defined]
-        )
+        schema: dict[str, Any] = getattr(tool, "schema", {}) or {}
+        description: str = getattr(tool, "description", "No description")
 
         # Infer capabilities from tool name/description if not provided
         inferred_capabilities = self._infer_capabilities(name, description)
@@ -129,7 +127,7 @@ class ToolRegistry:
             return
 
         # Support list/tuple of tools (future multi-tool agents)
-        if isinstance(tool, (list, tuple)):
+        if isinstance(tool, list | tuple):
             for single in tool:
                 if single:  # guard against None entries
                     self.register_tool_by_agent(agent_name, single)
@@ -288,7 +286,7 @@ class ToolRegistry:
             return None
 
         try:
-            result = await tool.tool_instance.run(**kwargs)  # type: ignore[attr-defined]
+            result = await tool.tool_instance.run(**kwargs)
             return str(result)
         except Exception as e:
             return f"Error executing tool {tool_name}: {e!s}"

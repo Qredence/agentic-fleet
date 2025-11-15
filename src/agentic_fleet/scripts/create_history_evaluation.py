@@ -76,7 +76,7 @@ def extract_keywords(task: str) -> list[str]:
     return sorted(list(keywords))
 
 
-def main():
+def main() -> None:
     # Paths
     workspace_root = Path(__file__).parent.parent
     history_path = workspace_root / "logs" / "execution_history.jsonl"
@@ -100,7 +100,7 @@ def main():
 
     # Print summary
     print("\n--- Dataset Summary ---")
-    complexity_counts = {}
+    complexity_counts: dict[str, int] = {}
     for task in eval_tasks:
         complexity = task["metadata"]["complexity"]
         complexity_counts[complexity] = complexity_counts.get(complexity, 0) + 1

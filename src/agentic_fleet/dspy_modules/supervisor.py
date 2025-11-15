@@ -477,12 +477,12 @@ class DSPySupervisor(dspy.Module):
             "tool_usage_stats": tool_usage_stats,
             "average_routing_confidence": avg_confidence,
             "signatures_used": {
-                "routing": "EnhancedTaskRouting"
-                if self.enhanced_routing_enabled
-                else "TaskRouting",
-                "quality": "JudgeEvaluation"
-                if self.enhanced_judge_enabled
-                else "QualityAssessment",
+                "routing": (
+                    "EnhancedTaskRouting" if self.enhanced_routing_enabled else "TaskRouting"
+                ),
+                "quality": (
+                    "JudgeEvaluation" if self.enhanced_judge_enabled else "QualityAssessment"
+                ),
             },
         }
 

@@ -26,19 +26,14 @@ if TYPE_CHECKING:
     from agentic_fleet.utils.tool_registry import ToolMetadata, ToolRegistry
 
 __all__ = [
-    # Tool registry
-    "ToolRegistry",
-    "ToolMetadata",
-    # Models
     "ExecutionMode",
     "RoutingDecision",
-    # Compiler
-    "compile_supervisor",
-    # Config
-    "load_config",
-    "get_agent_model",
-    # Cache
     "TTLCache",
+    "ToolMetadata",
+    "ToolRegistry",
+    "compile_supervisor",
+    "get_agent_model",
+    "load_config",
 ]
 
 

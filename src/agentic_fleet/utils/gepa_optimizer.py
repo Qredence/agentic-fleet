@@ -199,7 +199,7 @@ def _normalize_agents(value: Any) -> list[str]:
         return []
     if isinstance(value, str):
         parts = value.split(",")
-    elif isinstance(value, (list, tuple, set)):
+    elif isinstance(value, list | tuple | set):
         parts = list(value)
     else:
         parts = [str(value)]

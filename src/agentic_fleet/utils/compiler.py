@@ -225,10 +225,7 @@ def _is_cache_valid(
         examples_mtime = os.path.getmtime(examples_path)
 
         # Cache is valid if it's newer than examples file
-        if cache_mtime < examples_mtime:
-            return False
-
-        return True
+        return not cache_mtime < examples_mtime
     except OSError:
         # If we can't get mtime, assume cache is invalid
         return False
