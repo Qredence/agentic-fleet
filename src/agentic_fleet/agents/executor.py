@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import os
 from typing import Any
 
 
@@ -12,7 +13,7 @@ def get_config() -> dict[str, Any]:
         Executor agent configuration dictionary
     """
     return {
-        "model": "gpt-5-mini",
+        "model": os.getenv("FAST_PATH_MODEL", "gpt-5-mini"),
         "instructions": "prompts.executor",
         "description": "Executes active plan steps and coordinates other specialists",
         "reasoning": {

@@ -39,7 +39,7 @@ env/
 logs
 .serena/
 .playwright-mcp/
-
+.trae/
 # Environment variables
 .env
 .env.local
@@ -147,3 +147,5 @@ src/frontend/src/.npm-cache/_cacache/index-v5/86/47/86e70a82678db0560ecf5dfeb70e
 .claude/skills/webapp-testing/examples/element_discovery.py
 .claude/skills/webapp-testing/examples/static_html_automation.py
 .claude/skills/webapp-testing/scripts/with_server.py
+.trae/documents/AgenticFleet Architecture Analysis and Simplification Plan.md
+.trae/documents/Cleanup and Simplification of AgenticFleet via Agent Framework.md
