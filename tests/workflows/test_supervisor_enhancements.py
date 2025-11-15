@@ -51,7 +51,7 @@ class StubDSPySupervisor(dspy.Module):
 @pytest.mark.asyncio
 async def test_run_falls_back_to_available_agent():
     """Test that unknown agents fall back to available ones."""
-    workflow = SupervisorWorkflow()
+    workflow = SupervisorWorkflow(WorkflowConfig(), None)
     workflow.agents = {"Writer": DummyAgent("Writer")}
     workflow.dspy_supervisor = StubDSPySupervisor(  # type: ignore[assignment]
         routing={"assigned_to": ["Ghost"], "mode": "parallel", "subtasks": []}
@@ -67,7 +67,7 @@ async def test_run_falls_back_to_available_agent():
 @pytest.mark.asyncio
 async def test_run_stream_normalizes_parallel_subtasks(monkeypatch):
     """Test that parallel subtasks are normalized correctly."""
-    workflow = SupervisorWorkflow()
+    workflow = SupervisorWorkflow(WorkflowConfig(), None)
     workflow.agents = {
         "Researcher": DummyAgent("Researcher"),
         "Analyst": DummyAgent("Analyst"),
@@ -99,7 +99,7 @@ async def test_run_stream_normalizes_parallel_subtasks(monkeypatch):
 @pytest.mark.asyncio
 async def test_parallel_execution_handles_failures():
     """Test that parallel execution handles individual agent failures gracefully."""
-    workflow = SupervisorWorkflow()
+    workflow = SupervisorWorkflow(WorkflowConfig(), None)
     workflow.agents = {
         "GoodAgent": DummyAgent("GoodAgent", should_fail=False),
         "BadAgent": DummyAgent("BadAgent", should_fail=True),
@@ -114,7 +114,7 @@ async def test_parallel_execution_handles_failures():
 @pytest.mark.asyncio
 async def test_single_agent_parallel_mode_converts_to_delegated():
     """Test that parallel mode with single agent converts to delegated."""
-    workflow = SupervisorWorkflow()
+    workflow = SupervisorWorkflow(WorkflowConfig(), None)
     workflow.agents = {"Writer": DummyAgent("Writer")}
     workflow.dspy_supervisor = StubDSPySupervisor(  # type: ignore[assignment]
         routing={"assigned_to": ["Writer"], "mode": "parallel", "subtasks": []}
