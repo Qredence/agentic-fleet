@@ -384,7 +384,7 @@ async def test_handoff_manager_statistics():
 @pytest.mark.asyncio
 async def test_workflow_handoffs_enabled_by_default():
     """Handoffs are enabled by default in the core app."""
-    workflow = SupervisorWorkflow(WorkflowConfig(compile_dspy=False))
+    workflow = SupervisorWorkflow(WorkflowConfig(compile_dspy=False), None)
     await workflow.initialize(compile_dspy=False)
 
     # Handoffs should be enabled by default
@@ -395,7 +395,7 @@ async def test_workflow_handoffs_enabled_by_default():
 @pytest.mark.asyncio
 async def test_workflow_handoffs_can_be_disabled_via_config():
     """WorkflowConfig flag should disable handoffs when requested."""
-    workflow = SupervisorWorkflow(WorkflowConfig(compile_dspy=False, enable_handoffs=False))
+    workflow = SupervisorWorkflow(WorkflowConfig(compile_dspy=False, enable_handoffs=False), None)
     await workflow.initialize(compile_dspy=False)
 
     assert workflow.enable_handoffs is False
@@ -406,7 +406,7 @@ async def test_workflow_handoffs_can_be_disabled_via_config():
 @pytest.mark.asyncio
 async def test_workflow_with_handoffs_enabled():
     """Test workflow with handoffs enabled."""
-    workflow = SupervisorWorkflow(WorkflowConfig(compile_dspy=False))
+    workflow = SupervisorWorkflow(WorkflowConfig(compile_dspy=False), None)
     await workflow.initialize(compile_dspy=False)
 
     # Enable handoffs
@@ -419,7 +419,7 @@ async def test_workflow_with_handoffs_enabled():
 @pytest.mark.asyncio
 async def test_handoff_history_in_execution():
     """Test that handoff history is tracked in execution."""
-    workflow = SupervisorWorkflow(WorkflowConfig(compile_dspy=False))
+    workflow = SupervisorWorkflow(WorkflowConfig(compile_dspy=False), None)
     await workflow.initialize(compile_dspy=False)
     workflow.enable_handoffs = True
 
@@ -501,7 +501,7 @@ async def test_handoff_export():
 @pytest.mark.asyncio
 async def test_format_handoff_input():
     """Test formatting handoff input for next agent."""
-    workflow = SupervisorWorkflow(WorkflowConfig(compile_dspy=False))
+    workflow = SupervisorWorkflow(None, WorkflowConfig(compile_dspy=False))
     await workflow.initialize(compile_dspy=False)
 
     handoff = HandoffContext(
@@ -558,7 +558,7 @@ async def test_handoff_manager_clear_history():
 @pytest.mark.asyncio
 async def test_extract_artifacts():
     """Test artifact extraction from agent result."""
-    workflow = SupervisorWorkflow(WorkflowConfig(compile_dspy=False))
+    workflow = SupervisorWorkflow(None, WorkflowConfig(compile_dspy=False))
     await workflow.initialize(compile_dspy=False)
 
     result = "This is a test result with some data"
@@ -571,7 +571,7 @@ async def test_extract_artifacts():
 @pytest.mark.asyncio
 async def test_estimate_remaining_work():
     """Test estimating remaining work."""
-    workflow = SupervisorWorkflow(WorkflowConfig(compile_dspy=False))
+    workflow = SupervisorWorkflow(None, WorkflowConfig(compile_dspy=False))
     await workflow.initialize(compile_dspy=False)
 
     original_task = "Research and analyze market trends"
@@ -586,7 +586,7 @@ async def test_estimate_remaining_work():
 @pytest.mark.asyncio
 async def test_derive_objectives():
     """Test deriving objectives from remaining work."""
-    workflow = SupervisorWorkflow(WorkflowConfig(compile_dspy=False))
+    workflow = SupervisorWorkflow(None, WorkflowConfig(compile_dspy=False))
     await workflow.initialize(compile_dspy=False)
 
     remaining_work = "Analyze data and create visualizations"
