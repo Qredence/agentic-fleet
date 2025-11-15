@@ -1,0 +1,794 @@
+[
+  {
+    "task": "Who won the 2025 New York mayoral election?",
+    "team": "Researcher: Web research specialist",
+    "available_tools": "- TavilySearchTool (available to Researcher): Search the web for real-time information using Tavily. Provides accurate, up-to-date results with source citations. [Capabilities: web_search, real_time, citations]",
+    "context": "Query about recent/future event requiring current information",
+    "assigned_to": "Researcher",
+    "mode": "delegated",
+    "tool_requirements": ["TavilySearchTool"]
+  },
+  {
+    "task": "What is the current stock price of Tesla?",
+    "team": "Researcher: Web research specialist",
+    "available_tools": "- TavilySearchTool (available to Researcher): Search the web for real-time information using Tavily. Provides accurate, up-to-date results with source citations. [Capabilities: web_search, real_time, citations]",
+    "context": "Query requiring real-time data beyond model training cutoff",
+    "assigned_to": "Researcher",
+    "mode": "delegated",
+    "tool_requirements": ["TavilySearchTool"]
+  },
+  {
+    "task": "What are the latest developments in quantum computing?",
+    "team": "Researcher: Web research specialist",
+    "available_tools": "- TavilySearchTool (available to Researcher): Search the web for real-time information using Tavily. Provides accurate, up-to-date results with source citations. [Capabilities: web_search, real_time, citations]",
+    "context": "Query about recent/latest information",
+    "assigned_to": "Researcher",
+    "mode": "delegated",
+    "tool_requirements": ["TavilySearchTool"]
+  },
+  {
+    "task": "Who is the next mayor of New York in 2026?",
+    "team": "Researcher: Web research specialist",
+    "available_tools": "- TavilySearchTool (available to Researcher): Search the web for real-time information using Tavily. Provides accurate, up-to-date results with source citations. [Capabilities: web_search, real_time, citations]",
+    "context": "Query about future event requiring current election information",
+    "assigned_to": "Researcher",
+    "mode": "delegated",
+    "tool_requirements": ["TavilySearchTool"]
+  },
+  {
+    "task": "What is today's weather in San Francisco?",
+    "team": "Researcher: Web research specialist",
+    "available_tools": "- TavilySearchTool (available to Researcher): Search the web for real-time information using Tavily. Provides accurate, up-to-date results with source citations. [Capabilities: web_search, real_time, citations]",
+    "context": "Query requiring real-time current conditions",
+    "assigned_to": "Researcher",
+    "mode": "delegated",
+    "tool_requirements": ["TavilySearchTool"]
+  },
+  {
+    "task": "Research and analyze the impact of AI on healthcare",
+    "team": "Researcher: Web research specialist\nAnalyst: Data analysis expert\nWriter: Content creation",
+    "available_tools": "- TavilySearchTool (available to Researcher): Search the web for real-time information using Tavily. Provides accurate, up-to-date results with source citations. [Capabilities: web_search, real_time, citations]\n- HostedCodeInterpreterTool (available to Analyst): Execute Python snippets in a managed sandbox. [Capabilities: code_execution]",
+    "context": "Initial research task",
+    "assigned_to": "Researcher,Analyst",
+    "mode": "sequential",
+    "tool_requirements": ["TavilySearchTool"]
+  },
+  {
+    "task": "Create financial report with market analysis and projections",
+    "team": "Researcher: Web research specialist\nAnalyst: Data analysis expert\nWriter: Content creation",
+    "available_tools": "- TavilySearchTool (available to Researcher): Search the web for real-time information using Tavily. Provides accurate, up-to-date results with source citations. [Capabilities: web_search, real_time, citations]\n- HostedCodeInterpreterTool (available to Analyst): Execute Python snippets in a managed sandbox. [Capabilities: code_execution]",
+    "context": "Complex analysis required",
+    "assigned_to": "Researcher,Analyst,Writer",
+    "mode": "sequential",
+    "tool_requirements": ["TavilySearchTool", "HostedCodeInterpreterTool"]
+  },
+  {
+    "task": "Generate product descriptions for e-commerce website",
+    "team": "Writer: Content creation\nReviewer: Quality assurance",
+    "available_tools": "No tools available",
+    "context": "Content generation task",
+    "assigned_to": "Writer",
+    "mode": "delegated",
+    "tool_requirements": []
+  },
+  {
+    "task": "Analyze competitor pricing and create comparison charts",
+    "team": "Researcher: Web research specialist\nAnalyst: Data analysis expert",
+    "available_tools": "- TavilySearchTool (available to Researcher): Search the web for real-time information using Tavily. Provides accurate, up-to-date results with source citations. [Capabilities: web_search, real_time, citations]\n- HostedCodeInterpreterTool (available to Analyst): Execute Python snippets in a managed sandbox. [Capabilities: code_execution]",
+    "context": "Parallel data gathering",
+    "assigned_to": "Researcher,Analyst",
+    "mode": "parallel",
+    "tool_requirements": ["TavilySearchTool", "HostedCodeInterpreterTool"]
+  },
+  {
+    "task": "Review and validate research findings for accuracy",
+    "team": "Reviewer: Quality assurance\nResearcher: Web research specialist",
+    "available_tools": "- TavilySearchTool (available to Researcher): Search the web for real-time information using Tavily. Provides accurate, up-to-date results with source citations. [Capabilities: web_search, real_time, citations]",
+    "context": "Quality check required",
+    "assigned_to": "Reviewer",
+    "mode": "delegated",
+    "tool_requirements": []
+  },
+  {
+    "task": "Search for latest developments in quantum computing",
+    "team": "Researcher: Web research specialist",
+    "available_tools": "- TavilySearchTool (available to Researcher): Search the web for real-time information using Tavily. Provides accurate, up-to-date results with source citations. [Capabilities: web_search, real_time, citations]",
+    "context": "Current information needed",
+    "assigned_to": "Researcher",
+    "mode": "delegated",
+    "tool_requirements": ["TavilySearchTool"]
+  },
+  {
+    "task": "Calculate statistical analysis of sales data",
+    "team": "Analyst: Data analysis expert",
+    "available_tools": "- HostedCodeInterpreterTool (available to Analyst): Execute Python snippets in a managed sandbox. [Capabilities: code_execution]",
+    "context": "Computation required",
+    "assigned_to": "Analyst",
+    "mode": "delegated",
+    "tool_requirements": ["HostedCodeInterpreterTool"]
+  },
+  {
+    "task": "Write a technical blog post about machine learning trends",
+    "team": "Researcher: Web research specialist\nWriter: Content creation\nReviewer: Quality assurance",
+    "available_tools": "- TavilySearchTool (available to Researcher): Search the web for real-time information using Tavily. Provides accurate, up-to-date results with source citations. [Capabilities: web_search, real_time, citations]",
+    "context": "Content creation with research",
+    "assigned_to": "Researcher,Writer,Reviewer",
+    "mode": "sequential",
+    "tool_requirements": ["TavilySearchTool"]
+  },
+  {
+    "task": "Process and visualize customer survey data",
+    "team": "Analyst: Data analysis expert",
+    "available_tools": "- HostedCodeInterpreterTool (available to Analyst): Execute Python snippets in a managed sandbox. [Capabilities: code_execution]",
+    "context": "Data processing task",
+    "assigned_to": "Analyst",
+    "mode": "delegated",
+    "tool_requirements": ["HostedCodeInterpreterTool"]
+  },
+  {
+    "task": "Find current stock prices and calculate portfolio value",
+    "team": "Researcher: Web research specialist\nAnalyst: Data analysis expert",
+    "available_tools": "- TavilySearchTool (available to Researcher): Search the web for real-time information using Tavily. Provides accurate, up-to-date results with source citations. [Capabilities: web_search, real_time, citations]\n- HostedCodeInterpreterTool (available to Analyst): Execute Python snippets in a managed sandbox. [Capabilities: code_execution]",
+    "context": "Real-time data needed",
+    "assigned_to": "Researcher,Analyst",
+    "mode": "sequential",
+    "tool_requirements": ["TavilySearchTool", "HostedCodeInterpreterTool"]
+  },
+  {
+    "task": "Create marketing copy for new product launch",
+    "team": "Writer: Content creation",
+    "available_tools": "No tools available",
+    "context": "Creative writing task",
+    "assigned_to": "Writer",
+    "mode": "delegated",
+    "tool_requirements": []
+  },
+  {
+    "task": "Research climate change data and create visualization",
+    "team": "Researcher: Web research specialist\nAnalyst: Data analysis expert\nWriter: Content creation",
+    "available_tools": "- TavilySearchTool (available to Researcher): Search the web for real-time information using Tavily. Provides accurate, up-to-date results with source citations. [Capabilities: web_search, real_time, citations]\n- HostedCodeInterpreterTool (available to Analyst): Execute Python snippets in a managed sandbox. [Capabilities: code_execution]",
+    "context": "Multi-step research and analysis",
+    "assigned_to": "Researcher,Analyst,Writer",
+    "mode": "sequential",
+    "tool_requirements": ["TavilySearchTool", "HostedCodeInterpreterTool"]
+  },
+  {
+    "task": "Compare multiple API response times",
+    "team": "Analyst: Data analysis expert",
+    "available_tools": "- HostedCodeInterpreterTool (available to Analyst): Execute Python snippets in a managed sandbox. [Capabilities: code_execution]",
+    "context": "Performance testing",
+    "assigned_to": "Analyst",
+    "mode": "delegated",
+    "tool_requirements": ["HostedCodeInterpreterTool"]
+  },
+  {
+    "task": "Find recent news about renewable energy",
+    "team": "Researcher: Web research specialist",
+    "available_tools": "- TavilySearchTool (available to Researcher): Search the web for real-time information using Tavily. Provides accurate, up-to-date results with source citations. [Capabilities: web_search, real_time, citations]",
+    "context": "News research",
+    "assigned_to": "Researcher",
+    "mode": "delegated",
+    "tool_requirements": ["TavilySearchTool"]
+  },
+  {
+    "task": "Generate user documentation for software feature",
+    "team": "Writer: Content creation\nReviewer: Quality assurance",
+    "available_tools": "No tools available",
+    "context": "Documentation writing",
+    "assigned_to": "Writer,Reviewer",
+    "mode": "sequential",
+    "tool_requirements": []
+  },
+  {
+    "task": "Analyze website traffic patterns and generate report",
+    "team": "Analyst: Data analysis expert\nWriter: Content creation",
+    "available_tools": "- HostedCodeInterpreterTool (available to Analyst): Execute Python snippets in a managed sandbox. [Capabilities: code_execution]",
+    "context": "Data analysis and reporting",
+    "assigned_to": "Analyst,Writer",
+    "mode": "sequential",
+    "tool_requirements": ["HostedCodeInterpreterTool"]
+  },
+  {
+    "task": "Research competitor features and create comparison table",
+    "team": "Researcher: Web research specialist\nWriter: Content creation",
+    "available_tools": "- TavilySearchTool (available to Researcher): Search the web for real-time information using Tavily. Provides accurate, up-to-date results with source citations. [Capabilities: web_search, real_time, citations]",
+    "context": "Competitive analysis",
+    "assigned_to": "Researcher,Writer",
+    "mode": "sequential",
+    "tool_requirements": ["TavilySearchTool"]
+  },
+  {
+    "task": "Calculate ROI for marketing campaigns",
+    "team": "Analyst: Data analysis expert",
+    "available_tools": "- HostedCodeInterpreterTool (available to Analyst): Execute Python snippets in a managed sandbox. [Capabilities: code_execution]",
+    "context": "Financial calculation",
+    "assigned_to": "Analyst",
+    "mode": "delegated",
+    "tool_requirements": ["HostedCodeInterpreterTool"]
+  },
+  {
+    "task": "Write email newsletter content",
+    "team": "Writer: Content creation",
+    "available_tools": "No tools available",
+    "context": "Email content creation",
+    "assigned_to": "Writer",
+    "mode": "delegated",
+    "tool_requirements": []
+  },
+  {
+    "task": "Research industry trends and create strategic recommendations",
+    "team": "Researcher: Web research specialist\nAnalyst: Data analysis expert\nWriter: Content creation\nReviewer: Quality assurance",
+    "available_tools": "- TavilySearchTool (available to Researcher): Search the web for real-time information using Tavily. Provides accurate, up-to-date results with source citations. [Capabilities: web_search, real_time, citations]\n- HostedCodeInterpreterTool (available to Analyst): Execute Python snippets in a managed sandbox. [Capabilities: code_execution]",
+    "context": "Complex strategic analysis",
+    "assigned_to": "Researcher,Analyst,Writer,Reviewer",
+    "mode": "sequential",
+    "tool_requirements": ["TavilySearchTool", "HostedCodeInterpreterTool"]
+  },
+  {
+    "task": "Find current exchange rates and convert currencies",
+    "team": "Researcher: Web research specialist\nAnalyst: Data analysis expert",
+    "available_tools": "- TavilySearchTool (available to Researcher): Search the web for real-time information using Tavily. Provides accurate, up-to-date results with source citations. [Capabilities: web_search, real_time, citations]\n- HostedCodeInterpreterTool (available to Analyst): Execute Python snippets in a managed sandbox. [Capabilities: code_execution]",
+    "context": "Real-time data and calculation",
+    "assigned_to": "Researcher,Analyst",
+    "mode": "sequential",
+    "tool_requirements": ["TavilySearchTool", "HostedCodeInterpreterTool"]
+  },
+  {
+    "task": "Create social media post content",
+    "team": "Writer: Content creation",
+    "available_tools": "No tools available",
+    "context": "Short-form content",
+    "assigned_to": "Writer",
+    "mode": "delegated",
+    "tool_requirements": []
+  },
+  {
+    "task": "Analyze customer feedback sentiment",
+    "team": "Analyst: Data analysis expert",
+    "available_tools": "- HostedCodeInterpreterTool (available to Analyst): Execute Python snippets in a managed sandbox. [Capabilities: code_execution]",
+    "context": "Text analysis",
+    "assigned_to": "Analyst",
+    "mode": "delegated",
+    "tool_requirements": ["HostedCodeInterpreterTool"]
+  },
+  {
+    "task": "Research best practices for API design",
+    "team": "Researcher: Web research specialist",
+    "available_tools": "- TavilySearchTool (available to Researcher): Search the web for real-time information using Tavily. Provides accurate, up-to-date results with source citations. [Capabilities: web_search, real_time, citations]",
+    "context": "Technical research",
+    "assigned_to": "Researcher",
+    "mode": "delegated",
+    "tool_requirements": ["TavilySearchTool"]
+  },
+  {
+    "task": "Generate meeting minutes from discussion points",
+    "team": "Writer: Content creation\nReviewer: Quality assurance",
+    "available_tools": "No tools available",
+    "context": "Documentation from notes",
+    "assigned_to": "Writer,Reviewer",
+    "mode": "sequential",
+    "tool_requirements": []
+  },
+  {
+    "task": "Process CSV data and generate insights",
+    "team": "Analyst: Data analysis expert\nWriter: Content creation",
+    "available_tools": "- HostedCodeInterpreterTool (available to Analyst): Execute Python snippets in a managed sandbox. [Capabilities: code_execution]",
+    "context": "Data processing and reporting",
+    "assigned_to": "Analyst,Writer",
+    "mode": "sequential",
+    "tool_requirements": ["HostedCodeInterpreterTool"]
+  },
+  {
+    "task": "Research and compare cloud service providers",
+    "team": "Researcher: Web research specialist\nAnalyst: Data analysis expert\nWriter: Content creation",
+    "available_tools": "- TavilySearchTool (available to Researcher): Search the web for real-time information using Tavily. Provides accurate, up-to-date results with source citations. [Capabilities: web_search, real_time, citations]\n- HostedCodeInterpreterTool (available to Analyst): Execute Python snippets in a managed sandbox. [Capabilities: code_execution]",
+    "context": "Comparative research",
+    "assigned_to": "Researcher,Analyst,Writer",
+    "mode": "sequential",
+    "tool_requirements": ["TavilySearchTool", "HostedCodeInterpreterTool"]
+  },
+  {
+    "task": "Calculate monthly recurring revenue trends",
+    "team": "Analyst: Data analysis expert",
+    "available_tools": "- HostedCodeInterpreterTool (available to Analyst): Execute Python snippets in a managed sandbox. [Capabilities: code_execution]",
+    "context": "Financial metrics calculation",
+    "assigned_to": "Analyst",
+    "mode": "delegated",
+    "tool_requirements": ["HostedCodeInterpreterTool"]
+  },
+  {
+    "task": "Write press release for product announcement",
+    "team": "Writer: Content creation\nReviewer: Quality assurance",
+    "available_tools": "No tools available",
+    "context": "Press release writing",
+    "assigned_to": "Writer,Reviewer",
+    "mode": "sequential",
+    "tool_requirements": []
+  },
+  {
+    "task": "Find latest cybersecurity threats and create alert summary",
+    "team": "Researcher: Web research specialist\nWriter: Content creation",
+    "available_tools": "- TavilySearchTool (available to Researcher): Search the web for real-time information using Tavily. Provides accurate, up-to-date results with source citations. [Capabilities: web_search, real_time, citations]",
+    "context": "Security research and reporting",
+    "assigned_to": "Researcher,Writer",
+    "mode": "sequential",
+    "tool_requirements": ["TavilySearchTool"]
+  },
+  {
+    "task": "Analyze A/B test results and provide recommendations",
+    "team": "Analyst: Data analysis expert\nWriter: Content creation\nReviewer: Quality assurance",
+    "available_tools": "- HostedCodeInterpreterTool (available to Analyst): Execute Python snippets in a managed sandbox. [Capabilities: code_execution]",
+    "context": "Statistical analysis and reporting",
+    "assigned_to": "Analyst,Writer,Reviewer",
+    "mode": "sequential",
+    "tool_requirements": ["HostedCodeInterpreterTool"]
+  },
+  {
+    "task": "Research user interface design patterns",
+    "team": "Researcher: Web research specialist",
+    "available_tools": "- TavilySearchTool (available to Researcher): Search the web for real-time information using Tavily. Provides accurate, up-to-date results with source citations. [Capabilities: web_search, real_time, citations]",
+    "context": "Design research",
+    "assigned_to": "Researcher",
+    "mode": "delegated",
+    "tool_requirements": ["TavilySearchTool"]
+  },
+  {
+    "task": "Generate code documentation from function signatures",
+    "team": "Writer: Content creation",
+    "available_tools": "No tools available",
+    "context": "Technical documentation",
+    "assigned_to": "Writer",
+    "mode": "delegated",
+    "tool_requirements": []
+  },
+  {
+    "task": "Process log files and identify error patterns",
+    "team": "Analyst: Data analysis expert",
+    "available_tools": "- HostedCodeInterpreterTool (available to Analyst): Execute Python snippets in a managed sandbox. [Capabilities: code_execution]",
+    "context": "Log analysis",
+    "assigned_to": "Analyst",
+    "mode": "delegated",
+    "tool_requirements": ["HostedCodeInterpreterTool"]
+  },
+  {
+    "task": "Research market entry strategies for new region",
+    "team": "Researcher: Web research specialist\nAnalyst: Data analysis expert\nWriter: Content creation\nReviewer: Quality assurance",
+    "available_tools": "- TavilySearchTool (available to Researcher): Search the web for real-time information using Tavily. Provides accurate, up-to-date results with source citations. [Capabilities: web_search, real_time, citations]\n- HostedCodeInterpreterTool (available to Analyst): Execute Python snippets in a managed sandbox. [Capabilities: code_execution]",
+    "context": "Strategic market research",
+    "assigned_to": "Researcher,Analyst,Writer,Reviewer",
+    "mode": "sequential",
+    "tool_requirements": ["TavilySearchTool", "HostedCodeInterpreterTool"]
+  },
+  {
+    "task": "Calculate customer lifetime value from transaction data",
+    "team": "Analyst: Data analysis expert",
+    "available_tools": "- HostedCodeInterpreterTool (available to Analyst): Execute Python snippets in a managed sandbox. [Capabilities: code_execution]",
+    "context": "Customer analytics",
+    "assigned_to": "Analyst",
+    "mode": "delegated",
+    "tool_requirements": ["HostedCodeInterpreterTool"]
+  },
+  {
+    "task": "Write technical specification document",
+    "team": "Writer: Content creation\nReviewer: Quality assurance",
+    "available_tools": "No tools available",
+    "context": "Technical writing",
+    "assigned_to": "Writer,Reviewer",
+    "mode": "sequential",
+    "tool_requirements": []
+  },
+  {
+    "task": "Find current technology adoption rates",
+    "team": "Researcher: Web research specialist\nAnalyst: Data analysis expert",
+    "available_tools": "- TavilySearchTool (available to Researcher): Search the web for real-time information using Tavily. Provides accurate, up-to-date results with source citations. [Capabilities: web_search, real_time, citations]\n- HostedCodeInterpreterTool (available to Analyst): Execute Python snippets in a managed sandbox. [Capabilities: code_execution]",
+    "context": "Market research with analysis",
+    "assigned_to": "Researcher,Analyst",
+    "mode": "parallel",
+    "tool_requirements": ["TavilySearchTool", "HostedCodeInterpreterTool"]
+  },
+  {
+    "task": "Generate API endpoint documentation",
+    "team": "Writer: Content creation",
+    "available_tools": "No tools available",
+    "context": "API documentation",
+    "assigned_to": "Writer",
+    "mode": "delegated",
+    "tool_requirements": []
+  },
+  {
+    "task": "Analyze user behavior patterns from event data",
+    "team": "Analyst: Data analysis expert\nWriter: Content creation",
+    "available_tools": "- HostedCodeInterpreterTool (available to Analyst): Execute Python snippets in a managed sandbox. [Capabilities: code_execution]",
+    "context": "Behavioral analytics",
+    "assigned_to": "Analyst,Writer",
+    "mode": "sequential",
+    "tool_requirements": ["HostedCodeInterpreterTool"]
+  },
+  {
+    "task": "Research compliance requirements for data privacy",
+    "team": "Researcher: Web research specialist\nWriter: Content creation",
+    "available_tools": "- TavilySearchTool (available to Researcher): Search the web for real-time information using Tavily. Provides accurate, up-to-date results with source citations. [Capabilities: web_search, real_time, citations]",
+    "context": "Legal and compliance research",
+    "assigned_to": "Researcher,Writer",
+    "mode": "sequential",
+    "tool_requirements": ["TavilySearchTool"]
+  },
+  {
+    "task": "Calculate conversion funnel metrics",
+    "team": "Analyst: Data analysis expert",
+    "available_tools": "- HostedCodeInterpreterTool (available to Analyst): Execute Python snippets in a managed sandbox. [Capabilities: code_execution]",
+    "context": "Marketing analytics",
+    "assigned_to": "Analyst",
+    "mode": "delegated",
+    "tool_requirements": ["HostedCodeInterpreterTool"]
+  },
+  {
+    "task": "Write executive summary of quarterly results",
+    "team": "Writer: Content creation\nReviewer: Quality assurance",
+    "available_tools": "No tools available",
+    "context": "Executive communication",
+    "assigned_to": "Writer,Reviewer",
+    "mode": "sequential",
+    "tool_requirements": []
+  },
+  {
+    "task": "Research emerging technologies in fintech",
+    "team": "Researcher: Web research specialist\nAnalyst: Data analysis expert\nWriter: Content creation",
+    "available_tools": "- TavilySearchTool (available to Researcher): Search the web for real-time information using Tavily. Provides accurate, up-to-date results with source citations. [Capabilities: web_search, real_time, citations]\n- HostedCodeInterpreterTool (available to Analyst): Execute Python snippets in a managed sandbox. [Capabilities: code_execution]",
+    "context": "Technology trend analysis",
+    "assigned_to": "Researcher,Analyst,Writer",
+    "mode": "sequential",
+    "tool_requirements": ["TavilySearchTool", "HostedCodeInterpreterTool"]
+  },
+  {
+    "task": "Process time series data and forecast trends",
+    "team": "Analyst: Data analysis expert",
+    "available_tools": "- HostedCodeInterpreterTool (available to Analyst): Execute Python snippets in a managed sandbox. [Capabilities: code_execution]",
+    "context": "Time series analysis",
+    "assigned_to": "Analyst",
+    "mode": "delegated",
+    "tool_requirements": ["HostedCodeInterpreterTool"]
+  },
+  {
+    "task": "Create onboarding documentation for new employees",
+    "team": "Writer: Content creation\nReviewer: Quality assurance",
+    "available_tools": "No tools available",
+    "context": "HR documentation",
+    "assigned_to": "Writer,Reviewer",
+    "mode": "sequential",
+    "tool_requirements": []
+  },
+  {
+    "task": "Find and analyze patent filings in AI domain",
+    "team": "Researcher: Web research specialist\nAnalyst: Data analysis expert",
+    "available_tools": "- TavilySearchTool (available to Researcher): Search the web for real-time information using Tavily. Provides accurate, up-to-date results with source citations. [Capabilities: web_search, real_time, citations]\n- HostedCodeInterpreterTool (available to Analyst): Execute Python snippets in a managed sandbox. [Capabilities: code_execution]",
+    "context": "Patent research and analysis",
+    "assigned_to": "Researcher,Analyst",
+    "mode": "parallel",
+    "tool_requirements": ["TavilySearchTool", "HostedCodeInterpreterTool"]
+  },
+  {
+    "task": "Generate release notes for software update",
+    "team": "Writer: Content creation",
+    "available_tools": "No tools available",
+    "context": "Release documentation",
+    "assigned_to": "Writer",
+    "mode": "delegated",
+    "tool_requirements": []
+  },
+  {
+    "task": "Analyze network performance metrics",
+    "team": "Analyst: Data analysis expert",
+    "available_tools": "- HostedCodeInterpreterTool (available to Analyst): Execute Python snippets in a managed sandbox. [Capabilities: code_execution]",
+    "context": "Network analysis",
+    "assigned_to": "Analyst",
+    "mode": "delegated",
+    "tool_requirements": ["HostedCodeInterpreterTool"]
+  },
+  {
+    "task": "Research customer support best practices",
+    "team": "Researcher: Web research specialist\nWriter: Content creation",
+    "available_tools": "- TavilySearchTool (available to Researcher): Search the web for real-time information using Tavily. Provides accurate, up-to-date results with source citations. [Capabilities: web_search, real_time, citations]",
+    "context": "Best practices research",
+    "assigned_to": "Researcher,Writer",
+    "mode": "sequential",
+    "tool_requirements": ["TavilySearchTool"]
+  },
+  {
+    "task": "Calculate churn rate and retention metrics",
+    "team": "Analyst: Data analysis expert\nWriter: Content creation",
+    "available_tools": "- HostedCodeInterpreterTool (available to Analyst): Execute Python snippets in a managed sandbox. [Capabilities: code_execution]",
+    "context": "Customer retention analysis",
+    "assigned_to": "Analyst,Writer",
+    "mode": "sequential",
+    "tool_requirements": ["HostedCodeInterpreterTool"]
+  },
+  {
+    "task": "Write product comparison guide",
+    "team": "Writer: Content creation\nReviewer: Quality assurance",
+    "available_tools": "No tools available",
+    "context": "Comparison content",
+    "assigned_to": "Writer,Reviewer",
+    "mode": "sequential",
+    "tool_requirements": []
+  },
+  {
+    "task": "Research and analyze social media sentiment",
+    "team": "Researcher: Web research specialist\nAnalyst: Data analysis expert\nWriter: Content creation",
+    "available_tools": "- TavilySearchTool (available to Researcher): Search the web for real-time information using Tavily. Provides accurate, up-to-date results with source citations. [Capabilities: web_search, real_time, citations]\n- HostedCodeInterpreterTool (available to Analyst): Execute Python snippets in a managed sandbox. [Capabilities: code_execution]",
+    "context": "Sentiment analysis project",
+    "assigned_to": "Researcher,Analyst,Writer",
+    "mode": "sequential",
+    "tool_requirements": ["TavilySearchTool", "HostedCodeInterpreterTool"]
+  },
+  {
+    "task": "Process image metadata and generate report",
+    "team": "Analyst: Data analysis expert",
+    "available_tools": "- HostedCodeInterpreterTool (available to Analyst): Execute Python snippets in a managed sandbox. [Capabilities: code_execution]",
+    "context": "Metadata processing",
+    "assigned_to": "Analyst",
+    "mode": "delegated",
+    "tool_requirements": ["HostedCodeInterpreterTool"]
+  },
+  {
+    "task": "Find latest industry benchmarks",
+    "team": "Researcher: Web research specialist",
+    "available_tools": "- TavilySearchTool (available to Researcher): Search the web for real-time information using Tavily. Provides accurate, up-to-date results with source citations. [Capabilities: web_search, real_time, citations]",
+    "context": "Benchmark research",
+    "assigned_to": "Researcher",
+    "mode": "delegated",
+    "tool_requirements": ["TavilySearchTool"]
+  },
+  {
+    "task": "Generate training material for internal tools",
+    "team": "Writer: Content creation\nReviewer: Quality assurance",
+    "available_tools": "No tools available",
+    "context": "Training documentation",
+    "assigned_to": "Writer,Reviewer",
+    "mode": "sequential",
+    "tool_requirements": []
+  },
+  {
+    "task": "Analyze database query performance",
+    "team": "Analyst: Data analysis expert",
+    "available_tools": "- HostedCodeInterpreterTool (available to Analyst): Execute Python snippets in a managed sandbox. [Capabilities: code_execution]",
+    "context": "Performance analysis",
+    "assigned_to": "Analyst",
+    "mode": "delegated",
+    "tool_requirements": ["HostedCodeInterpreterTool"]
+  },
+  {
+    "task": "Research pricing strategies for SaaS products",
+    "team": "Researcher: Web research specialist\nAnalyst: Data analysis expert\nWriter: Content creation",
+    "available_tools": "- TavilySearchTool (available to Researcher): Search the web for real-time information using Tavily. Provides accurate, up-to-date results with source citations. [Capabilities: web_search, real_time, citations]\n- HostedCodeInterpreterTool (available to Analyst): Execute Python snippets in a managed sandbox. [Capabilities: code_execution]",
+    "context": "Pricing strategy research",
+    "assigned_to": "Researcher,Analyst,Writer",
+    "mode": "sequential",
+    "tool_requirements": ["TavilySearchTool", "HostedCodeInterpreterTool"]
+  },
+  {
+    "task": "Your question here",
+    "team": "Researcher: Web research specialist",
+    "available_tools": "- TavilySearchTool (available to Researcher): Search the web for real-time information using Tavily. Provides accurate, up-to-date results with source citations. [Capabilities: web_search, real_time, citations]",
+    "context": "Self-improvement: Quality score 8.0/10",
+    "assigned_to": "Researcher",
+    "mode": "sequential",
+    "tool_requirements": []
+  },
+  {
+    "task": "2+2",
+    "team": "Researcher: Web research specialist",
+    "available_tools": "- TavilySearchTool (available to Researcher): Search the web for real-time information using Tavily. Provides accurate, up-to-date results with source citations. [Capabilities: web_search, real_time, citations]",
+    "context": "Self-improvement: Quality score 10.0/10",
+    "assigned_to": "Researcher",
+    "mode": "sequential",
+    "tool_requirements": []
+  },
+  {
+    "task": "what is quantum computing",
+    "team": "Researcher: Web research specialist\nAnalyst: Data analysis expert\nWriter: Content creation\nReviewer: Quality assurance",
+    "available_tools": "- TavilySearchTool (available to Researcher): Search the web for real-time information using Tavily. Provides accurate, up-to-date results with source citations. [Capabilities: web_search, real_time, citations]\n- HostedCodeInterpreterTool (available to Analyst): Execute Python snippets in a managed sandbox. [Capabilities: code_execution]",
+    "context": "Self-improvement: Quality score 8.0/10",
+    "assigned_to": "Researcher,Analyst,Writer,Reviewer",
+    "mode": "sequential",
+    "tool_requirements": []
+  },
+  {
+    "task": "Maybe research AI trends or possibly analyze market data",
+    "team": "Researcher: Web research specialist\nAnalyst: Data analysis expert",
+    "available_tools": "- TavilySearchTool (available to Researcher): Search the web for real-time information using Tavily. Provides accurate, up-to-date results with source citations. [Capabilities: web_search, real_time, citations]\n- HostedCodeInterpreterTool (available to Analyst): Execute Python snippets in a managed sandbox. [Capabilities: code_execution]",
+    "context": "Edge case: Ambiguous task requiring clarification",
+    "assigned_to": "Researcher",
+    "mode": "delegated",
+    "tool_requirements": ["TavilySearchTool"]
+  },
+  {
+    "task": "Either research topic A or analyze dataset B",
+    "team": "Researcher: Web research specialist\nAnalyst: Data analysis expert",
+    "available_tools": "- TavilySearchTool (available to Researcher): Search the web for real-time information using Tavily. Provides accurate, up-to-date results with source citations. [Capabilities: web_search, real_time, citations]\n- HostedCodeInterpreterTool (available to Analyst): Execute Python snippets in a managed sandbox. [Capabilities: code_execution]",
+    "context": "Edge case: Ambiguous either/or task",
+    "assigned_to": "Researcher",
+    "mode": "delegated",
+    "tool_requirements": ["TavilySearchTool"]
+  },
+  {
+    "task": "Research topic A and analyze topic B",
+    "team": "Researcher: Web research specialist\nAnalyst: Data analysis expert",
+    "available_tools": "- TavilySearchTool (available to Researcher): Search the web for real-time information using Tavily. Provides accurate, up-to-date results with source citations. [Capabilities: web_search, real_time, citations]\n- HostedCodeInterpreterTool (available to Analyst): Execute Python snippets in a managed sandbox. [Capabilities: code_execution]",
+    "context": "Edge case: Independent subtasks - parallel mode",
+    "assigned_to": "Researcher,Analyst",
+    "mode": "parallel",
+    "tool_requirements": ["TavilySearchTool", "HostedCodeInterpreterTool"]
+  },
+  {
+    "task": "Research topic A, then analyze the results",
+    "team": "Researcher: Web research specialist\nAnalyst: Data analysis expert",
+    "available_tools": "- TavilySearchTool (available to Researcher): Search the web for real-time information using Tavily. Provides accurate, up-to-date results with source citations. [Capabilities: web_search, real_time, citations]\n- HostedCodeInterpreterTool (available to Analyst): Execute Python snippets in a managed sandbox. [Capabilities: code_execution]",
+    "context": "Edge case: Dependent subtasks - sequential mode",
+    "assigned_to": "Researcher,Analyst",
+    "mode": "sequential",
+    "tool_requirements": ["TavilySearchTool", "HostedCodeInterpreterTool"]
+  },
+  {
+    "task": "What are the recent developments in AI?",
+    "team": "Researcher: Web research specialist",
+    "available_tools": "- TavilySearchTool (available to Researcher): Search the web for real-time information using Tavily. Provides accurate, up-to-date results with source citations. [Capabilities: web_search, real_time, citations]",
+    "context": "Edge case: Time-sensitive query with 'recent' keyword",
+    "assigned_to": "Researcher",
+    "mode": "delegated",
+    "tool_requirements": ["TavilySearchTool"]
+  },
+  {
+    "task": "What might be the future of quantum computing?",
+    "team": "Researcher: Web research specialist",
+    "available_tools": "- TavilySearchTool (available to Researcher): Search the web for real-time information using Tavily. Provides accurate, up-to-date results with source citations. [Capabilities: web_search, real_time, citations]",
+    "context": "Edge case: Future prediction query requires web search",
+    "assigned_to": "Researcher",
+    "mode": "delegated",
+    "tool_requirements": ["TavilySearchTool"]
+  },
+  {
+    "task": "Calculate sales metrics and also research competitor pricing",
+    "team": "Researcher: Web research specialist\nAnalyst: Data analysis expert",
+    "available_tools": "- TavilySearchTool (available to Researcher): Search the web for real-time information using Tavily. Provides accurate, up-to-date results with source citations. [Capabilities: web_search, real_time, citations]\n- HostedCodeInterpreterTool (available to Analyst): Execute Python snippets in a managed sandbox. [Capabilities: code_execution]",
+    "context": "Edge case: Multi-part task with 'also' - independent parts",
+    "assigned_to": "Researcher,Analyst",
+    "mode": "parallel",
+    "tool_requirements": ["TavilySearchTool", "HostedCodeInterpreterTool"]
+  },
+  {
+    "task": "Write a simple paragraph about Python",
+    "team": "Writer: Content creation\nResearcher: Web research specialist",
+    "available_tools": "- TavilySearchTool (available to Researcher): Search the web for real-time information using Tavily. Provides accurate, up-to-date results with source citations. [Capabilities: web_search, real_time, citations]",
+    "context": "Edge case: Simple writing task - no tools needed, single agent",
+    "assigned_to": "Writer",
+    "mode": "delegated",
+    "tool_requirements": []
+  },
+  {
+    "task": "What is the capital of France?",
+    "team": "Researcher: Web research specialist\nWriter: Content creation",
+    "available_tools": "- TavilySearchTool (available to Researcher): Search the web for real-time information using Tavily. Provides accurate, up-to-date results with source citations. [Capabilities: web_search, real_time, citations]",
+    "context": "Edge case: Simple factual question - no web search needed",
+    "assigned_to": "Researcher",
+    "mode": "delegated",
+    "tool_requirements": []
+  },
+  {
+    "task": "Research latest AI trends, analyze market impact, and write comprehensive report",
+    "team": "Researcher: Web research specialist\nAnalyst: Data analysis expert\nWriter: Content creation",
+    "available_tools": "- TavilySearchTool (available to Researcher): Search the web for real-time information using Tavily. Provides accurate, up-to-date results with source citations. [Capabilities: web_search, real_time, citations]\n- HostedCodeInterpreterTool (available to Analyst): Execute Python snippets in a managed sandbox. [Capabilities: code_execution]",
+    "context": "Edge case: Multi-step task with dependencies - sequential mode",
+    "assigned_to": "Researcher,Analyst,Writer",
+    "mode": "sequential",
+    "tool_requirements": ["TavilySearchTool", "HostedCodeInterpreterTool"]
+  },
+  {
+    "task": "What happened in 2020?",
+    "team": "Researcher: Web research specialist",
+    "available_tools": "- TavilySearchTool (available to Researcher): Search the web for real-time information using Tavily. Provides accurate, up-to-date results with source citations. [Capabilities: web_search, real_time, citations]",
+    "context": "Edge case: Historical query before training cutoff - may not need web search",
+    "assigned_to": "Researcher",
+    "mode": "delegated",
+    "tool_requirements": []
+  },
+  {
+    "task": "What will happen in 2027?",
+    "team": "Researcher: Web research specialist",
+    "available_tools": "- TavilySearchTool (available to Researcher): Search the web for real-time information using Tavily. Provides accurate, up-to-date results with source citations. [Capabilities: web_search, real_time, citations]",
+    "context": "Edge case: Future date query - requires web search",
+    "assigned_to": "Researcher",
+    "mode": "delegated",
+    "tool_requirements": ["TavilySearchTool"]
+  },
+  {
+    "task": "Review this document",
+    "team": "Reviewer: Quality assurance\nWriter: Content creation",
+    "available_tools": "No tools available",
+    "context": "Edge case: Simple review task - single agent, no tools",
+    "assigned_to": "Reviewer",
+    "mode": "delegated",
+    "tool_requirements": []
+  },
+  {
+    "task": "Could you maybe help with research or analysis?",
+    "team": "Researcher: Web research specialist\nAnalyst: Data analysis expert",
+    "available_tools": "- TavilySearchTool (available to Researcher): Search the web for real-time information using Tavily. Provides accurate, up-to-date results with source citations. [Capabilities: web_search, real_time, citations]\n- HostedCodeInterpreterTool (available to Analyst): Execute Python snippets in a managed sandbox. [Capabilities: code_execution]",
+    "context": "Edge case: Highly ambiguous task with multiple uncertainty markers",
+    "assigned_to": "Researcher",
+    "mode": "delegated",
+    "tool_requirements": ["TavilySearchTool"]
+  },
+  {
+    "task": "Research renewable energy trends",
+    "team": "Researcher: Web research specialist",
+    "available_tools": "- TavilySearchTool (available to Researcher): Search the web for real-time information using Tavily. Provides accurate, up-to-date results with source citations. [Capabilities: web_search, real_time, citations]",
+    "context": "Self-improvement: Quality score 8.0/10",
+    "assigned_to": "Researcher",
+    "mode": "sequential",
+    "tool_requirements": []
+  },
+  {
+    "task": "What are the latest developments in AI?",
+    "team": "Researcher: Web research specialist",
+    "available_tools": "- TavilySearchTool (available to Researcher): Search the web for real-time information using Tavily. Provides accurate, up-to-date results with source citations. [Capabilities: web_search, real_time, citations]",
+    "context": "Self-improvement: Quality score 8.0/10",
+    "assigned_to": "Researcher",
+    "mode": "sequential",
+    "tool_requirements": []
+  },
+  {
+    "task": "Your question here",
+    "team": "Writer: Content creation\nReviewer: Quality assurance",
+    "available_tools": "No tools available",
+    "context": "Self-improvement: Quality score 8.0/10",
+    "assigned_to": "Writer,Reviewer",
+    "mode": "sequential",
+    "tool_requirements": []
+  },
+  {
+    "task": "What are the latest developments in AI?",
+    "team": "Researcher: Web research specialist",
+    "available_tools": "- TavilySearchTool (available to Researcher): Search the web for real-time information using Tavily. Provides accurate, up-to-date results with source citations. [Capabilities: web_search, real_time, citations]",
+    "context": "Self-improvement: Quality score 8.0/10",
+    "assigned_to": "Researcher",
+    "mode": "delegated",
+    "tool_requirements": ["browser", "tavily_search"]
+  },
+  {
+    "task": "Who won the 2025 New York mayor election? Search for Zohran Mamdani and provide details about the winner.",
+    "team": "Researcher: Web research specialist\nWriter: Content creation",
+    "available_tools": "- TavilySearchTool (available to Researcher): Search the web for real-time information using Tavily. Provides accurate, up-to-date results with source citations. [Capabilities: web_search, real_time, citations]",
+    "context": "Self-improvement: Quality score 7.0/10",
+    "assigned_to": "Researcher,Writer",
+    "mode": "sequential",
+    "tool_requirements": ["browser", "tavily_search"]
+  },
+  {
+    "task": "Complex multi-step task",
+    "team": "Researcher: Web research specialist",
+    "available_tools": "- TavilySearchTool (available to Researcher): Search the web for real-time information using Tavily. Provides accurate, up-to-date results with source citations. [Capabilities: web_search, real_time, citations]",
+    "context": "Edge case: Sequential Single Agent - Self-improvement: Quality score 5.0/10 - Sequential mode typically requires multiple agents with dependencies",
+    "assigned_to": "Researcher",
+    "mode": "sequential",
+    "tool_requirements": []
+  },
+  {
+    "task": "What are the latest AI developments in 2025?",
+    "team": "Researcher: Web research specialist\nAnalyst: Data analysis expert\nWriter: Content creation\nReviewer: Quality assurance",
+    "available_tools": "- TavilySearchTool (available to Researcher): Search the web for real-time information using Tavily. Provides accurate, up-to-date results with source citations. [Capabilities: web_search, real_time, citations]\n- HostedCodeInterpreterTool (available to Analyst): Execute Python snippets in a managed sandbox. [Capabilities: code_execution]",
+    "context": "Edge case: Time Sensitive - Self-improvement: Quality score 4.0/10 - Time-sensitive queries require TavilySearchTool",
+    "assigned_to": "Researcher,Analyst,Writer,Reviewer",
+    "mode": "sequential",
+    "tool_requirements": ["browser", "tavily_search", "code_interpreter"]
+  },
+  {
+    "task": "Research climate change mitigation strategies",
+    "team": "Researcher: Web research specialist",
+    "available_tools": "- TavilySearchTool (available to Researcher): Search the web for real-time information using Tavily. Provides accurate, up-to-date results with source citations. [Capabilities: web_search, real_time, citations]",
+    "context": "Self-improvement: Quality score 8.0/10",
+    "assigned_to": "Researcher",
+    "mode": "delegated",
+    "tool_requirements": ["browser", "tavily_search"]
+  }
+]

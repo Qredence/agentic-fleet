@@ -74,8 +74,9 @@ export interface ErrorEvent {
 /** Conversation structure */
 export interface Conversation {
   id: string;
-  createdAt: number;
-  updatedAt: number;
+  title: string;
+  created_at: number;
+  messages?: ChatMessage[]; // Optional, for preview in sidebar
 }
 
 /** Chat state interface */
@@ -93,6 +94,10 @@ export interface ChatState {
   isLoading: boolean;
   error: string | null;
   conversationId: string | null;
+  /** List of all conversations */
+  conversations: Conversation[];
+  /** Whether conversations list is being loaded */
+  isLoadingConversations: boolean;
 }
 
 /** Orchestrator message for chain-of-thought */
@@ -116,6 +121,16 @@ export interface ChatActions {
   setLoading: (loading: boolean) => void;
   setError: (error: string | null) => void;
   setConversationId: (id: string) => void;
+  /** Load conversation history from API */
+  loadConversationHistory: (conversationId: string) => Promise<void>;
+  /** Load list of all conversations */
+  loadConversations: () => Promise<void>;
+  /** Switch to a different conversation */
+  switchConversation: (conversationId: string) => Promise<void>;
+  /** Create a new conversation and switch to it */
+  createNewConversation: () => Promise<void>;
+  /** Abort the active SSE stream and cleanup state */
+  cancelStreaming: () => void;
   reset: () => void;
   completeStreaming: () => void;
 }

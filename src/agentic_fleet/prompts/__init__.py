@@ -1,6 +1,4 @@
-"""Prompt templates and management for Magentic workflows."""
-
-from __future__ import annotations
+"""Prompt templates and management for AgenticFleet workflows (DSPy-optimized)."""
 
 from agentic_fleet.prompts import coder, executor, generator, planner, verifier
 

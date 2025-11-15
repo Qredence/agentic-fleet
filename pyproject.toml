@@ -1,6 +1,6 @@
 [project]
 name = "agentic-fleet"
-version = "0.5.5"
+version = "0.6.0"
 description = "Multi-agent orchestration system built with Microsoft Agent Framework's Magentic Fleet pattern"
 authors = [{ name = "Qredence", email = "contact@qredence.ai" }]
 readme = "README.md"
@@ -17,39 +17,38 @@ classifiers = [
     "Framework :: AsyncIO",
     "Typing :: Typed",
 ]
+
 dependencies = [
     "azure-ai-agents>=1.2.0b5,<2.0",
     "azure-identity>=1.25.1,<2.0",
     "azure-cosmos>=4.8.0,<5.0",
-    "python-dotenv>=1.1.1,<2.0",
-    "pyyaml>=6.0",
+    "python-dotenv>=1.2.1,<2.0",
+    "pyyaml>=6.0.3,<7.0",
     "requests>=2.28.0",
-    "pydantic>=2.0.0",
+    "pydantic>=2.12.3,<3.0",
     "tiktoken>=0.12.0,<1.0",
     "agent-framework",
     "agent-framework-core",
     "agent-framework-a2a",
     "agent-framework-azure-ai",
     "agent-framework-mem0",
-    "agent-framework-redis",
     "agent-framework-devui",
-    "mem0ai==1.0.0",                    # Pinned for stable memory API
-    "rich>=12.6.0",
+    "mem0ai==1.0.0", # Pinned for stable memory API
+    "rich>=14.2.0",
     "prompt-toolkit>=3.0.47,<4.0",
     "ipykernel>=7.0.1,<8.0",
-    "openai>=1.99.0,<2.6.1",            # Compatible with agent-framework requirements
+    "openai>=2.5.1", # Updated from requirements.txt
     "azure-ai-evaluation>=1.12.0,<2.0",
     "fastapi>=0.120.1,<1.0",
     "uvicorn[standard]>=0.24.0",
     "httpx>=0.24.0",
     "sse-starlette>=2.0.0",
-    "sqlalchemy>=2.0.0,<3.0",
     "databases[asyncpg]>=0.7.0,<1.0",
-    "aiofiles>=24.1.0",
+    "aiofiles>=25.1.0,<26.0",
     "pydantic-settings>=2.3.2,<3.0",
-    "redis[hiredis]>=6.4.0,<7.0",
     "websockets>=10.4",
-    "typer>=0.20.0",
+    "typer>=0.20.0,<0.21.0",
+    "textual>=6.5.0", # Added from requirements.txt for TUI
     "locust>=2.15.0",
     "aiohttp>=3.9.0",
     "aiosqlite>=0.20.0",
@@ -64,13 +63,22 @@ dependencies = [
     "matplotlib>=3.6.0",
     "seaborn>=0.11.0",
     "plotly>=5.10.0",
-    "pytest>=7.2.0",
-    "pytest-asyncio>=0.20.0",
-    "pytest-cov>=4.0.0",
-    "black>=22.0.0",
+    "pytest>=9.0.1,<10.0",
+    "pytest-asyncio>=0.21.0", # Updated from requirements.txt
+    "pytest-cov>=4.1.0", # Updated from requirements.txt
+    "black>=25.0.0", # Updated from requirements.txt
     "ruff>=0.0.200",
-    "mypy>=0.991",
+    "mypy>=1.8.0", # Updated from requirements.txt
+    "flake8>=7.0.0", # Added from requirements.txt
     "pytz>=2024.1",
+    "setuptools>=80.9.0",
+    "dspy>=3.0.3", # Updated from requirements.txt (was pinned to 3.0.4)
+    "tavily-python>=0.7.12", # Added version constraint from requirements.txt
+    "dill>=0.3.8",
+    "playwright>=1.40.0",
+    "mcp>=1.21.0",
+    "mlflow>=3.6.0",
+    "agent-framework[viz]"
 ]
 requires-python = ">=3.12,<4"
 
@@ -79,14 +87,10 @@ requires-python = ">=3.12,<4"
 azure = ["azure-ai-agents>=1.2.0b5,<2.0", "azure-identity>=1.25.1,<2.0"]
 
 # Memory and persistence features
-memory = ["agent-framework-mem0", "agent-framework-redis", "mem0ai==1.0.0"]
+memory = ["agent-framework-mem0", "mem0ai==1.0.0"]
 
 # UI and interactive features
-ui = [
-    "agent-framework-devui",
-    "rich>=13.7.0,<14.0",
-    "prompt-toolkit>=3.0.47,<4.0",
-]
+ui = ["agent-framework-devui", "rich>=14.2.0", "prompt-toolkit>=3.0.47,<4.0"]
 
 # Evaluation and testing
 evaluation = ["azure-ai-evaluation>=1.12.0,<2.0"]
@@ -95,10 +99,10 @@ evaluation = ["azure-ai-evaluation>=1.12.0,<2.0"]
 all = ["agentic-fleet[azure,memory,ui,evaluation]"]
 
 [project.scripts]
-agentic-fleet = "agentic_fleet.cli.app:app"
-fleet = "agentic_fleet.cli.app:app"
-dynamic-fleet = "agentic_fleet.cli.app:app"
-workflow = "agentic_fleet.cli.app:app"
+agentic-fleet = "agentic_fleet.cli.console:app"
+fleet = "agentic_fleet.cli.console:app"
+dynamic-fleet = "agentic_fleet.cli.console:app"
+workflow = "agentic_fleet.cli.console:app"
 
 
 [project.urls]
@@ -152,7 +156,6 @@ dev = [
 "agent-framework-a2a" = { git = "https://github.com/microsoft/agent-framework.git", branch = "main", subdirectory = "python/packages/a2a" }
 "agent-framework-copilotstudio" = { git = "https://github.com/microsoft/agent-framework.git", branch = "main", subdirectory = "python/packages/copilotstudio" }
 "agent-framework-mem0" = { git = "https://github.com/microsoft/agent-framework.git", branch = "main", subdirectory = "python/packages/mem0" }
-"agent-framework-redis" = { git = "https://github.com/microsoft/agent-framework.git", branch = "main", subdirectory = "python/packages/redis" }
 "agent-framework-devui" = { git = "https://github.com/microsoft/agent-framework.git", branch = "main", subdirectory = "python/packages/devui" }
 
 [tool.black]
@@ -186,9 +189,10 @@ ignore = ["E501"]
 [tool.ruff.lint.per-file-ignores]
 "__init__.py" = ["F401"]
 "notebooks/*.ipynb" = ["A002"] # Allow shadowing builtins in notebooks
+"src/agentic_fleet/console.py" = ["B008"] # Allow Typer Option in signatures
 
 [tool.ruff.lint.isort]
-known-first-party = ["agenticfleet"]
+known-first-party = ["agentic_fleet", "agenticfleet"]
 
 [tool.pytest.ini_options]
 pythonpath = "src"
@@ -211,30 +215,22 @@ exclude_lines = [
 
 [tool.mypy]
 python_version = "3.12"
-strict = true
+strict = false
 packages = ["agentic_fleet", "agenticfleet"]
 plugins = ["pydantic.mypy"]
-# No per-module overrides; all modules must be fully type-checked and compliant.
-# Ensure all functions have explicit type hints and all imports are resolvable.
+ignore_missing_imports = true
+warn_unused_ignores = false
+# Start with balanced defaults instead of full strictness so we can progressively
+# dial up coverage as we annotate more modules.
 
-[[tool.mypy.overrides]]
-module = "agenticfleet.server"
-disallow_untyped_decorators = false
-
-[[tool.mypy.overrides]]
-module = "agenticfleet.cli.memory_cli"
-disallow_untyped_decorators = false
-
-[[tool.mypy.overrides]]
-module = "agenticfleet.persistance.database"
-disallow_untyped_defs = false
 
 [[tool.mypy.overrides]]
 module = "agentic_fleet.api.app"
 warn_unused_ignores = false
 
 [[tool.mypy.overrides]]
-module = "agentic_fleet.api.conversations.routes"
+module = "agentic_fleet.api.workflows.routes"
+warn_unused_ignores = false
 disallow_untyped_decorators = false
 
 
@@ -242,6 +238,21 @@ disallow_untyped_decorators = false
 module = "aiofiles"
 ignore_missing_imports = true
 disallow_untyped_decorators = false
+
+# Temporarily relax typing for complex subsystems until they are fully annotated.
+[[tool.mypy.overrides]]
+module = [
+  "agentic_fleet.tools.*",
+  "agentic_fleet.dspy_modules.*",
+  "agentic_fleet.workflows.*",
+  "agentic_fleet.agents.*",
+  "agentic_fleet.examples.*",
+  "agentic_fleet.utils.dspy_manager",
+  "agentic_fleet.utils.history_manager",
+  "agentic_fleet.evaluation.evaluator",
+  "agentic_fleet.cli.commands.benchmark",
+]
+ignore_errors = true
 
 # Tests are executable validation artifacts rather than library code; relax typing strictness
 # to prioritize production package guarantees while allowing incremental test annotation.

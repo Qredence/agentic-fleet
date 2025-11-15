@@ -1,102 +1,241 @@
-# AGENTS.md
+# AgenticFleet Agents Documentation
 
-This repository powers the Agentic Fleet stack: a FastAPI backend, Vite/React frontend, and
-documentation/test harnesses that showcase multi-agent orchestration. Treat this file as the
-single source of truth for cross-cutting rules; subdirectory guides drill into details.
+## Overview
 
-## Invariants (DO NOT VIOLATE)
+AgenticFleet ships a roster of specialized agents built atop Microsoft's agent-framework. Each agent focuses on a distinct stage of problem solving (research, analysis, composition, evaluation, iteration). The DSPy supervisor chooses which subset to engage and how (delegated, sequential, parallel, or handoff chains).
 
-- Always invoke Python tooling through `uv run …` (e.g. `uv run pytest`, `uv run ruff`). For JavaScript
-  tasks, execute commands from `src/frontend/`.
-- Keep workflows, docs, and tests synchronized. Any new or renamed agent/workflow must update
-  `src/agentic_fleet/AGENTS.md`, `tests/AGENTS.md`, `docs/AGENTS.md`, and `src/frontend/AGENTS.md`.
-- Configuration remains YAML-driven. Do not hardcode model IDs, prompts, or tool lists in Python or
-  TypeScript sources—extend the YAML or `get_config()` helpers instead.
-- Secrets never land in the repo. Use `.env` (ignored), environment variables, or managed stores.
-- Run `make validate-agents` before publishing. Fix any blocking findings in docs or code.
+---
 
-## Quick Command Reference
+## Core Agents
 
-| Command                 | Purpose                                                              |
-| ----------------------- | -------------------------------------------------------------------- |
-| `make install`          | Sync Python dependencies via uv (rerun after `uv.lock` updates).     |
-| `make frontend-install` | Install frontend dependencies in `src/frontend`.                     |
-| `make dev`              | Launch backend (port 8000) and frontend (port 5173) with hot reload. |
-| `make check`            | Run lint (`ruff`), format (`black`), type-check (`mypy`), and tests. |
-| `make test-config`      | Instantiate `WorkflowFactory` to validate YAML + agent wiring.       |
-| `make validate-agents`  | Audit AGENTS docs and common documentation invariants.               |
-| `uv run agentic-fleet`  | Typer CLI entry point for smoke tests and scripted flows.            |
+### 🔍 Researcher
 
-## Repository Map
+Purpose: High‑quality information gathering & source discovery.
+Tools: `TavilyMCPTool`, `BrowserTool` (optional).
+Strengths: Current events, citation generation, multi‑source synthesis.
+Sample Tasks:
 
-- `src/agentic_fleet/` — FastAPI backend: routers, workflow runtime, agent registry, tools.
-- `src/frontend/src/` — Vite + React app: components, stores, hooks, and utility modules.
-- `tests/` — Backend Pytest suites plus load-testing utilities under `tests/load_testing/`.
-- `docs/` — Architecture notes, API references, CLI guides, and supporting media.
-- `tools/`, `notebooks/`, `assets/`, `config/pytest.ini`, `var/` — Scripts, experiments, shared
-  assets, Pytest config, and runtime data.
-- `scripts/`, `specs/`, `PLANS.md` — Auxiliary automation, design documents, and planning trails.
+```text
+"Who won the 2024 US presidential election?"
+"Research latest transformer architecture improvements"
+"Find pricing changes for Azure AI in Q3 2025"
+```
 
-## Development Workflow
+Config (excerpt from `workflow_config.yaml`):
 
-- **Setup**: `make install` then `make frontend-install`. Use `make dev-setup` for the bundled flow.
-- **Daily loop**: Run `make dev` for full-stack work or `make backend` / `make frontend-dev` to focus
-  on one side. The backend reads configuration from `.env` and the packaged `src/agentic_fleet/workflows.yaml` (or a path supplied via `AF_WORKFLOW_CONFIG`).
-- **CLI**: `uv run agentic-fleet` (aliased to `uv run fleet`) exposes scripted interactions and quick
-  workflow checks. Add new commands under `src/agentic_fleet/cli/`.
-- **Config overrides**: Point `AF_WORKFLOW_CONFIG` to an absolute YAML file if you need an alternate workflow set. Otherwise edit `src/agentic_fleet/workflows.yaml`. Avoid committing environment-specific overrides.
+```yaml
+agents:
+  researcher:
+    model: gpt-5.1
+    tools: [TavilySearchTool]
+    temperature: 0.5
+```
 
-## Coding Standards
+### 📊 Analyst
 
-- **Python**: Target 3.12, explicit typing, 4-space indentation, 100-character lines. Keep imports
-  sorted, prefer `pathlib`, and guard module exports with `__all__`. Use the logging helpers in
-  `src/agentic_fleet/utils/logging.py`.
-- **Frontend**: TypeScript strict mode, two-space indentation, PascalCase components, camelCase
-  hooks/functions. Organize feature assets together and prefer barrel exports when it improves
-  readability.
-- **Formatting**: `uv run ruff check --fix .` and `uv run black .` for backend; Prettier and ESLint
-  (via `npm run lint`) for the frontend. Do not mix formatting-only changes with logic in commits.
+Purpose: Structured data, computation, code execution.
+Tools: `HostedCodeInterpreterTool`.
+Strengths: Statistical analysis, simulations, chart generation, validation of research claims.
+Sample Tasks:
 
-## Testing Checklist
+```text
+"Compute year‑over‑year growth from this CSV"
+"Run a Monte Carlo simulation for risk assessment"
+"Generate a bar chart of quarterly revenue"
+```
 
-- `make test` (alias for `uv run pytest -v`) covers the backend. Use `uv run pytest -k <pattern>` for
-  focused runs and `uv run pytest --cov=src/agentic_fleet --cov-report=term-missing` when tracking
-  coverage.
-- Start both services (`make dev`) before `make test-e2e` to execute Playwright flows.
-- `npm run test` from `src/frontend` drives Vitest suites. Snapshot updates require reviewer
-  acknowledgement.
-- Load testing lives under `tests/load_testing/`; run `make load-test-smoke|load|stress` with the API
-  running locally.
-- Refresh documentation invariants with `make validate-agents` whenever AGENTS content changes.
-- For conversation memory testing, use `uv run pytest tests/test_conversation_memory.py -v` to verify
-  history injection, context retention, and multi-turn interactions.
+Config:
 
-## Documentation Chain
+```yaml
+analyst:
+  model: gpt-4o
+  tools: [HostedCodeInterpreterTool]
+  temperature: 0.3
+```
 
-- `docs/AGENTS.md` governs authoring standards for Markdown-style documentation.
-- `src/agentic_fleet/AGENTS.md` documents backend architecture, workflow wiring, and agent personas.
-- `src/frontend/AGENTS.md` captures SPA structure, state management, and SSE integration points.
-- `tests/AGENTS.md` maps coverage areas and how to execute the suites.
-- Update cross-references when paths, commands, or workflows move. Regenerate diagrams or assets in
-  `assets/` when documentation calls them out.
+### ✍️ Writer
 
-## Release & Pull Request Guidelines
+Purpose: Narrative synthesis & formatted output.
+Tools: None (language model only).
+Strengths: Reports, documentation, blog posts, structured summaries.
+Sample Tasks:
 
-- Use Conventional Commits (`feat(frontend): …`, `fix(api): …`, `chore:`) with succinct imperative
-  summaries (~72 characters) and optional scopes.
-- Keep changelog notes in PR descriptions: affected workflow IDs, new endpoints, or UI changes.
-- Attach screenshots or terminal transcripts for UX-visible updates. Mention skipped checks or
-  follow-up tasks explicitly.
-- Run `make check` before review. Follow up with `make validate-agents` if docs were touched and note
-  any intentional deviations.
+```text
+"Draft an executive summary of research findings"
+"Write a blog post on sustainable AI practices"
+"Produce a README section describing evaluation pipeline"
+```
 
-## Agent Configuration Tips
+Config:
 
-- Define personas inside `src/agentic_fleet/agents/` (`get_config()` functions returning dictionaries)
-  and register them in `src/agentic_fleet/workflows.yaml` (or an override provided via `AF_WORKFLOW_CONFIG`).
-- Ensure new prompts live under `src/agentic_fleet/prompts/`. Modules should expose
-  `get_instructions()` for reuse.
-- Maintain alignment between YAML workflow IDs, entity metadata, and tests. Update `tests/AGENTS.md`
-  and relevant suites (`test_workflow_factory.py`, `test_event_bridge.py`) when orchestrations change.
-- Rerun `make validate-agents` after editing this document or any AGENTS sibling to keep the doc chain
-  synchronized with code.
+```yaml
+writer:
+  model: gpt-4o
+  temperature: 0.7
+```
+
+### 👀 Reviewer
+
+Purpose: Quality gate, consistency & polish.
+Tools: None.
+Strengths: Style alignment, minor corrections, coherence checks.
+Sample Tasks:
+
+```text
+"Review the draft report for clarity and tone"
+"Check if instructions section covers all steps"
+```
+
+Config:
+
+```yaml
+reviewer:
+  model: gpt-4o
+  temperature: 0.4
+```
+
+### ⚖️ Judge
+
+Purpose: Structured evaluation & scoring with dynamic criteria.
+Tools: Internal reasoning (may leverage model reasoning effort flags).
+Strengths: Criteria generation, gap detection, refinement directives.
+Quality Threshold: Configurable (e.g. `judge_threshold: 7.0`).
+Sample Evaluation Dimensions: correctness, completeness, clarity, citation quality (when applicable).
+
+---
+
+## Handoff Specialists
+
+These roles participate in explicit multi‑stage production flows:
+
+| Agent     | Role                                          | Highlights                                         |
+| --------- | --------------------------------------------- | -------------------------------------------------- |
+| Planner   | Decompose task into ordered steps             | High reasoning effort; produces structured plan    |
+| Executor  | Coordinate plan execution & progress tracking | Detects stalls; escalates blockers                 |
+| Coder     | Implement technical changes / prototypes      | Low temperature; code interpreter access           |
+| Verifier  | Validate artifacts & test improvements        | Regression detection & acceptance criteria checks  |
+| Generator | Final user‑facing assembly                    | Integrates verified outputs into polished response |
+
+Additions require updates to: `workflow_config.yaml`, `agents/*.py`, prompt modules, training examples, and tests.
+
+---
+
+## Execution Patterns
+
+| Pattern       | Flow                                   | Example                                                        |
+| ------------- | -------------------------------------- | -------------------------------------------------------------- |
+| Delegated     | Single agent                           | "Summarize latest AI conference keynote" → Researcher          |
+| Sequential    | Linear chain                           | Researcher → Analyst → Writer → Reviewer                       |
+| Parallel      | Concurrent specialists then synthesize | Researcher(AWS) + Researcher(Azure) + Researcher(GCP) → Writer |
+| Handoff Chain | Explicit staged roles                  | Planner → Coder → Verifier → Generator                         |
+
+Supervisor selects pattern based on task analysis + historical examples.
+
+---
+
+## Selection Guidelines
+
+| Need                                    | Choose     | Rationale                        |
+| --------------------------------------- | ---------- | -------------------------------- |
+| Current factual info                    | Researcher | Web search + citation tooling    |
+| Computation / data transform            | Analyst    | Sandboxed code execution         |
+| Narrative / documentation               | Writer     | Higher creativity temperature    |
+| Final polish / consistency              | Reviewer   | Style & coherence adjustment     |
+| Formal scoring / improvement directives | Judge      | Structured criteria & thresholds |
+
+Combine agents when tasks span multiple domains (e.g. research + quantitative analysis + reporting).
+
+---
+
+## Tooling Matrix
+
+| Tool                      | Provided By           | Purpose                 | Notes                                  |
+| ------------------------- | --------------------- | ----------------------- | -------------------------------------- |
+| TavilyMCPTool             | Researcher            | Web search w/ citations | Requires `TAVILY_API_KEY`              |
+| BrowserTool               | Researcher (optional) | Direct page interaction | Install Playwright; respect robots.txt |
+| HostedCodeInterpreterTool | Analyst, Coder        | Compute & visualize     | Sandboxed; no external network         |
+
+Extending tooling: implement agent-framework `ToolProtocol`, register in `ToolRegistry`, reference in YAML.
+
+---
+
+## Code Quality & Architecture
+
+### Enhanced Error Handling
+
+- Comprehensive exception hierarchy in `workflows/exceptions.py` with context-aware error reporting
+- Specific exceptions: `CompilationError`, `CacheError`, `ValidationError`, `TimeoutError`, `ToolError`
+- Structured error context for better debugging and monitoring
+
+### Type Safety
+
+- Protocol definitions in `utils/types.py` for DSPy, agent-framework, and internal interfaces
+- Type aliases and runtime-checkable protocols to improve IDE support
+- Better type hints throughout the codebase
+
+### Caching & Performance
+
+- Enhanced `TTLCache` with hit rate tracking (`CacheStats`) in `utils/cache.py`
+- Incremental cleanup of expired entries for better memory management
+- Async compilation support in `utils/async_compiler.py` for non-blocking initialization
+- Constants centralized in `utils/constants.py` for maintainability
+
+### Code Organization
+
+- CLI module structure: `cli/runner.py` (WorkflowRunner), `cli/display.py` (display utilities)
+- Improved separation of concerns and modularity
+
+See `docs/developers/code-quality.md` for detailed documentation.
+
+---
+
+## Adding a New Agent (Checklist)
+
+1. Create `agents/new_role.py` with `get_config()`.
+2. Add prompt instructions under `prompts/new_role.py`.
+3. Register in `workflow_config.yaml` under `agents:`.
+4. Update training examples (include tasks requiring new role).
+5. Extend tests (routing + execution + quality) under `tests/`.
+6. Document in `AGENTS.md` & link where relevant.
+7. (Optional) Provide evaluation tasks exercising new role.
+
+---
+
+## Performance Tuning
+
+- Lower temperature for deterministic roles (Analyst, Coder, Verifier).
+- Use lighter model (gpt-5-mini) for supervisor to reduce latency.
+- Limit `max_bootstrapped_demos` during prototyping; increase for production stability.
+- Cache compilation; clear when signatures or examples change.
+- Stream outputs (`enable_streaming: true`) for improved UX on long tasks.
+- Use async compilation (`utils/async_compiler.py`) for non-blocking workflow initialization.
+- Monitor cache hit rates via `CacheStats` to optimize TTL settings.
+- Leverage incremental cache cleanup to reduce memory usage in long-running processes.
+
+---
+
+## Troubleshooting Quick Hits
+
+| Issue             | Likely Cause                   | Mitigation                                  |
+| ----------------- | ------------------------------ | ------------------------------------------- |
+| Weak routing      | Sparse or low-quality examples | Expand `supervisor_examples.json`           |
+| Slow refinement   | High reasoning effort on Judge | Try `reasoning_effort: minimal`             |
+| Missing citations | Tavily key absent              | Set `TAVILY_API_KEY` in `.env`              |
+| Tool not found    | Registry mismatch              | Confirm name & import in `ToolRegistry`     |
+| Stalled chain     | Overly long agent roster       | Reduce agents or enable progress heuristics |
+
+See `docs/users/troubleshooting.md` for deeper coverage.
+
+---
+
+## Reference Links
+
+- Architecture: `docs/developers/architecture.md`
+- Quick Reference: `docs/guides/quick-reference.md`
+- DSPy Optimization: `docs/guides/dspy-optimizer.md`
+- Evaluation: `docs/guides/evaluation.md`
+- Configuration: `docs/users/configuration.md`
+
+---
+
+This document complements the runtime layout guide at `src/agentic_fleet/AGENTS.md` (internal developer focus). This root file targets users selecting and combining agents effectively.
