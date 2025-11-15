@@ -55,7 +55,6 @@ __all__ = [
     "ToolRegistry",
     "WorkflowConfig",
     "compute_metrics",
-    "console",
     "create_supervisor_workflow",
 ]
 
