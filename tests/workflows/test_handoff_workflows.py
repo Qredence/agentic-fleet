@@ -384,7 +384,7 @@ async def test_handoff_manager_statistics():
 @pytest.mark.asyncio
 async def test_workflow_handoffs_enabled_by_default():
     """Handoffs are enabled by default in the core app."""
-    workflow = SupervisorWorkflow(WorkflowConfig(compile_dspy=False))
+    workflow = SupervisorWorkflow(WorkflowConfig(compile_dspy=False), None)
     await workflow.initialize(compile_dspy=False)
 
     # Handoffs should be enabled by default
@@ -395,7 +395,7 @@ async def test_workflow_handoffs_enabled_by_default():
 @pytest.mark.asyncio
 async def test_workflow_handoffs_can_be_disabled_via_config():
     """WorkflowConfig flag should disable handoffs when requested."""
-    workflow = SupervisorWorkflow(WorkflowConfig(compile_dspy=False, enable_handoffs=False))
+    workflow = SupervisorWorkflow(WorkflowConfig(compile_dspy=False, enable_handoffs=False), None)
     await workflow.initialize(compile_dspy=False)
 
     assert workflow.enable_handoffs is False
@@ -406,7 +406,7 @@ async def test_workflow_handoffs_can_be_disabled_via_config():
 @pytest.mark.asyncio
 async def test_workflow_with_handoffs_enabled():
     """Test workflow with handoffs enabled."""
-    workflow = SupervisorWorkflow(WorkflowConfig(compile_dspy=False))
+    workflow = SupervisorWorkflow(WorkflowConfig(compile_dspy=False), None)
     await workflow.initialize(compile_dspy=False)
 
     # Enable handoffs
