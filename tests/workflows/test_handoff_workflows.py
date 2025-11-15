@@ -501,7 +501,7 @@ async def test_handoff_export():
 @pytest.mark.asyncio
 async def test_format_handoff_input():
     """Test formatting handoff input for next agent."""
-    workflow = SupervisorWorkflow(WorkflowConfig(compile_dspy=False))
+    workflow = SupervisorWorkflow(None, WorkflowConfig(compile_dspy=False))
     await workflow.initialize(compile_dspy=False)
 
     handoff = HandoffContext(
@@ -558,7 +558,7 @@ async def test_handoff_manager_clear_history():
 @pytest.mark.asyncio
 async def test_extract_artifacts():
     """Test artifact extraction from agent result."""
-    workflow = SupervisorWorkflow(WorkflowConfig(compile_dspy=False))
+    workflow = SupervisorWorkflow(None, WorkflowConfig(compile_dspy=False))
     await workflow.initialize(compile_dspy=False)
 
     result = "This is a test result with some data"
@@ -571,7 +571,7 @@ async def test_extract_artifacts():
 @pytest.mark.asyncio
 async def test_estimate_remaining_work():
     """Test estimating remaining work."""
-    workflow = SupervisorWorkflow(WorkflowConfig(compile_dspy=False))
+    workflow = SupervisorWorkflow(None, WorkflowConfig(compile_dspy=False))
     await workflow.initialize(compile_dspy=False)
 
     original_task = "Research and analyze market trends"
@@ -586,7 +586,7 @@ async def test_estimate_remaining_work():
 @pytest.mark.asyncio
 async def test_derive_objectives():
     """Test deriving objectives from remaining work."""
-    workflow = SupervisorWorkflow(WorkflowConfig(compile_dspy=False))
+    workflow = SupervisorWorkflow(None, WorkflowConfig(compile_dspy=False))
     await workflow.initialize(compile_dspy=False)
 
     remaining_work = "Analyze data and create visualizations"
