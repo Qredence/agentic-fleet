@@ -45,10 +45,11 @@ class StubDSPySupervisor(dspy.Module):
 
 @pytest.mark.asyncio
 async def test_run_falls_back_to_available_agent():
-    workflow = SupervisorWorkflow()
-    workflow.agents = {"Writer": DummyAgent("Writer")}
-    workflow.dspy_supervisor = StubDSPySupervisor(  # type: ignore[assignment]
-        routing={"assigned_to": ["Ghost"], "mode": "parallel", "subtasks": []}
+    workflow = SupervisorWorkflow(
+        dspy_supervisor=StubDSPySupervisor(
+            routing={"assigned_to": ["Ghost"], "mode": "parallel", "subtasks": []}
+        ),
+        agents={"Writer": DummyAgent("Writer")},
     )
 
     result = await workflow.run("demo task")
@@ -60,17 +61,18 @@ async def test_run_falls_back_to_available_agent():
 
 @pytest.mark.asyncio
 async def test_run_stream_normalizes_parallel_subtasks(monkeypatch):
-    workflow = SupervisorWorkflow()
-    workflow.agents = {
-        "Researcher": DummyAgent("Researcher"),
-        "Analyst": DummyAgent("Analyst"),
-    }
-    workflow.dspy_supervisor = StubDSPySupervisor(  # type: ignore[assignment]
-        routing={
-            "assigned_to": ["Researcher", "Analyst"],
-            "mode": "parallel",
-            "subtasks": ["collect context"],
-        }
+    workflow = SupervisorWorkflow(
+        dspy_supervisor=StubDSPySupervisor(
+            routing={
+                "assigned_to": ["Researcher", "Analyst"],
+                "mode": "parallel",
+                "subtasks": ["collect context"],
+            }
+        ),
+        agents={
+            "Researcher": DummyAgent("Researcher"),
+            "Analyst": DummyAgent("Analyst"),
+        },
     )
     # Avoid writing execution history files during tests
     workflow.history_manager.save_execution = lambda execution: "logs/test.jsonl"
