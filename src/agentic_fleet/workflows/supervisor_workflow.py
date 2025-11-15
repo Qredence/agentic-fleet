@@ -16,6 +16,7 @@ if TYPE_CHECKING:
     from .fleet.adapter import SupervisorWorkflow as FleetWorkflowAdapter
 
 # Type alias for public API compatibility
+from .config import WorkflowConfig
 from .fleet.adapter import SupervisorWorkflow, create_fleet_workflow
 from .initialization import initialize_workflow_context
 
@@ -23,20 +24,25 @@ from .initialization import initialize_workflow_context
 FleetWorkflowAdapter = SupervisorWorkflow
 
 
-async def create_supervisor_workflow(compile_dspy: bool = True) -> SupervisorWorkflow:
+async def create_supervisor_workflow(
+    compile_dspy: bool = True,
+    config: WorkflowConfig | None = None,
+) -> SupervisorWorkflow:
     """Factory function to create and initialize supervisor workflow.
 
     Uses the agent-framework WorkflowBuilder-based fleet workflow.
 
     Args:
         compile_dspy: Whether to compile DSPy supervisor
+        config: Optional workflow configuration. When provided, this
+            configuration is passed through to the workflow initializer.
 
     Returns:
         SupervisorWorkflow instance (FleetWorkflowAdapter)
     """
 
     # Initialize workflow context
-    context = await initialize_workflow_context(compile_dspy=compile_dspy)
+    context = await initialize_workflow_context(config=config, compile_dspy=compile_dspy)
 
     # Create workflow entrypoint
     workflow = await create_fleet_workflow(context, compile_dspy=compile_dspy)
