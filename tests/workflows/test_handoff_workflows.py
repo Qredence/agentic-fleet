@@ -419,7 +419,7 @@ async def test_workflow_with_handoffs_enabled():
 @pytest.mark.asyncio
 async def test_handoff_history_in_execution():
     """Test that handoff history is tracked in execution."""
-    workflow = SupervisorWorkflow(WorkflowConfig(compile_dspy=False))
+    workflow = SupervisorWorkflow(WorkflowConfig(compile_dspy=False), None)
     await workflow.initialize(compile_dspy=False)
     workflow.enable_handoffs = True
 
