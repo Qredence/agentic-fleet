@@ -108,7 +108,7 @@ async def test_parallel_execution_with_all_agents_failing():
 @pytest.mark.asyncio
 async def test_sequential_execution_with_missing_agent():
     """Test sequential execution skips missing agents."""
-    workflow = SupervisorWorkflow()
+    workflow = SupervisorWorkflow(WorkflowConfig(), MagicMock())
 
     from tests.workflows.test_supervisor_workflow import DummyAgent
 
@@ -127,7 +127,7 @@ async def test_sequential_execution_with_missing_agent():
 @pytest.mark.asyncio
 async def test_delegated_execution_with_invalid_agent():
     """Test delegated execution raises error for invalid agent."""
-    workflow = SupervisorWorkflow()
+    workflow = SupervisorWorkflow(WorkflowConfig(), MagicMock())
     await workflow.initialize(compile_dspy=False)
 
     with pytest.raises(AgentExecutionError):
@@ -137,7 +137,7 @@ async def test_delegated_execution_with_invalid_agent():
 @pytest.mark.asyncio
 async def test_normalize_routing_fallback():
     """Test routing normalization falls back to available agent."""
-    workflow = SupervisorWorkflow()
+    workflow = SupervisorWorkflow(WorkflowConfig(), MagicMock())
     await workflow.initialize(compile_dspy=False)
 
     # Invalid routing with no valid agents
@@ -151,7 +151,7 @@ async def test_normalize_routing_fallback():
 @pytest.mark.asyncio
 async def test_normalize_routing_invalid_mode():
     """Test routing normalization handles invalid mode."""
-    workflow = SupervisorWorkflow()
+    workflow = SupervisorWorkflow(WorkflowConfig(), MagicMock())
     await workflow.initialize(compile_dspy=False)
 
     invalid_routing = {"assigned_to": ["Writer"], "mode": "invalid_mode"}
