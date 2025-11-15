@@ -2,7 +2,7 @@
 
 ## Overview
 
-The DSPy-Enhanced Agent Framework combines Microsoft's agent-framework with DSPy's intelligent prompt optimization to create self-improving multi-agent workflows.
+AgenticFleet combines Microsoft's agent-framework with DSPy's intelligent prompt optimization to create self-improving multi-agent workflows.
 
 ## System Architecture
 

@@ -138,7 +138,7 @@ tail -f logs/workflow.log
 ## Files and Directories
 
 ```
-dspy-agent-framework/
+agentic-fleet/
 ├── console.py                    # CLI interface
 ├── analyze_history.py            # History analysis tool
 ├── config/

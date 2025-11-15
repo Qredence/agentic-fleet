@@ -1,6 +1,6 @@
 # Tracing & Observability Guide
 
-This guide explains how to enable, configure, and use tracing for the DSPy-Enhanced Agent Framework.
+This guide explains how to enable, configure, and use tracing for AgenticFleet.
 
 ## Overview
 
