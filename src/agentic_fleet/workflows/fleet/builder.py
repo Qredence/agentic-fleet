@@ -41,36 +41,36 @@ def build_fleet_workflow(
 
     # Create executors
     analysis_executor = AnalysisExecutor(
-        id="analysis",
+        executor_id="analysis",
         supervisor=supervisor,
         context=context,
     )
 
     routing_executor = RoutingExecutor(
-        id="routing",
+        executor_id="routing",
         supervisor=supervisor,
         context=context,
     )
 
     execution_executor = ExecutionExecutor(
-        id="execution",
+        executor_id="execution",
         context=context,
     )
 
     progress_executor = ProgressExecutor(
-        id="progress",
+        executor_id="progress",
         supervisor=supervisor,
         context=context,
     )
 
     quality_executor = QualityExecutor(
-        id="quality",
+        executor_id="quality",
         supervisor=supervisor,
         context=context,
     )
 
     judge_refine_executor = JudgeRefineExecutor(
-        id="judge_refine",
+        executor_id="judge_refine",
         context=context,
     )
 

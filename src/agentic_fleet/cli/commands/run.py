@@ -84,6 +84,11 @@ def run(
         "--handoffs/--no-handoffs",
         help="Force enable/disable structured handoffs (defaults to config)",
     ),
+    fast: bool = typer.Option(
+        False,
+        "--fast",
+        help="Optimize for latency (lighter judge/refinement settings where supported)",
+    ),
 ) -> None:
     """
     Run the DSPy-enhanced workflow with a message.
@@ -126,6 +131,12 @@ def run(
             max_rounds=15,
             enable_handoffs=handoffs,
         )
+        # Apply optional fast-mode tuning on top of the loaded config.
+        if fast and runner.workflow_config is not None:
+            cfg = runner.workflow_config
+            # Reduce judge/refinement cost in fast mode.
+            cfg.max_refinement_rounds = min(cfg.max_refinement_rounds, 1)
+            cfg.judge_reasoning_effort = "minimal"
 
     try:
         if message_input:

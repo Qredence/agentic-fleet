@@ -327,8 +327,9 @@ class DSPySupervisor(dspy.Module):
                 current_context=context or "Initial task",
                 handoff_history=handoff_history or "",
             )
+
         exec_mode = getattr(routing, "execution_mode", "delegated")
-        assigned = getattr(routing, "assigned_to", "")
+        assigned_raw = getattr(routing, "assigned_to", "")
         subtasks_val = getattr(routing, "subtasks", "")
         confidence_raw = getattr(
             routing,
@@ -340,24 +341,81 @@ class DSPySupervisor(dspy.Module):
         except (TypeError, ValueError):
             confidence_val = None
 
-        # Extract tool requirements from analysis if available
+        # ------------------------------------------------------------------
+        # Normalise assigned agents against the known team.
+        # DSPy may return free-form descriptions here (especially when
+        # running without compiled examples), so we coerce the output
+        # back to concrete agent IDs that exist in ``team``.
+        # ------------------------------------------------------------------
+        if isinstance(assigned_raw, str):
+            assigned_str = assigned_raw
+        elif isinstance(assigned_raw, list | tuple | set):
+            assigned_str = ", ".join(str(a) for a in assigned_raw)
+        else:
+            assigned_str = str(assigned_raw or "")
+
+        parsed_agents = self._parse_agents(assigned_str)
+
+        team_keys = list(team.keys())
+        team_keys_lower = {k.lower(): k for k in team_keys}
+
+        normalised_agents: list[str] = []
+        seen: set[str] = set()
+
+        for candidate in parsed_agents:
+            # Exact match
+            if candidate in team:
+                canonical = candidate
+            else:
+                cand_lower = candidate.lower()
+                # Case-insensitive match
+                canonical = team_keys_lower.get(cand_lower)
+                if canonical is None:
+                    # Fuzzy substring match (handles descriptions like
+                    # "Researcher (primary)" or "primary work by the researcher").
+                    for key in team_keys:
+                        key_lower = key.lower()
+                        if key_lower in cand_lower or cand_lower in key_lower:
+                            canonical = key
+                            break
+
+            if canonical and canonical not in seen:
+                normalised_agents.append(canonical)
+                seen.add(canonical)
+
+        # Fallback: if nothing matched, prefer a Researcher-like agent,
+        # or the first team member as a safe default.
+        if not normalised_agents:
+            fallback = None
+            for key in team_keys:
+                if key.lower() == "researcher":
+                    fallback = key
+                    break
+            if fallback is None and team_keys:
+                fallback = team_keys[0]
+            normalised_agents = [fallback] if fallback else []
+
+        mode_enum = ExecutionMode.from_raw(exec_mode)
+
+        # Delegated mode should always target a single agent.
+        if mode_enum is ExecutionMode.DELEGATED and len(normalised_agents) > 1:
+            normalised_agents = normalised_agents[:1]
+
+        # Extract tool requirements from analysis if available using the
+        # normalised agents list.
         tool_requirements_set = set()  # Use set for O(1) lookups instead of O(n) list
         if self.tool_registry:
-            # Check which tools the assigned agents have
-            assigned_agents = self._parse_agents(routing.assigned_to)
-            for agent_name in assigned_agents:
+            for agent_name in normalised_agents:
                 agent_tools = self.tool_registry.get_agent_tools(agent_name)
                 for tool_meta in agent_tools:
-                    tool_requirements_set.add(tool_meta.name)  # O(1) operation instead of O(n)
+                    tool_requirements_set.add(tool_meta.name)
 
         decision = RoutingDecision(
             task=task,
-            assigned_to=tuple(self._parse_agents(assigned)),
-            mode=ExecutionMode.from_raw(exec_mode),
+            assigned_to=tuple(normalised_agents),
+            mode=mode_enum,
             subtasks=tuple(self._parse_subtasks(subtasks_val)),
-            tool_requirements=tuple(
-                tool_requirements_set
-            ),  # Convert set back to tuple for the output
+            tool_requirements=tuple(tool_requirements_set),
             confidence=confidence_val,
         )
 
@@ -501,10 +559,19 @@ class DSPySupervisor(dspy.Module):
         return [cap.strip() for cap in capabilities_str.split(",") if cap.strip()]
 
     def _parse_agents(self, agents_str: str) -> list[str]:
-        """Parse agent list from DSPy output."""
+        """Parse agent list from DSPy output.
+
+        The routing signatures typically emit a comma-separated list of
+        agent identifiers (e.g. ``\"Researcher, Analyst\"``), but when
+        running without compiled examples the model may instead return
+        longer natural-language descriptions with newlines. To keep
+        parsing robust we treat commas, semicolons, and newlines as
+        delimiters.
+        """
         if not agents_str:
             return []
-        return [agent.strip() for agent in agents_str.split(",") if agent.strip()]
+        normalized = agents_str.replace("\n", ",").replace(";", ",")
+        return [agent.strip() for agent in normalized.split(",") if agent.strip()]
 
     def _parse_subtasks(self, subtasks_str: str) -> list[str]:
         """Parse subtasks from DSPy output."""

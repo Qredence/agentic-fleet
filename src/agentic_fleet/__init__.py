@@ -55,6 +55,7 @@ __all__ = [
     "ToolRegistry",
     "WorkflowConfig",
     "compute_metrics",
+    "console",
     "create_supervisor_workflow",
 ]
 
@@ -66,10 +67,7 @@ def __getattr__(name: str) -> object:
         or name == "WorkflowConfig"
         or name == "create_supervisor_workflow"
     ):
-        from agentic_fleet.workflows import (
-            SupervisorWorkflow,
-            create_supervisor_workflow,
-        )
+        from agentic_fleet.workflows import SupervisorWorkflow, create_supervisor_workflow
         from agentic_fleet.workflows.config import WorkflowConfig
 
         if name == "SupervisorWorkflow":
@@ -112,5 +110,13 @@ def __getattr__(name: str) -> object:
         if name == "Evaluator":
             return Evaluator
         return compute_metrics
+
+    if name == "console":
+        # Expose the CLI console module as an attribute for
+        # backward-compatible imports (tests and docs use
+        # `from agentic_fleet import console`).
+        import importlib
+
+        return importlib.import_module("agentic_fleet.cli.console")
 
     raise AttributeError(f"module {__name__!r} has no attribute {name!r}")

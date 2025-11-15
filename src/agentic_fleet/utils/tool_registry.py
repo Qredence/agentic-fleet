@@ -10,11 +10,22 @@ from __future__ import annotations
 
 import logging
 from dataclasses import dataclass, field
-from typing import Any
-
-from agent_framework import ToolProtocol
+from typing import Any, Protocol, cast, runtime_checkable
 
 logger = logging.getLogger(__name__)
+
+
+@runtime_checkable
+class RunnableTool(Protocol):
+    """Protocol for tools that expose an async ``run`` coroutine.
+
+    This aligns with how tools are used by the registry in practice, without
+    depending directly on the concrete agent-framework ``ToolProtocol`` type
+    (which may be stubbed differently in tests).
+    """
+
+    async def run(self, **kwargs: Any) -> Any:  # pragma: no cover - structural
+        ...
 
 
 @dataclass
@@ -25,7 +36,7 @@ class ToolMetadata:
     description: str
     schema: dict[str, Any]
     agent: str
-    tool_instance: ToolProtocol | None = None
+    tool_instance: RunnableTool | None = None
     available: bool = True
     capabilities: set[str] = field(default_factory=set)
     use_cases: list[str] = field(default_factory=list)
@@ -48,7 +59,7 @@ class ToolRegistry:
     def register_tool(
         self,
         name: str,
-        tool: ToolProtocol,
+        tool: RunnableTool,
         agent: str,
         capabilities: list[str] | None = None,
         use_cases: list[str] | None = None,
@@ -149,7 +160,7 @@ class ToolRegistry:
 
         self.register_tool(
             name=tool_name,
-            tool=tool,
+            tool=cast(RunnableTool, tool),
             agent=agent_name,
             capabilities=capabilities,
             use_cases=use_cases,
@@ -281,12 +292,14 @@ class ToolRegistry:
         Returns:
             Tool execution result, or None if tool not found/unavailable
         """
-        tool = self._tools.get(tool_name)
-        if not tool or not tool.available or not tool.tool_instance:
+        meta = self._tools.get(tool_name)
+        if not meta or meta.tool_instance is None or not meta.available:
             return None
 
+        tool_instance = meta.tool_instance
+
         try:
-            result = await tool.tool_instance.run(**kwargs)
+            result = await tool_instance.run(**kwargs)
             return str(result)
         except Exception as e:
             return f"Error executing tool {tool_name}: {e!s}"
@@ -313,13 +326,13 @@ class ToolRegistry:
 
         return capabilities
 
-    def _infer_capabilities_from_tool(self, tool: ToolProtocol) -> list[str]:
+    def _infer_capabilities_from_tool(self, tool: RunnableTool) -> list[str]:
         """Infer capabilities from tool instance."""
         name = getattr(tool, "name", "") or tool.__class__.__name__
         description = getattr(tool, "description", "") or ""
         return list(self._infer_capabilities(name, description))
 
-    def _infer_use_cases_from_tool(self, tool: ToolProtocol) -> list[str]:
+    def _infer_use_cases_from_tool(self, tool: RunnableTool) -> list[str]:
         """Infer use cases from tool type."""
         name = getattr(tool, "name", "") or tool.__class__.__name__
         name_lower = name.lower()

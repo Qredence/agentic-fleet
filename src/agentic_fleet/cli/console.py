@@ -19,17 +19,8 @@ if __package__ in (None, ""):
     globals()["__package__"] = "agentic_fleet.cli"
 
 from ..utils.env import validate_agentic_fleet_env
-from .commands import (
-    agents,
-    analyze,
-    benchmark,
-    evaluate,
-    handoff,
-    history,
-    improve,
-    optimize,
-    run,
-)
+from .commands import agents, analyze, benchmark, evaluate, history, improve, optimize, run
+from .commands import handoff as handoff_module
 from .runner import WorkflowRunner  # noqa: F401
 
 # Suppress OpenTelemetry OTLP log export errors early (before any imports trigger setup)
@@ -54,7 +45,12 @@ app = typer.Typer(
 )
 
 app.command(name="run")(run.run)
-app.command(name="handoff")(handoff.handoff)
+
+# Backward-compatible alias so tests and external callers can use
+# `console.handoff` directly as a Typer command function rather than
+# importing the submodule.
+handoff = handoff_module.handoff
+app.command(name="handoff")(handoff)
 app.command(name="analyze")(analyze.analyze)
 app.command(name="benchmark")(benchmark.benchmark)
 app.command(name="list-agents")(agents.list_agents)

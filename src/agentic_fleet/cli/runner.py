@@ -181,10 +181,12 @@ class WorkflowRunner:
         self.workflow_config = workflow_config
 
         with self.console.status("[bold green]Initializing DSPy-Enhanced Workflow..."):
-            # Note: config is loaded from YAML, but create_supervisor_workflow
-            # uses its own config loading. For now, we use the factory function.
-            # TODO: Update initialization to accept config parameter
-            workflow = await create_supervisor_workflow(compile_dspy=compile_dspy)
+            # Initialize workflow using the CLI-derived WorkflowConfig so that
+            # YAML and command-line options consistently drive execution.
+            workflow = await create_supervisor_workflow(
+                compile_dspy=compile_dspy,
+                config=workflow_config,
+            )
             # Set progress callback if workflow supports it
             if hasattr(workflow, "progress_callback"):
                 workflow.progress_callback = self.progress_callback
@@ -245,11 +247,21 @@ class WorkflowRunner:
                                 self.console.print("=" * 80 + "\n")
 
                                 for i, routing in enumerate(routing_history, 1):
+                                    raw_confidence = routing.get("confidence", None)
+                                    # Handle None or non-numeric confidence gracefully
+                                    if raw_confidence is None:
+                                        confidence_str = "N/A"
+                                    else:
+                                        try:
+                                            confidence_str = f"{float(raw_confidence):.2f}"
+                                        except (TypeError, ValueError):
+                                            confidence_str = "N/A"
+
                                     self.console.print(
                                         Panel(
                                             f"[bold]Mode:[/bold] {routing.get('mode', 'unknown')}\n"
                                             f"[bold]Agents:[/bold] {', '.join(routing.get('assigned_to', []))}\n"
-                                            f"[bold]Confidence:[/bold] {routing.get('confidence', 0.0):.2f}",
+                                            f"[bold]Confidence:[/bold] {confidence_str}",
                                             title=f"[bold yellow]Step {i}[/bold yellow]",
                                             border_style="yellow",
                                         )
@@ -282,10 +294,11 @@ class WorkflowRunner:
                         # Complete message from agent
                         if event.message and hasattr(event.message, "text"):  # type: ignore[attr-defined]
                             live.stop()
+                            title_agent = current_agent or "Agent"
                             self.console.print(
                                 Panel(
                                     event.message.text,  # type: ignore[attr-defined]
-                                    title=f"[bold green]✅ {current_agent}[/bold green]",
+                                    title=f"[bold green]✅ {title_agent}[/bold green]",
                                     border_style="green",
                                 )
                             )

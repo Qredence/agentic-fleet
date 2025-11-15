@@ -11,10 +11,7 @@ from agent_framework import Executor, WorkflowContext, handler
 
 from ...utils.logger import setup_logger
 from ...utils.models import ExecutionMode, RoutingDecision
-from ..quality import (
-    call_judge_with_reasoning,
-    parse_judge_response,
-)
+from ..quality import call_judge_with_reasoning, parse_judge_response
 from ..quality.criteria import get_quality_criteria as _get_quality_criteria
 from .messages import FinalResultMessage, QualityMessage
 

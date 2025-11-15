@@ -7,6 +7,10 @@ from typing import TYPE_CHECKING, Any
 
 from agent_framework import ChatMessage, MagenticAgentMessageEvent, Role, WorkflowOutputEvent
 
+if TYPE_CHECKING:
+    # Workflow is only needed for type checking; runtime uses Protocol methods.
+    from agent_framework import Workflow
+
 from ...utils.logger import setup_logger
 from ...utils.models import RoutingDecision, ensure_routing_decision
 from ..orchestration import SupervisorContext
@@ -14,9 +18,6 @@ from ..shared.models import QualityReport
 from ..shared.quality import quality_report_to_legacy
 from .builder import build_fleet_workflow
 from .messages import FinalResultMessage, TaskMessage
-
-if TYPE_CHECKING:
-    from agent_framework import WorkflowAgent
 
 logger = setup_logger(__name__)
 
@@ -27,17 +28,17 @@ class SupervisorWorkflow:
     def __init__(
         self,
         context: SupervisorContext,
-        workflow_agent: WorkflowAgent,
+        workflow_runner: Workflow,
     ) -> None:
         """Initialize SupervisorWorkflow.
 
         Args:
             context: Supervisor context with configuration and state
-            workflow_agent: WorkflowAgent instance from agent-framework
+            workflow_runner: agent-framework Workflow instance
         """
         self.context = context
         self.config = context.config
-        self.workflow_agent = workflow_agent
+        self.workflow = workflow_runner
         self.dspy_supervisor = context.dspy_supervisor
         self.agents = context.agents
         self.handoff_manager = context.handoff_manager
@@ -61,7 +62,7 @@ class SupervisorWorkflow:
 
         # Run workflow
         try:
-            result = await self.workflow_agent.run(task_msg)
+            result = await self.workflow.run(task_msg)
         except Exception as e:
             logger.exception(f"Workflow execution failed: {e}")
             raise
@@ -111,7 +112,7 @@ class SupervisorWorkflow:
         try:
             final_msg: FinalResultMessage | None = None
 
-            async for event in self.workflow_agent.run_stream(task_msg):
+            async for event in self.workflow.run_stream(task_msg):
                 # Forward agent-framework events
                 if isinstance(event, MagenticAgentMessageEvent):
                     yield event
@@ -139,7 +140,7 @@ class SupervisorWorkflow:
             if final_msg is None:
                 # Try to get from workflow run result
                 try:
-                    result = await self.workflow_agent.run(task_msg)
+                    result = await self.workflow.run(task_msg)
                     outputs = result.get_outputs() if hasattr(result, "get_outputs") else []
                     if outputs:
                         final_output = outputs[-1]
@@ -268,10 +269,9 @@ async def create_fleet_workflow(
 
     # Build workflow and wrap as agent
     workflow = workflow_builder.build()
-    workflow_agent = workflow.as_agent()
 
     # Create workflow entrypoint
-    workflow = SupervisorWorkflow(context, workflow_agent)
+    workflow = SupervisorWorkflow(context, workflow)
 
     logger.info("Supervisor workflow created successfully")
     return workflow
