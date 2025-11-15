@@ -26,6 +26,14 @@ if TYPE_CHECKING:
         SupervisorWorkflow,
         create_supervisor_workflow,
     )
+    from agentic_fleet.workflows.orchestration import SupervisorContext
+    from agentic_fleet.workflows.shared.models import (
+        AnalysisResult,
+        ExecutionOutcome,
+        ProgressReport,
+        QualityReport,
+        RoutingPlan,
+    )
 
 __all__ = [
     "AgentExecutionError",

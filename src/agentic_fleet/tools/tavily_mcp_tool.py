@@ -83,7 +83,8 @@ class TavilyMCPTool(MCPStreamableHTTPTool):
         self.name = "tavily_search"
         self.description = description
 
-        logger.info(f"Initialized TavilyMCPTool with MCP URL: {mcp_url[:50]}...")
+        # Log initialization without exposing API key
+        logger.info("Initialized TavilyMCPTool successfully")
 
         # Internal helpers for ensuring one-time connection + cached tool name
         self._connect_lock: asyncio.Lock = asyncio.Lock()
