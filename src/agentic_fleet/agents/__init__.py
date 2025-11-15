@@ -1,17 +1,23 @@
 """Agents package public API.
 
-Avoids import-time circular dependencies by lazily resolving symbols.
+Exports AgentFactory for creating ChatAgent instances from YAML configuration,
+and create_workflow_agents for creating default workflow agents.
 """
 
-from __future__ import annotations
+from typing import TYPE_CHECKING, Any
 
-from typing import Any
+if TYPE_CHECKING:
+    from .coordinator import AgentFactory, create_workflow_agents, validate_tool
 
-__all__ = ["AgentFactory", "MagenticCoordinator"]
+__all__ = ["AgentFactory", "create_workflow_agents", "validate_tool"]
 
 
-def __getattr__(name: str) -> Any:  # pragma: no cover - import-time behavior
-    if name in {"AgentFactory", "MagenticCoordinator"}:
+def __getattr__(name: str) -> Any:
+    if name == "AgentFactory":
+        from . import coordinator as _coordinator
+
+        return getattr(_coordinator, name)
+    if name in ("create_workflow_agents", "validate_tool"):
         from . import coordinator as _coordinator
 
         return getattr(_coordinator, name)
