@@ -9,7 +9,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from .adapter import SupervisorWorkflow
+    from .adapter import SupervisorWorkflow, create_fleet_workflow
 
 __all__ = [
     "SupervisorWorkflow",
