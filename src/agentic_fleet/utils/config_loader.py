@@ -132,6 +132,8 @@ def get_default_config() -> dict[str, Any]:
                 "max_stalls": 3,
                 "max_resets": 2,
                 "enable_streaming": True,
+                "pipeline_profile": "full",
+                "simple_task_max_words": 40,
             },
             "execution": {
                 "parallel_threshold": 3,
@@ -141,6 +143,8 @@ def get_default_config() -> dict[str, Any]:
             "quality": {
                 "refinement_threshold": 8.0,
                 "enable_refinement": True,
+                "enable_progress_eval": True,
+                "enable_quality_eval": True,
                 "judge_model": None,
                 "judge_reasoning_effort": "medium",
             },

@@ -47,7 +47,7 @@ def get_dspy_lm(model: str, enable_cache: bool = True) -> dspy.LM:
         model_path = f"openai/{model}"
         logger.debug(f"Creating DSPy LM instance for {model_path}")
 
-        # Create LM with caching enabled if requested
+        # Create LM with caching enabled if requested (no adapter to avoid JSON serialization issues)
         lm = dspy.LM(model_path)  # type: ignore[attr-defined]
 
         # Enable prompt caching if supported and requested

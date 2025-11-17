@@ -54,19 +54,19 @@ Use the CLI command to trigger self-improvement:
 
 ```bash
 # Analyze and improve from execution history
-uv run python console.py self-improve
+uv run agentic-fleet self-improve
 
 # Show statistics without making changes
-uv run python console.py self-improve --stats-only
+uv run agentic-fleet self-improve --stats-only
 
 # Customize quality threshold (only learn from excellent executions)
-uv run python console.py self-improve --min-quality 9.0
+uv run agentic-fleet self-improve --min-quality 9.0
 
 # Limit number of examples to add
-uv run python console.py self-improve --max-examples 10
+uv run agentic-fleet self-improve --max-examples 10
 
 # Combine options
-uv run python console.py self-improve --min-quality 8.5 --max-examples 15
+uv run agentic-fleet self-improve --min-quality 8.5 --max-examples 15
 ```
 
 ### Using the Dedicated Script
@@ -203,10 +203,10 @@ Run self-improvement periodically:
 
 ```bash
 # After every 10-20 executions
-uv run python console.py self-improve
+uv run agentic-fleet self-improve
 
 # Or set up a cron job
-0 0 * * * cd /path/to/project && uv run python console.py self-improve
+0 0 * * * cd /path/to/project && uv run agentic-fleet self-improve
 ```
 
 ### 2. Monitor Quality Trends
@@ -226,13 +226,13 @@ Start with strict thresholds, relax as needed:
 
 ```bash
 # Week 1: Only learn from excellent executions
-uv run python console.py self-improve --min-quality 9.0
+uv run agentic-fleet self-improve --min-quality 9.0
 
 # Week 2: Include good executions
-uv run python console.py self-improve --min-quality 8.0
+uv run agentic-fleet self-improve --min-quality 8.0
 
 # Week 3: Learn from acceptable patterns
-uv run python console.py self-improve --min-quality 7.5
+uv run agentic-fleet self-improve --min-quality 7.5
 ```
 
 ### 4. Validate After Improvement
@@ -244,7 +244,7 @@ After adding examples, test routing:
 uv run python -c "from src.utils.compiler import clear_cache; clear_cache()"
 
 # Run test task
-uv run python console.py run -m "Test task similar to learned patterns" --verbose
+uv run agentic-fleet run -m "Test task similar to learned patterns" --verbose
 ```
 
 ## Statistics and Monitoring
@@ -253,7 +253,7 @@ uv run python console.py run -m "Test task similar to learned patterns" --verbos
 
 ```bash
 # See how many high-quality executions are available
-uv run python console.py self-improve --stats-only
+uv run agentic-fleet self-improve --stats-only
 ```
 
 Output includes:
@@ -362,7 +362,7 @@ research_tasks = [
 
 3. Run with compilation enabled:
    ```bash
-   uv run python console.py run -m "Task" --compile
+   uv run agentic-fleet run -m "Task" --compile
    ```
 
 ### Duplicate Examples
@@ -402,21 +402,21 @@ More examples = longer compilation:
 
 ```bash
 # Run various tasks
-uv run python console.py run -m "Research AI trends"
-uv run python console.py run -m "Analyze sales data"
-uv run python console.py run -m "Write report"
+uv run agentic-fleet run -m "Research AI trends"
+uv run agentic-fleet run -m "Analyze sales data"
+uv run agentic-fleet run -m "Write report"
 ```
 
 ### Week 2: First Self-Improvement
 
 ```bash
 # Check what can be learned
-uv run python console.py self-improve --stats-only
+uv run agentic-fleet self-improve --stats-only
 
 # Output: 15 executions, 5 high-quality
 
 # Add successful patterns
-uv run python console.py self-improve
+uv run agentic-fleet self-improve
 
 # Output: Added 5 new training examples
 ```
@@ -425,11 +425,11 @@ uv run python console.py self-improve
 
 ```bash
 # More tasks with improved routing
-uv run python console.py run -m "Similar research task"
+uv run agentic-fleet run -m "Similar research task"
 # Routing should be better/faster
 
 # Periodic improvement
-uv run python console.py self-improve
+uv run agentic-fleet self-improve
 
 # Output: Added 3 new training examples (+ 2 duplicates filtered)
 ```

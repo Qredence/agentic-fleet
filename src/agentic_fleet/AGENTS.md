@@ -66,8 +66,8 @@ Updates to any roster require concurrent changes in `config/workflow_config.yaml
 ## DSPy Supervisor & Workflow Pipeline
 
 1. **Task Analysis** – `DSPySupervisor.analyze_task` extracts goals, constraints, and tooling hints using DSPy `ChainOfThought` signatures (`TaskAnalysis`, `ToolAwareTaskAnalysis`).
-2. **Task Routing** – `DSPySupervisor.route_task` selects agents, execution mode (delegated/sequential/parallel), and tool requirements using `EnhancedTaskRouting` signature (workflow-aware) or `TaskRouting` (standard).
-3. **Agent Execution** – Fleet workflow (`FleetWorkflowAdapter`) executes the plan via agent-framework `WorkflowBuilder` and executors, leveraging the `ToolRegistry`, `HandoffManager`, and DSPy supervisor.
+2. **Task Routing** – `DSPySupervisor.route_task` selects agents, execution mode (delegated/sequential/parallel), and tool requirements using `EnhancedTaskRouting` (workflow-aware) or `TaskRouting` (standard). The enhanced signature now emits a compact, ReAct-friendly tool plan.
+3. **Agent Execution** – Fleet workflow (`FleetWorkflowAdapter`) executes the plan via agent-framework `WorkflowBuilder` and executors. A lightweight `decide_tools(...)` method in the DSPy supervisor surfaces an ordered `tool_plan`, `tool_goals`, and `latency_budget` that are attached to execution metadata and can guide tool usage.
 4. **Quality Assessment** – `DSPySupervisor.assess_quality` uses `JudgeEvaluation` signature (with task-specific criteria) or `QualityAssessment` (standard) to score results; sub‑threshold scores trigger refinement loops or judge-based reviews.
 
 ### Workflow Diagram
@@ -93,13 +93,12 @@ Typical bottlenecks and tuning actions:
 
 - DSPy compilation on first run
   - Set `DSPY_COMPILE=false` in env when iterating quickly, or rely on cache; clear via [`scripts/manage_cache.py`](src/agentic_fleet/scripts/manage_cache.py)
-  - Reduce GEPA effort in [`workflow_config.yaml`](config/workflow_config.yaml): `gepa_max_metric_calls`, `max_bootstrapped_demos`
+  - Reduce GEPA effort in [`workflow_config.yaml`](config/workflow_config.yaml): `gepa_max_metric_calls`, `max_bootstrapped_demos` (defaults tuned lower)
 - Tool calls with network latency (OpenAI, Tavily, Hosted Code Interpreter)
   - Prefer lighter Supervisor model; e.g. `dspy.model: gpt-5-mini`
-  - Disable pre-analysis tool usage for simple tasks
+  - Pre-analysis tool usage is supported and cached via `ToolRegistry` result cache
 - Judge/refinement loops
-  - Set `quality.max_refinement_rounds: 1`
-  - Use `judge_reasoning_effort: minimal`
+  - Set `quality.max_refinement_rounds: 1`, `judge_reasoning_effort: minimal`, `judge_timeout_seconds` to cap cost
 - Parallel fan-out synthesis
   - Cap `execution.max_parallel_agents` to a small number
   - Enable streaming to surface progress early
@@ -107,7 +106,7 @@ Typical bottlenecks and tuning actions:
   - Reduce verbosity during production runs
   - Batch writes if needed
 
-Slow-phase detection: inspect timing breakdowns from history analytics (`scripts/analyze_history.py`) and review per-phase durations; focus on reducing compilation, external network time, and unnecessary refinement rounds.
+Slow-phase detection: per-phase timing is recorded in `phase_timings` (analysis/routing/progress). A `slow_execution_threshold` guardrail logs when a phase exceeds the threshold.
 
 ## Configuration & Environment
 
@@ -118,7 +117,8 @@ Slow-phase detection: inspect timing breakdowns from history analytics (`scripts
 
 ## Tools & Integrations
 
-- Tool registry resolves names declared in YAML to concrete instances (`HostedCodeInterpreterTool`, `TavilySearchTool`, browser automation, MCP adapters).
+- Tool registry resolves names declared in YAML to concrete instances (`HostedCodeInterpreterTool`, `TavilySearchTool`, browser automation, MCP adapters) and now exposes concise tool descriptions with latency hints (`low|medium|high`).
+- Tool results are cached with TTL to reduce repeat network calls; cache stats are available for tuning.
 - GEPA optimization (`utils/gepa_optimizer.py`) accelerates DSPy compilation and supports history-informed reruns.
 - OpenTelemetry tracing hooks live in `utils/tracing.py` and align with AI Toolkit collectors.
 - History capture and analytics live in `utils/history_manager.py` and the `scripts/` helpers.
@@ -168,6 +168,25 @@ Slow-phase detection: inspect timing breakdowns from history analytics (`scripts
 - Periodic cache cleanup to reduce memory footprint
 - Reduced code duplication through shared execution strategies
 
+### Latency Profiles
+
+- The fleet workflow supports selectable pipeline profiles via `WorkflowConfig.pipeline_profile`:
+  - `"full"` (default): full multi-stage pipeline (analysis → routing → execution → progress → quality → judge/refinement).
+  - `"light"`: latency-optimized path for simple tasks; uses heuristic analysis/routing and skips DSPy progress/quality evaluation and judge/refinement.
+- The CLI `run` command enables the light profile automatically when using `--fast`:
+  - `agentic-fleet run --fast "Quick question"` → `pipeline_profile="light"`, progress/quality eval and judge/refinement disabled.
+- Simple-task detection in light profile is heuristic and currently based on word count (`simple_task_max_words`, default 40); it can be tuned via `workflow.supervisor.simple_task_max_words` in `config/workflow_config.yaml`.
+
+### DSPy Optimization Usage
+
+- DSPy is configured once per process via `utils.dspy_manager.configure_dspy_settings`, using a shared LM (e.g. `openai/gpt-5-mini`) and optional prompt caching.
+- Supervisor analysis and routing are backed by `DSPySupervisor`:
+  - `AnalysisExecutor` caches DSPy analysis results in `SupervisorContext.analysis_cache` (TTL, configurable) so repeated/related tasks reuse the compiled supervisor’s outputs.
+  - `RoutingExecutor` calls `DSPySupervisor.route_task` with team + tool descriptions to leverage tool-aware routing and an enhanced signature that can emit an ordered tool plan.
+- Judge / quality evaluation:
+  - Quality assessment uses DSPy-backed logic via `workflows/quality/assessor.py` and `workflows/shared/quality.py`.
+  - `JudgeRefineExecutor` streams intermediate judge evaluations and respects `judge_timeout_seconds` with minimal reasoning effort; refinement is gated by thresholds to control cost.
+
 ## CLI & Automation
 
 - `uv run python -m agentic_fleet.cli.console run -m "..."` – Run a single workflow (streamed or buffered).
@@ -181,7 +200,7 @@ Slow-phase detection: inspect timing breakdowns from history analytics (`scripts
 
 - `make test` / `uv run pytest -v` – Backend tests (stubs avoid external API calls).
 - `make test-config` – Validates YAML wiring and agent imports.
-- `make check` – Runs Ruff, Black, and mypy to enforce style and typing.
+- `make check` – Runs Ruff (lint + format) and mypy to enforce style and typing.
 - `make validate-agents` – Ensures documentation and configuration stay in sync (when the validation script is enabled).
 
 ## Troubleshooting

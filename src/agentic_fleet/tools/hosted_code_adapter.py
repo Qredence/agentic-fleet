@@ -10,6 +10,8 @@ from typing import TYPE_CHECKING, Any, Protocol
 
 from agent_framework import HostedCodeInterpreterTool
 
+from agentic_fleet.tools.serialization import SerializationMixin
+
 if TYPE_CHECKING:  # pragma: no cover - typing helper
 
     class ToolProtocolBase(Protocol):
@@ -23,33 +25,8 @@ if TYPE_CHECKING:  # pragma: no cover - typing helper
 
         def to_dict(self, **kwargs: Any) -> dict[str, Any]: ...
 
-    class _SerializationMixinProto(Protocol):
-        def to_dict(self, **kwargs: Any) -> dict[str, Any]: ...
-
 else:
     from agent_framework import ToolProtocol as ToolProtocolBase
-
-    class _SerializationMixinProto:  # pragma: no cover - runtime placeholder
-        def to_dict(self, **kwargs: Any) -> dict[str, Any]:
-            return {}
-
-
-# Import SerializationMixin with fallback while keeping static analysis happy
-try:
-    from agent_framework._serialization import SerializationMixin as _RuntimeSerializationMixin
-except (ImportError, ModuleNotFoundError, AttributeError):  # pragma: no cover - optional dep
-
-    class _RuntimeSerializationMixin:  # type: ignore[too-many-ancestors]
-        """Fallback SerializationMixin for environments where agent_framework._serialization is not available."""
-
-        def to_dict(self, **_: Any) -> dict[str, Any]:
-            return {}
-
-
-if TYPE_CHECKING:
-    SerializationMixin = _SerializationMixinProto
-else:
-    SerializationMixin = _RuntimeSerializationMixin
 
 
 class HostedCodeInterpreterAdapter(ToolProtocolBase, SerializationMixin):

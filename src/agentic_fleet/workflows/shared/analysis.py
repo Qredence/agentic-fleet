@@ -3,6 +3,7 @@ from __future__ import annotations
 import logging
 from collections.abc import Awaitable, Callable, Mapping
 from dataclasses import asdict
+from time import perf_counter
 from typing import Any
 
 from ...dspy_modules.supervisor import DSPySupervisor
@@ -66,12 +67,15 @@ async def run_analysis_phase(
 ) -> AnalysisResult:
     cache_key = task.strip()
     cache = context.analysis_cache
+    start_t = perf_counter()
     if cache:
         cached = cache.get(cache_key)
         if cached:
             logger.info("Cache hit: reusing DSPy task analysis for task hash.")
             record_phase_status("analysis", "cached")
-            return _to_analysis_result(cached)
+            result = _to_analysis_result(cached)
+            context.latest_phase_timings["analysis"] = max(0.0, perf_counter() - start_t)
+            return result
 
     used_fallback = False
     try:
@@ -105,4 +109,20 @@ async def run_analysis_phase(
         cache.set(cache_key, dict(analysis_payload))
 
     record_phase_status("analysis", "fallback" if used_fallback else "success")
-    return _to_analysis_result(analysis_payload)
+    result = _to_analysis_result(analysis_payload)
+    # Record timing and enforce slow-phase guardrail
+    duration = max(0.0, perf_counter() - start_t)
+    context.latest_phase_timings["analysis"] = duration
+    try:
+        threshold = float(getattr(context.config, "slow_execution_threshold", 0))
+        if threshold and duration > threshold:
+            logger.warning(
+                "Analysis phase exceeded slow_execution_threshold: %.2fs > %.2fs",
+                duration,
+                threshold,
+            )
+    except Exception:
+        # Intentionally ignore errors converting slow_execution_threshold to float:
+        # if misconfigured, simply skip the timing warning.
+        pass
+    return result

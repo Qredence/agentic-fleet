@@ -91,19 +91,19 @@ All executions are saved to `logs/execution_history.json` with the following str
 ### Basic Usage (Console Only)
 
 ```bash
-uv run python console.py run -m "Your question here"
+uv run agentic-fleet run -m "Your question here"
 ```
 
 ### With Verbose Logging
 
 ```bash
-uv run python console.py run -m "Your question here" --verbose
+uv run agentic-fleet run -m "Your question here" --verbose
 ```
 
 ### Capture Console Output to File
 
 ```bash
-uv run python console.py run -m "Your question here" --verbose 2>&1 | tee logs/console_output.log
+uv run agentic-fleet run -m "Your question here" --verbose 2>&1 | tee logs/console_output.log
 ```
 
 ## Configuration
@@ -206,7 +206,7 @@ History saved to: logs/execution_history.json
 
 **Verbose logging not showing:**
 
-- Use `--verbose` flag when running console.py
+- Use `--verbose` flag when running the CLI
 - Check `workflow_config.yaml` logging settings
 - Verify logger configuration in `src/utils/logger.py`
 

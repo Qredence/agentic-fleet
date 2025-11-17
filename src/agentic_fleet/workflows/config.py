@@ -14,11 +14,21 @@ class WorkflowConfig:
     max_stalls: int = 3
     max_resets: int = 2
     enable_streaming: bool = True
+    # Pipeline profile:
+    # - "full": full multi-stage pipeline with analysis/routing/progress/quality/judge
+    # - "light": latency-optimized path for simple tasks
+    pipeline_profile: str = "full"
+    # Heuristic threshold for simple-task detection (word count)
+    simple_task_max_words: int = 40
     parallel_threshold: int = 3
     dspy_model: str = "gpt-5-mini"
     compile_dspy: bool = True
     refinement_threshold: float = 8.0
     enable_refinement: bool = True
+    # Whether to call DSPy for progress/quality assessment.
+    # These can be disabled in "light" profile to reduce LM calls.
+    enable_progress_eval: bool = True
+    enable_quality_eval: bool = True
     enable_completion_storage: bool = False
     agent_models: dict[str, str] | None = None
     agent_temperatures: dict[str, float] | None = None
@@ -37,3 +47,12 @@ class WorkflowConfig:
     enable_judge: bool = True
     judge_model: str | None = None
     judge_reasoning_effort: str = "medium"
+
+    # ------------------------------------------------------------------
+    # Backward-compatibility: some tests expect a ``config`` attribute
+    # exposing dict-like access to underlying settings.
+    # ------------------------------------------------------------------
+    @property
+    def config(self) -> dict[str, Any]:
+        """Return a dict-like view of configuration fields."""
+        return self.__dict__

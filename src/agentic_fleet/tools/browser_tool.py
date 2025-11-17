@@ -15,25 +15,7 @@ from urllib.parse import urlparse
 
 from agent_framework import ToolProtocol
 
-# Import SerializationMixin with fallback for test environments while
-# keeping type-checkers satisfied
-if TYPE_CHECKING:  # pragma: no cover - typing helper
-    from agent_framework._serialization import (
-        SerializationMixin as SerializationMixinBase,
-    )
-else:
-    try:
-        from agent_framework._serialization import (
-            SerializationMixin as SerializationMixinBase,
-        )
-    except (ImportError, ModuleNotFoundError, AttributeError):  # pragma: no cover - optional dep
-
-        class SerializationMixinBase:  # type: ignore[too-many-ancestors]
-            """Fallback SerializationMixin for environments where agent_framework._serialization is not available."""
-
-            def to_dict(self, **_: Any) -> dict[str, Any]:
-                return {}
-
+from agentic_fleet.tools.serialization import SerializationMixin
 
 if TYPE_CHECKING:
     from playwright.async_api import (
@@ -54,7 +36,7 @@ except ImportError:
     PLAYWRIGHT_AVAILABLE = False
 
 
-class BrowserTool(SerializationMixinBase, ToolProtocol):
+class BrowserTool(SerializationMixin, ToolProtocol):
     """
     Browser automation tool using Playwright for real-time web browsing.
 

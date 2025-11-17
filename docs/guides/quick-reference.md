@@ -4,13 +4,13 @@
 
 ```bash
 # Basic execution
-uv run python console.py run -m "Your question"
+uv run agentic-fleet run -m "Your question"
 
 # With detailed logging
-uv run python console.py run -m "Your question" --verbose
+uv run agentic-fleet run -m "Your question" --verbose
 
 # Save output to file
-uv run python console.py run -m "Your question" --verbose 2>&1 | tee logs/output.log
+uv run agentic-fleet run -m "Your question" --verbose 2>&1 | tee logs/output.log
 ```
 
 ## Analyzing History
@@ -80,13 +80,13 @@ code config/workflow_config.yaml
 ### Test a simple query
 
 ```bash
-uv run python console.py run -m "What is 2+2?" --verbose
+uv run agentic-fleet run -m "What is 2+2?" --verbose
 ```
 
 ### Test multi-agent workflow
 
 ```bash
-uv run python console.py run -m "Research quantum computing and write a summary" --verbose
+uv run agentic-fleet run -m "Research quantum computing and write a summary" --verbose
 ```
 
 ### Check last 10 executions
@@ -104,7 +104,7 @@ uv run python analyze_history.py --routing --agents
 ### Monitor execution in real-time
 
 ```bash
-uv run python console.py run -m "Your complex task" --verbose 2>&1 | tee logs/live.log
+uv run agentic-fleet run -m "Your complex task" --verbose 2>&1 | tee logs/live.log
 # In another terminal:
 tail -f logs/workflow.log
 ```
@@ -139,7 +139,7 @@ tail -f logs/workflow.log
 
 ```
 agentic-fleet/
-├── console.py                    # CLI interface
+├── cli/console.py                # Typer CLI entrypoint (exposed as `agentic-fleet`)
 ├── analyze_history.py            # History analysis tool
 ├── config/
 │   └── workflow_config.yaml      # Main configuration

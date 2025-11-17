@@ -49,7 +49,7 @@ initialize_tracing(config)
 `initialize_tracing` attempts:
 
 1. `agent_framework.observability.setup_observability(...)`
-2. Fallback minimal OTLP exporter (service.name = `dspy-agent-framework`)
+2. Fallback minimal OTLP exporter (service.name = `agentic-fleet`)
 
 Idempotent: subsequent calls are no-ops.
 

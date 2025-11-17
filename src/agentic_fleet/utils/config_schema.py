@@ -46,6 +46,11 @@ class SupervisorConfig(BaseModel):
     max_stalls: int = Field(default=3, ge=1, le=20)
     max_resets: int = Field(default=2, ge=0, le=10)
     enable_streaming: bool = True
+    # Pipeline profile: "full" = full multi-stage pipeline,
+    # "light" = latency-optimized path for simple tasks.
+    pipeline_profile: Literal["full", "light"] = "full"
+    # Heuristic threshold (word count) for classifying simple tasks.
+    simple_task_max_words: int = Field(default=40, ge=1, le=2000)
 
 
 class ExecutionConfig(BaseModel):
@@ -61,6 +66,10 @@ class QualityConfig(BaseModel):
 
     refinement_threshold: float = Field(default=8.0, ge=0.0, le=10.0)
     enable_refinement: bool = True
+    # Whether to invoke DSPy for progress / quality evaluation stages.
+    # These can be disabled in light/fast paths to reduce LM calls.
+    enable_progress_eval: bool = True
+    enable_quality_eval: bool = True
     judge_threshold: float = Field(default=7.0, ge=0.0, le=10.0)
     enable_judge: bool = True
     max_refinement_rounds: int = Field(default=2, ge=1, le=5)

@@ -1,3 +1,41 @@
+# AgenticFleet – Copilot Instructions
+
+## Big picture
+
+- AgenticFleet is a DSPy‑enhanced multi‑agent runtime built on Microsoft's agent-framework.
+- The core flow is: task input → DSPy analysis → DSPy routing → agent-framework execution → quality / judge → optional refinement.
+- Treat `src/agentic_fleet/` as the source of truth for runtime behaviour; top‑level examples under `examples/` are for demos only.
+
+## Where things live
+
+- `src/agentic_fleet/workflows/supervisor_workflow.py` + `workflows/fleet/*` – main workflow adapter and execution strategies (delegated, sequential, parallel, handoffs).
+- `src/agentic_fleet/dspy_modules/{supervisor.py,workflow_signatures.py,signatures.py}` – DSPy supervisor and signatures; extend signatures here, not in workflows.
+- `config/workflow_config.yaml` – models, agents, thresholds, tools, tracing, evaluation; change behaviour here instead of hardcoding constants in Python.
+- `src/agentic_fleet/agents/*` + `prompts/*` – specialist agents and their instructions; see `AGENTS.md` and `src/agentic_fleet/AGENTS.md` for roles and rosters.
+- `src/agentic_fleet/tools/*` + `utils/tool_registry.py` – tool adapters and registry; YAML `agents.*.tools` list names, the registry provides instances.
+- `src/agentic_fleet/utils/{cache.py,compiler.py,async_compiler.py}` – DSPy compilation + TTL cache; compilation artefacts live under `logs/compiled_supervisor.pkl`.
+
+## Development workflow
+
+- Backend quality gate: `make check` (ruff, black, mypy) and `make test` (pytest). Key suites include `tests/workflows/test_execution_strategies.py`, `tests/utils/test_tool_registry.py`, and `tests/dspy_modules/test_supervisor_handoffs.py`.
+- Prefer CLI entry points over ad‑hoc scripts: `agentic-fleet run -m "..."` or `uv run python -m agentic_fleet.cli.console run -m "..."`.
+- When changing DSPy signatures, routing, or config, update `src/agentic_fleet/data/supervisor_examples.json` and clear the cache via `uv run python -m agentic_fleet.scripts.manage_cache --clear`.
+- Use `.env` (or environment variables) for secrets: `OPENAI_API_KEY` is required; `TAVILY_API_KEY` enables web search for the Researcher; tracing uses standard OTEL variables.
+
+## Conventions & patterns
+
+- Keep behaviour declarative: tweak `workflow_config.yaml` and training examples instead of embedding prompt text or thresholds directly in code.
+- When adding an agent: create `agents/<name>.py`, a prompt module in `prompts/`, register it in `workflow_config.yaml`, add routing/quality examples, tests, and update `AGENTS.md`.
+- When adding a tool: implement an adapter in `tools/`, register it in `ToolRegistry`, then reference its name from YAML; avoid calling external APIs directly from agents.
+- DSPy outputs often encode lists and scores as strings (e.g. `"Researcher,Analyst"`, `"8/10"`); always parse/validate before use and fall back to safe defaults (delegated mode, conservative scores) on errors.
+- Quality and refinement loops are controlled via `quality.*` keys in `workflow_config.yaml`; prefer adjusting thresholds / round counts there instead of modifying workflow code.
+
+## Docs, prompts, and history
+
+- Architecture and runtime details: `README.md`, `src/agentic_fleet/AGENTS.md`, and `docs/guides/quick-reference.md`.
+- Additional Copilot prompts live under `.github/prompts/`; keep this file high‑level and put task‑specific flows into dedicated prompt files.
+- Execution history is appended to `logs/execution_history.jsonl`; analytics and self‑improvement scripts live in `src/agentic_fleet/scripts/` and `scripts/`.
+
 # DSPy-Enhanced Agent Framework - AI Coding Guide
 
 ## Architecture Overview

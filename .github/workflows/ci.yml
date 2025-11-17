@@ -44,11 +44,11 @@ jobs:
       - name: Install dependencies
         run: uv sync --all-extras
 
-      - name: Run Ruff linter
+      - name: Run Ruff lint checks
         run: uv run ruff check . --output-format=github
 
-      - name: Run Black formatter check
-        run: uv run black --check --diff .
+      - name: Run Ruff formatter check
+        run: uv run ruff format --check .
 
       - name: Check import sorting
         run: uv run ruff check . --select I --output-format=github
@@ -104,17 +104,6 @@ jobs:
 
       - name: Install dependencies
         run: uv sync --all-extras
-
-      - name: Run configuration tests
-        if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.fork == false
-        env:
-          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
-          AZURE_AI_PROJECT_ENDPOINT: ${{ secrets.AZURE_AI_PROJECT_ENDPOINT }}
-          AZURE_AI_SEARCH_ENDPOINT: ${{ secrets.AZURE_AI_SEARCH_ENDPOINT }}
-          AZURE_AI_SEARCH_KEY: ${{ secrets.AZURE_AI_SEARCH_KEY }}
-          AZURE_OPENAI_CHAT_COMPLETION_DEPLOYED_MODEL_NAME: ${{ secrets.AZURE_OPENAI_CHAT_COMPLETION_DEPLOYED_MODEL_NAME }}
-          AZURE_OPENAI_EMBEDDING_DEPLOYED_MODEL_NAME: ${{ secrets.AZURE_OPENAI_EMBEDDING_DEPLOYED_MODEL_NAME }}
-        run: uv run python tests/test_config.py
 
       - name: Run pytest with coverage
         if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.fork == false

@@ -351,9 +351,18 @@ DSPy modules are compiled using BootstrapFewShot optimization with training exam
 
 Tools are registered in the `ToolRegistry` and made available to DSPy modules for:
 
-- Tool-aware routing decisions
-- Pre-analysis tool usage (e.g., web search for context)
-- Tool requirement identification
+- Tool-aware routing decisions with concise tool descriptions and latency hints (`low|medium|high`)
+- Pre-analysis tool usage (e.g., web search for context) with TTL-cached results to reduce repeated network calls
+- Tool requirement identification and a compact, ReAct-style tool plan emitted by the enhanced routing signature
+
+## DSPy Enhancements
+
+- Enhanced `EnhancedTaskRouting` signature outputs:
+  - `tool_plan`: ordered list of tools to use
+  - `tool_goals`: short justification/goals for tool use
+  - `latency_budget`: `low|medium|high` guidance
+- Supervisor helper `decide_tools(task, team, current_context)` provides a compact tool plan to execution.
+- Per-phase timings (analysis, routing, progress) recorded in `phase_timings`; warnings logged when exceeding `slow_execution_threshold`.
 
 ## Configuration
 

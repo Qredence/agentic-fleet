@@ -45,9 +45,10 @@ class ChatAgent:  # pragma: no cover - stub
 
 
 class ChatMessage:  # pragma: no cover - stub
-    def __init__(self, role=None, text: str = ""):
+    def __init__(self, role=None, text: str = "", content: str | None = None, **_):
         self.role = role
-        self.text = text
+        self.text = text or (content or "")
+        self.content = content or self.text
 
 
 class Role:  # pragma: no cover - stub
@@ -102,14 +103,19 @@ else:
     agent_framework_exceptions = sys.modules["agent_framework.exceptions"]
 
 
-class ToolError(Exception):  # pragma: no cover - stub
+class AgentFrameworkException(Exception):  # pragma: no cover - stub  # noqa: N818
     pass
 
 
-class ToolExecutionError(Exception):  # pragma: no cover - stub
+class ToolError(AgentFrameworkException):  # pragma: no cover - stub
     pass
 
 
+class ToolExecutionError(AgentFrameworkException):  # pragma: no cover - stub
+    pass
+
+
+agent_framework_exceptions.AgentFrameworkException = AgentFrameworkException
 agent_framework_exceptions.ToolException = ToolError
 agent_framework_exceptions.ToolExecutionException = ToolExecutionError
 

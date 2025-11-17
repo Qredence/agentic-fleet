@@ -150,14 +150,18 @@ For timing analysis, run history analytics: `uv run python src/agentic_fleet/scr
 ```bash
 git clone https://github.com/Qredence/agentic-fleet.git
 cd agentic-fleet
-uv pip install -r requirements.txt
-uv pip install -e .
+
+# Create and sync a local environment from pyproject.toml
+uv sync
 ```
 
 ### Standard pip
 
 ```bash
-pip install -r requirements.txt
+# From PyPI (library / CLI usage)
+pip install agentic-fleet
+
+# From a local clone (editable install)
 pip install -e .
 ```
 
@@ -325,7 +329,7 @@ uv run python scripts/self_improve.py --max 50
 ## Testing & Quality
 
 ```bash
-make check                 # lint (Ruff), format (Black), type‑check (mypy)
+make check                 # lint + format (Ruff), type‑check (mypy)
 make test                  # run pytest suite
 PYTHONPATH=. uv run pytest tests/workflows/test_supervisor_workflow.py::test_supervisor_workflow -q
 ```

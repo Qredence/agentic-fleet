@@ -171,7 +171,7 @@ clear_cache()
 1. Skip DSPy compilation:
 
 ```bash
-uv run python console.py run -m "Task" --no-compile
+uv run agentic-fleet run -m "Task" --no-compile
 ```
 
 2. Use cached compiled module (automatic after first run)
@@ -360,8 +360,8 @@ uv run python -c "from utils.tool_registry import ToolRegistry; r = ToolRegistry
 3. **Run with Verbose**:
 
    ```bash
-   uv run python console.py run -m "Your task" --verbose
-   uv run python console.py run -m "Task" --verbose
+   uv run agentic-fleet run -m "Your task" --verbose
+   uv run agentic-fleet run -m "Task" --verbose
    ```
 
 4. **Check Tests**:

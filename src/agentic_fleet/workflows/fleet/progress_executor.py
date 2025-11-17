@@ -7,11 +7,12 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from agent_framework import Executor, WorkflowContext, handler
+from agent_framework import Executor, WorkflowContext
 
 from ...dspy_modules.supervisor import DSPySupervisor
 from ...utils.logger import setup_logger
 from ...utils.models import RoutingDecision
+from .decorators import handler
 from .messages import ExecutionMessage, ProgressMessage
 
 if TYPE_CHECKING:
@@ -55,18 +56,32 @@ class ProgressExecutor(Executor):
         logger.info("Evaluating progress...")
 
         try:
-            # Use DSPy supervisor to evaluate progress
-            progress_dict = await self._call_with_retry(
-                self.supervisor.evaluate_progress,
-                original_task=execution_msg.task,
-                completed=execution_msg.outcome.result,
-                status="completion",
-            )
+            cfg = self.context.config
+            pipeline_profile = getattr(cfg, "pipeline_profile", "full")
+            enable_eval = getattr(cfg, "enable_progress_eval", True)
 
-            # Convert to ProgressReport
-            from ..shared.progress import progress_report_from_legacy
+            if pipeline_profile == "light" or not enable_eval:
+                # Lightweight path: skip DSPy progress evaluation to reduce LM calls.
+                from ..shared.models import ProgressReport
 
-            progress_report = progress_report_from_legacy(progress_dict)
+                progress_report = ProgressReport(
+                    action="complete",
+                    feedback="",
+                    used_fallback=True,
+                )
+            else:
+                # Use DSPy supervisor to evaluate progress
+                progress_dict = await self._call_with_retry(
+                    self.supervisor.evaluate_progress,
+                    original_task=execution_msg.task,
+                    completed=execution_msg.outcome.result,
+                    status="completion",
+                )
+
+                # Convert to ProgressReport
+                from ..shared.progress import progress_report_from_legacy
+
+                progress_report = progress_report_from_legacy(progress_dict)
 
             # Extract routing from execution outcome or metadata
             routing = None

@@ -11,6 +11,7 @@ from typing import Any
 
 from ..agents import create_workflow_agents, validate_tool
 from ..dspy_modules.supervisor import DSPySupervisor
+from ..utils.agent_framework_shims import ensure_agent_framework_shims
 from ..utils.cache import TTLCache
 from ..utils.dspy_manager import configure_dspy_settings
 from ..utils.history_manager import HistoryManager
@@ -39,6 +40,7 @@ async def initialize_workflow_context(
         Initialized SupervisorContext
     """
     config = config or WorkflowConfig()
+    ensure_agent_framework_shims()
 
     init_start = datetime.now()
     logger.info("=" * 80)
@@ -113,8 +115,7 @@ async def initialize_workflow_context(
                     registered_count += 1
                     tool_name = getattr(t, "name", t.__class__.__name__)
                     logger.info(
-                        f"Registered tool for {agent_name}: {tool_name} "
-                        f"(type: {type(t).__name__})"
+                        f"Registered tool for {agent_name}: {tool_name} (type: {type(t).__name__})"
                     )
                 except Exception as tool_error:
                     tool_name = getattr(t, "name", t.__class__.__name__)
