@@ -35,6 +35,30 @@ async def run_routing_phase(
     fallback_routing_decision: FallbackRoutingDecision,
     record_phase_status: RecordPhaseStatus,
 ) -> RoutingPlan:
+    """
+    Execute the routing phase to determine agent assignment and execution mode.
+
+    Uses the DSPy-compiled supervisor to route the task based on analysis results,
+    available agents, and tool capabilities. Falls back to heuristic routing on errors.
+
+    Args:
+        task: The task description to be routed
+        analysis: Task analysis result or legacy analysis dict
+        context: Supervisor context with agents and configuration
+        call_with_retry: Async callable wrapper with retry logic
+        compiled_supervisor: DSPy-compiled supervisor module
+        validate_routing_prediction: Function to validate routing output
+        normalize_routing_decision_fn: Function to normalize routing to RoutingDecision
+        fallback_routing_decision: Function providing fallback routing on errors
+        record_phase_status: Function to record phase execution status
+
+    Returns:
+        RoutingPlan containing the routing decision, edge cases, and fallback flag
+
+    Logs:
+        - Warning if routing phase exceeds slow_execution_threshold
+        - Debug message on timing check exceptions (non-critical)
+    """
     start_t = perf_counter()
     analysis_data = (
         analysis if isinstance(analysis, AnalysisResult) else analysis_result_from_legacy(analysis)
