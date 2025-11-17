@@ -181,6 +181,7 @@ exclude = '''
 src = ["src"]
 target-version = "py312"
 line-length = 100
+extend-exclude = ["*.ipynb"]
 
 
 [tool.ruff.lint]

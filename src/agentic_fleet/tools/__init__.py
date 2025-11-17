@@ -1,10 +1,10 @@
 """Tools package for agent framework integration."""
 
 # Provide compatibility shims for agent_framework test stubs so imports succeed
+import logging
 import sys
 import types
 from typing import Any
-import logging
 
 logger = logging.getLogger(__name__)
 # Ensure agent_framework._serialization with SerializationMixin exists (shared identity)
@@ -34,13 +34,13 @@ if _tools_mod_name not in sys.modules:
                 try:
                     out.append(t.to_dict())
                     continue
-                except Exception as e:
+                except Exception:
                     logger.exception("Failed to convert tool '%r' to dict:", t)
             if hasattr(t, "schema"):
                 try:
                     out.append(t.schema)
                     continue
-                except Exception as e:
+                except Exception:
                     logger.exception("Failed to get schema from tool '%r':", t)
         return out
 
