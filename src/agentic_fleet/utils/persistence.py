@@ -7,6 +7,7 @@ conversation persistence service suitable for tests and local execution.
 
 from __future__ import annotations
 
+from copy import deepcopy
 from dataclasses import dataclass
 from types import SimpleNamespace
 from typing import Any
@@ -27,6 +28,14 @@ class DatabaseManager:
     def __init__(self, db_path: str, init_schema: bool = True):
         self.db_path = db_path
         self.init_schema = init_schema
+
+    async def close(self) -> None:
+        """Close any open database connections.
+
+        This is a no-op for the placeholder implementation but provides
+        an async-compatible hook for tests and future extensions.
+        """
+        return None
 
 
 class ConversationPersistenceService:
@@ -68,7 +77,7 @@ class ConversationPersistenceService:
     async def get_conversation_history(self, conv_id: str) -> list[dict[str, Any]]:
         """Return a shallow copy of the conversation history."""
         history = self._conversations.get(conv_id, [])
-        return [entry.copy() for entry in history]
+        return deepcopy(history)
 
     async def _apply_summarization(self, conv_id: str) -> None:
         """Apply summarization based on configured thresholds."""
@@ -82,14 +91,15 @@ class ConversationPersistenceService:
 
         history = self._conversations.get(conv_id, [])
         non_summary_messages = [m for m in history if not m.get("is_summary")]
-        if len(non_summary_messages) <= threshold:
+        total_non_summary = len(non_summary_messages)
+
+        # Only summarize once we have at least `threshold` messages *plus* the
+        # number of recent messages we want to keep. This ensures that after
+        # summarization we keep exactly `keep_recent` non-summary messages.
+        if total_non_summary < threshold + keep_recent:
             return
 
-        if keep_recent >= len(non_summary_messages):
-            # Nothing to summarize yet
-            return
-
-        cutoff = len(non_summary_messages) - keep_recent
+        cutoff = total_non_summary - keep_recent
         to_summarize = non_summary_messages[:cutoff]
         recent = non_summary_messages[cutoff:]
 
@@ -101,4 +111,4 @@ class ConversationPersistenceService:
             "type": "summary",
         }
 
-        self._conversations[conv_id] = [summary_message] + [msg.copy() for msg in recent]
+        self._conversations[conv_id] = [summary_message] + [deepcopy(msg) for msg in recent]

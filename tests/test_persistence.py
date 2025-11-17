@@ -19,8 +19,13 @@ async def temp_db(tmp_path):
 
 @pytest_asyncio.fixture
 async def db_manager(temp_db):
-    """Create database manager."""
-    return DatabaseManager(temp_db, init_schema=False)
+    """Create database manager with initialized schema and proper teardown."""
+    manager = DatabaseManager(temp_db, init_schema=True)
+    try:
+        yield manager
+    finally:
+        # Ensure any database connections/resources are cleaned up after tests.
+        await manager.close()
 
 
 @pytest.fixture

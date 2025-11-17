@@ -40,7 +40,12 @@ from ..handoff_manager import HandoffManager
 from ..orchestration import SupervisorContext
 from ..shared.models import QualityReport
 from ..shared.quality import quality_report_to_legacy
-from ..utils import derive_objectives, estimate_remaining_work, extract_artifacts
+from ..utils import (
+    derive_objectives,
+    estimate_remaining_work,
+    extract_artifacts,
+    synthesize_results,
+)
 from .builder import build_fleet_workflow
 from .messages import FinalResultMessage, TaskMessage
 
@@ -636,6 +641,151 @@ class SupervisorWorkflow:
         agents = self._require_agents()
         return await execute_parallel(agents, agent_names, subtasks)
 
+    async def _execute_delegated(self, agent_name: str, task: str) -> str:
+        """Execute a single agent task (legacy delegated path)."""
+        agents = self._require_agents()
+        agent = agents.get(agent_name)
+        if agent is None:
+            from ..exceptions import AgentExecutionError
+
+            raise AgentExecutionError(
+                agent_name=agent_name, task=task, original_error=ValueError("Agent not found")
+            )
+        result_text: str | None = None
+        async for event in execute_delegated_streaming(agents, agent_name, task):
+            if isinstance(event, WorkflowOutputEvent):
+                data = event.data or {}
+                result_text = str(data.get("result", "")) if isinstance(data, dict) else str(data)
+        if result_text is None:
+            raise RuntimeError("Delegated execution did not produce a result")
+        return result_text
+
+    async def _execute_sequential(self, agent_names: list[str], task: str) -> str:
+        """Execute multiple agents sequentially (legacy path)."""
+        agents = self._require_agents()
+        result_text: str | None = None
+        async for event in execute_sequential_streaming(
+            agents,
+            agent_names,
+            task,
+            enable_handoffs=self.enable_handoffs,
+            handoff_manager=self.handoff_manager,
+        ):
+            if isinstance(event, WorkflowOutputEvent):
+                data = event.data or {}
+                result_text = str(data.get("result", "")) if isinstance(data, dict) else str(data)
+        if result_text is None:
+            raise RuntimeError("Sequential execution did not produce a result")
+        return result_text
+
+    def _normalize_routing_decision(
+        self, routing_raw: dict[str, Any], task: str
+    ) -> RoutingDecision:
+        """Normalize a raw routing decision dict into a RoutingDecision.
+
+        Mirrors the logic used in the legacy execution flow so older tests
+        continue to observe identical behaviour.
+        """
+        routing = ensure_routing_decision(routing_raw)
+        agents = self._require_agents()
+        assigned = [a for a in routing.assigned_to if a in agents]
+        if not assigned and agents:
+            assigned = [next(iter(agents.keys()))]
+        mode = routing.mode
+        if mode is ExecutionMode.PARALLEL and len(assigned) <= 1:
+            mode = ExecutionMode.DELEGATED
+        subtasks = list(routing.subtasks)
+        if mode is ExecutionMode.PARALLEL:
+            if not subtasks:
+                subtasks = [task for _ in assigned]
+            elif len(subtasks) < len(assigned):
+                while len(subtasks) < len(assigned):
+                    subtasks.append(task)
+            else:
+                subtasks = subtasks[: len(assigned)]
+        return routing.update(assigned_to=tuple(assigned), mode=mode, subtasks=tuple(subtasks))
+
+    def _prepare_subtasks(self, agents: list[str], subtasks: list[str], fallback: str) -> list[str]:
+        """Prepare subtasks list to match agent count (pad/truncate)."""
+        if not subtasks:
+            return [fallback for _ in agents]
+        if len(subtasks) < len(agents):
+            padded = list(subtasks)
+            while len(padded) < len(agents):
+                padded.append(fallback)
+            return padded
+        return list(subtasks[: len(agents)])
+
+    def _synthesize_results(self, results: list[str]) -> str:
+        """Combine parallel results into a single string (legacy helper)."""
+        return synthesize_results(results)
+
+    async def _refine_results(self, result: str, improvements: str) -> str:
+        """Refine results using the Writer agent (legacy helper)."""
+        agents = self._require_agents()
+        writer = agents.get("Writer")
+        if writer is None:
+            return result
+        refine_prompt = (
+            "Refine these results based on the feedback below.\n\n"
+            f"Current result: {result}\n\n"
+            f"Feedback: {improvements}"
+        )
+        try:
+            refined = await writer.run(refine_prompt)
+            return str(refined)
+        except Exception:
+            return result
+
+    def _validate_tool(self, tool: Any) -> bool:
+        """Validate tool for legacy tests (None rejected)."""
+        if tool is None:
+            return False
+        try:
+            from ...agents import validate_tool as _vt
+
+            return bool(_vt(tool))
+        except Exception:
+            return False
+
+    def _create_agent(
+        self,
+        name: str,
+        description: str,
+        instructions: str,
+        tools: Any | None = None,
+    ) -> Any:
+        """Minimal agent factory for legacy tests.
+
+        Returns a lightweight object with a ``run`` coroutine; avoids full
+        OpenAI client setup when unnecessary in tests.
+        """
+
+        class _SimpleAgent:
+            def __init__(self, nm: str, desc: str, instr: str, tls: Any | None) -> None:
+                self.name = nm
+                self.description = desc
+                self.instructions = instr
+                self.tools = tls
+
+            async def run(self, prompt: str) -> str:  # pragma: no cover - simple stub
+                return f"{self.name} output for: {prompt[:100]}"
+
+        return _SimpleAgent(name, description, instructions, tools)
+
+    def _get_supervisor_instructions(self) -> str:
+        """Return synthetic supervisor instructions including tool catalog."""
+        tool_catalog = (
+            self.tool_registry.get_tool_descriptions()
+            if self.tool_registry
+            else "No tools available"
+        )
+        return (
+            "Supervisor Instructions:\n"
+            "You coordinate specialized agents (Researcher, Analyst, Writer, Reviewer, Judge).\n\n"
+            "Available tools:\n" + tool_catalog
+        )
+
     def _format_handoff_input(self, handoff: Any) -> str:
         """Delegate to :func:`format_handoff_input` for tests.
 
@@ -796,6 +946,8 @@ async def create_fleet_workflow(
     Returns:
         SupervisorWorkflow instance
     """
+    # Maintain async signature for future extensibility; satisfy lint by explicit await.
+    await asyncio.sleep(0)
     supervisor = context.dspy_supervisor
     if supervisor is None:
         raise RuntimeError("DSPy supervisor must be initialized in context")

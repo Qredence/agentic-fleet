@@ -553,12 +553,26 @@ In your AgenticFleet backend, configure the Cosmos client to use the environment
 ```python
 import os
 from azure.cosmos import CosmosClient
+from azure.identity import DefaultAzureCredential
 
-endpoint = os.environ["COSMOSDB_ACCOUNT_ENDPOINT"]
-key = os.environ["COSMOSDB_ACCOUNT_KEY"]
-database_id = os.environ.get("COSMOSDB_DATABASE_ID", "agentic-fleet")
+endpoint = os.environ.get("AZURE_COSMOS_ENDPOINT")
+database_id = os.environ.get("AZURE_COSMOS_DATABASE", "agentic-fleet")
+use_managed_identity = os.environ.get("AZURE_COSMOS_USE_MANAGED_IDENTITY")
 
-client = CosmosClient(endpoint, credential=key)
+if not endpoint:
+  raise RuntimeError("AZURE_COSMOS_ENDPOINT is required to connect to Cosmos DB.")
+
+if use_managed_identity:
+  credential = DefaultAzureCredential()
+else:
+  key = os.environ.get("AZURE_COSMOS_KEY")
+  if not key:
+    raise RuntimeError(
+      "AZURE_COSMOS_KEY is required when managed identity authentication is disabled."
+    )
+  credential = key
+
+client = CosmosClient(endpoint, credential=credential)
 db = client.get_database_client(database_id)
 
 workflow_runs = db.get_container_client("workflowRuns")

@@ -66,10 +66,12 @@ async def execute_parallel_streaming(
     """Execute subtasks in parallel with streaming."""
     tasks = []
     valid_agent_names = []
+    valid_subtasks = []
     for agent_name, subtask in zip(agent_names, subtasks, strict=False):
         if agent_name in agents:
             tasks.append(agents[agent_name].run(subtask))
             valid_agent_names.append(agent_name)
+            valid_subtasks.append(subtask)
 
     if progress_callback:
         progress_callback.on_progress(
@@ -79,7 +81,7 @@ async def execute_parallel_streaming(
         )
 
     # Yield start events for each agent
-    for agent_name, subtask in zip(valid_agent_names, subtasks, strict=False):
+    for agent_name, subtask in zip(valid_agent_names, valid_subtasks, strict=False):
         yield create_agent_event(
             stage="execution",
             event="agent.start",

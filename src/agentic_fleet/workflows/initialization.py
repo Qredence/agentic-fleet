@@ -74,7 +74,13 @@ async def initialize_workflow_context(
     tool_registry = ToolRegistry()
 
     # Create DSPy supervisor with enhanced signatures enabled (reuse if provided)
-    dspy_supervisor = dspy_supervisor or DSPySupervisor(use_enhanced_signatures=True)
+    if dspy_supervisor is None:
+        dspy_supervisor = DSPySupervisor(use_enhanced_signatures=True)
+    elif not getattr(dspy_supervisor, "use_enhanced_signatures", False):
+        logger.warning(
+            "Provided dspy_supervisor does not have use_enhanced_signatures=True. "
+            "This may lead to inconsistent behavior."
+        )
 
     # Create specialized agents BEFORE compilation if tool-aware DSPy signatures need visibility
     logger.info("Creating specialized agents...")

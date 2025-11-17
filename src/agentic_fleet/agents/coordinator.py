@@ -502,6 +502,13 @@ def create_workflow_agents(
         instructions="Perform detailed analysis with code and visualizations",
         tools=analyst_tool,
     )
+    # Register analyst tool so tests can see code execution capability
+    try:
+        if validate_tool(analyst_tool):
+            tool_registry.register_tool_by_agent("Analyst", analyst_tool)
+            logger.info("HostedCodeInterpreterAdapter registered for Analyst")
+    except Exception as e:
+        logger.warning(f"Failed to register Analyst tool: {e}")
 
     agents["Writer"] = _create_agent(
         name="Writer",

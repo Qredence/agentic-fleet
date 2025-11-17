@@ -16,6 +16,10 @@ from ..workflows.exceptions import HistoryError
 
 logger = logging.getLogger(__name__)
 
+# Track background tasks to satisfy Ruff RUF006 and prevent premature GC of tasks.
+# Tasks are added when created and automatically removed on completion.
+_background_tasks: set[asyncio.Task[Any]] = set()
+
 
 class HistoryManager:
     """Manages execution history storage and retrieval."""
@@ -68,13 +72,18 @@ class HistoryManager:
             raise HistoryError(f"Failed to save execution history: {e}", history_file) from e
 
         # Best-effort mirror to Cosmos DB without affecting main execution.
-        try:
-            from .cosmos import mirror_execution_history
+        async def mirror_in_background():
+            try:
+                from .cosmos import mirror_execution_history
 
-            await asyncio.to_thread(mirror_execution_history, execution)
-        except Exception:  # pragma: no cover - defensive guardrail
-            logger.debug("Cosmos history mirror failed (async path)", exc_info=True)
+                await asyncio.to_thread(mirror_execution_history, execution)
+            except Exception:  # pragma: no cover - defensive guardrail
+                logger.debug("Cosmos history mirror failed (async path)", exc_info=True)
 
+        # Create background mirror task and retain reference until completion (RUF006)
+        task = asyncio.create_task(mirror_in_background())
+        _background_tasks.add(task)
+        task.add_done_callback(_background_tasks.discard)
         return history_file
 
     def save_execution(self, execution: dict[str, Any]) -> str:
@@ -104,7 +113,7 @@ class HistoryManager:
             )
             raise HistoryError(f"Failed to save execution history: {e}", history_file) from e
 
-        # Best-effort mirror to Cosmos DB without affecting main execution.
+        # Best-effort mirror to Cosmos DB. Errors are caught to avoid affecting main execution success.
         try:
             from .cosmos import mirror_execution_history
 
