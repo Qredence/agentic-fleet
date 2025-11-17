@@ -41,6 +41,10 @@ class EnhancedTaskRouting(SignatureBase):
     handoff_strategy = OutputField(desc="planned handoff checkpoints and triggers")
     subtasks = OutputField(desc="task breakdown with handoff points marked")
     workflow_gates = OutputField(desc="checkpoints requiring review before continuation")
+    # Tool-aware enhancements for ReAct-style planning
+    tool_plan = OutputField(desc="ordered list of tools to use (comma-separated)")
+    tool_goals = OutputField(desc="brief goals for why each tool is needed")
+    latency_budget = OutputField(desc="low|medium|high latency budget guidance")
 
 
 class WorkflowHandoffDecision(SignatureBase):
