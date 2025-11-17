@@ -2,20 +2,33 @@
 
 import contextlib
 import os
+
+# Import SerializationMixin with fallback for test environments
+# Ensure tools and tests use the same SerializationMixin class
+import sys
+import types
 from unittest.mock import MagicMock
 
 import pytest
 from agent_framework import ToolProtocol
 
-# Import SerializationMixin with fallback for test environments
 try:
     from agent_framework._serialization import SerializationMixin
 except (ImportError, ModuleNotFoundError, AttributeError):
-    # Fallback for test environments
+    # Fallback for test environments - create once and register
     class SerializationMixin:  # type: ignore[no-redef]
         """Fallback SerializationMixin for test environments."""
 
         pass
+
+    # Register in sys.modules so tools can use the same class
+    if "agent_framework" not in sys.modules:
+        sys.modules["agent_framework"] = types.ModuleType("agent_framework")
+    if "agent_framework._serialization" not in sys.modules:
+        serialization_mod = types.ModuleType("agent_framework._serialization")
+        serialization_mod.SerializationMixin = SerializationMixin
+        sys.modules["agent_framework._serialization"] = serialization_mod
+        sys.modules["agent_framework"]._serialization = serialization_mod
 
 
 # Import _tools_to_dict with fallback for test environments
@@ -25,7 +38,25 @@ except (ImportError, ModuleNotFoundError, AttributeError):
     # Fallback for test environments
     def _tools_to_dict(tools):  # type: ignore[no-redef]
         """Fallback _tools_to_dict for test environments."""
+        # If tools have to_dict method, return list with dict
+        if hasattr(tools, "to_dict"):
+            return [tools.to_dict()]
+        if isinstance(tools, list | tuple):
+            result = []
+            for tool in tools:
+                if hasattr(tool, "to_dict"):
+                    result.append(tool.to_dict())
+            return result if result else None
         return None
+
+    # Register in sys.modules so tools can use it
+    if "agent_framework" not in sys.modules:
+        sys.modules["agent_framework"] = types.ModuleType("agent_framework")
+    if "agent_framework._tools" not in sys.modules:
+        tools_mod = types.ModuleType("agent_framework._tools")
+        tools_mod._tools_to_dict = _tools_to_dict
+        sys.modules["agent_framework._tools"] = tools_mod
+        sys.modules["agent_framework"]._tools = tools_mod
 
 
 from agentic_fleet.tools.browser_tool import BrowserTool

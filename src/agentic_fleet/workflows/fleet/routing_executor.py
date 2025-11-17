@@ -7,12 +7,13 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from agent_framework import Executor, WorkflowContext, handler
+from agent_framework import Executor, WorkflowContext
 
 from ...dspy_modules.supervisor import DSPySupervisor
 from ...utils.logger import setup_logger
 from ...utils.models import RoutingDecision, ensure_routing_decision
 from ..routing.helpers import detect_routing_edge_cases, normalize_routing_decision
+from .decorators import handler
 from .messages import AnalysisMessage, RoutingMessage
 
 if TYPE_CHECKING:
@@ -55,33 +56,56 @@ class RoutingExecutor(Executor):
         """
         logger.info(f"Routing task: {analysis_msg.task[:100]}...")
 
+        # Determine whether we should use a lightweight routing path. When the
+        # pipeline profile is "light" and the analysis phase marked the task as
+        # simple, we skip DSPy routing entirely and fall back to the heuristic
+        # router to save latency for trivial requests.
+        metadata = analysis_msg.metadata or {}
+        simple_mode = bool(metadata.get("simple_mode"))
         try:
-            # Prepare team descriptions
-            agents = self.context.agents or {}
-            team_descriptions = {
-                name: getattr(agent, "description", "") or getattr(agent, "name", "")
-                for name, agent in agents.items()
-            }
+            cfg = self.context.config
+            pipeline_profile = getattr(cfg, "pipeline_profile", "full")
+        except Exception:
+            pipeline_profile = "full"
 
-            # Use DSPy supervisor to route task
-            routing_decision = await self._call_with_retry(
-                self.supervisor.route_task,
-                task=analysis_msg.task,
-                team=team_descriptions,
-                context=analysis_msg.analysis.search_context or "",
-                handoff_history="",
-            )
+        use_light_routing = pipeline_profile == "light" and simple_mode
 
-            # Ensure we have a RoutingDecision
-            routing_decision = ensure_routing_decision(routing_decision)
+        try:
+            if use_light_routing:
+                logger.info("Using heuristic routing for simple task in light profile")
+                routing_decision = self._fallback_routing(analysis_msg.task)
+                routing_decision = ensure_routing_decision(routing_decision)
+                routing_decision = normalize_routing_decision(routing_decision, analysis_msg.task)
+                edge_cases: list[str] = []
+                used_fallback = True
+            else:
+                # Prepare team descriptions
+                agents = self.context.agents or {}
+                team_descriptions = {
+                    name: getattr(agent, "description", "") or getattr(agent, "name", "")
+                    for name, agent in agents.items()
+                }
 
-            # Normalize routing decision
-            routing_decision = normalize_routing_decision(routing_decision, analysis_msg.task)
+                # Use DSPy supervisor to route task
+                routing_decision = await self._call_with_retry(
+                    self.supervisor.route_task,
+                    task=analysis_msg.task,
+                    team=team_descriptions,
+                    context=analysis_msg.analysis.search_context or "",
+                    handoff_history="",
+                )
 
-            # Detect edge cases
-            edge_cases = detect_routing_edge_cases(analysis_msg.task, routing_decision)
-            if edge_cases:
-                logger.info(f"Edge cases detected: {', '.join(edge_cases)}")
+                # Ensure we have a RoutingDecision
+                routing_decision = ensure_routing_decision(routing_decision)
+
+                # Normalize routing decision
+                routing_decision = normalize_routing_decision(routing_decision, analysis_msg.task)
+
+                # Detect edge cases
+                edge_cases = detect_routing_edge_cases(analysis_msg.task, routing_decision)
+                if edge_cases:
+                    logger.info(f"Edge cases detected: {', '.join(edge_cases)}")
+                used_fallback = False
 
             # Create routing plan
             from ..shared.models import RoutingPlan
@@ -89,7 +113,7 @@ class RoutingExecutor(Executor):
             routing_plan = RoutingPlan(
                 decision=routing_decision,
                 edge_cases=edge_cases,
-                used_fallback=False,
+                used_fallback=used_fallback,
             )
 
             # Create routing message

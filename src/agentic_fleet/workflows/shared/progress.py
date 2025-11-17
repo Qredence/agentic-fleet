@@ -3,6 +3,7 @@ from __future__ import annotations
 import logging
 from collections.abc import Awaitable, Callable, Mapping
 from dataclasses import asdict
+from time import perf_counter
 from typing import Any
 
 from ...dspy_modules.supervisor import DSPySupervisor
@@ -46,6 +47,7 @@ async def run_progress_phase(
     fallback_progress: FallbackProgress,
     record_phase_status: RecordPhaseStatus,
 ) -> ProgressReport:
+    start_t = perf_counter()
     used_fallback = False
     try:
         raw_progress = await call_with_retry(
@@ -62,4 +64,17 @@ async def run_progress_phase(
 
     record_phase_status("progress", "fallback" if used_fallback else "success")
     payload["used_fallback"] = used_fallback
+    # Record timing and guardrail
+    duration = max(0.0, perf_counter() - start_t)
+    context.latest_phase_timings["progress"] = duration
+    try:
+        threshold = float(getattr(context.config, "slow_execution_threshold", 0))
+        if threshold and duration > threshold:
+            logger.warning(
+                "Progress phase exceeded slow_execution_threshold: %.2fs > %.2fs",
+                duration,
+                threshold,
+            )
+    except Exception:
+        pass
     return progress_report_from_legacy(payload)

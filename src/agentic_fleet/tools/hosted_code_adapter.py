@@ -6,6 +6,8 @@ an OpenAI function calling compatible schema and a predictable tool name.
 
 from __future__ import annotations
 
+import sys
+import types
 from typing import TYPE_CHECKING, Any, Protocol
 
 from agent_framework import HostedCodeInterpreterTool
@@ -34,16 +36,23 @@ else:
             return {}
 
 
-# Import SerializationMixin with fallback while keeping static analysis happy
-try:
+# Import SerializationMixin, ensuring module exists so tests import same class identity
+try:  # pragma: no cover
     from agent_framework._serialization import SerializationMixin as _RuntimeSerializationMixin
-except (ImportError, ModuleNotFoundError, AttributeError):  # pragma: no cover - optional dep
+except Exception:  # pragma: no cover - create shim
+    mod_name = "agent_framework._serialization"
+    if mod_name not in sys.modules:
+        m = types.ModuleType(mod_name)
 
-    class _RuntimeSerializationMixin:  # type: ignore[too-many-ancestors]
-        """Fallback SerializationMixin for environments where agent_framework._serialization is not available."""
+        class SerializationMixin:  # type: ignore[too-many-ancestors]
+            def to_dict(self, **_: Any) -> dict[str, Any]:
+                return {}
 
-        def to_dict(self, **_: Any) -> dict[str, Any]:
-            return {}
+        m.SerializationMixin = SerializationMixin  # type: ignore[attr-defined]
+        sys.modules[mod_name] = m
+    from agent_framework._serialization import (
+        SerializationMixin as _RuntimeSerializationMixin,  # type: ignore[no-redef]
+    )
 
 
 if TYPE_CHECKING:

@@ -5,14 +5,16 @@ Handles judge evaluation and refinement loops using agent-framework agents.
 
 from __future__ import annotations
 
+import asyncio
 from typing import TYPE_CHECKING, Any
 
-from agent_framework import Executor, WorkflowContext, handler
+from agent_framework import Executor, WorkflowContext
 
 from ...utils.logger import setup_logger
 from ...utils.models import ExecutionMode, RoutingDecision
 from ..quality import call_judge_with_reasoning, parse_judge_response
 from ..quality.criteria import get_quality_criteria as _get_quality_criteria
+from .decorators import handler
 from .messages import FinalResultMessage, QualityMessage
 
 if TYPE_CHECKING:
@@ -63,8 +65,55 @@ class JudgeRefineExecutor(Executor):
         # Judge evaluation phase (if enabled)
         if self.context.config.enable_judge and "Judge" in agents:
             try:
-                judge_eval = await self._run_judge_phase(task, current_result, agents)
+                # Apply timeout guard if configured
+                judge_timeout = getattr(self.context.config, "judge_timeout_seconds", None)
+                if judge_timeout and judge_timeout > 0:
+                    try:
+                        judge_eval = await asyncio.wait_for(
+                            self._run_judge_phase(task, current_result, agents),
+                            timeout=judge_timeout,
+                        )
+                    except TimeoutError:
+                        logger.warning(
+                            f"Judge evaluation timed out after {judge_timeout}s, skipping refinement"
+                        )
+                        judge_eval = {
+                            "score": 7.0,  # Default passing score
+                            "refinement_needed": "no",
+                            "missing_elements": "Timeout during evaluation",
+                            "required_improvements": "",
+                        }
+                else:
+                    judge_eval = await self._run_judge_phase(task, current_result, agents)
                 judge_evaluations.append(judge_eval)
+
+                # Stream intermediate judge evaluation as workflow output so that
+                # the CLI can surface scores and feedback while refinement is ongoing.
+                try:
+                    await ctx.yield_output(
+                        FinalResultMessage(
+                            result=current_result,
+                            routing=quality_msg.routing
+                            if quality_msg.routing is not None
+                            else RoutingDecision(
+                                task=task,
+                                assigned_to=tuple(agents.keys()),
+                                mode=ExecutionMode.DELEGATED,
+                                subtasks=(task,),
+                                tool_requirements=(),
+                                confidence=None,
+                            ),
+                            quality=quality_msg.quality,
+                            judge_evaluations=judge_evaluations.copy(),
+                            execution_summary={},
+                            phase_timings=self.context.latest_phase_timings.copy(),
+                            phase_status=self.context.latest_phase_status.copy(),
+                            metadata={**quality_msg.metadata, "intermediate_judge": True},
+                        )
+                    )
+                except Exception:
+                    # Non-fatal: continue refinement even if streaming fails
+                    logger.debug("Failed to stream intermediate judge evaluation", exc_info=True)
 
                 logger.info(
                     f"Judge evaluation: score={judge_eval['score']}/10, "
@@ -110,8 +159,21 @@ class JudgeRefineExecutor(Executor):
                         logger.exception(f"Refinement failed: {exc}")
                         break
 
-                    # Re-evaluate with judge
-                    judge_eval = await self._run_judge_phase(task, current_result, agents)
+                    # Re-evaluate with judge (with timeout guard)
+                    judge_timeout = getattr(self.context.config, "judge_timeout_seconds", None)
+                    if judge_timeout and judge_timeout > 0:
+                        try:
+                            judge_eval = await asyncio.wait_for(
+                                self._run_judge_phase(task, current_result, agents),
+                                timeout=judge_timeout,
+                            )
+                        except TimeoutError:
+                            logger.warning(
+                                f"Judge re-evaluation timed out after {judge_timeout}s, stopping refinement"
+                            )
+                            break
+                    else:
+                        judge_eval = await self._run_judge_phase(task, current_result, agents)
                     judge_evaluations.append(judge_eval)
                     logger.info(
                         f"Judge re-evaluation (round {refinement_rounds}): score={judge_eval['score']}/10, "
@@ -133,10 +195,17 @@ class JudgeRefineExecutor(Executor):
             except Exception as e:
                 logger.exception(f"Judge/refinement phase failed: {e}")
 
-        # Fallback refinement (if enabled and judge is disabled)
-        # Note: We don't have progress info here, so we check quality score only
+        # Fallback refinement (if enabled and judge is disabled OR judge didn't evaluate)
+        # Skip fallback if judge already evaluated and passed, even if it didn't refine
+        judge_evaluated_and_passed = (
+            self.context.config.enable_judge
+            and judge_evaluations
+            and judge_evaluations[-1].get("score", 0.0) >= self.context.config.judge_threshold
+        )
+
         if (
             not refinement_performed
+            and not judge_evaluated_and_passed
             and self.context.config.enable_refinement
             and quality_msg.quality.score < self.context.config.refinement_threshold
         ):

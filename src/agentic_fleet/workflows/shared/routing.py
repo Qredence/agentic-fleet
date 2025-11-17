@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import logging
 from collections.abc import Awaitable, Callable, Mapping
+from time import perf_counter
 from typing import Any
 
 from ...utils.models import RoutingDecision
@@ -34,6 +35,7 @@ async def run_routing_phase(
     fallback_routing_decision: FallbackRoutingDecision,
     record_phase_status: RecordPhaseStatus,
 ) -> RoutingPlan:
+    start_t = perf_counter()
     analysis_data = (
         analysis if isinstance(analysis, AnalysisResult) else analysis_result_from_legacy(analysis)
     )
@@ -74,4 +76,17 @@ async def run_routing_phase(
         edge_case_store.extend(edge_cases)
 
     record_phase_status("routing", "fallback" if used_fallback else "success")
+    # Record timing and guardrail
+    duration = max(0.0, perf_counter() - start_t)
+    context.latest_phase_timings["routing"] = duration
+    try:
+        threshold = float(getattr(context.config, "slow_execution_threshold", 0))
+        if threshold and duration > threshold:
+            logger.warning(
+                "Routing phase exceeded slow_execution_threshold: %.2fs > %.2fs",
+                duration,
+                threshold,
+            )
+    except Exception:
+        pass
     return RoutingPlan(decision=routing, edge_cases=edge_cases, used_fallback=used_fallback)

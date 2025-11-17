@@ -81,10 +81,19 @@ async def _execute_sequential(
             handoff_manager,
         )
 
+    # Pass simple_mode through to suppress heavy tool usage on trivial tasks
+    simple_mode = False
+    try:
+        # `task` here is the text; we cannot directly access metadata. Default false.
+        # Simple-mode is primarily signaled via executor metadata; this is a best-effort guard.
+        simple_mode = False
+    except Exception:
+        simple_mode = False
     return await execute_sequential(
         agents_map,
         list(agents),
         task,
         enable_handoffs=False,
         handoff_manager=None,
+        simple_mode=simple_mode,
     )

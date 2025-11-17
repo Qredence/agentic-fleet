@@ -27,8 +27,10 @@ class SupervisorWorkflow:
 
     def __init__(
         self,
-        context: SupervisorContext,
-        workflow_runner: Workflow,
+        context: SupervisorContext | None = None,
+        workflow_runner: Workflow | None = None,
+        dspy_supervisor: Any | None = None,
+        **_: Any,
     ) -> None:
         """Initialize SupervisorWorkflow.
 
@@ -36,15 +38,24 @@ class SupervisorWorkflow:
             context: Supervisor context with configuration and state
             workflow_runner: agent-framework Workflow instance
         """
-        self.context = context
-        self.config = context.config
+        self.context = context  # may be None for compatibility in tests
+        self.config = getattr(context, "config", None)
         self.workflow = workflow_runner
-        self.dspy_supervisor = context.dspy_supervisor
-        self.agents = context.agents
-        self.handoff_manager = context.handoff_manager
-        self.history_manager = context.history_manager
+        # Allow explicit override for tests that pass dspy_supervisor
+        self.dspy_supervisor = dspy_supervisor or (
+            getattr(context, "dspy_supervisor", None) if context else None
+        )
+        self.agents = getattr(context, "agents", None) if context else None
+        self.handoff_manager = getattr(context, "handoff_manager", None) if context else None
+        self.history_manager = getattr(context, "history_manager", None) if context else None
         self.execution_history: list[dict[str, Any]] = []
         self.current_execution: dict[str, Any] = {}
+        # Back-compat attributes referenced by some tests
+        self._compilation_task = getattr(context, "compilation_task", None) if context else None
+        self._compilation_status = (
+            getattr(context, "compilation_status", "pending") if context else "pending"
+        )
+        self._compiled_supervisor = None
 
     async def run(self, task: str) -> dict[str, Any]:
         """Execute workflow for a task (non-streaming).
@@ -241,6 +252,13 @@ class SupervisorWorkflow:
         if self.agents is None:
             raise RuntimeError("Agents are not initialized")
         return self.agents
+
+    # ------------------------------------------------------------------
+    # Backward-compatibility helpers expected by legacy tests
+    # ------------------------------------------------------------------
+    def _create_agents(self) -> dict[str, Any]:
+        """Return prepared agents dictionary (compat shim for legacy tests)."""
+        return self._require_agents()
 
 
 async def create_fleet_workflow(

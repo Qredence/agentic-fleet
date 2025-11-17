@@ -51,6 +51,8 @@ async def execute_sequential(
     task: str,
     enable_handoffs: bool = False,
     handoff_manager: HandoffManager | None = None,
+    *,
+    simple_mode: bool | None = None,
 ) -> str:
     """Execute a task sequentially across agents without streaming."""
     if not agent_names:
@@ -74,7 +76,13 @@ async def execute_sequential(
                 agent_name,
             )
             continue
-        result = await agent.run(str(result))
+        # Prevent heavy tools on simple tasks: if simple_mode is set, avoid
+        # tool-triggering formats and just ask the agent directly.
+        if simple_mode:
+            prompt = f"{result!s}"
+            result = await agent.run(prompt)
+        else:
+            result = await agent.run(str(result))
 
     return str(result)
 

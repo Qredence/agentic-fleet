@@ -9,6 +9,8 @@ from __future__ import annotations
 import asyncio
 import contextlib
 import os
+import sys
+import types
 from collections.abc import Callable
 from typing import TYPE_CHECKING, Any, cast
 from urllib.parse import urlparse
@@ -27,12 +29,20 @@ else:
             SerializationMixin as SerializationMixinBase,
         )
     except (ImportError, ModuleNotFoundError, AttributeError):  # pragma: no cover - optional dep
+        # Create a shim submodule so tests import the same class identity
+        mod_name = "agent_framework._serialization"
+        if mod_name not in sys.modules:
+            m = types.ModuleType(mod_name)
 
-        class SerializationMixinBase:  # type: ignore[too-many-ancestors]
-            """Fallback SerializationMixin for environments where agent_framework._serialization is not available."""
+            class SerializationMixin:  # type: ignore[too-many-ancestors]
+                def to_dict(self, **_: Any) -> dict[str, Any]:
+                    return {}
 
-            def to_dict(self, **_: Any) -> dict[str, Any]:
-                return {}
+            m.SerializationMixin = SerializationMixin  # type: ignore[attr-defined]
+            sys.modules[mod_name] = m
+        from agent_framework._serialization import (  # type: ignore[no-redef]
+            SerializationMixin as SerializationMixinBase,
+        )
 
 
 if TYPE_CHECKING:

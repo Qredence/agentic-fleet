@@ -78,7 +78,9 @@ dependencies = [
     "playwright>=1.40.0",
     "mcp>=1.21.0",
     "mlflow>=3.6.0",
-    "agent-framework[viz]"
+    "gepa[dspy]>=0.0.17",
+    "anyio>=4.11.0",
+    "asyncer>=0.0.8",
 ]
 requires-python = ">=3.12,<4"
 
