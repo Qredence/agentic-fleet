@@ -66,7 +66,6 @@ dependencies = [
     "pytest>=9.0.1,<10.0",
     "pytest-asyncio>=0.21.0",           # Updated from requirements.txt
     "pytest-cov>=4.1.0",                # Updated from requirements.txt
-    "black>=25.0.0",                    # Updated from requirements.txt
     "ruff>=0.0.200",
     "mypy>=1.8.0",                      # Updated from requirements.txt
     "flake8>=7.0.0",                    # Added from requirements.txt
@@ -142,7 +141,6 @@ dev = [
     "pytest>=8.4.2",
     "pytest-asyncio>=1.2.0",
     "pytest-cov>=6.0.0",
-    "black>=25.9.0",
     "ruff>=0.14.0",
     "mypy>=1.18.2",
     "debugpy>=1.8.17",
@@ -159,23 +157,6 @@ dev = [
 "agent-framework-copilotstudio" = { git = "https://github.com/microsoft/agent-framework.git", branch = "main", subdirectory = "python/packages/copilotstudio" }
 "agent-framework-mem0" = { git = "https://github.com/microsoft/agent-framework.git", branch = "main", subdirectory = "python/packages/mem0" }
 "agent-framework-devui" = { git = "https://github.com/microsoft/agent-framework.git", branch = "main", subdirectory = "python/packages/devui" }
-
-[tool.black]
-target-version = ['py312']
-line-length = 100
-exclude = '''
-/(
-    \.git
-  | \.mypy_cache
-  | \.pytest_cache
-  | \.ruff_cache
-  | \.venv
-  | node_modules
-  | dist
-  | build
-)/
-'''
-
 
 [tool.ruff]
 src = ["src"]

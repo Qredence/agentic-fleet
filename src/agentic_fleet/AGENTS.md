@@ -200,7 +200,7 @@ Slow-phase detection: per-phase timing is recorded in `phase_timings` (analysis/
 
 - `make test` / `uv run pytest -v` – Backend tests (stubs avoid external API calls).
 - `make test-config` – Validates YAML wiring and agent imports.
-- `make check` – Runs Ruff, Black, and mypy to enforce style and typing.
+- `make check` – Runs Ruff (lint + format) and mypy to enforce style and typing.
 - `make validate-agents` – Ensures documentation and configuration stay in sync (when the validation script is enabled).
 
 ## Troubleshooting

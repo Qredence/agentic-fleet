@@ -44,11 +44,11 @@ jobs:
       - name: Install dependencies
         run: uv sync --all-extras
 
-      - name: Run Ruff linter
+      - name: Run Ruff lint checks
         run: uv run ruff check . --output-format=github
 
-      - name: Run Black formatter check
-        run: uv run black --check --diff .
+      - name: Run Ruff formatter check
+        run: uv run ruff format --check .
 
       - name: Check import sorting
         run: uv run ruff check . --select I --output-format=github

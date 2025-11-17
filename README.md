@@ -329,7 +329,7 @@ uv run python scripts/self_improve.py --max 50
 ## Testing & Quality
 
 ```bash
-make check                 # lint (Ruff), format (Black), type‑check (mypy)
+make check                 # lint + format (Ruff), type‑check (mypy)
 make test                  # run pytest suite
 PYTHONPATH=. uv run pytest tests/workflows/test_supervisor_workflow.py::test_supervisor_workflow -q
 ```

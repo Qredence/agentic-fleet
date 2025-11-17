@@ -9,7 +9,7 @@
 
 ## Code Style
 
-- **Formatting**: Use `black` with the project config (`pyproject.toml`)
+- **Formatting**: Use `ruff format` with the project config (`pyproject.toml`)
 - **Linting**: Use `ruff` (configured in `pyproject.toml`)
 - **Type Checking**: Use `mypy` (Python 3.12 target; config in `pyproject.toml`)
 - **Naming**: snake_case for functions, PascalCase for classes
@@ -84,7 +84,7 @@ from src.workflows.supervisor_workflow import SupervisorWorkflow
 ## Pull Requests
 
 1. Ensure all tests pass: `PYTHONPATH=. uv run pytest -q`
-2. Run formatter: `uv run black --line-length 100 .`
+2. Run formatter: `uv run ruff format .`
 3. Run linter: `uv run flake8`
 4. Run type checker: `uv run mypy`
 5. Update documentation if needed

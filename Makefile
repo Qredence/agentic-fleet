@@ -29,7 +29,7 @@ help:
 	@echo ""
 	@echo "Code Quality:"
 	@echo "  make lint              Run Ruff linter"
-	@echo "  make format            Format code with Black and Ruff"
+	@echo "  make format            Format code with Ruff (lint + style)"
 	@echo "  make type-check        Run mypy type checker"
 	@echo "  make check             Run all quality checks (lint + format + type)"
 	@echo ""
@@ -132,7 +132,7 @@ lint:
 
 format:
 	uv run ruff check --fix .
-	uv run black .
+	uv run ruff format .
 
 type-check:
 	uv run mypy src
