@@ -75,6 +75,6 @@ async def run_progress_phase(
                 duration,
                 threshold,
             )
-    except Exception:
-        pass
+    except Exception as exc:
+        logger.debug("Failed to check slow_execution_threshold in progress phase: %s", exc)
     return progress_report_from_legacy(payload)
