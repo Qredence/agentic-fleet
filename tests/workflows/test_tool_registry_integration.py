@@ -29,14 +29,14 @@ async def test_tool_registry_populated_after_init():
     tool_names = list(available_tools.keys())
 
     # Should have web search tool (from Researcher)
-    assert any(
-        "tavily" in name.lower() or "search" in name.lower() for name in tool_names
-    ), f"Expected web search tool, got: {tool_names}"
+    assert any("tavily" in name.lower() or "search" in name.lower() for name in tool_names), (
+        f"Expected web search tool, got: {tool_names}"
+    )
 
     # Should have code execution tool (from Analyst)
-    assert any(
-        "code" in name.lower() or "interpreter" in name.lower() for name in tool_names
-    ), f"Expected code execution tool, got: {tool_names}"
+    assert any("code" in name.lower() or "interpreter" in name.lower() for name in tool_names), (
+        f"Expected code execution tool, got: {tool_names}"
+    )
 
 
 @pytest.mark.asyncio
@@ -54,9 +54,9 @@ async def test_tool_descriptions_formatted():
     assert descriptions != "No tools are currently available."
 
     # Should contain key information
-    assert (
-        "available to" in descriptions.lower()
-    ), "Descriptions should show which agent has each tool"
+    assert "available to" in descriptions.lower(), (
+        "Descriptions should show which agent has each tool"
+    )
     assert "capabilities" in descriptions.lower(), "Descriptions should list capabilities"
 
 
@@ -69,12 +69,12 @@ async def test_tool_registry_attached_to_supervisor():
     await workflow.initialize(compile_dspy=False)
 
     # Verify supervisor has tool registry
-    assert (
-        workflow.dspy_supervisor.tool_registry is not None
-    ), "Supervisor should have tool registry attached"
-    assert (
-        workflow.dspy_supervisor.tool_registry is workflow.tool_registry
-    ), "Supervisor should reference the same registry instance"
+    assert workflow.dspy_supervisor.tool_registry is not None, (
+        "Supervisor should have tool registry attached"
+    )
+    assert workflow.dspy_supervisor.tool_registry is workflow.tool_registry, (
+        "Supervisor should reference the same registry instance"
+    )
 
 
 @pytest.mark.asyncio
@@ -139,9 +139,9 @@ async def test_tool_aliases_registered():
 
     # Verify alias resolution works
     descriptions = workflow.tool_registry.get_tool_descriptions()
-    assert (
-        "aliases:" in descriptions.lower() or len(available_tools) > 0
-    ), "Tool aliases should be visible in descriptions"
+    assert "aliases:" in descriptions.lower() or len(available_tools) > 0, (
+        "Tool aliases should be visible in descriptions"
+    )
 
 
 @pytest.mark.asyncio
@@ -155,9 +155,9 @@ async def test_supervisor_instructions_include_tools():
     instructions = workflow._get_supervisor_instructions()
 
     # Instructions should mention tools
-    assert (
-        "available tools" in instructions.lower()
-    ), "Instructions should include tool catalog section"
+    assert "available tools" in instructions.lower(), (
+        "Instructions should include tool catalog section"
+    )
 
     # Should list actual tools or say "no tools"
     assert (
