@@ -41,8 +41,8 @@ The DSPy-Enhanced Agent Framework combines Microsoft's agent-framework with DSPy
 1. **Clone the repository**:
 
 ```bash
-git clone https://github.com/Zochory/dspy-agent-framework.git
-cd dspy-agent-framework
+git clone https://github.com/Qredence/agentic-fleet.git
+cd agentic-fleet
 ```
 
 2. **Create virtual environment**:
@@ -55,8 +55,7 @@ source venv/bin/activate  # On Windows: venv\Scripts\activate
 3. **Install dependencies**:
 
 ```bash
-uv pip install -r requirements.txt
-pip install -e .
+uv sync
 ```
 
 4. **Set up environment variables**:
@@ -78,13 +77,13 @@ The command-line interface for interacting with the framework:
 
 ```bash
 # Basic usage
-uv run python console.py run -m "Your question here"
+uv run agentic-fleet run -m "Your question here"
 
 # With verbose logging (see all DSPy decisions)
-uv run python console.py run -m "Your question here" --verbose
+uv run agentic-fleet run -m "Your question here" --verbose
 
 # Save output to file
-uv run python console.py run -m "Your question here" --verbose 2>&1 | tee logs/output.log
+uv run agentic-fleet run -m "Your question here" --verbose 2>&1 | tee logs/output.log
 ```
 
 ### Programmatic Usage
@@ -647,7 +646,7 @@ manager.clear_history(keep_recent=100)
 Enable verbose logging to see DSPy decisions:
 
 ```bash
-uv run python console.py run -m "Your task" --verbose
+uv run agentic-fleet run -m "Your task" --verbose
 ```
 
 Verbose output includes:
@@ -702,7 +701,7 @@ PYTHONPATH=. pytest -q tests/
 
 ```bash
 # Skip DSPy compilation
-uv run python console.py run -m "Task" --no-compile
+uv run agentic-fleet run -m "Task" --no-compile
 ```
 
 **Better Routing Accuracy**:
