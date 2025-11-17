@@ -79,8 +79,8 @@ async def execute_sequential(
         # Prevent heavy tools on simple tasks: if simple_mode is set, avoid
         # tool-triggering formats and just ask the agent directly.
         if simple_mode:
-            prompt = f"{result!s}"
-            result = await agent.run(prompt)
+            # Pass result directly without string conversion
+            result = await agent.run(result)
         else:
             result = await agent.run(str(result))
 

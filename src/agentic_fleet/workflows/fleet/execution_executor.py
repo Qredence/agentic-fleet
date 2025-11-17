@@ -103,7 +103,9 @@ class ExecutionExecutor(Executor):
                             )
                             // 3,
                         )
-                        _ = await asyncio.wait_for(_bounded(), timeout=timeout)
+                        plan_result = await asyncio.wait_for(_bounded(), timeout=timeout)
+                        if hasattr(plan_result, "plan"):
+                            tool_plan_info["generated_plan"] = plan_result.plan
                     except Exception:
                         pass
 

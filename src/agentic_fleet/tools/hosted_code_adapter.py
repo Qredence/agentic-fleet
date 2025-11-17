@@ -6,11 +6,11 @@ an OpenAI function calling compatible schema and a predictable tool name.
 
 from __future__ import annotations
 
-import sys
-import types
 from typing import TYPE_CHECKING, Any, Protocol
 
 from agent_framework import HostedCodeInterpreterTool
+
+from agentic_fleet.tools.serialization import SerializationMixin
 
 if TYPE_CHECKING:  # pragma: no cover - typing helper
 
@@ -25,40 +25,8 @@ if TYPE_CHECKING:  # pragma: no cover - typing helper
 
         def to_dict(self, **kwargs: Any) -> dict[str, Any]: ...
 
-    class _SerializationMixinProto(Protocol):
-        def to_dict(self, **kwargs: Any) -> dict[str, Any]: ...
-
 else:
     from agent_framework import ToolProtocol as ToolProtocolBase
-
-    class _SerializationMixinProto:  # pragma: no cover - runtime placeholder
-        def to_dict(self, **kwargs: Any) -> dict[str, Any]:
-            return {}
-
-
-# Import SerializationMixin, ensuring module exists so tests import same class identity
-try:  # pragma: no cover
-    from agent_framework._serialization import SerializationMixin as _RuntimeSerializationMixin
-except Exception:  # pragma: no cover - create shim
-    mod_name = "agent_framework._serialization"
-    if mod_name not in sys.modules:
-        m = types.ModuleType(mod_name)
-
-        class SerializationMixin:  # type: ignore[too-many-ancestors]
-            def to_dict(self, **_: Any) -> dict[str, Any]:
-                return {}
-
-        m.SerializationMixin = SerializationMixin  # type: ignore[attr-defined]
-        sys.modules[mod_name] = m
-    from agent_framework._serialization import (
-        SerializationMixin as _RuntimeSerializationMixin,  # type: ignore[no-redef]
-    )
-
-
-if TYPE_CHECKING:
-    SerializationMixin = _SerializationMixinProto
-else:
-    SerializationMixin = _RuntimeSerializationMixin
 
 
 class HostedCodeInterpreterAdapter(ToolProtocolBase, SerializationMixin):

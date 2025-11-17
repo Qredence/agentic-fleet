@@ -599,8 +599,8 @@
     "available_tools": "- TavilySearchTool (available to Researcher): Search the web for real-time information using Tavily. Provides accurate, up-to-date results with source citations. [Capabilities: web_search, real_time, citations]",
     "context": "Self-improvement: Quality score 8.0/10",
     "assigned_to": "Researcher",
-    "mode": "sequential",
-    "tool_requirements": []
+    "mode": "delegated",
+    "tool_requirements": ["TavilySearchTool"]
   },
   {
     "task": "2+2",
@@ -608,7 +608,7 @@
     "available_tools": "- TavilySearchTool (available to Researcher): Search the web for real-time information using Tavily. Provides accurate, up-to-date results with source citations. [Capabilities: web_search, real_time, citations]",
     "context": "Self-improvement: Quality score 10.0/10",
     "assigned_to": "Researcher",
-    "mode": "sequential",
+    "mode": "delegated",
     "tool_requirements": []
   },
   {
@@ -618,7 +618,7 @@
     "context": "Self-improvement: Quality score 8.0/10",
     "assigned_to": "Researcher,Analyst,Writer,Reviewer",
     "mode": "sequential",
-    "tool_requirements": []
+    "tool_requirements": ["TavilySearchTool", "HostedCodeInterpreterTool"]
   },
   {
     "task": "Maybe research AI trends or possibly analyze market data",
@@ -752,8 +752,8 @@
     "available_tools": "- TavilySearchTool (available to Researcher): Search the web for real-time information using Tavily. Provides accurate, up-to-date results with source citations. [Capabilities: web_search, real_time, citations]",
     "context": "Self-improvement: Quality score 8.0/10",
     "assigned_to": "Researcher",
-    "mode": "sequential",
-    "tool_requirements": []
+    "mode": "delegated",
+    "tool_requirements": ["TavilySearchTool"]
   },
   {
     "task": "What are the latest developments in AI?",
@@ -761,8 +761,8 @@
     "available_tools": "- TavilySearchTool (available to Researcher): Search the web for real-time information using Tavily. Provides accurate, up-to-date results with source citations. [Capabilities: web_search, real_time, citations]",
     "context": "Self-improvement: Quality score 8.0/10",
     "assigned_to": "Researcher",
-    "mode": "sequential",
-    "tool_requirements": []
+    "mode": "delegated",
+    "tool_requirements": ["TavilySearchTool"]
   },
   {
     "task": "Your question here",
@@ -780,7 +780,7 @@
     "context": "Self-improvement: Quality score 8.0/10",
     "assigned_to": "Researcher",
     "mode": "delegated",
-    "tool_requirements": ["browser", "tavily_search"]
+    "tool_requirements": ["TavilySearchTool"]
   },
   {
     "task": "Who won the 2025 New York mayor election? Search for Zohran Mamdani and provide details about the winner.",
@@ -789,16 +789,16 @@
     "context": "Self-improvement: Quality score 7.0/10",
     "assigned_to": "Researcher,Writer",
     "mode": "sequential",
-    "tool_requirements": ["browser", "tavily_search"]
+    "tool_requirements": ["TavilySearchTool"]
   },
   {
     "task": "Complex multi-step task",
     "team": "Researcher: Web research specialist",
     "available_tools": "- TavilySearchTool (available to Researcher): Search the web for real-time information using Tavily. Provides accurate, up-to-date results with source citations. [Capabilities: web_search, real_time, citations]",
-    "context": "Edge case: Sequential Single Agent - Self-improvement: Quality score 5.0/10 - Sequential mode typically requires multiple agents with dependencies",
+    "context": "Edge case: Sequential Single Agent - Self-improvement: Quality score 5.0/10 - Changed to delegated mode as sequential requires multiple agents",
     "assigned_to": "Researcher",
-    "mode": "sequential",
-    "tool_requirements": []
+    "mode": "delegated",
+    "tool_requirements": ["TavilySearchTool"]
   },
   {
     "task": "What are the latest AI developments in 2025?",
@@ -807,7 +807,7 @@
     "context": "Edge case: Time Sensitive - Self-improvement: Quality score 4.0/10 - Time-sensitive queries require TavilySearchTool",
     "assigned_to": "Researcher,Analyst,Writer,Reviewer",
     "mode": "sequential",
-    "tool_requirements": ["browser", "tavily_search", "code_interpreter"]
+    "tool_requirements": ["TavilySearchTool", "HostedCodeInterpreterTool"]
   },
   {
     "task": "Research climate change mitigation strategies",
@@ -816,6 +816,6 @@
     "context": "Self-improvement: Quality score 8.0/10",
     "assigned_to": "Researcher",
     "mode": "delegated",
-    "tool_requirements": ["browser", "tavily_search"]
+    "tool_requirements": ["TavilySearchTool"]
   }
 ]

@@ -72,7 +72,11 @@ def _fallback_routing(_task: str):
 
 
 def _normalize_progress(payload: dict) -> dict:
-    return {"action": "complete", "feedback": "", "used_fallback": False}
+    return {
+        "action": payload.get("next_action", "complete"),
+        "feedback": payload.get("feedback", ""),
+        "used_fallback": False,
+    }
 
 
 def _fallback_progress() -> dict:

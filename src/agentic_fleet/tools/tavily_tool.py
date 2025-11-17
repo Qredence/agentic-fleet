@@ -11,33 +11,11 @@ from __future__ import annotations
 
 import asyncio
 import os
-import sys
-import types
 from typing import TYPE_CHECKING, Any, TypedDict
 
 from agent_framework import ToolProtocol
 
-# Resolve SerializationMixin from already-imported agent_framework._serialization if present
-_ser_mod = sys.modules.get("agent_framework._serialization")
-if _ser_mod and hasattr(_ser_mod, "SerializationMixin"):  # pragma: no cover
-    SerializationMixin = _ser_mod.SerializationMixin  # type: ignore[assignment]
-else:
-    # Ensure agent_framework._serialization exists so tests import the same class identity
-    try:  # pragma: no cover
-        from agent_framework._serialization import SerializationMixin  # type: ignore[no-redef]
-    except Exception:  # pragma: no cover - create shim submodule for tests
-        mod_name = "agent_framework._serialization"
-        if mod_name not in sys.modules:
-            m = types.ModuleType(mod_name)
-
-            class SerializationMixin:  # type: ignore[too-many-ancestors]
-                def to_dict(self, **_: Any) -> dict[str, Any]:
-                    return {}
-
-            m.SerializationMixin = SerializationMixin  # type: ignore[attr-defined]
-            sys.modules[mod_name] = m
-        from agent_framework._serialization import SerializationMixin  # type: ignore[no-redef]
-
+from agentic_fleet.tools.serialization import SerializationMixin
 
 try:  # pragma: no cover - optional dependency
     from tavily import TavilyClient  # type: ignore[import]
@@ -185,18 +163,3 @@ class TavilySearchTool(ToolProtocol, SerializationMixin):
         Returns the OpenAI function calling schema format.
         """
         return self.schema
-
-
-# Ensure compatibility with test-imported SerializationMixin identity
-try:  # pragma: no cover - test environment only
-    from agent_framework._serialization import SerializationMixin as _TestSerMixin  # type: ignore
-
-    if not issubclass(TavilySearchTool, _TestSerMixin):
-
-        class _TavilySearchToolCompat(TavilySearchTool, _TestSerMixin):  # type: ignore[misc]
-            pass
-
-        _TavilySearchToolCompat.__name__ = "TavilySearchTool"
-        TavilySearchTool = _TavilySearchToolCompat  # type: ignore[assignment]
-except Exception:
-    pass

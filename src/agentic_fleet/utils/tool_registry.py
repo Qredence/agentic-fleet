@@ -161,8 +161,10 @@ class ToolRegistry:
                         self.description = desc
                         self.schema = sch
 
-                    async def run(self, **_: Any) -> Any:  # pragma: no cover - placeholder
-                        return None
+                    async def run(self, **_: Any) -> Any:
+                        raise NotImplementedError(
+                            f"Dict-based tool '{self.name}' is metadata-only and cannot be executed"
+                        )
 
                     def to_dict(self, **__: Any) -> dict[str, Any]:
                         return self.schema

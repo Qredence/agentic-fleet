@@ -2,9 +2,6 @@
 
 import contextlib
 import os
-
-# Import SerializationMixin with fallback for test environments
-# Ensure tools and tests use the same SerializationMixin class
 import sys
 import types
 from unittest.mock import MagicMock
@@ -12,24 +9,7 @@ from unittest.mock import MagicMock
 import pytest
 from agent_framework import ToolProtocol
 
-try:
-    from agent_framework._serialization import SerializationMixin
-except (ImportError, ModuleNotFoundError, AttributeError):
-    # Fallback for test environments - create once and register
-    class SerializationMixin:  # type: ignore[no-redef]
-        """Fallback SerializationMixin for test environments."""
-
-        pass
-
-    # Register in sys.modules so tools can use the same class
-    if "agent_framework" not in sys.modules:
-        sys.modules["agent_framework"] = types.ModuleType("agent_framework")
-    if "agent_framework._serialization" not in sys.modules:
-        serialization_mod = types.ModuleType("agent_framework._serialization")
-        serialization_mod.SerializationMixin = SerializationMixin
-        sys.modules["agent_framework._serialization"] = serialization_mod
-        sys.modules["agent_framework"]._serialization = serialization_mod
-
+from agentic_fleet.tools.serialization import SerializationMixin
 
 # Import _tools_to_dict with fallback for test environments
 try:

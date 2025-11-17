@@ -89,7 +89,7 @@ class AnalysisExecutor(Executor):
                     )
                     if cache is not None:
                         cache.set(cache_key, analysis_dict)  # type: ignore[union-attr]
-                metadata = {**task_msg.metadata, "simple_mode": is_simple}
+                metadata = {**task_msg.metadata, "simple_mode": False}
 
             # Convert to AnalysisResult
             from ..shared.analysis import analysis_result_from_legacy
@@ -145,15 +145,13 @@ class AnalysisExecutor(Executor):
             "search_query": "",
         }
 
-    def _is_simple_task(self, task: str, max_words: int) -> bool:
-        """Heuristic classifier for simple tasks based on word count."""
-        if not task:
-            return True
-        try:
-            words = task.strip().split()
-            return len(words) <= max_words
-        except Exception:
-            return False
+
+def _is_simple_task(self, task: str, max_words: int) -> bool:
+    """Heuristic classifier for simple tasks based on word count."""
+    if not task:
+        return False
+    words = task.strip().split()
+    return len(words) <= max_words
 
     async def _call_with_retry(
         self,

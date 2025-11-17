@@ -9,41 +9,13 @@ from __future__ import annotations
 import asyncio
 import contextlib
 import os
-import sys
-import types
 from collections.abc import Callable
 from typing import TYPE_CHECKING, Any, cast
 from urllib.parse import urlparse
 
 from agent_framework import ToolProtocol
 
-# Import SerializationMixin with fallback for test environments while
-# keeping type-checkers satisfied
-if TYPE_CHECKING:  # pragma: no cover - typing helper
-    from agent_framework._serialization import (
-        SerializationMixin as SerializationMixinBase,
-    )
-else:
-    try:
-        from agent_framework._serialization import (
-            SerializationMixin as SerializationMixinBase,
-        )
-    except (ImportError, ModuleNotFoundError, AttributeError):  # pragma: no cover - optional dep
-        # Create a shim submodule so tests import the same class identity
-        mod_name = "agent_framework._serialization"
-        if mod_name not in sys.modules:
-            m = types.ModuleType(mod_name)
-
-            class SerializationMixin:  # type: ignore[too-many-ancestors]
-                def to_dict(self, **_: Any) -> dict[str, Any]:
-                    return {}
-
-            m.SerializationMixin = SerializationMixin  # type: ignore[attr-defined]
-            sys.modules[mod_name] = m
-        from agent_framework._serialization import (  # type: ignore[no-redef]
-            SerializationMixin as SerializationMixinBase,
-        )
-
+from agentic_fleet.tools.serialization import SerializationMixin
 
 if TYPE_CHECKING:
     from playwright.async_api import (
@@ -64,7 +36,7 @@ except ImportError:
     PLAYWRIGHT_AVAILABLE = False
 
 
-class BrowserTool(SerializationMixinBase, ToolProtocol):
+class BrowserTool(SerializationMixin, ToolProtocol):
     """
     Browser automation tool using Playwright for real-time web browsing.
 

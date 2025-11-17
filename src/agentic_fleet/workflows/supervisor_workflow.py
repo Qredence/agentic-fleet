@@ -94,6 +94,12 @@ class SupervisorWorkflow:
             self._compilation_status = "compiling"
 
     # ------------------- Minimal legacy execution API -------------------
+    @property
+    def agents(self) -> dict[str, Any] | None:
+        """Public accessor for agents."""
+        return self._agents
+
+    # ------------------- Minimal legacy execution API -------------------
     async def run(self, task: str) -> dict[str, Any]:
         """Simplified run compatible with legacy tests."""
         team = {
@@ -212,20 +218,19 @@ class SupervisorWorkflow:
 
     @property
     def compiled_supervisor(self) -> DSPySupervisor:
-        """Return compiled supervisor if available, else uncompiled."""
-        # If completed and we have it, return compiled
-        if self._compiled_supervisor is not None and self._compilation_status == "completed":
-            return self._compiled_supervisor
-
-        # If a task exists and we're not in a running loop, block until done
         if self._compilation_task and not self._compilation_task.done():
             try:
-                loop = asyncio.get_event_loop()
-                if loop.is_running():
-                    # In running loop, do not block (return base)
-                    return self.dspy_supervisor
-                loop.run_until_complete(self._compilation_task)
+                asyncio.get_running_loop()
             except RuntimeError:
+                loop = asyncio.new_event_loop()
+                try:
+                    loop.run_until_complete(self._compilation_task)
+                except Exception:
+                    return self.dspy_supervisor
+                finally:
+                    loop.close()
+            else:
+                # In an active event loop; avoid blocking
                 return self.dspy_supervisor
 
         # If compilation hasn't started (pending) and no task, trigger synchronous compile (legacy behavior)
