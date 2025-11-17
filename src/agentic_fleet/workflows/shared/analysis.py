@@ -122,5 +122,7 @@ async def run_analysis_phase(
                 threshold,
             )
     except Exception:
+        # Intentionally ignore errors converting slow_execution_threshold to float:
+        # if misconfigured, simply skip the timing warning.
         pass
     return result
