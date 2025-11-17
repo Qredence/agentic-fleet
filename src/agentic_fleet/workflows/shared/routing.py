@@ -87,6 +87,8 @@ async def run_routing_phase(
                 duration,
                 threshold,
             )
-    except Exception:
-        pass
+    except Exception as exc:
+        logger.debug(
+            "Exception encountered while checking slow_execution_threshold: %s (ignored because timing is non-critical)", exc
+        )
     return RoutingPlan(decision=routing, edge_cases=edge_cases, used_fallback=used_fallback)
