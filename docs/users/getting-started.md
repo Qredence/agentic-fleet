@@ -14,8 +14,8 @@
 ### Step 1: Clone the Repository
 
 ```bash
-git clone https://github.com/Zochory/dspy-agent-framework.git
-cd dspy-agent-framework
+git clone https://github.com/Qredence/agentic-fleet.git
+cd agentic-fleet
 ```
 
 ### Step 2: Create Virtual Environment
@@ -36,17 +36,19 @@ source venv/bin/activate  # On Windows: venv\Scripts\activate
 
 ### Step 3: Install Dependencies
 
-#### Method 1: Using uv (recommended)
+#### Method 1: Using uv (recommended, from repo root)
 
 ```bash
-uv pip install -r requirements.txt
-uv pip install -e .
+uv sync
 ```
 
 #### Method 2: Using pip (alternative)
 
 ```bash
-pip install -r requirements.txt
+# From PyPI (library / CLI usage)
+pip install agentic-fleet
+
+# Or from the local clone (editable)
 pip install -e .
 ```
 
@@ -73,7 +75,7 @@ TAVILY_API_KEY=tvly-your-tavily-key-here
 
 ```bash
 # Check CLI command
-uv run python console.py --help
+uv run agentic-fleet --help
 
 # Run tests
 PYTHONPATH=. uv run pytest -q tests/
@@ -92,13 +94,13 @@ The command-line interface for interacting with the framework:
 
 ```bash
 # Basic usage
-uv run python console.py run -m "Your question here"
+uv run agentic-fleet run -m "Your question here"
 
 # With verbose logging (see all DSPy decisions)
-uv run python console.py run -m "Your question here" --verbose
+uv run agentic-fleet run -m "Your question here" --verbose
 
 # Save output to file
-uv run python console.py run -m "Your question here" --verbose 2>&1 | tee logs/output.log
+uv run agentic-fleet run -m "Your question here" --verbose 2>&1 | tee logs/output.log
 ```
 
 ### Programmatic Usage
@@ -106,7 +108,7 @@ uv run python console.py run -m "Your question here" --verbose 2>&1 | tee logs/o
 Integrate into your Python applications:
 
 ```python
-from src.workflows import create_supervisor_workflow
+from agentic_fleet.workflows import create_supervisor_workflow
 import asyncio
 
 async def main():
@@ -129,21 +131,14 @@ asyncio.run(main())
 ### Clear Cache (First Run)
 
 ```bash
-# Clear any existing cache
-uv run python -c "from src.utils.compiler import clear_cache; clear_cache()"
-```
-
-### Verify Configuration
-
-```bash
-# Check configuration loads correctly
-uv run python -c "from src.utils.config_loader import load_config; print(load_config())"
+# Clear any existing compiled DSPy supervisor cache
+uv run python -m agentic_fleet.scripts.manage_cache --clear
 ```
 
 ### Run First Task
 
 ```bash
-uv run python console.py run -m "Write a haiku about code quality"
+uv run agentic-fleet run -m "Write a haiku about code quality"
 ```
 
 ## Installation Troubleshooting
@@ -178,7 +173,7 @@ pip install -e .
 
 ```bash
 # Install requirements first
-uv pip install -r requirements.txt
+uv sync
 ```
 
 ## Development Installation
@@ -190,7 +185,7 @@ For development, install additional tools:
 uv pip install -e ".[dev]"
 
 # Or install dev tools separately
-uv pip install pytest pytest-asyncio pytest-cov black flake8 mypy
+uv pip install pytest pytest-asyncio pytest-cov ruff flake8 mypy
 ```
 
 ## Upgrading
@@ -201,19 +196,18 @@ To upgrade to a new version:
 # Pull latest changes
 git pull origin main
 
-# Reinstall dependencies
-uv pip install -r requirements.txt
-uv pip install -e .
+# Re-sync dependencies (from pyproject.toml)
+uv sync
 
 # Clear cache to force recompilation
-uv run python -c "from src.utils.compiler import clear_cache; clear_cache()"
+uv run python -m agentic_fleet.scripts.manage_cache --clear
 ```
 
 ## Uninstallation
 
 ```bash
 # Remove package
-uv pip uninstall dspy-agent-framework
+uv pip uninstall agentic-fleet
 
 # Remove virtual environment
 deactivate
@@ -232,23 +226,20 @@ FROM python:3.11-slim
 
 WORKDIR /app
 
-COPY requirements.txt .
-RUN pip install -r requirements.txt
-
 COPY . .
-RUN pip install -e .
+RUN pip install .
 
 ENV OPENAI_API_KEY=""
 ENV TAVILY_API_KEY=""
 
-CMD ["python", "console.py", "run", "-m", "Your task here"]
+CMD ["agentic-fleet", "run", "-m", "Your task here"]
 ```
 
 Build and run:
 
 ```bash
-docker build -t dspy-agent-framework .
-docker run -it --env-file .env dspy-agent-framework
+docker build -t agentic-fleet .
+docker run -it --env-file .env agentic-fleet
 ```
 
 **Note**: The Docker image uses `uv` for faster dependency installation.

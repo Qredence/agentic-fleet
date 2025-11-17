@@ -9,6 +9,7 @@ from __future__ import annotations
 from datetime import datetime
 from typing import Any
 
+from agent_framework import MagenticAgentMessageEvent, WorkflowOutputEvent
 from rich.console import Console
 from rich.live import Live
 from rich.markdown import Markdown
@@ -47,6 +48,7 @@ class WorkflowRunner:
         max_rounds: int = 15,
         model: str | None = None,
         enable_handoffs: bool | None = None,
+        pipeline_profile: str | None = None,
     ) -> Any:
         """Initialize the workflow with configuration.
 
@@ -128,37 +130,46 @@ class WorkflowRunner:
             enable_handoffs if enable_handoffs is not None else handoffs_cfg.get("enabled", True)
         )
 
+        # Determine pipeline profile (full vs light)
+        supervisor_cfg = (
+            yaml_config.get("workflow", {}).get("supervisor", {})
+            if isinstance(yaml_config.get("workflow"), dict)
+            else {}
+        )
+        effective_profile = (
+            pipeline_profile
+            if pipeline_profile is not None
+            else supervisor_cfg.get("pipeline_profile", "full")
+        )
+        simple_task_max_words = supervisor_cfg.get("simple_task_max_words", 40)
+
+        quality_cfg = (
+            yaml_config.get("workflow", {}).get("quality", {})
+            if isinstance(yaml_config.get("workflow"), dict)
+            else {}
+        )
+
         workflow_config = WorkflowConfig(
             max_rounds=max_rounds,
-            max_stalls=yaml_config.get("workflow", {}).get("supervisor", {}).get("max_stalls", 3),
-            max_resets=yaml_config.get("workflow", {}).get("supervisor", {}).get("max_resets", 2),
-            enable_streaming=yaml_config.get("workflow", {})
-            .get("supervisor", {})
-            .get("enable_streaming", True),
+            max_stalls=supervisor_cfg.get("max_stalls", 3),
+            max_resets=supervisor_cfg.get("max_resets", 2),
+            enable_streaming=supervisor_cfg.get("enable_streaming", True),
+            pipeline_profile=effective_profile,
+            simple_task_max_words=simple_task_max_words,
             parallel_threshold=yaml_config.get("workflow", {})
             .get("execution", {})
             .get("parallel_threshold", 3),
             dspy_model=effective_model,
             compile_dspy=compile_dspy,
-            refinement_threshold=yaml_config.get("workflow", {})
-            .get("quality", {})
-            .get("refinement_threshold", 8.0),
-            enable_refinement=yaml_config.get("workflow", {})
-            .get("quality", {})
-            .get("enable_refinement", True),
-            judge_threshold=yaml_config.get("workflow", {})
-            .get("quality", {})
-            .get("judge_threshold", 7.0),
-            enable_judge=yaml_config.get("workflow", {})
-            .get("quality", {})
-            .get("enable_judge", True),
-            max_refinement_rounds=yaml_config.get("workflow", {})
-            .get("quality", {})
-            .get("max_refinement_rounds", 2),
-            judge_model=yaml_config.get("workflow", {}).get("quality", {}).get("judge_model"),
-            judge_reasoning_effort=yaml_config.get("workflow", {})
-            .get("quality", {})
-            .get("judge_reasoning_effort", "medium"),
+            refinement_threshold=quality_cfg.get("refinement_threshold", 8.0),
+            enable_refinement=quality_cfg.get("enable_refinement", True),
+            enable_progress_eval=quality_cfg.get("enable_progress_eval", True),
+            enable_quality_eval=quality_cfg.get("enable_quality_eval", True),
+            judge_threshold=quality_cfg.get("judge_threshold", 7.0),
+            enable_judge=quality_cfg.get("enable_judge", True),
+            max_refinement_rounds=quality_cfg.get("max_refinement_rounds", 2),
+            judge_model=quality_cfg.get("judge_model"),
+            judge_reasoning_effort=quality_cfg.get("judge_reasoning_effort", "medium"),
             enable_completion_storage=yaml_config.get("openai", {}).get(
                 "enable_completion_storage", False
             ),
@@ -211,6 +222,7 @@ class WorkflowRunner:
         agent_outputs: dict[str, str] = {}
         reasoning_shown = False
         judge_evaluations: list[dict[str, Any]] = []
+        final_data: dict[str, Any] | None = None
 
         # Display task
         self.console.print(
@@ -231,8 +243,8 @@ class WorkflowRunner:
                 async for event in self.workflow.run_stream(message):
                     event_type = type(event).__name__
 
-                    # Handle WorkflowOutputEvent with final data
-                    if hasattr(event, "data") and isinstance(event.data, dict):
+                    # Handle final workflow outputs (metadata + result)
+                    if isinstance(event, WorkflowOutputEvent) and isinstance(event.data, dict):
                         final_data = event.data
 
                         # Show reasoning steps if not already shown
@@ -274,40 +286,54 @@ class WorkflowRunner:
                         if judge_evals:
                             judge_evaluations = judge_evals
 
-                    # Handle different event types
-                    if hasattr(event, "agent_id"):
-                        current_agent = event.agent_id  # type: ignore[attr-defined]
-                        if current_agent not in agent_outputs:
-                            agent_outputs[current_agent] = ""
+                        # Don't treat WorkflowOutputEvent as an agent message
+                        continue
 
-                    if hasattr(event, "text"):
-                        # Streaming text from agent
-                        if current_agent:
-                            agent_outputs[current_agent] += event.text or ""  # type: ignore[attr-defined]
+                    # Handle agent message events only (skip framework-level \"fleet\" events)
+                    if isinstance(event, MagenticAgentMessageEvent):
+                        agent_id = getattr(event, "agent_id", None)
+                        # Internal workflow events are wrapped with agent_id=\"fleet\"; use them
+                        # only for lightweight status updates (and do not stream them verbosely).
+                        if agent_id == "fleet":
+                            if self.verbose:
+                                msg_obj = getattr(event, "message", None)
+                                text_val = getattr(msg_obj, "text", None)
+                                if text_val:
+                                    self.console.print(
+                                        f"[dim]{text_val}[/dim]",
+                                        style="dim",
+                                    )
+                            continue
+
+                        if agent_id:
+                            current_agent = agent_id
+                            if current_agent not in agent_outputs:
+                                agent_outputs[current_agent] = ""
+
+                        # Streaming updates may arrive as incremental tokens
+                        text_fragment = None
+                        message_obj = getattr(event, "message", None)
+                        if message_obj is not None and hasattr(message_obj, "text"):
+                            text_fragment = message_obj.text
+
+                        if text_fragment:
+                            # Append to the current agent's output
+                            target_agent = current_agent or agent_id or "Agent"
+                            agent_outputs[target_agent] = agent_outputs.get(target_agent, "") + str(
+                                text_fragment
+                            )
                             status_text = self._format_agent_output(
-                                current_agent,
-                                agent_outputs[current_agent],
+                                target_agent,
+                                agent_outputs[target_agent],
                             )
                             live.update(status_text)
 
-                    elif hasattr(event, "message"):
-                        # Complete message from agent
-                        if event.message and hasattr(event.message, "text"):  # type: ignore[attr-defined]
-                            live.stop()
-                            title_agent = current_agent or "Agent"
-                            self.console.print(
-                                Panel(
-                                    event.message.text,  # type: ignore[attr-defined]
-                                    title=f"[bold green]✅ {title_agent}[/bold green]",
-                                    border_style="green",
-                                )
-                            )
-                            live.start()
+                        continue
 
-                    elif hasattr(event, "data") and self.verbose:
-                        # Final result (metadata-only event when verbose)
+                    # For non-agent events, only show minimal diagnostics in verbose mode
+                    if self.verbose:
                         self.console.print(
-                            f"[dim]Event: {event_type}[/dim]",
+                            f"[dim]{event_type}: {event!r}[/dim]",
                             style="dim",
                         )
 
@@ -343,6 +369,26 @@ class WorkflowRunner:
         self.console.print(
             f"\n[bold green]⏱️  Total Execution Time: {execution_time:.2f}s[/bold green]\n"
         )
+
+        # Show final result summary (who responded, score, answer)
+        if final_data:
+            result_text = str(final_data.get("result", "") or "")
+            routing = final_data.get("routing") or {}
+            quality = final_data.get("quality") or {}
+
+            agents = ", ".join(routing.get("assigned_to", [])) if isinstance(routing, dict) else ""
+            score = quality.get("score") if isinstance(quality, dict) else None
+            score_str = f"{score}/10" if isinstance(score, int | float) else "N/A"
+
+            self.console.print(
+                Panel(
+                    f"[bold]Agents:[/bold] {agents or 'unknown'}\n"
+                    f"[bold]Quality score:[/bold] {score_str}\n\n"
+                    f"[bold]Answer:[/bold]\n{result_text}",
+                    title="[bold green]✅ Final Result[/bold green]",
+                    border_style="green",
+                )
+            )
 
     async def run_without_streaming(self, message: str) -> dict[str, Any]:
         """Run workflow without streaming and return complete result.

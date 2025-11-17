@@ -130,11 +130,19 @@ def run(
             model=model,
             max_rounds=15,
             enable_handoffs=handoffs,
+            # In fast mode, request the light pipeline profile to reduce
+            # the number of LM calls for simple queries.
+            pipeline_profile="light" if fast else None,
         )
         # Apply optional fast-mode tuning on top of the loaded config.
         if fast and runner.workflow_config is not None:
             cfg = runner.workflow_config
-            # Reduce judge/refinement cost in fast mode.
+            # Switch to light profile and reduce judge/refinement cost in fast mode.
+            cfg.pipeline_profile = "light"
+            cfg.enable_progress_eval = False
+            cfg.enable_quality_eval = False
+            cfg.enable_judge = False
+            cfg.enable_refinement = False
             cfg.max_refinement_rounds = min(cfg.max_refinement_rounds, 1)
             cfg.judge_reasoning_effort = "minimal"
 

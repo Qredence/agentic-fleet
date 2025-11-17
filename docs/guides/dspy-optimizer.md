@@ -24,7 +24,7 @@ dspy:
 
 ```bash
 # Run workflow - optimization happens automatically
-uv run python console.py run -m "Your task here"
+uv run agentic-fleet run -m "Your task here"
 ```
 
 The framework will:
@@ -48,16 +48,16 @@ Or use the CLI command:
 
 ```bash
 # Run GEPA optimization once (auto light effort)
-uv run python console.py gepa-optimize --auto light
+uv run agentic-fleet gepa-optimize --auto light
 
 # Alternate: explicit iteration budget (disables --auto)
-uv run python console.py gepa-optimize --max-full-evals 60
+uv run agentic-fleet gepa-optimize --max-full-evals 60
 
 # Alternate: explicit metric call budget (disables --auto)
-uv run python console.py gepa-optimize --max-metric-calls 120
+uv run agentic-fleet gepa-optimize --max-metric-calls 120
 
 # With history augmentation (still exclusive selection of ONE strategy)
-uv run python console.py gepa-optimize --auto medium --use-history --history-min-quality 9.0
+uv run agentic-fleet gepa-optimize --auto medium --use-history --history-min-quality 9.0
 ```
 
 ## Understanding the Optimizers
@@ -240,7 +240,7 @@ Cache is automatically invalidated when:
 rm logs/compiled_supervisor.pkl*
 
 # Next run will recompile
-uv run python console.py run -m "Test task"
+uv run agentic-fleet run -m "Test task"
 ```
 
 Or use the Python API:
@@ -303,21 +303,21 @@ await workflow.initialize(compile_dspy=False)
 
 ```bash
 # Standard run (uses cached compiled module if available)
-uv run python console.py run -m "Analyze multi-agent benefits"
+uv run agentic-fleet run -m "Analyze multi-agent benefits"
 
 # Force recompilation
 rm logs/compiled_supervisor.pkl
-uv run python console.py run -m "Same task"
+uv run agentic-fleet run -m "Same task"
 ```
 
 ### GEPA Optimization
 
 ```bash
 # Run GEPA optimization and save
-uv run python console.py gepa-optimize
+uv run agentic-fleet gepa-optimize
 
 # With options
-uv run python console.py gepa-optimize \
+uv run agentic-fleet gepa-optimize \
   --examples data/supervisor_examples.json \
   --auto light \
   --use-history \
@@ -614,14 +614,14 @@ print('GEPA avg quality:', g['metrics']['quality_score']['mean'])
 
 ```bash
 # Run with optimization
-uv run python console.py run -m "Task"
+uv run agentic-fleet run -m "Task"
 
 # GEPA optimize
-uv run python console.py gepa-optimize --auto light
+uv run agentic-fleet gepa-optimize --auto light
 
 # Clear cache
 rm logs/compiled_supervisor.pkl*
 
 # Evaluate performance
-uv run python console.py evaluate --dataset data/evaluation_tasks.jsonl
+uv run agentic-fleet evaluate --dataset data/evaluation_tasks.jsonl
 ```

@@ -24,11 +24,19 @@ Please enhance the response by addressing the missing elements and required impr
 
 
 async def refine_results(
-    agents: dict[str, Any],
     results: Any,
     improvements: str,
+    agents: dict[str, Any],
 ) -> Any:
     """Refine results based on quality assessment."""
+    writer = agents.get("Writer")
+    if writer is None:
+        # No writer available; return original results without refinement
+        return str(results)
     refinement_task = f"Refine these results based on improvements needed:\n{results}\n\nImprovements: {improvements}"
-    response = await agents["Writer"].run(refinement_task)
-    return str(response)
+    try:
+        response = await writer.run(refinement_task)
+        return str(response) if response is not None else str(results)
+    except Exception:
+        # Defensive: on any failure, return original results
+        return str(results)

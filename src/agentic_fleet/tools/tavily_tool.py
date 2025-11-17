@@ -15,20 +15,7 @@ from typing import TYPE_CHECKING, Any, TypedDict
 
 from agent_framework import ToolProtocol
 
-# Import SerializationMixin with fallback for test environments
-if TYPE_CHECKING:  # pragma: no cover - typing helper
-    from agent_framework._serialization import SerializationMixin
-else:
-    try:
-        from agent_framework._serialization import SerializationMixin
-    except (ImportError, ModuleNotFoundError, AttributeError):  # pragma: no cover - optional dep
-
-        class SerializationMixin:  # type: ignore[too-many-ancestors]
-            """Fallback SerializationMixin for environments where agent_framework._serialization is not available."""
-
-            def to_dict(self, **_: Any) -> dict[str, Any]:
-                return {}
-
+from agentic_fleet.tools.serialization import SerializationMixin
 
 try:  # pragma: no cover - optional dependency
     from tavily import TavilyClient  # type: ignore[import]

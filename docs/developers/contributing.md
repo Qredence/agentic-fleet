@@ -3,24 +3,23 @@
 ## Development Setup
 
 1. Clone the repository
-2. Create virtual environment: `uv python -m venv venv`
-3. Activate: `source venv/bin/activate`
-4. Install dependencies: `uv pip install -r requirements.txt`
-5. Install in editable mode: `uv pip install -e .`
+2. (Optional) Create virtual environment: `uv python -m venv venv && source venv/bin/activate`
+3. From the repo root, install dependencies via uv: `uv sync`
+4. Verify the CLI: `uv run agentic-fleet --help`
 
 ## Code Style
 
-- **Formatting**: Use `black --line-length 100`
-- **Linting**: Use `flake8` (see `.flake8` config)
-- **Type Checking**: Use `mypy` (targets Python 3.13)
+- **Formatting**: Use `ruff format` with the project config (`pyproject.toml`)
+- **Linting**: Use `ruff` (configured in `pyproject.toml`)
+- **Type Checking**: Use `mypy` (Python 3.12 target; config in `pyproject.toml`)
 - **Naming**: snake_case for functions, PascalCase for classes
 
 ## Testing
 
-- Run tests: `PYTHONPATH=. uv run pytest -q`
-- Run specific test: `PYTHONPATH=. uv run pytest -q tests/workflows/test_supervisor_workflow.py::test_name`
-- With coverage: `PYTHONPATH=. uv run pytest --cov=src --cov-report=term-missing`
-- Tests use pytest-asyncio for async tests
+- Run tests: `make test` (or `uv run pytest -v`)
+- Run a specific test: `uv run pytest -q tests/workflows/test_supervisor_workflow.py::test_name`
+- With coverage: `uv run pytest --cov=src --cov-report=term-missing`
+- Tests use `pytest-asyncio` for async tests
 
 ## Code Organization
 
@@ -85,7 +84,7 @@ from src.workflows.supervisor_workflow import SupervisorWorkflow
 ## Pull Requests
 
 1. Ensure all tests pass: `PYTHONPATH=. uv run pytest -q`
-2. Run formatter: `uv run black --line-length 100 .`
+2. Run formatter: `uv run ruff format .`
 3. Run linter: `uv run flake8`
 4. Run type checker: `uv run mypy`
 5. Update documentation if needed

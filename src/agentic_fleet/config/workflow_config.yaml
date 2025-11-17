@@ -53,12 +53,13 @@ workflow:
     enable_refinement: true
     quality_threshold: 7.0 # Lowered from 8.0 to reduce refinement cycles
     # Judge-based refinement settings
-    judge_threshold: 5.0 # Trigger refinement when Judge score < 5.0
+    judge_threshold: 7.0 # Trigger refinement when Judge score < 7.0 (raised from 5.0)
     enable_judge: true # Enable Judge agent for quality evaluation
     max_refinement_rounds: 1 # Reduced from 2 to 1 for faster execution
-    judge_model: gpt-5 # Use gpt-5 for reasoning capabilities
+    judge_model: gpt-5-mini # Use gpt-5-mini for faster evaluation (changed from gpt-5)
     judge_reasoning_effort: minimal # Changed from medium to minimal for speed
-    refinement_min_improvement: 1.0 # Skip refinement if score doesn't improve by 1 point
+    judge_timeout_seconds: 30 # Timeout for judge evaluation (new)
+    refinement_min_improvement: 1.0 # Skip refinement if not improving by 1 point
 
   performance:
     enable_caching: true # Enable response caching

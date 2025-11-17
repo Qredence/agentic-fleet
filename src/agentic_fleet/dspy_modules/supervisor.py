@@ -99,6 +99,7 @@ class DSPySupervisor(dspy.Module):
             available_tools=available_tools or "No tools available",
             current_context=current_context or "Initial task",
             handoff_history="",  # TaskRouting is now handoff-aware
+            workflow_state=current_context or "Initial workflow state",
         )
         execution_mode = getattr(routing, "execution_mode", "delegated")
         assigned_to = getattr(routing, "assigned_to", "")
@@ -127,6 +128,52 @@ class DSPySupervisor(dspy.Module):
             subtasks=subtasks_val,
             confidence=confidence,
         )
+
+    def decide_tools(
+        self,
+        task: str,
+        team: dict[str, str] | None = None,
+        current_context: str = "",
+    ) -> dict[str, Any]:
+        """
+        Produce a lightweight, tool-aware plan for ReAct-style execution.
+
+        Returns a compact plan:
+          - tool_plan: ordered list of tool names (as list[str])
+          - tool_goals: brief goal string for tool usage
+          - latency_budget: one of low|medium|high
+        """
+        team_capabilities = ""
+        if team:
+            team_capabilities = "\n".join([f"{k}: {v}" for k, v in team.items()])
+
+        available_tools = ""
+        if self.tool_registry:
+            available_tools = self.tool_registry.get_tool_descriptions()
+
+        routing = self.task_router(
+            task=task,
+            team_capabilities=team_capabilities or "Unspecified team",
+            available_tools=available_tools or "No tools available",
+            current_context=current_context or "Initial task",
+            handoff_history="",
+            workflow_state=current_context or "Initial workflow state",
+        )
+
+        raw_plan = getattr(routing, "tool_plan", "") or ""
+        # Normalize comma/newline separated into a clean list
+        if isinstance(raw_plan, str):
+            raw_plan_list = [p.strip() for p in raw_plan.replace("\n", ",").split(",") if p.strip()]
+        elif isinstance(raw_plan, list | tuple):
+            raw_plan_list = [str(p).strip() for p in raw_plan if str(p).strip()]
+        else:
+            raw_plan_list = []
+
+        return {
+            "tool_plan": raw_plan_list,
+            "tool_goals": getattr(routing, "tool_goals", "") or "",
+            "latency_budget": getattr(routing, "latency_budget", "") or "",
+        }
 
     def analyze_task(
         self,

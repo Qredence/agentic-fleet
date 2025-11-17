@@ -81,10 +81,13 @@ async def _execute_sequential(
             handoff_manager,
         )
 
+    # TODO: Determine simple_mode from executor metadata to suppress heavy tool usage on trivial tasks
+    simple_mode = False
     return await execute_sequential(
         agents_map,
         list(agents),
         task,
         enable_handoffs=False,
         handoff_manager=None,
+        simple_mode=simple_mode,
     )

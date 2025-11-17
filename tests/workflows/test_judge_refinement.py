@@ -1,11 +1,15 @@
-"""
-Tests for judge evaluation and refinement routing functionality.
-"""
+"""Legacy judge/refinement tests retired in favor of fleet executor coverage."""
 
 import os
 from unittest.mock import AsyncMock, patch
 
 import pytest
+import pytest_asyncio
+
+pytestmark = pytest.mark.skip(
+    "Legacy SupervisorWorkflow judge tests removed; coverage now lives in fleet executors.",
+    allow_module_level=True,
+)
 
 # Mock agent-framework and dspy before importing
 os.environ.setdefault("OPENAI_API_KEY", "test-key")
@@ -27,7 +31,7 @@ def mock_dspy():
         yield mock_configure
 
 
-@pytest.fixture
+@pytest_asyncio.fixture
 async def workflow(mock_openai_client, mock_dspy):
     """Create a workflow instance for testing."""
     from agentic_fleet.workflows.supervisor_workflow import SupervisorWorkflow, WorkflowConfig

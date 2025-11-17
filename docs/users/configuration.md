@@ -118,16 +118,16 @@ Many configuration values can be overridden at runtime without editing `workflow
 
 ```bash
 # Swap the DSPy model for a single run
-uv run python console.py run -m "task" --model gpt-3.5-turbo
+uv run agentic-fleet run -m "task" --model gpt-3.5-turbo
 
 # Skip compilation when iterating quickly
-uv run python console.py run -m "task" --no-compile
+uv run agentic-fleet run -m "task" --no-compile
 
 # Turn on verbose logging/streaming
-uv run python console.py run -m "task" --verbose
+uv run agentic-fleet run -m "task" --verbose
 ```
 
-Use `uv run python console.py run --help` to inspect the full list of override flags.
+Use `uv run agentic-fleet run --help` to inspect the full list of override flags.
 
 ## Configuration Sections
 
@@ -400,7 +400,7 @@ evaluation:
   stop_on_failure: false
 ```
 
-- **enabled** (`bool`, default: `false`): Toggle evaluation CLI (`console.py evaluate`) and guards inside `Evaluator`.
+- **enabled** (`bool`, default: `false`): Toggle evaluation CLI (for example, via `agentic-fleet evaluate`) and guards inside `Evaluator`.
 - **dataset_path** (`str`): JSONL dataset containing tasks/keywords.
 - **output_dir** (`str`): Where summaries + per-task metrics are written.
 - **metrics** (`List[str]`): Metric IDs from `src/evaluation/metrics.py`.
@@ -419,7 +419,7 @@ workflow:
     enabled: true
 ```
 
-- **enabled** (`bool`, default: `true`): Turns structured handoffs on/off. When disabled, sequential execution reverts to simple pass-through and DSPy routing ignores handoff history. Override per-run with `console.py run --handoffs/--no-handoffs`.
+- **enabled** (`bool`, default: `true`): Turns structured handoffs on/off. When disabled, sequential execution reverts to simple pass-through and DSPy routing ignores handoff history. Override per-run with `agentic-fleet run --handoffs/--no-handoffs`.
 
 ## Environment Variables
 
@@ -476,7 +476,7 @@ Training examples teach DSPy optimal routing patterns. Format:
 - Cover all execution modes
 - Include tool-using and non-tool examples
 - Add edge cases and boundary conditions
-- Test after adding examples: `python console.py run -m "Test task" --verbose`
+- Test after adding examples: `agentic-fleet run -m "Test task" --verbose`
 
 ## Programmatic Configuration
 
@@ -741,7 +741,7 @@ logging:
 ### Config file not loading
 
 - Ensure `config/workflow_config.yaml` exists and contains valid YAML (use `uv run python -m yaml lint` if unsure).
-- When the file is missing, defaults kick in—check the active config by running `uv run python console.py run --show-config`.
+- When the file is missing, defaults kick in—check the active config by running `uv run agentic-fleet run --show-config`.
 
 ### Cached module feels stale
 

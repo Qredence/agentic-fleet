@@ -7,10 +7,11 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any
 
-from agent_framework import Executor, WorkflowContext, handler
+from agent_framework import Executor, WorkflowContext
 
 from ...dspy_modules.supervisor import DSPySupervisor
 from ...utils.logger import setup_logger
+from .decorators import handler
 from .messages import AnalysisMessage, TaskMessage
 
 if TYPE_CHECKING:
@@ -53,14 +54,42 @@ class AnalysisExecutor(Executor):
         """
         logger.info(f"Analyzing task: {task_msg.task[:100]}...")
 
+        # Simple-task fast path: for light pipeline profile and obviously short tasks,
+        # skip DSPy analysis entirely and fall back to the heuristic analysis. This
+        # avoids an extra LM call for trivial requests.
+        cfg = self.context.config
+        pipeline_profile = getattr(cfg, "pipeline_profile", "full")
+        simple_threshold = getattr(cfg, "simple_task_max_words", 40)
+
+        is_simple = self._is_simple_task(task_msg.task, simple_threshold)
+        use_light_path = pipeline_profile == "light" and is_simple
+
         try:
-            # Use DSPy supervisor to analyze task
-            analysis_dict = await self._call_with_retry(
-                self.supervisor.analyze_task,
-                task_msg.task,
-                use_tools=True,
-                perform_search=True,
-            )
+            if use_light_path:
+                # Heuristic analysis only; mark as simple in metadata so downstream
+                # routing can choose lightweight execution paths.
+                analysis_dict = self._fallback_analysis(task_msg.task)
+                metadata = {**task_msg.metadata, "simple_mode": True}
+            else:
+                # Use cached DSPy analysis when available
+                cache = self.context.analysis_cache
+                cache_key = task_msg.task.strip()
+                cached = cache.get(cache_key) if cache is not None else None  # type: ignore[union-attr]
+
+                if cached is not None:
+                    logger.info("Using cached DSPy analysis for task")
+                    analysis_dict = cached
+                else:
+                    # Use DSPy supervisor to analyze task (tool-aware when tools exist)
+                    analysis_dict = await self._call_with_retry(
+                        self.supervisor.analyze_task,
+                        task_msg.task,
+                        use_tools=True,
+                        perform_search=True,
+                    )
+                    if cache is not None:
+                        cache.set(cache_key, analysis_dict)  # type: ignore[union-attr]
+                metadata = {**task_msg.metadata, "simple_mode": False}
 
             # Convert to AnalysisResult
             from ..shared.analysis import analysis_result_from_legacy
@@ -71,7 +100,7 @@ class AnalysisExecutor(Executor):
             analysis_msg = AnalysisMessage(
                 task=task_msg.task,
                 analysis=analysis_result,
-                metadata=task_msg.metadata,
+                metadata=metadata,
             )
 
             logger.info(
@@ -115,6 +144,14 @@ class AnalysisExecutor(Executor):
             "needs_web_search": False,
             "search_query": "",
         }
+
+
+def _is_simple_task(self, task: str, max_words: int) -> bool:
+    """Heuristic classifier for simple tasks based on word count."""
+    if not task:
+        return False
+    words = task.strip().split()
+    return len(words) <= max_words
 
     async def _call_with_retry(
         self,

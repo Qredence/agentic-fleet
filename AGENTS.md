@@ -26,9 +26,8 @@ Config (excerpt from `workflow_config.yaml`):
 ```yaml
 agents:
   researcher:
-    model: gpt-5.1
+    model: gpt-5-mini
     tools: [TavilySearchTool]
-    temperature: 0.5
 ```
 
 ### 📊 Analyst
@@ -48,9 +47,8 @@ Config:
 
 ```yaml
 analyst:
-  model: gpt-4o
+  model: gpt-5-mini
   tools: [HostedCodeInterpreterTool]
-  temperature: 0.3
 ```
 
 ### ✍️ Writer
@@ -70,8 +68,7 @@ Config:
 
 ```yaml
 writer:
-  model: gpt-4o
-  temperature: 0.7
+  model: gpt-5-mini
 ```
 
 ### 👀 Reviewer
@@ -90,8 +87,7 @@ Config:
 
 ```yaml
 reviewer:
-  model: gpt-4o
-  temperature: 0.4
+  model: gpt-5-mini
 ```
 
 ### ⚖️ Judge
@@ -149,13 +145,13 @@ Combine agents when tasks span multiple domains (e.g. research + quantitative an
 
 ## Tooling Matrix
 
-| Tool                      | Provided By           | Purpose                 | Notes                                  |
-| ------------------------- | --------------------- | ----------------------- | -------------------------------------- |
-| TavilyMCPTool             | Researcher            | Web search w/ citations | Requires `TAVILY_API_KEY`              |
-| BrowserTool               | Researcher (optional) | Direct page interaction | Install Playwright; respect robots.txt |
-| HostedCodeInterpreterTool | Analyst, Coder        | Compute & visualize     | Sandboxed; no external network         |
+| Tool                      | Provided By           | Purpose                 | Notes                                                |
+| ------------------------- | --------------------- | ----------------------- | ---------------------------------------------------- |
+| TavilyMCPTool             | Researcher            | Web search w/ citations | Requires `TAVILY_API_KEY`; medium latency            |
+| BrowserTool               | Researcher (optional) | Direct page interaction | Install Playwright; respect robots.txt; high latency |
+| HostedCodeInterpreterTool | Analyst, Coder        | Compute & visualize     | Sandboxed; no external network; high latency/cost    |
 
-Extending tooling: implement agent-framework `ToolProtocol`, register in `ToolRegistry`, reference in YAML.
+Extending tooling: implement agent-framework `ToolProtocol`, register in `ToolRegistry`, reference in YAML. The `ToolRegistry` now provides concise tool descriptions with latency hints and TTL-caches common results.
 
 ---
 
@@ -203,7 +199,6 @@ See `docs/developers/code-quality.md` for detailed documentation.
 
 ## Performance Tuning
 
-- Lower temperature for deterministic roles (Analyst, Coder, Verifier).
 - Use lighter model (gpt-5-mini) for supervisor to reduce latency.
 - Limit `max_bootstrapped_demos` during prototyping; increase for production stability.
 - Cache compilation; clear when signatures or examples change.
@@ -211,6 +206,8 @@ See `docs/developers/code-quality.md` for detailed documentation.
 - Use async compilation (`utils/async_compiler.py`) for non-blocking workflow initialization.
 - Monitor cache hit rates via `CacheStats` to optimize TTL settings.
 - Leverage incremental cache cleanup to reduce memory usage in long-running processes.
+- Prefer minimal judge reasoning effort and 1 refinement round; set `judge_timeout_seconds`.
+- Use `gepa_max_metric_calls` and small `max_bootstrapped_demos` for faster DSPy optimization.
 
 ---
 

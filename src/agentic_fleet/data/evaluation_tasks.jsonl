@@ -1,3 +1,13 @@
+{"task": "Summarize the main idea of the following: Paris is the capital of France and a center for art and fashion.", "keywords": ["Paris", "France"], "type": "writing"}
+{"task": "List three recent facts about OpenAI (no older than 2024) and include brief sources.", "keywords": ["OpenAI"], "type": "research"}
+{"task": "Compute the mean and median of the numbers: [4, 7, 9, 12, 15].", "keywords": ["mean", "median"], "type": "analysis"}
+{"task": "Compare AWS and Azure AI services in two short bullet points each.", "keywords": ["AWS", "Azure"], "type": "writing"}
+{"task": "Explain what retrieval-augmented generation (RAG) is in 2-3 sentences.", "keywords": ["RAG"], "type": "writing"}
+{"task": "Given this text: 'LLMs often hallucinate.' Provide two mitigation strategies.", "keywords": ["hallucination"], "type": "analysis"}
+{"task": "Find the capital of Japan and one cultural landmark there.", "keywords": ["Japan"], "type": "research"}
+{"task": "Create a one-paragraph executive summary about AI model evaluation.", "keywords": ["evaluation"], "type": "writing"}
+{"task": "Generate a small Python snippet to count words in 'hello world hello'.", "keywords": ["Python"], "type": "analysis"}
+{"task": "Identify two risks of using browser tools in agents and how to mitigate them.", "keywords": ["browser"], "type": "analysis"}
 {"id": "task1", "message": "Research and summarize three benefits of multi-agent workflows", "keywords": ["multi-agent", "workflow", "benefits"]}
 {"id": "task2", "message": "Generate a concise explanation of DSPy routing advantages", "keywords": ["DSPy", "routing", "advantages"]}
 {"id": "task3", "message": "Write a short paragraph on tracing importance in AI systems", "keywords": ["tracing", "AI", "visibility"]}

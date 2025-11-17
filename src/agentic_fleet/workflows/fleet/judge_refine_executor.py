@@ -5,14 +5,16 @@ Handles judge evaluation and refinement loops using agent-framework agents.
 
 from __future__ import annotations
 
+import asyncio
 from typing import TYPE_CHECKING, Any
 
-from agent_framework import Executor, WorkflowContext, handler
+from agent_framework import Executor, WorkflowContext
 
 from ...utils.logger import setup_logger
 from ...utils.models import ExecutionMode, RoutingDecision
 from ..quality import call_judge_with_reasoning, parse_judge_response
 from ..quality.criteria import get_quality_criteria as _get_quality_criteria
+from .decorators import handler
 from .messages import FinalResultMessage, QualityMessage
 
 if TYPE_CHECKING:
@@ -63,80 +65,151 @@ class JudgeRefineExecutor(Executor):
         # Judge evaluation phase (if enabled)
         if self.context.config.enable_judge and "Judge" in agents:
             try:
-                judge_eval = await self._run_judge_phase(task, current_result, agents)
-                judge_evaluations.append(judge_eval)
-
-                logger.info(
-                    f"Judge evaluation: score={judge_eval['score']}/10, "
-                    f"refinement_needed={judge_eval['refinement_needed']}"
-                )
-
-                # Refinement loop
-                refinement_rounds = 0
-                while (
-                    refinement_rounds < self.context.config.max_refinement_rounds
-                    and judge_eval.get("refinement_needed", "no").lower() == "yes"
-                    and judge_eval.get("score", 0.0) < self.context.config.judge_threshold
-                ):
-                    refinement_rounds += 1
-                    logger.info(
-                        f"Starting refinement round {refinement_rounds}/{self.context.config.max_refinement_rounds}"
-                    )
-
-                    # Determine refinement agent
-                    refinement_agent_name = judge_eval.get("refinement_agent")
-                    if not refinement_agent_name or refinement_agent_name not in agents:
-                        refinement_agent_name = self._determine_refinement_agent(
-                            judge_eval.get("missing_elements", "")
-                        )
-
-                    if refinement_agent_name not in agents:
-                        logger.warning(
-                            f"Refinement agent '{refinement_agent_name}' not available, skipping refinement"
-                        )
-                        break
-
-                    # Build refinement task
-                    refinement_task = self._build_refinement_task(current_result, judge_eval)
-
-                    # Execute refinement using agent-framework's agent.run()
+                # Apply timeout guard if configured
+                judge_timeout = getattr(self.context.config, "judge_timeout_seconds", None)
+                if judge_timeout and judge_timeout > 0:
                     try:
-                        refinement_agent = agents[refinement_agent_name]
-                        refined_result = await refinement_agent.run(refinement_task)
-                        current_result = str(refined_result) if refined_result else current_result
-                        logger.info(f"Refinement completed by {refinement_agent_name}")
-                        refinement_performed = True
-                    except Exception as exc:
-                        logger.exception(f"Refinement failed: {exc}")
-                        break
-
-                    # Re-evaluate with judge
+                        judge_eval = await asyncio.wait_for(
+                            self._run_judge_phase(task, current_result, agents),
+                            timeout=judge_timeout,
+                        )
+                    except TimeoutError:
+                        logger.warning(
+                            f"Judge evaluation timed out after {judge_timeout}s; skipping judge phase for this round"
+                        )
+                        judge_eval = None
+                else:
                     judge_eval = await self._run_judge_phase(task, current_result, agents)
+
+                if judge_eval is None:
+                    logger.warning("Judge evaluation unavailable; skipping judge-driven refinement")
+                else:
                     judge_evaluations.append(judge_eval)
+
+                    # Stream intermediate judge evaluation as workflow output so that
+                    # the CLI can surface scores and feedback while refinement is ongoing.
+                    try:
+                        await ctx.yield_output(
+                            FinalResultMessage(
+                                result=current_result,
+                                routing=quality_msg.routing
+                                if quality_msg.routing is not None
+                                else RoutingDecision(
+                                    task=task,
+                                    assigned_to=(),  # Unknown at this point
+                                    mode=ExecutionMode.DELEGATED,
+                                    subtasks=(task,),
+                                    tool_requirements=(),
+                                    confidence=0.0,  # Indicate unavailable routing
+                                ),
+                                quality=quality_msg.quality,
+                                judge_evaluations=judge_evaluations.copy(),
+                                execution_summary={},
+                                phase_timings=self.context.latest_phase_timings.copy(),
+                                phase_status=self.context.latest_phase_status.copy(),
+                                metadata={**quality_msg.metadata, "intermediate_judge": True},
+                            )
+                        )
+                    except Exception:
+                        # Non-fatal: continue refinement even if streaming fails
+                        logger.debug(
+                            "Failed to stream intermediate judge evaluation", exc_info=True
+                        )
+
                     logger.info(
-                        f"Judge re-evaluation (round {refinement_rounds}): score={judge_eval['score']}/10, "
+                        f"Judge evaluation: score={judge_eval['score']}/10, "
                         f"refinement_needed={judge_eval['refinement_needed']}"
                     )
 
-                    # Stop refinement if threshold is met or judge says no more needed
-                    judge_score = judge_eval.get("score", 0.0)
-                    if judge_score >= self.context.config.judge_threshold:
+                    # Refinement loop
+                    refinement_rounds = 0
+                    while (
+                        refinement_rounds < self.context.config.max_refinement_rounds
+                        and judge_eval.get("refinement_needed", "no").lower() == "yes"
+                        and judge_eval.get("score", 0.0) < self.context.config.judge_threshold
+                    ):
+                        refinement_rounds += 1
                         logger.info(
-                            f"Quality threshold met ({judge_score} >= {self.context.config.judge_threshold}), "
-                            "stopping refinement"
+                            f"Starting refinement round {refinement_rounds}/{self.context.config.max_refinement_rounds}"
                         )
-                        break
-                    elif judge_eval.get("refinement_needed", "no").lower() == "no":
-                        logger.info("Judge determined no further refinement needed")
-                        break
+
+                        # Determine refinement agent
+                        refinement_agent_name = judge_eval.get("refinement_agent")
+                        if not refinement_agent_name or refinement_agent_name not in agents:
+                            refinement_agent_name = self._determine_refinement_agent(
+                                judge_eval.get("missing_elements", "")
+                            )
+
+                        if refinement_agent_name not in agents:
+                            logger.warning(
+                                f"Refinement agent '{refinement_agent_name}' not available, skipping refinement"
+                            )
+                            break
+
+                        # Build refinement task
+                        refinement_task = self._build_refinement_task(current_result, judge_eval)
+
+                        # Execute refinement using agent-framework's agent.run()
+                        try:
+                            refinement_agent = agents[refinement_agent_name]
+                            refined_result = await refinement_agent.run(refinement_task)
+                            current_result = (
+                                str(refined_result) if refined_result else current_result
+                            )
+                            logger.info(f"Refinement completed by {refinement_agent_name}")
+                            refinement_performed = True
+                        except Exception as exc:
+                            logger.exception(f"Refinement failed: {exc}")
+                            break
+
+                        # Re-evaluate with judge (with timeout guard)
+                        judge_timeout = getattr(self.context.config, "judge_timeout_seconds", None)
+                        if judge_timeout and judge_timeout > 0:
+                            try:
+                                judge_eval = await asyncio.wait_for(
+                                    self._run_judge_phase(task, current_result, agents),
+                                    timeout=judge_timeout,
+                                )
+                            except TimeoutError:
+                                logger.warning(
+                                    f"Judge re-evaluation timed out after {judge_timeout}s, stopping refinement"
+                                )
+                                break
+                        else:
+                            judge_eval = await self._run_judge_phase(task, current_result, agents)
+                        judge_evaluations.append(judge_eval)
+                        logger.info(
+                            f"Judge re-evaluation (round {refinement_rounds}): score={judge_eval['score']}/10, "
+                            f"refinement_needed={judge_eval['refinement_needed']}"
+                        )
+
+                        # Stop refinement if threshold is met or judge says no more needed
+                        judge_score = judge_eval.get("score", 0.0)
+                        if judge_score >= self.context.config.judge_threshold:
+                            logger.info(
+                                f"Quality threshold met ({judge_score} >= {self.context.config.judge_threshold}), "
+                                "stopping refinement"
+                            )
+                            break
+                        elif judge_eval.get("refinement_needed", "no").lower() == "no":
+                            logger.info("Judge determined no further refinement needed")
+                            break
 
             except Exception as e:
                 logger.exception(f"Judge/refinement phase failed: {e}")
 
-        # Fallback refinement (if enabled and judge is disabled)
-        # Note: We don't have progress info here, so we check quality score only
+        # Fallback refinement (if enabled and judge is disabled OR judge didn't evaluate)
+        # Skip fallback if judge already evaluated and passed, even if it didn't refine
+        last_judge_eval = judge_evaluations[-1] if judge_evaluations else None
+        judge_evaluated_and_passed = (
+            self.context.config.enable_judge
+            and last_judge_eval is not None
+            and last_judge_eval.get("score", 0.0) >= self.context.config.judge_threshold
+        )
+
         if (
             not refinement_performed
+            and not judge_evaluated_and_passed
             and self.context.config.enable_refinement
             and quality_msg.quality.score < self.context.config.refinement_threshold
         ):
@@ -188,9 +261,9 @@ class JudgeRefineExecutor(Executor):
                 task=task,
                 assigned_to=(),
                 mode=ExecutionMode.DELEGATED,
-                subtasks=(),
+                subtasks=(task,),
                 tool_requirements=(),
-                confidence=None,
+                confidence=0.0,
             )
 
         final_msg = FinalResultMessage(

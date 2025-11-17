@@ -12,6 +12,8 @@ import logging
 from dataclasses import dataclass, field
 from typing import Any, Protocol, cast, runtime_checkable
 
+from ..utils.cache import CacheStats, TTLCache  # type: ignore
+
 logger = logging.getLogger(__name__)
 
 
@@ -41,6 +43,9 @@ class ToolMetadata:
     capabilities: set[str] = field(default_factory=set)
     use_cases: list[str] = field(default_factory=list)
     aliases: list[str] = field(default_factory=list)
+    # Efficiency hints
+    latency_cost_hint: str = "medium"  # low|medium|high
+    concise_description: str = ""
 
 
 class ToolRegistry:
@@ -55,6 +60,8 @@ class ToolRegistry:
         """Initialize an empty tool registry."""
         self._tools: dict[str, ToolMetadata] = {}
         self._agent_tools: dict[str, list[str]] = {}
+        # Simple result cache for tool calls to avoid repeated network usage
+        self._tool_result_cache: TTLCache[str, str] = TTLCache(ttl_seconds=300)
 
     def register_tool(
         self,
@@ -98,6 +105,8 @@ class ToolRegistry:
             capabilities=inferred_capabilities,
             use_cases=use_cases or [],
             aliases=aliases,
+            latency_cost_hint=self._infer_latency_hint(inferred_capabilities),
+            concise_description=self._to_concise_description(description),
         )
 
         self._tools[name] = metadata
@@ -133,9 +142,44 @@ class ToolRegistry:
             return
 
         if isinstance(tool, dict):
-            # Handle dict tool config - for now, skip as not implemented
-            logger.debug(f"Skipping dict tool config for {agent_name}: {tool}")
-            return
+            # Accept OpenAI function-style dicts or minimal dict specs
+            try:
+                if "function" in tool:
+                    fn = tool["function"] or {}
+                    name = fn.get("name") or "anonymous_tool"
+                    description = fn.get("description") or "No description"
+                    schema = {"type": "function", "function": fn}
+                else:
+                    # Minimal fallback: expect 'name' at top-level
+                    name = tool.get("name") or "anonymous_tool"
+                    description = tool.get("description") or "No description"
+                    schema = tool
+
+                class _DictToolAdapter:
+                    def __init__(self, nm: str, desc: str, sch: dict[str, Any]) -> None:
+                        self.name = nm
+                        self.description = desc
+                        self.schema = sch
+
+                    async def run(self, **_: Any) -> Any:
+                        raise NotImplementedError(
+                            f"Dict-based tool '{self.name}' is metadata-only and cannot be executed"
+                        )
+
+                    def to_dict(self, **__: Any) -> dict[str, Any]:
+                        return self.schema
+
+                adapter = _DictToolAdapter(name, description, schema)
+                self.register_tool(
+                    name=name,
+                    tool=cast(RunnableTool, adapter),
+                    agent=agent_name,
+                    capabilities=list(self._infer_capabilities(name, description)),
+                    use_cases=[],
+                )
+            except Exception as e:
+                logger.debug(f"Skipping dict tool config for {agent_name}: {e}")
+                return
 
         # Support list/tuple of tools (future multi-tool agents)
         if isinstance(tool, list | tuple):
@@ -155,12 +199,14 @@ class ToolRegistry:
         )
 
         # Infer capabilities and use cases based on tool type
-        capabilities = self._infer_capabilities_from_tool(tool)
-        use_cases = self._infer_use_cases_from_tool(tool)
+        # Cast to RunnableTool for type checker since we've already validated it's not a dict/list
+        tool_instance = cast(RunnableTool, tool)
+        capabilities = self._infer_capabilities_from_tool(tool_instance)
+        use_cases = self._infer_use_cases_from_tool(tool_instance)
 
         self.register_tool(
             name=tool_name,
-            tool=cast(RunnableTool, tool),
+            tool=tool_instance,
             agent=agent_name,
             capabilities=capabilities,
             use_cases=use_cases,
@@ -220,7 +266,9 @@ class ToolRegistry:
 
             alias_part = f" | aliases: {', '.join(tool.aliases)}" if tool.aliases else ""
             desc = f"- {tool.name}{alias_part} (available to {tool.agent})"
-            desc += f": {tool.description}"
+            hint = f" [Latency: {tool.latency_cost_hint}]"
+            summary = tool.concise_description or tool.description
+            desc += f": {summary}{hint}"
 
             if tool.capabilities:
                 caps = ", ".join(sorted(tool.capabilities))
@@ -299,10 +347,33 @@ class ToolRegistry:
         tool_instance = meta.tool_instance
 
         try:
+            # Cache by tool + args signature
+            cache_key = self._tool_cache_key(tool_name, kwargs)
+            cached = self._tool_result_cache.get(cache_key)
+            if cached is not None:
+                return cached
             result = await tool_instance.run(**kwargs)
-            return str(result)
+            result_str = str(result) if result is not None else ""
+            # Cache small results to prevent excessive memory
+            if len(result_str) <= 5000:
+                self._tool_result_cache.set(cache_key, result_str)
+            return result_str
         except Exception as e:
             return f"Error executing tool {tool_name}: {e!s}"
+
+    def get_tool_cache_stats(self) -> CacheStats:
+        """Expose cache statistics for tool result caching."""
+        return self._tool_result_cache.get_stats()
+
+    def _tool_cache_key(self, tool_name: str, kwargs: dict[str, Any]) -> str:
+        """Build a stable cache key for a tool invocation."""
+        try:
+            # Sort kwargs for stable hashing
+            items = sorted((k, str(v)) for k, v in kwargs.items())
+            arg_sig = "|".join(f"{k}={v}" for k, v in items)
+        except Exception:
+            arg_sig = str(kwargs)
+        return f"{tool_name}:{arg_sig}"
 
     def _infer_capabilities(self, name: str, description: str) -> set[str]:
         """Infer capabilities from tool name and description."""
@@ -356,6 +427,25 @@ class ToolRegistry:
             )
 
         return use_cases
+
+    def _infer_latency_hint(self, capabilities: set[str]) -> str:
+        """Rudimentary latency/cost hint from capabilities."""
+        caps_lower = {c.lower() for c in capabilities}
+        if "code_execution" in caps_lower:
+            return "high"
+        if "real_time" in caps_lower:
+            return "high"
+        if "web_search" in caps_lower:
+            return "medium"
+        return "medium"
+
+    def _to_concise_description(self, description: str, max_len: int = 200) -> str:
+        """Clamp long descriptions for prompt efficiency."""
+        if not description:
+            return ""
+        if len(description) <= max_len:
+            return description
+        return description[: max_len - 1].rstrip() + "…"
 
     def clear(self) -> None:
         """Clear all registered tools."""

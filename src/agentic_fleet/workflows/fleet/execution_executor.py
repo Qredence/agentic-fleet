@@ -8,10 +8,11 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from agent_framework import Executor, WorkflowContext, handler
+from agent_framework import Executor, WorkflowContext
 
 from ...utils.logger import setup_logger
 from ..shared.execution import run_execution_phase
+from .decorators import handler
 from .messages import ExecutionMessage, RoutingMessage
 
 if TYPE_CHECKING:
@@ -57,6 +58,58 @@ class ExecutionExecutor(Executor):
         )
 
         try:
+            # Optional: produce a compact tool plan to guide execution (ReAct-style),
+            # capped implicitly by downstream execution strategies.
+            tool_plan_info: dict | None = None
+            try:
+                dspy_supervisor = getattr(self.context, "dspy_supervisor", None)
+                if dspy_supervisor is not None:
+                    team = {
+                        name: getattr(agent, "description", "")
+                        for name, agent in (self.context.agents or {}).items()
+                    }
+                    tool_plan_info = dspy_supervisor.decide_tools(task, team, current_context="")
+            except Exception:
+                tool_plan_info = None
+
+            # If the plan indicates multiple tool steps, insert a bounded ReAct-style
+            # reasoning pass to synthesize a brief plan snippet before execution.
+            # We keep this lightweight and non-blocking; time-bounded by execution timeout/3.
+            if tool_plan_info and isinstance(tool_plan_info.get("tool_plan"), list):
+                plan_list = tool_plan_info.get("tool_plan") or []
+                if len(plan_list) >= 2:
+                    try:
+                        import asyncio
+
+                        import dspy
+
+                        # Minimal signature: produce one-paragraph plan
+                        class ToolPlanSignature(dspy.Signature):  # type: ignore
+                            task = dspy.InputField(desc="task to execute")
+                            tools = dspy.InputField(desc="ordered tools to use")
+                            plan = dspy.OutputField(desc="short plan for 2-3 steps")
+
+                        planner = dspy.Predict(ToolPlanSignature)
+
+                        async def _bounded():
+                            return planner(task=task, tools=", ".join(plan_list))
+
+                        timeout = max(
+                            5,
+                            int(
+                                self.context.config.execution_timeout_seconds
+                                if hasattr(self.context.config, "execution_timeout_seconds")
+                                else 30
+                            )
+                            // 3,
+                        )
+                        plan_result = await asyncio.wait_for(_bounded(), timeout=timeout)
+                        if hasattr(plan_result, "plan"):
+                            tool_plan_info["generated_plan"] = plan_result.plan
+                    except Exception as e:
+                        # Planner generation failed, which is non-fatal. Continue without generated plan.
+                        logger.warning(f"Failed to generate tool plan for task '{task}': {e}")
+
             # Use existing execution phase logic
             execution_outcome = await run_execution_phase(
                 routing=routing_decision,
@@ -67,6 +120,8 @@ class ExecutionExecutor(Executor):
             # Store routing in metadata for downstream executors
             metadata = routing_msg.metadata.copy()
             metadata["routing"] = routing_decision
+            if tool_plan_info:
+                metadata["tool_plan"] = tool_plan_info
 
             # Create execution message
             execution_msg = ExecutionMessage(

@@ -22,10 +22,6 @@ if TYPE_CHECKING:
     from agentic_fleet.workflows.config import WorkflowConfig
     from agentic_fleet.workflows.exceptions import AgentExecutionError, HistoryError, RoutingError
     from agentic_fleet.workflows.handoff_manager import HandoffContext, HandoffManager
-    from agentic_fleet.workflows.supervisor_workflow import (
-        SupervisorWorkflow,
-        create_supervisor_workflow,
-    )
     from agentic_fleet.workflows.orchestration import SupervisorContext
     from agentic_fleet.workflows.shared.models import (
         AnalysisResult,
@@ -33,6 +29,10 @@ if TYPE_CHECKING:
         ProgressReport,
         QualityReport,
         RoutingPlan,
+    )
+    from agentic_fleet.workflows.supervisor_workflow import (
+        SupervisorWorkflow,
+        create_supervisor_workflow,
     )
 
 __all__ = [

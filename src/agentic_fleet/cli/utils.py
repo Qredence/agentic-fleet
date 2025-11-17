@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import contextlib
 import logging
 from pathlib import Path
 from typing import Any
@@ -14,6 +15,19 @@ logger = logging.getLogger(__name__)
 def init_tracing() -> dict[str, Any]:
     """Initialize tracing (idempotent). Returns loaded config."""
     cfg = load_config()
+    # Optional MLflow DSPy autologging behind env flag
+    try:
+        import os
+
+        if os.getenv("MLFLOW_DSPY_AUTOLOG", "false").lower() in ("1", "true", "yes", "on"):
+            import mlflow  # type: ignore
+
+            # Minimal autolog setup; users can point MLflow to a tracking URI externally
+            with contextlib.suppress(Exception):
+                # Older mlflow may not have dspy namespace; ignore silently
+                mlflow.dspy.autolog(log_compiles=True, log_evals=True, log_traces=True)  # type: ignore
+    except Exception as exc:
+        logger.debug(f"MLflow autologging not enabled: {exc}")
     try:
         from ..utils.tracing import initialize_tracing
 

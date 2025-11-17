@@ -133,19 +133,19 @@ evaluation:
 
 ```bash
 # Run with defaults from config
-uv run python console.py evaluate
+uv run agentic-fleet evaluate
 
 # Limit number of tasks
-uv run python console.py evaluate --max-tasks 5
+uv run agentic-fleet evaluate --max-tasks 5
 
 # Custom dataset
-uv run python console.py evaluate --dataset data/custom_eval.jsonl
+uv run agentic-fleet evaluate --dataset data/custom_eval.jsonl
 
 # Override metrics
-uv run python console.py evaluate --metrics quality_score,latency_seconds
+uv run agentic-fleet evaluate --metrics quality_score,latency_seconds
 
 # Early stop on failed success metric
-uv run python console.py evaluate --stop-on-failure
+uv run agentic-fleet evaluate --stop-on-failure
 ```
 
 ### History-Based Evaluation
@@ -155,7 +155,7 @@ uv run python console.py evaluate --stop-on-failure
 uv run python scripts/create_history_evaluation.py
 
 # 2. Run evaluation
-uv run python console.py evaluate \
+uv run agentic-fleet evaluate \
   --dataset data/history_evaluation_tasks.jsonl \
   --max-tasks 10
 
@@ -194,7 +194,7 @@ On first evaluation run, a baseline snapshot is created at `logs/evaluation/base
 rm logs/evaluation/baseline_snapshot.json
 
 # Next evaluation run creates new baseline
-uv run python console.py evaluate \
+uv run agentic-fleet evaluate \
   --dataset data/history_evaluation_tasks.jsonl \
   --max-tasks 5
 ```
@@ -252,7 +252,7 @@ Add to your development workflow:
 uv run pytest -q  # Run unit tests first
 
 # Then evaluate on historical tasks
-uv run python console.py evaluate \
+uv run agentic-fleet evaluate \
   --dataset data/history_evaluation_tasks.jsonl \
   --max-tasks 10
 
@@ -266,13 +266,13 @@ Re-extract from history after significant runs:
 
 ```bash
 # Add new workflow executions to history.jsonl (happens automatically)
-uv run python console.py run -m "New complex task"
+uv run agentic-fleet run -m "New complex task"
 
 # Re-extract evaluation dataset to include new tasks
 uv run python scripts/create_history_evaluation.py
 
 # Re-run evaluation with expanded dataset
-uv run python console.py evaluate \
+uv run agentic-fleet evaluate \
   --dataset data/history_evaluation_tasks.jsonl
 ```
 
@@ -280,7 +280,7 @@ uv run python console.py evaluate \
 
 1. **Keep datasets small and focused** (10–50 tasks) for rapid iteration
 2. **Track historical summaries** (commit `evaluation_summary.json` snapshots) to detect regressions
-3. **Pair evaluations with self-improvement** (`console.py self-improve`) for continuous routing optimization
+3. **Pair evaluations with self-improvement** (`agentic-fleet self-improve`) for continuous routing optimization
 4. **Disable tracing** if evaluating latency exclusively (`tracing.enabled: false`)
 5. **Use history evaluation** for regression testing after code changes
 6. **Reset baseline** after intentional improvements to outputs
