@@ -4,6 +4,7 @@ import sys
 import types
 from pathlib import Path
 from types import SimpleNamespace
+from typing import Any
 
 import dspy
 import pytest
@@ -45,9 +46,10 @@ class ChatAgent:  # pragma: no cover - stub
 
 
 class ChatMessage:  # pragma: no cover - stub
-    def __init__(self, role=None, text: str = ""):
+    def __init__(self, role=None, text: str = "", content: str | None = None, **_):
         self.role = role
-        self.text = text
+        self.text = text or (content or "")
+        self.content = content or self.text
 
 
 class Role:  # pragma: no cover - stub
@@ -131,9 +133,24 @@ class WorkflowAgent:  # pragma: no cover - stub
 
 
 class AgentRunResponse:  # pragma: no cover - stub
-    def __init__(self, **kwargs):
-        self.content = kwargs.get("content", "")
-        self.messages = kwargs.get("messages", [])
+    def __init__(
+        self,
+        *,
+        content: str | None = None,
+        messages: list[Any] | None = None,
+        role: str | None = None,
+        additional_properties: dict[str, Any] | None = None,
+        metadata: dict[str, Any] | None = None,
+        **kwargs,
+    ):
+        self.messages = list(messages) if messages is not None else []
+        self.content = content or (self.messages[-1].text if self.messages else "")
+        self.role = role or (self.messages[-1].role if self.messages else None)
+        self.additional_properties = additional_properties or kwargs.get("metadata", {}) or {}
+        self.metadata = metadata or self.additional_properties.get("metadata", {})
+
+    def get_outputs(self) -> list[Any]:
+        return self.messages
 
 
 agent_framework.ToolProtocol = ToolProtocol
@@ -182,14 +199,19 @@ else:
     agent_framework_exceptions = sys.modules["agent_framework.exceptions"]
 
 
-class ToolException(Exception):  # pragma: no cover - stub  # noqa: N818  # matches framework API
+class AgentFrameworkException(Exception):  # pragma: no cover - stub  # noqa: N818
     pass
 
 
-class ToolExecutionError(Exception):  # pragma: no cover - stub  # matches framework API
+class ToolException(AgentFrameworkException):  # pragma: no cover - stub
     pass
 
 
+class ToolExecutionError(AgentFrameworkException):  # pragma: no cover - stub
+    pass
+
+
+agent_framework_exceptions.AgentFrameworkException = AgentFrameworkException
 agent_framework_exceptions.ToolException = ToolException
 agent_framework_exceptions.ToolExecutionException = ToolExecutionError
 

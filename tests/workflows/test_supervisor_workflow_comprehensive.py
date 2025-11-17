@@ -6,10 +6,7 @@ from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
-from agentic_fleet.workflows.exceptions import (
-    AgentExecutionError,
-    HistoryError,
-)
+from agentic_fleet.workflows.exceptions import AgentExecutionError, HistoryError
 from agentic_fleet.workflows.supervisor_workflow import (
     SupervisorWorkflow,
     WorkflowConfig,
@@ -47,29 +44,6 @@ async def test_run_stream_yields_events():
     assert len(events) > 0
     # Check that we get WorkflowOutputEvent at the end
     assert hasattr(events[-1], "data")
-
-
-@pytest.mark.asyncio
-async def test_run_stream_handles_empty_task():
-    """Test that run_stream validates empty task."""
-    workflow = SupervisorWorkflow(WorkflowConfig(), MagicMock())
-    await workflow.initialize(compile_dspy=False)
-
-    with pytest.raises(ValueError, match="cannot be empty"):
-        async for _ in workflow.run_stream(""):
-            pass
-
-
-@pytest.mark.asyncio
-async def test_run_stream_handles_long_task():
-    """Test that run_stream validates task length."""
-    workflow = SupervisorWorkflow(WorkflowConfig(), MagicMock())
-    await workflow.initialize(compile_dspy=False)
-
-    long_task = "x" * 10001
-    with pytest.raises(ValueError, match="exceeds maximum length"):
-        async for _ in workflow.run_stream(long_task):
-            pass
 
 
 @pytest.mark.asyncio

@@ -9,14 +9,21 @@ Bridges older tests to the new fleet workflow by providing:
 from __future__ import annotations
 
 import asyncio
+import textwrap
 from typing import TYPE_CHECKING, Any
 
 from ..dspy_modules.supervisor import DSPySupervisor
+from ..utils.agent_framework_shims import ensure_agent_framework_shims
 from ..utils.logger import setup_logger
 from ..utils.tool_registry import ToolRegistry
 from .config import WorkflowConfig
+from .execution.delegated import execute_delegated
+from .execution.parallel import execute_parallel
+from .execution.sequential import execute_sequential, format_handoff_input
 from .fleet.adapter import create_fleet_workflow
+from .handoff_manager import HandoffContext, HandoffManager
 from .initialization import initialize_workflow_context
+from .utils import derive_objectives, estimate_remaining_work, extract_artifacts
 
 if TYPE_CHECKING:
     from .fleet.adapter import FleetWorkflow as _SupervisorWorkflowType
@@ -52,18 +59,33 @@ class SupervisorWorkflow:
     """Legacy-compatible SupervisorWorkflow facade."""
 
     def __init__(
-        self, config: WorkflowConfig | None = None, workflow_runner: Any | None = None, **_: Any
+        self,
+        config: WorkflowConfig | None = None,
+        workflow_runner: Any | None = None,
+        **kwargs: Any,
     ) -> None:
-        # Public attributes referenced by tests
+        ensure_agent_framework_shims()
+        # Allow tests/legacy callers to pass alternate initialization kwargs without errors.
+        custom_agents = kwargs.pop("agents", None)
+        custom_supervisor = kwargs.pop("dspy_supervisor", None)
+        custom_registry: ToolRegistry | None = kwargs.pop("tool_registry", None)
+        custom_handoff_manager: HandoffManager | None = kwargs.pop("handoff_manager", None)
+
         self.config = config or WorkflowConfig()
         self.workflow_runner = workflow_runner
-        self.tool_registry: ToolRegistry | None = None
-        self.dspy_supervisor: DSPySupervisor = DSPySupervisor(use_enhanced_signatures=True)
+        self.tool_registry: ToolRegistry = custom_registry or ToolRegistry()
+        self.dspy_supervisor: DSPySupervisor = custom_supervisor or DSPySupervisor(
+            use_enhanced_signatures=True
+        )
         self._compiled_supervisor: DSPySupervisor | None = None
         self._compilation_task: asyncio.Task[None] | None = None
         self._compilation_status: str = "pending"
-        self._agents: dict[str, Any] | None = None
+        self._agents: dict[str, Any] | None = custom_agents
         self._context: Any | None = None
+        self.current_execution: dict[str, Any] = {}
+        self.execution_history: list[dict[str, Any]] = []
+        self._handoff_manager: HandoffManager | None = custom_handoff_manager
+        self._enable_handoffs: bool = self.config.enable_handoffs
 
         # Minimal history manager stub
         class _Hist:
@@ -78,13 +100,18 @@ class SupervisorWorkflow:
         # Reuse shared initialization utilities
         context = await initialize_workflow_context(config=self.config, compile_dspy=compile_dspy)
         self._context = context
-        self.tool_registry = context.tool_registry
+        self.tool_registry = context.tool_registry or self.tool_registry
         self._agents = context.agents
         # Keep reference to the live (uncompiled) supervisor
         self.dspy_supervisor = context.dspy_supervisor
         # Mirror compilation status for tests
         self._compilation_task = context.compilation_task
         self._compilation_status = context.compilation_status or "pending"
+        self.history_manager = context.history_manager or self.history_manager
+        self.execution_history = context.execution_history
+        self.current_execution = context.current_execution
+        self.handoff_manager = context.handoff_manager or self._handoff_manager
+        self._enable_handoffs = context.enable_handoffs
 
         if compile_dspy and self._compilation_task is None:
             # Fallback: if not already scheduled (should be in normal flow),
@@ -99,18 +126,67 @@ class SupervisorWorkflow:
         """Public accessor for agents."""
         return self._agents
 
+    @agents.setter
+    def agents(self, value: dict[str, Any] | None) -> None:
+        self._agents = value
+
+    @property
+    def enable_handoffs(self) -> bool:
+        return self._enable_handoffs
+
+    @enable_handoffs.setter
+    def enable_handoffs(self, value: bool) -> None:
+        flag = bool(value)
+        self._enable_handoffs = flag
+        self.config.enable_handoffs = flag
+        if self._context is not None:
+            self._context.enable_handoffs = flag
+
+    @property
+    def handoff_manager(self) -> HandoffManager | None:
+        if self._handoff_manager is None and self.dspy_supervisor is not None:
+            self._handoff_manager = HandoffManager(self.dspy_supervisor)
+            self._bind_handoff_manager(self._handoff_manager)
+        return self._handoff_manager
+
+    @handoff_manager.setter
+    def handoff_manager(self, manager: HandoffManager | None) -> None:
+        self._handoff_manager = manager
+        if manager is not None:
+            self._bind_handoff_manager(manager)
+
+    def _bind_handoff_manager(self, manager: HandoffManager) -> None:
+        if getattr(manager, "_workflow_bound", False):
+            return
+
+        base_provider = getattr(manager, "_get_compiled_supervisor", None)
+
+        def _provider():
+            if self._compiled_supervisor is not None:
+                return self._compiled_supervisor
+            if callable(base_provider):
+                try:
+                    candidate = base_provider()
+                    if candidate is not None:
+                        return candidate
+                except Exception:  # pragma: no cover - defensive guardrail
+                    logger.debug("Handoff provider fallback failed", exc_info=True)
+            return self.dspy_supervisor
+
+        manager._get_compiled_supervisor = _provider  # type: ignore[attr-defined]
+        manager._workflow_bound = True
+
     # ------------------- Minimal legacy execution API -------------------
     async def run(self, task: str) -> dict[str, Any]:
         """Simplified run compatible with legacy tests."""
         team = {
             name: getattr(agent, "description", name) for name, agent in (self.agents or {}).items()
         }
-        routing = self.dspy_supervisor.route_task(task, team, "")
-        assigned = list(routing.get("assigned_to", [])) if isinstance(routing, dict) else []
-        mode = (
-            routing.get("mode", "delegated") if isinstance(routing, dict) else "delegated"
-        ).lower()
-        subtasks = list(routing.get("subtasks", [])) if isinstance(routing, dict) else []
+        routing_raw = self.dspy_supervisor.route_task(task, team, "")
+        routing = self._routing_to_dict(routing_raw)
+        assigned = list(routing.get("assigned_to", []))
+        mode = str(routing.get("mode", "delegated")).lower()
+        subtasks = list(routing.get("subtasks", []))
 
         # Fallback unknown agents to first available
         agent_names = list((self.agents or {}).keys())
@@ -130,15 +206,16 @@ class SupervisorWorkflow:
             mode = "delegated"
 
         if mode == "parallel":
-            # Normalize subtasks count (pad with base task)
-            if len(subtasks) < len(assigned):
-                subtasks = subtasks + [task] * (len(assigned) - len(subtasks))
+            subtasks = self._prepare_subtasks(assigned, subtasks, task)
             result_text = await self._execute_parallel(assigned, subtasks)
+        elif mode == "sequential":
+            result_text = await self._execute_sequential(assigned, task)
         else:
-            # Delegated/sequential -> first agent handles the task
             agent_id = assigned[0] if assigned else (agent_names[0] if agent_names else "")
-            agent = (self.agents or {}).get(agent_id)
-            result_text = await agent.run(task) if agent else ""
+            if not agent_id:
+                result_text = ""
+            else:
+                result_text = await self._execute_delegated(agent_id, task)
 
         # Build legacy-like result
         return {
@@ -152,21 +229,23 @@ class SupervisorWorkflow:
         }
 
     async def _execute_parallel(self, assigned: list[str], subtasks: list[str]) -> str:
-        """Execute tasks in parallel across assigned agents; handle failures gracefully."""
+        return await execute_parallel(self.agents or {}, assigned, subtasks)
 
-        async def run_single(agent_id: str, subtask: str) -> str:
-            agent = (self.agents or {}).get(agent_id)
-            try:
-                return await agent.run(subtask) if agent else f"{agent_id} failed: missing agent"
-            except Exception:
-                return f"{agent_id} failed: error"
+    async def _execute_sequential(self, agents: list[str], task: str) -> str:
+        return await execute_sequential(
+            self.agents or {},
+            agents,
+            task,
+            enable_handoffs=self.enable_handoffs,
+            handoff_manager=self.handoff_manager,
+        )
 
-        coros = [run_single(a, s) for a, s in zip(assigned, subtasks, strict=False)]
-        results = await asyncio.gather(*coros, return_exceptions=False)
-        return " | ".join(results)
+    async def _execute_delegated(self, agent_name: str, task: str) -> str:
+        return await execute_delegated(self.agents or {}, agent_name, task)
 
     async def run_stream(self, task: str):
         """Simplified streaming: yield a single WorkflowOutputEvent with final dict."""
+        ensure_agent_framework_shims()
         from agent_framework import WorkflowOutputEvent  # test stub
 
         # Minimal tracking for tests
@@ -176,7 +255,8 @@ class SupervisorWorkflow:
         team = {
             name: getattr(agent, "description", name) for name, agent in (self.agents or {}).items()
         }
-        routing = self.dspy_supervisor.route_task(task, team, "")
+        routing_raw = self.dspy_supervisor.route_task(task, team, "")
+        routing = self._routing_to_dict(routing_raw)
         assigned = list(routing.get("assigned_to", []))
         subtasks = list(routing.get("subtasks", []))
         if len(subtasks) < len(assigned):
@@ -321,6 +401,7 @@ class SupervisorWorkflow:
                 return {"result": f"stub:{task}", "metadata": {}}
 
             async def run_stream(self, task: str):
+                ensure_agent_framework_shims()
                 from agent_framework import WorkflowOutputEvent
 
                 yield WorkflowOutputEvent(
@@ -377,16 +458,86 @@ class SupervisorWorkflow:
 
     async def _refine_results(self, original: str, improvements: str) -> str:
         """Refine results based on improvements (legacy helper for tests)."""
+        writer = None
+        for name, agent in (self.agents or {}).items():
+            if name.lower() == "writer":
+                writer = agent
+                break
+
+        if writer is None or not hasattr(writer, "run"):
+            return f"{original}\n[Refined based on: {improvements}]"
+
+        refinement_prompt = textwrap.dedent(
+            f"""
+            Please refine the following result using the requested improvements.
+
+            ## Current Result
+            {original}
+
+            ## Requested Improvements
+            {improvements}
+
+            Return only the refined result.
+            """
+        ).strip()
+
+        try:
+            refined = await writer.run(refinement_prompt)
+            if isinstance(refined, str) and refined.strip():
+                return refined
+        except Exception:  # pragma: no cover - fallback on failure
+            logger.warning("Writer agent refinement failed; returning fallback result.")
+
         return f"{original}\n[Refined based on: {improvements}]"
 
-    def _create_agent(self, name: str, description: str = "", tools: Any = None) -> Any:
+    def _routing_to_dict(self, routing: Any) -> dict[str, Any]:
+        """Normalize routing decision objects to a dict structure."""
+        if isinstance(routing, dict):
+            return dict(routing)
+        if hasattr(routing, "_asdict"):
+            try:
+                return dict(routing._asdict())  # type: ignore[attr-defined]
+            except Exception:  # pragma: no cover - defensive
+                pass
+        if hasattr(routing, "__dict__"):
+            data = {}
+            for attr in ("assigned_to", "mode", "subtasks", "tool_requirements", "confidence"):
+                if hasattr(routing, attr):
+                    data[attr] = getattr(routing, attr)
+            return data
+        return {}
+
+    def _format_handoff_input(self, handoff: HandoffContext) -> str:
+        """Format handoff context for next agent (legacy helper)."""
+        return format_handoff_input(handoff)
+
+    def _extract_artifacts(self, result: Any) -> dict[str, Any]:
+        """Extract artifacts from agent result (legacy helper)."""
+        return extract_artifacts(result)
+
+    def _estimate_remaining_work(self, original_task: str, work_done: str) -> str:
+        """Estimate remaining work based on original task and completed work."""
+        return estimate_remaining_work(original_task, work_done)
+
+    def _derive_objectives(self, remaining_work: str) -> list[str]:
+        """Derive objectives from remaining work description."""
+        return derive_objectives(remaining_work)
+
+    def _create_agent(
+        self,
+        name: str,
+        description: str = "",
+        instructions: str | None = None,
+        tools: Any = None,
+    ) -> Any:
         """Create an agent instance (legacy helper for tests)."""
         from types import SimpleNamespace
 
         class _Agent:
-            def __init__(self, n: str, d: str = "", t: Any = None):
+            def __init__(self, n: str, d: str = "", i: str | None = None, t: Any = None):
                 self.name = n
                 self.description = d or n
+                self.instructions = i
                 self.chat_options = SimpleNamespace(
                     tools=t if isinstance(t, list) else ([t] if t else [])
                 )
@@ -394,7 +545,30 @@ class SupervisorWorkflow:
             async def run(self, task: str) -> str:
                 return f"{self.name}:{task}"
 
-        return _Agent(name, description, tools)
+        return _Agent(name, description, instructions, tools)
+
+    def _get_supervisor_instructions(self) -> str:
+        agent_lines = []
+        for name, agent in (self.agents or {}).items():
+            desc = getattr(agent, "description", name)
+            agent_lines.append(f"- {name}: {desc}")
+        roster = "\n".join(agent_lines) if agent_lines else "- No agents registered."
+
+        tool_catalog = (
+            self.tool_registry.get_tool_descriptions()
+            if hasattr(self.tool_registry, "get_tool_descriptions")
+            else "No tools are currently available."
+        )
+
+        return textwrap.dedent(
+            f"""
+            ## Team Roster
+            {roster}
+
+            ## Available Tools
+            {tool_catalog}
+            """
+        ).strip()
 
 
 # -----------------------------------------------------------------------------

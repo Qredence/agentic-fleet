@@ -28,6 +28,12 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
+from agentic_fleet.utils.agent_framework_shims import (
+    ensure_agent_framework_shims as _ensure_agent_framework_shims,
+)
+
+_ensure_agent_framework_shims()
+
 if TYPE_CHECKING:
     from agentic_fleet.agents import AgentFactory
     from agentic_fleet.evaluation import Evaluator, compute_metrics
