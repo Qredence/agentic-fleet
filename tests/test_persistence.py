@@ -1,6 +1,6 @@
 """Tests for conversation persistence service."""
 import pytest
-from datetime import datetime
+
 
 # Mock classes for testing (these would normally be imported)
 class PersistenceSettings:
