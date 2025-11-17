@@ -145,13 +145,12 @@ class AnalysisExecutor(Executor):
             "search_query": "",
         }
 
-
-def _is_simple_task(self, task: str, max_words: int) -> bool:
-    """Heuristic classifier for simple tasks based on word count."""
-    if not task:
-        return False
-    words = task.strip().split()
-    return len(words) <= max_words
+    def _is_simple_task(self, task: str, max_words: int) -> bool:
+        """Heuristic classifier for simple tasks based on word count."""
+        if not task:
+            return False
+        words = task.strip().split()
+        return len(words) <= max_words
 
     async def _call_with_retry(
         self,

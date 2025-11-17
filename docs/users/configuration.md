@@ -400,6 +400,33 @@ evaluation:
   stop_on_failure: false
 ```
 
+### Azure Cosmos DB Integration
+
+AgenticFleet can mirror workflow runs, long-term agent memory, DSPy datasets, optimization metadata, and cache entries into **Azure Cosmos DB for NoSQL**. The feature is fully optional and disabled by default; enable it by toggling a single environment flag and supplying your Cosmos endpoint/credentials. All writes are best-effort—if Cosmos is unavailable, the runtime logs a warning and continues with local history files.
+
+| Environment Variable                            | Required when Cosmos is on?         | Default                | Purpose                                                                                                                                               |
+| ----------------------------------------------- | ----------------------------------- | ---------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `AGENTICFLEET_USE_COSMOS`                       | Yes                                 | `0`                    | Master feature flag. Set to `1`, `true`, `yes`, or `on` to enable Cosmos mirroring.                                                                   |
+| `AZURE_COSMOS_ENDPOINT`                         | Yes                                 | _empty_                | Account endpoint (`https://<account>.documents.azure.com:443/`).                                                                                      |
+| `AZURE_COSMOS_USE_MANAGED_IDENTITY`             | No                                  | `0`                    | Set to `1` to authenticate via `DefaultAzureCredential` (managed identity / Azure CLI). Requires the identity to have Cosmos Data Contributor access. |
+| `AZURE_COSMOS_KEY`                              | Yes when not using managed identity | _empty_                | Primary or secondary key for the account. Store securely; never commit to source control.                                                             |
+| `AZURE_COSMOS_DATABASE`                         | Yes                                 | `agentic-fleet`        | Database ID that already contains your containers. The helper never creates resources automatically.                                                  |
+| `AZURE_COSMOS_WORKFLOW_RUNS_CONTAINER`          | No                                  | `workflowRuns`         | Override if your workflow history container uses a different name. Partition key: `/workflowId`.                                                      |
+| `AZURE_COSMOS_AGENT_MEMORY_CONTAINER`           | No                                  | `agentMemory`          | Override for long-term memory container (partition key `/userId`).                                                                                    |
+| `AZURE_COSMOS_DSPY_EXAMPLES_CONTAINER`          | No                                  | `dspyExamples`         | Override for DSPy datasets (partition key `/userId`).                                                                                                 |
+| `AZURE_COSMOS_DSPY_OPTIMIZATION_RUNS_CONTAINER` | No                                  | `dspyOptimizationRuns` | Override for GEPA / optimization metadata (partition key `/userId`).                                                                                  |
+| `AZURE_COSMOS_CACHE_CONTAINER`                  | No                                  | `cache`                | Override for TTL cache metadata (partition key `/cacheKey`).                                                                                          |
+| `AGENTICFLEET_DEFAULT_USER_ID`                  | Recommended                         | _empty_                | High-cardinality identifier (tenant/workspace/developer) used when mirroring agent memory or DSPy artifacts that need a partition key.                |
+
+Best practices (aligned with [Cosmos DB data modeling guidance](../../cosmosdb_requirements.md)):
+
+- Use **high-cardinality partition keys** (`workflowId`, `userId`, `cacheKey`) to avoid hot partitions and stay below the 20 GB logical partition limit. When mirroring agent memory, summarize or prune old entries so each document remains well under Cosmos’s 2 MB item cap.
+- Provision the database and containers up front (see `cosmosdb_data_model.md` for schemas). The helper intentionally avoids creating resources automatically so you retain control of RU/throughput settings.
+- Toggle the feature per-environment by supplying different `.env` files or deployment secrets. Local development can keep the flag off while production mirrors runs for analytics.
+- When using managed identity, grant the identity `Cosmos DB Built-in Data Contributor` on the account or specific database; the SDK uses `DefaultAzureCredential` which follows the usual Azure authentication chain.
+
+With the flag enabled, the runtime mirrors data without changing workflow semantics—you can safely enable it in production while continuing to rely on file-based history for local debugging.
+
 - **enabled** (`bool`, default: `false`): Toggle evaluation CLI (for example, via `agentic-fleet evaluate`) and guards inside `Evaluator`.
 - **dataset_path** (`str`): JSONL dataset containing tasks/keywords.
 - **output_dir** (`str`): Where summaries + per-task metrics are written.

@@ -206,6 +206,17 @@ def _is_cache_valid(
             logger.debug("Cache marked with serializer 'none' - treating as invalid")
             return False
 
+        recorded_examples_path = metadata.get("examples_path")
+        if recorded_examples_path and os.path.abspath(recorded_examples_path) != os.path.abspath(
+            examples_path
+        ):
+            logger.debug(
+                "Cache metadata references %s but current workflow expects %s",
+                recorded_examples_path,
+                examples_path,
+            )
+            return False
+
         # Check signature hash if available (granular invalidation)
         if (
             signature_hash
@@ -220,14 +231,25 @@ def _is_cache_valid(
             logger.debug("Cache config hash mismatch: configuration changed, invalidating cache")
             return False
 
+        recorded_examples_mtime = metadata.get("examples_mtime")
+        if recorded_examples_mtime is not None:
+            try:
+                current_examples_mtime = os.path.getmtime(examples_path)
+            except OSError:
+                return False
+            # Allow for minor filesystem precision differences when comparing timestamps
+            if current_examples_mtime - recorded_examples_mtime > 1e-6:
+                logger.debug(
+                    "Examples file modified since cache metadata was written; invalidating"
+                )
+                return False
+        return True
+
     try:
         cache_mtime = os.path.getmtime(cache_path)
         examples_mtime = os.path.getmtime(examples_path)
-
-        # Cache is valid if it's newer than examples file
-        return not cache_mtime < examples_mtime
+        return cache_mtime >= examples_mtime
     except OSError:
-        # If we can't get mtime, assume cache is invalid
         return False
 
 

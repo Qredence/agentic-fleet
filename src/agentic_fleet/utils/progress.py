@@ -108,11 +108,7 @@ class RichProgressCallback:
             self.progress: Progress | None = None
             self.task_id: Any | None = None
             self.start_time: float | None = None
-            # Check if console already has a Live context active (to avoid recursion)
-            self._has_live_context = (
-                hasattr(self.console, "_live_stack")
-                and len(getattr(self.console, "_live_stack", [])) > 0
-            )
+            self._use_logging_only = False
         except ImportError:
             logger.warning("Rich not available, falling back to logging progress")
             self.Progress = None
@@ -125,23 +121,30 @@ class RichProgressCallback:
             self.progress = None
             self.task_id = None
             self.start_time = None
-            self._has_live_context = False
+            self._use_logging_only = True
+
+    def _is_live_context_active(self) -> bool:
+        return bool(
+            self.console
+            and hasattr(self.console, "_live_stack")
+            and len(getattr(self.console, "_live_stack", [])) > 0
+        )
 
     def on_start(self, message: str) -> None:
         """Start a progress bar or spinner."""
         if self.Progress is None:
+            self._use_logging_only = True
             self._fallback.on_start(message)
             return
 
         # Check if console has active Live context (avoid nested Progress)
-        if (
-            hasattr(self.console, "_live_stack")
-            and len(getattr(self.console, "_live_stack", [])) > 0
-        ):
-            # Use simple logging instead of Progress bars to avoid recursion
+        if self._is_live_context_active():
+            self._use_logging_only = True
             self.start_time = time.perf_counter()
             logger.info("▶ %s", message)
             return
+
+        self._use_logging_only = False
 
         self.start_time = time.perf_counter()
         progress_cls = self.Progress
@@ -159,6 +162,7 @@ class RichProgressCallback:
             or elapsed_cls is None
             or remaining_cls is None
         ):
+            self._use_logging_only = True
             self._fallback.on_start(message)
             return
 
@@ -175,9 +179,11 @@ class RichProgressCallback:
                 )
                 self.progress.start()
                 self.task_id = self.progress.add_task(message, total=None)
+                self._use_logging_only = False
             except Exception as e:
                 # Fallback to logging if Progress creation fails
                 logger.warning(f"Failed to create Progress bar: {e}, using logging instead")
+                self._use_logging_only = True
                 self._fallback.on_start(message)
                 self.progress = None
 
@@ -185,21 +191,8 @@ class RichProgressCallback:
         self, message: str, current: int | None = None, total: int | None = None
     ) -> None:
         """Update progress bar."""
-        if self.Progress is None:
+        if self._use_logging_only or self.Progress is None:
             self._fallback.on_progress(message, current, total)
-            return
-
-        # Check if console has active Live context (avoid nested Progress)
-        if (
-            hasattr(self.console, "_live_stack")
-            and len(getattr(self.console, "_live_stack", [])) > 0
-        ):
-            # Use simple logging instead
-            if current is not None and total is not None:
-                percentage = (current / total * 100) if total > 0 else 0
-                logger.info("  → %s (%d/%d, %.1f%%)", message, current, total, percentage)
-            else:
-                logger.info("  → %s", message)
             return
 
         if self.progress is None or self.task_id is None:
@@ -219,22 +212,10 @@ class RichProgressCallback:
 
     def on_complete(self, message: str, duration: float | None = None) -> None:
         """Complete the progress bar."""
-        if self.Progress is None:
+        if self._use_logging_only or self.Progress is None:
             self._fallback.on_complete(message, duration)
-            return
-
-        # Check if console has active Live context (avoid nested Progress)
-        if (
-            hasattr(self.console, "_live_stack")
-            and len(getattr(self.console, "_live_stack", [])) > 0
-        ):
-            # Use simple logging instead
-            if duration is None and self.start_time is not None:
-                duration = time.perf_counter() - self.start_time
-            if duration is not None:
-                logger.info("✓ %s (took %.2fs)", message, duration)
-            else:
-                logger.info("✓ %s", message)
+            self.progress = None
+            self.task_id = None
             self.start_time = None
             return
 
@@ -279,20 +260,10 @@ class RichProgressCallback:
 
     def on_error(self, message: str, error: Exception | None = None) -> None:
         """Report error and stop progress."""
-        if self.Progress is None:
+        if self._use_logging_only or self.Progress is None:
             self._fallback.on_error(message, error)
-            return
-
-        # Check if console has active Live context (avoid nested Progress)
-        if (
-            hasattr(self.console, "_live_stack")
-            and len(getattr(self.console, "_live_stack", [])) > 0
-        ):
-            # Use simple logging instead
-            if error:
-                logger.error("✗ %s: %s", message, error)
-            else:
-                logger.error("✗ %s", message)
+            self.progress = None
+            self.task_id = None
             self.start_time = None
             return
 

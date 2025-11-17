@@ -153,6 +153,13 @@ Combine agents when tasks span multiple domains (e.g. research + quantitative an
 
 Extending tooling: implement agent-framework `ToolProtocol`, register in `ToolRegistry`, reference in YAML. The `ToolRegistry` now provides concise tool descriptions with latency hints and TTL-caches common results.
 
+### Long-Term Memory & Cosmos Mirror
+
+- Set `AGENTICFLEET_USE_COSMOS=1` to mirror workflow history, agent memories, DSPy datasets, and cache metadata into Azure Cosmos DB. The helper (`utils/cosmos.py`) reuses a single client, supports managed identity, and never blocks the critical path when Cosmos is unavailable.
+- `agentMemory` uses `/userId` as its partition key. Keep IDs high-cardinality (tenant, workspace, or developer handle) to avoid hot partitions, and keep each memory item well under Cosmos’s 2 MB limit by summarizing older turns.
+- Container defaults align with the documented schema (`workflowRuns`, `agentMemory`, `dspyExamples`, `dspyOptimizationRuns`, `cache`). Override via `AZURE_COSMOS_*_CONTAINER` vars if your account already uses different IDs.
+- Full requirements + data model live in `cosmosdb_requirements.md` and `cosmosdb_data_model.md`; provision the database ahead of time since AgenticFleet never creates containers automatically.
+
 ---
 
 ## Code Quality & Architecture
@@ -180,6 +187,13 @@ Extending tooling: implement agent-framework `ToolProtocol`, register in `ToolRe
 
 - CLI module structure: `cli/runner.py` (WorkflowRunner), `cli/display.py` (display utilities)
 - Improved separation of concerns and modularity
+
+At a high level, the runtime is layered as follows:
+
+- Workflows (`src/agentic_fleet/workflows/*`) orchestrate execution using agent-framework `WorkflowBuilder` and executors.
+- DSPy modules (`src/agentic_fleet/dspy_modules/*`) analyze tasks, choose agents/modes, and assess quality; they do not run inside workflow executors.
+- Agents and tools (`src/agentic_fleet/agents/*`, `src/agentic_fleet/tools/*`) wrap `ChatAgent` instances and tool implementations that workflows call as opaque executors.
+- The CLI wires everything together: DSPy → workflow assembly → execution → optional DSPy judge/refinement.
 
 See `docs/developers/code-quality.md` for detailed documentation.
 

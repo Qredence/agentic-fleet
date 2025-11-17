@@ -11,6 +11,7 @@ from ...utils.cache import TTLCache
 from ...utils.history_manager import HistoryManager
 from ...utils.progress import NullProgressCallback, ProgressCallback
 from ...utils.tool_registry import ToolRegistry
+from ..compilation import CompilationState
 from ..config import WorkflowConfig
 from ..handoff_manager import HandoffManager
 
@@ -42,3 +43,4 @@ class SupervisorContext:
     compilation_status: str = "pending"
     compilation_task: asyncio.Task[Any] | None = None
     compilation_lock: asyncio.Lock | None = None
+    compilation_state: CompilationState | None = None

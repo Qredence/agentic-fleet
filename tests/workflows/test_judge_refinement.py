@@ -7,8 +7,7 @@ import pytest
 import pytest_asyncio
 
 pytestmark = pytest.mark.skip(
-    "Legacy SupervisorWorkflow judge tests removed; coverage now lives in fleet executors.",
-    allow_module_level=True,
+    "Legacy SupervisorWorkflow judge tests removed; coverage now lives in fleet executors."
 )
 
 # Mock agent-framework and dspy before importing

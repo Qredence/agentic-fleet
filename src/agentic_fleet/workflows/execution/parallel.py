@@ -5,11 +5,12 @@ from __future__ import annotations
 import asyncio
 from typing import TYPE_CHECKING, Any
 
-from agent_framework import ChatMessage, MagenticAgentMessageEvent, Role, WorkflowOutputEvent
+from agent_framework import WorkflowOutputEvent
 
 from ...utils.logger import setup_logger
 from ..exceptions import AgentExecutionError
 from ..utils import synthesize_results
+from .streaming_events import create_agent_event, create_system_event
 
 if TYPE_CHECKING:
     from ...utils.progress import ProgressCallback
@@ -78,10 +79,13 @@ async def execute_parallel_streaming(
         )
 
     # Yield start events for each agent
-    for agent_name in valid_agent_names:
-        yield MagenticAgentMessageEvent(
-            agent_id=agent_name,
-            message=ChatMessage(role=Role.ASSISTANT, text="Starting parallel execution..."),
+    for agent_name, subtask in zip(valid_agent_names, subtasks, strict=False):
+        yield create_agent_event(
+            stage="execution",
+            event="agent.start",
+            agent=agent_name,
+            text=f"{agent_name} starting parallel subtask",
+            payload={"subtask": subtask},
         )
 
     # Execute with exception handling
@@ -97,21 +101,37 @@ async def execute_parallel_streaming(
         if isinstance(result, Exception):
             logger.error(f"Agent '{agent_name}' failed: {result}")
             error_msg = f"[{agent_name} failed: {result!s}]"
-            yield MagenticAgentMessageEvent(
-                agent_id=agent_name,
-                message=ChatMessage(role=Role.ASSISTANT, text=f"Failed: {result!s}"),
+            yield create_agent_event(
+                stage="execution",
+                event="agent.error",
+                agent=agent_name,
+                text=f"{agent_name} failed during parallel execution",
+                payload={"error": str(result)},
             )
             successful_results.append(error_msg)
         else:
-            yield MagenticAgentMessageEvent(
-                agent_id=agent_name,
-                message=ChatMessage(role=Role.ASSISTANT, text=f"Completed: {result!s}"),
+            result_text = str(result)
+            yield create_agent_event(
+                stage="execution",
+                event="agent.completed",
+                agent=agent_name,
+                text=f"{agent_name} completed parallel subtask",
+                payload={"result_preview": result_text[:200]},
             )
-            successful_results.append(str(result))
+            successful_results.append(result_text)
 
     # Yield final synthesized result
     final_result = synthesize_results(successful_results)
+    yield create_system_event(
+        stage="execution",
+        event="agent.summary",
+        text="Parallel execution complete",
+        payload={"agents": valid_agent_names},
+    )
     yield WorkflowOutputEvent(
-        data={"result": final_result},
+        data={
+            "result": final_result,
+            "agents": valid_agent_names,
+        },
         source_executor_id="parallel_execution",
     )

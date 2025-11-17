@@ -4,6 +4,7 @@ History management utilities for execution history.
 
 from __future__ import annotations
 
+import asyncio
 import json
 import logging
 from pathlib import Path
@@ -55,9 +56,9 @@ class HistoryManager:
         """
         try:
             if self.history_format == "jsonl":
-                return await self._save_jsonl_async(execution)
+                history_file = await self._save_jsonl_async(execution)
             else:
-                return await self._save_json_async(execution)
+                history_file = await self._save_json_async(execution)
         except Exception as e:
             history_file = (
                 str(self.history_dir / f"execution_history.{self.history_format}")
@@ -65,6 +66,16 @@ class HistoryManager:
                 else str(self.history_dir / "execution_history.json")
             )
             raise HistoryError(f"Failed to save execution history: {e}", history_file) from e
+
+        # Best-effort mirror to Cosmos DB without affecting main execution.
+        try:
+            from .cosmos import mirror_execution_history
+
+            await asyncio.to_thread(mirror_execution_history, execution)
+        except Exception:  # pragma: no cover - defensive guardrail
+            logger.debug("Cosmos history mirror failed (async path)", exc_info=True)
+
+        return history_file
 
     def save_execution(self, execution: dict[str, Any]) -> str:
         """
@@ -82,9 +93,9 @@ class HistoryManager:
         # For backward compatibility, use the original synchronous implementation
         try:
             if self.history_format == "jsonl":
-                return self._save_jsonl(execution)
+                history_file = self._save_jsonl(execution)
             else:
-                return self._save_json(execution)
+                history_file = self._save_json(execution)
         except Exception as e:
             history_file = (
                 str(self.history_dir / f"execution_history.{self.history_format}")
@@ -92,6 +103,16 @@ class HistoryManager:
                 else str(self.history_dir / "execution_history.json")
             )
             raise HistoryError(f"Failed to save execution history: {e}", history_file) from e
+
+        # Best-effort mirror to Cosmos DB without affecting main execution.
+        try:
+            from .cosmos import mirror_execution_history
+
+            mirror_execution_history(execution)
+        except Exception:  # pragma: no cover - defensive guardrail
+            logger.debug("Cosmos history mirror failed (sync path)", exc_info=True)
+
+        return history_file
 
     async def _save_jsonl_async(self, execution: dict[str, Any]) -> str:
         """Save execution in JSONL format (append mode, async)."""

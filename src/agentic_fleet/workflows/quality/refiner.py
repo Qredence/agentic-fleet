@@ -31,8 +31,7 @@ async def refine_results(
     """Refine results based on quality assessment."""
     writer = agents.get("Writer")
     if writer is None:
-        # No writer available; return original results without refinement
-        return str(results)
+        raise KeyError("Writer agent is required for refinement")
     refinement_task = f"Refine these results based on improvements needed:\n{results}\n\nImprovements: {improvements}"
     try:
         response = await writer.run(refinement_task)

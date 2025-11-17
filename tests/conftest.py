@@ -272,6 +272,20 @@ def stub_dspy(monkeypatch):
                     execution_mode="sequential",
                     subtasks="Investigate\nSummarize",
                 )
+            if name == "EnhancedTaskRouting":
+                # Extended routing signature used for tool-aware ReAct-style planning.
+                # Provide all key fields so tests can verify structure without
+                # depending on a real model call.
+                return SimpleNamespace(
+                    assigned_to="Researcher",
+                    execution_mode="delegated",
+                    handoff_strategy="After research, handoff to analyst",
+                    subtasks="Research\nAnalyze",
+                    workflow_gates="Quality checkpoint before completion",
+                    tool_plan="TavilySearchTool",
+                    tool_goals="Gather context",
+                    latency_budget="medium",
+                )
             if name == "TaskAnalysis" or name == "ToolAwareTaskAnalysis":
                 return SimpleNamespace(
                     needs_web_search="no",

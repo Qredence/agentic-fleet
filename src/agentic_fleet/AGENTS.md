@@ -122,6 +122,7 @@ Slow-phase detection: per-phase timing is recorded in `phase_timings` (analysis/
 - GEPA optimization (`utils/gepa_optimizer.py`) accelerates DSPy compilation and supports history-informed reruns.
 - OpenTelemetry tracing hooks live in `utils/tracing.py` and align with AI Toolkit collectors.
 - History capture and analytics live in `utils/history_manager.py` and the `scripts/` helpers.
+- Cosmos mirrors are handled by `utils/cosmos.py`: set `AGENTICFLEET_USE_COSMOS=1` plus `AZURE_COSMOS_ENDPOINT` and either `AZURE_COSMOS_KEY` or `AZURE_COSMOS_USE_MANAGED_IDENTITY=1` to enable best-effort writes to `workflowRuns`, `agentMemory`, `dspyExamples`, `dspyOptimizationRuns`, and `cache`. Partition keys follow best practices (`/workflowId`, `/userId`, `/cacheKey`), and the helper never blocks if the account is unreachable.
 
 ## Code Quality & Architecture Improvements
 
