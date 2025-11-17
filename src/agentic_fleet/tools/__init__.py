@@ -4,7 +4,9 @@
 import sys
 import types
 from typing import Any
+import logging
 
+logger = logging.getLogger(__name__)
 # Ensure agent_framework._serialization with SerializationMixin exists (shared identity)
 _ser_mod_name = "agent_framework._serialization"
 if _ser_mod_name not in sys.modules:
@@ -32,14 +34,14 @@ if _tools_mod_name not in sys.modules:
                 try:
                     out.append(t.to_dict())
                     continue
-                except Exception:
-                    pass
+                except Exception as e:
+                    logger.exception("Failed to convert tool '%r' to dict:", t)
             if hasattr(t, "schema"):
                 try:
                     out.append(t.schema)
                     continue
-                except Exception:
-                    pass
+                except Exception as e:
+                    logger.exception("Failed to get schema from tool '%r':", t)
         return out
 
     _tools_mod._tools_to_dict = _tools_to_dict  # type: ignore[attr-defined]
