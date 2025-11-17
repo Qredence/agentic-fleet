@@ -106,8 +106,9 @@ class ExecutionExecutor(Executor):
                         plan_result = await asyncio.wait_for(_bounded(), timeout=timeout)
                         if hasattr(plan_result, "plan"):
                             tool_plan_info["generated_plan"] = plan_result.plan
-                    except Exception:
-                        pass
+                    except Exception as e:
+                        # Planner generation failed, which is non-fatal. Continue without generated plan.
+                        logger.warning(f"Failed to generate tool plan for task '{task}': {e}")
 
             # Use existing execution phase logic
             execution_outcome = await run_execution_phase(
