@@ -5,6 +5,7 @@ Comprehensive tests for supervisor workflow streaming and edge cases.
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
+from tests.workflows.test_supervisor_workflow import DummyAgent, StubDSPySupervisor
 
 from agentic_fleet.workflows.exceptions import AgentExecutionError, HistoryError
 from agentic_fleet.workflows.supervisor_workflow import (
@@ -20,7 +21,7 @@ async def test_run_stream_yields_events():
     workflow = SupervisorWorkflow(WorkflowConfig(), MagicMock())
 
     # Use DummyAgent instead of stub that raises NotImplementedError
-    from tests.workflows.test_supervisor_workflow import DummyAgent
+    # from tests.workflows.test_supervisor_workflow import DummyAgent -- moved to module import
 
     workflow.agents = {
         "Writer": DummyAgent("Writer"),
@@ -29,12 +30,12 @@ async def test_run_stream_yields_events():
         "Reviewer": DummyAgent("Reviewer"),
     }
 
-    from tests.workflows.test_supervisor_workflow import StubDSPySupervisor
+    # from tests.workflows.test_supervisor_workflow import StubDSPySupervisor -- moved to module import
 
     workflow.dspy_supervisor = StubDSPySupervisor(
         routing={"assigned_to": ["Writer"], "mode": "delegated", "subtasks": []}
     )  # type: ignore[assignment]
-    workflow.history_manager.save_execution = lambda execution: "logs/test.jsonl"
+    workflow.history_manager.save_execution = MagicMock(return_value="logs/test.jsonl")
 
     events = []
     async for event in workflow.run_stream("Test task"):
@@ -84,7 +85,7 @@ async def test_sequential_execution_with_missing_agent():
     """Test sequential execution skips missing agents."""
     workflow = SupervisorWorkflow(WorkflowConfig(), MagicMock())
 
-    from tests.workflows.test_supervisor_workflow import DummyAgent
+    # DummyAgent already imported at module scope
 
     # Create agents with DummyAgent
     workflow.agents = {
@@ -137,7 +138,7 @@ async def test_normalize_routing_invalid_mode():
 @pytest.mark.asyncio
 async def test_normalize_routing_parallel_to_delegated():
     """Test routing switches from parallel to delegated for single agent."""
-    workflow = SupervisorWorkflow()
+    workflow = SupervisorWorkflow(WorkflowConfig(), MagicMock())
     await workflow.initialize(compile_dspy=False)
 
     routing = {"assigned_to": ["Writer"], "mode": "parallel"}
