@@ -58,14 +58,9 @@ This project combines **Microsoft's agent-framework** with **DSPy's prompt optim
 
 ## Critical Patterns
 
-### 1. DSPy Signature Pattern
+### AI Coding Instructions (Concise)
 
-All DSPy modules use **Signatures** (not plain prompts). Signatures define input/output fields with descriptions:
-
-```python
-# AgenticFleet – AI Coding Instructions (Concise)
-
-Purpose: Equip AI coding agents with just-in-time knowledge to be productive in this DSPy + Microsoft agent-framework hybrid. Keep changes declarative (YAML, examples) and lean on existing abstractions (SupervisorWorkflow, DSPySupervisor, ToolRegistry).
+**Purpose:** Equip AI coding agents with just-in-time knowledge to be productive in this DSPy + Microsoft agent-framework hybrid. Keep changes declarative (YAML, examples) and lean on existing abstractions (SupervisorWorkflow, DSPySupervisor, ToolRegistry).
 
 ## Core Architecture
 4 Phases (+ optional Judge loop): Analysis → Routing → Execution → Progress/Quality → (Refinement). Lazy DSPy compilation runs in the background (`logs/compiled_supervisor.pkl` + `.meta` with signature+config hashes) – never block user flows waiting for completion.
@@ -124,5 +119,3 @@ Wrong path references (use `src/agentic_fleet/...`). Tool list misuse (YAML list
 5. Lint & types pass (`ruff`, `mypy`, `black`)
 
 Feedback welcome—request clarification if any pattern seems incomplete or outdated.
-
-```
