@@ -1,5 +1,32 @@
 # Changelog
 
+## Unreleased
+
+### Highlights
+
+- **Optional Azure Cosmos DB persistence** – `AGENTICFLEET_USE_COSMOS=1` now mirrors workflow history, agent memory, DSPy datasets, and cache metadata into Cosmos NoSQL using a single helper module (`utils/cosmos.py`). The runtime degrades gracefully when Cosmos is unreachable.
+- **Data Model Documentation** – Added `cosmosdb_requirements.md` and `cosmosdb_data_model.md`, covering access patterns, container schemas, and provisioning guidance that follow Azure Cosmos DB best practices (high-cardinality partition keys, 2 MB limits, TTL guidance).
+- **Quality & Persistence polish** – `HistoryManager` now mirrors executions asynchronously, the supervisor workflow records whether refinement ran, and tests gained realistic persistence utilities with summarization support.
+
+### Changes
+
+- Introduced `src/agentic_fleet/utils/cosmos.py`, a cached helper that manages Cosmos clients (managed identity or key auth), container lookups, and best-effort mirroring APIs for executions, agent memory items, DSPy examples/optimization runs, and cache entries.
+- Updated `utils/history_manager.py`, `workflows/quality/refiner.py`, `workflows/supervisor_workflow.py`, and supporting modules to call the new helper without blocking the critical path.
+- Added lightweight, in-memory persistence utilities (`utils/persistence.py`) used by `tests/test_persistence.py` to verify summarization thresholds (`summary_threshold` / `summary_keep_recent`).
+- Expanded documentation: README (configuration, observability, new Cosmos section), `docs/users/configuration.md` (environment reference), and both `AGENTS.md` files to describe Cosmos-backed long-term memory.
+
+### Testing
+
+- Updated `tests/test_persistence.py` with real persistence helpers and summarization assertions.
+- Extended workflow quality suites (`tests/workflows/test_judge_refinement.py`, `tests/workflows/test_quality_modules.py`) to ensure the new refinement and quality metadata paths behave as expected.
+
+### Migration Notes
+
+- Cosmos mirroring is off by default. Set `AGENTICFLEET_USE_COSMOS=1` plus the relevant endpoint/key (or managed identity) variables to enable it. The helper never creates databases/containers; provision them ahead of time using the schemas in `cosmosdb_data_model.md`.
+- Container names default to `workflowRuns`, `agentMemory`, `dspyExamples`, `dspyOptimizationRuns`, and `cache`. Override via `AZURE_COSMOS_*_CONTAINER` env vars if your account uses different IDs.
+
+---
+
 ## v0.6.0 (2025-11-13) – Major Refactor: Code Quality, Import Organization & Architecture Cleanup
 
 ### Highlights (v0.6.0)

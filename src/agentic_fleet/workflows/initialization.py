@@ -29,12 +29,14 @@ logger = setup_logger(__name__)
 async def initialize_workflow_context(
     config: WorkflowConfig | None = None,
     compile_dspy: bool = True,
+    dspy_supervisor: DSPySupervisor | None = None,
 ) -> SupervisorContext:
     """Initialize workflow context with agents, DSPy supervisor, and tools.
 
     Args:
         config: Workflow configuration (defaults to WorkflowConfig())
         compile_dspy: Whether to compile DSPy supervisor
+        dspy_supervisor: Optional pre-initialized DSPy supervisor to reuse
 
     Returns:
         Initialized SupervisorContext
@@ -71,8 +73,14 @@ async def initialize_workflow_context(
     # Create tool registry first
     tool_registry = ToolRegistry()
 
-    # Create DSPy supervisor with enhanced signatures enabled
-    dspy_supervisor = DSPySupervisor(use_enhanced_signatures=True)
+    # Create DSPy supervisor with enhanced signatures enabled (reuse if provided)
+    if dspy_supervisor is None:
+        dspy_supervisor = DSPySupervisor(use_enhanced_signatures=True)
+    elif not getattr(dspy_supervisor, "use_enhanced_signatures", False):
+        logger.warning(
+            "Provided dspy_supervisor does not have use_enhanced_signatures=True. "
+            "This may lead to inconsistent behavior."
+        )
 
     # Create specialized agents BEFORE compilation if tool-aware DSPy signatures need visibility
     logger.info("Creating specialized agents...")
@@ -180,6 +188,7 @@ async def initialize_workflow_context(
         compilation_status="pending",
         compilation_task=None,
         compilation_lock=asyncio.Lock(),
+        compilation_state=compilation_state,
     )
 
     # Optionally compile DSPy supervisor

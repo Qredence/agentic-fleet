@@ -11,7 +11,7 @@ from __future__ import annotations
 import asyncio
 import time
 from collections.abc import AsyncGenerator
-from typing import TYPE_CHECKING, Any
+from typing import Any
 
 import dspy
 from agent_framework import AgentRunResponse, ChatAgent, ChatMessage, Role
@@ -19,9 +19,6 @@ from agent_framework import AgentRunResponse, ChatAgent, ChatMessage, Role
 from ..utils.cache import cache_agent_response
 from ..utils.logger import setup_logger
 from ..utils.telemetry import PerformanceTracker, optional_span
-
-if TYPE_CHECKING:
-    from agent_framework.openai import OpenAIResponsesClient
 
 logger = setup_logger(__name__)
 
@@ -70,7 +67,7 @@ class DSPyEnhancedAgent(ChatAgent):
     def __init__(
         self,
         name: str,
-        chat_client: OpenAIResponsesClient,
+        chat_client: Any,
         instructions: str = "",
         description: str = "",
         tools: Any = None,
@@ -90,6 +87,11 @@ class DSPyEnhancedAgent(ChatAgent):
             cache_ttl: Cache time-to-live in seconds (0 to disable)
             timeout: Maximum execution time per task in seconds
         """
+        # Preserve a stable, explicit role description for DSPy that
+        # doesn't depend on ChatAgent internals. Prefer an explicit
+        # description, then instructions, then the agent name.
+        self._role_description: str = description or instructions or name
+
         super().__init__(
             name=name,
             description=description,
@@ -117,9 +119,13 @@ class DSPyEnhancedAgent(ChatAgent):
 
     def _get_agent_role_description(self) -> str:
         """Get agent role description for DSPy enhancement."""
-        instructions = getattr(self.chat_options, "instructions", None)
-        role_description = self.description or instructions or ""
-        return role_description[:200]
+        # Prefer the explicit role description captured at initialization.
+        role_description = getattr(self, "_role_description", None)
+        if not role_description:
+            # Fallback to current runtime attributes if needed.
+            instructions = getattr(self.chat_options, "instructions", None)
+            role_description = self.description or instructions or self.name
+        return str(role_description)[:200]
 
     def _enhance_task_with_dspy(self, task: str, context: str = "") -> tuple[str, dict[str, Any]]:
         """Enhance task using DSPy for better agent understanding.

@@ -4,12 +4,13 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any
 
-from agent_framework import ChatMessage, MagenticAgentMessageEvent, Role, WorkflowOutputEvent
+from agent_framework import WorkflowOutputEvent
 
 from ...utils.logger import setup_logger
 from ..exceptions import AgentExecutionError
 from ..handoff_manager import HandoffContext, HandoffManager
 from ..utils import derive_objectives, estimate_remaining_work, extract_artifacts
+from .streaming_events import create_agent_event, create_system_event
 
 if TYPE_CHECKING:
     from ...utils.progress import ProgressCallback
@@ -166,36 +167,138 @@ async def execute_sequential_streaming(
     agent_names: list[str],
     task: str,
     progress_callback: ProgressCallback | None = None,
+    *,
+    enable_handoffs: bool = False,
+    handoff_manager: HandoffManager | None = None,
 ):
     """Execute task sequentially through agents with streaming."""
+
+    if not agent_names:
+        raise AgentExecutionError(
+            agent_name="unknown",
+            task="sequential execution",
+            original_error=RuntimeError("Sequential execution requires at least one agent"),
+        )
+
     result = task
-    total_agents = len([a for a in agent_names if a in agents])
-    current_agent = 0
-    for agent_name in agent_names:
-        if agent_name in agents:
-            current_agent += 1
-            if progress_callback:
-                progress_callback.on_progress(
-                    f"Executing {agent_name} ({current_agent}/{total_agents})...",
-                    current=current_agent,
-                    total=total_agents,
+    total_agents = len([name for name in agent_names if name in agents])
+    current_agent_idx = 0
+    artifacts: dict[str, Any] = {}
+    agent_trace: list[dict[str, Any]] = []
+    handoff_history: list[dict[str, Any]] = []
+
+    for step_index, agent_name in enumerate(agent_names):
+        agent = agents.get(agent_name)
+        if not agent:
+            yield create_system_event(
+                stage="execution",
+                event="agent.skipped",
+                text=f"Skipping unknown agent '{agent_name}'",
+                payload={"agent": agent_name},
+            )
+            continue
+
+        current_agent_idx += 1
+        if progress_callback:
+            progress_callback.on_progress(
+                f"Executing {agent_name} ({current_agent_idx}/{total_agents})...",
+                current=current_agent_idx,
+                total=total_agents,
+            )
+
+        yield create_agent_event(
+            stage="execution",
+            event="agent.start",
+            agent=agent_name,
+            text=f"{agent_name} starting sequential step",
+            payload={
+                "position": current_agent_idx,
+                "total_agents": total_agents,
+            },
+        )
+
+        response = await agent.run(result)
+        result_text = str(response)
+        artifacts.update(extract_artifacts(result_text))
+
+        yield create_agent_event(
+            stage="execution",
+            event="agent.completed",
+            agent=agent_name,
+            text=f"{agent_name} completed sequential step",
+            payload={
+                "result_preview": result_text[:200],
+                "artifacts": list(artifacts.keys()),
+            },
+        )
+
+        agent_trace.append(
+            {
+                "agent": agent_name,
+                "output_preview": result_text[:200],
+                "artifacts": list(artifacts.keys()),
+            }
+        )
+
+        # Handoff handling (only before final agent)
+        if enable_handoffs and handoff_manager and step_index < len(agent_names) - 1:
+            next_agent_name = agent_names[step_index + 1]
+            remaining_work = estimate_remaining_work(task, result_text)
+            available_agents = {
+                name: getattr(agents[name], "description", name)
+                for name in agent_names[step_index + 1 :]
+                if name in agents
+            }
+
+            if available_agents:
+                next_agent = await handoff_manager.evaluate_handoff(
+                    current_agent=agent_name,
+                    work_completed=result_text,
+                    remaining_work=remaining_work,
+                    available_agents=available_agents,
                 )
-            yield MagenticAgentMessageEvent(
-                agent_id=agent_name,
-                message=ChatMessage(role=Role.ASSISTANT, text="Processing task..."),
-            )
 
-            response = await agents[agent_name].run(result)
+                if next_agent == next_agent_name:
+                    remaining_objectives = derive_objectives(remaining_work)
+                    handoff_context = await handoff_manager.create_handoff_package(
+                        from_agent=agent_name,
+                        to_agent=next_agent_name,
+                        work_completed=result_text,
+                        artifacts=artifacts,
+                        remaining_objectives=remaining_objectives,
+                        task=task,
+                        handoff_reason=f"Sequential workflow handoff {agent_name} → {next_agent_name}",
+                    )
 
-            yield MagenticAgentMessageEvent(
-                agent_id=agent_name,
-                message=ChatMessage(role=Role.ASSISTANT, text=f"Completed: {response!s}"),
-            )
+                    handoff_history.append(handoff_context.to_dict())
+                    yield create_system_event(
+                        stage="handoff",
+                        event="handoff.created",
+                        text=f"Handoff {agent_name} → {next_agent_name}",
+                        payload={"handoff": handoff_context.to_dict()},
+                        agent=f"{agent_name}->{next_agent_name}",
+                    )
 
-            result = str(response)
+                    formatted_input = format_handoff_input(handoff_context)
+                    result = formatted_input
+                    continue
 
-    # Yield final result
+        result = result_text
+
+    final_payload = {
+        "result": result,
+        "agent_executions": agent_trace,
+        "handoff_history": handoff_history,
+        "artifacts": artifacts,
+    }
+
+    yield create_system_event(
+        stage="execution",
+        event="agent.summary",
+        text="Sequential execution complete",
+        payload={"agents": agent_names},
+    )
     yield WorkflowOutputEvent(
-        data={"result": result},
+        data=final_payload,
         source_executor_id="sequential_execution",
     )

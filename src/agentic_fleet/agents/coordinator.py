@@ -2,21 +2,62 @@
 
 from __future__ import annotations
 
+import inspect
 import logging
 import os
 from typing import Any
 
 from agent_framework import ChatAgent
-from agent_framework.openai import OpenAIResponsesClient
+from agent_framework.openai import OpenAIChatClient
 from dotenv import load_dotenv
 
 from agentic_fleet.agents.base import DSPyEnhancedAgent
 from agentic_fleet.utils.telemetry import optional_span
 from agentic_fleet.utils.tool_registry import ToolRegistry
 
+try:
+    from agent_framework.openai import OpenAIResponsesClient as _PreferredOpenAIClient
+
+    _RESPONSES_CLIENT_AVAILABLE = True
+except (
+    ImportError,
+    AttributeError,
+):  # pragma: no cover - fallback path depends on installed extras
+    _PreferredOpenAIClient = OpenAIChatClient
+    _RESPONSES_CLIENT_AVAILABLE = False
+
 load_dotenv(override=True)
 
 logger = logging.getLogger(__name__)
+_fallback_warning_emitted = False
+
+
+def _prepare_kwargs_for_client(client_cls: type, kwargs: dict[str, Any]) -> dict[str, Any]:
+    try:
+        signature = inspect.signature(client_cls.__init__)
+    except (TypeError, ValueError):  # pragma: no cover - defensive guardrail
+        return kwargs
+
+    accepts_var_kwargs = any(
+        param.kind == inspect.Parameter.VAR_KEYWORD for param in signature.parameters.values()
+    )
+    if accepts_var_kwargs:
+        return kwargs
+
+    allowed_keys = {name for name, parameter in signature.parameters.items() if name != "self"}
+    return {key: value for key, value in kwargs.items() if key in allowed_keys}
+
+
+def _create_openai_client(**kwargs: Any):
+    global _fallback_warning_emitted
+
+    client_kwargs = _prepare_kwargs_for_client(_PreferredOpenAIClient, kwargs)
+    if not _RESPONSES_CLIENT_AVAILABLE and not _fallback_warning_emitted:
+        logger.warning(
+            "OpenAIResponsesClient is unavailable; falling back to OpenAIChatClient (Responses API features disabled).",
+        )
+        _fallback_warning_emitted = True
+    return _PreferredOpenAIClient(**client_kwargs)
 
 
 class AgentFactory:
@@ -93,7 +134,7 @@ class AgentFactory:
             base_url = os.getenv("OPENAI_BASE_URL") or None
 
             # Create OpenAI client using agent_framework directly
-            chat_client = OpenAIResponsesClient(
+            chat_client = _create_openai_client(
                 model_id=model_id,
                 api_key=api_key,
                 base_url=base_url,
@@ -461,6 +502,13 @@ def create_workflow_agents(
         instructions="Perform detailed analysis with code and visualizations",
         tools=analyst_tool,
     )
+    # Register analyst tool so tests can see code execution capability
+    try:
+        if validate_tool(analyst_tool):
+            tool_registry.register_tool_by_agent("Analyst", analyst_tool)
+            logger.info("HostedCodeInterpreterAdapter registered for Analyst")
+    except Exception as e:
+        logger.warning(f"Failed to register Analyst tool: {e}")
 
     agents["Writer"] = _create_agent(
         name="Writer",

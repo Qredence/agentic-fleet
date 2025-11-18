@@ -73,7 +73,7 @@ workflow:
 # Agent Configuration
 agents:
   researcher:
-    model: gpt-4.1
+    model: gpt-4.1-mini
     tools:
       - TavilySearchTool # Requires TAVILY_API_KEY environment variable
     temperature: 0.5
@@ -82,7 +82,7 @@ agents:
     timeout: 30 # Task timeout in seconds
 
   analyst:
-    model: gpt-4.1
+    model: gpt-4.1-mini
     tools:
       - HostedCodeInterpreterTool
     temperature: 0.3
@@ -91,7 +91,7 @@ agents:
     timeout: 45 # Longer timeout for computations
 
   writer:
-    model: gpt-4.1
+    model: gpt-5-nano
     tools: []
     temperature: 0.7
     enable_dspy: true
@@ -162,7 +162,7 @@ tools:
 
 # Logging
 logging:
-  level: INFO
+  level: DEBUG
   format: "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
   file: logs/workflow.log
   save_history: true
@@ -189,5 +189,5 @@ evaluation:
     - relevance_score # Fraction of keywords present (semantic proxy)
     - token_count # Approximate output token count
     - estimated_cost_usd # Estimated model cost based on token_count
-  max_tasks: 0 # 0 = no limit
-  stop_on_failure: false # Abort early on first failed success metric
+  max_tasks: 5 # 0 = no limit
+  stop_on_failure: true # Abort early on first failed success metric

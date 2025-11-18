@@ -86,6 +86,58 @@ uv run agentic-fleet run -m "Your question here" --verbose
 uv run agentic-fleet run -m "Your question here" --verbose 2>&1 | tee logs/output.log
 ```
 
+## Workflow via CLI
+
+### Running the Supervisor Workflow
+
+Once the package is installed you can invoke the workflow directly with the
+packaged CLI (no `uv run` wrapper required in production shells):
+
+```bash
+agentic-fleet run -m "Map Q4 risks for the AI compliance program"
+```
+
+Commonly used flags:
+
+- `--verbose` – stream DSPy analysis, routing, tool calls, and judge feedback
+- `--no-compile` – skip DSPy compilation for the current session (faster cold start)
+- `--history <path>` – override where execution history is written
+
+The same executable exposes supporting commands such as
+`agentic-fleet list-agents` (inspect roster) and
+`agentic-fleet evaluate --max-tasks 25` (batch evaluation), so teams can keep a
+single mental model for both ad-hoc runs and continuous benchmarking.
+
+### Features & Representative Use Cases
+
+| Feature                        | What it delivers                                                                                                                  | Sample CLI prompts                                                                    |
+| ------------------------------ | --------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------- |
+| Adaptive multi-agent routing   | DSPy supervisor selects the right mix of Researcher/Analyst/Writer/Reviewer plus execution mode (delegated, sequential, parallel) | `agentic-fleet run -m "Research EU AI Act updates and summarize the compliance gap"`  |
+| Tool-aware orchestration       | Routing decisions consider tool requirements such as Tavily search or Hosted Code Interpreter                                     | `agentic-fleet run -m "Fetch current GPU spot prices and chart 12‑month trend"`       |
+| Judge & refinement loop        | Automatic scoring (0–10), gap detection, and optional refinement when the score falls below thresholds                            | `agentic-fleet run -m "Draft an incident postmortem for outage #1452" --verbose`      |
+| Streaming visibility           | Real-time event stream powers CLIs, TUIs, and the frontend dashboard                                                              | `agentic-fleet run -m "Live update: summarize today’s AI policy headlines" --verbose` |
+| Persistent history & analytics | JSONL history + analyzer scripts make it easy to audit routing, timings, and quality                                              | `agentic-fleet run -m "Prepare talking points for next week’s roadmap review"`        |
+
+These patterns cover the primary personas we see in production: research pods,
+analyst desks, documentation teams, and evaluation/QA leads.
+
+### Processing Flow
+
+Each CLI invocation triggers the same four-phase pipeline described in
+[Execution Phases](#execution-phases):
+
+1. **Analysis** – DSPy inspects the prompt, required skills, and available tools.
+2. **Routing** – The supervisor fixes the agent roster, selects delegated vs.
+   sequential vs. parallel mode, and synthesizes subtasks/handoffs.
+3. **Execution** – Microsoft agent-framework executors run the selected
+   ChatAgents, stream tool calls, and capture artifacts.
+4. **Quality & Judge** – DSPy scores the output, records missing elements, and
+   optionally triggers refinement rounds until thresholds are met.
+
+The CLI surfaces these phases through the `--verbose` stream and also records
+timings/decisions in `logs/execution_history.jsonl` for later inspection via
+`uv run python scripts/analyze_history.py`.
+
 ### Programmatic Usage
 
 Integrate into your Python applications:
@@ -655,6 +707,27 @@ Verbose output includes:
 - Tool availability and usage
 - Routing decisions with explanations
 - Quality assessment details
+
+## Console Output Formatting
+
+By default the CLI prints a concise **Final Answer** block that contains the
+user-facing response, the overall quality score, and the agents that
+contributed. When you add `--verbose`, the stream is reorganized into clearly
+separated sections so operators can reason about the run without losing the
+clean answer:
+
+1. **Final Answer** – Markdown-formatted response and key metrics (always shown).
+2. **Reasoning & Plan** – DSPy analysis, proposed steps, and routing rationale.
+3. **Execution Log** – Timestamped agent/tool events, iterations, and handoffs.
+4. **Assertions & Checks** – Judge/referee evaluations, missing items, and
+   refinement outcomes.
+
+The structured layout keeps executive-ready answers readable in the default
+mode while still exposing deep traces for operators and developers via
+`--verbose`. Teams that ingest the CLI output into observability tooling often
+pipe the verbose stream through `tee` or redirect just the Final Answer block
+to downstream systems, knowing that the reasoning/steps/assertions are already
+formatted for inspection.
 
 ## Troubleshooting
 

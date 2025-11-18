@@ -9,7 +9,7 @@ resolution-markers = [
 
 [[package]]
 name = "a2a-sdk"
-version = "0.3.12"
+version = "0.3.13"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "google-api-core" },
@@ -18,9 +18,9 @@ dependencies = [
     { name = "protobuf" },
     { name = "pydantic" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/55/38/b473e04e21960d8eee7b04e35ac35c8e117f3cc2b333e0fa0371b48308a3/a2a_sdk-0.3.12.tar.gz", hash = "sha256:498a14c6b175185d24b4d800ea1ce1daa7dade48cdb85bc63c6db18acca37f6d", size = 227806, upload-time = "2025-11-12T21:38:23.972Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/2d/17/bc2837a6b22cfe03df58c6145e5fa2fbcf780d53e0d9a865ae6d32a3155a/a2a_sdk-0.3.13.tar.gz", hash = "sha256:c1dcc611bff0523730906833927d7046bf88d7d90b0f8d73239c43d373afcab8", size = 227869, upload-time = "2025-11-17T09:27:40.532Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/77/68/3c89949d8692deaab48ac077543fdff500317ee06ee16c7292ddff66a54f/a2a_sdk-0.3.12-py3-none-any.whl", hash = "sha256:8f1cb56e1faa3edc6a228075391b136c1518061b4f0b78ff0e373f65f858d736", size = 140393, upload-time = "2025-11-12T21:38:22.63Z" },
+    { url = "https://files.pythonhosted.org/packages/7e/da/6587ce6d08852988de7fd6f5442a53c6c572378d9242c6819f2f67c5b7ab/a2a_sdk-0.3.13-py3-none-any.whl", hash = "sha256:0dd13aae759aebd95405dc88cfa9d087e8745a6b8e598e83ccc0223330ecf78a", size = 140386, upload-time = "2025-11-17T09:27:39.294Z" },
 ]
 
 [[package]]
@@ -62,7 +62,7 @@ wheels = [
 [[package]]
 name = "agent-framework-a2a"
 version = "1.0.0b251114"
-source = { git = "https://github.com/microsoft/agent-framework.git?subdirectory=python%2Fpackages%2Fa2a&branch=main#45dba6b8258b1184f940be52ffc062cee5cdadbb" }
+source = { git = "https://github.com/microsoft/agent-framework.git?subdirectory=python%2Fpackages%2Fa2a&branch=main#57ca139f8cdd484a3a3de3d9f2e13559f518f754" }
 dependencies = [
     { name = "a2a-sdk" },
     { name = "agent-framework-core" },
@@ -99,7 +99,7 @@ wheels = [
 [[package]]
 name = "agent-framework-azure-ai"
 version = "1.0.0b251114"
-source = { git = "https://github.com/microsoft/agent-framework.git?subdirectory=python%2Fpackages%2Fazure-ai&branch=main#45dba6b8258b1184f940be52ffc062cee5cdadbb" }
+source = { git = "https://github.com/microsoft/agent-framework.git?subdirectory=python%2Fpackages%2Fazure-ai&branch=main#57ca139f8cdd484a3a3de3d9f2e13559f518f754" }
 dependencies = [
     { name = "agent-framework-core" },
     { name = "aiohttp" },
@@ -150,7 +150,7 @@ wheels = [
 [[package]]
 name = "agent-framework-core"
 version = "1.0.0b251114"
-source = { git = "https://github.com/microsoft/agent-framework.git?subdirectory=python%2Fpackages%2Fcore&branch=main#45dba6b8258b1184f940be52ffc062cee5cdadbb" }
+source = { git = "https://github.com/microsoft/agent-framework.git?subdirectory=python%2Fpackages%2Fcore&branch=main#57ca139f8cdd484a3a3de3d9f2e13559f518f754" }
 dependencies = [
     { name = "azure-identity" },
     { name = "mcp", extra = ["ws"] },
@@ -168,7 +168,7 @@ dependencies = [
 [[package]]
 name = "agent-framework-devui"
 version = "1.0.0b251114"
-source = { git = "https://github.com/microsoft/agent-framework.git?subdirectory=python%2Fpackages%2Fdevui&branch=main#45dba6b8258b1184f940be52ffc062cee5cdadbb" }
+source = { git = "https://github.com/microsoft/agent-framework.git?subdirectory=python%2Fpackages%2Fdevui&branch=main#57ca139f8cdd484a3a3de3d9f2e13559f518f754" }
 dependencies = [
     { name = "agent-framework-core" },
     { name = "fastapi" },
@@ -191,7 +191,7 @@ wheels = [
 [[package]]
 name = "agent-framework-mem0"
 version = "1.0.0b251114"
-source = { git = "https://github.com/microsoft/agent-framework.git?subdirectory=python%2Fpackages%2Fmem0&branch=main#45dba6b8258b1184f940be52ffc062cee5cdadbb" }
+source = { git = "https://github.com/microsoft/agent-framework.git?subdirectory=python%2Fpackages%2Fmem0&branch=main#57ca139f8cdd484a3a3de3d9f2e13559f518f754" }
 dependencies = [
     { name = "agent-framework-core" },
     { name = "mem0ai" },
@@ -2836,7 +2836,7 @@ wheels = [
 
 [[package]]
 name = "mcp"
-version = "1.21.1"
+version = "1.21.2"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "anyio" },
@@ -2854,9 +2854,9 @@ dependencies = [
     { name = "typing-inspection" },
     { name = "uvicorn", marker = "sys_platform != 'emscripten'" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/f7/25/4df633e7574254ada574822db2245bbee424725d1b01bccae10bf128794e/mcp-1.21.1.tar.gz", hash = "sha256:540e6ac4b12b085c43f14879fde04cbdb10148a09ea9492ff82d8c7ba651a302", size = 469071, upload-time = "2025-11-13T20:33:46.139Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/15/bb/147bf5d47b8d6f3fb315204cd2f567b1ad85511acd8d59e85cccf7cce65c/mcp-1.21.2.tar.gz", hash = "sha256:b6497b7f7a77aabe263931a3335956dfd45fe8b1e2168931e455914ba1a7f4c9", size = 470799, upload-time = "2025-11-17T13:56:06.397Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/49/af/01fb42df59ad15925ffc1e2e609adafddd3ac4572f606faae0dc8b55ba0c/mcp-1.21.1-py3-none-any.whl", hash = "sha256:dd35abe36d68530a8a1291daa25d50276d8731e545c0434d6e250a3700dd2a6d", size = 174852, upload-time = "2025-11-13T20:33:44.502Z" },
+    { url = "https://files.pythonhosted.org/packages/67/0f/669ecbe78a0ba192afcc0b026ae62d1005779e91bad27ab9d703401510bf/mcp-1.21.2-py3-none-any.whl", hash = "sha256:59413ef15db757a785e3859548c1a7ffc7be57bf162c3c24afc0e04fd9f4181c", size = 174854, upload-time = "2025-11-17T13:56:04.987Z" },
 ]
 
 [package.optional-dependencies]
@@ -3281,11 +3281,11 @@ wheels = [
 
 [[package]]
 name = "narwhals"
-version = "2.11.0"
+version = "2.12.0"
 source = { registry = "https://pypi.org/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/7d/a2/25208347aa4c2d82a265cf4bc0873aaf5069f525c0438146821e7fc19ef5/narwhals-2.11.0.tar.gz", hash = "sha256:d23f3ea7efc6b4d0355444a72de6b8fa3011175585246c3400c894a7583964af", size = 589233, upload-time = "2025-11-10T16:28:35.675Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/93/f8/e1c28f24b641871c14ccae7ba6381f3c7827789a06e947ce975ae8a9075a/narwhals-2.12.0.tar.gz", hash = "sha256:075b6d56f3a222613793e025744b129439ecdff9292ea6615dd983af7ba6ea44", size = 590404, upload-time = "2025-11-17T10:53:28.381Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/c0/a1/4d21933898e23b011ae0528151b57a9230a62960d0919bf2ee48c7f5c20a/narwhals-2.11.0-py3-none-any.whl", hash = "sha256:a9795e1e44aa94e5ba6406ef1c5ee4c172414ced4f1aea4a79e5894f0c7378d4", size = 423069, upload-time = "2025-11-10T16:28:33.522Z" },
+    { url = "https://files.pythonhosted.org/packages/0b/9a/c6f79de7ba3a0a8473129936b7b90aa461d3d46fec6f1627672b1dccf4e9/narwhals-2.12.0-py3-none-any.whl", hash = "sha256:baeba5d448a30b04c299a696bd9ee5ff73e4742143e06c49ca316b46539a7cbb", size = 425014, upload-time = "2025-11-17T10:53:26.65Z" },
 ]
 
 [[package]]
@@ -4526,7 +4526,7 @@ wheels = [
 
 [[package]]
 name = "qdrant-client"
-version = "1.15.1"
+version = "1.16.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "grpcio" },
@@ -4537,9 +4537,9 @@ dependencies = [
     { name = "pydantic" },
     { name = "urllib3" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/79/8b/76c7d325e11d97cb8eb5e261c3759e9ed6664735afbf32fdded5b580690c/qdrant_client-1.15.1.tar.gz", hash = "sha256:631f1f3caebfad0fd0c1fba98f41be81d9962b7bf3ca653bed3b727c0e0cbe0e", size = 295297, upload-time = "2025-07-31T19:35:19.627Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/fa/16/366541897d270ee3f9c3f87da145baa8a5c9cc5190e0e53e8bbec1267cff/qdrant_client-1.16.0.tar.gz", hash = "sha256:0716aa0b7cca39745829c2e8ea0beb275fe2990e743ad803eabd6218e4b35c1b", size = 284128, upload-time = "2025-11-17T13:19:52.726Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/ef/33/d8df6a2b214ffbe4138db9a1efe3248f67dc3c671f82308bea1582ecbbb7/qdrant_client-1.15.1-py3-none-any.whl", hash = "sha256:2b975099b378382f6ca1cfb43f0d59e541be6e16a5892f282a4b8de7eff5cb63", size = 337331, upload-time = "2025-07-31T19:35:17.539Z" },
+    { url = "https://files.pythonhosted.org/packages/a5/ff/3a69bb56835c4b2e9fa780655790937011ac389b0408b9a1147eaa2cee22/qdrant_client-1.16.0-py3-none-any.whl", hash = "sha256:6b932393e84e4c0233e5b2eb96b0918e968725855adae4d9c541761f4c50cf11", size = 328579, upload-time = "2025-11-17T13:19:51.092Z" },
 ]
 
 [[package]]

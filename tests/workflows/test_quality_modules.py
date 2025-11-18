@@ -427,7 +427,7 @@ async def test_refine_results():
     results = "Original results"
     improvements = "Add citations"
 
-    refined = await refiner.refine_results(agents, results, improvements)
+    refined = await refiner.refine_results(results, improvements, agents)
 
     assert "Refined" in refined
     assert "Original results" in refined
@@ -442,7 +442,7 @@ async def test_refine_results_missing_writer():
     improvements = "Add citations"
 
     with pytest.raises(KeyError):
-        await refiner.refine_results(agents, results, improvements)
+        await refiner.refine_results(results, improvements, agents)
 
 
 def test_parse_judge_response_quality_score():

@@ -61,6 +61,7 @@ AgenticFleet is a hybrid **DSPy + Microsoft agent-framework** runtime that deliv
 - **Rich Ergonomics** – Typer CLI (`cli/console.py`), `dspy-fleet` command, optional Vite frontend, history analytics scripts.
 - **Safe Fallbacks** – Graceful degradation when DSPy unavailable (heuristic routing & quality scoring).
 - **Extensible Toolkit** – Add agents, tools, signatures, evaluation metrics with minimal boilerplate.
+- **Azure Cosmos DB Persistence (optional)** – Set one flag to mirror workflow runs, agent memories, DSPy datasets, and cache metadata into Cosmos NoSQL for durable, queryable telemetry.
 
 ---
 
@@ -191,6 +192,20 @@ DSPY_COMPILE=true              # Toggle DSPy compilation (true/false)
 OPENAI_BASE_URL=https://...    # Optional custom endpoint
 LANGFUSE_PUBLIC_KEY=...        # Optional observability
 LANGFUSE_SECRET_KEY=...
+
+# Optional Azure Cosmos DB mirroring
+AGENTICFLEET_USE_COSMOS=0
+AZURE_COSMOS_ENDPOINT=https://<account>.documents.azure.com:443/
+AZURE_COSMOS_USE_MANAGED_IDENTITY=0
+AZURE_COSMOS_KEY=<primary-or-secondary-key>
+AZURE_COSMOS_DATABASE=agentic-fleet
+AGENTICFLEET_DEFAULT_USER_ID=local-dev
+# Container overrides (use defaults unless you renamed them)
+# AZURE_COSMOS_WORKFLOW_RUNS_CONTAINER=workflowRuns
+# AZURE_COSMOS_AGENT_MEMORY_CONTAINER=agentMemory
+# AZURE_COSMOS_DSPY_EXAMPLES_CONTAINER=dspyExamples
+# AZURE_COSMOS_DSPY_OPTIMIZATION_RUNS_CONTAINER=dspyOptimizationRuns
+# AZURE_COSMOS_CACHE_CONTAINER=cache
 ```
 
 **Note**: The `OPENAI_API_KEY` environment variable is required and will be validated at startup. If missing, the application will fail with a clear error message.
@@ -204,7 +219,7 @@ Key YAML knobs (`workflow_config.yaml`):
 - `agents.*` – Per-agent model + temperature + tools
 - `evaluation.*` – Batch evaluation settings
 
-**Configuration Validation**: The YAML configuration is automatically validated against a schema when loaded. Invalid values (e.g., out-of-range temperatures, invalid model names) will raise `ConfigurationError` with clear messages indicating which field failed validation.
+**Configuration Validation**: The YAML configuration is automatically validated against a schema when loaded. Invalid values (e.g., out-of-range temperatures, invalid model names) will raise `ConfigurationError` with clear messages indicating which field failed validation. Cosmos mirroring is best-effort—if environment variables are missing or the containers are unreachable, workflows continue locally and you’ll see a warning in the logs.
 
 ---
 
@@ -298,9 +313,21 @@ uv run python -m agentic_fleet.scripts.manage_cache --clear
 ## Observability & History
 
 - **History**: Structured events appended to `logs/execution_history.jsonl`.
+- **Cosmos Mirror (optional)**: When `AGENTICFLEET_USE_COSMOS=1`, workflow executions, agent memories, DSPy examples, optimization runs, and cache metadata are mirrored into Cosmos containers (`workflowRuns`, `agentMemory`, `dspyExamples`, `dspyOptimizationRuns`, `cache`). All writes are best-effort and never block the main workflow.
 - **Tracing**: Enable OpenTelemetry in YAML; export to AI Toolkit / OTLP endpoint.
 - **Logging**: Adjustable log level via env (`AGENTIC_FLEET_LOG_LEVEL=DEBUG`).
 - **Analysis**: `scripts/analyze_history.py --all` surfaces aggregate metrics.
+
+## Azure Cosmos DB Integration
+
+AgenticFleet now includes a lightweight Cosmos helper (`src/agentic_fleet/utils/cosmos.py`) that centralizes credentials, container lookups, and error handling. Enable it by setting `AGENTICFLEET_USE_COSMOS=1` and supplying the endpoint plus either a primary key or managed identity. The runtime mirrors the following data sets without changing your local workflow semantics:
+
+- **Workflow history** (`workflowRuns`) – Each supervisor run (task, routing, events, quality) is mirrored so you can build dashboards or Power BI reports.
+- **Agent memory** (`agentMemory`) – Long-term memories keyed by `userId`, ready for Cosmos vector search or downstream RAG systems.
+- **DSPy artifacts** (`dspyExamples`, `dspyOptimizationRuns`) – Keep your routing datasets and optimization metadata in a globally accessible store.
+- **Cache metadata** (`cache`) – Optional TTL-based cache entries for expensive computations.
+
+Provision the database/containers ahead of time (see `cosmosdb_requirements.md` and `cosmosdb_data_model.md`). The helper never creates resources automatically, keeping RU/throughput surprises under your control. Partition keys follow Cosmos best practices (`/workflowId`, `/userId`, `/cacheKey`) and default container names can be overridden via environment variables to match your deployment. If the Cosmos account is unavailable, the runtime logs a warning and continues with file-based history only.
 
 ---
 
@@ -392,6 +419,8 @@ MIT License – see [LICENSE](LICENSE).
 - Tracing: `docs/guides/tracing.md`
 - Self Improvement: `docs/users/self-improvement.md`
 - Troubleshooting: `docs/users/troubleshooting.md`
+- Cosmos Requirements: `cosmosdb_requirements.md`
+- Cosmos Data Model: `cosmosdb_data_model.md`
 
 ---
 

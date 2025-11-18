@@ -12,6 +12,7 @@ import logging
 from pathlib import Path
 from typing import Any
 
+from .cosmos import get_default_user_id, mirror_dspy_examples, save_agent_memory_item
 from .history_manager import HistoryManager
 
 logger = logging.getLogger(__name__)
@@ -30,6 +31,7 @@ class SelfImprovementEngine:
         min_quality_score: float = 8.0,
         max_examples_to_add: int = 20,
         history_lookback: int = 100,
+        user_id: str | None = None,
     ):
         """
         Initialize self-improvement engine.
@@ -43,6 +45,7 @@ class SelfImprovementEngine:
         self.max_examples_to_add = max_examples_to_add
         self.history_lookback = history_lookback
         self.history_manager = HistoryManager()
+        self.user_id = user_id or get_default_user_id()
 
     def analyze_and_improve(
         self, examples_file: str = "data/supervisor_examples.json"
@@ -231,6 +234,7 @@ class SelfImprovementEngine:
                 example = self.execution_to_example(execution)
                 if example:
                     examples.append(example)
+                    self._record_memory_from_execution(execution, example)
 
                 # Also check for edge cases even in successful executions
                 edge_cases = self._detect_edge_cases_in_execution(execution)
@@ -240,6 +244,11 @@ class SelfImprovementEngine:
                     )
                     if clarifying_example:
                         edge_case_examples.append(clarifying_example)
+                        self._record_memory_from_execution(
+                            execution,
+                            clarifying_example,
+                            memory_type="edge_case_example",
+                        )
             except Exception as e:
                 logger.warning(f"Failed to convert execution to example: {e}")
                 continue
@@ -261,6 +270,11 @@ class SelfImprovementEngine:
                     )
                     if clarifying_example:
                         edge_case_examples.append(clarifying_example)
+                        self._record_memory_from_execution(
+                            execution,
+                            clarifying_example,
+                            memory_type="edge_case_example",
+                        )
             except Exception as e:
                 logger.debug(f"Failed to process edge case from failed execution: {e}")
                 continue
@@ -426,6 +440,9 @@ class SelfImprovementEngine:
                 f"Saved {len(updated)} total examples to {examples_file} ({len(unique_new)} new)"
             )
 
+            if unique_new:
+                mirror_dspy_examples(unique_new, user_id=self.user_id)
+
             return unique_new
 
         except Exception as e:
@@ -443,6 +460,48 @@ class SelfImprovementEngine:
         mode = example.get("mode", "")
 
         return f"{task}|{assigned_to}|{mode}"
+
+    def _record_memory_from_execution(
+        self,
+        execution: dict[str, Any],
+        example: dict[str, Any],
+        *,
+        memory_type: str = "execution_insight",
+    ) -> None:
+        """Persist distilled insights from executions into Cosmos agent memory."""
+
+        if not self.user_id:
+            return
+
+        routing = execution.get("routing", {}) or {}
+        assigned = routing.get("assigned_to") or []
+        if isinstance(assigned, str):
+            agents = [agent.strip() for agent in assigned.split(",") if agent.strip()]
+        else:
+            agents = list(assigned)
+
+        fingerprint = self._create_fingerprint(example)
+        summary = execution.get("result") or example.get("context") or ""
+
+        item = {
+            "memoryId": f"{execution.get('workflowId', 'unknown')}|{fingerprint}",
+            "userId": self.user_id,
+            "agentId": agents[0] if agents else "unknown",
+            "memoryType": memory_type,
+            "task": execution.get("task"),
+            "content": summary,
+            "workflowId": execution.get("workflowId"),
+            "source": "self_improvement",
+            "metadata": {
+                "agents": agents,
+                "mode": routing.get("mode"),
+                "toolRequirements": routing.get("tool_requirements", []),
+                "qualityScore": execution.get("quality", {}).get("score"),
+                "exampleContext": example.get("context"),
+            },
+        }
+
+        save_agent_memory_item(item, user_id=self.user_id)
 
     def get_improvement_stats(self) -> dict[str, Any]:
         """

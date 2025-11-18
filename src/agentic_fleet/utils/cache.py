@@ -12,6 +12,11 @@ from functools import wraps
 from typing import Any, TypeVar
 
 from .constants import DEFAULT_CACHE_TTL
+from .cosmos import mirror_cache_entry
+from .logger import setup_logger
+
+logger = setup_logger(__name__)
+
 
 K = TypeVar("K")
 V = TypeVar("V")
@@ -213,6 +218,18 @@ def cache_agent_response(
             # Execute and cache
             result = await func(self, task, *args, **kwargs)
             cache.set(cache_key, result)
+            try:
+                mirror_cache_entry(
+                    cache_key,
+                    {
+                        "agentName": agent_name,
+                        "taskPreview": task[:256],
+                        "ttlSeconds": ttl,
+                        "responseType": type(result).__name__,
+                    },
+                )
+            except Exception as exc:  # pragma: no cover - defensive
+                logger.debug("Failed to mirror cache entry: %s", exc)
             return result
 
         return wrapper

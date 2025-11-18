@@ -37,7 +37,13 @@ def _ensure_submodule(name: str) -> types.ModuleType:
     module = sys.modules.get(name)
     if module is not None:
         return module
-    module = types.ModuleType(name)
+
+    try:  # pragma: no cover - passthrough when dependency is installed
+        module = importlib.import_module(name)
+    except Exception:  # pragma: no cover - fallback shim path
+        module = types.ModuleType(name)
+        module.__dict__.setdefault("__path__", [])
+
     sys.modules[name] = module
     return module
 

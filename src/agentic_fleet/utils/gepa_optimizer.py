@@ -15,6 +15,7 @@ import logging
 import random
 from collections.abc import Iterable, Sequence
 from dataclasses import dataclass
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any, Literal
 
@@ -22,6 +23,7 @@ import dspy
 from dspy.teleprompt.gepa.gepa import GEPAFeedbackMetric
 from dspy.teleprompt.gepa.gepa_utils import ScoreWithFeedback
 
+from .cosmos import get_default_user_id, record_dspy_optimization_run
 from .dspy_manager import get_reflection_lm
 from .history_manager import HistoryManager
 from .progress import NullProgressCallback, ProgressCallback
@@ -617,4 +619,23 @@ def optimize_with_gepa(
         len(valset or []),
         log_dir,
     )
+
+    try:
+        record_dspy_optimization_run(
+            {
+                "optimizerType": "gepa",
+                "autoMode": auto,
+                "trainExampleCount": len(trainset),
+                "valExampleCount": len(valset or []),
+                "maxFullEvaluations": max_full_evals,
+                "maxMetricCalls": max_metric_calls,
+                "reflectionModel": reflection_model,
+                "logDir": log_dir,
+                "completedAt": datetime.now(UTC).isoformat(),
+            },
+            user_id=get_default_user_id(),
+        )
+    except Exception as exc:  # pragma: no cover - defensive
+        logger.debug("Skipping optimization run mirror: %s", exc)
+
     return compiled
