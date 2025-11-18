@@ -34,6 +34,9 @@ logger = setup_logger(__name__)
 
 # Cached singleton client to avoid re-creating connections.
 _COSMOS_CLIENT: CosmosClient | None = None
+
+# Used to emit a missing user ID warning only once
+_MISSING_USER_ID_WARNING_EMITTED = False
 _MISSING_USER_ID_WARNING_EMITTED = False
 
 
