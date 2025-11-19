@@ -48,8 +48,8 @@ this directory as the source of truth for workflow behaviour—adjust configurat
 
 ### Supervisor default team
 
-- **Researcher** — Retrieves context, performs web search (via `TavilySearchTool`), and drafts initial findings.
-- **Analyst** — Uses the Hosted Code Interpreter to validate data, run computations, or manipulate artifacts.
+- **Researcher** — Retrieves context, performs web search (via `TavilySearchTool`), and drafts initial findings. Uses **ReAct** strategy for autonomous tool loops.
+- **Analyst** — Uses the Hosted Code Interpreter to validate data, run computations, or manipulate artifacts. Uses **Program of Thought** (PoT) for code-based reasoning.
 - **Writer** — Synthesises polished narrative outputs based on accumulated context and intermediate results.
 - **Reviewer** — Provides quality gates and structured critiques before final delivery.
 
@@ -67,7 +67,7 @@ Updates to any roster require concurrent changes in `config/workflow_config.yaml
 
 1. **Task Analysis** – `DSPySupervisor.analyze_task` extracts goals, constraints, and tooling hints using DSPy `ChainOfThought` signatures (`TaskAnalysis`, `ToolAwareTaskAnalysis`).
 2. **Task Routing** – `DSPySupervisor.route_task` selects agents, execution mode (delegated/sequential/parallel), and tool requirements using `EnhancedTaskRouting` (workflow-aware) or `TaskRouting` (standard). The enhanced signature now emits a compact, ReAct-friendly tool plan.
-3. **Agent Execution** – Fleet workflow (`FleetWorkflowAdapter`) executes the plan via agent-framework `WorkflowBuilder` and executors. A lightweight `decide_tools(...)` method in the DSPy supervisor surfaces an ordered `tool_plan`, `tool_goals`, and `latency_budget` that are attached to execution metadata and can guide tool usage.
+3. **Agent Execution** – Fleet workflow (`FleetWorkflowAdapter`) executes the plan via agent-framework `WorkflowBuilder` and executors. Agents are initialized with specific reasoning strategies (e.g., ReAct, PoT) via `DSPyEnhancedAgent` to handle complex subtasks autonomously. A lightweight `decide_tools(...)` method in the DSPy supervisor surfaces an ordered `tool_plan`, `tool_goals`, and `latency_budget` that are attached to execution metadata and can guide tool usage.
 4. **Quality Assessment** – `DSPySupervisor.assess_quality` uses `JudgeEvaluation` signature (with task-specific criteria) or `QualityAssessment` (standard) to score results; sub‑threshold scores trigger refinement loops or judge-based reviews.
 
 ### Workflow Diagram

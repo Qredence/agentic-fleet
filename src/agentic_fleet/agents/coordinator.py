@@ -157,6 +157,7 @@ class AgentFactory:
             use_dspy = agent_config.get("enable_dspy", self.enable_dspy)
             cache_ttl = agent_config.get("cache_ttl", 300)
             timeout = agent_config.get("timeout", 30)
+            reasoning_strategy = agent_config.get("reasoning_strategy", "chain_of_thought")
 
             # Create agent instance
             if use_dspy:
@@ -170,10 +171,11 @@ class AgentFactory:
                     enable_dspy=True,
                     cache_ttl=cache_ttl,
                     timeout=timeout,
+                    reasoning_strategy=reasoning_strategy,
                 )
                 logger.debug(
                     f"Created DSPy-enhanced agent '{agent_name}' with model '{model_id}', "
-                    f"cache_ttl={cache_ttl}s, timeout={timeout}s"
+                    f"strategy='{reasoning_strategy}', cache_ttl={cache_ttl}s, timeout={timeout}s"
                 )
             else:
                 # Create standard ChatAgent
@@ -350,6 +352,7 @@ def create_workflow_agents(
         tools: Any | None = None,
         model_override: str | None = None,
         reasoning_effort: str | None = None,
+        reasoning_strategy: str = "chain_of_thought",
     ) -> ChatAgent:
         """Helper to create a single agent."""
         agent_models = config.agent_models or {}
@@ -411,10 +414,26 @@ def create_workflow_agents(
                 else:
                     chat_client._reasoning_effort = reasoning_effort  # type: ignore[attr-defined]
                     logger.debug(
-                        f"Judge agent reasoning effort stored: {reasoning_effort} (will be applied in request)"
+                        f"Judge agent configured with reasoning effort via private attr: {reasoning_effort}"
                     )
             except Exception as e:
-                logger.warning(f"Could not set reasoning effort on chat client: {e}")
+                logger.warning(f"Failed to configure reasoning effort: {e}")
+
+        # Wrap in DSPyEnhancedAgent if reasoning strategy is not default
+        if reasoning_strategy != "chain_of_thought":
+            # Create a DSPyEnhancedAgent wrapper
+            # Note: This is a bit of a hack since we're recreating the agent,
+            # but create_workflow_agents is a legacy helper.
+            # Ideally we should use AgentFactory for everything.
+            return DSPyEnhancedAgent(
+                name=name,
+                description=description,
+                instructions=instructions,
+                chat_client=chat_client,
+                tools=validated_tools,
+                enable_dspy=True,
+                reasoning_strategy=reasoning_strategy,  # type: ignore[arg-type]
+            )
 
         return ChatAgent(
             name=name,
@@ -479,6 +498,7 @@ def create_workflow_agents(
             "Use browser tool for direct website access when needed."
         ),
         tools=tools_for_researcher,
+        reasoning_strategy="react",  # Use ReAct for autonomous research
     )
 
     # Register MCP tool directly if it was created
@@ -501,6 +521,7 @@ def create_workflow_agents(
         description="Data analysis and computation specialist",
         instructions="Perform detailed analysis with code and visualizations",
         tools=analyst_tool,
+        reasoning_strategy="program_of_thought",  # Use PoT for calculation/analysis
     )
     # Register analyst tool so tests can see code execution capability
     try:

@@ -25,8 +25,16 @@ from collections.abc import Iterable
 from datetime import UTC, datetime
 from typing import Any
 
-from azure.cosmos import CosmosClient, exceptions  # type: ignore[import]
-from azure.identity import DefaultAzureCredential  # type: ignore[import]
+try:
+    from azure.cosmos import CosmosClient, exceptions  # type: ignore[import]
+    from azure.identity import DefaultAzureCredential  # type: ignore[import]
+
+    _HAS_COSMOS_SDK = True
+except ImportError:
+    _HAS_COSMOS_SDK = False
+    CosmosClient = None  # type: ignore
+    exceptions = None  # type: ignore
+    DefaultAzureCredential = None  # type: ignore
 
 from .logger import setup_logger
 
@@ -442,9 +450,43 @@ def mirror_cache_entry(cache_key: str, entry: dict[str, Any]) -> None:
         logger.debug("Unexpected error mirroring cache entry: %s", exc)
 
 
+def load_execution_history(limit: int = 20) -> list[dict[str, Any]]:
+    """Load execution history from Cosmos DB.
+
+    Args:
+        limit: Maximum number of entries to return
+
+    Returns:
+        List of execution dictionaries
+    """
+    if not is_cosmos_enabled():
+        return []
+
+    container = _get_history_container()
+    if container is None:
+        return []
+
+    query = "SELECT TOP @limit * FROM c ORDER BY c.createdAt DESC"
+    parameters = [{"name": "@limit", "value": limit}]
+
+    try:
+        items = container.query_items(
+            query=query,
+            parameters=parameters,
+            enable_cross_partition_query=True,
+        )
+        return list(items)
+    except exceptions.CosmosHttpResponseError as exc:  # type: ignore[attr-defined]
+        logger.warning("Failed to load execution history: %s", exc, exc_info=True)
+    except Exception as exc:  # pragma: no cover
+        logger.warning("Unexpected error while loading execution history: %s", exc, exc_info=True)
+    return []
+
+
 __all__ = [
     "get_default_user_id",
     "is_cosmos_enabled",
+    "load_execution_history",
     "mirror_cache_entry",
     "mirror_dspy_examples",
     "mirror_execution_history",

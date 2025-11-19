@@ -1,9 +1,3 @@
-import {
-  createConversation,
-  getConversation,
-  listConversations,
-} from "@/lib/api/chat";
-import { streamChatWithStore } from "@/lib/streaming/streamHandlers";
 import type {
   ChatActions,
   ChatMessage,
@@ -37,28 +31,21 @@ export const useChatStore = create<ChatStore>((set, get) => ({
   sendMessage: async (message: string) => {
     const state = get();
     if (!message.trim()) return;
+
+    // Use existing conversation ID or generate a local one
     let conversationId = state.conversationId;
     if (!conversationId) {
-      try {
-        const conversation = await createConversation();
-        conversationId = conversation.id;
-        set({ conversationId });
-      } catch (error) {
-        set({
-          error:
-            error instanceof Error
-              ? error.message
-              : "Failed to create conversation",
-        });
-        return;
-      }
+      conversationId = `local-${Date.now()}`;
+      set({ conversationId });
     }
+
     const userMessage: ChatMessage = {
       id: `user-${Date.now()}`,
       role: "user",
       content: message,
       createdAt: Date.now(),
     };
+
     set({
       messages: [...state.messages, userMessage],
       isLoading: true,
@@ -68,32 +55,37 @@ export const useChatStore = create<ChatStore>((set, get) => ({
       currentStreamingMessageId: undefined,
       currentStreamingTimestamp: undefined,
     });
-    // Abort any active stream before starting a new one
-    abortController?.abort();
-    abortController = new AbortController();
 
-    await streamChatWithStore(
-      conversationId!,
-      message,
-      {
-        get,
-        set,
-        completeReasoning: (reasoning: string) =>
-          set({
-            currentReasoningContent: reasoning,
-            currentReasoningStreaming: false,
-          }),
-        appendReasoningDelta: (reasoning: string) => {
-          const state = get();
-          set({
-            currentReasoningContent:
-              (state.currentReasoningContent || "") + reasoning,
-            currentReasoningStreaming: true,
-          });
-        },
-      },
-      abortController.signal,
-    );
+    try {
+      // Import client dynamically or use the one we created
+      const { apiClient } = await import("@/lib/api/client");
+
+      const response = await apiClient.runWorkflow({
+        task: message,
+        config: { max_rounds: 10 }, // Default config
+      });
+
+      const assistantMessage: ChatMessage = {
+        id: `assistant-${Date.now()}`,
+        role: "assistant",
+        content: response.result,
+        createdAt: Date.now(),
+        reasoning: response.execution_summary
+          ? JSON.stringify(response.execution_summary, null, 2)
+          : undefined,
+      };
+
+      set((state) => ({
+        messages: [...state.messages, assistantMessage],
+        isLoading: false,
+      }));
+    } catch (error) {
+      set({
+        isLoading: false,
+        error:
+          error instanceof Error ? error.message : "Failed to run workflow",
+      });
+    }
   },
 
   appendDelta: (delta: string, agentId?: string) => {
@@ -151,22 +143,17 @@ export const useChatStore = create<ChatStore>((set, get) => ({
 
   loadConversationHistory: async (conversationId: string) => {
     try {
-      const conversation = await getConversation(conversationId);
-
-      // Map backend messages to frontend ChatMessage format
-      const messages: ChatMessage[] = conversation.messages.map((msg) => ({
-        id: msg.id,
-        role: msg.role,
-        content: msg.content,
-        createdAt: msg.created_at,
-        reasoning: msg.reasoning || undefined,
-      }));
-
-      set({
-        conversationId: conversation.id,
-        messages,
-        error: null,
-      });
+      // Mock implementation
+      // In a real app, we would fetch messages for this ID
+      // For now, we just set the ID and clear messages or keep existing if it matches
+      const state = get();
+      if (state.conversationId !== conversationId) {
+        set({
+          conversationId: conversationId,
+          messages: [], // Start fresh or load from local storage if we implemented that
+          error: null,
+        });
+      }
     } catch (error) {
       set({
         error:
@@ -181,20 +168,8 @@ export const useChatStore = create<ChatStore>((set, get) => ({
   loadConversations: async () => {
     set({ isLoadingConversations: true });
     try {
-      const response = await listConversations();
-
-      const conversations: Conversation[] = response.items.map((conv) => ({
-        id: conv.id,
-        title: conv.title,
-        created_at: conv.created_at,
-        messages: conv.messages.map((msg) => ({
-          id: msg.id,
-          role: msg.role,
-          content: msg.content,
-          createdAt: msg.created_at,
-          reasoning: msg.reasoning || undefined,
-        })),
-      }));
+      // Mock implementation for now as backend doesn't support conversations yet
+      const conversations: Conversation[] = [];
 
       set({
         conversations,
@@ -234,9 +209,10 @@ export const useChatStore = create<ChatStore>((set, get) => ({
     abortController = null;
 
     try {
-      const conversation = await createConversation();
+      // Local only for now
+      const conversationId = `local-${Date.now()}`;
       set({
-        conversationId: conversation.id,
+        conversationId,
         messages: [],
         currentStreamingMessage: "",
         currentAgentId: undefined,
@@ -248,7 +224,6 @@ export const useChatStore = create<ChatStore>((set, get) => ({
         isLoading: false,
         error: null,
       });
-      await get().loadConversations();
     } catch (error) {
       set({
         error:

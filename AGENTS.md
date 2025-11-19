@@ -11,6 +11,7 @@ AgenticFleet ships a roster of specialized agents built atop Microsoft's agent-f
 ### 🔍 Researcher
 
 Purpose: High‑quality information gathering & source discovery.
+Reasoning Strategy: **ReAct** (Autonomous multi-step research loops).
 Tools: `TavilyMCPTool`, `BrowserTool` (optional).
 Strengths: Current events, citation generation, multi‑source synthesis.
 Sample Tasks:
@@ -33,6 +34,7 @@ agents:
 ### 📊 Analyst
 
 Purpose: Structured data, computation, code execution.
+Reasoning Strategy: **Program of Thought** (Code-based logic & calculation).
 Tools: `HostedCodeInterpreterTool`.
 Strengths: Statistical analysis, simulations, chart generation, validation of research claims.
 Sample Tasks:
@@ -97,6 +99,22 @@ Tools: Internal reasoning (may leverage model reasoning effort flags).
 Strengths: Criteria generation, gap detection, refinement directives.
 Quality Threshold: Configurable (e.g. `judge_threshold: 7.0`).
 Sample Evaluation Dimensions: correctness, completeness, clarity, citation quality (when applicable).
+
+---
+
+## Advanced Reasoning Strategies
+
+AgenticFleet enhances agent capabilities by plugging specialized DSPy reasoning modules into the execution loop. This allows agents to go beyond simple chain-of-thought and employ more robust cognitive strategies:
+
+### 🧠 ReAct (Reason + Act)
+
+**Used by:** Researcher
+**Description:** Enables the agent to perform autonomous loops of **Thought → Action → Observation**. The agent can issue multiple tool calls (e.g., search queries, browser navigation) in sequence, refining its understanding based on each result before formulating a final answer. This is critical for deep research where the initial query might not yield a direct answer.
+
+### 🧮 Program of Thought (PoT)
+
+**Used by:** Analyst
+**Description:** Instead of hallucinating calculations, the agent generates and executes **Python code** to solve the problem. This ensures mathematical precision and allows for complex data manipulation. The agent formulates the logic in code, runs it via a local executor, and uses the output to derive the final response.
 
 ---
 

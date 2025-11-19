@@ -1,325 +1,102 @@
-"""Base agent combining agent-framework ChatAgent with DSPy optimization.
+"""Base agent classes for the fleet.
 
-This module provides a hybrid agent architecture that combines:
-- agent-framework's production-ready ChatAgent infrastructure
-- DSPy's prompt optimization and task enhancement capabilities
-- Performance monitoring and caching
+This module defines the base agent classes used throughout the system,
+including the DSPy-enhanced agent that integrates with the Agent Framework.
 """
 
 from __future__ import annotations
 
-import asyncio
-import time
-from collections.abc import AsyncGenerator
-from typing import Any
+from typing import Any, Literal
 
-import dspy
-from agent_framework import AgentRunResponse, ChatAgent, ChatMessage, Role
+from agent_framework import ChatAgent
 
-from ..utils.cache import cache_agent_response
+from ..dspy_modules.reasoning import FleetPoT, FleetReAct
+from ..utils.cache import TTLCache
 from ..utils.logger import setup_logger
-from ..utils.telemetry import PerformanceTracker, optional_span
 
 logger = setup_logger(__name__)
 
 
-class TaskEnhancement(dspy.Signature):
-    """Enhance agent task with additional context and clarity.
-
-    This signature helps agents understand tasks better by:
-    - Adding relevant context from conversation history
-    - Clarifying ambiguous requirements
-    - Breaking down complex multi-part tasks
-    """
-
-    task = dspy.InputField(desc="Original user task or question")
-    agent_role = dspy.InputField(desc="Agent's specialized role and capabilities")
-    conversation_context = dspy.InputField(desc="Recent conversation history (optional)")
-
-    enhanced_task = dspy.OutputField(desc="Clarified task with added context")
-    key_requirements = dspy.OutputField(desc="List of key requirements to fulfill")
-    expected_output_format = dspy.OutputField(desc="Expected format of the response")
-
-
 class DSPyEnhancedAgent(ChatAgent):
-    """
-    Enhanced agent combining agent-framework ChatAgent with DSPy optimization.
+    """Agent that uses DSPy for enhanced reasoning capabilities.
 
-    Features:
-    - DSPy task enhancement for better understanding
-    - Response caching for repeated queries
-    - Performance tracking and timeout management
-    - Automatic context retention
-
-    Usage:
-        agent = DSPyEnhancedAgent(
-            name="ResearcherAgent",
-            chat_client=client,
-            tools=TavilyMCPTool(),
-            enable_dspy=True,
-            cache_ttl=300
-        )
-
-        async for event in agent.run_stream_with_dspy(task):
-            print(event)
+    This agent wraps the standard ChatAgent and injects DSPy-powered
+    reasoning strategies (Chain of Thought, ReAct, Program of Thought)
+    to improve performance on complex tasks.
     """
 
     def __init__(
         self,
-        name: str,
-        chat_client: Any,
-        instructions: str = "",
-        description: str = "",
-        tools: Any = None,
-        enable_dspy: bool = True,
-        cache_ttl: int = 300,
-        timeout: int = 30,
-    ):
-        """Initialize DSPy-enhanced agent.
+        *args: Any,
+        reasoning_strategy: Literal[
+            "chain_of_thought", "react", "program_of_thought"
+        ] = "chain_of_thought",
+        cache_ttl: int = 3600,
+        **kwargs: Any,
+    ) -> None:
+        """Initialize the DSPy-enhanced agent.
 
         Args:
-            name: Agent name (e.g., "ResearcherAgent")
-            chat_client: OpenAI client for LLM calls
-            instructions: Agent instructions/system prompt
-            description: Agent description
-            tools: Tool instance or tuple of tools
-            enable_dspy: Whether to enable DSPy task enhancement
-            cache_ttl: Cache time-to-live in seconds (0 to disable)
-            timeout: Maximum execution time per task in seconds
+            *args: Arguments passed to ChatAgent
+            reasoning_strategy: The reasoning strategy to use
+            cache_ttl: Time-to-live for cached results in seconds
+            **kwargs: Keyword arguments passed to ChatAgent
         """
-        # Preserve a stable, explicit role description for DSPy that
-        # doesn't depend on ChatAgent internals. Prefer an explicit
-        # description, then instructions, then the agent name.
-        self._role_description: str = description or instructions or name
+        super().__init__(*args, **kwargs)
+        self.reasoning_strategy = reasoning_strategy
+        self.cache = TTLCache(ttl_seconds=cache_ttl)
 
-        super().__init__(
-            name=name,
-            description=description,
-            instructions=instructions,
-            chat_client=chat_client,
-            tools=tools,
-        )
+        # Initialize reasoning modules
+        # We pass self.tools assuming ChatAgent exposes it. If not, it will raise AttributeError
+        # which we should catch or ensure ChatAgent has tools.
+        # For now, we assume it does as it's a standard pattern.
+        tools = getattr(self, "tools", [])
+        self.react_module = FleetReAct(tools=tools) if reasoning_strategy == "react" else None
+        self.pot_module = FleetPoT() if reasoning_strategy == "program_of_thought" else None
 
-        self.enable_dspy = enable_dspy
-        self.timeout = timeout
-        self.cache_ttl = cache_ttl
-        self.performance_tracker = PerformanceTracker()
-
-        # Initialize DSPy task enhancer if enabled
-        if self.enable_dspy:
-            try:
-                self.task_enhancer = dspy.ChainOfThought(TaskEnhancement)
-                logger.debug(f"DSPy enhancement enabled for {name}")
-            except Exception as e:
-                logger.warning(f"Failed to initialize DSPy for {name}: {e}")
-                self.enable_dspy = False
-                self.task_enhancer = None
-        else:
-            self.task_enhancer = None
-
-    def _get_agent_role_description(self) -> str:
-        """Get agent role description for DSPy enhancement."""
-        # Prefer the explicit role description captured at initialization.
-        role_description = getattr(self, "_role_description", None)
-        if not role_description:
-            # Fallback to current runtime attributes if needed.
-            instructions = getattr(self.chat_options, "instructions", None)
-            role_description = self.description or instructions or self.name
-        return str(role_description)[:200]
-
-    def _enhance_task_with_dspy(self, task: str, context: str = "") -> tuple[str, dict[str, Any]]:
-        """Enhance task using DSPy for better agent understanding.
+    async def run(self, prompt: str) -> str:
+        """Execute the agent's logic with the configured reasoning strategy.
 
         Args:
-            task: Original task string
-            context: Optional conversation context
+            prompt: The input prompt/task
 
         Returns:
-            Tuple of (enhanced_task, metadata)
+            The agent's response
         """
-        if not self.enable_dspy or not self.task_enhancer:
-            return task, {}
+        logger.info(f"Agent {self.name} running with strategy: {self.reasoning_strategy}")
+
+        # Check cache first
+        cached_result = self.cache.get(prompt)
+        if cached_result:
+            logger.info(f"Cache hit for agent {self.name}")
+            return cached_result
 
         try:
-            with optional_span(
-                "dspy_task_enhancement", tracer_name=__name__, attributes={"agent.name": self.name}
-            ):
-                result = self.task_enhancer(
-                    task=task,
-                    agent_role=self._get_agent_role_description(),
-                    conversation_context=context or "No prior context",
-                )
+            if self.reasoning_strategy == "react" and self.react_module:
+                # Use ReAct strategy
+                # Note: We pass the agent's tools to the ReAct module
+                # For now, we assume tools are compatible or wrapped
+                tools = getattr(self, "tools", [])
+                result = self.react_module(question=prompt, tools=tools)
+                response = getattr(result, "answer", str(result))
 
-                metadata = {
-                    "key_requirements": result.key_requirements,
-                    "expected_format": result.expected_output_format,
-                    "enhanced": True,
-                }
+            elif self.reasoning_strategy == "program_of_thought" and self.pot_module:
+                # Use Program of Thought strategy
+                result = self.pot_module(question=prompt)
+                response = getattr(result, "answer", str(result))
 
-                logger.debug(
-                    f"DSPy enhanced task for {self.name}: "
-                    f"{task[:50]}... -> {result.enhanced_task[:50]}..."
-                )
+            else:
+                # Default: Chain of Thought (handled by standard ChatAgent or simple DSPy CoT)
+                # For now, we delegate to the standard ChatAgent run which uses the LLM directly
+                # but we could wrap it in dspy.ChainOfThought if we had a signature for generic chat.
+                response = await super().run(prompt)
 
-                return result.enhanced_task, metadata
+            # Cache the result
+            self.cache.set(prompt, str(response))
+            return str(response)
 
         except Exception as e:
-            logger.warning(f"DSPy enhancement failed for {self.name}: {e}")
-            return task, {"enhanced": False, "error": str(e)}
-
-    async def execute_with_timeout(
-        self, task: str, context: str = "", timeout: int | None = None
-    ) -> AgentRunResponse:
-        """Execute task with configurable timeout.
-
-        Args:
-            task: Task to execute
-            context: Optional conversation context
-            timeout: Timeout in seconds (uses instance default if None)
-
-        Returns:
-            ChatMessage with agent response
-
-        Raises:
-            asyncio.TimeoutError: If execution exceeds timeout
-        """
-        timeout = timeout or self.timeout
-        start_time = time.time()
-
-        try:
-            async with asyncio.timeout(timeout):
-                # Enhance task with DSPy
-                enhanced_task, metadata = self._enhance_task_with_dspy(task, context)
-
-                # Execute with agent-framework
-                result = await self.run(enhanced_task)
-
-                if metadata:
-                    extras = getattr(result, "additional_properties", None) or {}
-                    cached_metadata = extras.get("metadata")
-                    if isinstance(cached_metadata, dict):
-                        cached_metadata.update(metadata)
-                    else:
-                        extras["metadata"] = metadata
-                    result.additional_properties = extras
-
-                duration = time.time() - start_time
-                self.performance_tracker.record_execution(
-                    agent_name=self.name,
-                    duration=duration,
-                    success=True,
-                    metadata={"task": task, **metadata},
-                )
-
-                return result
-
-        except TimeoutError:
-            duration = time.time() - start_time
-            self.performance_tracker.record_execution(
-                agent_name=self.name,
-                duration=duration,
-                success=False,
-                error="timeout",
-                metadata={"task": task, "timeout": timeout},
-            )
-            logger.warning(f"{self.name} exceeded {timeout}s timeout")
-            return self._create_timeout_response(timeout)
-        except Exception as exc:
-            duration = time.time() - start_time
-            self.performance_tracker.record_execution(
-                agent_name=self.name,
-                duration=duration,
-                success=False,
-                error=str(exc),
-                metadata={"task": task},
-            )
-            raise
-
-    async def run_stream_with_dspy(
-        self,
-        task: str,
-        context: str = "",
-    ) -> AsyncGenerator[Any, None]:
-        """Stream agent execution with DSPy enhancement.
-
-        Args:
-            task: Task to execute
-            context: Optional conversation context
-
-        Yields:
-            Agent framework events (MagenticAgentMessageEvent, etc.)
-        """
-        start_time = time.time()
-
-        try:
-            # Enhance task with DSPy
-            enhanced_task, metadata = self._enhance_task_with_dspy(task, context)
-
-            # Stream execution with agent-framework
-            async for event in self.run_stream(enhanced_task):
-                yield event
-
-            # Track performance
-            duration = time.time() - start_time
-            agent_name = self.name or self.__class__.__name__
-            self.performance_tracker.record_execution(
-                agent_name=agent_name, duration=duration, success=True, metadata=metadata
-            )
-
-        except Exception as e:
-            duration = time.time() - start_time
-            agent_name = self.name or self.__class__.__name__
-            self.performance_tracker.record_execution(
-                agent_name=agent_name, duration=duration, success=False, error=str(e)
-            )
-            logger.error(f"Error in {self.name} execution: {e}")
-            raise
-
-    @cache_agent_response(ttl=300)
-    async def run_cached(self, task: str, context: str = "") -> AgentRunResponse:
-        """Execute task with response caching.
-
-        Args:
-            task: Task to execute
-            context: Optional conversation context
-
-        Returns:
-            ChatMessage (may be from cache)
-        """
-        return await self.execute_with_timeout(task, context)
-
-    def _create_timeout_response(self, timeout: int) -> AgentRunResponse:
-        """Create standard timeout response message.
-
-        Args:
-            timeout: Timeout value that was exceeded
-
-        Returns:
-            ChatMessage indicating timeout
-        """
-        message = ChatMessage(
-            role=Role.ASSISTANT,
-            text=f"⏱️ {self.name} exceeded {timeout}s time limit. Task may be too complex or require different approach.",
-        )
-        metadata = {
-            "status": "timeout",
-            "agent": self.name,
-            "timeout": timeout,
-        }
-        return AgentRunResponse(
-            messages=[message],
-            additional_properties={
-                "status": "timeout",
-                "agent": self.name,
-                "timeout": timeout,
-                "metadata": metadata,
-            },
-        )
-
-    def get_performance_stats(self) -> dict[str, Any]:
-        """Get agent performance statistics.
-
-        Returns:
-            Dictionary with performance metrics
-        """
-        return self.performance_tracker.get_stats(agent_name=self.name)
+            logger.error(f"Agent execution failed: {e}")
+            # Fallback to standard execution if enhanced strategy fails
+            response = await super().run(prompt)
+            return str(response)

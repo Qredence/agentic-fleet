@@ -276,6 +276,17 @@ class HistoryManager:
         Returns:
             List of execution dictionaries
         """
+        # Try Cosmos DB first if enabled
+        try:
+            from .cosmos import is_cosmos_enabled, load_execution_history
+
+            if is_cosmos_enabled():
+                history = load_execution_history(limit=limit or 20)
+                if history:
+                    return history
+        except Exception as e:
+            logger.warning(f"Failed to load history from Cosmos DB: {e}")
+
         # Try JSONL first (preferred format)
         jsonl_file = self.history_dir / "execution_history.jsonl"
         if jsonl_file.exists():

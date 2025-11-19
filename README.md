@@ -53,6 +53,7 @@ AgenticFleet is a hybrid **DSPy + Microsoft agent-framework** runtime that deliv
 ## Key Features
 
 - **Adaptive Routing** – DSPy supervisor analyzes tasks and decides agent roster + execution mode (delegated / sequential / parallel).
+- **Advanced Reasoning** – Pluggable strategies per agent: **ReAct** for autonomous tool loops (Researcher) and **Program of Thought** for code-based logic (Analyst).
 - **Quality Loops** – Automatic Judge / Reviewer refinement when quality score drops below configurable threshold.
 - **Tool‑Aware Decisions** – Signatures include tool context; Supervisor recommends tool usage (code interpreter, search, browser, etc.).
 - **Streaming Events** – Emits OpenAI Responses‑compatible events for real‑time TUI / web UI updates.
