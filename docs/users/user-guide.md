@@ -143,7 +143,7 @@ timings/decisions in `logs/execution_history.jsonl` for later inspection via
 Integrate into your Python applications:
 
 ```python
-from src.workflows import create_supervisor_workflow
+from agentic_fleet.workflows import create_supervisor_workflow
 import asyncio
 
 async def main():
@@ -398,6 +398,9 @@ result = await workflow.run(
 You can override default configuration per execution:
 
 ```python
+from agentic_fleet.workflows.config import WorkflowConfig
+from agentic_fleet.workflows.supervisor_workflow import create_supervisor_workflow
+
 # Create workflow with custom config
 config = WorkflowConfig(
     dspy_model="gpt-4.1",
@@ -406,8 +409,7 @@ config = WorkflowConfig(
     max_rounds=20,
 )
 
-workflow = SupervisorWorkflow(config=config)
-await workflow.initialize()
+workflow = await create_supervisor_workflow(config=config, compile_dspy=True)
 
 result = await workflow.run("Your task")
 ```
@@ -621,8 +623,7 @@ config = WorkflowConfig(
     enable_refinement=True,      # Enable auto-refinement
 )
 
-workflow = SupervisorWorkflow(config=config)
-await workflow.initialize()
+workflow = await create_supervisor_workflow(config=config)
 
 result = await workflow.run("Your task")
 # If initial quality < 8.0, Writer agent will refine the output
@@ -795,7 +796,8 @@ Enable maximum verbosity:
 
 ```python
 import logging
-from src.utils.logger import setup_logger
+from agentic_fleet.utils.logger import setup_logger
+from agentic_fleet.workflows.supervisor_workflow import create_supervisor_workflow
 
 setup_logger("dspy_agent_framework", "DEBUG")
 

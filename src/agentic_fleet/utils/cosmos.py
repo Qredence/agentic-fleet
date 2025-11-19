@@ -256,7 +256,7 @@ def mirror_execution_history(execution: dict[str, Any]) -> None:
 
     try:
         # Partition key path for the container is /workflowId.
-        container.upsert_item(body=item, partition_key=item["workflowId"])
+        container.upsert_item(body=item)
     except exceptions.CosmosHttpResponseError as exc:  # type: ignore[attr-defined]
         logger.warning(
             "Failed to mirror execution to Cosmos (HTTP error); continuing without "
@@ -303,7 +303,7 @@ def save_agent_memory_item(item: dict[str, Any], *, user_id: str | None = None) 
     doc["updatedAt"] = now
 
     try:
-        container.upsert_item(doc, partition_key=resolved_user_id)
+        container.upsert_item(doc)
     except exceptions.CosmosHttpResponseError as exc:  # type: ignore[attr-defined]
         logger.warning("Failed to save agent memory: %s", exc, exc_info=True)
     except Exception as exc:  # pragma: no cover
@@ -386,7 +386,7 @@ def mirror_dspy_examples(
         doc.setdefault("createdAt", now)
 
         try:
-            container.upsert_item(doc, partition_key=resolved_user_id)
+            container.upsert_item(doc)
         except exceptions.CosmosHttpResponseError as exc:  # type: ignore[attr-defined]
             logger.debug("Failed to mirror DSPy example: %s", exc)
         except Exception as exc:  # pragma: no cover
@@ -420,7 +420,7 @@ def record_dspy_optimization_run(
     doc.setdefault("createdAt", datetime.now(UTC).isoformat())
 
     try:
-        container.upsert_item(doc, partition_key=resolved_user_id)
+        container.upsert_item(doc)
     except exceptions.CosmosHttpResponseError as exc:  # type: ignore[attr-defined]
         logger.debug("Failed to record optimization run: %s", exc)
     except Exception as exc:  # pragma: no cover
@@ -443,7 +443,7 @@ def mirror_cache_entry(cache_key: str, entry: dict[str, Any]) -> None:
     doc.setdefault("createdAt", datetime.now(UTC).isoformat())
 
     try:
-        container.upsert_item(doc, partition_key=cache_key)
+        container.upsert_item(doc)
     except exceptions.CosmosHttpResponseError as exc:  # type: ignore[attr-defined]
         logger.debug("Failed to mirror cache entry: %s", exc)
     except Exception as exc:  # pragma: no cover

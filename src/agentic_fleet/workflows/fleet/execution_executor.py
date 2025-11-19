@@ -72,44 +72,6 @@ class ExecutionExecutor(Executor):
             except Exception:
                 tool_plan_info = None
 
-            # If the plan indicates multiple tool steps, insert a bounded ReAct-style
-            # reasoning pass to synthesize a brief plan snippet before execution.
-            # We keep this lightweight and non-blocking; time-bounded by execution timeout/3.
-            if tool_plan_info and isinstance(tool_plan_info.get("tool_plan"), list):
-                plan_list = tool_plan_info.get("tool_plan") or []
-                if len(plan_list) >= 2:
-                    try:
-                        import asyncio
-
-                        import dspy
-
-                        # Minimal signature: produce one-paragraph plan
-                        class ToolPlanSignature(dspy.Signature):  # type: ignore
-                            task = dspy.InputField(desc="task to execute")
-                            tools = dspy.InputField(desc="ordered tools to use")
-                            plan = dspy.OutputField(desc="short plan for 2-3 steps")
-
-                        planner = dspy.Predict(ToolPlanSignature)
-
-                        async def _bounded():
-                            return planner(task=task, tools=", ".join(plan_list))
-
-                        timeout = max(
-                            5,
-                            int(
-                                self.context.config.execution_timeout_seconds
-                                if hasattr(self.context.config, "execution_timeout_seconds")
-                                else 30
-                            )
-                            // 3,
-                        )
-                        plan_result = await asyncio.wait_for(_bounded(), timeout=timeout)
-                        if hasattr(plan_result, "plan"):
-                            tool_plan_info["generated_plan"] = plan_result.plan
-                    except Exception as e:
-                        # Planner generation failed, which is non-fatal. Continue without generated plan.
-                        logger.warning(f"Failed to generate tool plan for task '{task}': {e}")
-
             # Use existing execution phase logic
             execution_outcome = await run_execution_phase(
                 routing=routing_decision,

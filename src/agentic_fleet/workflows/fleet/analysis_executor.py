@@ -5,6 +5,7 @@ Uses DSPySupervisor to analyze tasks and produce AnalysisMessage.
 
 from __future__ import annotations
 
+import re
 from typing import TYPE_CHECKING, Any
 
 from agent_framework import Executor, WorkflowContext
@@ -146,9 +147,19 @@ class AnalysisExecutor(Executor):
         }
 
     def _is_simple_task(self, task: str, max_words: int) -> bool:
-        """Heuristic classifier for simple tasks based on word count."""
+        """Heuristic classifier for simple tasks based on word count and patterns."""
         if not task:
             return False
+
+        # Check for explicit simple triggers
+        simple_patterns = [
+            r"(?i)^(remember|save)\s+this:?",
+            r"(?i)^(hello|hi|hey|greetings)",
+            r"(?i)^/help",
+        ]
+        if any(re.search(p, task) for p in simple_patterns):
+            return True
+
         words = task.strip().split()
         return len(words) <= max_words
 

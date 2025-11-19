@@ -6,23 +6,37 @@ including the DSPy-enhanced agent that integrates with the Agent Framework.
 
 from __future__ import annotations
 
+import asyncio
+import time
+from collections.abc import AsyncIterable
 from typing import Any, Literal
 
-from agent_framework import ChatAgent
+from agent_framework import (
+    AgentRunResponse,
+    AgentRunResponseUpdate,
+    AgentThread,
+    BaseAgent,
+    ChatAgent,
+    ChatMessage,
+    Role,
+)
 
 from ..dspy_modules.reasoning import FleetPoT, FleetReAct
 from ..utils.cache import TTLCache
 from ..utils.logger import setup_logger
+from ..utils.telemetry import PerformanceTracker
 
 logger = setup_logger(__name__)
 
 
-class DSPyEnhancedAgent(ChatAgent):
+class DSPyEnhancedAgent(BaseAgent):
     """Agent that uses DSPy for enhanced reasoning capabilities.
 
     This agent wraps the standard ChatAgent and injects DSPy-powered
     reasoning strategies (Chain of Thought, ReAct, Program of Thought)
-    to improve performance on complex tasks.
+    to improve performance on complex tasks. It inherits from BaseAgent
+    (custom agent) to have full control over the execution flow, while
+    maintaining a standard ChatAgent internally for fallback and tool support.
     """
 
     def __init__(
@@ -32,6 +46,8 @@ class DSPyEnhancedAgent(ChatAgent):
             "chain_of_thought", "react", "program_of_thought"
         ] = "chain_of_thought",
         cache_ttl: int = 3600,
+        enable_dspy: bool = True,
+        timeout: int = 30,
         **kwargs: Any,
     ) -> None:
         """Initialize the DSPy-enhanced agent.
@@ -40,63 +56,226 @@ class DSPyEnhancedAgent(ChatAgent):
             *args: Arguments passed to ChatAgent
             reasoning_strategy: The reasoning strategy to use
             cache_ttl: Time-to-live for cached results in seconds
-            **kwargs: Keyword arguments passed to ChatAgent
+            enable_dspy: Whether to enable DSPy enhancements
+            timeout: Execution timeout in seconds
+            **kwargs: Keyword arguments passed to ChatAgent (and BaseAgent)
         """
-        super().__init__(*args, **kwargs)
-        self.reasoning_strategy = reasoning_strategy
-        self.cache = TTLCache(ttl_seconds=cache_ttl)
+        # Extract BaseAgent specific args if present
+        name = kwargs.get("name")
+        description = kwargs.get("description")
 
-        # Initialize reasoning modules
-        # We pass self.tools assuming ChatAgent exposes it. If not, it will raise AttributeError
-        # which we should catch or ensure ChatAgent has tools.
-        # For now, we assume it does as it's a standard pattern.
-        tools = getattr(self, "tools", [])
-        self.react_module = FleetReAct(tools=tools) if reasoning_strategy == "react" else None
+        # Prepare kwargs for BaseAgent (exclude name/desc to avoid multiple values error)
+        base_kwargs = {k: v for k, v in kwargs.items() if k not in ("name", "description")}
+        super().__init__(name=name, description=description, **base_kwargs)
+
+        self.instructions = kwargs.get("instructions", "")
+        self.reasoning_strategy = reasoning_strategy
+        self.cache_ttl = cache_ttl
+        self.enable_dspy = enable_dspy
+        self.timeout = timeout
+        self.cache = TTLCache(ttl_seconds=cache_ttl)
+        self.tracker = PerformanceTracker()
+
+        # Initialize internal fallback agent
+        # We pass all args/kwargs to ensure it's configured identically
+        self._chat_agent = ChatAgent(*args, **kwargs)
+
+        # Initialize reasoning modules using the fallback agent's tools
+        self.react_module = FleetReAct(tools=self.tools) if reasoning_strategy == "react" else None
         self.pot_module = FleetPoT() if reasoning_strategy == "program_of_thought" else None
 
-    async def run(self, prompt: str) -> str:
-        """Execute the agent's logic with the configured reasoning strategy.
+    @property
+    def tools(self) -> Any:
+        """Expose tools from the internal chat agent."""
+        return getattr(self._chat_agent, "tools", [])
 
-        Args:
-            prompt: The input prompt/task
+    def _get_agent_role_description(self) -> str:
+        """Get the agent's role description."""
+        return f"{self.name}: {self.instructions or self.description or ''}"
 
-        Returns:
-            The agent's response
+    def _create_timeout_response(self, timeout: int) -> ChatMessage:
+        """Create a timeout response message."""
+        return ChatMessage(
+            role=Role.ASSISTANT,
+            text=f"Execution timed out after {timeout}s",
+            metadata={"status": "timeout"},
+        )
+
+    def get_performance_stats(self) -> dict[str, Any]:
+        """Get performance statistics for this agent."""
+        return self.tracker.get_stats(self.name or "unknown")
+
+    async def execute_with_timeout(self, task: str) -> ChatMessage:
+        """Execute the task with a timeout constraint.
+
+        Note: This is a legacy helper method used by some workflows.
+        Ideally workflows should call run() directly.
         """
-        logger.info(f"Agent {self.name} running with strategy: {self.reasoning_strategy}")
-
-        # Check cache first
-        cached_result = self.cache.get(prompt)
-        if cached_result:
-            logger.info(f"Cache hit for agent {self.name}")
-            return cached_result
-
+        start_time = time.time()
+        success = False
         try:
-            if self.reasoning_strategy == "react" and self.react_module:
-                # Use ReAct strategy
-                # Note: We pass the agent's tools to the ReAct module
-                # For now, we assume tools are compatible or wrapped
-                tools = getattr(self, "tools", [])
-                result = self.react_module(question=prompt, tools=tools)
-                response = getattr(result, "answer", str(result))
+            # Use run() which returns AgentRunResponse, then extract message
+            coro = self.run(task)
+            response_obj = await asyncio.wait_for(coro, timeout=self.timeout)
 
-            elif self.reasoning_strategy == "program_of_thought" and self.pot_module:
-                # Use Program of Thought strategy
-                result = self.pot_module(question=prompt)
-                response = getattr(result, "answer", str(result))
+            # Handle direct ChatMessage return (e.g. from mocks or legacy agents)
+            if isinstance(response_obj, ChatMessage):
+                success = True
+                return response_obj
 
+            # Extract first message or text
+            if response_obj.messages:
+                response = response_obj.messages[0]
             else:
-                # Default: Chain of Thought (handled by standard ChatAgent or simple DSPy CoT)
-                # For now, we delegate to the standard ChatAgent run which uses the LLM directly
-                # but we could wrap it in dspy.ChainOfThought if we had a signature for generic chat.
-                response = await super().run(prompt)
+                response = ChatMessage(role=Role.ASSISTANT, text=response_obj.text)
 
-            # Cache the result
-            self.cache.set(prompt, str(response))
-            return str(response)
+            success = True
+            return response
 
+        except TimeoutError:
+            logger.warning(f"Agent {self.name} timed out after {self.timeout}s")
+            return self._create_timeout_response(self.timeout)
         except Exception as e:
             logger.error(f"Agent execution failed: {e}")
-            # Fallback to standard execution if enhanced strategy fails
-            response = await super().run(prompt)
-            return str(response)
+            return ChatMessage(
+                role=Role.ASSISTANT,
+                text=f"Error: {e}",
+                metadata={"status": "error", "error": str(e)},
+            )
+        finally:
+            duration = time.time() - start_time
+            self.tracker.record_execution(
+                agent_name=self.name or "unknown", duration=duration, success=success
+            )
+
+    def _normalize_input_to_text(
+        self, messages: str | ChatMessage | list[str] | list[ChatMessage] | None
+    ) -> str:
+        """Extract text prompt from various message formats."""
+        if not messages:
+            return ""
+        if isinstance(messages, str):
+            return messages
+        if isinstance(messages, ChatMessage):
+            return messages.text
+        if isinstance(messages, list):
+            # Return the text of the last message if it's a list
+            last_msg = messages[-1]
+            return last_msg.text if isinstance(last_msg, ChatMessage) else str(last_msg)
+        return str(messages)
+
+    async def run(
+        self,
+        messages: str | ChatMessage | list[str] | list[ChatMessage] | None = None,
+        *,
+        thread: AgentThread | None = None,
+        **kwargs: Any,
+    ) -> AgentRunResponse:
+        """Execute the agent's logic.
+
+        Returns:
+            AgentRunResponse containing the result.
+        """
+        prompt = self._normalize_input_to_text(messages)
+        logger.info(f"Agent {self.name} running with strategy: {self.reasoning_strategy}")
+
+        # Check if DSPy is enabled
+        if self.enable_dspy:
+            # Check cache
+            cached_result = self.cache.get(prompt)
+            if cached_result:
+                logger.info(f"Cache hit for agent {self.name}")
+                return AgentRunResponse(
+                    messages=ChatMessage(role=Role.ASSISTANT, text=cached_result),
+                    additional_properties={"cached": True, "strategy": self.reasoning_strategy},
+                )
+
+            try:
+                response_text = ""
+                if self.reasoning_strategy == "react" and self.react_module:
+                    # Use ReAct strategy
+                    result = self.react_module(question=prompt, tools=self.tools)
+                    response_text = getattr(result, "answer", str(result))
+
+                elif self.reasoning_strategy == "program_of_thought" and self.pot_module:
+                    # Use Program of Thought strategy
+                    result = self.pot_module(question=prompt)
+                    response_text = getattr(result, "answer", str(result))
+
+                if response_text:
+                    # Cache the result
+                    self.cache.set(prompt, response_text)
+
+                    return AgentRunResponse(
+                        messages=ChatMessage(role=Role.ASSISTANT, text=response_text),
+                        additional_properties={"strategy": self.reasoning_strategy},
+                    )
+
+                # If strategy didn't produce specific output (or was CoT/Default), fallback might be better
+                # unless we implement explicit CoT module here. For now, if no specific module result,
+                # fall through to fallback.
+
+            except Exception as e:
+                logger.error(f"DSPy strategy failed for {self.name}: {e}")
+                # Fall through to fallback
+
+        # Fallback to standard ChatAgent execution
+        return await self._chat_agent.run(messages=messages, thread=thread, **kwargs)
+
+    async def run_stream(
+        self,
+        messages: str | ChatMessage | list[str] | list[ChatMessage] | None = None,
+        *,
+        thread: AgentThread | None = None,
+        **kwargs: Any,
+    ) -> AsyncIterable[AgentRunResponseUpdate]:
+        """Run the agent as a stream."""
+        prompt = self._normalize_input_to_text(messages)
+
+        # If DSPy is enabled and strategy is specialized (ReAct/PoT), we might want to run it.
+        # However, our current DSPy modules are blocking.
+        # We can yield a "Thinking" status then the result.
+
+        should_use_dspy = self.enable_dspy and (
+            (self.reasoning_strategy == "react" and self.react_module)
+            or (self.reasoning_strategy == "program_of_thought" and self.pot_module)
+        )
+
+        if should_use_dspy:
+            # Check cache
+            cached_result = self.cache.get(prompt)
+            if cached_result:
+                yield AgentRunResponseUpdate(
+                    text=cached_result, role=Role.ASSISTANT, additional_properties={"cached": True}
+                )
+                return
+
+            try:
+                # Yield a "Thinking" status if possible, or just block.
+                # Since we can't easily stream partial DSPy steps yet without deep hooks,
+                # we'll just await the result and yield it.
+
+                response_text = ""
+                if self.reasoning_strategy == "react" and self.react_module:
+                    result = self.react_module(question=prompt, tools=self.tools)
+                    response_text = getattr(result, "answer", str(result))
+                elif self.reasoning_strategy == "program_of_thought" and self.pot_module:
+                    result = self.pot_module(question=prompt)
+                    response_text = getattr(result, "answer", str(result))
+
+                if response_text:
+                    self.cache.set(prompt, response_text)
+                    yield AgentRunResponseUpdate(
+                        text=response_text,
+                        role=Role.ASSISTANT,
+                        additional_properties={"strategy": self.reasoning_strategy},
+                    )
+                    return
+
+            except Exception as e:
+                logger.error(f"DSPy streaming strategy failed for {self.name}: {e}")
+                # Fall through to fallback
+
+        # Fallback to standard streaming
+        async for update in self._chat_agent.run_stream(messages=messages, thread=thread, **kwargs):
+            yield update

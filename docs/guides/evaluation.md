@@ -203,16 +203,15 @@ uv run agentic-fleet evaluate \
 
 ```python
 import asyncio
-from src.evaluation import Evaluator
-from src.utils.config_loader import load_config
-from console import WorkflowRunner
+from agentic_fleet.evaluation import Evaluator
+from agentic_fleet.utils.config_loader import load_config
+from agentic_fleet.workflows.supervisor_workflow import create_supervisor_workflow
 
 async def main():
     cfg = load_config()
     async def wf_factory():
-        runner = WorkflowRunner(verbose=False)
-        await runner.initialize_workflow()
-        return runner.workflow
+        workflow = await create_supervisor_workflow(compile_dspy=False)
+        return workflow
 
     evaluator = Evaluator(
         workflow_factory=wf_factory,

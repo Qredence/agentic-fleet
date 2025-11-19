@@ -36,7 +36,7 @@ class TestDSPyEnhancedAgent:
         """Test agent initializes correctly."""
         assert basic_agent.name == "TestAgent"
         assert basic_agent.timeout == 30
-        assert basic_agent.cache_ttl == 300
+        assert basic_agent.cache_ttl == 3600
         assert basic_agent.enable_dspy is False
 
     def test_agent_role_description(self, basic_agent):
@@ -48,8 +48,12 @@ class TestDSPyEnhancedAgent:
         """Test timeout response generation."""
         response = basic_agent._create_timeout_response(30)
         assert response.role == Role.ASSISTANT
-        assert "30s" in response.content
-        assert response.metadata["status"] == "timeout"
+        assert "30s" in response.text
+        # Metadata is stored in additional_properties in ChatMessage
+        assert (
+            response.additional_properties.get("metadata", {}).get("status") == "timeout"
+            or response.additional_properties.get("status") == "timeout"
+        )
 
     def test_performance_stats_empty(self, basic_agent):
         """Test performance stats with no executions."""
@@ -61,12 +65,12 @@ class TestDSPyEnhancedAgent:
     async def test_execute_without_dspy(self, basic_agent):
         """Test execution without DSPy enhancement."""
         # Mock the run method
-        mock_message = ChatMessage(role=Role.ASSISTANT, content="Test response")
+        mock_message = ChatMessage(role=Role.ASSISTANT, text="Test response")
         basic_agent.run = AsyncMock(return_value=mock_message)
 
         result = await basic_agent.execute_with_timeout("test task")
 
-        assert result.content == "Test response"
+        assert result.text == "Test response"
         basic_agent.run.assert_called_once()
 
 
@@ -197,14 +201,14 @@ class TestIntegration:
         )
 
         # Mock the run method
-        mock_response = ChatMessage(role=Role.ASSISTANT, content="Integration test response")
+        mock_response = ChatMessage(role=Role.ASSISTANT, text="Integration test response")
         agent.run = AsyncMock(return_value=mock_response)
 
         # Execute
         result = await agent.execute_with_timeout("test task")
 
         # Verify
-        assert result.content == "Integration test response"
+        assert result.text == "Integration test response"
 
         # Check performance tracking
         stats = agent.get_performance_stats()

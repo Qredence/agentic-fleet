@@ -13,7 +13,6 @@ from rich.progress import Progress
 from ...dspy_modules.supervisor import DSPySupervisor
 from ...utils.compiler import compile_supervisor
 from ...utils.config_loader import load_config
-from ...utils.tool_registry import ToolRegistry
 from ..utils import init_tracing, resolve_resource_path
 
 console = Console()
@@ -139,7 +138,6 @@ def gepa_optimize(
     configure_dspy_settings(model=effective_model, enable_cache=True)
 
     supervisor = DSPySupervisor()
-    supervisor.set_tool_registry(ToolRegistry())
 
     reflection_model_value = reflection_model or effective_model
     gepa_options = {

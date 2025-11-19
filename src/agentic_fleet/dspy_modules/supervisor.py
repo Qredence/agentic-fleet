@@ -49,44 +49,51 @@ class DSPySupervisor:
         self.tool_planner = dspy.ChainOfThought(ToolPlan)
         self.judge = dspy.ChainOfThought(JudgeEvaluation)
 
-    def analyze_task(self, task: str) -> dict[str, Any]:
+        self.tool_registry: Any | None = None
+
+    def set_tool_registry(self, tool_registry: Any) -> None:
+        """Attach a tool registry to the supervisor."""
+        self.tool_registry = tool_registry
+
+    def analyze_task(
+        self, task: str, use_tools: bool = False, perform_search: bool = False
+    ) -> dict[str, Any]:
         """Analyze a task to understand its requirements and complexity.
 
         Args:
             task: The user's task description
+            use_tools: Whether to allow tool usage during analysis (default: False)
+            perform_search: Whether to perform web search during analysis (default: False)
 
         Returns:
             Dictionary containing analysis results (complexity, capabilities, etc.)
         """
         logger.info(f"Analyzing task: {task[:100]}...")
-        try:
-            prediction = self.analyzer(task=task)
+        prediction = self.analyzer(task=task)
 
-            # Extract fields from prediction
-            # Typed signatures provide these directly as attributes
-            return {
-                "complexity": getattr(prediction, "complexity", "medium"),
-                "required_capabilities": getattr(prediction, "required_capabilities", []),
-                "estimated_steps": getattr(prediction, "estimated_steps", 1),
-                "reasoning": getattr(prediction, "reasoning", ""),
-            }
-        except Exception as e:
-            logger.error(f"Task analysis failed: {e}")
-            # Fallback
-            return {
-                "complexity": "medium",
-                "required_capabilities": [],
-                "estimated_steps": 1,
-                "reasoning": "Analysis failed, using defaults.",
-            }
+        # Extract fields from prediction
+        # Typed signatures provide these directly as attributes
+        return {
+            "complexity": getattr(prediction, "complexity", "medium"),
+            "required_capabilities": getattr(prediction, "required_capabilities", []),
+            "estimated_steps": getattr(prediction, "estimated_steps", 1),
+            "reasoning": getattr(prediction, "reasoning", ""),
+        }
 
-    def route_task(self, task: str, team: dict[str, str], context: str = "") -> dict[str, Any]:
+    def route_task(
+        self,
+        task: str,
+        team: dict[str, str],
+        context: str = "",
+        handoff_history: list[dict[str, Any]] | None = None,
+    ) -> dict[str, Any]:
         """Route a task to the most appropriate agent(s).
 
         Args:
             task: The task to route
             team: Dictionary mapping agent names to their descriptions
             context: Optional context string
+            handoff_history: Optional history of agent handoffs
 
         Returns:
             Dictionary containing routing decision (assigned_to, mode, subtasks)
@@ -96,82 +103,63 @@ class DSPySupervisor:
         # Format team description
         team_str = "\n".join([f"- {name}: {desc}" for name, desc in team.items()])
 
-        try:
-            prediction = self.router(task=task, team=team_str, context=context)
+        prediction = self.router(task=task, team=team_str, context=context)
 
-            return {
-                "task": task,
-                "assigned_to": getattr(prediction, "assigned_to", []),
-                "mode": getattr(prediction, "mode", "delegated"),
-                "subtasks": getattr(prediction, "subtasks", [task]),
-                "reasoning": getattr(prediction, "reasoning", ""),
-            }
-        except Exception as e:
-            logger.error(f"Task routing failed: {e}")
-            # Fallback
-            return {
-                "task": task,
-                "assigned_to": list(team.keys())[:1] if team else [],
-                "mode": "delegated",
-                "subtasks": [task],
-                "reasoning": "Routing failed, using fallback.",
-            }
+        return {
+            "task": task,
+            "assigned_to": getattr(prediction, "assigned_to", []),
+            "mode": getattr(prediction, "mode", "delegated"),
+            "subtasks": getattr(prediction, "subtasks", [task]),
+            "reasoning": getattr(prediction, "reasoning", ""),
+        }
 
-    def assess_quality(self, task: str, result: str) -> dict[str, Any]:
+    def assess_quality(self, task: str = "", result: str = "", **kwargs: Any) -> dict[str, Any]:
         """Assess the quality of a task result.
 
         Args:
             task: The original task
             result: The result produced by the agent
+            **kwargs: Compatibility arguments (requirements, results, etc.)
 
         Returns:
             Dictionary containing quality assessment (score, missing, improvements)
         """
+        actual_task = task or kwargs.get("requirements", "")
+        actual_result = result or kwargs.get("results", "")
+
         logger.info("Assessing result quality...")
-        try:
-            prediction = self.quality_assessor(task=task, result=result)
+        prediction = self.quality_assessor(task=actual_task, result=actual_result)
 
-            return {
-                "score": getattr(prediction, "score", 0.0),
-                "missing": getattr(prediction, "missing_elements", ""),
-                "improvements": getattr(prediction, "required_improvements", ""),
-                "reasoning": getattr(prediction, "reasoning", ""),
-            }
-        except Exception as e:
-            logger.error(f"Quality assessment failed: {e}")
-            return {
-                "score": 0.0,
-                "missing": "Assessment failed",
-                "improvements": "",
-                "reasoning": str(e),
-            }
+        return {
+            "score": getattr(prediction, "score", 0.0),
+            "missing": getattr(prediction, "missing_elements", ""),
+            "improvements": getattr(prediction, "required_improvements", ""),
+            "reasoning": getattr(prediction, "reasoning", ""),
+        }
 
-    def evaluate_progress(self, task: str, result: str) -> dict[str, Any]:
+    def evaluate_progress(self, task: str = "", result: str = "", **kwargs: Any) -> dict[str, Any]:
         """Evaluate progress and decide next steps (complete or refine).
 
         Args:
             task: The original task
             result: The current result
+            **kwargs: Compatibility arguments (original_task, completed, etc.)
 
         Returns:
             Dictionary containing progress evaluation (action, feedback)
         """
-        logger.info("Evaluating progress...")
-        try:
-            prediction = self.progress_evaluator(task=task, result=result)
+        # Handle parameter aliases from different executors
+        actual_task = task or kwargs.get("original_task", "")
+        actual_result = result or kwargs.get("completed", "")
 
-            return {
-                "action": getattr(prediction, "action", "complete"),
-                "feedback": getattr(prediction, "feedback", ""),
-                "reasoning": getattr(prediction, "reasoning", ""),
-            }
-        except Exception as e:
-            logger.error(f"Progress evaluation failed: {e}")
-            return {
-                "action": "complete",
-                "feedback": "Evaluation failed",
-                "reasoning": str(e),
-            }
+        logger.info("Evaluating progress...")
+        prediction = self.progress_evaluator(task=actual_task, result=actual_result)
+
+        return {
+            "action": getattr(prediction, "action", "complete"),
+            "feedback": getattr(prediction, "feedback", ""),
+            "reasoning": getattr(prediction, "reasoning", ""),
+        }
 
     def decide_tools(
         self, task: str, team: dict[str, str], current_context: str = ""
@@ -190,19 +178,12 @@ class DSPySupervisor:
 
         team_str = "\n".join([f"- {name}: {desc}" for name, desc in team.items()])
 
-        try:
-            prediction = self.tool_planner(task=task, available_tools=team_str)
+        prediction = self.tool_planner(task=task, available_tools=team_str)
 
-            return {
-                "tool_plan": getattr(prediction, "tool_plan", []),
-                "reasoning": getattr(prediction, "reasoning", ""),
-            }
-        except Exception as e:
-            logger.error(f"Tool planning failed: {e}")
-            return {
-                "tool_plan": [],
-                "reasoning": str(e),
-            }
+        return {
+            "tool_plan": getattr(prediction, "tool_plan", []),
+            "reasoning": getattr(prediction, "reasoning", ""),
+        }
 
     def get_execution_summary(self) -> dict[str, Any]:
         """Return a summary of the execution history."""

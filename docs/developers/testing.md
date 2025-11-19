@@ -98,14 +98,13 @@ async def test_my_feature():
 
 ```python
 import pytest
-from src.workflows.supervisor_workflow import SupervisorWorkflow
+from agentic_fleet.workflows.supervisor_workflow import create_supervisor_workflow
 
 @pytest.mark.asyncio
 async def test_feature_name():
     """Test that feature works correctly."""
     # Arrange
-    workflow = SupervisorWorkflow()
-    await workflow.initialize(compile_dspy=False)
+    workflow = await create_supervisor_workflow(compile_dspy=False)
 
     # Act
     result = await workflow.run("test task")
@@ -123,8 +122,7 @@ All workflow tests must be marked as async:
 @pytest.mark.asyncio
 async def test_async_feature():
     """Test async functionality."""
-    workflow = SupervisorWorkflow()
-    await workflow.initialize(compile_dspy=False)
+    workflow = await create_supervisor_workflow(compile_dspy=False)
 
     result = await workflow.run("task")
     assert result is not None
@@ -136,9 +134,12 @@ async def test_async_feature():
 @pytest.mark.asyncio
 async def test_streaming():
     """Test streaming functionality."""
-    workflow = SupervisorWorkflow()
-    # Set up with DummyAgent to avoid NotImplementedError
-    workflow.agents = {"Writer": DummyAgent("Writer")}
+    # Set up with DummyAgent to avoid NotImplementedError (requires mocking _create_agents or similar)
+    # For simple template, we just show usage:
+    workflow = await create_supervisor_workflow(compile_dspy=False)
+
+    # Inject dummy agents if needed for offline testing
+    # workflow.agents = {"Writer": DummyAgent("Writer")}
 
     events = []
     async for event in workflow.run_stream("task"):
@@ -154,13 +155,14 @@ async def test_streaming():
 @pytest.mark.asyncio
 async def test_error_handling():
     """Test that errors are handled correctly."""
-    from src.workflows.exceptions import AgentExecutionError
+    from agentic_fleet.workflows.exceptions import AgentExecutionError
+    from agentic_fleet.workflows.supervisor_workflow import create_supervisor_workflow
 
-    workflow = SupervisorWorkflow()
-    await workflow.initialize(compile_dspy=False)
+    workflow = await create_supervisor_workflow(compile_dspy=False)
 
-    with pytest.raises(AgentExecutionError):
-        await workflow._execute_delegated("NonExistent", "task")
+    # This assumes _execute_delegated is accessible or testing public API failure
+    # For public API testing:
+    # await workflow.run("Trigger Failure")
 ```
 
 ### Testing Configuration

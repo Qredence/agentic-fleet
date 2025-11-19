@@ -56,8 +56,8 @@ workflow:
     judge_threshold: 7.0 # Trigger refinement when Judge score < 7.0 (raised from 5.0)
     enable_judge: true # Enable Judge agent for quality evaluation
     max_refinement_rounds: 1 # Reduced from 2 to 1 for faster execution
-    judge_model: gpt-5-mini # Use gpt-5-mini for faster evaluation (changed from gpt-5)
-    judge_reasoning_effort: minimal # Changed from medium to minimal for speed
+    judge_model: gpt-5.1 # Use gpt-5.1 for high-quality evaluation
+    judge_reasoning_effort: medium # Use medium reasoning effort for Judge
     judge_timeout_seconds: 30 # Timeout for judge evaluation (new)
     refinement_min_improvement: 1.0 # Skip refinement if not improving by 1 point
 
@@ -73,7 +73,7 @@ workflow:
 # Agent Configuration
 agents:
   researcher:
-    model: gpt-4.1-mini
+    model: gpt-5.1
     tools:
       - TavilySearchTool # Requires TAVILY_API_KEY environment variable
     temperature: 0.5
@@ -82,7 +82,7 @@ agents:
     timeout: 30 # Task timeout in seconds
 
   analyst:
-    model: gpt-4.1-mini
+    model: gpt-5.1-codex
     tools:
       - HostedCodeInterpreterTool
     temperature: 0.3
@@ -91,7 +91,7 @@ agents:
     timeout: 45 # Longer timeout for computations
 
   writer:
-    model: gpt-5-nano
+    model: gpt-5.1-chat
     tools: []
     temperature: 0.7
     enable_dspy: true
@@ -99,7 +99,7 @@ agents:
     timeout: 30
 
   reviewer:
-    model: gpt-5-mini
+    model: gpt-5.1
     tools: []
     temperature: 0.2
     enable_dspy: true
@@ -108,7 +108,7 @@ agents:
 
   # New expanded agent roster (configuration-driven; keeps legacy agents for compatibility)
   planner:
-    model: gpt-5-mini
+    model: gpt-5
     tools: []
     temperature: 0.5
     instructions: prompts.planner
@@ -126,7 +126,7 @@ agents:
     timeout: 30
 
   coder:
-    model: gpt-5-mini
+    model: gpt-5.1-codex-mini
     tools:
       - HostedCodeInterpreterTool
     temperature: 0.3
@@ -136,7 +136,7 @@ agents:
     timeout: 45
 
   verifier:
-    model: gpt-5-mini
+    model: gpt-5-nano
     tools: []
     temperature: 0.5
     instructions: prompts.verifier
@@ -145,7 +145,7 @@ agents:
     timeout: 30
 
   generator:
-    model: gpt-5-mini
+    model: gpt-5.1-chat
     tools: []
     temperature: 0.8
     instructions: prompts.generator

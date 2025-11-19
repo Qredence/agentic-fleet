@@ -80,6 +80,7 @@ dependencies = [
     "gepa[dspy]>=0.0.17,<1.0",
     "anyio>=4.11.0,<5.0",
     "asyncer>=0.0.8,<1.0",
+    "sqlalchemy>=2.0.44",
 ]
 requires-python = ">=3.12,<4"
 

@@ -1,14 +1,11 @@
 """Fleet-native workflow entrypoints.
 
 This module exposes the public ``SupervisorWorkflow`` class used by the CLI and
-tests, while delegating the main implementation to the fleet adapter.  It also
-re-exports a ``compile_supervisor`` symbol for backward-compatibility with
-legacy lazy-compilation tests.
+tests, while delegating the main implementation to the fleet adapter.
 """
 
 from __future__ import annotations
 
-from ..utils.compiler import compile_supervisor as _compile_supervisor
 from .config import WorkflowConfig
 from .fleet.adapter import SupervisorWorkflow as _FleetSupervisorWorkflow
 from .fleet.adapter import create_fleet_workflow
@@ -16,20 +13,6 @@ from .initialization import initialize_workflow_context
 
 # Public entrypoint used throughout the codebase/tests
 SupervisorWorkflow = _FleetSupervisorWorkflow
-
-
-# Legacy tests patch ``agentic_fleet.workflows.supervisor_workflow.compile_supervisor``
-# directly.  Re-export the real implementation here so patches continue to
-# work as expected while newer code relies on the utilities in
-# ``utils.compiler`` and ``workflows.compilation``.
-def compile_supervisor(*args, **kwargs):  # type: ignore[override]
-    """Compatibility shim delegating to :func:`utils.compiler.compile_supervisor`.
-
-    Tests patch this symbol in this module; production code simply forwards to
-    the real compiler implementation.
-    """
-
-    return _compile_supervisor(*args, **kwargs)
 
 
 def _validate_task(task: str, max_length: int = 10_000) -> str:

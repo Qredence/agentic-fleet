@@ -2,10 +2,18 @@
 
 import json
 from pathlib import Path
+from unittest.mock import patch
 
 import pytest
 
 from agentic_fleet.utils.history_manager import HistoryManager
+
+
+@pytest.fixture(autouse=True)
+def mock_cosmos_disabled():
+    """Disable Cosmos DB for all tests in this module."""
+    with patch("agentic_fleet.utils.cosmos.is_cosmos_enabled", return_value=False):
+        yield
 
 
 def test_history_manager_jsonl_format(tmp_path):

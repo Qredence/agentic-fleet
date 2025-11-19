@@ -510,7 +510,8 @@ Training examples teach DSPy optimal routing patterns. Format:
 Override configuration in code:
 
 ```python
-from src.workflows.supervisor_workflow import WorkflowConfig, SupervisorWorkflow
+from agentic_fleet.workflows.config import WorkflowConfig
+from agentic_fleet.workflows.supervisor_workflow import create_supervisor_workflow
 
 # Create custom config
 config = WorkflowConfig(
@@ -533,8 +534,7 @@ config = WorkflowConfig(
 )
 
 # Use custom config
-workflow = SupervisorWorkflow(config=config)
-await workflow.initialize()
+workflow = await create_supervisor_workflow(config=config, compile_dspy=True)
 ```
 
 ## Performance Tuning

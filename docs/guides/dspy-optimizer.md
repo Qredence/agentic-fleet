@@ -270,11 +270,10 @@ clear_cache()
 When you run a workflow, compilation happens automatically during initialization:
 
 ```python
-from src.workflows.supervisor_workflow import SupervisorWorkflow
+from agentic_fleet.workflows.supervisor_workflow import create_supervisor_workflow
 
 # Workflow reads config/workflow_config.yaml
-workflow = SupervisorWorkflow()
-await workflow.initialize()  # Compiles supervisor here
+workflow = await create_supervisor_workflow()  # Compiles supervisor here
 
 # Run with optimized module
 result = await workflow.run("Your task")
@@ -293,8 +292,7 @@ dspy:
 Or programmatically:
 
 ```python
-workflow = SupervisorWorkflow()
-await workflow.initialize(compile_dspy=False)
+workflow = await create_supervisor_workflow(compile_dspy=False)
 ```
 
 ## CLI Commands

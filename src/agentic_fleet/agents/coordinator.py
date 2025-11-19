@@ -63,14 +63,20 @@ def _create_openai_client(**kwargs: Any):
 class AgentFactory:
     """Factory for creating ChatAgent instances from YAML configuration."""
 
-    def __init__(self, tool_registry: ToolRegistry | None = None) -> None:
+    def __init__(
+        self,
+        tool_registry: ToolRegistry | None = None,
+        openai_client: Any | None = None,
+    ) -> None:
         """Initialize AgentFactory.
 
         Args:
             tool_registry: Optional tool registry for resolving tool names to instances.
                 If None, creates a default registry.
+            openai_client: Optional shared OpenAI client (AsyncOpenAI) to reuse.
         """
         self.tool_registry = tool_registry or ToolRegistry()
+        self.openai_client = openai_client
 
         # Check if DSPy enhancement should be enabled globally
         self.enable_dspy = os.getenv("ENABLE_DSPY_AGENTS", "true").lower() == "true"
@@ -133,17 +139,24 @@ class AgentFactory:
 
             base_url = os.getenv("OPENAI_BASE_URL") or None
 
+            # Prepare client arguments
+            client_kwargs = {
+                "model_id": model_id,
+                "api_key": api_key,
+                "base_url": base_url,
+                "reasoning_effort": reasoning_effort,
+                "reasoning_verbosity": reasoning_verbosity,
+                "store": store,
+                "temperature": temperature,
+                "max_tokens": max_tokens,
+            }
+
+            # Use shared client if available
+            if self.openai_client:
+                client_kwargs["async_client"] = self.openai_client
+
             # Create OpenAI client using agent_framework directly
-            chat_client = _create_openai_client(
-                model_id=model_id,
-                api_key=api_key,
-                base_url=base_url,
-                reasoning_effort=reasoning_effort,
-                reasoning_verbosity=reasoning_verbosity,
-                store=store,
-                temperature=temperature,
-                max_tokens=max_tokens,
-            )
+            chat_client = _create_openai_client(**client_kwargs)
 
             # Create agent name in PascalCase format
             agent_name = f"{name.capitalize()}Agent"
@@ -331,7 +344,6 @@ def create_workflow_agents(
     """
 
     from agent_framework import ChatAgent
-    from agent_framework.openai import OpenAIChatClient
 
     from ..tools import BrowserTool, HostedCodeInterpreterAdapter, TavilyMCPTool
 
@@ -399,7 +411,8 @@ def create_workflow_agents(
                     validated_tools = None
 
         # Create the chat client
-        chat_client = OpenAIChatClient(**chat_client_kwargs)
+        # Use the module-level _create_openai_client to ensure we use ResponsesClient if available
+        chat_client = _create_openai_client(**chat_client_kwargs)
 
         # For Judge agent with reasoning effort, set extra_body after creation
         if reasoning_effort is not None and name == "Judge":
@@ -583,3 +596,48 @@ Required improvements: Specific instructions for the refinement agent"""
     )
 
     return agents
+
+
+def get_default_agent_metadata() -> list[dict[str, Any]]:
+    """Get metadata for default agents without instantiating them.
+
+    Returns:
+        List of agent metadata dictionaries.
+    """
+    return [
+        {
+            "name": "Researcher",
+            "description": "Information gathering and web research specialist",
+            "capabilities": ["web_search", "tavily", "browser", "react"],
+            "status": "active",
+            "model": "default (gpt-5-mini)",
+        },
+        {
+            "name": "Analyst",
+            "description": "Data analysis and computation specialist",
+            "capabilities": ["code_interpreter", "data_analysis", "program_of_thought"],
+            "status": "active",
+            "model": "default (gpt-5-mini)",
+        },
+        {
+            "name": "Writer",
+            "description": "Content creation and report writing specialist",
+            "capabilities": ["content_generation", "reporting"],
+            "status": "active",
+            "model": "default (gpt-5-mini)",
+        },
+        {
+            "name": "Judge",
+            "description": "Quality evaluation specialist with dynamic task-aware criteria assessment",
+            "capabilities": ["quality_evaluation", "grading", "critique"],
+            "status": "active",
+            "model": "gpt-5",
+        },
+        {
+            "name": "Reviewer",
+            "description": "Quality assurance and validation specialist",
+            "capabilities": ["validation", "review"],
+            "status": "active",
+            "model": "default (gpt-5-mini)",
+        },
+    ]

@@ -81,7 +81,7 @@ async def _execute_sequential(
             handoff_manager,
         )
 
-    # TODO: Determine simple_mode from executor metadata to suppress heavy tool usage on trivial tasks
+    # Simple mode is disabled by default; can be enabled in future with executor metadata analysis
     simple_mode = False
     return await execute_sequential(
         agents_map,

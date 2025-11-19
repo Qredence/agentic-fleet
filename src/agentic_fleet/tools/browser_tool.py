@@ -6,7 +6,6 @@ with web pages to get the most up-to-date information.
 
 from __future__ import annotations
 
-import asyncio
 import contextlib
 import os
 from collections.abc import Callable
@@ -44,6 +43,10 @@ class BrowserTool(SerializationMixin, ToolProtocol):
     and interact with web pages to get current information.
     """
 
+    # Class-level shared instances
+    _shared_browser: Browser | None = None
+    _shared_playwright: Any | None = None
+
     def __init__(self, headless: bool = True, timeout: int = 30000):
         """
         Initialize browser tool.
@@ -60,8 +63,7 @@ class BrowserTool(SerializationMixin, ToolProtocol):
 
         self.headless = headless
         self.timeout = timeout
-        self._browser: Browser | None = None
-        self._playwright: Any | None = None
+        # Instance-level references are removed in favor of class-level shared ones
         self.name = "browser"
         self.description = (
             "Browse websites and extract real-time content. Navigate to URLs, "
@@ -70,29 +72,31 @@ class BrowserTool(SerializationMixin, ToolProtocol):
         )
         self.additional_properties: dict[str, Any] | None = None
 
-    async def _ensure_browser(self) -> Browser:
-        """Ensure browser is initialized."""
-        if self._browser is None:
+    @classmethod
+    async def _ensure_browser(cls, headless: bool = True) -> Browser:
+        """Ensure browser is initialized (shared instance)."""
+        if cls._shared_browser is None:
             if async_playwright_factory is None:  # pragma: no cover - import guard
                 raise RuntimeError("Playwright is not available")
 
             factory = cast(Callable[[], Any], async_playwright_factory)
             playwright_manager = factory()
-            self._playwright = await playwright_manager.start()
-            playwright_obj = cast(Any, self._playwright)
-            self._browser = await playwright_obj.chromium.launch(headless=self.headless)
+            cls._shared_playwright = await playwright_manager.start()
+            playwright_obj = cast(Any, cls._shared_playwright)
+            cls._shared_browser = await playwright_obj.chromium.launch(headless=headless)
 
-        assert self._browser is not None
-        return self._browser
+        assert cls._shared_browser is not None
+        return cls._shared_browser
 
-    async def _cleanup(self) -> None:
-        """Clean up browser resources."""
-        if self._browser:
-            await self._browser.close()
-            self._browser = None
-        if self._playwright:
-            await self._playwright.stop()
-            self._playwright = None
+    @classmethod
+    async def cleanup(cls) -> None:
+        """Clean up shared browser resources."""
+        if cls._shared_browser:
+            await cls._shared_browser.close()
+            cls._shared_browser = None
+        if cls._shared_playwright:
+            await cls._shared_playwright.stop()
+            cls._shared_playwright = None
 
     @property
     def schema(self) -> dict:
@@ -162,7 +166,7 @@ class BrowserTool(SerializationMixin, ToolProtocol):
 
         page: Page | None = None
         try:
-            browser = await self._ensure_browser()
+            browser = await self._ensure_browser(self.headless)
             page = await browser.new_page()
 
             # Set reasonable timeouts
@@ -267,19 +271,14 @@ class BrowserTool(SerializationMixin, ToolProtocol):
         return self.name
 
     def __del__(self):
-        """Cleanup on deletion."""
-        if hasattr(self, "_browser") and (
-            self._browser or (hasattr(self, "_playwright") and self._playwright)
-        ):
-            # Schedule cleanup in event loop if available
-            try:
-                loop = asyncio.get_event_loop()
-                if loop.is_running():
-                    _task = asyncio.create_task(self._cleanup())  # noqa: RUF006
-                else:
-                    loop.run_until_complete(self._cleanup())
-            except RuntimeError:
-                pass  # No event loop available
+        """
+        Cleanup on deletion.
+
+        Note: Explicit cleanup() call is preferred. This is a best-effort fallback
+        that warns but doesn't act, as managing async lifecycle from __del__
+        is unreliable with shared class-level resources.
+        """
+        pass
 
     def to_dict(self, **kwargs: Any) -> dict[str, Any]:
         """Convert tool to dictionary format for agent-framework.

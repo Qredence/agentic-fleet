@@ -817,5 +817,50 @@
     "assigned_to": "Researcher",
     "mode": "delegated",
     "tool_requirements": ["TavilySearchTool"]
+  },
+  {
+    "task": "Research 2024 AI funding trends",
+    "team": "Researcher: Web research specialist",
+    "available_tools": "- TavilySearchTool/TavilyMCPTool (available to Researcher): Search the web for real-time information using Tavily. Provides accurate, up-to-date results with source citations. [Capabilities: web_search, real_time, citations]",
+    "context": "Self-improvement: Quality score 10.0/10",
+    "assigned_to": "Researcher",
+    "mode": "delegated",
+    "tool_requirements": ["tavily_search", "browser"]
+  },
+  {
+    "task": "Research 2025 AI funding trends",
+    "team": "Researcher: Web research specialist",
+    "available_tools": "- TavilySearchTool/TavilyMCPTool (available to Researcher): Search the web for real-time information using Tavily. Provides accurate, up-to-date results with source citations. [Capabilities: web_search, real_time, citations]",
+    "context": "Self-improvement: Quality score 10.0/10",
+    "assigned_to": "Researcher",
+    "mode": "delegated",
+    "tool_requirements": ["browser", "tavily_search"]
+  },
+  {
+    "task": "how was charlie kirk ?",
+    "team": "Researcher: Web research specialist",
+    "available_tools": "- TavilySearchTool/TavilyMCPTool (available to Researcher): Search the web for real-time information using Tavily. Provides accurate, up-to-date results with source citations. [Capabilities: web_search, real_time, citations]",
+    "context": "Self-improvement: Quality score 10.0/10",
+    "assigned_to": "Researcher",
+    "mode": "delegated",
+    "tool_requirements": ["browser", "tavily_search"]
+  },
+  {
+    "task": "complex task",
+    "team": "Researcher: Web research specialist\nAnalyst: Data analysis expert",
+    "available_tools": "- TavilySearchTool/TavilyMCPTool (available to Researcher): Search the web for real-time information using Tavily. Provides accurate, up-to-date results with source citations. [Capabilities: web_search, real_time, citations]\n- HostedCodeInterpreterTool (available to Analyst): Execute Python snippets in a managed sandbox. [Capabilities: code_execution]",
+    "context": "Self-improvement: Quality score 10.0/10",
+    "assigned_to": "Researcher,Analyst",
+    "mode": "parallel",
+    "tool_requirements": []
+  },
+  {
+    "task": "Test task",
+    "team": "Writer: Content creation",
+    "available_tools": "No tools available",
+    "context": "Self-improvement: Quality score 10.0/10",
+    "assigned_to": "Writer",
+    "mode": "delegated",
+    "tool_requirements": []
   }
 ]

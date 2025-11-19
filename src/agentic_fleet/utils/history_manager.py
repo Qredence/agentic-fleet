@@ -252,17 +252,21 @@ class HistoryManager:
     def _rotate_jsonl(self, history_file: Path, max_entries: int) -> None:
         """Rotate JSONL file to keep only last N entries."""
         try:
-            # Use the optimized approach even for sync version
-            # Read all lines (legacy approach for compatibility)
-            with open(history_file) as f:
-                lines = f.readlines()
+            # Check file size to avoid unnecessary work
+            if not history_file.exists():
+                return
 
-            # Keep only last N entries
-            if len(lines) > max_entries:
-                lines = lines[-max_entries:]
-                with open(history_file, "w") as f:
-                    f.writelines(lines)
-                logger.debug(f"Rotated history file to keep last {max_entries} entries")
+            # Use deque for efficient tail extraction
+            from collections import deque
+
+            with open(history_file) as f:
+                last_lines = deque(f, maxlen=max_entries)
+
+            # Write back only the last N lines
+            with open(history_file, "w") as f:
+                f.writelines(last_lines)
+
+            logger.debug(f"Rotated history file to keep last {max_entries} entries")
         except Exception as e:
             logger.warning(f"Failed to rotate history file: {e}")
 

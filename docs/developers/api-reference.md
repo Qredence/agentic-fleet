@@ -9,15 +9,22 @@ Main workflow orchestrator combining DSPy and agent-framework.
 #### Constructor
 
 ```python
-SupervisorWorkflow(config: Optional[WorkflowConfig] = None)
+SupervisorWorkflow(
+    context: SupervisorContext,
+    workflow_runner: Optional[Workflow] = None,
+    dspy_supervisor: Optional[Any] = None,
+    **kwargs
+)
 ```
 
 **Parameters**:
 
-- `config`: Optional WorkflowConfig instance (uses defaults if None)
+- `context`: Required SupervisorContext instance containing config, agents, and tools.
+- `workflow_runner`: Optional Agent Framework Workflow instance.
 
 **Attributes**:
 
+- `context`: SupervisorContext instance
 - `config`: WorkflowConfig instance
 - `dspy_supervisor`: DSPySupervisor instance
 - `agents`: Dictionary of ChatAgent instances
@@ -25,23 +32,6 @@ SupervisorWorkflow(config: Optional[WorkflowConfig] = None)
 - `history_manager`: HistoryManager instance
 
 #### Methods
-
-##### `async initialize(compile_dspy: bool = True)`
-
-Initialize the workflow with agents and DSPy.
-
-**Parameters**:
-
-- `compile_dspy`: Whether to compile DSPy module with training examples
-
-**Example**:
-
-```python
-from src.workflows.supervisor_workflow import SupervisorWorkflow
-
-workflow = SupervisorWorkflow()
-await workflow.initialize(compile_dspy=True)
-```
 
 ##### `async run(task: str) -> Dict[str, Any]`
 
@@ -80,10 +70,9 @@ Execute workflow for a given task (non-streaming).
 **Example**:
 
 ```python
-from src.workflows.supervisor_workflow import SupervisorWorkflow
+from agentic_fleet.workflows.supervisor_workflow import create_supervisor_workflow
 
-workflow = SupervisorWorkflow()
-await workflow.initialize()
+workflow = await create_supervisor_workflow(compile_dspy=True)
 result = await workflow.run("Analyze the impact of AI")
 print(f"Result: {result['result']}")
 print(f"Quality: {result['quality']['score']}/10")
@@ -105,10 +94,9 @@ Execute workflow with streaming events.
 **Example**:
 
 ```python
-from src.workflows.supervisor_workflow import SupervisorWorkflow
+from agentic_fleet.workflows.supervisor_workflow import create_supervisor_workflow
 
-workflow = SupervisorWorkflow()
-await workflow.initialize()
+workflow = await create_supervisor_workflow(compile_dspy=True)
 async for event in workflow.run_stream("Your task"):
     if hasattr(event, 'agent_id'):
         print(f"{event.agent_id}: {event.message.text}")
@@ -545,3 +533,85 @@ from src.utils.compiler import CACHE_VERSION
 
 # CACHE_VERSION = 1  # Current cache version for invalidation
 ```
+
+## REST API
+
+The Agentic Fleet exposes a FastAPI-based REST API for interacting with the system.
+
+### Base URL
+
+`/api/v1/workflow`
+
+### Endpoints
+
+#### `POST /run`
+
+Execute a workflow for a given task.
+
+**Request Body**: `WorkflowRequest`
+
+```json
+{
+  "task": "Your task description",
+  "config": {
+    "dspy_model": "gpt-4.1",
+    "max_rounds": 10
+  }
+}
+```
+
+**Response**: `WorkflowResponse`
+
+#### `POST /optimize`
+
+Trigger a self-improvement/optimization run (background task).
+
+**Request Body**: `OptimizationRequest`
+
+```json
+{
+  "iterations": 3,
+  "task": "Benchmark task",
+  "compile_dspy": true
+}
+```
+
+**Response**: `OptimizationResult` (pending status)
+
+#### `GET /optimize/{job_id}`
+
+Check status of an optimization run.
+
+**Response**: `OptimizationResult`
+
+#### `GET /history`
+
+Retrieve execution history.
+
+**Query Parameters**:
+
+- `limit`: Number of entries (default: 20)
+- `min_quality`: Minimum quality score filter (default: 0.0)
+
+**Response**: `HistoryResponse`
+
+#### `POST /self-improve`
+
+Trigger self-improvement from history.
+
+**Request Body**: `SelfImprovementRequest`
+
+```json
+{
+  "min_quality": 8.0,
+  "max_examples": 20
+}
+```
+
+**Response**: `SelfImprovementResponse`
+
+#### `GET /agents`
+
+List available agents and their capabilities.
+
+**Response**: `AgentListResponse`
