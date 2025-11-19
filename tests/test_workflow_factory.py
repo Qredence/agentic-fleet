@@ -109,11 +109,7 @@ def test_workflow_factory_config_structure() -> None:
 
     # Each workflow should have required fields
     for workflow in workflows:
-        assert "id" in workflow
-        assert "name" in workflow
-        assert "description" in workflow
-        assert "factory" in workflow
-        assert "agent_count" in workflow
+        _validate_workflow_dict(workflow)
 
 
 def test_workflow_factory_env_override(monkeypatch: pytest.MonkeyPatch) -> None:
