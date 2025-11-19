@@ -127,5 +127,5 @@ if __name__ == "__main__":
     # Manual invocation, optionally allow overriding base_url via CLI
     import sys
 
-    base_url = sys.argv[1] if len(sys.argv) > 1 else "http://localhost:8000"
+    base_url = sys.argv[1] if len(sys.argv) > 1 else os.environ.get("BASE_URL", "http://localhost:8000")
     sse_streaming_performance_test(base_url)
