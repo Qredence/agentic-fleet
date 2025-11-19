@@ -6,6 +6,7 @@ are created, and that the DSPy supervisor can access tool metadata.
 """
 
 import os
+from unittest.mock import patch
 
 import pytest
 
@@ -29,14 +30,14 @@ async def test_tool_registry_populated_after_init():
     tool_names = list(available_tools.keys())
 
     # Should have web search tool (from Researcher)
-    assert any("tavily" in name.lower() or "search" in name.lower() for name in tool_names), (
-        f"Expected web search tool, got: {tool_names}"
+    web_search_tools = workflow.tool_registry.get_tools_by_capability("web_search")
+    assert len(web_search_tools) > 0, (
+        f"Expected at least one web search tool, got: {web_search_tools} (available tool names: {tool_names})"
     )
 
     # Should have code execution tool (from Analyst)
-    assert any("code" in name.lower() or "interpreter" in name.lower() for name in tool_names), (
-        f"Expected code execution tool, got: {tool_names}"
-    )
+    code_tools = workflow.tool_registry.get_tools_by_capability("code_execution")
+    assert len(code_tools) > 0, f"Expected code execution tool, got: {tool_names}"
 
 
 @pytest.mark.asyncio
@@ -54,9 +55,11 @@ async def test_tool_descriptions_formatted():
     assert descriptions != "No tools are currently available."
 
     # Should contain key information
-    assert "available to" in descriptions.lower(), (
-        "Descriptions should show which agent has each tool"
-    )
+    # Check that the agent names are referenced in descriptions (less brittle)
+    for agent_name in ["Researcher", "Analyst"]:
+        assert agent_name.lower() in descriptions.lower(), (
+            f"Descriptions should show which agent ({agent_name}) has each tool"
+        )
     assert "capabilities" in descriptions.lower(), "Descriptions should list capabilities"
 
 
@@ -99,8 +102,8 @@ async def test_tool_registry_empty_without_tools():
     """Verify graceful handling when agents have no tools."""
     # Create workflow with agents that have no tools
     workflow = SupervisorWorkflow()
-    # Temporarily override agents to have no tools
-    workflow.agents = {
+    # Temporarily override agents to have no tools using patch
+    mock_agents = {
         "Writer": type(
             "Agent",
             (),
@@ -110,12 +113,12 @@ async def test_tool_registry_empty_without_tools():
             },
         )(),
     }
-
-    # Initialize tool registry manually
-    for agent_name, agent in workflow.agents.items():
-        if hasattr(agent, "chat_options") and hasattr(agent.chat_options, "tools"):
-            for tool in agent.chat_options.tools or []:
-                workflow.tool_registry.register_tool_by_agent(agent_name, tool)
+    with patch.object(workflow, "agents", mock_agents):
+        # Initialize tool registry manually
+        for agent_name, agent in workflow.agents.items():
+            if hasattr(agent, "chat_options") and hasattr(agent.chat_options, "tools"):
+                for tool in agent.chat_options.tools or []:
+                    workflow.tool_registry.register_tool_by_agent(agent_name, tool)
 
     # Should handle empty registry gracefully
     descriptions = workflow.tool_registry.get_tool_descriptions()
@@ -139,9 +142,12 @@ async def test_tool_aliases_registered():
 
     # Verify alias resolution works
     descriptions = workflow.tool_registry.get_tool_descriptions()
-    assert "aliases:" in descriptions.lower() or len(available_tools) > 0, (
-        "Tool aliases should be visible in descriptions"
+    # Only assert if at least one tool has aliases
+    has_aliases = any(
+        tool.get("aliases") for tool in available_tools.values()
     )
+    if has_aliases:
+        assert "aliases:" in descriptions.lower(), "Tool aliases should be visible in descriptions"
 
 
 @pytest.mark.asyncio
