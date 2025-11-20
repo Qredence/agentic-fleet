@@ -215,9 +215,9 @@ async def main():
 
     evaluator = Evaluator(
         workflow_factory=wf_factory,
-        dataset_path=cfg['evaluation']['dataset_path'],
-        output_dir=cfg['evaluation']['output_dir'],
-        metrics=cfg['evaluation']['metrics'],
+        dataset_path=cfg["evaluation"]["dataset_path"],
+        output_dir=cfg["evaluation"]["output_dir"],
+        metrics=cfg["evaluation"]["metrics"],
     )
     summary = await evaluator.run()
     print(summary)
@@ -227,7 +227,7 @@ asyncio.run(main())
 
 ## Extending Metrics
 
-Add a new function to `src/evaluation/metrics.py`:
+Add a new function to `src/agentic_fleet/evaluation/metrics.py`:
 
 ```python
 def metric_custom(task, metadata):
@@ -235,7 +235,7 @@ def metric_custom(task, metadata):
     # Your logic here
     return value
 
-METRIC_FUNCS['custom'] = metric_custom
+METRIC_FUNCS["custom"] = metric_custom
 ```
 
 Then include `custom` in `evaluation.metrics` list in your config.

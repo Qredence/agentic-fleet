@@ -239,4 +239,4 @@ The `_perform_web_search` method in `supervisor.py` currently tries to execute a
 
 - [User Guide](../users/user-guide.md) - Tool integration usage patterns
 - [Configuration](../users/configuration.md) - Tool configuration options
-- [API Reference](../developers/api-reference.md) - ToolRegistry API details
+- [API Reference](../api-reference.md) - ToolRegistry API details

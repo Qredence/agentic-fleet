@@ -119,8 +119,7 @@ The CLI has been refactored into focused modules:
 
 - **`cli/runner.py`** - `WorkflowRunner` class managing workflow execution
 - **`cli/display.py`** - Display utilities (`display_result`, `show_help`, `show_status`)
-- **`cli/app.py`** - Typer entry point
-- **`console.py`** - Command definitions
+- **`cli/console.py`** - Typer entry point and command definitions
 
 This separation improves:
 

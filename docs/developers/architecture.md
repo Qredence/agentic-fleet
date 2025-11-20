@@ -215,15 +215,15 @@ G --> F
 
 **All workflow orchestration uses agent-framework primitives:**
 
-| Component            | Agent-Framework Usage                                   | Location                             |
-| -------------------- | ------------------------------------------------------- | ------------------------------------ |
-| **Workflow Graph**   | `WorkflowBuilder().set_start_executor().add_edge()`     | `workflows/fleet/builder.py:79-87`   |
-| **Executors**        | All extend `agent_framework.Executor` with `@handler`   | `workflows/fleet/*_executor.py`      |
-| **Workflow Runtime** | `workflow_builder.build().as_agent()` → `WorkflowAgent` | `workflows/fleet/adapter.py:275-276` |
-| **Execution**        | `workflow_agent.run()` / `run_stream()`                 | `workflows/fleet/adapter.py:66, 116` |
-| **Chat Agents**      | `ChatAgent` with `OpenAIResponsesClient`                | `agents/coordinator.py:96-115`       |
-| **Events**           | `MagenticAgentMessageEvent`, `WorkflowOutputEvent`      | `workflows/fleet/adapter.py:118-120` |
-| **Messages**         | `ChatMessage(role=Role.ASSISTANT, text=...)`            | `workflows/execution/*.py`           |
+| Component            | Agent-Framework Usage                                   | Location                          |
+| -------------------- | ------------------------------------------------------- | --------------------------------- |
+| **Workflow Graph**   | `WorkflowBuilder().set_start_executor().add_edge()`     | `workflows/builder.py:79-87`      |
+| **Executors**        | All extend `agent_framework.Executor` with `@handler`   | `workflows/executors.py`          |
+| **Workflow Runtime** | `workflow_builder.build().as_agent()` → `WorkflowAgent` | `workflows/supervisor.py:275-276` |
+| **Execution**        | `workflow_agent.run()` / `run_stream()`                 | `workflows/supervisor.py:66, 116` |
+| **Chat Agents**      | `ChatAgent` with `OpenAIResponsesClient`                | `agents/coordinator.py:96-115`    |
+| **Events**           | `MagenticAgentMessageEvent`, `WorkflowOutputEvent`      | `workflows/supervisor.py:118-120` |
+| **Messages**         | `ChatMessage(role=Role.ASSISTANT, text=...)`            | `workflows/strategies.py`         |
 
 **Code Examples:**
 
@@ -249,26 +249,18 @@ async for event in workflow_agent.run_stream(task_msg):
 
 ### Module Structure
 
-- `src/workflows/` - Workflow orchestration using agent-framework WorkflowBuilder
-  - `supervisor_workflow.py` - Factory function and type alias for `FleetWorkflowAdapter`
-  - `fleet/` - Fleet workflow implementation: `adapter.py` (FleetWorkflowAdapter), `builder.py` (WorkflowBuilder setup), executors (analysis, routing, execution, progress, quality, judge_refine)
-  - `shared/` - Shared typed models (AnalysisResult, RoutingPlan, etc.) and conversion helpers
-  - `config.py` - `WorkflowConfig` dataclass and configuration helpers
-  - `utils.py` - Shared workflow utilities (result synthesis, artifact extraction, client creation)
-  - `handoff_manager.py` - Structured agent handoff management
+- `src/workflows/` - Flattened orchestration logic
+  - `supervisor.py` - Main entry point and workflow runtime
+  - `builder.py` - WorkflowBuilder configuration
+  - `executors.py` - All phase executors (Analysis, Routing, Progress, Quality, Judge)
+  - `strategies.py` - Execution strategies (delegated, sequential, parallel)
+  - `handoff.py` - Handoff logic
+  - `context.py` - `SupervisorContext` definition
+  - `models.py` - Shared data models
+  - `messages.py` - Message handling
+  - `helpers.py` - Routing helpers
+  - `utils.py` - Shared utilities
   - `exceptions.py` - Custom exceptions
-  - `execution/` - Execution strategy modules
-    - `delegated.py` - Single-agent execution (streaming and non-streaming)
-    - `sequential.py` - Sequential agent execution with handoff support
-    - `parallel.py` - Parallel agent execution with result synthesis
-  - `quality/` - Quality assessment modules
-    - `assessor.py` - Quality and judge evaluation phases
-    - `criteria.py` - Dynamic quality criteria generation
-    - `refiner.py` - Result refinement logic
-  - `routing/` - Routing decision modules
-    - `helpers.py` - Routing normalization and edge case detection
-    - `subtasks.py` - Subtask preparation and distribution
-  - `agents/` - Re-export shim for backward compatibility (use `agentic_fleet.agents` directly)
 
 - `src/dspy_modules/` - DSPy integration (aligned with dspy.ai best practices)
   - `supervisor.py` - `DSPySupervisor` module orchestrating analysis, routing, progress, and quality. Uses enhanced signatures (`EnhancedTaskRouting`, `JudgeEvaluation`) by default for better workflow integration. Verbose about reasoning traces via `get_execution_summary()`.
@@ -278,7 +270,8 @@ async for event in workflow_agent.run_stream(task_msg):
 
 - `src/agents/` - **Canonical agent layer** (single source of truth)
   - `coordinator.py` - `AgentFactory` for YAML-based agent creation, `create_workflow_agents` for default workflow agents, `validate_tool` utility
-  - `base.py`, `planner.py`, `coder.py`, etc. - Agent role definitions
+  - `prompts.py` - Consolidated prompt templates
+  - `base.py` - Base agent classes
 
 - `src/cli/` - Command-line interface (modular structure)
   - `cli/console.py` - Minimal Typer app (~61 lines) that registers commands
@@ -391,12 +384,11 @@ DSPy compilation results are cached with:
 The codebase has been refactored to improve maintainability and reduce complexity:
 
 - **Fleet Workflow Architecture**: Workflow implemented via agent-framework `WorkflowBuilder` and executors:
-  - `workflows/fleet/` contains the implementation (adapter, builder, executors)
-  - `workflows/supervisor_workflow.py` is a thin factory/alias for backward compatibility
-  - Execution strategies in `workflows/execution/`
-  - Quality assessment in `workflows/quality/`
-  - Routing logic in `workflows/routing/`
-  - Shared typed models in `workflows/shared/`
+  - `workflows/` flattened structure (executors, strategies, logic in single level)
+  - `workflows/supervisor.py` is the main entry point
+  - Execution strategies in `workflows/strategies.py`
+  - Executors in `workflows/executors.py`
+  - Shared typed models in `workflows/models.py`
   - Shared utilities in `workflows/utils.py`
 
 ### Agent-framework + DSPy layering

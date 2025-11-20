@@ -103,7 +103,7 @@ Detailed guides for specific features and workflows:
 ## Project Information
 
 - **[README.md](../README.md)** - Project overview and quick start
-- **[CHANGELOG.md](CHANGELOG.md)** - Version history and changes
+- **[CHANGELOG.md](../CHANGELOG.md)** - Version history and changes
 
 ## External Resources
 
@@ -125,7 +125,6 @@ Detailed guides for specific features and workflows:
 ```
 docs/
 ├── INDEX.md                    # This file
-├── CHANGELOG.md                # Version history
 ├── users/                      # User-facing documentation
 │   ├── getting-started.md
 │   ├── user-guide.md

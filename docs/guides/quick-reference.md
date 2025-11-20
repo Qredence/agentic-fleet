@@ -17,18 +17,18 @@ uv run agentic-fleet run -m "Your question" --verbose 2>&1 | tee logs/output.log
 
 ```bash
 # Quick overview
-uv run python analyze_history.py
+uv run python src/agentic_fleet/scripts/analyze_history.py
 
 # All statistics
-uv run python analyze_history.py --all
+uv run python src/agentic_fleet/scripts/analyze_history.py --all
 
 # Specific views
-uv run python analyze_history.py --summary        # Overall stats
-uv run python analyze_history.py --executions     # List all
-uv run python analyze_history.py --last 5         # Last 5 only
-uv run python analyze_history.py --routing        # Mode distribution
-uv run python analyze_history.py --agents         # Agent usage
-uv run python analyze_history.py --timing         # Time breakdown
+uv run python src/agentic_fleet/scripts/analyze_history.py --summary        # Overall stats
+uv run python src/agentic_fleet/scripts/analyze_history.py --executions     # List all
+uv run python src/agentic_fleet/scripts/analyze_history.py --last 5         # Last 5 only
+uv run python src/agentic_fleet/scripts/analyze_history.py --routing        # Mode distribution
+uv run python src/agentic_fleet/scripts/analyze_history.py --agents         # Agent usage
+uv run python src/agentic_fleet/scripts/analyze_history.py --timing         # Time breakdown
 ```
 
 ## Viewing Logs
@@ -92,13 +92,13 @@ uv run agentic-fleet run -m "Research quantum computing and write a summary" --v
 ### Check last 10 executions
 
 ```bash
-uv run python analyze_history.py --executions --last 10
+uv run python src/agentic_fleet/scripts/analyze_history.py --executions --last 10
 ```
 
 ### View routing statistics
 
 ```bash
-uv run python analyze_history.py --routing --agents
+uv run python src/agentic_fleet/scripts/analyze_history.py --routing --agents
 ```
 
 ### Monitor execution in real-time
@@ -126,7 +126,7 @@ tail -f logs/workflow.log
 ### Slow execution
 
 - Check network connectivity (OpenAI API, Tavily API)
-- Review timing breakdown: `python analyze_history.py --timing`
+- Review timing breakdown: `python src/agentic_fleet/scripts/analyze_history.py --timing`
 - Consider adjusting max_rounds in config
 
 ### Quality scores always 10/10
@@ -139,8 +139,8 @@ tail -f logs/workflow.log
 
 ```
 agentic-fleet/
-├── cli/console.py                # Typer CLI entrypoint (exposed as `agentic-fleet`)
-├── analyze_history.py            # History analysis tool
+├── src/agentic_fleet/cli/console.py                # Typer CLI entrypoint (exposed as `agentic-fleet`)
+├── src/agentic_fleet/scripts/analyze_history.py    # History analysis tool
 ├── config/
 │   └── workflow_config.yaml      # Main configuration
 ├── logs/
@@ -150,17 +150,18 @@ agentic-fleet/
 ├── data/
 │   └── supervisor_examples.json  # DSPy training data
 └── src/
-    ├── workflows/                # Workflow definitions
-    ├── dspy_modules/             # DSPy signatures and modules
-    └── utils/                    # Logging and compilation utilities
+    ├── agentic_fleet/workflows/  # Workflow definitions
+    ├── agentic_fleet/dspy_modules/ # DSPy signatures and modules
+    └── agentic_fleet/utils/      # Logging and compilation utilities
 ```
 
 ## Environment Variables
 
 ```bash
 # Required
-OPENAI_API_KEY=sk-...           # OpenAI API key
-TAVILY_API_KEY=tvly-...         # Tavily search API key
+OPENAI_API_KEY=sk-...
+# Required
+TAVILY_API_KEY=tvly-...
 
 # Optional
 DSPY_COMPILE=true               # Enable/disable DSPy compilation

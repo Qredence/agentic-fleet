@@ -208,7 +208,7 @@ History saved to: logs/execution_history.json
 
 - Use `--verbose` flag when running the CLI
 - Check `workflow_config.yaml` logging settings
-- Verify logger configuration in `src/utils/logger.py`
+- Verify logger configuration in `src/agentic_fleet/utils/logger.py`
 
 **JSON parse errors:**
 

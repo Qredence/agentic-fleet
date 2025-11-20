@@ -246,7 +246,7 @@ uv run agentic-fleet run -m "Test task"
 Or use the Python API:
 
 ```python
-from src.utils.compiler import clear_cache, get_cache_info
+from src.agentic_fleet.utils.compiler import clear_cache, get_cache_info
 
 # Get cache metadata
 info = get_cache_info()
@@ -449,7 +449,7 @@ git tag -a v1.0-optimized -m "GEPA optimization run 2025-11-07"
 ```bash
 # Check cache validity
 python -c "
-from src.utils.compiler import get_cache_info
+from src.agentic_fleet.utils.compiler import get_cache_info
 print(get_cache_info())
 "
 ```
@@ -510,7 +510,7 @@ dspy:
 
 ### Custom Metrics
 
-Edit `src/utils/compiler.py` to define custom routing metrics:
+Edit `src/agentic_fleet/utils/compiler.py` to define custom routing metrics:
 
 ```python
 def routing_metric(example, prediction, trace=None):
@@ -533,8 +533,8 @@ def routing_metric(example, prediction, trace=None):
 Use the compiler directly:
 
 ```python
-from src.utils.compiler import compile_supervisor
-from src.dspy_modules.supervisor import DSPySupervisor
+from src.agentic_fleet.utils.compiler import compile_supervisor
+from src.agentic_fleet.dspy_modules.supervisor import DSPySupervisor
 
 # Create supervisor
 supervisor = DSPySupervisor()

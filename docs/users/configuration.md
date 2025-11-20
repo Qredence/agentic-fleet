@@ -101,7 +101,7 @@ tools:
 # Logging Configuration
 logging:
   level: INFO # DEBUG, INFO, WARNING, ERROR
-  format: "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+  format: "% (asctime)s - %(name)s - %(levelname)s - %(message)s"
   file: logs/workflow.log # Log file path
   save_history: true # Save execution history
   history_file: logs/execution_history.jsonl
@@ -430,11 +430,11 @@ With the flag enabled, the runtime mirrors data without changing workflow semant
 - **enabled** (`bool`, default: `false`): Toggle evaluation CLI (for example, via `agentic-fleet evaluate`) and guards inside `Evaluator`.
 - **dataset_path** (`str`): JSONL dataset containing tasks/keywords.
 - **output_dir** (`str`): Where summaries + per-task metrics are written.
-- **metrics** (`List[str]`): Metric IDs from `src/evaluation/metrics.py`.
+- **metrics** (`List[str]`): Metric IDs from `src/agentic_fleet/evaluation/metrics.py`.
 - **max_tasks** (`int`, default: `0` = no cap): Useful for spot checks.
 - **stop_on_failure** (`bool`): Abort as soon as a success metric fails.
 
-Pair this config with the helpers in `scripts/create_history_evaluation.py` for regenerating datasets from execution history.
+Pair this config with the helpers in `src/agentic_fleet/scripts/create_history_evaluation.py` for regenerating datasets from execution history.
 
 ### Handoff Configuration
 
@@ -583,8 +583,8 @@ logging:
 The framework validates configuration at startup using Pydantic schemas:
 
 ```python
-from src.utils.config_schema import validate_config
-from src.workflows.exceptions import ConfigurationError
+from src.agentic_fleet.utils.config_schema import validate_config
+from src.agentic_fleet.workflows.exceptions import ConfigurationError
 
 try:
     schema = validate_config(config_dict)
@@ -610,12 +610,12 @@ except ConfigurationError as e:
 
 1. **History format**: Execution history now appends to `logs/execution_history.jsonl`. The legacy `.json` file is still readable, but all tooling writes JSONL for better streaming performance.
 2. **WorkflowConfig fields**: New required attributes (quality thresholds, streaming flags, tool switches) were added in v0.5. If you instantiate `WorkflowConfig` manually, supply the new fields or rely on defaults.
-3. **Optional `TAVILY_API_KEY`**: Web search is now optional. When the key is missing, the Researcher agent automatically degrades to non-search mode. Run `uv run python console.py list_agents` to confirm the active capabilities.
+3. **Optional `TAVILY_API_KEY`**: Web search is now optional. When the key is missing, the Researcher agent automatically degrades to non-search mode. Run `uv run agentic-fleet list-agents` to confirm the active capabilities.
 
 ### JSON to JSONL History
 
 ```python
-from src.utils.history_manager import HistoryManager
+from src.agentic_fleet.utils.history_manager import HistoryManager
 
 # Load from old JSON format
 old_manager = HistoryManager(history_format="json")
@@ -659,7 +659,7 @@ logging:
 - **Tool-aware routing**: Centralized registry plus DSPy signature updates surface tool metadata inside prompts (`tools.*` section).
 - **Tracing controls**: `tracing.enabled`, `tracing.otlp_endpoint`, and env overrides make observability opt-in per environment.
 - **Evaluation suite**: `evaluation.*` keys wire up dataset paths, metrics, and CLI defaults for batch assessments.
-- **Structured handoffs**: `SupervisorWorkflow.enable_handoffs` unlocks rich agent-to-agent context passing (see `src/workflows/handoff_manager.py`).
+- **Structured handoffs**: `SupervisorWorkflow.enable_handoffs` unlocks rich agent-to-agent context passing (see `src/agentic_fleet/workflows/handoff.py`).
 
 ## Cache Management
 
@@ -667,10 +667,10 @@ Use the `manage_cache.py` helper to inspect or reset the DSPy compilation cache:
 
 ```bash
 # Show the current cache metadata (path, size, age)
-uv run python manage_cache.py --info
+uv run python src/agentic_fleet/scripts/manage_cache.py --info
 
 # Clear the compiled supervisor cache to force recompilation
-uv run python manage_cache.py --clear
+uv run python src/agentic_fleet/scripts/manage_cache.py --clear
 ```
 
 Clearing the cache is recommended whenever you update `data/supervisor_examples.json` or switch models.
@@ -772,8 +772,8 @@ logging:
 
 ### Cached module feels stale
 
-- Run `uv run python manage_cache.py --clear` after updating `data/supervisor_examples.json` or switching models.
-- Verify cache health with `uv run python manage_cache.py --info`; stale timestamps usually indicate a restart is needed.
+- Run `uv run python src/agentic_fleet/scripts/manage_cache.py --clear` after updating `data/supervisor_examples.json` or switching models.
+- Verify cache health with `uv run python src/agentic_fleet/scripts/manage_cache.py --info`; stale timestamps usually indicate a restart is needed.
 
 ## Operational Best Practices
 

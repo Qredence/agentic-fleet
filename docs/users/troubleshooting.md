@@ -11,7 +11,7 @@
 ```
 Traceback (most recent call last):
   File "console.py", line 24, in <module>
-    from src.dspy_modules.supervisor import DSPySupervisor
+    from src.agentic_fleet.dspy_modules.supervisor import DSPySupervisor
 ModuleNotFoundError: No module named 'src'
 ```
 
@@ -156,7 +156,7 @@ workflow = await create_supervisor_workflow(compile_dspy=False)
 **To clear cache**:
 
 ```python
-from src.utils.compiler import clear_cache
+from src.agentic_fleet.utils.compiler import clear_cache
 clear_cache()
 ```
 
@@ -241,8 +241,8 @@ python3 -c "import yaml; yaml.safe_load(open('config/workflow_config.yaml'))"
 2. Validate configuration:
 
 ```python
-from src.utils.config_schema import validate_config
-from src.utils.config_loader import load_config
+from src.agentic_fleet.utils.config_schema import validate_config
+from src.agentic_fleet.utils.config_loader import load_config
 
 config = load_config()
 validated = validate_config(config)
@@ -270,7 +270,7 @@ dspy:
 Verify:
 
 ```bash
-uv run python -c "from src.utils.config_schema import validate_config; from src.utils.config_loader import load_config; validate_config(load_config())"
+uv run python -c "from src.agentic_fleet.utils.config_schema import validate_config; from src.agentic_fleet.utils.config_loader import load_config; validate_config(load_config())"
 ```
 
 ---
@@ -284,19 +284,19 @@ uv run python -c "from src.utils.config_schema import validate_config; from src.
 **Incorrect**:
 
 ```python
-from src.workflows import SupervisorWorkflow  # ❌
+from src.agentic_fleet.workflows import SupervisorWorkflow  # ❌
 ```
 
 **Correct**:
 
 ```python
-from workflows.supervisor_workflow import SupervisorWorkflow  # ✅
+from agentic_fleet.workflows.supervisor import SupervisorWorkflow  # ✅
 ```
 
 **For console.py and examples** (not installed as package):
 
 ```python
-from src.workflows.supervisor_workflow import SupervisorWorkflow  # ✅
+from src.agentic_fleet.workflows.supervisor import SupervisorWorkflow  # ✅
 ```
 
 ---
@@ -306,7 +306,7 @@ from src.workflows.supervisor_workflow import SupervisorWorkflow  # ✅
 ### Enable Debug Logging
 
 ```python
-from src.utils.logger import setup_logger
+from src.agentic_fleet.utils.logger import setup_logger
 
 setup_logger("dspy_agent_framework", "DEBUG")
 ```
@@ -318,13 +318,13 @@ setup_logger("dspy_agent_framework", "DEBUG")
 print(workflow.tool_registry.get_available_tools())
 
 # View execution history
-from src.utils.history_manager import HistoryManager
+from src.agentic_fleet.utils.history_manager import HistoryManager
 manager = HistoryManager()
 stats = manager.get_history_stats()
 print(stats)
 
 # View cache info
-from src.utils.compiler import get_cache_info
+from src.agentic_fleet.utils.compiler import get_cache_info
 info = get_cache_info()
 print(info)
 ```
@@ -340,10 +340,10 @@ uv run python -c "import json; data = json.load(open('data/supervisor_examples.j
 
 ```bash
 # Test DSPy supervisor
-uv run python -c "from dspy_modules.supervisor import DSPySupervisor; s = DSPySupervisor(); print('Supervisor OK')"
+uv run python -c "from agentic_fleet.dspy_modules.supervisor import DSPySupervisor; s = DSPySupervisor(); print('Supervisor OK')"
 
 # Test tool registry
-uv run python -c "from utils.tool_registry import ToolRegistry; r = ToolRegistry(); print('Registry OK')"
+uv run python -c "from agentic_fleet.utils.tool_registry import ToolRegistry; r = ToolRegistry(); print('Registry OK')"
 ```
 
 ## Getting Additional Help
