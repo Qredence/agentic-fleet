@@ -73,7 +73,7 @@ def extract_keywords(task: str) -> list[str]:
         if key in task_lower:
             keywords.update(words)
 
-    return sorted(list(keywords))
+    return sorted(keywords)
 
 
 def main() -> None:
@@ -117,7 +117,7 @@ def main() -> None:
         f"\nAverage expected quality score: {
             sum(t['expected_quality_score'] for t in eval_tasks) / len(eval_tasks):.2f}"
     )
-    print(f"Total unique tasks: {len(set(t['task'] for t in eval_tasks))}")
+    print(f"Total unique tasks: {len({t['task'] for t in eval_tasks})}")
 
 
 if __name__ == "__main__":
