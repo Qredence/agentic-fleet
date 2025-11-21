@@ -530,7 +530,7 @@ def build_routing_feedback_metric(perfect_score: float = 1.0) -> GEPAFeedbackMet
 
         return ScoreWithFeedback(score=final_score, feedback=feedback)
 
-    return metric
+    return metric  # type: ignore[return-value]
 
 
 def optimize_with_gepa(

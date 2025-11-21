@@ -313,7 +313,7 @@ def _validate_example_alignment(records: list[dict[str, Any]]) -> list[str]:
     return warnings
 
 
-def compile_supervisor(
+def compile_reasoner(
     module: Any,
     examples_path: str = "data/supervisor_examples.json",
     use_cache: bool = True,
@@ -322,9 +322,10 @@ def compile_supervisor(
     dspy_model: str | None = None,
     agent_config: dict[str, Any] | None = None,
     progress_callback: ProgressCallback | None = None,
+    allow_gepa_optimization: bool = True,
 ) -> Any:
     """
-    Compile DSPy supervisor module with training examples.
+    Compile DSPy reasoner module with training examples.
 
     Args:
         module: DSPy module to compile
@@ -335,6 +336,7 @@ def compile_supervisor(
         dspy_model: DSPy model identifier (for config hash)
         agent_config: Agent Framework agent configuration (for config hash)
         progress_callback: Optional callback for progress reporting
+        allow_gepa_optimization: Whether to allow running GEPA optimization if cache is missing
 
     Returns:
         Compiled DSPy module
@@ -345,7 +347,7 @@ def compile_supervisor(
     optimizer = optimizer or "bootstrap"
     cache_path = "logs/compiled_supervisor.pkl"
 
-    progress_callback.on_start(f"Compiling DSPy supervisor with {optimizer} optimizer")
+    progress_callback.on_start(f"Compiling DSPy reasoner with {optimizer} optimizer")
 
     # Compute hashes for granular cache invalidation
     progress_callback.on_progress("Computing cache hashes...")
@@ -380,6 +382,26 @@ def compile_supervisor(
             else:
                 progress_callback.on_progress("No cache found, compiling...")
                 logger.debug("No cache found for optimizer '%s'; compiling...", optimizer)
+
+    # If GEPA is requested but not allowed (e.g. during normal run), fallback to bootstrap
+    if optimizer == "gepa" and not allow_gepa_optimization:
+        logger.info("GEPA optimization requested but disabled. Falling back to bootstrap.")
+        progress_callback.on_progress("GEPA disabled for this run, falling back to bootstrap...")
+        optimizer = "bootstrap"
+
+        # Re-check cache for bootstrap
+        if use_cache and _is_cache_valid(
+            cache_path,
+            examples_path,
+            optimizer,
+            signature_hash=signature_hash,
+            config_hash=config_hash,  # Note: config hash might differ if it includes optimizer
+        ):
+            cached = load_compiled_module(cache_path)
+            if cached is not None:
+                progress_callback.on_complete(f"Using cached compiled module ({optimizer})")
+                logger.info("✓ Using cached compiled module from %s (%s)", cache_path, optimizer)
+                return cached
 
     if not os.path.exists(examples_path):
         progress_callback.on_error(f"No training data found at {examples_path}")
@@ -551,7 +573,7 @@ def compile_supervisor(
 
     except Exception as e:
         progress_callback.on_error(f"Compilation failed with {optimizer}", e)
-        logger.error(f"Failed to compile module with {optimizer}: {e}")
+        logger.error(f"Failed to compile module with {optimizer}: {e}", exc_info=True)
         return module
 
 
@@ -573,7 +595,7 @@ def save_compiled_module(module: Any, filepath: str) -> str:
             logger.info(f"Compiled module serialized (pickle) to temp path {tmp_path}")
             return True
         except Exception as e:
-            logger.warning(f"Primary pickle serialization failed: {e}. Trying dill fallback...")
+            logger.warning(f"Pickle serialization failed: {e}")
             return False
 
     def _attempt_dill() -> bool:
@@ -585,7 +607,19 @@ def save_compiled_module(module: Any, filepath: str) -> str:
             logger.info(f"Compiled module serialized (dill) to temp path {tmp_path}")
             return True
         except Exception as e:  # pragma: no cover
-            logger.error(f"Failed to serialize compiled module with dill: {e}")
+            logger.warning(f"Failed to serialize compiled module with dill: {e}")
+            return False
+
+    def _attempt_cloudpickle() -> bool:
+        try:
+            import cloudpickle  # type: ignore
+
+            with open(tmp_path, "wb") as f:
+                cloudpickle.dump(module, f)  # type: ignore
+            logger.info(f"Compiled module serialized (cloudpickle) to temp path {tmp_path}")
+            return True
+        except Exception as e:  # pragma: no cover
+            logger.warning(f"Failed to serialize compiled module with cloudpickle: {e}")
             return False
 
     # Remove any stale temp
@@ -595,7 +629,17 @@ def save_compiled_module(module: Any, filepath: str) -> str:
     except Exception:
         pass
 
-    used = "pickle" if _attempt_pickle() else "dill" if _attempt_dill() else "none"
+    strategies = [
+        ("cloudpickle", _attempt_cloudpickle),
+        ("pickle", _attempt_pickle),
+        ("dill", _attempt_dill),
+    ]
+
+    used = "none"
+    for name, attempt in strategies:
+        if attempt():
+            used = name
+            break
     if used == "none":
         # Cleanup temp file if present
         try:
@@ -603,7 +647,7 @@ def save_compiled_module(module: Any, filepath: str) -> str:
                 os.remove(tmp_path)
         except Exception:
             pass
-        raise RuntimeError("Failed to serialize compiled module with both pickle and dill")
+        raise RuntimeError("Failed to serialize compiled module with cloudpickle, pickle, or dill")
 
     # Atomic replace
     try:
@@ -648,9 +692,16 @@ def load_compiled_module(filepath: str) -> Any | None:
         with open(filepath, "rb") as f:
             return dill.load(f)  # type: ignore
 
+    def _cloudpickle_loader():
+        import cloudpickle  # type: ignore
+
+        with open(filepath, "rb") as f:
+            return cloudpickle.load(f)  # type: ignore
+
     strategies: dict[str, Callable[[], Any]] = {
         "pickle": _pickle_loader,
         "dill": _dill_loader,
+        "cloudpickle": _cloudpickle_loader,
     }
     order = [serializer] + [s for s in strategies if s != serializer]
     for strat in order:

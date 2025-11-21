@@ -23,6 +23,7 @@ import os
 import uuid
 from collections.abc import Iterable
 from datetime import UTC, datetime
+from enum import Enum
 from typing import Any
 
 try:
@@ -224,6 +225,19 @@ def get_default_user_id() -> str | None:
     return None
 
 
+def _sanitize_for_cosmos(obj: Any) -> Any:
+    """Recursively convert objects to JSON-serializable formats."""
+    if hasattr(obj, "to_dict") and callable(obj.to_dict):
+        return _sanitize_for_cosmos(obj.to_dict())
+    if isinstance(obj, dict):
+        return {k: _sanitize_for_cosmos(v) for k, v in obj.items()}
+    if isinstance(obj, list | tuple):
+        return [_sanitize_for_cosmos(i) for i in obj]
+    if isinstance(obj, Enum):
+        return obj.value
+    return obj
+
+
 def mirror_execution_history(execution: dict[str, Any]) -> None:
     """Mirror a single execution record into Cosmos ``workflowRuns`` container.
 
@@ -243,7 +257,8 @@ def mirror_execution_history(execution: dict[str, Any]) -> None:
         return
 
     # Create a shallow copy so we do not mutate the caller's structure.
-    item: dict[str, Any] = dict(execution)
+    # And sanitize for JSON serialization (e.g. RoutingDecision objects)
+    item: dict[str, Any] = _sanitize_for_cosmos(execution)
 
     # Ensure we have a stable workflowId and id for Cosmos.
     workflow_id = item.get("workflowId")

@@ -115,13 +115,13 @@ class ToolRegistry:
                 "Registered tool '%s' with aliases %s (capabilities=%s)",
                 name,
                 aliases,
-                sorted(list(inferred_capabilities)),
+                sorted(inferred_capabilities),
             )
         else:
             logger.info(
                 "Registered tool '%s' (capabilities=%s)",
                 name,
-                sorted(list(inferred_capabilities)),
+                sorted(inferred_capabilities),
             )
 
         # Track which tools each agent has

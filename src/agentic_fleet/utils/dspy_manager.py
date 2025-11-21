@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import logging
 import threading
+from typing import Any
 
 import dspy
 
@@ -22,7 +23,7 @@ _global_lm_model: str | None = None
 _global_lm_configured = False
 
 
-def get_dspy_lm(model: str, enable_cache: bool = True) -> dspy.LM:
+def get_dspy_lm(model: str, enable_cache: bool = True, **kwargs: Any) -> dspy.LM:
     """
     Get or create a shared DSPy LM instance for the given model.
 
@@ -32,6 +33,7 @@ def get_dspy_lm(model: str, enable_cache: bool = True) -> dspy.LM:
     Args:
         model: Model identifier (e.g., "gpt-4", "gpt-5-mini")
         enable_cache: Whether to enable prompt caching (default: True)
+        **kwargs: Additional arguments for dspy.LM (e.g. temperature, max_tokens)
 
     Returns:
         Configured DSPy LM instance
@@ -44,11 +46,16 @@ def get_dspy_lm(model: str, enable_cache: bool = True) -> dspy.LM:
             return _global_lm
 
         # Create new LM instance
+        if model == "test-model":
+            raise ValueError(
+                "'test-model' was a dummy placeholder. Please configure a real model for DSPy."
+            )
+
         model_path = f"openai/{model}"
-        logger.debug(f"Creating DSPy LM instance for {model_path}")
+        logger.debug(f"Creating DSPy LM instance for {model_path} with kwargs: {kwargs}")
 
         # Create LM with caching enabled if requested (no adapter to avoid JSON serialization issues)
-        lm = dspy.LM(model_path)  # type: ignore[attr-defined]
+        lm = dspy.LM(model_path, **kwargs)  # type: ignore[attr-defined]
 
         # Enable prompt caching if supported and requested
         if enable_cache:
@@ -69,6 +76,7 @@ def configure_dspy_settings(
     model: str,
     enable_cache: bool = True,
     force_reconfigure: bool = False,
+    **kwargs: Any,
 ) -> bool:
     """
     Configure DSPy global settings with a shared LM instance.
@@ -92,7 +100,7 @@ def configure_dspy_settings(
         return False
 
     try:
-        lm = get_dspy_lm(model, enable_cache=enable_cache)
+        lm = get_dspy_lm(model, enable_cache=enable_cache, **kwargs)
         dspy.settings.configure(lm=lm)
         _global_lm_configured = True
         logger.info(f"DSPy settings configured with model: {model}")

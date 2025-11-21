@@ -12,6 +12,7 @@ from typing import Any
 
 import aiofiles
 
+from ..utils.models import RoutingDecision
 from ..workflows.exceptions import HistoryError
 
 logger = logging.getLogger(__name__)
@@ -19,6 +20,17 @@ logger = logging.getLogger(__name__)
 # Track background tasks to satisfy Ruff RUF006 and prevent premature GC of tasks.
 # Tasks are added when created and automatically removed on completion.
 _background_tasks: set[asyncio.Task[Any]] = set()
+
+
+class FleetJSONEncoder(json.JSONEncoder):
+    """Custom JSON encoder for fleet objects."""
+
+    def default(self, obj: Any) -> Any:
+        if isinstance(obj, RoutingDecision):
+            return obj.to_dict()
+        if hasattr(obj, "to_dict"):
+            return obj.to_dict()
+        return super().default(obj)
 
 
 class HistoryManager:
@@ -128,7 +140,7 @@ class HistoryManager:
         history_file = self.history_dir / "execution_history.jsonl"
 
         async with aiofiles.open(history_file, "a") as f:
-            content = json.dumps(execution) + "\n"
+            content = json.dumps(execution, cls=FleetJSONEncoder) + "\n"
             await f.write(content)
 
         logger.debug(f"Execution appended to {history_file}")
@@ -144,7 +156,7 @@ class HistoryManager:
         history_file = self.history_dir / "execution_history.jsonl"
 
         with open(history_file, "a") as f:
-            json.dump(execution, f)
+            json.dump(execution, f, cls=FleetJSONEncoder)
             f.write("\n")
 
         logger.debug(f"Execution appended to {history_file}")
@@ -179,7 +191,7 @@ class HistoryManager:
 
         # Save updated history
         async with aiofiles.open(history_file, "w") as f:
-            content = json.dumps(existing_history, indent=2)
+            content = json.dumps(existing_history, indent=2, cls=FleetJSONEncoder)
             await f.write(content)
 
         logger.debug(f"Execution history saved to {history_file}")
@@ -208,7 +220,7 @@ class HistoryManager:
 
         # Save updated history
         with open(history_file, "w") as f:
-            json.dump(existing_history, f, indent=2)
+            json.dump(existing_history, f, indent=2, cls=FleetJSONEncoder)
 
         logger.debug(f"Execution history saved to {history_file}")
         return str(history_file)

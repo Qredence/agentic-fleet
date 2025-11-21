@@ -483,8 +483,12 @@ class SelfImprovementEngine:
         fingerprint = self._create_fingerprint(example)
         summary = execution.get("result") or example.get("context") or ""
 
+        # Sanitize ID to remove illegal characters for Cosmos DB
+        raw_id = f"{execution.get('workflowId', 'unknown')}|{fingerprint}"
+        safe_id = "".join(c if c not in "/\\?#" else "-" for c in raw_id)
+
         item = {
-            "memoryId": f"{execution.get('workflowId', 'unknown')}|{fingerprint}",
+            "memoryId": safe_id,
             "userId": self.user_id,
             "agentId": agents[0] if agents else "unknown",
             "memoryType": memory_type,
