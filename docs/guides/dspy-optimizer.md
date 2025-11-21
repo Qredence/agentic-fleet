@@ -30,7 +30,7 @@ uv run agentic-fleet run -m "Your task here"
 The framework will:
 
 1. Load training examples from `data/supervisor_examples.json`
-2. Compile the supervisor using BootstrapFewShot
+2. Compile the reasoner using BootstrapFewShot
 3. Cache the optimized module at `logs/compiled_supervisor.pkl`
 4. Use the optimized module for all task routing
 
@@ -534,10 +534,10 @@ Use the compiler directly:
 
 ```python
 from src.agentic_fleet.utils.compiler import compile_supervisor
-from src.agentic_fleet.dspy_modules.supervisor import DSPySupervisor
+from src.agentic_fleet.dspy_modules.reasoner import DSPyReasoner
 
 # Create supervisor
-supervisor = DSPySupervisor()
+supervisor = DSPyReasoner()
 
 # Compile with BootstrapFewShot
 compiled = compile_supervisor(

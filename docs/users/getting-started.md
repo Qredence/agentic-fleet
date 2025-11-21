@@ -185,7 +185,7 @@ For development, install additional tools:
 uv pip install -e ".[dev]"
 
 # Or install dev tools separately
-uv pip install pytest pytest-asyncio pytest-cov ruff flake8 mypy
+uv pip install pytest pytest-asyncio pytest-cov ruff flake8 ty
 ```
 
 ## Upgrading

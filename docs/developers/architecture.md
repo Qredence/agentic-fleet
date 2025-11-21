@@ -23,7 +23,7 @@ AgenticFleet combines Microsoft's agent-framework with DSPy's intelligent prompt
         ┌──────────────────┼──────────────────┐
         │                  │                  │
 ┌───────▼──────┐ ┌─────────▼────┐ ┌──────────▼──────┐
-│ DSPySupervisor│ │   Agents    │ │  ToolRegistry   │
+│ DSPyReasoner  │ │   Agents    │ │  ToolRegistry   │
 │  (Routing)    │ │  (Execute)   │ │   (Metadata)    │
 └───────┬──────┘ └──────────────┘ └─────────────────┘
         │
@@ -36,8 +36,8 @@ AgenticFleet combines Microsoft's agent-framework with DSPy's intelligent prompt
 ### Data Flow
 
 1. **Task Input** → Console receives user task
-2. **DSPy Analysis** → Supervisor analyzes task complexity and requirements
-3. **DSPy Routing** → Supervisor routes task to appropriate agents
+2. **DSPy Analysis** → Reasoner analyzes task complexity and requirements
+3. **DSPy Routing** → Reasoner routes task to appropriate agents
 4. **Agent Execution** → Agents execute in parallel/sequential/delegated mode
 5. **Quality Assessment** → DSPy evaluates output quality
 6. **Refinement** → Optional refinement if quality < threshold
@@ -70,7 +70,7 @@ graph TB
     end
 
     subgraph "DSPy Intelligence Layer"
-        DSPY[DSPySupervisor]
+        DSPY[DSPyReasoner]
         SIGS[Enhanced Signatures<br/>EnhancedTaskRouting<br/>JudgeEvaluation]
     end
 
@@ -263,7 +263,7 @@ async for event in workflow_agent.run_stream(task_msg):
   - `exceptions.py` - Custom exceptions
 
 - `src/dspy_modules/` - DSPy integration (aligned with dspy.ai best practices)
-  - `supervisor.py` - `DSPySupervisor` module orchestrating analysis, routing, progress, and quality. Uses enhanced signatures (`EnhancedTaskRouting`, `JudgeEvaluation`) by default for better workflow integration. Verbose about reasoning traces via `get_execution_summary()`.
+  - `reasoner.py` - `DSPyReasoner` module orchestrating analysis, routing, progress, and quality. Uses enhanced signatures (`EnhancedTaskRouting`, `JudgeEvaluation`) by default for better workflow integration. Verbose about reasoning traces via `get_execution_summary()`.
   - `workflow_signatures.py` - **Canonical workflow-oriented signatures**: `EnhancedTaskRouting`, `JudgeEvaluation`, `WorkflowHandoffDecision` (follows dspy.ai signature patterns)
   - `signatures.py` - Core DSPy signatures: `TaskAnalysis`, `TaskRouting`, `QualityAssessment`, `ProgressEvaluation`
   - `handoff_signatures.py` - Handoff-specific DSPy signatures: `HandoffDecision`, `HandoffProtocol`, `HandoffQualityAssessment`
@@ -354,7 +354,7 @@ Tools are registered in the `ToolRegistry` and made available to DSPy modules fo
   - `tool_plan`: ordered list of tools to use
   - `tool_goals`: short justification/goals for tool use
   - `latency_budget`: `low|medium|high` guidance
-- Supervisor helper `decide_tools(task, team, current_context)` provides a compact tool plan to execution.
+- Reasoner helper `decide_tools(task, team, current_context)` provides a compact tool plan to execution.
 - Per-phase timings (analysis, routing, progress) recorded in `phase_timings`; warnings logged when exceeding `slow_execution_threshold`.
 
 ## Configuration
@@ -396,7 +396,7 @@ The codebase has been refactored to improve maintainability and reduce complexit
 To keep responsibilities clear and testable:
 
 - `workflows/*` own orchestration only. They are built with `WorkflowBuilder` and executors and do not call DSPy directly from executor functions.
-- `dspy_modules/*` encapsulate DSPy supervisors, signatures, and optimization logic for task analysis, routing, progress, and quality.
+- `dspy_modules/*` encapsulate DSPy reasoners, signatures, and optimization logic for task analysis, routing, progress, and quality.
 - `agents/*` and `tools/*` wrap `ChatAgent` instances and tool implementations; workflows treat them as opaque executors that may call tools.
 - The CLI and initialization code glue these layers together: DSPy analyzes tasks and proposes a plan, workflows execute the plan, and DSPy optionally evaluates the results.
 
@@ -426,11 +426,11 @@ Custom exception hierarchy:
 Typical slow phases and tuning guidance:
 
 - DSPy compilation on first run
-  - Use cached compiled supervisor on subsequent runs; clear via [`scripts/manage_cache.py`](src/agentic_fleet/scripts/manage_cache.py)
+  - Use cached compiled reasoner on subsequent runs; clear via [`scripts/manage_cache.py`](src/agentic_fleet/scripts/manage_cache.py)
   - Reduce GEPA effort in `config/workflow_config.yaml` e.g. `gepa_max_metric_calls`, `max_bootstrapped_demos`
   - Temporarily set `DSPY_COMPILE=false` for rapid iteration
 - External tool calls and network latency
-  - Prefer lighter Supervisor model e.g. `dspy.model: gpt-5-mini`
+  - Prefer lighter Reasoner model e.g. `dspy.model: gpt-5-mini`
   - Disable pre-analysis tool usage for simple tasks
 - Judge and refinement loops
   - Set `quality.max_refinement_rounds: 1`

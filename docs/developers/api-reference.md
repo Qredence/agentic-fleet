@@ -26,7 +26,7 @@ SupervisorWorkflow(
 
 - `context`: SupervisorContext instance
 - `config`: WorkflowConfig instance
-- `dspy_supervisor`: DSPySupervisor instance
+- `dspy_reasoner`: DSPyReasoner instance
 - `agents`: Dictionary of ChatAgent instances
 - `tool_registry`: ToolRegistry instance
 - `history_manager`: HistoryManager instance
@@ -140,7 +140,7 @@ config = WorkflowConfig(
 
 ## DSPy Modules
 
-### DSPySupervisor
+### DSPyReasoner
 
 DSPy module for intelligent task analysis and routing.
 
@@ -442,9 +442,11 @@ Compile DSPy supervisor module with training examples.
 
 ```python
 from src.agentic_fleet.utils.compiler import compile_supervisor
-from src.agentic_fleet.dspy_modules.supervisor import DSPySupervisor
+from src.agentic_fleet.dspy_modules.reasoner import DSPyReasoner
 
-supervisor = DSPySupervisor()
+# ...
+
+supervisor = DSPyReasoner()
 compiled = compile_supervisor(
     supervisor,
     examples_path="data/supervisor_examples.json",

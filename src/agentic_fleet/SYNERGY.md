@@ -39,13 +39,13 @@ graph TD
 ### 1. Task Analysis & Routing
 
 - **Component**: `AnalysisExecutor` & `RoutingExecutor`
-- **Synergy**: The `AnalysisExecutor` uses `DSPySupervisor.analyze_task` to decompose the user request. This structured analysis is passed to the `RoutingExecutor`, which uses `DSPySupervisor.route_task` to determine the `ExecutionMode` (Delegated, Sequential, Parallel) and the optimal agent roster.
+- **Synergy**: The `AnalysisExecutor` uses `DSPyReasoner.analyze_task` to decompose the user request. This structured analysis is passed to the `RoutingExecutor`, which uses `DSPyReasoner.route_task` to determine the `ExecutionMode` (Delegated, Sequential, Parallel) and the optimal agent roster.
 - **Benefit**: Agent Framework doesn't need complex conditional logic in edges; it simply follows the structured `RoutingDecision` emitted by DSPy.
 
 ### 2. Execution & Tool Planning
 
 - **Component**: `ExecutionExecutor`
-- **Synergy**: Before executing a task, the executor calls `DSPySupervisor.decide_tools`. This generates a lightweight **ReAct-style plan** (e.g., "1. Search for X, 2. Analyze Y").
+- **Synergy**: Before executing a task, the executor calls `DSPyReasoner.decide_tools`. This generates a lightweight **ReAct-style plan** (e.g., "1. Search for X, 2. Analyze Y").
 - **Benefit**: Agents (Executors) receive a "cognitive map" along with the task, reducing aimless tool usage and latency.
 
 ### 3. Autonomous Agents (ReAct / PoT)
@@ -67,7 +67,7 @@ graph TD
 ### Adding a New Capability
 
 1.  **Define the Signature**: Create a new DSPy signature in `dspy_modules/signatures.py` (e.g., `SecurityAudit`).
-2.  **Update the Brain**: Add a method to `DSPySupervisor` that uses this signature.
+2.  **Update the Brain**: Add a method to `DSPyReasoner` that uses this signature.
 3.  **Update the Body**: Create or modify an Agent Framework `Executor` to call this new supervisor method and act on the result.
 
 ### Debugging Synergy

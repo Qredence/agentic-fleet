@@ -10,43 +10,41 @@ this directory as the source of truth for workflow behaviour—adjust configurat
 
 ## Runtime Layout
 
-| Path                                 | Purpose                                                                                                                                                                                                                                                 |
-| ------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `cli/console.py`                     | Minimal Typer app that imports and registers commands from `cli/commands/`. Packaged CLI entrypoint via [`agentic_fleet.cli.console:app`](pyproject.toml).                                                                                              |
-| `scripts/manage_cache.py`            | Utility to inspect or clear the DSPy compilation cache stored under `logs/compiled_supervisor.pkl`.                                                                                                                                                     |
-| `agents/`                            | **Canonical agent layer**: Specialist configuration modules, `coordinator.AgentFactory` for YAML-based agent creation, and `create_workflow_agents` for default workflow agents.                                                                        |
-| `prompts/`                           | Prompt modules exposing `get_instructions()` for planner/executor/coder/verifier/generator specialists.                                                                                                                                                 |
-| `workflows/`                         | Core workflow orchestration using agent-framework WorkflowBuilder with DSPy-enhanced executors.                                                                                                                                                         |
-| `workflows/supervisor_workflow.py`   | Factory function and type alias for `FleetWorkflowAdapter` (the agent-framework workflow implementation).                                                                                                                                               |
-| `workflows/fleet/`                   | Fleet workflow implementation: `adapter.py` (FleetWorkflowAdapter), `builder.py` (WorkflowBuilder setup), executors (analysis, routing, execution, progress, quality, judge_refine).                                                                    |
-| `workflows/config.py`                | `WorkflowConfig` dataclass and configuration helpers.                                                                                                                                                                                                   |
-| `workflows/execution/`               | Execution strategy modules: `delegated.py`, `sequential.py`, `parallel.py` (streaming and non-streaming variants).                                                                                                                                      |
-| `workflows/quality/`                 | Quality assessment modules: `assessor.py` (quality/judge phases), `criteria.py` (dynamic criteria), `refiner.py` (refinement).                                                                                                                          |
-| `workflows/routing/`                 | Routing modules: `helpers.py` (normalization, edge case detection), `subtasks.py` (subtask preparation).                                                                                                                                                |
-| `workflows/shared/`                  | Shared workflow utilities: typed models (AnalysisResult, RoutingPlan, etc.) and conversion helpers.                                                                                                                                                     |
-| `workflows/utils.py`                 | Shared workflow utilities: result synthesis, artifact extraction, work estimation, OpenAI client creation.                                                                                                                                              |
-| `workflows/handoff_manager.py`       | Structured agent handoff management with context, artifacts, and quality criteria.                                                                                                                                                                      |
-| `workflows/exceptions.py`            | Workflow-specific exception hierarchy with context-aware error reporting.                                                                                                                                                                               |
-| `dspy_modules/`                      | DSPy signatures and supervisor implementation.                                                                                                                                                                                                          |
-| `dspy_modules/supervisor.py`         | `DSPySupervisor` module orchestrating analysis, routing, progress, and quality using DSPy signatures.                                                                                                                                                   |
-| `dspy_modules/handoff_signatures.py` | Enhanced DSPy signatures for agent-framework integration: `EnhancedTaskRouting`, `JudgeEvaluation`, `WorkflowHandoffDecision`, `HandoffDecision`, `HandoffProtocol`, `CapabilityMatching`, `ProgressEvaluationWithHandoff`, `HandoffQualityAssessment`. |
-| `dspy_modules/signatures.py`         | Core DSPy signatures: `TaskAnalysis`, `TaskRouting`, `QualityAssessment`, `ProgressEvaluation`.                                                                                                                                                         |
-| `dspy_modules/handoff_signatures.py` | Handoff-specific DSPy signatures: `HandoffDecision`, `HandoffProtocol`, `HandoffQualityAssessment`.                                                                                                                                                     |
-| `tools/`                             | Tool adapters (Hosted Code Interpreter, Tavily search, browser automation, MCP bridge) resolved by the tool registry.                                                                                                                                   |
-| `utils/`                             | Configuration loader, DSPy compiler cache, GEPA optimizer, history manager, telemetry bootstrap, models, tracing, `ToolRegistry`, type definitions, constants, and async compilation utilities.                                                         |
-| `evaluation/`                        | Batch evaluation engine and metrics used by CLI commands and scripts.                                                                                                                                                                                   |
-| `config/workflow_config.yaml`        | Authoritative configuration for DSPy settings, agent rosters, routing thresholds, quality gates, and tool toggles.                                                                                                                                      |
-| `data/`                              | Training examples (`supervisor_examples.json`) and evaluation datasets consumed by DSPy compilation and batch runs.                                                                                                                                     |
-| `scripts/`                           | Helpers for history analysis, evaluation dataset generation, and self-improvement loops.                                                                                                                                                                |
-| `cli/`                               | Modular CLI structure with command separation for better maintainability.                                                                                                                                                                               |
-| `cli/commands/`                      | Individual command modules: `run.py`, `handoff.py`, `analyze.py`, `benchmark.py`, `agents.py`, `history.py`, `optimize.py`, `improve.py`, `evaluate.py`.                                                                                                |
-| `cli/runner.py`                      | `WorkflowRunner` class for executing workflows from CLI.                                                                                                                                                                                                |
-| `cli/display.py`                     | Display utilities for rich console output.                                                                                                                                                                                                              |
-| `cli/utils.py`                       | CLI helper functions (tracing initialization, resource path resolution).                                                                                                                                                                                |
+| Path                                 | Purpose                                                                                                                                                            |
+| ------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `cli/console.py`                     | Minimal Typer app that imports and registers commands from `cli/commands/`. Packaged CLI entrypoint via [`agentic_fleet.cli.console:app`](pyproject.toml).         |
+| `scripts/manage_cache.py`            | Utility to inspect or clear the DSPy compilation cache stored under `logs/compiled_supervisor.pkl`.                                                                |
+| `agents/`                            | **Canonical agent layer**: Specialist configuration modules, `coordinator.AgentFactory`, and consolidated prompts (`prompts.py`).                                  |
+| `api/`                               | **Service Layer**: FastAPI backend, `settings.py` (config), `error_handlers.py`, and database models (`api/db/`).                                                  |
+| `workflows/`                         | **Orchestration Layer**: Flattened module structure for workflow management.                                                                                       |
+| `workflows/supervisor.py`            | Main entry point for `DSPyReasoner`, orchestrating analysis, routing, and execution.                                                                               |
+| `workflows/builder.py`               | `WorkflowBuilder` configuration and setup.                                                                                                                         |
+| `workflows/strategies.py`            | Execution strategies: `delegated`, `sequential`, and `parallel` (replacing `workflows/execution/*`).                                                               |
+| `workflows/executors.py`             | logic for specific phases: Analysis, Routing, Progress, Quality, Judge/Refine.                                                                                     |
+| `workflows/handoff.py`               | Structured agent handoff management and context logic.                                                                                                             |
+| `workflows/context.py`               | `SupervisorContext` definition for managing state across workflow phases.                                                                                          |
+| `workflows/models.py`                | Shared data models (AnalysisResult, RoutingPlan, etc.) and types.                                                                                                  |
+| `workflows/helpers.py`               | Pure utility functions for routing normalization and edge case detection.                                                                                          |
+| `workflows/messages.py`              | Message synthesis and artifact extraction utilities.                                                                                                               |
+| `workflows/exceptions.py`            | Workflow-specific exception hierarchy with context-aware error reporting.                                                                                          |
+| `dspy_modules/`                      | DSPy signatures and reasoner implementation.                                                                                                                       |
+| `dspy_modules/handoff_signatures.py` | Enhanced DSPy signatures for agent-framework integration.                                                                                                          |
+| `dspy_modules/signatures.py`         | Core DSPy signatures: `TaskAnalysis`, `TaskRouting`, `QualityAssessment`, `ProgressEvaluation`.                                                                    |
+| `tools/`                             | Tool adapters (Hosted Code Interpreter, Tavily search, browser automation, MCP bridge) resolved by the tool registry.                                              |
+| `utils/`                             | Configuration loader, DSPy compiler cache, GEPA optimizer, history manager, telemetry bootstrap, models, tracing, `ToolRegistry`, and async compilation utilities. |
+| `evaluation/`                        | Batch evaluation engine and metrics used by CLI commands and scripts.                                                                                              |
+| `config/workflow_config.yaml`        | Authoritative configuration for DSPy settings, agent rosters, routing thresholds, quality gates, and tool toggles.                                                 |
+| `data/`                              | Training examples (`supervisor_examples.json`) and evaluation datasets consumed by DSPy compilation and batch runs.                                                |
+| `scripts/`                           | Helpers for history analysis, evaluation dataset generation, and self-improvement loops.                                                                           |
+| `cli/`                               | Modular CLI structure with command separation for better maintainability.                                                                                          |
+| `cli/commands/`                      | Individual command modules: `run.py`, `handoff.py`, `analyze.py`, `benchmark.py`, `agents.py`, `history.py`, `optimize.py`, `improve.py`, `evaluate.py`.           |
+| `cli/runner.py`                      | `WorkflowRunner` class for executing workflows from CLI.                                                                                                           |
+| `cli/display.py`                     | Display utilities for rich console output.                                                                                                                         |
+| `cli/utils.py`                       | CLI helper functions (tracing initialization, resource path resolution).                                                                                           |
 
 ## Agent Rosters
 
-### Supervisor default team
+### Reasoner default team
 
 - **Researcher** — Retrieves context, performs web search (via `TavilySearchTool`), and drafts initial findings. Uses **ReAct** strategy for autonomous tool loops.
 - **Analyst** — Uses the Hosted Code Interpreter to validate data, run computations, or manipulate artifacts. Uses **Program of Thought** (PoT) for code-based reasoning.
@@ -63,12 +61,12 @@ this directory as the source of truth for workflow behaviour—adjust configurat
 
 Updates to any roster require concurrent changes in `config/workflow_config.yaml`, the relevant `agents/*.py` module, prompt modules, and coverage in the workflow/evaluation tests.
 
-## DSPy Supervisor & Workflow Pipeline
+## DSPy Reasoner & Workflow Pipeline
 
-1. **Task Analysis** – `DSPySupervisor.analyze_task` extracts goals, constraints, and tooling hints using DSPy `ChainOfThought` signatures (`TaskAnalysis`, `ToolAwareTaskAnalysis`).
-2. **Task Routing** – `DSPySupervisor.route_task` selects agents, execution mode (delegated/sequential/parallel), and tool requirements using `EnhancedTaskRouting` (workflow-aware) or `TaskRouting` (standard). The enhanced signature now emits a compact, ReAct-friendly tool plan.
-3. **Agent Execution** – Fleet workflow (`FleetWorkflowAdapter`) executes the plan via agent-framework `WorkflowBuilder` and executors. Agents are initialized with specific reasoning strategies (e.g., ReAct, PoT) via `DSPyEnhancedAgent` to handle complex subtasks autonomously. A lightweight `decide_tools(...)` method in the DSPy supervisor surfaces an ordered `tool_plan`, `tool_goals`, and `latency_budget` that are attached to execution metadata and can guide tool usage.
-4. **Quality Assessment** – `DSPySupervisor.assess_quality` uses `JudgeEvaluation` signature (with task-specific criteria) or `QualityAssessment` (standard) to score results; sub‑threshold scores trigger refinement loops or judge-based reviews.
+1. **Task Analysis** – `DSPyReasoner.analyze_task` extracts goals, constraints, and tooling hints using DSPy `ChainOfThought` signatures (`TaskAnalysis`, `ToolAwareTaskAnalysis`).
+2. **Task Routing** – `DSPyReasoner.route_task` selects agents, execution mode (delegated/sequential/parallel), and tool requirements using `EnhancedTaskRouting` (workflow-aware) or `TaskRouting` (standard). The enhanced signature now emits a compact, ReAct-friendly tool plan.
+3. **Agent Execution** – Fleet workflow (`FleetWorkflowAdapter`) executes the plan via agent-framework `WorkflowBuilder` and executors. Agents are initialized with specific reasoning strategies (e.g., ReAct, PoT) via `DSPyEnhancedAgent` to handle complex subtasks autonomously. A lightweight `decide_tools(...)` method in the DSPy reasoner surfaces an ordered `tool_plan`, `tool_goals`, and `latency_budget` that are attached to execution metadata and can guide tool usage.
+4. **Quality Assessment** – `DSPyReasoner.assess_quality` uses `JudgeEvaluation` signature (with task-specific criteria) or `QualityAssessment` (standard) to score results; sub‑threshold scores trigger refinement loops or judge-based reviews.
 
 ### Workflow Diagram
 
@@ -95,7 +93,7 @@ Typical bottlenecks and tuning actions:
   - Set `DSPY_COMPILE=false` in env when iterating quickly, or rely on cache; clear via [`scripts/manage_cache.py`](src/agentic_fleet/scripts/manage_cache.py)
   - Reduce GEPA effort in [`workflow_config.yaml`](config/workflow_config.yaml): `gepa_max_metric_calls`, `max_bootstrapped_demos` (defaults tuned lower)
 - Tool calls with network latency (OpenAI, Tavily, Hosted Code Interpreter)
-  - Prefer lighter Supervisor model; e.g. `dspy.model: gpt-5-mini`
+  - Prefer lighter Reasoner model; e.g. `dspy.model: gpt-5-mini`
   - Pre-analysis tool usage is supported and cached via `ToolRegistry` result cache
 - Judge/refinement loops
   - Set `quality.max_refinement_rounds: 1`, `judge_reasoning_effort: minimal`, `judge_timeout_seconds` to cap cost
@@ -181,9 +179,9 @@ Slow-phase detection: per-phase timing is recorded in `phase_timings` (analysis/
 ### DSPy Optimization Usage
 
 - DSPy is configured once per process via `utils.dspy_manager.configure_dspy_settings`, using a shared LM (e.g. `openai/gpt-5-mini`) and optional prompt caching.
-- Supervisor analysis and routing are backed by `DSPySupervisor`:
-  - `AnalysisExecutor` caches DSPy analysis results in `SupervisorContext.analysis_cache` (TTL, configurable) so repeated/related tasks reuse the compiled supervisor’s outputs.
-  - `RoutingExecutor` calls `DSPySupervisor.route_task` with team + tool descriptions to leverage tool-aware routing and an enhanced signature that can emit an ordered tool plan.
+- Supervisor analysis and routing are backed by `DSPyReasoner`:
+  - `AnalysisExecutor` calls `DSPyReasoner.analyze_task` to get a structured breakdown (complexity, steps, capabilities).
+  - `RoutingExecutor` calls `DSPyReasoner.route_task` with team + tool descriptions to leverage tool-aware routing and an enhanced signature that can emit an ordered tool plan.
 - Judge / quality evaluation:
   - Quality assessment uses DSPy-backed logic via `workflows/quality/assessor.py` and `workflows/shared/quality.py`.
   - `JudgeRefineExecutor` streams intermediate judge evaluations and respects `judge_timeout_seconds` with minimal reasoning effort; refinement is gated by thresholds to control cost.

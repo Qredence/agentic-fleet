@@ -133,7 +133,7 @@ Use `uv run agentic-fleet run --help` to inspect the full list of override flags
 
 ### DSPy Configuration
 
-Controls DSPy supervisor behavior and optimization.
+Controls DSPy reasoner behavior and optimization.
 
 **model** (`str`, default: `"gpt-4.1"`)
 
@@ -289,7 +289,7 @@ The framework includes a centralized **ToolRegistry** that tracks all available 
 **DSPy Integration**:
 
 - Tool descriptions are injected into DSPy signatures (`ToolAwareTaskAnalysis`, `TaskRouting`)
-- The supervisor's instructions include a live tool catalog for model context
+- The reasoner's instructions include a live tool catalog for model context
 - DSPy's `forward()` method prefers tool-aware analysis when tools are available
 - Routing decisions now include `tool_requirements` field listing needed tools
 
@@ -652,7 +652,7 @@ logging:
 
 ### New in v0.5
 
-- **Cached compilation**: Compiled DSPy supervisors are cached under `logs/compiled_supervisor.pkl`, shrinking cold-start time by ~5–10 seconds.
+- **Cached compilation**: Compiled DSPy reasoners are cached under `logs/compiled_supervisor.pkl`, shrinking cold-start time by ~5–10 seconds.
 - **Parallel execution resilience**: Failures inside one parallel branch no longer terminate the entire workflow; the supervisor retries or continues with remaining agents.
 - **Configurable refinement**: `workflow.quality.refinement_threshold` and `workflow.quality.enable_refinement` tune when the Reviewer requests another pass.
 - **Completion storage controls**: `openai.enable_completion_storage` lets you disable OpenAI's default query storage for privacy-sensitive runs.
@@ -669,7 +669,7 @@ Use the `manage_cache.py` helper to inspect or reset the DSPy compilation cache:
 # Show the current cache metadata (path, size, age)
 uv run python src/agentic_fleet/scripts/manage_cache.py --info
 
-# Clear the compiled supervisor cache to force recompilation
+# Clear the compiled reasoner cache to force recompilation
 uv run python src/agentic_fleet/scripts/manage_cache.py --clear
 ```
 

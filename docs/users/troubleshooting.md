@@ -11,7 +11,7 @@
 ```
 Traceback (most recent call last):
   File "console.py", line 24, in <module>
-    from src.agentic_fleet.dspy_modules.supervisor import DSPySupervisor
+    from src.agentic_fleet.dspy_modules.reasoner import DSPyReasoner
 ModuleNotFoundError: No module named 'src'
 ```
 
@@ -339,8 +339,8 @@ uv run python -c "import json; data = json.load(open('data/supervisor_examples.j
 ### Test Individual Components
 
 ```bash
-# Test DSPy supervisor
-uv run python -c "from agentic_fleet.dspy_modules.supervisor import DSPySupervisor; s = DSPySupervisor(); print('Supervisor OK')"
+# Test DSPy reasoner
+uv run python -c "from agentic_fleet.dspy_modules.reasoner import DSPyReasoner; s = DSPyReasoner(); print('Reasoner OK')"
 
 # Test tool registry
 uv run python -c "from agentic_fleet.utils.tool_registry import ToolRegistry; r = ToolRegistry(); print('Registry OK')"

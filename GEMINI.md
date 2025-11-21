@@ -53,7 +53,7 @@ The project uses a `Makefile` to standardize common development tasks.
   make dev
   ```
 
-  - Backend: http://localhost:8000
+  - Backend: http://localhost:8000 (API Docs: http://localhost:8000/api/docs)
   - Frontend: http://localhost:5173
 
 - **Backend Only:**
@@ -97,7 +97,7 @@ The project uses a `Makefile` to standardize common development tasks.
 ## Development Conventions
 
 - **Code Style:**
-  - **Python:** Follows PEP 8, enforced by `ruff`. Type hinting is required and checked with `mypy`.
+  - **Python:** Follows PEP 8, enforced by `ruff`. Type hinting is required and checked with `ty`.
   - **Frontend:** Standard Prettier/ESLint configuration.
 - **Commit Hooks:** Pre-commit hooks are available and should be installed (`make pre-commit-install`) to ensure code quality before committing.
 - **Configuration:**
@@ -110,10 +110,12 @@ The project uses a `Makefile` to standardize common development tasks.
 ## Key Files and Directories
 
 - `src/agentic_fleet/`: Main Python source code.
-  - `agents/`: Agent implementations.
+  - `agents/`: Agent implementations and prompt templates (`prompts.py`).
+  - `api/`: FastAPI backend, database models, and settings (`settings.py`, `error_handlers.py`).
   - `dspy_modules/`: DSPy signatures and modules.
-  - `workflows/`: Orchestration logic.
-  - `api/`: FastAPI backend.
+  - `workflows/`: Orchestration logic (flattened structure).
+  - `utils/`: Shared utilities.
+  - `tools/`: Tool implementations.
 - `src/frontend/`: React frontend application.
 - `config/`: Configuration files (`workflow_config.yaml`).
 - `AGENTS.md`: Agent definition and documentation.

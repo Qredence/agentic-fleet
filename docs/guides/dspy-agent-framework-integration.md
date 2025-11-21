@@ -20,7 +20,7 @@ AgenticFleet combines **Microsoft's agent-framework** with **DSPy's prompt optim
                   │
                   ▼
 ┌─────────────────────────────────────────────────────────────┐
-│              DSPy Supervisor                                 │
+│              DSPy Reasoner                                   │
 │  - Task Analysis (ChainOfThought)                           │
 │  - Intelligent Routing (TaskRouting)                        │
 │  - Quality Assessment (QualityEvaluation)                   │

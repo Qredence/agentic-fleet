@@ -73,20 +73,20 @@ Key fixtures from `conftest.py`:
 **Stubs** (for testing without full dependencies):
 
 - `ChatAgent`: Stub agent that doesn't require external API
-- `DSPySupervisor`: Stub supervisor for controlled testing
+- `DSPyReasoner`: Stub reasoner for controlled testing
 - `OpenAI`: Stub OpenAI client
 - `dspy`: Stub DSPy module
 
 **Usage**:
 
 ```python
-from tests.workflows.test_supervisor_workflow import DummyAgent, StubDSPySupervisor
+from tests.workflows.test_supervisor_workflow import DummyAgent, StubDSPyReasoner
 
 @pytest.mark.asyncio
 async def test_my_feature():
     workflow = SupervisorWorkflow()
     workflow.agents = {"Writer": DummyAgent("Writer")}
-    workflow.dspy_supervisor = StubDSPySupervisor(routing={...})
+    workflow.dspy_reasoner = StubDSPyReasoner(routing={...})
 
     result = await workflow.run("test task")
     assert result is not None
