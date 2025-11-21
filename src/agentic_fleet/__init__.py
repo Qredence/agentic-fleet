@@ -46,7 +46,7 @@ if TYPE_CHECKING:
         create_supervisor_workflow,
     )
 
-__version__ = "0.6.0"
+__version__ = "0.6.2"
 
 __all__ = [
     "AgentFactory",
