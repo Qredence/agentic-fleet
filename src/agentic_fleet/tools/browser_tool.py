@@ -17,10 +17,7 @@ from agent_framework import ToolProtocol
 from agentic_fleet.tools.serialization import SerializationMixin
 
 if TYPE_CHECKING:
-    from playwright.async_api import (
-        Browser,  # type: ignore[import]
-        Page,
-    )
+    from playwright.async_api import Browser, Page  # type: ignore[import]
 
 async_playwright_factory: Callable[[], Any] | None = None
 PlaywrightTimeoutError: type[Exception]
@@ -31,7 +28,7 @@ try:
     PLAYWRIGHT_AVAILABLE = True
     async_playwright_factory = _async_playwright
 except ImportError:
-    PlaywrightTimeoutError = TimeoutError
+    PlaywrightTimeoutError = TimeoutError  # type: ignore[assignment]
     PLAYWRIGHT_AVAILABLE = False
 
 
@@ -79,7 +76,7 @@ class BrowserTool(SerializationMixin, ToolProtocol):
             if async_playwright_factory is None:  # pragma: no cover - import guard
                 raise RuntimeError("Playwright is not available")
 
-            factory = cast(Callable[[], Any], async_playwright_factory)
+            factory = async_playwright_factory
             playwright_manager = factory()
             cls._shared_playwright = await playwright_manager.start()
             playwright_obj = cast(Any, cls._shared_playwright)

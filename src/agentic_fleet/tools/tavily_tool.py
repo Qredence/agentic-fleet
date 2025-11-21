@@ -17,28 +17,13 @@ from agent_framework import ToolProtocol
 
 from agentic_fleet.tools.serialization import SerializationMixin
 
-try:  # pragma: no cover - optional dependency
+try:  # Optional dependency — keep import non-fatal at module load time
     from tavily import TavilyClient  # type: ignore[import]
-except (ImportError, ModuleNotFoundError):
 
-    class TavilyClient:  # type: ignore[no-redef]
-        """Fallback client used in CI where tavily-python isn't installed."""
-
-        def __init__(self, *args: Any, **kwargs: Any) -> None:
-            self.api_key = kwargs.get("api_key")
-
-        def search(self, *args: Any, **kwargs: Any) -> dict[str, Any]:
-            query = kwargs.get("query", "")
-            return {
-                "results": [
-                    {
-                        "title": "Stubbed Tavily Result",
-                        "url": "https://example.com",
-                        "content": f"No real Tavily data available for '{query}'.",
-                    }
-                ],
-                "answer": "Stubbed Tavily response",
-            }
+    _tavily_import_error: Exception | None = None
+except (ImportError, ModuleNotFoundError) as exc:
+    TavilyClient = None  # type: ignore[assignment]
+    _tavily_import_error = exc
 
 
 if TYPE_CHECKING:
@@ -67,6 +52,13 @@ class TavilySearchTool(ToolProtocol, SerializationMixin):
         self.api_key = api_key or os.getenv("TAVILY_API_KEY")
         if not self.api_key:
             raise ValueError("TAVILY_API_KEY must be set in environment or passed to constructor")
+
+        if TavilyClient is None:
+            # Defer hard failure until instantiation so the package remains optional at import time
+            raise ImportError(
+                "The 'tavily-python' package is required to use TavilySearchTool. "
+                "Install it with 'pip install tavily-python'."
+            ) from _tavily_import_error
 
         # TavilyClient constructor accepts 'api_key' kwarg
         self.client = TavilyClient(api_key=self.api_key)  # type: ignore[call-arg]
@@ -100,7 +92,18 @@ class TavilySearchTool(ToolProtocol, SerializationMixin):
                             "type": "string",
                             "enum": ["basic", "advanced"],
                             "description": "Search depth: 'basic' for quick results, 'advanced' for comprehensive search",
-                            "default": "basic",
+                            "default": "advanced",
+                        },
+                        "topic": {
+                            "type": "string",
+                            "enum": ["general", "news"],
+                            "description": "Search topic: 'general' for broad search, 'news' for recent events",
+                            "default": "general",
+                        },
+                        "include_domains": {
+                            "type": "array",
+                            "items": {"type": "string"},
+                            "description": "List of domains to include in the search (e.g. ['wsj.com', 'reddit.com'])",
                         },
                     },
                     "required": ["query"],
@@ -108,19 +111,28 @@ class TavilySearchTool(ToolProtocol, SerializationMixin):
             },
         }
 
-    async def run(self, query: str, search_depth: str = "basic") -> str:
+    async def run(
+        self,
+        query: str,
+        search_depth: str = "advanced",
+        topic: str = "general",
+        include_domains: list[str] | None = None,
+    ) -> str:
         """
         Execute a web search using Tavily.
 
         Args:
             query: The search query
             search_depth: 'basic' or 'advanced' search depth
+            topic: 'general' or 'news'
+            include_domains: Optional list of domains to include
 
         Returns:
             Formatted search results with sources
         """
         try:
-            normalized_depth = search_depth if search_depth in {"basic", "advanced"} else "basic"
+            normalized_depth = search_depth if search_depth in {"basic", "advanced"} else "advanced"
+            normalized_topic = topic if topic in {"general", "news"} else "general"
 
             # Perform search on a worker thread. Response is expected to be a mapping with optional
             # 'results' list and 'answer' summary. Use loose typing to remain
@@ -130,6 +142,9 @@ class TavilySearchTool(ToolProtocol, SerializationMixin):
                 query=query,
                 search_depth=normalized_depth,  # type: ignore[arg-type]
                 max_results=self.max_results,
+                include_answer=True,
+                topic=normalized_topic,
+                include_domains=include_domains,
             )
 
             # Format results
