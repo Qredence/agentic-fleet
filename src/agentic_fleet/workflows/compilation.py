@@ -71,17 +71,20 @@ async def compile_supervisor_async(
     try:
         # Extract agent config for cache invalidation
         agent_config = {}
+        def extract_tools(agent):
+            # Try to get tools from chat_options
+            if hasattr(agent, "chat_options") and getattr(agent.chat_options, "tools", None):
+                tools = agent.chat_options.tools or []
+            # Fallback to direct tools attribute
+            elif hasattr(agent, "tools") and getattr(agent, "tools", None):
+                raw = agent.tools
+                tools = raw if isinstance(raw, list) else [raw]
+            else:
+                tools = []
+            return tools
         if agents:
             for agent_name, agent in agents.items():
-                tools_list = []
-                # Try to get tools from chat_options
-                if hasattr(agent, "chat_options") and getattr(agent.chat_options, "tools", None):
-                    tools_list = agent.chat_options.tools or []
-                # Fallback to direct tools attribute
-                elif hasattr(agent, "tools") and getattr(agent, "tools", None):
-                    raw = agent.tools
-                    tools_list = raw if isinstance(raw, list) else [raw]
-
+                tools_list = extract_tools(agent)
                 agent_config[agent_name] = {
                     "description": getattr(agent, "description", ""),
                     "tools": [tool.__class__.__name__ for tool in tools_list if tool],
