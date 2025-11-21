@@ -1,6 +1,6 @@
 """DSPy signatures for agentic fleet.
 
-This module defines the input/output signatures used by the DSPySupervisor
+This module defines the input/output signatures used by the DSPyReasoner
 to perform cognitive tasks.
 """
 
@@ -25,15 +25,24 @@ class TaskAnalysis(dspy.Signature):
 
 
 class TaskRouting(dspy.Signature):
-    """Route a task to the appropriate agent(s)."""
+    """Route a task to the appropriate agent(s).
+
+    Instruct agents (especially Researcher) to use search tools like Tavily when
+    queries are time-sensitive or require current information.
+
+    CRITICAL: Assign the minimum necessary agents to complete the task efficiently.
+    Do not over-assign. For simple tasks, a single agent is preferred.
+    """
 
     task: str = dspy.InputField(desc="The task to route")
     team: str = dspy.InputField(desc="Description of available agents")
-    context: str = dspy.InputField(desc="Optional execution context", default="")
+    context: str = dspy.InputField(desc="Optional execution context")
+    current_date: str = dspy.InputField(desc="Current date to inform time-sensitive decisions")
 
     assigned_to: list[str] = dspy.OutputField(desc="List of agent names assigned to the task")
     mode: Literal["delegated", "sequential", "parallel"] = dspy.OutputField(desc="Execution mode")
     subtasks: list[str] = dspy.OutputField(desc="List of subtasks (if applicable)")
+    tool_requirements: list[str] = dspy.OutputField(desc="List of required tool names (if any)")
     reasoning: str = dspy.OutputField(desc="Reasoning for the routing decision")
 
 
@@ -76,8 +85,19 @@ class ToolPlan(dspy.Signature):
     reasoning: str = dspy.OutputField(desc="Reasoning for the plan")
 
 
+class SimpleResponse(dspy.Signature):
+    """Directly answer a simple task or query."""
+
+    task: str = dspy.InputField(desc="The simple task or question")
+    answer: str = dspy.OutputField(desc="Concise and accurate answer")
+
+
 class JudgeEvaluation(dspy.Signature):
-    """Detailed evaluation by a judge agent."""
+    """Detailed evaluation by a judge agent.
+
+    If the task asks about a specific entity and the result correctly states that it does not exist or is not public,
+    score this highly for accuracy. Do not penalize for missing 'features' of non-existent products.
+    """
 
     task: str = dspy.InputField(desc="The original task")
     result: str = dspy.InputField(desc="The result to evaluate")

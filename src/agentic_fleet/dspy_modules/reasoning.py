@@ -42,6 +42,7 @@ class FleetPoT(dspy.Module):
     def __init__(self, signature: Any = None):
         super().__init__()
         self.pot = dspy.ProgramOfThought(signature or "question -> answer")
+        self.last_error: str | None = None
 
     def forward(self, question: str) -> dspy.Prediction:
         """Execute Program of Thought.
@@ -52,4 +53,10 @@ class FleetPoT(dspy.Module):
         Returns:
             Prediction with answer and reasoning (code)
         """
-        return self.pot(question=question)
+        self.last_error = None
+        try:
+            result = self.pot(question=question)
+        except RuntimeError as exc:
+            self.last_error = str(exc)
+            raise
+        return result
