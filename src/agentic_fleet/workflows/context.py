@@ -12,7 +12,7 @@ from ...utils.progress import NullProgressCallback, ProgressCallback
 from ...utils.tool_registry import ToolRegistry
 from ..config import WorkflowConfig
 from ..dspy_modules.reasoner import DSPyReasoner
-from ..handoff_manager import HandoffManager
+from .handoff import HandoffManager
 
 
 @dataclass
