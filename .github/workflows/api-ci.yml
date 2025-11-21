@@ -1,4 +1,6 @@
 name: API CI
+permissions:
+  contents: read
 
 on:
   push:
