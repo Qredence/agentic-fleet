@@ -134,14 +134,14 @@ if "tavily" not in sys.modules:
 
 
 def _import_handoff_modules():
-    from agentic_fleet.dspy_modules.supervisor import DSPySupervisor
-    from agentic_fleet.workflows.handoff_manager import HandoffContext, HandoffManager
+    from agentic_fleet.dspy_modules.reasoner import DSPyReasoner
+    from agentic_fleet.workflows.handoff import HandoffContext, HandoffManager
 
-    return DSPySupervisor, HandoffContext, HandoffManager
+    return DSPyReasoner, HandoffContext, HandoffManager
 
 
 (
-    DSPySupervisor,
+    DSPyReasoner,
     HandoffContext,
     HandoffManager,
 ) = _import_handoff_modules()
@@ -263,7 +263,7 @@ async def test_handoff_context_serialization():
 @pytest.mark.asyncio
 async def test_handoff_manager_initialization():
     """Test HandoffManager initialization."""
-    supervisor = DSPySupervisor()
+    supervisor = DSPyReasoner()
     manager = HandoffManager(supervisor)
 
     assert manager.supervisor == supervisor
@@ -275,7 +275,7 @@ async def test_handoff_manager_initialization():
 @pytest.mark.asyncio
 async def test_evaluate_handoff_no_agents():
     """Test handoff evaluation with no available agents."""
-    supervisor = DSPySupervisor()
+    supervisor = DSPyReasoner()
     manager = HandoffManager(supervisor)
 
     result = await manager.evaluate_handoff(
@@ -291,7 +291,7 @@ async def test_evaluate_handoff_no_agents():
 @pytest.mark.asyncio
 async def test_create_handoff_package():
     """Test creating a handoff package."""
-    supervisor = DSPySupervisor()
+    supervisor = DSPyReasoner()
     manager = HandoffManager(supervisor)
 
     # When DSPy module call fails, should create fallback handoff
@@ -316,7 +316,7 @@ async def test_create_handoff_package():
 @pytest.mark.asyncio
 async def test_handoff_manager_statistics():
     """Test handoff statistics generation."""
-    supervisor = DSPySupervisor()
+    supervisor = DSPyReasoner()
     manager = HandoffManager(supervisor)
 
     # Create mock handoffs
@@ -345,7 +345,7 @@ async def test_handoff_manager_statistics():
 @pytest.mark.asyncio
 async def test_handoff_manager_clear_history():
     """Test clearing handoff history."""
-    supervisor = DSPySupervisor()
+    supervisor = DSPyReasoner()
     manager = HandoffManager(supervisor)
 
     # Add some handoffs
@@ -376,7 +376,7 @@ async def test_handoff_export():
     import os
     import tempfile
 
-    supervisor = DSPySupervisor()
+    supervisor = DSPyReasoner()
     manager = HandoffManager(supervisor)
 
     # Create a handoff
@@ -421,7 +421,7 @@ async def test_handoff_export():
 @pytest.mark.asyncio
 async def test_handoff_manager_uses_compiled_supervisor_chains():
     """Ensure HandoffManager prefers compiled supervisor handoff chains when provided."""
-    supervisor = DSPySupervisor()
+    supervisor = DSPyReasoner()
 
     class CompiledSupervisorStub:
         def __init__(self):
@@ -481,7 +481,8 @@ async def test_handoff_manager_uses_compiled_supervisor_chains():
     )
     assert handoff.estimated_effort == "complex"
     assert handoff.metadata.get("protocol_package") == "compiled_package"
-    assert isinstance(handoff.quality_checklist, list) and len(handoff.quality_checklist) == 2
+    assert isinstance(handoff.quality_checklist, list)
+    assert len(handoff.quality_checklist) == 2
 
     # Assess quality - should use compiled.handoff_quality_assessor
     quality = await manager.assess_handoff_quality(handoff, work_after_handoff="Analysis done")
@@ -497,8 +498,8 @@ async def test_handoff_manager_uses_compiled_supervisor_chains():
 
 @pytest.mark.asyncio
 async def test_handoff_manager_uses_base_supervisor_chains_when_compiled_unavailable():
-    """When compiled supervisor is unavailable, use base DSPySupervisor chains."""
-    supervisor = DSPySupervisor()
+    """When compiled supervisor is unavailable, use base DSPyReasoner chains."""
+    supervisor = DSPyReasoner()
     manager = HandoffManager(supervisor, get_compiled_supervisor=lambda: None)
 
     # Evaluate handoff via base supervisor chain (stubbed DummyChain returns 'no')

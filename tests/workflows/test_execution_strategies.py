@@ -1,13 +1,16 @@
 """Tests for execution strategies (delegated, sequential, parallel)."""
 
 import pytest
-from agent_framework import MagenticAgentMessageEvent, WorkflowOutputEvent
 
 from agentic_fleet.workflows.exceptions import AgentExecutionError
-from agentic_fleet.workflows.execution import (
-    delegated,
-    parallel,
-    sequential,
+from agentic_fleet.workflows.strategies import (
+    execute_delegated,
+    execute_delegated_streaming,
+    execute_parallel,
+    execute_parallel_streaming,
+    execute_sequential,
+    execute_sequential_streaming,
+    format_handoff_input,
 )
 
 
@@ -22,7 +25,7 @@ async def test_execute_delegated_with_single_agent():
             return f"Result: {prompt}"
 
     agents = {agent_name: MockAgent()}
-    result = await delegated.execute_delegated(agents, agent_name, task)
+    result, _ = await execute_delegated(agents, agent_name, task)
 
     assert result == f"Result: {task}"
 
@@ -35,7 +38,7 @@ async def test_execute_delegated_missing_agent():
     task = "Research topic X"
 
     with pytest.raises(AgentExecutionError) as exc_info:
-        await delegated.execute_delegated(agents, agent_name, task)
+        await execute_delegated(agents, agent_name, task)
 
     assert agent_name in str(exc_info.value)
 
@@ -53,12 +56,12 @@ async def test_execute_delegated_streaming():
     agents = {agent_name: MockAgent()}
 
     events = []
-    async for event in delegated.execute_delegated_streaming(agents, agent_name, task):
+    async for event in execute_delegated_streaming(agents, agent_name, task):
         events.append(event)
 
     assert len(events) >= 2  # Should have at least start and completion events
-    assert any(isinstance(e, MagenticAgentMessageEvent) for e in events)
-    assert any(isinstance(e, WorkflowOutputEvent) for e in events)
+    assert any(type(e).__name__ == "MagenticAgentMessageEvent" for e in events)
+    assert any(type(e).__name__ == "WorkflowOutputEvent" for e in events)
 
 
 @pytest.mark.asyncio
@@ -81,9 +84,7 @@ async def test_execute_delegated_streaming_with_progress_callback():
     progress_callback = MockProgressCallback()
 
     events = []
-    async for event in delegated.execute_delegated_streaming(
-        agents, agent_name, task, progress_callback
-    ):
+    async for event in execute_delegated_streaming(agents, agent_name, task, progress_callback):
         events.append(event)
 
     assert len(progress_calls) > 0
@@ -104,7 +105,7 @@ async def test_execute_parallel_with_multiple_agents():
             return f"{self.name}: {prompt}"
 
     agents = {name: MockAgent(name) for name in agent_names}
-    result = await parallel.execute_parallel(agents, agent_names, subtasks)
+    result, _ = await execute_parallel(agents, agent_names, subtasks)
 
     assert "Researcher" in result
     assert "Analyst" in result
@@ -124,7 +125,7 @@ async def test_execute_parallel_with_missing_agent():
             return f"{self.name}: {prompt}"
 
     agents = {"Researcher": MockAgent("Researcher")}
-    result = await parallel.execute_parallel(agents, agent_names, subtasks)
+    result, _ = await execute_parallel(agents, agent_names, subtasks)
 
     # Should only have Researcher result
     assert "Researcher" in result
@@ -139,7 +140,7 @@ async def test_execute_parallel_no_valid_agents():
     agents = {}
 
     with pytest.raises(AgentExecutionError) as exc_info:
-        await parallel.execute_parallel(agents, agent_names, subtasks)
+        await execute_parallel(agents, agent_names, subtasks)
 
     # Check that the original error message contains "No valid agents"
     assert "No valid agents" in str(exc_info.value.original_error)
@@ -165,7 +166,7 @@ async def test_execute_parallel_with_exceptions():
         "Researcher": MockAgent("Researcher", should_fail=False),
         "FailingAgent": MockAgent("FailingAgent", should_fail=True),
     }
-    result = await parallel.execute_parallel(agents, agent_names, subtasks)
+    result, _ = await execute_parallel(agents, agent_names, subtasks)
 
     # Should include failure message for failing agent
     assert "Researcher" in result
@@ -188,12 +189,12 @@ async def test_execute_parallel_streaming():
     agents = {name: MockAgent(name) for name in agent_names}
 
     events = []
-    async for event in parallel.execute_parallel_streaming(agents, agent_names, subtasks):
+    async for event in execute_parallel_streaming(agents, agent_names, subtasks):
         events.append(event)
 
     # Should have start events, completion events, and final output
     assert len(events) >= len(agent_names) + 1  # At least one per agent + final output
-    assert any(isinstance(e, WorkflowOutputEvent) for e in events)
+    assert any(type(e).__name__ == "WorkflowOutputEvent" for e in events)
 
 
 @pytest.mark.asyncio
@@ -219,9 +220,7 @@ async def test_execute_parallel_streaming_with_progress():
     progress_callback = MockProgressCallback()
 
     events = []
-    async for event in parallel.execute_parallel_streaming(
-        agents, agent_names, subtasks, progress_callback
-    ):
+    async for event in execute_parallel_streaming(agents, agent_names, subtasks, progress_callback):
         events.append(event)
 
     assert len(progress_calls) > 0
@@ -243,7 +242,7 @@ async def test_execute_sequential_standard_flow():
             return f"{self.name} processed: {prompt}"
 
     agents = {name: MockAgent(name) for name in agent_names}
-    result = await sequential.execute_sequential(agents, agent_names, task)
+    result, _ = await execute_sequential(agents, agent_names, task)
 
     # Result should be processed by both agents
     assert "Writer" in result
@@ -267,7 +266,7 @@ async def test_execute_sequential_with_missing_agent():
         "Researcher": MockAgent("Researcher"),
         "Writer": MockAgent("Writer"),
     }
-    result = await sequential.execute_sequential(agents, agent_names, task)
+    result, _ = await execute_sequential(agents, agent_names, task)
 
     # Should still work, skipping MissingAgent
     assert "Writer" in result
@@ -281,7 +280,7 @@ async def test_execute_sequential_empty_agent_list():
     task = "Some task"
 
     with pytest.raises(AgentExecutionError) as exc_info:
-        await sequential.execute_sequential(agents, agent_names, task)
+        await execute_sequential(agents, agent_names, task)
 
     # Check that the original error message contains "at least one agent"
     assert "at least one agent" in str(exc_info.value.original_error).lower()
@@ -290,8 +289,8 @@ async def test_execute_sequential_empty_agent_list():
 @pytest.mark.asyncio
 async def test_execute_sequential_with_handoffs():
     """Test sequential execution with handoffs enabled."""
-    from agentic_fleet.dspy_modules.supervisor import DSPySupervisor
-    from agentic_fleet.workflows.handoff_manager import HandoffManager
+    from agentic_fleet.dspy_modules.reasoner import DSPyReasoner
+    from agentic_fleet.workflows.handoff import HandoffManager
 
     agent_names = ["Researcher", "Analyst"]
     task = "Research and analyze X"
@@ -306,11 +305,11 @@ async def test_execute_sequential_with_handoffs():
 
     agents = {name: MockAgent(name) for name in agent_names}
 
-    supervisor = DSPySupervisor()
+    supervisor = DSPyReasoner()
     handoff_manager = HandoffManager(supervisor)
 
-    result = await sequential.execute_sequential(
-        agents, agent_names, task, enable_handoffs=True, handoff_manager=handoff_manager
+    result, _ = await execute_sequential(
+        agents, agent_names, task, enable_handoffs=True, handoff=handoff_manager
     )
 
     # Should execute with handoffs
@@ -335,13 +334,13 @@ async def test_execute_sequential_streaming():
     agents = {name: MockAgent(name) for name in agent_names}
 
     events = []
-    async for event in sequential.execute_sequential_streaming(agents, agent_names, task):
+    async for event in execute_sequential_streaming(agents, agent_names, task):
         events.append(event)
 
     # Should have events for each agent and final output
     assert len(events) >= len(agent_names) + 1
-    assert any(isinstance(e, WorkflowOutputEvent) for e in events)
-    first_event = next(e for e in events if isinstance(e, MagenticAgentMessageEvent))
+    assert any(type(e).__name__ == "WorkflowOutputEvent" for e in events)
+    first_event = next(e for e in events if type(e).__name__ == "MagenticAgentMessageEvent")
     assert getattr(first_event, "stage", None) == "execution"
     assert getattr(first_event, "event", None) == "agent.start"
 
@@ -349,7 +348,7 @@ async def test_execute_sequential_streaming():
 @pytest.mark.asyncio
 async def test_execute_sequential_streaming_with_handoff_events():
     """Sequential streaming should emit handoff metadata when enabled."""
-    from agentic_fleet.workflows.handoff_manager import HandoffContext
+    from agentic_fleet.workflows.handoff import HandoffContext
 
     agent_names = ["Researcher", "Analyst"]
     task = "Research and analyze X"
@@ -389,17 +388,17 @@ async def test_execute_sequential_streaming_with_handoff_events():
     handoff_manager = StubHandoffManager()
 
     events = []
-    async for event in sequential.execute_sequential_streaming(
+    async for event in execute_sequential_streaming(
         agents,
         agent_names,
         task,
         enable_handoffs=True,
-        handoff_manager=handoff_manager,
+        handoff=handoff_manager,
     ):
         events.append(event)
 
     assert any(getattr(e, "event", "") == "handoff.created" for e in events)
-    final_event = next(e for e in events if isinstance(e, WorkflowOutputEvent))
+    final_event = next(e for e in events if type(e).__name__ == "WorkflowOutputEvent")
     assert final_event.data.get("handoff_history")
     assert final_event.data["handoff_history"][0]["from_agent"] == "Researcher"
 
@@ -407,7 +406,7 @@ async def test_execute_sequential_streaming_with_handoff_events():
 @pytest.mark.asyncio
 async def test_format_handoff_input():
     """Test formatting handoff input."""
-    from agentic_fleet.workflows.handoff_manager import HandoffContext
+    from agentic_fleet.workflows.handoff import HandoffContext
 
     handoff = HandoffContext(
         from_agent="Researcher",
@@ -422,7 +421,7 @@ async def test_format_handoff_input():
         quality_checklist=["Verify data quality", "Check calculations"],
     )
 
-    formatted = sequential.format_handoff_input(handoff)
+    formatted = format_handoff_input(handoff)
 
     assert "HANDOFF FROM Researcher" in formatted
     assert "Work Completed" in formatted

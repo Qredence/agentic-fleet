@@ -37,7 +37,8 @@ def test_estimated_cost_rounded():
     task = {"_result_text": "One two three four five six seven eight nine ten"}
     count = metric_token_count(task, {})
     cost = metric_estimated_cost_usd(task, {})
-    assert count is not None and count > 0
+    assert count is not None
+    assert count > 0
     assert cost is not None
     # Cost should be proportional to count and small
     assert cost < 0.01

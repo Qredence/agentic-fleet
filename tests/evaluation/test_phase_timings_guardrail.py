@@ -1,161 +1,138 @@
 from __future__ import annotations
 
 from types import SimpleNamespace
+from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
-from agentic_fleet.workflows.shared.analysis import run_analysis_phase
-from agentic_fleet.workflows.shared.progress import run_progress_phase
-from agentic_fleet.workflows.shared.routing import run_routing_phase
+from agentic_fleet.utils.models import ExecutionMode
+from agentic_fleet.workflows.context import SupervisorContext
+from agentic_fleet.workflows.executors import AnalysisExecutor, ProgressExecutor, RoutingExecutor
+from agentic_fleet.workflows.messages import (
+    AnalysisMessage,
+    ExecutionMessage,
+    RoutingMessage,
+    TaskMessage,
+)
+from agentic_fleet.workflows.models import (
+    ExecutionOutcome,
+)
 
 
-class DummySupervisor:
-    async def analyze_task(self, task: str, perform_search: bool = False):
-        return {
+# Mock context helper
+def create_mock_context():
+    config = SimpleNamespace(
+        pipeline_profile="full",
+        simple_task_max_words=10,
+        dspy_retry_attempts=1,
+        dspy_retry_backoff_seconds=0.0,
+        slow_execution_threshold=0.1,  # Set low threshold to trigger warnings if needed
+    )
+    context = MagicMock(spec=SupervisorContext)
+    context.config = config
+    context.analysis_cache = None
+    context.agents = {"Researcher": SimpleNamespace(description="Research & search")}
+    context.latest_phase_timings = {}
+    context.latest_phase_status = {}
+    return context
+
+
+# Mock supervisor helper
+def create_mock_supervisor():
+    supervisor = MagicMock()
+
+    # Mock analyze_task
+    supervisor.analyze_task = AsyncMock(
+        return_value={
             "complexity": "simple",
-            "required_capabilities": "general_reasoning",
-            "tool_requirements": "",
-            "estimated_steps": "3",
+            "required_capabilities": ["general_reasoning"],
+            "tool_requirements": [],
+            "estimated_steps": 3,
             "search_context": "",
-            "needs_web_search": "no",
+            "needs_web_search": False,
             "search_query": "",
         }
-
-    async def evaluate_progress(self, original_task: str, completed: str, current_status: str):
-        return {"next_action": "complete", "feedback": ""}
-
-    async def perform_web_search_async(self, query: str):
-        return "n/a"
-
-    async def route_task(self, task: str, team: dict[str, str], context: str = ""):
-        return {
-            "assigned_to": "Researcher",
-            "execution_mode": "delegated",
-            "subtasks": task,
-            "confidence": "0.9",
-        }
-
-
-def _normalize_analysis(payload: dict, _task: str) -> dict:
-    return payload
-
-
-def _fallback_analysis(_task: str) -> dict:
-    return {
-        "complexity": "simple",
-        "required_capabilities": "general_reasoning",
-        "tool_requirements": "",
-        "estimated_steps": "3",
-        "search_context": "",
-        "needs_web_search": "no",
-        "search_query": "",
-    }
-
-
-def _validate_routing_prediction(payload: dict, _task: str):
-    return SimpleNamespace(
-        task=_task,
-        assigned_to=("Researcher",),
-        mode=SimpleNamespace(value="delegated"),
-        subtasks=(_task,),
-        tool_requirements=tuple(),
-        confidence=0.9,
     )
 
+    # Mock route_task
+    supervisor.route_task = AsyncMock(
+        return_value={
+            "assigned_to": ["Researcher"],
+            "execution_mode": "delegated",
+            "subtasks": ["Task"],
+            "confidence": 0.9,
+        }
+    )
 
-def _normalize_routing_decision(routing, _task: str):
-    return routing
+    # Mock evaluate_progress
+    supervisor.evaluate_progress = AsyncMock(
+        return_value={
+            "action": "complete",
+            "feedback": "",
+        }
+    )
 
-
-def _fallback_routing(_task: str):
-    return _validate_routing_prediction({}, _task)
-
-
-def _normalize_progress(payload: dict) -> dict:
-    return {
-        "action": payload.get("next_action", "complete"),
-        "feedback": payload.get("feedback", ""),
-        "used_fallback": False,
-    }
-
-
-def _fallback_progress() -> dict:
-    return {"action": "continue", "feedback": "", "used_fallback": True}
-
-
-async def _call_with_retry(fn, *args, **kwargs):
-    res = fn(*args, **kwargs)
-    if hasattr(res, "__await__"):
-        return await res
-    return res
-
-
-def _record_phase_status(container: dict[str, str]):
-    def _rec(phase: str, status: str) -> None:
-        container[phase] = status
-
-    return _rec
+    return supervisor
 
 
 @pytest.mark.asyncio
 async def test_phase_timings_and_statuses():
-    # Minimal context
-    config = SimpleNamespace(slow_execution_threshold=999999)  # effectively disabled
-    context = SimpleNamespace(
-        config=config,
-        analysis_cache=None,
-        agents={"Researcher": SimpleNamespace(description="Research & search")},
-        latest_phase_timings={},
-        latest_phase_status={},
-    )
+    context = create_mock_context()
+    supervisor = create_mock_supervisor()
 
-    supervisor = DummySupervisor()
+    # --- Analysis Phase ---
+    analysis_executor = AnalysisExecutor("analysis", supervisor, context)
+    task_msg = TaskMessage(task="Quick test task")
 
-    # Analysis
-    analysis = await run_analysis_phase(
-        task="Quick test task",
-        context=context,
-        compiled_supervisor=supervisor,
-        supervisor=supervisor,
-        call_with_retry=_call_with_retry,
-        normalize_analysis_result=_normalize_analysis,
-        fallback_analysis=_fallback_analysis,
-        record_phase_status=_record_phase_status(context.latest_phase_status),
-    )
-    assert analysis.complexity in {"simple", "moderate", "complex"}
+    # Mock ctx.send_message to capture output
+    analysis_ctx = MagicMock()
+    analysis_ctx.send_message = AsyncMock()
+
+    await analysis_executor.handle_task(task_msg, analysis_ctx)
+
+    # Verify timing and status recorded
     assert "analysis" in context.latest_phase_timings
     assert context.latest_phase_timings["analysis"] >= 0.0
-    assert context.latest_phase_status.get("analysis") in {"success", "fallback", "cached"}
+    assert context.latest_phase_status.get("analysis") == "success"
 
-    # Routing
-    plan = await run_routing_phase(
-        task="Quick test task",
-        analysis=analysis,
-        context=context,
-        call_with_retry=_call_with_retry,
-        compiled_supervisor=supervisor,
-        validate_routing_prediction=_validate_routing_prediction,
-        normalize_routing_decision_fn=_normalize_routing_decision,
-        fallback_routing_decision=_fallback_routing,
-        record_phase_status=_record_phase_status(context.latest_phase_status),
-    )
-    assert plan.decision.assigned_to
+    # Capture the analysis message for next step
+    analysis_msg = analysis_ctx.send_message.call_args[0][0]
+    assert isinstance(analysis_msg, AnalysisMessage)
+
+    # --- Routing Phase ---
+    routing_executor = RoutingExecutor("routing", supervisor, context)
+    routing_ctx = MagicMock()
+    routing_ctx.send_message = AsyncMock()
+
+    await routing_executor.handle_analysis(analysis_msg, routing_ctx)
+
     assert "routing" in context.latest_phase_timings
     assert context.latest_phase_timings["routing"] >= 0.0
-    assert context.latest_phase_status.get("routing") in {"success", "fallback"}
+    assert context.latest_phase_status.get("routing") == "success"
 
-    # Progress
-    progress = await run_progress_phase(
-        task="Quick test task",
-        result="ok",
-        context=context,
-        supervisor=supervisor,
-        call_with_retry=_call_with_retry,
-        normalize_progress=_normalize_progress,
-        fallback_progress=_fallback_progress,
-        record_phase_status=_record_phase_status(context.latest_phase_status),
+    # Capture routing message
+    routing_msg = routing_ctx.send_message.call_args[0][0]
+    assert isinstance(routing_msg, RoutingMessage)
+
+    # --- Progress Phase ---
+    # Skip execution phase as it requires more setup, go straight to progress
+    progress_executor = ProgressExecutor("progress", supervisor, context)
+
+    # Create a dummy execution message
+    outcome = ExecutionOutcome(
+        result="Task complete",
+        mode=ExecutionMode.DELEGATED,
+        assigned_agents=["Researcher"],
+        subtasks=["Task"],
+        status="success",
     )
-    assert progress.action in {"continue", "complete", "refine", "escalate"}
+    execution_msg = ExecutionMessage(task="Quick test task", outcome=outcome, metadata={})
+
+    progress_ctx = MagicMock()
+    progress_ctx.send_message = AsyncMock()
+
+    await progress_executor.handle_execution(execution_msg, progress_ctx)
+
     assert "progress" in context.latest_phase_timings
     assert context.latest_phase_timings["progress"] >= 0.0
-    assert context.latest_phase_status.get("progress") in {"success", "fallback"}
+    assert context.latest_phase_status.get("progress") == "success"

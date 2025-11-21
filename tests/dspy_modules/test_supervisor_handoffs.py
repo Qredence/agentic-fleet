@@ -63,33 +63,37 @@ if "dspy" not in sys.modules:
 import dspy
 from dspy.utils.dummies import DummyLM
 
-from agentic_fleet.dspy_modules.supervisor import DSPySupervisor
+from agentic_fleet.dspy_modules.reasoner import DSPyReasoner
 from agentic_fleet.utils.models import ExecutionMode
 
 
 @pytest.mark.asyncio
 async def test_dspy_supervisor_handoff_aware_routing():
-    """Test DSPy supervisor considers handoffs in routing decisions."""
+    """Test DSPy reasoner considers handoffs in routing decisions."""
     # Configure DummyLM to prevent "No LM is loaded" error
-    lm = DummyLM(
-        [
-            {
-                "assigned_to": ["Researcher"],
-                "mode": "delegated",
-                "subtasks": ["Research and analyze market data"],
-                "reasoning": "Test reasoning",
-            }
-        ]
-    )
-    dspy.configure(lm=lm)
+    # Provide multiple copies of the response to handle potential internal retries or multi-step calls
+    response_data = {
+        "assigned_to": ["Researcher"],
+        "execution_mode": "delegated",
+        "subtasks": ["Research and analyze market data"],
+        "reasoning": "Test reasoning",
+        "handoff_strategy": "None",
+        "workflow_gates": "None",
+        "tool_plan": [],
+        "tool_goals": "",
+        "latency_budget": "medium",
+    }
+    lm = DummyLM([response_data] * 5)
 
-    supervisor = DSPySupervisor()
+    # Use context to avoid global configuration conflicts in async tests
+    with dspy.context(lm=lm):
+        supervisor = DSPyReasoner()
 
-    routing = supervisor.route_task(
-        task="Research and analyze market data",
-        team={"Researcher": "Web research", "Analyst": "Data analysis"},
-        context="Initial task",
-    )
+        routing = supervisor.route_task(
+            task="Research and analyze market data",
+            team={"Researcher": "Web research", "Analyst": "Data analysis"},
+            context="Initial task",
+        )
 
     # Should include handoff considerations in routing
     assert "mode" in routing
