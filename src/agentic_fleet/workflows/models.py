@@ -3,7 +3,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import Any
 
-from ..utils.models import ExecutionMode, RoutingDecision
+from agentic_fleet.utils.models import ExecutionMode, RoutingDecision
 
 
 @dataclass(frozen=True)
