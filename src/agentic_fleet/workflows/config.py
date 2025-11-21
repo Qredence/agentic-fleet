@@ -39,7 +39,12 @@ class WorkflowConfig:
     examples_path: str = "data/supervisor_examples.json"
     dspy_optimizer: str = "bootstrap"
     gepa_options: dict[str, Any] | None = None
-    allow_gepa_optimization: bool = False  # Default to False for safety
+    # GEPA optimization (e.g., Gradient-based Efficient Prompt Adaptation) is disabled by default.
+    # This feature is experimental and may introduce instability, unpredictable model behaviour,
+    # or potential security risks (such as leaking sensitive data or bypassing safety checks).
+    # Enable only in trusted environments, for advanced users, or after thorough testing.
+    # Recommended: leave disabled unless you fully understand the implications.
+    allow_gepa_optimization: bool = False
     enable_handoffs: bool = True
     max_task_length: int = 10000
     quality_threshold: float = 8.0
