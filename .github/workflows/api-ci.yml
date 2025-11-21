@@ -24,10 +24,6 @@ jobs:
   test:
     runs-on: ubuntu-latest
 
-    services:
-      # Add services if needed (e.g. redis, postgres)
-      pass
-
     steps:
       - uses: actions/checkout@v3
 
