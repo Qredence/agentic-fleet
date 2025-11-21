@@ -349,24 +349,20 @@ class RoutingExecutor(Executor):
             confidence=0.0,
         )
 
-    async def _call_with_retry(self, fn, *args, **kwargs):
-        # Reuse AnalysisExecutor logic or make shared util
-        # For now, duplicating simple retry logic to keep file self-contained
-        import asyncio
-
-        attempts = 3
-        for attempt in range(attempts):
-            try:
-                result = fn(*args, **kwargs)
-                if asyncio.iscoroutine(result):
-                    result = await result
-                return result
-            except Exception:
-                if attempt == attempts - 1:
-                    raise
-                await asyncio.sleep(0.5)
-
-
+# Shared retry utility for executors
+async def call_with_retry(fn, *args, **kwargs):
+    import asyncio
+    attempts = 3
+    for attempt in range(attempts):
+        try:
+            result = fn(*args, **kwargs)
+            if asyncio.iscoroutine(result):
+                result = await result
+            return result
+        except Exception:
+            if attempt == attempts - 1:
+                raise
+            await asyncio.sleep(0.5)
 class ExecutionExecutor(Executor):
     """Executor that executes tasks based on routing decisions."""
 
