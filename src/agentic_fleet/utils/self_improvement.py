@@ -12,7 +12,7 @@ import logging
 from pathlib import Path
 from typing import Any
 
-from .cosmos import get_default_user_id, mirror_dspy_examples, save_agent_memory_item
+from .cosmos import get_default_user_id, mirror_dspy_examples
 from .history_manager import HistoryManager
 
 logger = logging.getLogger(__name__)
@@ -460,52 +460,6 @@ class SelfImprovementEngine:
         mode = example.get("mode", "")
 
         return f"{task}|{assigned_to}|{mode}"
-
-    def _record_memory_from_execution(
-        self,
-        execution: dict[str, Any],
-        example: dict[str, Any],
-        *,
-        memory_type: str = "execution_insight",
-    ) -> None:
-        """Persist distilled insights from executions into Cosmos agent memory."""
-
-        if not self.user_id:
-            return
-
-        routing = execution.get("routing", {}) or {}
-        assigned = routing.get("assigned_to") or []
-        if isinstance(assigned, str):
-            agents = [agent.strip() for agent in assigned.split(",") if agent.strip()]
-        else:
-            agents = list(assigned)
-
-        fingerprint = self._create_fingerprint(example)
-        summary = execution.get("result") or example.get("context") or ""
-
-        # Sanitize ID to remove illegal characters for Cosmos DB
-        raw_id = f"{execution.get('workflowId', 'unknown')}|{fingerprint}"
-        safe_id = "".join(c if c not in "/\\?#" else "-" for c in raw_id)
-
-        item = {
-            "memoryId": safe_id,
-            "userId": self.user_id,
-            "agentId": agents[0] if agents else "unknown",
-            "memoryType": memory_type,
-            "task": execution.get("task"),
-            "content": summary,
-            "workflowId": execution.get("workflowId"),
-            "source": "self_improvement",
-            "metadata": {
-                "agents": agents,
-                "mode": routing.get("mode"),
-                "toolRequirements": routing.get("tool_requirements", []),
-                "qualityScore": execution.get("quality", {}).get("score"),
-                "exampleContext": example.get("context"),
-            },
-        }
-
-        save_agent_memory_item(item, user_id=self.user_id)
 
     def get_improvement_stats(self) -> dict[str, Any]:
         """

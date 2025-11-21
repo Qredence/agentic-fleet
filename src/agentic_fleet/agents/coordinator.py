@@ -7,8 +7,8 @@ import logging
 import os
 from typing import Any
 
-from agent_framework import BaseAgent, ChatAgent
-from agent_framework.openai import OpenAIChatClient
+from agent_framework import ChatAgent
+from agent_framework.openai import OpenAIResponsesClient
 from dotenv import load_dotenv
 
 from agentic_fleet.agents.base import DSPyEnhancedAgent
@@ -19,12 +19,10 @@ try:
     from agent_framework.openai import OpenAIResponsesClient as _PreferredOpenAIClient
 
     _RESPONSES_CLIENT_AVAILABLE = True
-except (
-    ImportError,
-    AttributeError,
-):  # pragma: no cover - fallback path depends on installed extras
-    _PreferredOpenAIClient = OpenAIChatClient  # type: ignore[assignment]
-    _RESPONSES_CLIENT_AVAILABLE = False  # type: ignore[assignment]
+except ImportError:
+    from agent_framework.openai import OpenAIChatClient as _PreferredOpenAIClient  # type: ignore
+
+    _RESPONSES_CLIENT_AVAILABLE = False
 
 load_dotenv(override=True)
 
@@ -85,7 +83,7 @@ class AgentFactory:
         self,
         name: str,
         agent_config: dict[str, Any],
-    ) -> BaseAgent:
+    ) -> ChatAgent:
         """Create a ChatAgent instance from configuration.
 
         Args:
@@ -156,7 +154,16 @@ class AgentFactory:
                 client_kwargs["async_client"] = self.openai_client
 
             # Create OpenAI client using agent_framework directly
-            chat_client = _create_openai_client(**client_kwargs)
+            chat_client = OpenAIResponsesClient(
+                model_id=model_id,
+                api_key=api_key,
+                base_url=base_url,
+                reasoning_effort=reasoning_effort,
+                reasoning_verbosity=reasoning_verbosity,
+                store=store,
+                temperature=temperature,
+                max_tokens=max_tokens,
+            )
 
             # Create agent name in PascalCase format
             agent_name = f"{name.capitalize()}Agent"
@@ -361,7 +368,7 @@ def create_workflow_agents(
         model_override: str | None = None,
         reasoning_effort: str | None = None,
         reasoning_strategy: str = "chain_of_thought",
-    ) -> BaseAgent:
+    ) -> ChatAgent:
         """Helper to create a single agent."""
         agent_models = config.agent_models or {}
         model_id = model_override or agent_models.get(name.lower(), config.dspy_model)
@@ -543,15 +550,7 @@ def create_workflow_agents(
         description="Data analysis and computation specialist",
         instructions="Perform detailed analysis with code and visualizations",
         tools=analyst_tool,
-        reasoning_strategy="program_of_thought",  # Use PoT for calculation/analysis
     )
-    # Register analyst tool so tests can see code execution capability
-    try:
-        if validate_tool(analyst_tool):
-            tool_registry.register_tool_by_agent("Analyst", analyst_tool)
-            logger.info("HostedCodeInterpreterAdapter registered for Analyst")
-    except Exception as e:
-        logger.warning(f"Failed to register Analyst tool: {e}")
 
     agents["Writer"] = _create_agent(
         name="Writer",

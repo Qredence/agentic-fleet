@@ -347,21 +347,9 @@ uv run python -m agentic_fleet.scripts.manage_cache --clear
 ## Observability & History
 
 - **History**: Structured events appended to `logs/execution_history.jsonl`.
-- **Cosmos Mirror (optional)**: When `AGENTICFLEET_USE_COSMOS=1`, workflow executions, agent memories, DSPy datasets, and cache metadata are mirrored into Cosmos containers (`workflowRuns`, `agentMemory`, `dspyExamples`, `dspyOptimizationRuns`, `cache`). All writes are best-effort and never block the main workflow.
 - **Tracing**: Enable OpenTelemetry in YAML; export to AI Toolkit / OTLP endpoint.
 - **Logging**: Adjustable log level via env (`AGENTIC_FLEET_LOG_LEVEL=DEBUG`).
 - **Analysis**: `scripts/analyze_history.py --all` surfaces aggregate metrics.
-
-## Azure Cosmos DB Integration
-
-AgenticFleet now includes a lightweight Cosmos helper (`src/agentic_fleet/utils/cosmos.py`) that centralizes credentials, container lookups, and error handling. Enable it by setting `AGENTICFLEET_USE_COSMOS=1` and supplying the endpoint plus either a primary key or managed identity. The runtime mirrors the following data sets without changing your local workflow semantics:
-
-- **Workflow history** (`workflowRuns`) – Each workflow run (task, routing, events, quality) is mirrored so you can build dashboards or Power BI reports.
-- **Agent memory** (`agentMemory`) – Long-term memories keyed by `userId`, ready for Cosmos vector search or downstream RAG systems.
-- **DSPy artifacts** (`dspyExamples`, `dspyOptimizationRuns`) – Keep your routing datasets and optimization metadata in a globally accessible store.
-- **Cache metadata** (`cache`) – Optional TTL-based cache entries for expensive computations.
-
-Provision the database/containers ahead of time (see `cosmosdb_requirements.md` and `cosmosdb_data_model.md`). The helper never creates resources automatically, keeping RU/throughput surprises under your control. Partition keys follow Cosmos best practices (`/workflowId`, `/userId`, `/cacheKey`) and default container names can be overridden via environment variables to match your deployment. If the Cosmos account is unavailable, the runtime logs a warning and continues with file-based history only.
 
 ---
 

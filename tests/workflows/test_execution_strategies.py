@@ -4,6 +4,7 @@ import pytest
 
 from agentic_fleet.workflows.exceptions import AgentExecutionError
 from agentic_fleet.workflows.strategies import (
+    delegated,
     execute_delegated,
     execute_delegated_streaming,
     execute_parallel,
@@ -11,6 +12,8 @@ from agentic_fleet.workflows.strategies import (
     execute_sequential,
     execute_sequential_streaming,
     format_handoff_input,
+    parallel,
+    sequential,
 )
 
 
@@ -60,8 +63,8 @@ async def test_execute_delegated_streaming():
         events.append(event)
 
     assert len(events) >= 2  # Should have at least start and completion events
-    assert any(type(e).__name__ == "MagenticAgentMessageEvent" for e in events)
-    assert any(type(e).__name__ == "WorkflowOutputEvent" for e in events)
+    assert any(isinstance(e, delegated.MagenticAgentMessageEvent) for e in events)
+    assert any(isinstance(e, delegated.WorkflowOutputEvent) for e in events)
 
 
 @pytest.mark.asyncio
@@ -194,7 +197,7 @@ async def test_execute_parallel_streaming():
 
     # Should have start events, completion events, and final output
     assert len(events) >= len(agent_names) + 1  # At least one per agent + final output
-    assert any(type(e).__name__ == "WorkflowOutputEvent" for e in events)
+    assert any(isinstance(e, parallel.WorkflowOutputEvent) for e in events)
 
 
 @pytest.mark.asyncio
@@ -339,68 +342,7 @@ async def test_execute_sequential_streaming():
 
     # Should have events for each agent and final output
     assert len(events) >= len(agent_names) + 1
-    assert any(type(e).__name__ == "WorkflowOutputEvent" for e in events)
-    first_event = next(e for e in events if type(e).__name__ == "MagenticAgentMessageEvent")
-    assert getattr(first_event, "stage", None) == "execution"
-    assert getattr(first_event, "event", None) == "agent.start"
-
-
-@pytest.mark.asyncio
-async def test_execute_sequential_streaming_with_handoff_events():
-    """Sequential streaming should emit handoff metadata when enabled."""
-    from agentic_fleet.workflows.handoff import HandoffContext
-
-    agent_names = ["Researcher", "Analyst"]
-    task = "Research and analyze X"
-
-    class MockAgent:
-        def __init__(self, name):
-            self.name = name
-            self.description = name
-
-        async def run(self, prompt: str):
-            return f"{self.name} processed: {prompt}"
-
-    class StubHandoffManager:
-        def __init__(self):
-            self.handoff_history = []
-
-        async def evaluate_handoff(self, **_kwargs):
-            return "Analyst"
-
-        async def create_handoff_package(self, **kwargs):
-            context = HandoffContext(
-                from_agent=kwargs["from_agent"],
-                to_agent=kwargs["to_agent"],
-                task=kwargs.get("task", ""),
-                work_completed=kwargs["work_completed"],
-                artifacts=kwargs["artifacts"],
-                remaining_objectives=kwargs["remaining_objectives"],
-                success_criteria=["Done"],
-                tool_requirements=[],
-                estimated_effort="simple",
-                quality_checklist=["Verify"],
-            )
-            self.handoff_history.append(context)
-            return context
-
-    agents = {name: MockAgent(name) for name in agent_names}
-    handoff_manager = StubHandoffManager()
-
-    events = []
-    async for event in execute_sequential_streaming(
-        agents,
-        agent_names,
-        task,
-        enable_handoffs=True,
-        handoff=handoff_manager,
-    ):
-        events.append(event)
-
-    assert any(getattr(e, "event", "") == "handoff.created" for e in events)
-    final_event = next(e for e in events if type(e).__name__ == "WorkflowOutputEvent")
-    assert final_event.data.get("handoff_history")
-    assert final_event.data["handoff_history"][0]["from_agent"] == "Researcher"
+    assert any(isinstance(e, sequential.WorkflowOutputEvent) for e in events)
 
 
 @pytest.mark.asyncio

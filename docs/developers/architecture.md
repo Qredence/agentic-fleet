@@ -391,15 +391,6 @@ The codebase has been refactored to improve maintainability and reduce complexit
   - Shared typed models in `workflows/models.py`
   - Shared utilities in `workflows/utils.py`
 
-### Agent-framework + DSPy layering
-
-To keep responsibilities clear and testable:
-
-- `workflows/*` own orchestration only. They are built with `WorkflowBuilder` and executors and do not call DSPy directly from executor functions.
-- `dspy_modules/*` encapsulate DSPy reasoners, signatures, and optimization logic for task analysis, routing, progress, and quality.
-- `agents/*` and `tools/*` wrap `ChatAgent` instances and tool implementations; workflows treat them as opaque executors that may call tools.
-- The CLI and initialization code glue these layers together: DSPy analyzes tasks and proposes a plan, workflows execute the plan, and DSPy optionally evaluates the results.
-
 - **CLI Modularization**: Commands separated into individual modules in `cli/commands/`:
   - Each command is self-contained with its own Typer app
   - `cli/console.py` reduced to ~61 lines, focusing on registration

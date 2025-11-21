@@ -14,6 +14,7 @@ from ..dspy_modules.reasoner import DSPyReasoner
 from ..utils.agent_framework_shims import ensure_agent_framework_shims
 from ..utils.cache import TTLCache
 from ..utils.dspy_manager import configure_dspy_settings
+from ..utils.env import validate_agentic_fleet_env
 from ..utils.history_manager import HistoryManager
 from ..utils.logger import setup_logger
 from ..utils.tool_registry import ToolRegistry
@@ -32,8 +33,6 @@ logger = setup_logger(__name__)
 def _validate_environment() -> None:
     """Validate required environment variables."""
     try:
-        from ..utils.env import validate_agentic_fleet_env
-
         validate_agentic_fleet_env()
     except Exception as e:
         logger.error(f"Environment validation failed: {e}")
@@ -60,6 +59,7 @@ def _create_shared_components(
 
     # Create tool registry
     tool_registry = ToolRegistry()
+
     return openai_client, tool_registry
 
 
@@ -243,10 +243,30 @@ async def initialize_workflow_context(
         compilation_status="pending",
         compilation_task=None,
         compilation_lock=asyncio.Lock(),
-        compilation_state=compilation_state,
     )
 
-    _setup_dspy_compilation(context, config, dspy_supervisor, agents, compile_dspy)
+    # Optionally compile DSPy supervisor
+    if compile_dspy and config.compile_dspy:
+        logger.info("Setting up DSPy compilation (lazy/background mode)...")
+        # Start background compilation task (non-blocking)
+        compilation_task = asyncio.create_task(
+            compile_supervisor_async(
+                supervisor=dspy_supervisor,
+                config=config,
+                agents=agents,
+                progress_callback=None,  # Can be set via context later
+                state=compilation_state,
+            )
+        )
+        compilation_state.compilation_task = compilation_task
+        context.compilation_task = compilation_task
+        context.compilation_status = "compiling"
+
+        logger.info("DSPy compilation started in background (workflow can start immediately)")
+    else:
+        logger.info("Skipping DSPy compilation (using base prompts)")
+        compilation_state.compilation_status = "skipped"
+        context.compilation_status = "skipped"
 
     init_time = (datetime.now() - init_start).total_seconds()
     logger.info(f"Workflow context initialized successfully in {init_time:.2f}s")

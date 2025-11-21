@@ -21,30 +21,76 @@ AgenticFleet is a hybrid **DSPy + Microsoft agent-framework** runtime for self-o
 
 ## Development Workflow
 
-- **Quality Gate**: Run `make check` (ruff, mypy) and `make test` (pytest) before committing.
-- **CLI Usage**: Use `agentic-fleet` or `uv run python -m agentic_fleet.cli.console`.
-  - Example: `agentic-fleet run -m "Research AI trends" --verbose`
-- **DSPy Caching**: Compilation artifacts live in `logs/compiled_supervisor.pkl`.
-  - Clear cache: `uv run python -m agentic_fleet.scripts.manage_cache --clear`
-  - **Important**: Clear cache when changing DSPy signatures or `supervisor_examples.json`.
+- Backend quality gate: `make check` (ruff, black, mypy) and `make test` (pytest). Key suites include `tests/workflows/test_execution_strategies.py`, `tests/utils/test_tool_registry.py`, and `tests/dspy_modules/test_supervisor_handoffs.py`.
+- Prefer CLI entry points over ad‑hoc scripts: `agentic-fleet run -m "..."` or `uv run python -m agentic_fleet.cli.console run -m "..."`.
+- When changing DSPy signatures, routing, or config, update `src/agentic_fleet/data/supervisor_examples.json` and clear the cache via `uv run python -m agentic_fleet.scripts.manage_cache --clear`.
+- Use `.env` (or environment variables) for secrets: `OPENAI_API_KEY` is required; `TAVILY_API_KEY` enables web search for the Researcher; tracing uses standard OTEL variables.
 
-## Coding Conventions
+## Conventions & patterns
 
-- **Declarative Config**: Prefer modifying `config/workflow_config.yaml` over hardcoding values.
-- **Agent Definition**:
-  1. Create `agents/<name>.py`.
-  2. Register in `workflow_config.yaml`.
-  3. Add prompts in `agents/prompts.py`.
-  4. Add training examples in `data/supervisor_examples.json`.
-- **Tooling**: Register tools in `ToolRegistry` (`utils/tool_registry.py`) before referencing in YAML.
-- **Error Handling**: Use exceptions from `src/agentic_fleet/workflows/exceptions.py` (e.g., `CompilationError`, `ToolError`).
-- **Type Safety**: Use protocols from `src/agentic_fleet/utils/types.py`.
+- Keep behaviour declarative: tweak `workflow_config.yaml` and training examples instead of embedding prompt text or thresholds directly in code.
+- When adding an agent: create `agents/<name>.py`, a prompt module in `prompts/`, register it in `workflow_config.yaml`, add routing/quality examples, tests, and update `AGENTS.md`.
+- When adding a tool: implement an adapter in `tools/`, register it in `ToolRegistry`, then reference its name from YAML; avoid calling external APIs directly from agents.
+- DSPy outputs often encode lists and scores as strings (e.g. `"Researcher,Analyst"`, `"8/10"`); always parse/validate before use and fall back to safe defaults (delegated mode, conservative scores) on errors.
+- Quality and refinement loops are controlled via `quality.*` keys in `workflow_config.yaml`; prefer adjusting thresholds / round counts there instead of modifying workflow code.
 
-## Integration Points
+## Docs, prompts, and history
 
-- **Cosmos DB**: Set `AGENTICFLEET_USE_COSMOS=1` to mirror history/memory. See `src/agentic_fleet/utils/cosmos.py`.
-- **Tracing**: OpenTelemetry hooks in `src/agentic_fleet/utils/tracing.py`.
-- **Environment**: `OPENAI_API_KEY` is required. `TAVILY_API_KEY` for search.
+- Architecture and runtime details: `README.md`, `src/agentic_fleet/AGENTS.md`, and `docs/guides/quick-reference.md`.
+- Additional Copilot prompts live under `.github/prompts/`; keep this file high‑level and put task‑specific flows into dedicated prompt files.
+- Execution history is appended to `logs/execution_history.jsonl`; analytics and self‑improvement scripts live in `src/agentic_fleet/scripts/` and `scripts/`.
+
+# DSPy-Enhanced Agent Framework - AI Coding Guide
+
+## Architecture Overview
+
+This project combines **Microsoft's agent-framework** with **DSPy's prompt optimization** to create self-improving multi-agent workflows. The key insight: DSPy modules optimize task routing and quality assessment, while agent-framework handles orchestration.
+
+**Core Components:**
+
+- `src/dspy_modules/supervisor.py` - DSPy supervisor with ChainOfThought wrappers; exposes analyze_task, route_task, evaluate_progress, assess_quality
+- `src/workflows/supervisor_workflow.py` - Main workflow orchestrator combining both frameworks (delegated/sequential/parallel modes, streaming, history persistence)
+- `config/workflow_config.yaml` - Centralized config for models, agents, and execution parameters
+- `data/supervisor_examples.json` - Training examples for DSPy compilation
+- `console.py` - Primary Typer CLI with run, analyze, benchmark, list_agents, export_history commands
+- `src/cli/fleet.py` - TUI entry point (`dspy-fleet` command) with Rich-based UI
+- `src/utils/compiler.py` - Compiles supervisor using BootstrapFewShot; defines routing_metric
+
+**Data Flow:** Console input → SupervisorWorkflow.run/run_stream → DSPy analysis → DSPy routing → agent execution → DSPy quality assessment → optional refinement → append to logs/execution_history.json
+
+**4-Phase Execution:** (1) DSPy Task Analysis → (2) DSPy Task Routing → (3) Agent Execution → (4) DSPy Quality Assessment (refine if score < 8/10)
+
+## Critical Patterns
+
+### 1. DSPy Signature Pattern
+
+All DSPy modules use **Signatures** (not plain prompts). Signatures define input/output fields with descriptions:
+
+```python
+# AgenticFleet – AI Coding Instructions (Concise)
+
+Purpose: Equip AI coding agents with just-in-time knowledge to be productive in this DSPy + Microsoft agent-framework hybrid. Keep changes declarative (YAML, examples) and lean on existing abstractions (SupervisorWorkflow, DSPySupervisor, ToolRegistry).
+
+## Core Architecture
+4 Phases (+ optional Judge loop): Analysis → Routing → Execution → Progress/Quality → (Refinement). Lazy DSPy compilation runs in the background (`logs/compiled_supervisor.pkl` + `.meta` with signature+config hashes) – never block user flows waiting for completion.
+
+Key runtime files:
+- `src/agentic_fleet/dspy_modules/supervisor.py` – DSPySupervisor (task/tool-aware analysis, routing, progress, quality, execution summary)
+- `src/agentic_fleet/dspy_modules/signatures.py` – Signatures; follow field docstyle when adding
+- `src/agentic_fleet/workflows/supervisor_workflow.py` – Orchestrates phases, judge refinement, streaming
+- `src/agentic_fleet/config/workflow_config.yaml` – Models, thresholds, agents, GEPA, tracing, evaluation
+- `src/agentic_fleet/utils/compiler.py` – Compilation + cache invalidation (signature/config hash)
+- `src/agentic_fleet/utils/tool_registry.py` – Tool discovery + capability mapping (drives tool‑aware routing)
+- `src/agentic_fleet/utils/cache.py` – TTLCache + hit‑rate stats (analysis caching via `analysis_cache_ttl_seconds`)
+
+## Execution Modes & Handoffs
+`ExecutionMode`: delegated (single), sequential (dependency chain, optional structured handoffs), parallel (independent subtasks). Handoffs enabled via `handoffs.enabled: true` using `handoff_manager` in sequential runs.
+
+## Tool‑Aware DSPy
+Agents created first; tools registered (single instance per tool) → supervisor sees registry before compilation. Signatures include `available_tools`; analysis may set `needs_web_search` & `search_query`; routing injects tool requirements from assigned agents.
+
+## Judge & Refinement
+Judge loop active if `quality.enable_judge: true`. Stops when `score >= judge_threshold` OR `refinement_needed == no` OR max rounds reached. Legacy refinement uses `quality.refinement_threshold` & progress action == "refine".
 
 ## Common Patterns
 
@@ -52,7 +98,22 @@ AgenticFleet is a hybrid **DSPy + Microsoft agent-framework** runtime for self-o
 - **Execution Modes**: Delegated (single), Sequential (chain), Parallel (fan-out).
 - **Handoffs**: Managed by `HandoffManager` in `workflows/handoff.py`.
 
-## Documentation
+## Testing & Quality
+`pytest` covers routing, tool parsing, judge refinement, cache behavior. Add minimal example when introducing a new signature. Stubs avoid external API calls.
 
-- **Agents**: `src/agentic_fleet/AGENTS.md`
-- **Architecture**: `docs/developers/architecture.md`
+## Performance & Optimization
+Use smaller supervisor model (`gpt-5-mini`) for speed. Prefer `gepa_max_metric_calls` for ultra-fast GEPA. Lower `max_refinement_rounds` for latency. Monitor `phase_timings` & `phase_status` in workflow output.
+
+## Common Gotchas
+Wrong path references (use `src/agentic_fleet/...`). Tool list misuse (YAML lists names; registry provides instances). Missing examples → weaker routing (fallback still works). Judge loop stalls if threshold too high. Parallel mode with one agent auto-normalizes to delegated.
+
+## PR Checklist
+1. YAML updated (no hardcoded thresholds)
+2. Examples added/changed; cache cleared
+3. Tests updated (routing/quality/tool parsing)
+4. Docs touched (`AGENTS.md` or this file)
+5. Lint & types pass (`ruff`, `mypy`, `black`)
+
+Feedback welcome—request clarification if any pattern seems incomplete or outdated.
+
+```

@@ -6,14 +6,13 @@ from typing import Any
 
 import openai
 
+from ...utils.cache import TTLCache
+from ...utils.history_manager import HistoryManager
+from ...utils.progress import NullProgressCallback, ProgressCallback
+from ...utils.tool_registry import ToolRegistry
+from ..config import WorkflowConfig
 from ..dspy_modules.reasoner import DSPyReasoner
-from ..utils.cache import TTLCache
-from ..utils.history_manager import HistoryManager
-from ..utils.progress import NullProgressCallback, ProgressCallback
-from ..utils.tool_registry import ToolRegistry
-from .compilation import CompilationState
-from .config import WorkflowConfig
-from .handoff import HandoffManager
+from ..handoff_manager import HandoffManager
 
 
 @dataclass
@@ -43,13 +42,3 @@ class SupervisorContext:
     compilation_status: str = "pending"
     compilation_task: asyncio.Task[Any] | None = None
     compilation_lock: asyncio.Lock | None = None
-    compilation_state: CompilationState | None = None
-
-    # Compatibility alias expected by execution strategies
-    @property
-    def handoff_manager(self) -> HandoffManager | None:  # pragma: no cover - thin alias
-        return self.handoff
-
-    @handoff_manager.setter
-    def handoff_manager(self, value: HandoffManager | None) -> None:  # pragma: no cover
-        self.handoff = value

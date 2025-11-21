@@ -73,7 +73,7 @@ workflow:
 # Agent Configuration
 agents:
   researcher:
-    model: gpt-5.1
+    model: gpt-4.1
     tools:
       - TavilySearchTool # Requires TAVILY_API_KEY environment variable
     temperature: 0.5
@@ -82,7 +82,7 @@ agents:
     timeout: 60 # Task timeout in seconds
 
   analyst:
-    model: gpt-5.1-codex
+    model: gpt-4.1
     tools:
       - HostedCodeInterpreterTool
     temperature: 0.3
@@ -92,7 +92,7 @@ agents:
     strategy: "react" # Switch to ReAct for stability
 
   writer:
-    model: gpt-5.1-chat
+    model: gpt-4.1
     tools: []
     temperature: 0.7
     enable_dspy: true
