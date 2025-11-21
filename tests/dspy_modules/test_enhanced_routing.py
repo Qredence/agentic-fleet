@@ -29,8 +29,11 @@ def test_supervisor_enhanced_routing_outputs():
 
     supervisor.router = lambda **kwargs: MockEnhancedPrediction()
 
+    # Use a complex task that won't trigger simple task detection
     result = supervisor.route_task(
-        task="Test task", team={"Researcher": "Search web"}, context="Context"
+        task="Research the latest AI news and analyze trends",
+        team={"Researcher": "Search web"},
+        context="Context",
     )
 
     assert result["tool_plan"] == ["TavilySearchTool"]
