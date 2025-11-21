@@ -177,6 +177,7 @@ class DSPyEnhancedAgent(BaseAgent):
             AgentRunResponse containing the result.
         """
         prompt = self._normalize_input_to_text(messages)
+        agent_kwargs = dict(kwargs)
         logger.info(f"Agent {self.name} running with strategy: {self.reasoning_strategy}")
 
         # Check if DSPy is enabled
@@ -199,7 +200,15 @@ class DSPyEnhancedAgent(BaseAgent):
 
                 elif self.reasoning_strategy == "program_of_thought" and self.pot_module:
                     # Use Program of Thought strategy
-                    result = self.pot_module(question=prompt)
+                    try:
+                        result = self.pot_module(question=prompt)
+                    except RuntimeError as exc:
+                        return await self._handle_pot_failure(
+                            messages=messages,
+                            thread=thread,
+                            agent_kwargs=agent_kwargs,
+                            error=exc,
+                        )
                     response_text = getattr(result, "answer", str(result))
 
                 if response_text:
@@ -272,6 +281,16 @@ class DSPyEnhancedAgent(BaseAgent):
                     )
                     return
 
+            except RuntimeError as exc:
+                async for update in self._yield_pot_stream_fallback(
+                    messages=messages,
+                    thread=thread,
+                    agent_kwargs=kwargs,
+                    error=exc,
+                ):
+                    yield update
+                return
+
             except Exception as e:
                 logger.error(f"DSPy streaming strategy failed for {self.name}: {e}")
                 # Fall through to fallback
@@ -279,3 +298,81 @@ class DSPyEnhancedAgent(BaseAgent):
         # Fallback to standard streaming
         async for update in self._chat_agent.run_stream(messages=messages, thread=thread, **kwargs):
             yield update
+
+    async def _handle_pot_failure(
+        self,
+        messages: Any,
+        thread: AgentThread | None,
+        agent_kwargs: dict[str, Any],
+        error: Exception,
+    ) -> AgentRunResponse:
+        """Run fallback ChatAgent when Program of Thought fails."""
+
+        note = self._build_pot_error_note(error)
+        logger.warning("Program of Thought failed for %s: %s", self.name, note)
+
+        fallback_response = await self._chat_agent.run(
+            messages=messages, thread=thread, **agent_kwargs
+        )
+        # Prepend note to the first message text
+        first_msg = None
+        if fallback_response.messages:
+            first_msg = fallback_response.messages[0]
+            first_msg.text = self._apply_note_to_text(first_msg.text, note)
+        else:
+            fallback_response_text = getattr(fallback_response, "text", "")
+            fallback_response.text = self._apply_note_to_text(fallback_response_text, note)  # type: ignore[attr-defined]
+
+        existing_props = dict(fallback_response.additional_properties or {})
+        existing_props.update(
+            {
+                "strategy": self.reasoning_strategy,
+                "pot_error": note,
+            }
+        )
+        fallback_response.additional_properties = existing_props
+        return fallback_response
+
+    async def _yield_pot_stream_fallback(
+        self,
+        messages: Any,
+        thread: AgentThread | None,
+        agent_kwargs: dict[str, Any],
+        error: Exception,
+    ) -> AsyncIterable[AgentRunResponseUpdate]:
+        """Yield fallback streaming updates when PoT fails."""
+
+        note = self._build_pot_error_note(error)
+        note_update = AgentRunResponseUpdate(
+            text=note,
+            role=Role.ASSISTANT,
+            additional_properties={"strategy": self.reasoning_strategy, "pot_error": note},
+        )
+        yield note_update
+
+        async for update in self._chat_agent.run_stream(
+            messages=messages, thread=thread, **agent_kwargs
+        ):
+            props = dict(update.additional_properties or {})
+            props.update({"strategy": self.reasoning_strategy, "pot_error": note})
+            update.additional_properties = props
+            yield update
+
+    def _build_pot_error_note(self, error: Exception) -> str:
+        """Create a user-facing note describing why PoT fell back."""
+
+        fallback_reason = None
+        if self.pot_module:
+            fallback_reason = getattr(self.pot_module, "last_error", None)
+        base = fallback_reason or str(error)
+        return f"Program of Thought fallback: {base}"
+
+    @staticmethod
+    def _apply_note_to_text(text: str, note: str) -> str:
+        """Prepend note to existing text while preserving whitespace."""
+
+        if not text:
+            return note
+        if text.startswith(note):
+            return text
+        return f"{note}\n\n{text}"

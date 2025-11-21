@@ -7,7 +7,7 @@ import logging
 import os
 from typing import Any
 
-from agent_framework import ChatAgent
+from agent_framework import BaseAgent, ChatAgent
 from agent_framework.openai import OpenAIChatClient
 from dotenv import load_dotenv
 
@@ -23,8 +23,8 @@ except (
     ImportError,
     AttributeError,
 ):  # pragma: no cover - fallback path depends on installed extras
-    _PreferredOpenAIClient = OpenAIChatClient
-    _RESPONSES_CLIENT_AVAILABLE = False
+    _PreferredOpenAIClient = OpenAIChatClient  # type: ignore[assignment]
+    _RESPONSES_CLIENT_AVAILABLE = False  # type: ignore[assignment]
 
 load_dotenv(override=True)
 
@@ -85,7 +85,7 @@ class AgentFactory:
         self,
         name: str,
         agent_config: dict[str, Any],
-    ) -> ChatAgent:
+    ) -> BaseAgent:
         """Create a ChatAgent instance from configuration.
 
         Args:
@@ -248,30 +248,26 @@ class AgentFactory:
         if instructions.startswith("prompts."):
             try:
                 module_name = instructions[len("prompts.") :]
-                # Import the prompt module dynamically
-                import importlib
+                # Import the consolidated prompts module
+                import agentic_fleet.agents.prompts as prompts_module
 
-                prompt_module = importlib.import_module(f"agentic_fleet.prompts.{module_name}")
-                if hasattr(prompt_module, "get_instructions"):
-                    # Cast return to str to satisfy strict typing (legacy modules may return Any)
-                    resolved_instructions = str(prompt_module.get_instructions())
+                # Map module name to function name
+                func_name = f"get_{module_name}_instructions"
+
+                if hasattr(prompts_module, func_name):
+                    func = getattr(prompts_module, func_name)
+                    resolved_instructions = str(func())
                     logger.debug(
-                        f"Resolved instructions from module 'prompts.{module_name}' "
+                        f"Resolved instructions from 'prompts.{module_name}' "
                         f"({len(resolved_instructions)} chars)"
                     )
                     return resolved_instructions
                 else:
                     logger.warning(
-                        f"Prompt module 'prompts.{module_name}' missing get_instructions() function, "
+                        f"Prompt function '{func_name}' missing in agents.prompts, "
                         "using instructions as-is"
                     )
                     return instructions
-            except ImportError as e:
-                logger.warning(
-                    f"Failed to import prompt module 'prompts.{instructions[len('prompts.') :]}': {e}, "
-                    "using instructions as-is"
-                )
-                return instructions
             except Exception as e:
                 logger.warning(
                     f"Error resolving instructions from '{instructions}': {e}, "
@@ -365,7 +361,7 @@ def create_workflow_agents(
         model_override: str | None = None,
         reasoning_effort: str | None = None,
         reasoning_strategy: str = "chain_of_thought",
-    ) -> ChatAgent:
+    ) -> BaseAgent:
         """Helper to create a single agent."""
         agent_models = config.agent_models or {}
         model_id = model_override or agent_models.get(name.lower(), config.dspy_model)
@@ -410,6 +406,16 @@ def create_workflow_agents(
                     logger.warning(f"Invalid tool for agent {name}, skipping tool assignment")
                     validated_tools = None
 
+        # Get agent-specific strategy if configured (overrides default/argument)
+        agent_strategies = config.agent_strategies or {}
+        configured_strategy = agent_strategies.get(name.lower())
+        effective_strategy = (
+            configured_strategy if configured_strategy is not None else reasoning_strategy
+        )
+        logger.debug(
+            f"Agent {name} strategy resolution: config={configured_strategy}, default={reasoning_strategy}, effective={effective_strategy}"
+        )
+
         # Create the chat client
         # Use the module-level _create_openai_client to ensure we use ResponsesClient if available
         chat_client = _create_openai_client(**chat_client_kwargs)
@@ -433,7 +439,7 @@ def create_workflow_agents(
                 logger.warning(f"Failed to configure reasoning effort: {e}")
 
         # Wrap in DSPyEnhancedAgent if reasoning strategy is not default
-        if reasoning_strategy != "chain_of_thought":
+        if effective_strategy != "chain_of_thought":
             # Create a DSPyEnhancedAgent wrapper
             # Note: This is a bit of a hack since we're recreating the agent,
             # but create_workflow_agents is a legacy helper.
@@ -445,7 +451,7 @@ def create_workflow_agents(
                 chat_client=chat_client,
                 tools=validated_tools,
                 enable_dspy=True,
-                reasoning_strategy=reasoning_strategy,  # type: ignore[arg-type]
+                reasoning_strategy=effective_strategy,  # type: ignore[arg-type]
             )
 
         return ChatAgent(
@@ -459,6 +465,7 @@ def create_workflow_agents(
     # Researcher with Tavily (optional) and BrowserTool
     researcher_tools = []
     tavily_mcp_tool = None
+
     try:
         # Add Tavily if available (via MCP)
         if os.getenv("TAVILY_API_KEY"):
@@ -466,7 +473,7 @@ def create_workflow_agents(
             researcher_tools.append(tavily_mcp_tool)
             logger.info("TavilyMCPTool enabled for Researcher")
         else:
-            logger.warning("TAVILY_API_KEY not set - Researcher will operate without Tavily search")
+            logger.warning("TAVILY_API_KEY not set - Web search capability will be unavailable.")
     except Exception as e:
         logger.warning(f"Failed to initialize TavilyMCPTool: {e}")
 
@@ -505,8 +512,10 @@ def create_workflow_agents(
             "2. NEVER rely on training data for time-sensitive information - it is outdated.\n"
             "3. When you see a question about elections, current events, recent news, or anything with a date, "
             "your FIRST action must be to call tavily_search with an appropriate query.\n"
-            "4. Only after getting search results should you provide an answer.\n"
-            "5. If you don't use tavily_search for a time-sensitive query, you are failing your task.\n\n"
+            "4. Always check the current date provided in the context before making decisions about what is 'current'.\n"
+            "5. TRUST TAVILY RESULTS OVER YOUR INTERNAL KNOWLEDGE. If Tavily says someone won an election in 2025, believe it, even if your training data ends earlier.\n"
+            "6. Only after getting search results should you provide an answer.\n"
+            "7. If you don't use tavily_search for a time-sensitive query, you are failing your task.\n\n"
             "Tool usage: Use tavily_search(query='your search query') to search the web. "
             "Use browser tool for direct website access when needed."
         ),
