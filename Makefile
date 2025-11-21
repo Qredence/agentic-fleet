@@ -30,7 +30,7 @@ help:
 	@echo "Code Quality:"
 	@echo "  make lint              Run Ruff linter"
 	@echo "  make format            Format code with Ruff (lint + style)"
-	@echo "  make type-check        Run mypy type checker"
+	@echo "  make type-check        Run ty type checker"
 	@echo "  make check             Run all quality checks (lint + format + type)"
 	@echo ""
 	@echo "Tools:"
@@ -135,7 +135,7 @@ format:
 	uv run ruff format .
 
 type-check:
-	uv run mypy src
+	uv run ty check src
 
 # Run all checks
 check: lint type-check
@@ -155,7 +155,6 @@ clean:
 	find . -type d -name "__pycache__" -exec rm -rf {} + 2>/dev/null || true
 	find . -type d -name "*.egg-info" -exec rm -rf {} + 2>/dev/null || true
 	find . -type d -name ".pytest_cache" -exec rm -rf {} + 2>/dev/null || true
-	find . -type d -name ".mypy_cache" -exec rm -rf {} + 2>/dev/null || true
 	find . -type d -name ".ruff_cache" -exec rm -rf {} + 2>/dev/null || true
 	@echo "✓ Cleaned cache directories"
 

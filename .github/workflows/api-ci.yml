@@ -51,7 +51,7 @@ jobs:
 
       - name: Run Type Checking
         run: |
-          uv run mypy src/agentic_fleet/api src/agentic_fleet/core src/agentic_fleet/db src/agentic_fleet/models
+          uv run ty check src
 
       - name: Run Tests
         run: |

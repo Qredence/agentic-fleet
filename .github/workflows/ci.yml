@@ -54,7 +54,7 @@ jobs:
         run: uv run ruff check . --select I --output-format=github
 
   type-check:
-    name: Type Check (mypy)
+    name: Type Check (ty)
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # ratchet:actions/checkout@v5
@@ -71,8 +71,8 @@ jobs:
       - name: Install dependencies
         run: uv sync --all-extras
 
-      - name: Run mypy type checker
-        run: uv run mypy .
+      - name: Run ty type checker
+        run: uv run ty check src
         continue-on-error: true # Don't fail CI on type errors yet
 
   test:

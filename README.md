@@ -25,6 +25,7 @@ AgenticFleet is a hybrid **DSPy + Microsoft agent-framework** runtime that deliv
   - [Architecture Overview](#architecture-overview)
     - [Workflow Diagram](#workflow-diagram)
     - [Latency \& Slow Phases](#latency--slow-phases)
+    - [Backend API \& Performance](#backend-api--performance)
   - [Directory Layout](#directory-layout)
   - [Installation](#installation)
     - [Python (uv recommended)](#python-uv-recommended)
@@ -35,11 +36,13 @@ AgenticFleet is a hybrid **DSPy + Microsoft agent-framework** runtime that deliv
   - [Quick Start](#quick-start)
     - [TUI / CLI](#tui--cli)
     - [Python API](#python-api)
+    - [Backend API](#backend-api)
     - [Streaming](#streaming)
   - [Execution Modes](#execution-modes)
   - [Agents](#agents)
   - [DSPy Optimization](#dspy-optimization)
   - [Observability \& History](#observability--history)
+  - [Azure Cosmos DB Integration](#azure-cosmos-db-integration)
   - [Evaluation \& Self-Improvement](#evaluation--self-improvement)
   - [Testing \& Quality](#testing--quality)
   - [Troubleshooting](#troubleshooting)
@@ -52,10 +55,10 @@ AgenticFleet is a hybrid **DSPy + Microsoft agent-framework** runtime that deliv
 
 ## Key Features
 
-- **Adaptive Routing** – DSPy supervisor analyzes tasks and decides agent roster + execution mode (delegated / sequential / parallel).
+- **Adaptive Routing** – DSPy reasoner analyzes tasks and decides agent roster + execution mode (delegated / sequential / parallel).
 - **Advanced Reasoning** – Pluggable strategies per agent: **ReAct** for autonomous tool loops (Researcher) and **Program of Thought** for code-based logic (Analyst).
 - **Quality Loops** – Automatic Judge / Reviewer refinement when quality score drops below configurable threshold.
-- **Tool‑Aware Decisions** – Signatures include tool context; Supervisor recommends tool usage (code interpreter, search, browser, etc.).
+- **Tool‑Aware Decisions** – Signatures include tool context; Reasoner recommends tool usage (code interpreter, search, browser, etc.).
 - **Streaming Events** – Emits OpenAI Responses‑compatible events for real‑time TUI / web UI updates.
 - **Self‑Improvement** – GEPA + BootstrapFewShot compilation refines routing from curated examples & execution history.
 - **YAML‑Driven** – Central `workflow_config.yaml` governs models, thresholds, agents, tracing, evaluation toggles.
@@ -74,12 +77,12 @@ Four‑phase pipeline:
 Task → [1] DSPy Analysis → [2] DSPy Routing → [3] Agent Execution → [4] Quality / Judge Assessment → (Optional Refinement)
 ```
 
-| Phase     | Responsibility                            | Source                                                  |
-| --------- | ----------------------------------------- | ------------------------------------------------------- |
-| Analysis  | Extract goals, complexity, constraints    | `dspy_modules/supervisor.py` (`analyze_task`)           |
-| Routing   | Pick agents + execution mode, tools       | `dspy_modules/supervisor.py` (`route_task`)             |
-| Execution | Orchestrate agents & tools; stream events | `workflows/supervisor_workflow.py`                      |
-| Quality   | Score output, recommend improvements      | `dspy_modules/supervisor.py` (`assess_quality` + Judge) |
+| Phase     | Responsibility                            | Source                                                |
+| --------- | ----------------------------------------- | ----------------------------------------------------- |
+| Analysis  | Extract goals, complexity, constraints    | `dspy_modules/reasoner.py` (`analyze_task`)           |
+| Routing   | Pick agents + execution mode, tools       | `dspy_modules/reasoner.py` (`route_task`)             |
+| Execution | Orchestrate agents & tools; stream events | `workflows/supervisor.py`                             |
+| Quality   | Score output, recommend improvements      | `dspy_modules/reasoner.py` (`assess_quality` + Judge) |
 
 ### Workflow Diagram
 
@@ -98,7 +101,7 @@ E --> G[Refinement loop]
 G --> F
 ```
 
-Refinement triggers when score < threshold (default 8 or judge threshold ≥ 7). Handoffs coordinate multi‑agent chains via `HandoffManager`.
+Refinement triggers when score < threshold (default 8 or judge threshold ≥ 7). Handoffs coordinate multi‑agent chains via `HandoffManager` (in `workflows/handoff.py`).
 
 Consult: `docs/developers/architecture.md` & `docs/guides/quick-reference.md`.
 
@@ -107,11 +110,11 @@ Consult: `docs/developers/architecture.md` & `docs/guides/quick-reference.md`.
 Common bottlenecks and how to mitigate:
 
 - DSPy compilation on first run
-  - Use cached compiled supervisor after first run; clear via `uv run python -m agentic_fleet.scripts.manage_cache --clear`
+  - Use cached compiled reasoner after first run; clear via `uv run python -m agentic_fleet.scripts.manage_cache --clear`
   - Reduce GEPA effort in `config/workflow_config.yaml` (e.g., `gepa_max_metric_calls`, `max_bootstrapped_demos`)
   - Set `DSPY_COMPILE=false` during rapid iteration
 - External tool calls (OpenAI, Tavily, Hosted Interpreter)
-  - Prefer lighter Supervisor model `dspy.model: gpt-5-mini`
+  - Prefer lighter Reasoner model `dspy.model: gpt-5-mini`
   - Disable pre‑analysis tool usage for simple tasks
 - Judge/refinement loops
   - Set `quality.max_refinement_rounds: 1`
@@ -124,24 +127,34 @@ Common bottlenecks and how to mitigate:
 
 For timing analysis, run history analytics: `uv run python src/agentic_fleet/scripts/analyze_history.py --timing`.
 
+### Backend API & Performance
+
+Recent optimizations have significantly improved the responsiveness and scalability of the backend API:
+
+- **Non-Blocking Architecture:** Heavy background tasks, such as self-improvement analysis and DSPy compilation, are now offloaded to separate threads. This prevents blocking the main asyncio event loop, ensuring the API remains responsive to new requests even under load.
+- **Job Store Abstraction:** Background job state is no longer tied to a global variable. A pluggable `JobStore` interface (currently implemented as `InMemoryJobStore`) allows for easy future extension to persistent stores like Redis or Azure Cosmos DB.
+- **Performance Benchmarking:** A dedicated benchmark script (`scripts/benchmark_api.py`) is available to rigorously measure API latency, throughput, and error rates under concurrent load.
+- **Real Models Only:** DSPy now requires a real model ID (e.g., `gpt-5-mini`); the previous `test-model`/DummyLM path has been removed to avoid mock outputs during production runs.
+
 ---
 
 ## Directory Layout
 
-| Path                               | Purpose                                                    |
-| ---------------------------------- | ---------------------------------------------------------- |
-| `config/workflow_config.yaml`      | Models, agents, thresholds, tracing, evaluation flags      |
-| `src/agentic_fleet/dspy_modules/`  | DSPy Signatures & Supervisor implementation                |
-| `src/agentic_fleet/workflows/`     | `SupervisorWorkflow`, handoff & exceptions                 |
-| `src/agentic_fleet/agents/`        | Specialist configurations & factory                        |
-| `src/agentic_fleet/tools/`         | Tool adapters: Tavily, Browser, Hosted Interpreter, MCP    |
-| `src/agentic_fleet/utils/`         | Compiler cache, GEPA optimizer, history, tracing, registry |
-| `src/agentic_fleet/evaluation/`    | Metrics & evaluator engine                                 |
-| `src/agentic_fleet/cli/console.py` | Rich / Typer CLI (dspy-fleet)                              |
-| `examples/`                        | Minimal workflow samples                                   |
-| `scripts/`                         | Analysis, self-improvement, dataset generation             |
-| `logs/`                            | Execution history, compilation artifacts                   |
-| `frontend/`                        | Optional Vite + React streaming UI                         |
+| Path                               | Purpose                                                                        |
+| ---------------------------------- | ------------------------------------------------------------------------------ |
+| `config/workflow_config.yaml`      | Models, agents, thresholds, tracing, evaluation flags                          |
+| `src/agentic_fleet/dspy_modules/`  | DSPy Signatures & Reasoner implementation                                      |
+| `src/agentic_fleet/workflows/`     | Flattened orchestration logic (`supervisor.py`, `handoff.py`, `strategies.py`) |
+| `src/agentic_fleet/agents/`        | Specialist configurations, factory, and prompts (`prompts.py`)                 |
+| `src/agentic_fleet/api/`           | FastAPI backend, DB models (`api/db`), settings (`api/settings.py`)            |
+| `src/agentic_fleet/tools/`         | Tool adapters: Tavily, Browser, Hosted Interpreter, MCP                        |
+| `src/agentic_fleet/utils/`         | Compiler cache, GEPA optimizer, history, tracing, registry                     |
+| `src/agentic_fleet/evaluation/`    | Metrics & evaluator engine                                                     |
+| `src/agentic_fleet/cli/console.py` | Rich / Typer CLI (dspy-fleet)                                                  |
+| `examples/`                        | Minimal workflow samples                                                       |
+| `scripts/`                         | Analysis, self-improvement, benchmarking, dataset gen                          |
+| `logs/`                            | Execution history, compilation artifacts                                       |
+| `frontend/`                        | Optional Vite + React streaming UI                                             |
 
 ---
 
@@ -187,11 +200,14 @@ playwright install chromium
 Create `.env` (or copy `.env.example`):
 
 ```bash
-OPENAI_API_KEY=sk-...          # Required for all model calls (validated at startup)
-TAVILY_API_KEY=tvly-...        # Optional: Enables web search for Researcher agent
+OPENAI_API_KEY=sk-...
+# Required for all model calls (validated at startup)
+TAVILY_API_KEY=tvly-...
+# Optional: Enables web search for Researcher agent
 DSPY_COMPILE=true              # Toggle DSPy compilation (true/false)
-OPENAI_BASE_URL=https://...    # Optional custom endpoint
-LANGFUSE_PUBLIC_KEY=...        # Optional observability
+OPENAI_BASE_URL=https://...
+# Optional custom endpoint
+LANGFUSE_PUBLIC_KEY=...
 LANGFUSE_SECRET_KEY=...
 
 # Optional Azure Cosmos DB mirroring
@@ -213,7 +229,7 @@ AGENTICFLEET_DEFAULT_USER_ID=local-dev
 
 Key YAML knobs (`workflow_config.yaml`):
 
-- `dspy.model` – Supervisor model (e.g. gpt-5-mini)
+- `dspy.model` – Reasoner model (e.g. gpt-5-mini)
 - `dspy.optimization.metric_threshold` – Minimum routing accuracy
 - `workflow.supervisor.max_rounds` – Conversation turn limit
 - `workflow.supervisor.enable_streaming` – Event streaming toggle
@@ -232,7 +248,7 @@ Key YAML knobs (`workflow_config.yaml`):
 agentic-fleet                       # Launch interactive console (packaged entry point)
 
 # Process a single task with streaming
-agentic-fleet run -m "Research 2024 AI funding trends" --verbose
+agentic-fleet run -m "What is Gemini 3 Pro?" --verbose
 
 # List available agents and their tools
 agentic-fleet list-agents
@@ -259,6 +275,23 @@ async def main():
 asyncio.run(main())
 ```
 
+### Backend API
+
+Start the FastAPI backend server:
+
+```bash
+./start_backend.sh
+# Server runs at http://localhost:8000
+# API Docs: http://localhost:8000/api/docs
+```
+
+Run the automated performance benchmark:
+
+```bash
+# Requires the backend to be running
+python scripts/benchmark_api.py
+```
+
 ### Streaming
 
 ```python
@@ -278,7 +311,7 @@ async for event in workflow.run_stream("Compare AWS vs Azure AI offerings"):
 | Parallel       | Multiple agents concurrently; synthesis afterwards | Multi‑source comparisons            |
 | Handoff Chains | Explicit role transitions with artifacts           | Complex coding + verification flows |
 
-Supervisor chooses based on task structure + examples; can be overridden via configuration or future explicit flags.
+Reasoner chooses based on task structure + examples; can be overridden via configuration or future explicit flags.
 
 ---
 
@@ -314,7 +347,7 @@ uv run python -m agentic_fleet.scripts.manage_cache --clear
 ## Observability & History
 
 - **History**: Structured events appended to `logs/execution_history.jsonl`.
-- **Cosmos Mirror (optional)**: When `AGENTICFLEET_USE_COSMOS=1`, workflow executions, agent memories, DSPy examples, optimization runs, and cache metadata are mirrored into Cosmos containers (`workflowRuns`, `agentMemory`, `dspyExamples`, `dspyOptimizationRuns`, `cache`). All writes are best-effort and never block the main workflow.
+- **Cosmos Mirror (optional)**: When `AGENTICFLEET_USE_COSMOS=1`, workflow executions, agent memories, DSPy datasets, and cache metadata are mirrored into Cosmos containers (`workflowRuns`, `agentMemory`, `dspyExamples`, `dspyOptimizationRuns`, `cache`). All writes are best-effort and never block the main workflow.
 - **Tracing**: Enable OpenTelemetry in YAML; export to AI Toolkit / OTLP endpoint.
 - **Logging**: Adjustable log level via env (`AGENTIC_FLEET_LOG_LEVEL=DEBUG`).
 - **Analysis**: `scripts/analyze_history.py --all` surfaces aggregate metrics.
@@ -323,7 +356,7 @@ uv run python -m agentic_fleet.scripts.manage_cache --clear
 
 AgenticFleet now includes a lightweight Cosmos helper (`src/agentic_fleet/utils/cosmos.py`) that centralizes credentials, container lookups, and error handling. Enable it by setting `AGENTICFLEET_USE_COSMOS=1` and supplying the endpoint plus either a primary key or managed identity. The runtime mirrors the following data sets without changing your local workflow semantics:
 
-- **Workflow history** (`workflowRuns`) – Each supervisor run (task, routing, events, quality) is mirrored so you can build dashboards or Power BI reports.
+- **Workflow history** (`workflowRuns`) – Each workflow run (task, routing, events, quality) is mirrored so you can build dashboards or Power BI reports.
 - **Agent memory** (`agentMemory`) – Long-term memories keyed by `userId`, ready for Cosmos vector search or downstream RAG systems.
 - **DSPy artifacts** (`dspyExamples`, `dspyOptimizationRuns`) – Keep your routing datasets and optimization metadata in a globally accessible store.
 - **Cache metadata** (`cache`) – Optional TTL-based cache entries for expensive computations.
@@ -357,9 +390,9 @@ uv run python scripts/self_improve.py --max 50
 ## Testing & Quality
 
 ```bash
-make check                 # lint + format (Ruff), type‑check (mypy)
+make check                 # lint + format (Ruff), type‑check (ty)
 make test                  # run pytest suite
-PYTHONPATH=. uv run pytest tests/workflows/test_supervisor_workflow.py::test_supervisor_workflow -q
+PYTHONPATH=. uv run pytest tests/workflows/test_execution_strategies.py -q
 ```
 
 Key test domains: routing accuracy, tool registry integration, judge refinement, lazy compilation, tracing hooks.
