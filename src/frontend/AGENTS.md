@@ -17,7 +17,7 @@ state management, and development workflow for the SPA.
 | `stores/chatStore.ts` | Zustand store managing conversation state, SSE deltas, orchestrator messages, and errors.                                                                                         |
 | `lib/api/`            | REST + SSE clients (`chat.ts`, `magentic-workflow.ts`). All backend calls flow through here.                                                                                      |
 | `lib/parsers/`        | Helpers that translate Responses payloads into frontend-friendly shapes.                                                                                                          |
-| `lib/config.ts`       | Resolves `API_BASE_URL` from environment variables (`VITE_API_BASE_URL`).                                                                                                         |
+| `lib/config.ts`       | Resolves `API_BASE_URL` from environment variables (`VITE_API_URL`) and appends the `/api` prefix automatically.                                                                  |
 | `hooks/`              | Future custom hooks live here. (Empty by default to keep structure consistent with backend docs.)                                                                                 |
 | `types/`              | Shared TypeScript types for chat payloads, workflow entities, and SSE event envelopes.                                                                                            |
 | `assets/`             | Images or static resources consumed by the SPA.                                                                                                                                   |
@@ -31,8 +31,9 @@ state management, and development workflow for the SPA.
   SPA on <http://localhost:5173>.
 - Production build: `make build-frontend` (internally calls `npm run build` and copies assets into
   `src/agentic_fleet/ui`).
-- Environment configuration lives in `.env` (root) or `.env.local` (frontend). Set `VITE_API_BASE_URL`
-  to point at the backend (`http://localhost:8000` by default).
+- Environment configuration lives in `.env` (root) or `.env.local` (frontend). Set `VITE_API_URL`
+  to the backend origin (default `http://localhost:8000`); the `/api` prefix is appended automatically
+  by `lib/config.ts`.
 - When adjusting bundler or lint settings, update `vite.config.ts`, `tsconfig.json`, and
   `package.json` scripts together.
 
