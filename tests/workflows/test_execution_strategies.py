@@ -28,7 +28,7 @@ async def test_execute_delegated_with_single_agent():
             return f"Result: {prompt}"
 
     agents = {agent_name: MockAgent()}
-    result, _ = await execute_delegated(agents, agent_name, task)
+    result = await execute_delegated(agents, agent_name, task)
 
     assert result == f"Result: {task}"
 
