@@ -7,10 +7,10 @@ from __future__ import annotations
 
 import asyncio
 from datetime import datetime
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from ..agents import create_workflow_agents, validate_tool
-from ..dspy_modules.supervisor import DSPySupervisor
+from ..dspy_modules.reasoner import DSPyReasoner
 from ..utils.agent_framework_shims import ensure_agent_framework_shims
 from ..utils.cache import TTLCache
 from ..utils.dspy_manager import configure_dspy_settings
@@ -19,37 +19,18 @@ from ..utils.logger import setup_logger
 from ..utils.tool_registry import ToolRegistry
 from .compilation import CompilationState, compile_supervisor_async, get_compiled_supervisor
 from .config import WorkflowConfig
-from .handoff_manager import HandoffManager
-from .orchestration import SupervisorContext
+from .context import SupervisorContext
+from .handoff import HandoffManager
 from .utils import create_openai_client_with_store
+
+if TYPE_CHECKING:
+    from openai import AsyncOpenAI
 
 logger = setup_logger(__name__)
 
 
-async def initialize_workflow_context(
-    config: WorkflowConfig | None = None,
-    compile_dspy: bool = True,
-    dspy_supervisor: DSPySupervisor | None = None,
-) -> SupervisorContext:
-    """Initialize workflow context with agents, DSPy supervisor, and tools.
-
-    Args:
-        config: Workflow configuration (defaults to WorkflowConfig())
-        compile_dspy: Whether to compile DSPy supervisor
-        dspy_supervisor: Optional pre-initialized DSPy supervisor to reuse
-
-    Returns:
-        Initialized SupervisorContext
-    """
-    config = config or WorkflowConfig()
-    ensure_agent_framework_shims()
-
-    init_start = datetime.now()
-    logger.info("=" * 80)
-    logger.info("Initializing DSPy-Enhanced Agent Framework")
-    logger.info("=" * 80)
-
-    # Validate required environment variables
+def _validate_environment() -> None:
+    """Validate required environment variables."""
     try:
         from ..utils.env import validate_agentic_fleet_env
 
@@ -58,6 +39,11 @@ async def initialize_workflow_context(
         logger.error(f"Environment validation failed: {e}")
         raise
 
+
+def _create_shared_components(
+    config: WorkflowConfig,
+) -> tuple[AsyncOpenAI, ToolRegistry]:
+    """Create and configure shared components (OpenAI client, DSPy, ToolRegistry)."""
     # Create shared OpenAI client once (reused for all agents and supervisor)
     openai_client = create_openai_client_with_store(config.enable_completion_storage)
     logger.info("Created shared OpenAI client for all agents")
@@ -68,31 +54,17 @@ async def initialize_workflow_context(
         model=config.dspy_model,
         enable_cache=True,
         force_reconfigure=False,
+        temperature=config.dspy_temperature,
+        max_tokens=config.dspy_max_tokens,
     )
 
-    # Create tool registry first
+    # Create tool registry
     tool_registry = ToolRegistry()
+    return openai_client, tool_registry
 
-    # Create DSPy supervisor with enhanced signatures enabled (reuse if provided)
-    if dspy_supervisor is None:
-        dspy_supervisor = DSPySupervisor(use_enhanced_signatures=True)
-    elif not getattr(dspy_supervisor, "use_enhanced_signatures", False):
-        logger.warning(
-            "Provided dspy_supervisor does not have use_enhanced_signatures=True. "
-            "This may lead to inconsistent behavior."
-        )
 
-    # Create specialized agents BEFORE compilation if tool-aware DSPy signatures need visibility
-    logger.info("Creating specialized agents...")
-    agents = create_workflow_agents(
-        config=config,
-        openai_client=openai_client,
-        tool_registry=tool_registry,
-        create_client_fn=lambda enable_storage: create_openai_client_with_store(enable_storage),
-    )
-    logger.info(f"Created {len(agents)} agents: {', '.join(agents.keys())}")
-
-    # Register tools in registry early so supervisor sees them during compilation / analysis
+def _register_agent_tools(agents: dict[str, Any], tool_registry: ToolRegistry) -> None:
+    """Register tools from agents into the registry."""
     logger.info("Registering tools in tool registry (pre-compilation)...")
     for agent_name, agent in agents.items():
         registered_count = 0
@@ -146,52 +118,19 @@ async def initialize_workflow_context(
         f"Tool registry initialized with {total_tools} tool(s) across {len(agents)} agent(s)"
     )
 
-    # Attach tool registry to supervisor
-    dspy_supervisor.set_tool_registry(tool_registry)
 
-    # Initialize handoff manager (will be updated after compilation)
-    compilation_state = CompilationState()
+def _setup_dspy_compilation(
+    context: SupervisorContext,
+    config: WorkflowConfig,
+    dspy_supervisor: DSPyReasoner,
+    agents: dict[str, Any],
+    compile_dspy: bool,
+) -> None:
+    """Setup and optionally start DSPy compilation."""
+    compilation_state = context.compilation_state
+    if compilation_state is None:
+        return
 
-    def get_compiled_supervisor_fn():
-        return get_compiled_supervisor(dspy_supervisor, compilation_state)
-
-    handoff_manager = HandoffManager(
-        dspy_supervisor,
-        get_compiled_supervisor=get_compiled_supervisor_fn,
-    )
-
-    # Create analysis cache
-    analysis_cache = (
-        TTLCache[str, dict[str, Any]](config.analysis_cache_ttl_seconds)
-        if config.analysis_cache_ttl_seconds > 0
-        else None
-    )
-
-    # Create supervisor context
-    context = SupervisorContext(
-        config=config,
-        dspy_supervisor=dspy_supervisor,
-        agents=agents,
-        workflow=None,
-        verbose_logging=True,
-        openai_client=openai_client,
-        tool_registry=tool_registry,
-        history_manager=HistoryManager(history_format=config.history_format),
-        handoff_manager=handoff_manager,
-        enable_handoffs=config.enable_handoffs,
-        analysis_cache=analysis_cache,
-        latest_phase_timings={},
-        latest_phase_status={},
-        progress_callback=None,
-        current_execution={},
-        execution_history=[],
-        compilation_status="pending",
-        compilation_task=None,
-        compilation_lock=asyncio.Lock(),
-        compilation_state=compilation_state,
-    )
-
-    # Optionally compile DSPy supervisor
     if compile_dspy and config.compile_dspy:
         logger.info("Setting up DSPy compilation (lazy/background mode)...")
         # Start background compilation task (non-blocking)
@@ -213,6 +152,101 @@ async def initialize_workflow_context(
         logger.info("Skipping DSPy compilation (using base prompts)")
         compilation_state.compilation_status = "skipped"
         context.compilation_status = "skipped"
+
+
+async def initialize_workflow_context(
+    config: WorkflowConfig | None = None,
+    compile_dspy: bool = True,
+    dspy_supervisor: DSPyReasoner | None = None,
+) -> SupervisorContext:
+    """Initialize workflow context with agents, DSPy reasoner, and tools.
+
+    Args:
+        config: Workflow configuration (defaults to WorkflowConfig())
+        compile_dspy: Whether to compile DSPy reasoner
+        dspy_supervisor: Optional pre-initialized DSPy reasoner to reuse
+
+    Returns:
+        Initialized SupervisorContext
+    """
+    config = config or WorkflowConfig()
+    ensure_agent_framework_shims()
+
+    init_start = datetime.now()
+    logger.info("=" * 80)
+    logger.info("Initializing DSPy-Enhanced Agent Framework")
+    logger.info("=" * 80)
+
+    _validate_environment()
+
+    openai_client, tool_registry = _create_shared_components(config)
+
+    # Create DSPy reasoner with enhanced signatures enabled (reuse if provided)
+    if dspy_supervisor is None:
+        dspy_supervisor = DSPyReasoner(use_enhanced_signatures=True)
+    elif not getattr(dspy_supervisor, "use_enhanced_signatures", False):
+        logger.warning(
+            "Provided dspy_supervisor does not have use_enhanced_signatures=True. "
+            "This may lead to inconsistent behavior."
+        )
+
+    # Create specialized agents BEFORE compilation if tool-aware DSPy signatures need visibility
+    logger.info("Creating specialized agents...")
+    agents = create_workflow_agents(
+        config=config,
+        openai_client=openai_client,
+        tool_registry=tool_registry,
+        create_client_fn=lambda enable_storage: create_openai_client_with_store(enable_storage),
+    )
+    logger.info(f"Created {len(agents)} agents: {', '.join(agents.keys())}")
+
+    _register_agent_tools(agents, tool_registry)
+
+    # Attach tool registry to reasoner
+    dspy_supervisor.set_tool_registry(tool_registry)
+
+    # Initialize handoff manager (will be updated after compilation)
+    compilation_state = CompilationState()
+
+    def get_compiled_supervisor_fn():
+        return get_compiled_supervisor(dspy_supervisor, compilation_state)
+
+    handoff = HandoffManager(
+        dspy_supervisor,
+        get_compiled_supervisor=get_compiled_supervisor_fn,
+    )
+
+    # Create analysis cache
+    analysis_cache = (
+        TTLCache[str, dict[str, Any]](config.analysis_cache_ttl_seconds)
+        if config.analysis_cache_ttl_seconds > 0
+        else None
+    )
+
+    # Create supervisor context
+    context = SupervisorContext(
+        config=config,
+        dspy_supervisor=dspy_supervisor,
+        agents=agents,
+        workflow=None,
+        verbose_logging=True,
+        openai_client=openai_client,
+        tool_registry=tool_registry,
+        history_manager=HistoryManager(history_format=config.history_format),
+        handoff=handoff,
+        enable_handoffs=config.enable_handoffs,
+        analysis_cache=analysis_cache,
+        latest_phase_timings={},
+        latest_phase_status={},
+        current_execution={},
+        execution_history=[],
+        compilation_status="pending",
+        compilation_task=None,
+        compilation_lock=asyncio.Lock(),
+        compilation_state=compilation_state,
+    )
+
+    _setup_dspy_compilation(context, config, dspy_supervisor, agents, compile_dspy)
 
     init_time = (datetime.now() - init_start).total_seconds()
     logger.info(f"Workflow context initialized successfully in {init_time:.2f}s")

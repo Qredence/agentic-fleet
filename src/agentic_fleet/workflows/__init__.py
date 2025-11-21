@@ -3,11 +3,8 @@
 This package provides the core workflow orchestration functionality using
 agent-framework WorkflowBuilder for multi-agent task execution.
 
-The workflow is implemented via the fleet/ subpackage, which uses agent-framework's
-WorkflowBuilder and Executors to orchestrate DSPy-enhanced agent execution.
-
 Public API:
-    - SupervisorWorkflow: Type alias for FleetWorkflowAdapter (agent-framework workflow)
+    - SupervisorWorkflow: Main workflow orchestrator
     - WorkflowConfig: Configuration dataclass for workflow execution
     - create_supervisor_workflow: Factory function to create and initialize fleet workflow
     - HandoffManager: Manager for handoff-based workflows
@@ -20,17 +17,17 @@ from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
     from agentic_fleet.workflows.config import WorkflowConfig
+    from agentic_fleet.workflows.context import SupervisorContext
     from agentic_fleet.workflows.exceptions import AgentExecutionError, HistoryError, RoutingError
-    from agentic_fleet.workflows.handoff_manager import HandoffContext, HandoffManager
-    from agentic_fleet.workflows.orchestration import SupervisorContext
-    from agentic_fleet.workflows.shared.models import (
+    from agentic_fleet.workflows.handoff import HandoffContext, HandoffManager
+    from agentic_fleet.workflows.models import (
         AnalysisResult,
         ExecutionOutcome,
         ProgressReport,
         QualityReport,
         RoutingPlan,
     )
-    from agentic_fleet.workflows.supervisor_workflow import (
+    from agentic_fleet.workflows.supervisor import (
         SupervisorWorkflow,
         create_supervisor_workflow,
     )
@@ -61,7 +58,7 @@ def __getattr__(name: str) -> object:
         or name == "create_supervisor_workflow"
     ):
         from agentic_fleet.workflows.config import WorkflowConfig
-        from agentic_fleet.workflows.supervisor_workflow import (
+        from agentic_fleet.workflows.supervisor import (
             SupervisorWorkflow,
             create_supervisor_workflow,
         )
@@ -73,7 +70,7 @@ def __getattr__(name: str) -> object:
         return create_supervisor_workflow
 
     if name == "SupervisorContext":
-        from agentic_fleet.workflows.orchestration import SupervisorContext
+        from agentic_fleet.workflows.context import SupervisorContext
 
         return SupervisorContext
 
@@ -84,7 +81,7 @@ def __getattr__(name: str) -> object:
         "ProgressReport",
         "QualityReport",
     ):
-        from agentic_fleet.workflows.shared.models import (
+        from agentic_fleet.workflows.models import (
             AnalysisResult,
             ExecutionOutcome,
             ProgressReport,
@@ -102,7 +99,7 @@ def __getattr__(name: str) -> object:
         return mapping[name]
 
     if name in ("HandoffManager", "HandoffContext"):
-        from agentic_fleet.workflows.handoff_manager import HandoffContext, HandoffManager
+        from agentic_fleet.workflows.handoff import HandoffContext, HandoffManager
 
         if name == "HandoffManager":
             return HandoffManager

@@ -22,6 +22,8 @@ class WorkflowConfig:
     simple_task_max_words: int = 40
     parallel_threshold: int = 3
     dspy_model: str = "gpt-5-mini"
+    dspy_temperature: float = 1.0
+    dspy_max_tokens: int = 16000
     compile_dspy: bool = True
     refinement_threshold: float = 8.0
     enable_refinement: bool = True
@@ -32,10 +34,12 @@ class WorkflowConfig:
     enable_completion_storage: bool = False
     agent_models: dict[str, str] | None = None
     agent_temperatures: dict[str, float] | None = None
+    agent_strategies: dict[str, str] | None = None
     history_format: str = "jsonl"
     examples_path: str = "data/supervisor_examples.json"
     dspy_optimizer: str = "bootstrap"
     gepa_options: dict[str, Any] | None = None
+    allow_gepa_optimization: bool = False  # Default to False for safety
     enable_handoffs: bool = True
     max_task_length: int = 10000
     quality_threshold: float = 8.0
