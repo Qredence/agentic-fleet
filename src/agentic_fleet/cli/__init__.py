@@ -1,13 +1,27 @@
 """CLI package for AgenticFleet command-line interface.
 
 This package provides the command-line entry points for the AgenticFleet application.
-The main entry point is `app` which is a Typer application.
+The main entry point is `app` which is a Typer application, imported lazily to avoid
+double-loading warnings when invoked via `python -m agentic_fleet.cli.console`.
 """
 
 from __future__ import annotations
 
-from agentic_fleet.cli.console import app
+from typing import TYPE_CHECKING
+
 from agentic_fleet.cli.display import display_result, show_help, show_status
 from agentic_fleet.cli.runner import WorkflowRunner
 
+if TYPE_CHECKING:  # pragma: no cover - helps IDEs without eager import
+    from agentic_fleet.cli.console import app as _app
+
 __all__ = ["WorkflowRunner", "app", "display_result", "show_help", "show_status"]
+
+
+def __getattr__(name: str):
+    """Lazily import the Typer app to avoid runpy double-load warnings."""
+    if name == "app":
+        from agentic_fleet.cli import console as _console
+
+        return _console.app
+    raise AttributeError(f"module {__name__!r} has no attribute {name!r}")

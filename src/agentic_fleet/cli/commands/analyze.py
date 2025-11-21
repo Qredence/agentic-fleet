@@ -35,9 +35,9 @@ def analyze(
             console.print("[red]Workflow failed to initialize.[/red]")
             raise typer.Exit(code=1)
 
-        supervisor = workflow.dspy_supervisor
+        supervisor = workflow.dspy_reasoner
         if supervisor is None:
-            console.print("[red]DSPy supervisor is unavailable.[/red]")
+            console.print("[red]DSPy reasoner is unavailable.[/red]")
             raise typer.Exit(code=1)
 
         # Analyze task
