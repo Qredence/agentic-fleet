@@ -2,7 +2,7 @@
 
 Adds lightweight type information for the third-party ``tavily`` package which
 currently lacks distributed type stubs (py.typed), preventing strict type
-checking tools (e.g. mypy) from analyzing it. We provide minimal TypedDict
+checking tools (e.g. ty) from analyzing it. We provide minimal TypedDict
 definitions and a ``TYPE_CHECKING`` stub for ``TavilyClient`` so that static
 analysis succeeds without altering runtime behavior.
 """
