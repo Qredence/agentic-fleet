@@ -193,20 +193,23 @@ class DSPyReasoner(dspy.Module):
         logger.info(f"Routing task: {task[:100]}...")
 
         if self._is_simple_task(task):
-            logger.info("Detected simple/heartbeat task; routing directly to Writer (delegated).")
-            return {
-                "task": task,
-                "assigned_to": ["Writer"],
-                "mode": "delegated",
-                "subtasks": [task],
-                "tool_plan": [],
-                "tool_requirements": [],
-                "tool_goals": "Direct acknowledgment only",
-                "latency_budget": "low",
-                "handoff_strategy": "",
-                "workflow_gates": "",
-                "reasoning": "Simple/heartbeat task → route to Writer only",
-            }
+            if "Writer" in team:
+                logger.info("Detected simple/heartbeat task; routing directly to Writer (delegated).")
+                return {
+                    "task": task,
+                    "assigned_to": ["Writer"],
+                    "mode": "delegated",
+                    "subtasks": [task],
+                    "tool_plan": [],
+                    "tool_requirements": [],
+                    "tool_goals": "Direct acknowledgment only",
+                    "latency_budget": "low",
+                    "handoff_strategy": "",
+                    "workflow_gates": "",
+                    "reasoning": "Simple/heartbeat task → route to Writer only",
+                }
+            else:
+                logger.warning("Simple/heartbeat task detected, but 'Writer' agent is not present in the team. Falling back to standard routing.")
 
         # Format team description
         team_str = "\n".join([f"- {name}: {desc}" for name, desc in team.items()])
