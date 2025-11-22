@@ -132,7 +132,7 @@ include = [
     "/tests",
     "/LICENSE",
     "/README.md",
-    "/AGENTS.md",
+    "/docs/AGENTS.md",
     "/pyproject.toml",
 ]
 exclude = ["/.github", "/var", "/logs", "/__pycache__", "*.pyc"]
@@ -160,7 +160,6 @@ dev = [
 "agent-framework-copilotstudio" = { git = "https://github.com/microsoft/agent-framework.git", branch = "main", subdirectory = "python/packages/copilotstudio" }
 "agent-framework-mem0" = { git = "https://github.com/microsoft/agent-framework.git", branch = "main", subdirectory = "python/packages/mem0" }
 "agent-framework-devui" = { git = "https://github.com/microsoft/agent-framework.git", branch = "main", subdirectory = "python/packages/devui" }
-"agent-framework-ag-ui" = { git = "https://github.com/microsoft/agent-framework.git", branch = "main", subdirectory = "python/packages/ag-ui" }
 
 
 [tool.ruff]
