@@ -233,7 +233,8 @@ class AnalysisExecutor(Executor):
                     result = await result
                 return result
         
-        # This line should never be reached due to reraise=True above
+        # Defensive fallback: This line should never be reached due to reraise=True in AsyncRetrying.
+        # If reached, it indicates unexpected behavior or a bug in the tenacity library.
         raise RuntimeError("Retry loop completed without result or exception")
 
 
