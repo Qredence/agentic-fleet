@@ -88,9 +88,17 @@ def _build_group_chat_workflow(
         from agent_framework.openai import OpenAIChatClient
 
         model_id = "gpt-4o"
-        if context.config and hasattr(context.config, "model"):
-            model_id = str(context.config.model)
-        elif hasattr(context.config, "dspy") and hasattr(context.config.dspy, "model"):
+-        if context.config and hasattr(context.config, "model"):
+-            model_id = str(context.config.model)
+-        elif hasattr(context.config, "dspy") and hasattr(context.config.dspy, "model"):
+-            model_id = str(context.config.dspy.model)
++        if context.config:
++            if hasattr(context.config, "model"):
++                model_id = str(context.config.model)
++            elif hasattr(context.config, "dspy") and hasattr(context.config.dspy, "model"):
++                model_id = str(context.config.dspy.model)
++        else:
++            raise ValueError("Model configuration not found in context.")
             model_id = str(context.config.dspy.model)
 
         chat_client = OpenAIChatClient(
