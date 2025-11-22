@@ -249,9 +249,10 @@ class WorkflowRunner:
                 # explicitly if it can.
                 #
                 # Let's revert this change and handle it in `src/agentic_fleet/cli/commands/run.py`.
-                pass
-            except Exception:
-                pass
+            except Exception as e:
+                # Suppress initialization errors during mode detection
+                # (fallback to standard mode will be handled by caller)
+                logger.debug(f"Failed to initialize DSPyReasoner for auto-mode: {e}")
 
         with self.console.status(f"[bold green]Initializing DSPy-Enhanced Workflow ({mode})..."):
             # Initialize workflow using the CLI-derived WorkflowConfig so that
