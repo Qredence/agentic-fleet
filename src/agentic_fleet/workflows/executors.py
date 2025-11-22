@@ -517,7 +517,6 @@ class ProgressExecutor(Executor):
         )
 
     async def _call_with_retry(self, fn, *args, **kwargs):
-        import asyncio
 
         attempts = 3
         for attempt in range(attempts):
