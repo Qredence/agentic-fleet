@@ -197,8 +197,7 @@ class SupervisorWorkflow:
             # However, since we haven't fully implemented dynamic graph rebuilding in run(),
             # we will proceed with the initialized workflow unless it's fast_path (handled above).
             # To truly support auto-mode, the runner should call select_workflow_mode BEFORE instantiating SupervisorWorkflow.
-
-            pass  # Dynamic graph switching not yet implemented in run(); handled in CLI runner layer.
+            # Note: Dynamic graph switching not yet implemented in run(); handled in CLI runner layer.
 
         if self.dspy_reasoner and self._is_simple_task(task):
             logger.info(f"Fast Path triggered for task: {task[:50]}...")

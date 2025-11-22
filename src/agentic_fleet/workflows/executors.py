@@ -232,6 +232,9 @@ class AnalysisExecutor(Executor):
                 if asyncio.iscoroutine(result):
                     result = await result
                 return result
+        
+        # This line should never be reached due to reraise=True above
+        raise RuntimeError("Retry loop completed without result or exception")
 
 
 class RoutingExecutor(Executor):
@@ -375,6 +378,9 @@ class RoutingExecutor(Executor):
                 if asyncio.iscoroutine(result):
                     result = await result
                 return result
+        
+        # This line should never be reached due to reraise=True above
+        raise RuntimeError("Retry loop completed without result or exception")
 
 
 # Shared retry utility for executors
@@ -560,6 +566,9 @@ class ProgressExecutor(Executor):
                 if asyncio.iscoroutine(result):
                     result = await result
                 return result
+        
+        # This line should never be reached due to reraise=True above
+        raise RuntimeError("Retry loop completed without result or exception")
 
 
 class QualityExecutor(Executor):
@@ -664,6 +673,9 @@ class QualityExecutor(Executor):
                 if asyncio.iscoroutine(result):
                     result = await result
                 return result
+        
+        # This line should never be reached due to reraise=True above
+        raise RuntimeError("Retry loop completed without result or exception")
 
 
 class JudgeRefineExecutor(Executor):

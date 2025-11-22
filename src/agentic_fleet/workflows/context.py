@@ -14,8 +14,8 @@ from ..utils.tool_registry import ToolRegistry
 from .config import WorkflowConfig
 from .handoff import HandoffManager
 
-if True:  # Lazy import to avoid circular dependency if needed, though direct import seems safe
-    from .compilation import CompilationState
+# Direct import - no circular dependency detected
+from .compilation import CompilationState
 
 
 @dataclass
