@@ -532,3 +532,14 @@ class SelfImprovementEngine:
             return added, status
         else:
             return 0, "No new high-quality examples found for self-improvement."
+
+    def _record_memory_from_execution(
+        self,
+        execution: dict[str, Any],
+        example: dict[str, Any],
+        memory_type: str = "training_example",
+    ) -> None:
+        """Record memory from execution for future reference."""
+        # This is a placeholder for memory recording logic
+        # In a real implementation, this would store the example in a vector DB or similar
+        pass

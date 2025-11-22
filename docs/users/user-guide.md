@@ -76,19 +76,20 @@ Get a free Tavily API key at [tavily.com](https://tavily.com) for high-quality w
 The command-line interface for interacting with the framework:
 
 ```bash
-# Basic usage
+# Basic usage (Auto-mode detects best workflow)
 uv run agentic-fleet run -m "Your question here"
+
+# Explicitly force a mode
+uv run agentic-fleet run -m "Complex analysis" --mode standard
+uv run agentic-fleet run -m "Quick research" --mode handoff
 
 # With verbose logging (see all DSPy decisions)
 uv run agentic-fleet run -m "Your question here" --verbose
-
-# Save output to file
-uv run agentic-fleet run -m "Your question here" --verbose 2>&1 | tee logs/output.log
 ```
 
-## Workflow via CLI
+### Workflow via CLI
 
-### Running the Supervisor Workflow
+#### Running the Supervisor Workflow
 
 Once the package is installed you can invoke the workflow directly with the
 packaged CLI (no `uv run` wrapper required in production shells):
@@ -99,6 +100,7 @@ agentic-fleet run -m "Map Q4 risks for the AI compliance program"
 
 Commonly used flags:
 
+- `--mode <auto|standard|handoff>` – Select workflow architecture (default: `auto`)
 - `--verbose` – stream DSPy analysis, routing, tool calls, and judge feedback
 - `--no-compile` – skip DSPy compilation for the current session (faster cold start)
 - `--history <path>` – override where execution history is written
@@ -545,7 +547,34 @@ Add examples to `data/supervisor_examples.json` that show when to use the new to
 
 ## Execution Modes
 
-### Delegated Mode
+### Auto Mode (Default)
+
+The DSPy reasoner analyzes the task complexity, time sensitivity, and structure to automatically select the best architecture:
+
+- **Fast Path**: For trivial queries ("Hello", "2+2"). Instant response, zero tool overhead.
+- **Handoff**: For linear tasks, simple research, or when speed is priority. Uses a "Triage" coordinator to route directly to specialists.
+- **Standard**: For complex, multi-step workflows requiring robustness. Uses the full "Committee" (Analysis → Routing → Execution → Review → Judge).
+
+### Handoff Mode
+
+A lightweight, collaborative graph where agents pass control directly.
+
+**Characteristics**:
+
+- **Coordinator**: A "Triage" agent receives the user task.
+- **Topology**: Full mesh (any agent can hand off to any other).
+- **Speed**: High (bypasses intermediate supervisor steps).
+- **Use Case**: "Who won the election?", "Weather in Paris", "Quick fact check".
+
+**Example**:
+
+```bash
+agentic-fleet run -m "What is the weather in Paris?" --mode handoff
+# Triage -> Researcher (gets weather) -> Triage -> Final Result
+# Latency: ~30s (vs ~4m for Standard)
+```
+
+### Delegated Mode (Standard)
 
 Single agent handles the entire task end-to-end.
 

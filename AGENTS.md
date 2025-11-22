@@ -138,14 +138,19 @@ Additions require updates to: `workflow_config.yaml`, `agents/*.py`, prompt modu
 
 ## Execution Patterns
 
-| Pattern       | Flow                                   | Example                                                        |
-| ------------- | -------------------------------------- | -------------------------------------------------------------- |
-| Delegated     | Single agent                           | "Summarize latest AI conference keynote" → Researcher          |
-| Sequential    | Linear chain                           | Researcher → Analyst → Writer → Reviewer                       |
-| Parallel      | Concurrent specialists then synthesize | Researcher(AWS) + Researcher(Azure) + Researcher(GCP) → Writer |
-| Handoff Chain | Explicit staged roles                  | Planner → Coder → Verifier → Generator                         |
+| Pattern    | Flow                                   | Example                                                        |
+| ---------- | -------------------------------------- | -------------------------------------------------------------- |
+| **Auto**   | DSPy selects best mode (Default)       | User asks question → System picks Handoff or Standard          |
+| Delegated  | Single agent                           | "Summarize latest AI conference keynote" → Researcher          |
+| Sequential | Linear chain                           | Researcher → Analyst → Writer → Reviewer                       |
+| Parallel   | Concurrent specialists then synthesize | Researcher(AWS) + Researcher(Azure) + Researcher(GCP) → Writer |
+| Handoff    | Collaborative Graph                    | Triage → Researcher ⇄ Analyst → Triage (Fast/Direct)           |
 
-Reasoner selects pattern based on task analysis + historical examples.
+**Auto Mode**: The default for CLI runs. The DSPy reasoner analyzes the task complexity and time-sensitivity to choose between:
+
+- **Handoff**: For speed, simple queries, and real-time research. Uses a "Triage" coordinator.
+- **Standard**: For complex, multi-step workflows requiring robust quality gates (Sequential/Parallel).
+- **Fast Path**: For trivial greetings or simple math (instant response).
 
 Routing defaults (2025-11): when the router assigns multiple agents but leaves mode as delegated, the workflow auto-normalizes to parallel fan-out with aligned subtasks to cut latency. Time-sensitive tasks (keywords like "latest/current/today" or years >=2023) force `tavily_search` and ensure Researcher is included if the key is available.
 

@@ -80,6 +80,7 @@ class DSPyEnhancedAgent(ChatAgent):
         self.reasoning_strategy = reasoning_strategy
         self.cache = TTLCache(ttl_seconds=cache_ttl)
         self.tracker = PerformanceTracker()
+        self.task_enhancer: Any | None = None
 
         # Initialize reasoning modules using the agent's tools
         self.react_module = FleetReAct(tools=self.tools) if reasoning_strategy == "react" else None
@@ -403,3 +404,11 @@ class DSPyEnhancedAgent(ChatAgent):
         if text.startswith(note):
             return text
         return f"{note}\n\n{text}"
+
+    def _create_timeout_response(self, timeout: int) -> ChatMessage:
+        """Create a timeout response message."""
+        return ChatMessage(
+            role=Role.ASSISTANT,
+            text=f"Task execution timed out after {timeout} seconds.",
+            metadata={"status": "timeout", "timeout": timeout},
+        )

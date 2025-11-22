@@ -1,19 +1,31 @@
 import time
 import uuid
+from typing import Annotated
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, Depends, HTTPException
 
-from agentic_fleet.api.dependencies import Logger
+from agentic_fleet.api.dependencies import Logger, get_logger
 from agentic_fleet.api.exceptions import WorkflowExecutionError
-from agentic_fleet.api.models import WorkflowRunRequest, WorkflowRunResponse
+from agentic_fleet.api.models import WorkflowRunRequest, WorkflowRunResponse, WorkflowStatus
 from agentic_fleet.workflows.config import WorkflowConfig
-from agentic_fleet.workflows.supervisor import create_supervisor_workflow
+from agentic_fleet.workflows.supervisor import SupervisorWorkflow, create_supervisor_workflow
 
 router = APIRouter()
 
 
+async def get_workflow_factory(request: WorkflowRunRequest) -> SupervisorWorkflow:
+    """Dependency to create a workflow instance."""
+    inputs = request.inputs or {}
+    workflow_config = WorkflowConfig(**inputs.get("config", {}))
+    return await create_supervisor_workflow(config=workflow_config)
+
+
 @router.post("/run", response_model=WorkflowRunResponse)
-async def run_workflow(request: WorkflowRunRequest, logger: Logger):
+async def run_workflow(
+    request: WorkflowRunRequest,
+    logger: Annotated[Logger, Depends(get_logger)],
+    workflow: Annotated[SupervisorWorkflow, Depends(get_workflow_factory)],
+):
     """Run a workflow."""
     run_id = str(uuid.uuid4())
     start_time = time.time()
@@ -29,9 +41,6 @@ async def run_workflow(request: WorkflowRunRequest, logger: Logger):
 
         logger.info(f"Starting workflow run {run_id} for task: {task[:50]}...")
 
-        workflow_config = WorkflowConfig(**inputs.get("config", {}))
-        workflow = await create_supervisor_workflow(config=workflow_config)
-
         result = await workflow.run(task)
 
         execution_time = time.time() - start_time
@@ -39,7 +48,7 @@ async def run_workflow(request: WorkflowRunRequest, logger: Logger):
 
         return WorkflowRunResponse(
             run_id=run_id,
-            status="completed",
+            status=WorkflowStatus.COMPLETED,
             output={
                 "result": result.get("result"),
                 "quality_score": result.get("quality", {}).get("score"),

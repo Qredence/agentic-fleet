@@ -90,9 +90,9 @@ def run(
         help="Optimize for latency (lighter judge/refinement settings where supported)",
     ),
     mode: str = typer.Option(
-        "standard",
+        "auto",
         "--mode",
-        help="Workflow mode (standard, group_chat, concurrent, handoff)",
+        help="Workflow mode (auto, standard, group_chat, concurrent, handoff)",
     ),
 ) -> None:
     """
@@ -130,6 +130,45 @@ def run(
 
     # Initialize workflow with model parameter
     async def init_runner() -> None:
+        final_mode = mode
+
+        # Handle Auto Mode
+        if mode == "auto" and message_input:
+            console.print("[dim]Auto-detecting workflow mode...[/dim]")
+            try:
+                # Quick DSPy init for decision
+                import dspy
+
+                from ...dspy_modules.reasoner import DSPyReasoner
+
+                if not dspy.settings.lm:
+                    # Minimal config
+                    lm = dspy.LM(
+                        f"openai/{model or 'gpt-5-mini'}", api_key=os.getenv("OPENAI_API_KEY")
+                    )
+                    dspy.configure(lm=lm)
+
+                reasoner = DSPyReasoner(use_enhanced_signatures=True)
+                decision = reasoner.select_workflow_mode(message_input)
+                detected = decision.get("mode", "standard")
+
+                if detected == "fast_path":
+                    # Fast path can be handled by standard mode's fast-path logic,
+                    # or we can run it here. Let's map it to 'standard' but let supervisor handle fast path.
+                    # Actually supervisor has fast path check.
+                    final_mode = "standard"
+                    console.print(
+                        "[bold green]Auto-detected:[/bold green] Fast Path (via Standard)"
+                    )
+                else:
+                    final_mode = detected
+                    console.print(f"[bold green]Auto-detected:[/bold green] {final_mode}")
+                    console.print(f"[dim]Reasoning: {decision.get('reasoning')}[/dim]")
+
+            except Exception as e:
+                logger.warning(f"Auto-detection failed: {e}. Defaulting to standard.")
+                final_mode = "standard"
+
         await runner.initialize_workflow(
             compile_dspy=compile_dspy,
             model=model,
@@ -138,7 +177,7 @@ def run(
             # In fast mode, request the light pipeline profile to reduce
             # the number of LM calls for simple queries.
             pipeline_profile="light" if fast else None,
-            mode=mode,
+            mode=final_mode,
             allow_gepa=False,  # Disable GEPA optimization during run
         )
         # Apply optional fast-mode tuning on top of the loaded config.

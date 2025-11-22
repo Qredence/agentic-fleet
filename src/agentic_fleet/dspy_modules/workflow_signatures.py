@@ -39,3 +39,21 @@ class EnhancedTaskRouting(dspy.Signature):
     tool_goals: str = dspy.OutputField(desc="Specific goals for tool usage")
     latency_budget: str = dspy.OutputField(desc="Estimated time/latency budget")
     reasoning: str = dspy.OutputField(desc="Reasoning for the routing decision")
+
+
+class WorkflowStrategy(dspy.Signature):
+    """Decides the high-level workflow architecture for a task.
+
+    Selects between:
+    - 'handoff': For simple, linear, or real-time tasks (Low latency).
+    - 'standard': For complex, multi-step, or quality-critical tasks (High robustness).
+    - 'fast_path': For trivial queries (Instant).
+    """
+
+    task: str = dspy.InputField(desc="The user's request or task")
+    complexity_analysis: str = dspy.InputField(desc="Analysis of task complexity")
+
+    workflow_mode: Literal["handoff", "standard", "fast_path"] = dspy.OutputField(
+        desc="The optimal workflow architecture"
+    )
+    reasoning: str = dspy.OutputField(desc="Why this architecture was chosen")

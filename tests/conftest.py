@@ -1,10 +1,24 @@
 """Pytest configuration and fixtures."""
 
+import os
 import sys
+import tempfile
 import types
 from pathlib import Path
 from types import SimpleNamespace
 from typing import Any
+from unittest.mock import MagicMock
+
+# Configure DSPy cache directory to a writable temp location before import
+os.environ["DSPY_CACHEDIR"] = tempfile.mkdtemp()
+
+# Mock azure.cosmos if missing (for tests in envs without it)
+try:
+    import azure.cosmos  # noqa: F401
+except ImportError:
+    mock_cosmos = MagicMock()
+    sys.modules["azure.cosmos"] = mock_cosmos
+    sys.modules["azure.cosmos.aio"] = mock_cosmos
 
 import dspy
 import pytest
@@ -72,6 +86,30 @@ class WorkflowOutputEvent:  # pragma: no cover - stub
     def __init__(self, data=None, source_executor_id=None):
         self.data = data or {}
         self.source_executor_id = source_executor_id
+
+
+class ExecutorCompletedEvent:  # pragma: no cover - stub
+    def __init__(self, executor_id=None, output=None):
+        self.executor_id = executor_id
+        self.output = output
+
+
+class WorkflowStartedEvent:  # pragma: no cover - stub
+    def __init__(self, data=None):
+        self.data = data
+
+
+class WorkflowStatusEvent:  # pragma: no cover - stub
+    def __init__(self, state=None, data=None):
+        self.state = state
+        self.data = data
+
+
+class WorkflowRunState:  # pragma: no cover - stub
+    IDLE = "idle"
+    IN_PROGRESS = "in_progress"
+    COMPLETED = "completed"
+    FAILED = "failed"
 
 
 class WorkflowContext:  # pragma: no cover - stub
@@ -153,6 +191,23 @@ class AgentRunResponse:  # pragma: no cover - stub
         return self.messages
 
 
+class AgentRunResponseUpdate:  # pragma: no cover - stub
+    def __init__(
+        self,
+        text: str | None = None,
+        role: str | None = None,
+        additional_properties: dict[str, Any] | None = None,
+        **kwargs: Any,
+    ) -> None:
+        self.text = text
+        self.role = role
+        self.additional_properties = additional_properties or {}
+
+
+class AgentThread:  # pragma: no cover - stub
+    pass
+
+
 agent_framework.ToolProtocol = ToolProtocol
 agent_framework.HostedCodeInterpreterTool = HostedCodeInterpreterTool
 agent_framework.ChatAgent = ChatAgent
@@ -161,12 +216,18 @@ agent_framework.Role = Role
 agent_framework.MagenticAgentMessageEvent = MagenticAgentMessageEvent
 agent_framework.MagenticBuilder = MagenticBuilder
 agent_framework.WorkflowOutputEvent = WorkflowOutputEvent
+agent_framework.ExecutorCompletedEvent = ExecutorCompletedEvent
+agent_framework.WorkflowStartedEvent = WorkflowStartedEvent
+agent_framework.WorkflowStatusEvent = WorkflowStatusEvent
+agent_framework.WorkflowRunState = WorkflowRunState
 agent_framework.WorkflowContext = WorkflowContext
 agent_framework.Executor = Executor
 agent_framework.handler = handler
 agent_framework.WorkflowBuilder = WorkflowBuilder
 agent_framework.WorkflowAgent = WorkflowAgent
 agent_framework.AgentRunResponse = AgentRunResponse
+agent_framework.AgentRunResponseUpdate = AgentRunResponseUpdate
+agent_framework.AgentThread = AgentThread
 
 # Ensure agent_framework.openai submodule exists with OpenAIChatClient stub.
 if "agent_framework.openai" not in sys.modules:

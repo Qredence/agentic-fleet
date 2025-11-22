@@ -5,8 +5,20 @@ Logging utilities for the workflow system.
 from __future__ import annotations
 
 import logging
+import os
 import sys
 from pathlib import Path
+
+from pythonjsonlogger import jsonlogger
+
+
+class _EnsureRequestIdFilter(logging.Filter):
+    """Guarantee `request_id` exists so formatters don't raise KeyError."""
+
+    def filter(self, record: logging.LogRecord) -> bool:  # pragma: no cover - trivial
+        if not hasattr(record, "request_id"):
+            record.request_id = None
+        return True
 
 
 def setup_logger(
@@ -14,22 +26,42 @@ def setup_logger(
     level: str = "INFO",
     log_file: str | None = None,
     format_string: str | None = None,
+    json_format: bool = False,
 ) -> logging.Logger:
     """
     Setup logger with console and optional file output.
+
+    Args:
+        name: Logger name
+        level: Logging level
+        log_file: Optional path to log file
+        format_string: Optional format string for text logs
+        json_format: Whether to use JSON formatting (overrides format_string)
     """
+    # Check env var for global JSON logging override
+    if os.getenv("LOG_FORMAT", "text").lower() == "json":
+        json_format = True
 
     logger = logging.getLogger(name)
     logger.setLevel(getattr(logging, level.upper()))
 
-    # Remove existing handlers
-    logger.handlers.clear()
+    # Remove existing handlers to prevent duplicates
+    if logger.hasHandlers():
+        logger.handlers.clear()
 
-    # Default format
-    if format_string is None:
-        format_string = "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+    if not any(isinstance(f, _EnsureRequestIdFilter) for f in logger.filters):
+        logger.addFilter(_EnsureRequestIdFilter())
 
-    formatter = logging.Formatter(format_string)
+    # Create formatter
+    if json_format:
+        formatter = jsonlogger.JsonFormatter(
+            "%(asctime)s %(name)s %(levelname)s %(message)s %(request_id)s",
+            timestamp=True,
+        )
+    else:
+        if format_string is None:
+            format_string = "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+        formatter = logging.Formatter(format_string)
 
     # Console handler
     console_handler = logging.StreamHandler(sys.stdout)

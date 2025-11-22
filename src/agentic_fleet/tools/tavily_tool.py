@@ -16,6 +16,7 @@ from typing import TYPE_CHECKING, Any, TypedDict
 from agent_framework import ToolProtocol
 
 from agentic_fleet.tools.serialization import SerializationMixin
+from agentic_fleet.utils.resilience import external_api_retry
 
 try:  # Optional dependency — keep import non-fatal at module load time
     from tavily import TavilyClient  # type: ignore[import]
@@ -111,26 +112,22 @@ class TavilySearchTool(ToolProtocol, SerializationMixin):
             },
         }
 
-    async def run(
-        self,
-        query: str,
-        search_depth: str = "advanced",
-        topic: str = "general",
-        include_domains: list[str] | None = None,
-    ) -> str:
-        """
-        Execute a web search using Tavily.
+    @external_api_retry
+    async def run(self, query: str, **kwargs: Any) -> str:
+        """Execute the search query.
 
         Args:
-            query: The search query
-            search_depth: 'basic' or 'advanced' search depth
-            topic: 'general' or 'news'
-            include_domains: Optional list of domains to include
+            query: The search query string
+            **kwargs: Additional arguments (ignored)
 
         Returns:
-            Formatted search results with sources
+            Formatted search results string
         """
         try:
+            search_depth = kwargs.get("search_depth", "advanced")
+            topic = kwargs.get("topic", "general")
+            include_domains = kwargs.get("include_domains")
+
             normalized_depth = search_depth if search_depth in {"basic", "advanced"} else "advanced"
             normalized_topic = topic if topic in {"general", "news"} else "general"
 

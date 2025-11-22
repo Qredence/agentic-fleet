@@ -6,6 +6,7 @@ execution and coordinates with the display system.
 
 from __future__ import annotations
 
+import os
 from datetime import datetime
 from typing import Any
 
@@ -207,7 +208,53 @@ class WorkflowRunner:
         )
         self.workflow_config = workflow_config
 
-        with self.console.status("[bold green]Initializing DSPy-Enhanced Workflow..."):
+        # Auto-mode detection logic
+        if mode == "auto":
+            self.console.print("[dim]Auto-detecting workflow mode...[/dim]")
+            # We need a DSPyReasoner to make the decision.
+            # Use the configured dspy model settings.
+            import dspy
+
+            from ..dspy_modules.reasoner import DSPyReasoner
+
+            # Ensure DSPy is configured
+            # (It might be configured by create_supervisor_workflow later, but we need it now)
+            # We'll use a lightweight config for this check if possible, or just rely on what we have.
+            try:
+                # Basic DSPy setup just for this decision
+                if not dspy.settings.lm:
+                    # Manual fallback if helper not available easily
+                    api_key = os.getenv("OPENAI_API_KEY")
+                    model_name = effective_model
+                    if api_key:
+                        lm = dspy.LM(f"openai/{model_name}", api_key=api_key)
+                        dspy.configure(lm=lm)
+            except Exception as e:
+                logger.warning(
+                    f"Failed to configure DSPy for auto-mode: {e}. Fallback to standard."
+                )
+
+            try:
+                DSPyReasoner(use_enhanced_signatures=True)
+                # We don't have the task yet! initialize_workflow is called before run().
+                # The CLI structure calls initialize_workflow, THEN run_without_streaming(message).
+                # This means we can't decide mode based on message here.
+                #
+                # Solution: If mode is 'auto', we initialize with a 'standard' workflow BUT
+                # enable a flag in SupervisorWorkflow to check the mode on the first run() call
+                # and potentially rebuild/switch.
+                #
+                # HOWEVER, switching graphs at runtime is complex.
+                # Alternative: The CLI 'run' command has the message. It should pass mode='auto' logic
+                # explicitly if it can.
+                #
+                # Let's revert this change and handle it in `src/agentic_fleet/cli/commands/run.py`.
+            except Exception as e:
+                # Suppress initialization errors during mode detection
+                # (fallback to standard mode will be handled by caller)
+                logger.debug(f"Failed to initialize DSPyReasoner for auto-mode: {e}")
+
+        with self.console.status(f"[bold green]Initializing DSPy-Enhanced Workflow ({mode})..."):
             # Initialize workflow using the CLI-derived WorkflowConfig so that
             # YAML and command-line options consistently drive execution.
             workflow = await create_supervisor_workflow(

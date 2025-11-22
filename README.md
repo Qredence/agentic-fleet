@@ -240,24 +240,24 @@ Key YAML knobs (`workflow_config.yaml`):
 
 ---
 
-## Quick Start
+### Quick Start
 
-### TUI / CLI
+#### TUI / CLI
 
 ```bash
 agentic-fleet                       # Launch interactive console (packaged entry point)
 
-# Process a single task with streaming
+# Process a single task (Auto-mode detects best workflow)
 agentic-fleet run -m "What is Gemini 3 Pro?" --verbose
+
+# Explicitly use Handoff mode for fast research
+agentic-fleet run -m "Who won the NY mayoral race?" --mode handoff
 
 # List available agents and their tools
 agentic-fleet list-agents
 
 # Run batch evaluation (uses config dataset by default)
 agentic-fleet evaluate --max-tasks 5
-
-# Module-style invocation (alternative)
-python -m agentic_fleet.cli.console --help
 ```
 
 ### Python API
@@ -267,7 +267,8 @@ import asyncio
 from agentic_fleet.workflows import create_supervisor_workflow
 
 async def main():
-		workflow = await create_supervisor_workflow(compile_dspy=True)
+		# Auto-mode is default in CLI, for API specify if needed or use default 'standard'
+		workflow = await create_supervisor_workflow(compile_dspy=True, mode="standard")
 		result = await workflow.run("Summarize transformer architecture evolution")
 		print(result["result"])  # final output
 		print(result["quality"]) # quality assessment details
@@ -285,13 +286,6 @@ Start the FastAPI backend server:
 # API Docs: http://localhost:8000/api/docs
 ```
 
-Run the automated performance benchmark:
-
-```bash
-# Requires the backend to be running
-python scripts/benchmark_api.py
-```
-
 ### Streaming
 
 ```python
@@ -304,14 +298,15 @@ async for event in workflow.run_stream("Compare AWS vs Azure AI offerings"):
 
 ## Execution Modes
 
-| Mode           | Description                                        | Use Case                            |
-| -------------- | -------------------------------------------------- | ----------------------------------- |
-| Delegated      | Single agent manages entire task                   | Focused research, simple writeups   |
-| Sequential     | Output of one feeds next                           | Research → Analyze → Write report   |
-| Parallel       | Multiple agents concurrently; synthesis afterwards | Multi‑source comparisons            |
-| Handoff Chains | Explicit role transitions with artifacts           | Complex coding + verification flows |
+| Mode       | Description                                        | Use Case                               |
+| ---------- | -------------------------------------------------- | -------------------------------------- |
+| **Auto**   | **Default.** DSPy analyzes task to pick best mode. | General usage.                         |
+| Delegated  | Single agent manages entire task                   | Focused research, simple writeups      |
+| Sequential | Output of one feeds next                           | Research → Analyze → Write report      |
+| Parallel   | Multiple agents concurrently; synthesis afterwards | Multi‑source comparisons               |
+| Handoff    | Collaborative graph with direct agent handoffs     | Fast research, linear specialist flows |
 
-Reasoner chooses based on task structure + examples; can be overridden via configuration or future explicit flags.
+Reasoner chooses based on task structure + examples; can be overridden via configuration or explicit flags.
 
 ---
 

@@ -9,13 +9,14 @@ from fastapi import FastAPI, Request, status
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
+from prometheus_fastapi_instrumentator import Instrumentator
 
 from agentic_fleet.api.db.base_class import Base
 from agentic_fleet.api.db.cosmos import cosmos_db
 from agentic_fleet.api.db.session import engine
 from agentic_fleet.api.exceptions import AgenticFleetAPIError
 from agentic_fleet.api.middlewares import LoggingMiddleware, RequestIDMiddleware
-from agentic_fleet.api.routes import health, history, logs, workflow
+from agentic_fleet.api.routes import health, history, logs, optimization, workflow
 from agentic_fleet.api.settings import settings
 from agentic_fleet.utils.logger import setup_logger
 
@@ -69,6 +70,9 @@ app.add_middleware(
 app.add_middleware(LoggingMiddleware)  # type: ignore[arg-type]
 app.add_middleware(RequestIDMiddleware)  # type: ignore[arg-type]
 
+# Instrument with Prometheus
+Instrumentator().instrument(app).expose(app)
+
 
 @app.exception_handler(RequestValidationError)
 async def validation_exception_handler(
@@ -107,3 +111,4 @@ app.include_router(health.router, prefix=API_PREFIX, tags=["Health"])
 app.include_router(workflow.router, prefix=f"{API_PREFIX}/workflows", tags=["Workflows"])
 app.include_router(history.router, prefix=f"{API_PREFIX}/history", tags=["History"])
 app.include_router(logs.router, prefix=f"{API_PREFIX}/logs", tags=["Logs"])
+app.include_router(optimization.router, prefix=f"{API_PREFIX}/optimization", tags=["Optimization"])

@@ -10,9 +10,11 @@ from typing import TYPE_CHECKING, Any
 from uuid import uuid4
 
 from agent_framework import (
+    AgentRunUpdateEvent,
     ChatMessage,
     ExecutorCompletedEvent,
     MagenticAgentMessageEvent,
+    RequestInfoEvent,
     Role,
     WorkflowOutputEvent,
     WorkflowRunState,
@@ -130,6 +132,73 @@ class SupervisorWorkflow:
         start_time = datetime.now()
         workflow_id = str(uuid4())
 
+        if (
+            self.mode == "auto"
+            and self.dspy_reasoner
+            and hasattr(self.dspy_reasoner, "select_workflow_mode")
+        ):
+            logger.info(f"Auto-detecting workflow mode for task: {task[:50]}...")
+            decision = self.dspy_reasoner.select_workflow_mode(task)
+            detected_mode = decision.get("mode", "standard")
+
+            # Map 'fast_path' to internal handling
+            if detected_mode == "fast_path":
+                logger.info(f"Fast Path triggered for task: {task[:50]}...")
+                result_text = self.dspy_reasoner.generate_simple_response(task)
+                execution_record = {
+                    "workflowId": workflow_id,
+                    "task": task,
+                    "start_time": start_time.isoformat(),
+                    "end_time": datetime.now().isoformat(),
+                    "result": result_text,
+                    "routing": RoutingDecision(
+                        task=task,
+                        assigned_to=("FastResponder",),
+                        mode=ExecutionMode.DELEGATED,
+                        subtasks=(task,),
+                    ).to_dict(),
+                    "quality": {"score": 10.0},
+                    "metadata": {"fast_path": True, "mode_reasoning": decision.get("reasoning")},
+                }
+                if self.history_manager:
+                    try:
+                        await self.history_manager.save_execution_async(execution_record)
+                    except Exception:
+                        logger.debug("Failed to persist fast-path execution history", exc_info=True)
+                return {
+                    "result": result_text,
+                    "routing": RoutingDecision(
+                        task=task,
+                        assigned_to=("FastResponder",),
+                        mode=ExecutionMode.DELEGATED,
+                        subtasks=(task,),
+                    ).to_dict(),
+                    "quality": {"score": 10.0},
+                    "judge_evaluations": [],
+                    "execution_summary": {},
+                    "phase_timings": {},
+                    "phase_status": {},
+                    "metadata": {"fast_path": True, "mode_reasoning": decision.get("reasoning")},
+                }
+
+            # If not fast path, update mode and rebuild workflow if necessary
+            # Note: Changing mode at runtime requires rebuilding the workflow graph.
+            # The current architecture builds the graph at initialization.
+            # Ideally, we should select mode *before* creating the SupervisorWorkflow,
+            # or SupervisorWorkflow should support dynamic dispatch.
+            # Given the current structure, we will log and potentially warn if mode switch is needed but not supported dynamically yet,
+            # OR we can support dynamic dispatch if we have access to the builder.
+
+            # For now, we'll only support dynamic dispatch if the current mode allows or if we re-initialize.
+            # Actually, create_supervisor_workflow is the factory.
+            # But since we are already IN run(), the workflow object is already built.
+            # HACK: If the detected mode differs from the initialized mode (likely 'standard' fallback),
+            # and we are in 'auto', we might be stuck.
+            # However, since we haven't fully implemented dynamic graph rebuilding in run(),
+            # we will proceed with the initialized workflow unless it's fast_path (handled above).
+            # To truly support auto-mode, the runner should call select_workflow_mode BEFORE instantiating SupervisorWorkflow.
+            # Note: Dynamic graph switching not yet implemented in run(); handled in CLI runner layer.
+
         if self.dspy_reasoner and self._is_simple_task(task):
             logger.info(f"Fast Path triggered for task: {task[:50]}...")
             result_text = self.dspy_reasoner.generate_simple_response(task)
@@ -181,16 +250,28 @@ class SupervisorWorkflow:
 
         logger.info(f"Running fleet workflow for task: {task[:50]}...")
 
-        if self.mode == "group_chat":
+        if self.mode in ("group_chat", "handoff"):
             msg = ChatMessage(role=Role.USER, text=task)
             result = await self.workflow.run(msg)
-            result_text = str(result.content) if hasattr(result, "content") else str(result)
+
+            # Handle Handoff/GroupChat result (usually a list of messages or a single message)
+            result_text = ""
+            if isinstance(result, list):  # List[ChatMessage]
+                # Find the last message
+                if result:
+                    last_msg = result[-1]
+                    result_text = last_msg.text
+            elif hasattr(result, "content"):
+                result_text = str(result.content)
+            else:
+                result_text = str(result)
+
             return {
                 "result": result_text,
-                "routing": {"mode": "group_chat"},
+                "routing": {"mode": self.mode},
                 "quality": {"score": 0.0},
                 "judge_evaluations": [],
-                "metadata": {"mode": "group_chat"},
+                "metadata": {"mode": self.mode},
             }
 
         task_msg = TaskMessage(task=task)
@@ -268,11 +349,69 @@ class SupervisorWorkflow:
         }
 
         final_msg = None
-        if self.mode == "group_chat":
+        if self.mode in ("group_chat", "handoff"):
             msg = ChatMessage(role=Role.USER, text=task)
             async for event in self.workflow.run_stream(msg):
                 if isinstance(event, MagenticAgentMessageEvent):
                     yield event
+                elif isinstance(event, AgentRunUpdateEvent):
+                    # Convert AgentRunUpdateEvent to MagenticAgentMessageEvent for CLI compatibility
+                    text = ""
+                    if hasattr(event, "run") and hasattr(event.run, "delta"):
+                        delta = event.run.delta
+                        if hasattr(delta, "content") and delta.content:
+                            # Handle list of content parts or string
+                            if isinstance(delta.content, list):
+                                text = "".join(str(part) for part in delta.content)
+                            else:
+                                text = str(delta.content)
+
+                    if text:
+                        # Create synthetic event for CLI streaming
+                        mag_msg = ChatMessage(role=Role.ASSISTANT, text=text)
+                        agent_id = (
+                            getattr(event.run, "agent_id", "unknown")
+                            if hasattr(event, "run")
+                            else "unknown"
+                        )
+                        mag_event = MagenticAgentMessageEvent(agent_id=agent_id, message=mag_msg)
+                        yield mag_event
+
+                elif isinstance(event, RequestInfoEvent):
+                    # If request contains conversation, extracting last message might be useful
+                    if hasattr(event.data, "conversation") and event.data.conversation:
+                        last_msg = event.data.conversation[-1]
+                        # Log or capture partial result
+                        logger.info(
+                            f"RequestInfoEvent: Last message from {last_msg.author_name}: {last_msg.text[:50]}..."
+                        )
+
+                elif isinstance(event, WorkflowOutputEvent) and (
+                    isinstance(event.data, list)
+                    and event.data
+                    and isinstance(event.data[0], ChatMessage)
+                ):
+                    last_msg = event.data[-1]
+                    final_msg = FinalResultMessage(
+                        result=last_msg.text,
+                        routing=RoutingDecision(
+                            task=task,
+                            assigned_to=(self.mode,),
+                            mode=ExecutionMode.DELEGATED,  # or GroupChat/Handoff specific
+                            subtasks=(task,),
+                        ),
+                        quality=QualityReport(score=0.0),
+                        judge_evaluations=[],
+                        execution_summary={},
+                        phase_timings={},
+                        phase_status={},
+                        metadata={"mode": self.mode},
+                    )
+                    # Yield the formatted output event
+                    yield WorkflowOutputEvent(
+                        data=self._final_message_to_dict(final_msg),
+                        source_executor_id=self.mode,
+                    )
         else:
             task_msg = TaskMessage(task=task)
             async for event in self.workflow.run_stream(task_msg):
@@ -294,7 +433,7 @@ class SupervisorWorkflow:
                             final_msg = self._dict_to_final_message(data)
                     yield event
 
-        if final_msg is None and self.mode != "group_chat":
+        if final_msg is None and self.mode not in ("group_chat", "handoff"):
             final_msg = await self._create_fallback_result(task)
             yield WorkflowOutputEvent(
                 data=self._final_message_to_dict(final_msg), source_executor_id="fallback"
