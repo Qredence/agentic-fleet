@@ -1,5 +1,23 @@
 [
   {
+    "task": "What is Gemini 3 Pro?",
+    "team": "Researcher: search for 'Google Gemini 3 Pro AI model' to avoid confusion with other products\nWriter: summarize findings",
+    "assigned_to": "Researcher,Writer",
+    "mode": "sequential",
+    "available_tools": "- TavilySearchTool (available to Researcher): Search the web for real-time information using Tavily. Provides accurate, up-to-date results with source citations. [Capabilities: web_search, real_time, citations]",
+    "context": "Specific product query with potential ambiguity",
+    "tool_requirements": ["TavilySearchTool"]
+  },
+  {
+    "task": "What are the specs of the iPhone 16?",
+    "team": "Researcher: find specs\nWriter: summarize",
+    "assigned_to": "Researcher,Writer",
+    "mode": "sequential",
+    "available_tools": "- TavilySearchTool (available to Researcher): Search the web for real-time information using Tavily. Provides accurate, up-to-date results with source citations. [Capabilities: web_search, real_time, citations]",
+    "context": "Simple fact check",
+    "tool_requirements": ["TavilySearchTool"]
+  },
+  {
     "task": "Who won the 2025 New York mayoral election?",
     "team": "Researcher: Web research specialist",
     "available_tools": "- TavilySearchTool (available to Researcher): Search the web for real-time information using Tavily. Provides accurate, up-to-date results with source citations. [Capabilities: web_search, real_time, citations]",
@@ -817,5 +835,14 @@
     "assigned_to": "Researcher",
     "mode": "delegated",
     "tool_requirements": ["browser", "tavily_search"]
+  },
+  {
+    "task": "Who is the mayor of New York elected in 2025?",
+    "team": "Writer: Content creation",
+    "available_tools": "No tools available",
+    "context": "Edge case: Ambiguous Task - Self-improvement: Quality score 6.0/10 - Ambiguous tasks should default to Researcher for clarification",
+    "assigned_to": "",
+    "mode": "delegated",
+    "tool_requirements": []
   }
 ]

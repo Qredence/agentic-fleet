@@ -43,9 +43,29 @@ if "dspy" not in sys.modules:
 
 def test_enhanced_task_routing_signature():
     """Test enhanced TaskRouting signature with handoff awareness."""
+    import dspy
     from dspy import ChainOfThought
+    from dspy.utils.dummies import DummyLM
 
     from agentic_fleet.dspy_modules.workflow_signatures import EnhancedTaskRouting
+
+    # Configure DummyLM
+    lm = DummyLM(
+        [
+            {
+                "assigned_to": ["Researcher"],
+                "execution_mode": "delegated",
+                "handoff_strategy": "After research, handoff to analyst",
+                "subtasks": ["Research", "Analyze"],
+                "workflow_gates": "Quality checkpoint before completion",
+                "tool_plan": ["TavilySearchTool"],
+                "tool_goals": "Find info",
+                "latency_budget": "30s",
+                "reasoning": "Test reasoning",
+            }
+        ]
+    )
+    dspy.configure(lm=lm)
 
     router = ChainOfThought(EnhancedTaskRouting)
 

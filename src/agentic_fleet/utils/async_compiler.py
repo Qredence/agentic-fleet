@@ -10,7 +10,7 @@ import asyncio
 import logging
 from typing import Any
 
-from .compiler import compile_supervisor
+from .compiler import compile_reasoner
 from .progress import NullProgressCallback, ProgressCallback
 
 logger = logging.getLogger(__name__)
@@ -59,7 +59,7 @@ class AsyncCompiler:
         def _compile() -> Any:
             """Run compilation in thread pool."""
             try:
-                return compile_supervisor(
+                return compile_reasoner(
                     module=module,
                     examples_path=examples_path,
                     use_cache=use_cache,

@@ -20,7 +20,7 @@ from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
     from agentic_fleet.utils.cache import TTLCache
-    from agentic_fleet.utils.compiler import compile_supervisor
+    from agentic_fleet.utils.compiler import compile_reasoner
     from agentic_fleet.utils.config_loader import get_agent_model, load_config
     from agentic_fleet.utils.models import ExecutionMode, RoutingDecision
     from agentic_fleet.utils.tool_registry import ToolMetadata, ToolRegistry
@@ -31,7 +31,7 @@ __all__ = [
     "TTLCache",
     "ToolMetadata",
     "ToolRegistry",
-    "compile_supervisor",
+    "compile_reasoner",
     "get_agent_model",
     "load_config",
 ]
@@ -53,10 +53,10 @@ def __getattr__(name: str) -> object:
             return ExecutionMode
         return RoutingDecision
 
-    if name == "compile_supervisor":
-        from agentic_fleet.utils.compiler import compile_supervisor
+    if name == "compile_reasoner":
+        from agentic_fleet.utils.compiler import compile_reasoner
 
-        return compile_supervisor
+        return compile_reasoner
 
     if name in ("load_config", "get_agent_model"):
         from agentic_fleet.utils.config_loader import get_agent_model, load_config

@@ -216,6 +216,21 @@ def ensure_agent_framework_shims() -> None:
 
         root.ChatAgent = ChatAgent  # type: ignore[attr-defined]
 
+    if not hasattr(root, "GroupChatBuilder"):
+
+        class GroupChatBuilder:  # pragma: no cover - shim
+            def __init__(self) -> None:
+                self.agents: list[Any] = []
+
+            def add_agent(self, agent: Any) -> GroupChatBuilder:
+                self.agents.append(agent)
+                return self
+
+            def build(self) -> Any:
+                return root.ChatAgent(name="GroupChat", description="Group Chat Shim")  # type: ignore[attr-defined]
+
+        root.GroupChatBuilder = GroupChatBuilder  # type: ignore[attr-defined]
+
     # -- OpenAI submodule stub (needed for agent factory) --
     openai_module = _ensure_submodule("agent_framework.openai")
 

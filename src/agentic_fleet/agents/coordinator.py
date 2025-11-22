@@ -8,7 +8,7 @@ import os
 from typing import Any
 
 from agent_framework import ChatAgent
-from agent_framework.openai import OpenAIChatClient
+from agent_framework.openai import OpenAIResponsesClient
 from dotenv import load_dotenv
 
 from agentic_fleet.agents.base import DSPyEnhancedAgent
@@ -19,11 +19,9 @@ try:
     from agent_framework.openai import OpenAIResponsesClient as _PreferredOpenAIClient
 
     _RESPONSES_CLIENT_AVAILABLE = True
-except (
-    ImportError,
-    AttributeError,
-):  # pragma: no cover - fallback path depends on installed extras
-    _PreferredOpenAIClient = OpenAIChatClient
+except ImportError:
+    from agent_framework.openai import OpenAIChatClient as _PreferredOpenAIClient  # type: ignore
+
     _RESPONSES_CLIENT_AVAILABLE = False
 
 load_dotenv(override=True)
@@ -63,14 +61,20 @@ def _create_openai_client(**kwargs: Any):
 class AgentFactory:
     """Factory for creating ChatAgent instances from YAML configuration."""
 
-    def __init__(self, tool_registry: ToolRegistry | None = None) -> None:
+    def __init__(
+        self,
+        tool_registry: ToolRegistry | None = None,
+        openai_client: Any | None = None,
+    ) -> None:
         """Initialize AgentFactory.
 
         Args:
             tool_registry: Optional tool registry for resolving tool names to instances.
                 If None, creates a default registry.
+            openai_client: Optional shared OpenAI client (AsyncOpenAI) to reuse.
         """
         self.tool_registry = tool_registry or ToolRegistry()
+        self.openai_client = openai_client
 
         # Check if DSPy enhancement should be enabled globally
         self.enable_dspy = os.getenv("ENABLE_DSPY_AGENTS", "true").lower() == "true"
@@ -133,8 +137,24 @@ class AgentFactory:
 
             base_url = os.getenv("OPENAI_BASE_URL") or None
 
+            # Prepare client arguments
+            client_kwargs = {
+                "model_id": model_id,
+                "api_key": api_key,
+                "base_url": base_url,
+                "reasoning_effort": reasoning_effort,
+                "reasoning_verbosity": reasoning_verbosity,
+                "store": store,
+                "temperature": temperature,
+                "max_tokens": max_tokens,
+            }
+
+            # Use shared client if available
+            if self.openai_client:
+                client_kwargs["async_client"] = self.openai_client
+
             # Create OpenAI client using agent_framework directly
-            chat_client = _create_openai_client(
+            chat_client = OpenAIResponsesClient(
                 model_id=model_id,
                 api_key=api_key,
                 base_url=base_url,
@@ -157,6 +177,7 @@ class AgentFactory:
             use_dspy = agent_config.get("enable_dspy", self.enable_dspy)
             cache_ttl = agent_config.get("cache_ttl", 300)
             timeout = agent_config.get("timeout", 30)
+            reasoning_strategy = agent_config.get("reasoning_strategy", "chain_of_thought")
 
             # Create agent instance
             if use_dspy:
@@ -170,10 +191,11 @@ class AgentFactory:
                     enable_dspy=True,
                     cache_ttl=cache_ttl,
                     timeout=timeout,
+                    reasoning_strategy=reasoning_strategy,
                 )
                 logger.debug(
                     f"Created DSPy-enhanced agent '{agent_name}' with model '{model_id}', "
-                    f"cache_ttl={cache_ttl}s, timeout={timeout}s"
+                    f"strategy='{reasoning_strategy}', cache_ttl={cache_ttl}s, timeout={timeout}s"
                 )
             else:
                 # Create standard ChatAgent
@@ -233,30 +255,26 @@ class AgentFactory:
         if instructions.startswith("prompts."):
             try:
                 module_name = instructions[len("prompts.") :]
-                # Import the prompt module dynamically
-                import importlib
+                # Import the consolidated prompts module
+                import agentic_fleet.agents.prompts as prompts_module
 
-                prompt_module = importlib.import_module(f"agentic_fleet.prompts.{module_name}")
-                if hasattr(prompt_module, "get_instructions"):
-                    # Cast return to str to satisfy strict typing (legacy modules may return Any)
-                    resolved_instructions = str(prompt_module.get_instructions())
+                # Map module name to function name
+                func_name = f"get_{module_name}_instructions"
+
+                if hasattr(prompts_module, func_name):
+                    func = getattr(prompts_module, func_name)
+                    resolved_instructions = str(func())
                     logger.debug(
-                        f"Resolved instructions from module 'prompts.{module_name}' "
+                        f"Resolved instructions from 'prompts.{module_name}' "
                         f"({len(resolved_instructions)} chars)"
                     )
                     return resolved_instructions
                 else:
                     logger.warning(
-                        f"Prompt module 'prompts.{module_name}' missing get_instructions() function, "
+                        f"Prompt function '{func_name}' missing in agents.prompts, "
                         "using instructions as-is"
                     )
                     return instructions
-            except ImportError as e:
-                logger.warning(
-                    f"Failed to import prompt module 'prompts.{instructions[len('prompts.') :]}': {e}, "
-                    "using instructions as-is"
-                )
-                return instructions
             except Exception as e:
                 logger.warning(
                     f"Error resolving instructions from '{instructions}': {e}, "
@@ -329,7 +347,6 @@ def create_workflow_agents(
     """
 
     from agent_framework import ChatAgent
-    from agent_framework.openai import OpenAIChatClient
 
     from ..tools import BrowserTool, HostedCodeInterpreterAdapter, TavilyMCPTool
 
@@ -350,6 +367,7 @@ def create_workflow_agents(
         tools: Any | None = None,
         model_override: str | None = None,
         reasoning_effort: str | None = None,
+        reasoning_strategy: str = "chain_of_thought",
     ) -> ChatAgent:
         """Helper to create a single agent."""
         agent_models = config.agent_models or {}
@@ -395,8 +413,19 @@ def create_workflow_agents(
                     logger.warning(f"Invalid tool for agent {name}, skipping tool assignment")
                     validated_tools = None
 
+        # Get agent-specific strategy if configured (overrides default/argument)
+        agent_strategies = config.agent_strategies or {}
+        configured_strategy = agent_strategies.get(name.lower())
+        effective_strategy = (
+            configured_strategy if configured_strategy is not None else reasoning_strategy
+        )
+        logger.debug(
+            f"Agent {name} strategy resolution: config={configured_strategy}, default={reasoning_strategy}, effective={effective_strategy}"
+        )
+
         # Create the chat client
-        chat_client = OpenAIChatClient(**chat_client_kwargs)
+        # Use the module-level _create_openai_client to ensure we use ResponsesClient if available
+        chat_client = _create_openai_client(**chat_client_kwargs)
 
         # For Judge agent with reasoning effort, set extra_body after creation
         if reasoning_effort is not None and name == "Judge":
@@ -411,10 +440,26 @@ def create_workflow_agents(
                 else:
                     chat_client._reasoning_effort = reasoning_effort  # type: ignore[attr-defined]
                     logger.debug(
-                        f"Judge agent reasoning effort stored: {reasoning_effort} (will be applied in request)"
+                        f"Judge agent configured with reasoning effort via private attr: {reasoning_effort}"
                     )
             except Exception as e:
-                logger.warning(f"Could not set reasoning effort on chat client: {e}")
+                logger.warning(f"Failed to configure reasoning effort: {e}")
+
+        # Wrap in DSPyEnhancedAgent if reasoning strategy is not default
+        if effective_strategy != "chain_of_thought":
+            # Create a DSPyEnhancedAgent wrapper
+            # Note: This is a bit of a hack since we're recreating the agent,
+            # but create_workflow_agents is a legacy helper.
+            # Ideally we should use AgentFactory for everything.
+            return DSPyEnhancedAgent(
+                name=name,
+                description=description,
+                instructions=instructions,
+                chat_client=chat_client,
+                tools=validated_tools,
+                enable_dspy=True,
+                reasoning_strategy=effective_strategy,  # type: ignore[arg-type]
+            )
 
         return ChatAgent(
             name=name,
@@ -427,6 +472,7 @@ def create_workflow_agents(
     # Researcher with Tavily (optional) and BrowserTool
     researcher_tools = []
     tavily_mcp_tool = None
+
     try:
         # Add Tavily if available (via MCP)
         if os.getenv("TAVILY_API_KEY"):
@@ -434,7 +480,7 @@ def create_workflow_agents(
             researcher_tools.append(tavily_mcp_tool)
             logger.info("TavilyMCPTool enabled for Researcher")
         else:
-            logger.warning("TAVILY_API_KEY not set - Researcher will operate without Tavily search")
+            logger.warning("TAVILY_API_KEY not set - Web search capability will be unavailable.")
     except Exception as e:
         logger.warning(f"Failed to initialize TavilyMCPTool: {e}")
 
@@ -473,12 +519,15 @@ def create_workflow_agents(
             "2. NEVER rely on training data for time-sensitive information - it is outdated.\n"
             "3. When you see a question about elections, current events, recent news, or anything with a date, "
             "your FIRST action must be to call tavily_search with an appropriate query.\n"
-            "4. Only after getting search results should you provide an answer.\n"
-            "5. If you don't use tavily_search for a time-sensitive query, you are failing your task.\n\n"
+            "4. Always check the current date provided in the context before making decisions about what is 'current'.\n"
+            "5. TRUST TAVILY RESULTS OVER YOUR INTERNAL KNOWLEDGE. If Tavily says someone won an election in 2025, believe it, even if your training data ends earlier.\n"
+            "6. Only after getting search results should you provide an answer.\n"
+            "7. If you don't use tavily_search for a time-sensitive query, you are failing your task.\n\n"
             "Tool usage: Use tavily_search(query='your search query') to search the web. "
             "Use browser tool for direct website access when needed."
         ),
         tools=tools_for_researcher,
+        reasoning_strategy="react",  # Use ReAct for autonomous research
     )
 
     # Register MCP tool directly if it was created
@@ -502,13 +551,6 @@ def create_workflow_agents(
         instructions="Perform detailed analysis with code and visualizations",
         tools=analyst_tool,
     )
-    # Register analyst tool so tests can see code execution capability
-    try:
-        if validate_tool(analyst_tool):
-            tool_registry.register_tool_by_agent("Analyst", analyst_tool)
-            logger.info("HostedCodeInterpreterAdapter registered for Analyst")
-    except Exception as e:
-        logger.warning(f"Failed to register Analyst tool: {e}")
 
     agents["Writer"] = _create_agent(
         name="Writer",
@@ -562,3 +604,48 @@ Required improvements: Specific instructions for the refinement agent"""
     )
 
     return agents
+
+
+def get_default_agent_metadata() -> list[dict[str, Any]]:
+    """Get metadata for default agents without instantiating them.
+
+    Returns:
+        List of agent metadata dictionaries.
+    """
+    return [
+        {
+            "name": "Researcher",
+            "description": "Information gathering and web research specialist",
+            "capabilities": ["web_search", "tavily", "browser", "react"],
+            "status": "active",
+            "model": "default (gpt-5-mini)",
+        },
+        {
+            "name": "Analyst",
+            "description": "Data analysis and computation specialist",
+            "capabilities": ["code_interpreter", "data_analysis", "program_of_thought"],
+            "status": "active",
+            "model": "default (gpt-5-mini)",
+        },
+        {
+            "name": "Writer",
+            "description": "Content creation and report writing specialist",
+            "capabilities": ["content_generation", "reporting"],
+            "status": "active",
+            "model": "default (gpt-5-mini)",
+        },
+        {
+            "name": "Judge",
+            "description": "Quality evaluation specialist with dynamic task-aware criteria assessment",
+            "capabilities": ["quality_evaluation", "grading", "critique"],
+            "status": "active",
+            "model": "gpt-5",
+        },
+        {
+            "name": "Reviewer",
+            "description": "Quality assurance and validation specialist",
+            "capabilities": ["validation", "review"],
+            "status": "active",
+            "model": "default (gpt-5-mini)",
+        },
+    ]

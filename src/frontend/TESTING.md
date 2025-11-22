@@ -51,7 +51,8 @@ make dev
 make backend
 ```
 
-The backend should be available at `http://localhost:8000`.
+The backend should be available at `http://localhost:8000` (the API is served under the `/api`
+prefix).
 
 ## Running Tests
 
@@ -126,7 +127,7 @@ npm run test:run
 
 Tests use the following environment variables:
 
-- `VITE_API_URL`: Backend API URL (default: `http://localhost:8000`)
+- `VITE_API_URL`: Backend API origin (default: `http://localhost:8000`; the frontend appends `/api` automatically)
 
 You can override in `.env.test`:
 

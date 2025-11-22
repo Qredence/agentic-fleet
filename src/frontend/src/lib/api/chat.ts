@@ -157,49 +157,37 @@ export async function streamChatResponse(
           callbacks.onCompleted?.();
           return;
         }
-        const agentId = (evt as any).agentId ?? (evt as any).agent_id;
+
         switch (evt.type) {
-          case "response.delta":
-            if ((evt as any).delta) {
-              callbacks.onDelta?.((evt as any).delta as string, agentId);
-            }
+          case "response.delta": {
+            const agentId = evt.agentId ?? evt.agent_id;
+            callbacks.onDelta?.(evt.delta, agentId);
             break;
+          }
           case "response.completed":
             callbacks.onCompleted?.();
             break;
           case "orchestrator.message":
-            if ((evt as any).message) {
-              callbacks.onOrchestrator?.(
-                (evt as any).message as string,
-                (evt as any).kind as string | undefined,
-              );
+            callbacks.onOrchestrator?.(evt.message, evt.kind);
+            break;
+          case "agent.message.complete": {
+            const agentId = evt.agentId ?? evt.agent_id;
+            if (agentId) {
+              callbacks.onAgentComplete?.(agentId, evt.content);
             }
             break;
-          case "agent.message.complete":
-            if (agentId && (evt as any).content) {
-              callbacks.onAgentComplete?.(
-                agentId as string,
-                (evt as any).content as string,
-              );
-            }
-            break;
+          }
           case "reasoning.delta":
-            if ((evt as any).reasoning) {
-              callbacks.onReasoningDelta?.((evt as any).reasoning as string);
-            }
+            callbacks.onReasoningDelta?.(evt.reasoning);
             break;
           case "reasoning.completed":
-            if (callbacks.onReasoningCompleted) {
-              const r = (evt as any).reasoning as string | undefined;
-              callbacks.onReasoningCompleted(r || "");
-            }
+            callbacks.onReasoningCompleted?.(evt.reasoning || "");
             break;
           case "error":
-            callbacks.onError?.(
-              ((evt as any).error as string) || "Unknown error",
-            );
+            callbacks.onError?.(evt.error || "Unknown error");
             break;
           default:
+            // Handle unknown event types gracefully
             break;
         }
       });

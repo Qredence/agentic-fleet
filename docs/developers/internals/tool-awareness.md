@@ -46,7 +46,7 @@ ToolMetadata(
    ↓
 4. Metadata inference (capabilities, use cases, aliases)
    ↓
-5. Supervisor attachment (set_tool_registry)
+5. Reasoner attachment (set_tool_registry)
    ↓
 6. DSPy compilation (with tool visibility)
 ```
@@ -57,8 +57,8 @@ ToolMetadata(
 
 1. **ToolAwareTaskAnalysis**: Receives `available_tools` input field
 2. **TaskRouting**: Includes `available_tools` and outputs `tool_requirements`
-3. **Supervisor forward()**: Conditionally uses tool-aware analyzer
-4. **Supervisor instructions**: Embeds tool catalog in system prompt
+3. **Reasoner forward()**: Conditionally uses tool-aware analyzer
+4. **Reasoner instructions**: Embeds tool catalog in system prompt
 
 **Tool Visibility in Prompts:**
 
@@ -193,9 +193,9 @@ registry.register_tool_by_agent("Researcher", [tavily_tool, other_tool])
 - Test stubs continue to work
 - Recursive registration for collections
 
-### Supervisor Instructions
+### Reasoner Instructions
 
-The supervisor's system prompt includes a live tool catalog:
+The reasoner's system prompt includes a live tool catalog:
 
 ```
 Available tools:
@@ -211,18 +211,18 @@ Available tools:
 - Tool registry count: **0**
 - DSPy analysis: No tool visibility
 - Routing: Tool-blind decisions
-- Supervisor instructions: Generic team list only
+- Reasoner instructions: Generic team list only
 
 ### After Integration
 
 - Tool registry count: **2** (tavily_search, HostedCodeInterpreterTool)
 - DSPy analysis: Full tool descriptions with capabilities and use cases
 - Routing: Tool-aware decisions with explicit `tool_requirements`
-- Supervisor instructions: Rich tool catalog with guidance
+- Reasoner instructions: Rich tool catalog with guidance
 
 ## Known Limitations
 
-The `_perform_web_search` method in `supervisor.py` currently tries to execute async tools in a sync context, which may fail silently. The **detection works perfectly** (needs_web_search=True), but actual search execution during the analysis phase may not complete.
+The `_perform_web_search` method in `reasoner.py` currently tries to execute async tools in a sync context, which may fail silently. The **detection works perfectly** (needs_web_search=True), but actual search execution during the analysis phase may not complete.
 
 **Workaround**: The search will still be executed during agent execution phase when the Researcher agent runs, as the routing correctly assigns the task to the Researcher with TavilySearchTool.
 
@@ -239,4 +239,4 @@ The `_perform_web_search` method in `supervisor.py` currently tries to execute a
 
 - [User Guide](../users/user-guide.md) - Tool integration usage patterns
 - [Configuration](../users/configuration.md) - Tool configuration options
-- [API Reference](../developers/api-reference.md) - ToolRegistry API details
+- [API Reference](../api-reference.md) - ToolRegistry API details

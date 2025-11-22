@@ -39,10 +39,10 @@ Environment flags take precedence over YAML values.
 
 ## Initialization Flow
 
-Early in command execution (`console.py`) we call:
+Early in command execution (`src/agentic_fleet/cli/console.py`) we call:
 
 ```python
-from src.utils.tracing import initialize_tracing
+from src.agentic_fleet.utils.tracing import initialize_tracing
 initialize_tracing(config)
 ```
 

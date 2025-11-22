@@ -12,6 +12,7 @@ from typing import Any
 
 import aiofiles
 
+from ..utils.models import RoutingDecision
 from ..workflows.exceptions import HistoryError
 
 logger = logging.getLogger(__name__)
@@ -19,6 +20,17 @@ logger = logging.getLogger(__name__)
 # Track background tasks to satisfy Ruff RUF006 and prevent premature GC of tasks.
 # Tasks are added when created and automatically removed on completion.
 _background_tasks: set[asyncio.Task[Any]] = set()
+
+
+class FleetJSONEncoder(json.JSONEncoder):
+    """Custom JSON encoder for fleet objects."""
+
+    def default(self, obj: Any) -> Any:
+        if isinstance(obj, RoutingDecision):
+            return obj.to_dict()
+        if hasattr(obj, "to_dict"):
+            return obj.to_dict()
+        return super().default(obj)
 
 
 class HistoryManager:
@@ -128,7 +140,7 @@ class HistoryManager:
         history_file = self.history_dir / "execution_history.jsonl"
 
         async with aiofiles.open(history_file, "a") as f:
-            content = json.dumps(execution) + "\n"
+            content = json.dumps(execution, cls=FleetJSONEncoder) + "\n"
             await f.write(content)
 
         logger.debug(f"Execution appended to {history_file}")
@@ -144,7 +156,7 @@ class HistoryManager:
         history_file = self.history_dir / "execution_history.jsonl"
 
         with open(history_file, "a") as f:
-            json.dump(execution, f)
+            json.dump(execution, f, cls=FleetJSONEncoder)
             f.write("\n")
 
         logger.debug(f"Execution appended to {history_file}")
@@ -179,7 +191,7 @@ class HistoryManager:
 
         # Save updated history
         async with aiofiles.open(history_file, "w") as f:
-            content = json.dumps(existing_history, indent=2)
+            content = json.dumps(existing_history, indent=2, cls=FleetJSONEncoder)
             await f.write(content)
 
         logger.debug(f"Execution history saved to {history_file}")
@@ -208,7 +220,7 @@ class HistoryManager:
 
         # Save updated history
         with open(history_file, "w") as f:
-            json.dump(existing_history, f, indent=2)
+            json.dump(existing_history, f, indent=2, cls=FleetJSONEncoder)
 
         logger.debug(f"Execution history saved to {history_file}")
         return str(history_file)
@@ -252,17 +264,21 @@ class HistoryManager:
     def _rotate_jsonl(self, history_file: Path, max_entries: int) -> None:
         """Rotate JSONL file to keep only last N entries."""
         try:
-            # Use the optimized approach even for sync version
-            # Read all lines (legacy approach for compatibility)
-            with open(history_file) as f:
-                lines = f.readlines()
+            # Check file size to avoid unnecessary work
+            if not history_file.exists():
+                return
 
-            # Keep only last N entries
-            if len(lines) > max_entries:
-                lines = lines[-max_entries:]
-                with open(history_file, "w") as f:
-                    f.writelines(lines)
-                logger.debug(f"Rotated history file to keep last {max_entries} entries")
+            # Use deque for efficient tail extraction
+            from collections import deque
+
+            with open(history_file) as f:
+                last_lines = deque(f, maxlen=max_entries)
+
+            # Write back only the last N lines
+            with open(history_file, "w") as f:
+                f.writelines(last_lines)
+
+            logger.debug(f"Rotated history file to keep last {max_entries} entries")
         except Exception as e:
             logger.warning(f"Failed to rotate history file: {e}")
 
@@ -276,6 +292,17 @@ class HistoryManager:
         Returns:
             List of execution dictionaries
         """
+        # Try Cosmos DB first if enabled
+        try:
+            from .cosmos import is_cosmos_enabled, load_execution_history
+
+            if is_cosmos_enabled():
+                history = load_execution_history(limit=limit or 20)
+                if history:
+                    return history
+        except Exception as e:
+            logger.warning(f"Failed to load history from Cosmos DB: {e}")
+
         # Try JSONL first (preferred format)
         jsonl_file = self.history_dir / "execution_history.jsonl"
         if jsonl_file.exists():

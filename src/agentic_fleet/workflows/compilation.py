@@ -1,6 +1,6 @@
-"""DSPy supervisor compilation utilities.
+"""DSPy reasoner compilation utilities.
 
-Standalone compilation functions for DSPy supervisor.
+Standalone compilation functions for DSPy reasoner.
 """
 
 from __future__ import annotations
@@ -9,8 +9,8 @@ import asyncio
 import logging
 from typing import Any
 
-from ..dspy_modules.supervisor import DSPySupervisor
-from ..utils.compiler import compile_supervisor
+from ..dspy_modules.reasoner import DSPyReasoner
+from ..utils.compiler import compile_reasoner
 from ..utils.progress import LoggingProgressCallback, NullProgressCallback
 from .config import WorkflowConfig
 
@@ -22,29 +22,29 @@ class CompilationState:
 
     def __init__(self) -> None:
         """Initialize compilation state."""
-        self.compiled_supervisor: DSPySupervisor | None = None
+        self.compiled_supervisor: DSPyReasoner | None = None
         self.compilation_status: str = "pending"
         self.compilation_task: asyncio.Task[None] | None = None
 
 
 async def compile_supervisor_async(
-    supervisor: DSPySupervisor,
+    supervisor: DSPyReasoner,
     config: WorkflowConfig,
     agents: dict[str, Any],
     progress_callback: Any | None = None,
     state: CompilationState | None = None,
-) -> DSPySupervisor:
-    """Compile DSPy supervisor asynchronously in background.
+) -> DSPyReasoner:
+    """Compile DSPy reasoner asynchronously in background.
 
     Args:
-        supervisor: DSPy supervisor to compile
+        supervisor: DSPy reasoner to compile
         config: Workflow configuration
         agents: Dictionary of agents for config extraction
         progress_callback: Optional progress callback
         state: Optional compilation state container
 
     Returns:
-        Compiled DSPy supervisor
+        Compiled DSPy reasoner
     """
     state = state or CompilationState()
 
@@ -71,21 +71,30 @@ async def compile_supervisor_async(
     try:
         # Extract agent config for cache invalidation
         agent_config = {}
+        def extract_tools(agent):
+            # Try to get tools from chat_options
+            if hasattr(agent, "chat_options") and getattr(agent.chat_options, "tools", None):
+                tools = agent.chat_options.tools or []
+            # Fallback to direct tools attribute
+            elif hasattr(agent, "tools") and getattr(agent, "tools", None):
+                raw = agent.tools
+                tools = raw if isinstance(raw, list) else [raw]
+            else:
+                tools = []
+            return tools
         if agents:
             for agent_name, agent in agents.items():
+                tools_list = extract_tools(agent)
                 agent_config[agent_name] = {
                     "description": getattr(agent, "description", ""),
-                    "tools": [
-                        tool.__class__.__name__
-                        for tool in (getattr(agent.chat_options, "tools", []) or [])
-                    ],
+                    "tools": [tool.__class__.__name__ for tool in tools_list if tool],
                 }
 
         # Run compilation in executor to avoid blocking event loop
         loop = asyncio.get_event_loop()
 
         def compile_sync():
-            return compile_supervisor(
+            return compile_reasoner(
                 supervisor,
                 examples_path=config.examples_path,
                 optimizer=config.dspy_optimizer,
@@ -93,6 +102,7 @@ async def compile_supervisor_async(
                 dspy_model=config.dspy_model,
                 agent_config=agent_config,
                 progress_callback=progress_callback,
+                allow_gepa_optimization=config.allow_gepa_optimization,
             )
 
         compiled = await loop.run_in_executor(None, compile_sync)
@@ -113,17 +123,17 @@ async def compile_supervisor_async(
 
 
 def get_compiled_supervisor(
-    supervisor: DSPySupervisor,
+    supervisor: DSPyReasoner,
     state: CompilationState,
-) -> DSPySupervisor:
-    """Get compiled supervisor, triggering compilation if needed.
+) -> DSPyReasoner:
+    """Get compiled reasoner, triggering compilation if needed.
 
     Args:
-        supervisor: Base DSPy supervisor
+        supervisor: Base DSPy reasoner
         state: Compilation state container
 
     Returns:
-        Compiled DSPy supervisor (or uncompiled if compilation failed/skipped)
+        Compiled DSPy reasoner (or uncompiled if compilation failed/skipped)
     """
     # If already compiled, return it
     if state.compiled_supervisor is not None:
@@ -135,12 +145,12 @@ def get_compiled_supervisor(
         try:
             loop = asyncio.get_event_loop()
             if loop.is_running():
-                logger.warning("Compilation still in progress, using uncompiled supervisor")
+                logger.warning("Compilation still in progress, using uncompiled reasoner")
                 return supervisor
             else:
                 loop.run_until_complete(state.compilation_task)
         except RuntimeError:
-            logger.warning("No event loop available, using uncompiled supervisor")
+            logger.warning("No event loop available, using uncompiled reasoner")
             return supervisor
 
     # If compilation completed, use compiled version

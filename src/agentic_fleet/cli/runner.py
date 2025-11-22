@@ -9,7 +9,7 @@ from __future__ import annotations
 from datetime import datetime
 from typing import Any
 
-from agent_framework import MagenticAgentMessageEvent, WorkflowOutputEvent
+from agent_framework import ExecutorCompletedEvent, MagenticAgentMessageEvent, WorkflowOutputEvent
 from rich.console import Console
 from rich.live import Live
 from rich.markdown import Markdown
@@ -21,7 +21,14 @@ from ..utils.error_utils import sanitize_error_message
 from ..utils.logger import setup_logger
 from ..utils.progress import RichProgressCallback
 from ..workflows.config import WorkflowConfig
-from ..workflows.supervisor_workflow import create_supervisor_workflow
+from ..workflows.messages import (
+    AnalysisMessage,
+    ExecutionMessage,
+    ProgressMessage,
+    QualityMessage,
+    RoutingMessage,
+)
+from ..workflows.supervisor import create_supervisor_workflow
 
 logger = setup_logger(__name__)
 
@@ -49,6 +56,8 @@ class WorkflowRunner:
         model: str | None = None,
         enable_handoffs: bool | None = None,
         pipeline_profile: str | None = None,
+        mode: str = "standard",
+        allow_gepa: bool = False,
     ) -> Any:
         """Initialize the workflow with configuration.
 
@@ -57,6 +66,8 @@ class WorkflowRunner:
             max_rounds: Maximum workflow rounds
             model: Override model ID
             enable_handoffs: Enable/disable handoffs
+            mode: Workflow mode ("group_chat", "concurrent", "handoff", "standard")
+            allow_gepa: Whether to allow GEPA optimization (default: False)
 
         Returns:
             Initialized workflow instance
@@ -160,6 +171,8 @@ class WorkflowRunner:
             .get("execution", {})
             .get("parallel_threshold", 3),
             dspy_model=effective_model,
+            dspy_temperature=yaml_config.get("dspy", {}).get("temperature", 0.7),
+            dspy_max_tokens=yaml_config.get("dspy", {}).get("max_tokens", 2000),
             compile_dspy=compile_dspy,
             refinement_threshold=quality_cfg.get("refinement_threshold", 8.0),
             enable_refinement=quality_cfg.get("enable_refinement", True),
@@ -174,20 +187,23 @@ class WorkflowRunner:
                 "enable_completion_storage", False
             ),
             agent_models={
-                agent_name.lower(): get_agent_model(yaml_config, agent_name, effective_model)
-                for agent_name in ["researcher", "analyst", "writer", "reviewer"]
+                name.lower(): get_agent_model(yaml_config, name, effective_model)
+                for name in yaml_config.get("agents", {})
             },
             agent_temperatures={
-                agent_name.lower(): yaml_config.get("agents", {})
-                .get(agent_name.lower(), {})
-                .get("temperature")
-                for agent_name in ["researcher", "analyst", "writer", "reviewer"]
+                name.lower(): yaml_config.get("agents", {}).get(name.lower(), {}).get("temperature")
+                for name in yaml_config.get("agents", {})
+            },
+            agent_strategies={
+                name.lower(): yaml_config.get("agents", {}).get(name.lower(), {}).get("strategy")
+                for name in yaml_config.get("agents", {})
             },
             history_format=history_format,
             examples_path=examples_path,
             dspy_optimizer="gepa" if use_gepa else "bootstrap",
             gepa_options=optimization_options,
             enable_handoffs=handoffs_enabled,
+            allow_gepa_optimization=allow_gepa,
         )
         self.workflow_config = workflow_config
 
@@ -197,10 +213,11 @@ class WorkflowRunner:
             workflow = await create_supervisor_workflow(
                 compile_dspy=compile_dspy,
                 config=workflow_config,
+                mode=mode,
             )
             # Set progress callback if workflow supports it
             if hasattr(workflow, "progress_callback"):
-                workflow.progress_callback = self.progress_callback
+                workflow.progress_callback = self.progress_callback  # type: ignore[assignment]
 
         self.workflow = workflow
         return workflow
@@ -242,6 +259,104 @@ class WorkflowRunner:
             try:
                 async for event in self.workflow.run_stream(message):
                     event_type = type(event).__name__
+
+                    # Handle intermediate workflow steps via ExecutorCompletedEvent
+                    if isinstance(event, ExecutorCompletedEvent):
+                        output = event.data
+
+                        if isinstance(output, AnalysisMessage):
+                            live.update(
+                                Panel(
+                                    "Analyzing task...",
+                                    title="[bold cyan]Analysis[/bold cyan]",
+                                    border_style="cyan",
+                                )
+                            )
+                            analysis = output.analysis
+                            self.console.print(
+                                Panel(
+                                    f"[bold]Complexity:[/bold] {analysis.complexity}\n"
+                                    f"[bold]Steps:[/bold] {analysis.steps}\n"
+                                    f"[bold]Capabilities:[/bold] {', '.join(analysis.capabilities)}\n"
+                                    f"[bold]Tools:[/bold] {', '.join(analysis.tool_requirements) or 'None'}",
+                                    title="[bold cyan]🔍 Analysis Complete[/bold cyan]",
+                                    border_style="cyan",
+                                )
+                            )
+                            live.update(Text("Proceeding to routing..."))
+
+                        elif isinstance(output, RoutingMessage):
+                            live.update(
+                                Panel(
+                                    "Routing task...",
+                                    title="[bold yellow]Routing[/bold yellow]",
+                                    border_style="yellow",
+                                )
+                            )
+                            routing = output.routing.decision
+                            self.console.print(
+                                Panel(
+                                    f"[bold]Mode:[/bold] {routing.mode.value}\n"
+                                    f"[bold]Assigned:[/bold] {', '.join(routing.assigned_to)}\n"
+                                    f"[bold]Subtasks:[/bold]\n- " + "\n- ".join(routing.subtasks),
+                                    title="[bold yellow]🔀 Routing Decision[/bold yellow]",
+                                    border_style="yellow",
+                                )
+                            )
+                            live.update(Text(f"Executing with {', '.join(routing.assigned_to)}..."))
+
+                        elif isinstance(output, ExecutionMessage):
+                            # Execution outcome is usually followed by agent streaming or results
+                            pass
+
+                        elif isinstance(output, ProgressMessage):
+                            live.update(
+                                Panel(
+                                    "Evaluating progress...",
+                                    title="[bold blue]Progress[/bold blue]",
+                                    border_style="blue",
+                                )
+                            )
+                            prog = output.progress
+                            color = "green" if prog.action == "complete" else "yellow"
+                            self.console.print(
+                                Panel(
+                                    f"[bold]Action:[/bold] {prog.action}\n"
+                                    f"[bold]Feedback:[/bold] {prog.feedback}",
+                                    title="[bold blue]📈 Progress Evaluation[/bold blue]",
+                                    border_style=color,
+                                )
+                            )
+                            live.update(Text("Assessing quality..."))
+
+                        elif isinstance(output, QualityMessage):
+                            live.update(
+                                Panel(
+                                    "Assessing quality...",
+                                    title="[bold magenta]Quality[/bold magenta]",
+                                    border_style="magenta",
+                                )
+                            )
+                            qual = output.quality
+                            score_color = (
+                                "green"
+                                if qual.score >= 8.0
+                                else "yellow"
+                                if qual.score >= 5.0
+                                else "red"
+                            )
+                            self.console.print(
+                                Panel(
+                                    f"[bold]Score:[/bold] [{score_color}]{qual.score}/10[/{score_color}]\n"
+                                    f"[bold]Missing:[/bold] {qual.missing or 'None'}\n"
+                                    f"[bold]Improvements:[/bold] {qual.improvements or 'None'}",
+                                    title="[bold magenta]✨ Quality Assessment[/bold magenta]",
+                                    border_style="magenta",
+                                )
+                            )
+                            live.update(Text("Finalizing..."))
+
+                        continue
 
                     # Handle final workflow outputs (metadata + result)
                     if isinstance(event, WorkflowOutputEvent) and isinstance(event.data, dict):
@@ -289,10 +404,10 @@ class WorkflowRunner:
                         # Don't treat WorkflowOutputEvent as an agent message
                         continue
 
-                    # Handle agent message events only (skip framework-level \"fleet\" events)
+                    # Handle agent message events only (skip framework-level "fleet" events)
                     if isinstance(event, MagenticAgentMessageEvent):
                         agent_id = getattr(event, "agent_id", None)
-                        # Internal workflow events are wrapped with agent_id=\"fleet\"; use them
+                        # Internal workflow events are wrapped with agent_id="fleet"; use them
                         # only for lightweight status updates (and do not stream them verbosely).
                         if agent_id == "fleet":
                             if self.verbose:
@@ -373,10 +488,14 @@ class WorkflowRunner:
         # Show final result summary (who responded, score, answer)
         if final_data:
             result_text = str(final_data.get("result", "") or "")
-            routing = final_data.get("routing") or {}
+            final_routing = final_data.get("routing") or {}
             quality = final_data.get("quality") or {}
 
-            agents = ", ".join(routing.get("assigned_to", [])) if isinstance(routing, dict) else ""
+            agents = (
+                ", ".join(final_routing.get("assigned_to", []))
+                if isinstance(final_routing, dict)
+                else ""
+            )
             score = quality.get("score") if isinstance(quality, dict) else None
             score_str = f"{score}/10" if isinstance(score, int | float) else "N/A"
 

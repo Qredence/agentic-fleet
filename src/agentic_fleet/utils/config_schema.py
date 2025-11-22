@@ -98,6 +98,13 @@ class AgentConfig(BaseModel):
     model: str = "gpt-5-mini"
     tools: list[str] = Field(default_factory=list)
     temperature: float = Field(default=0.7, ge=0.0, le=2.0)
+    enable_dspy: bool = True
+    cache_ttl: int = Field(default=300, ge=0)
+    timeout: int = Field(default=30, ge=1)
+    strategy: str | None = None
+    instructions: str | None = None
+
+    model_config = {"extra": "allow"}
 
 
 class AgentsConfig(BaseModel):
@@ -107,6 +114,8 @@ class AgentsConfig(BaseModel):
     analyst: AgentConfig = AgentConfig()
     writer: AgentConfig = AgentConfig()
     reviewer: AgentConfig = AgentConfig()
+
+    model_config = {"extra": "allow"}
 
 
 class ToolsConfig(BaseModel):

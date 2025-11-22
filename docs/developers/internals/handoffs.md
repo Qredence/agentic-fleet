@@ -20,7 +20,7 @@ Agent handoffs enable seamless work transitions between specialized agents with:
 ### Basic Handoff
 
 ```python
-from src.workflows.handoff_manager import HandoffManager
+from agentic_fleet.workflows.handoff import HandoffManager
 
 # Initialize
 handoff_manager = HandoffManager(dspy_supervisor)
@@ -249,7 +249,7 @@ result = await workflow.run(complex_task)
 ### Enhanced GEPA Metric
 
 ```python
-from src.utils.gepa_optimizer import build_advanced_routing_feedback_metric
+from src.agentic_fleet.utils.gepa_optimizer import build_advanced_routing_feedback_metric
 
 # Create metric with handoff evaluation
 metric = build_advanced_routing_feedback_metric(
@@ -291,7 +291,8 @@ Handoff Statistics:
 - Total handoffs: {stats['total_handoffs']}
 - Most common: {stats['most_common_handoffs']}
 - Average per task: {stats['avg_handoffs_per_task']:.1f}
-""")
+"""
+)
 
 # View specific handoff
 for handoff in workflow.handoff_manager.handoff_history:
@@ -303,7 +304,7 @@ for handoff in workflow.handoff_manager.handoff_history:
 ### Execution History
 
 ```python
-from src.utils.history_manager import HistoryManager
+from src.agentic_fleet.utils.history_manager import HistoryManager
 
 history = HistoryManager()
 executions = history.load_history(limit=10)

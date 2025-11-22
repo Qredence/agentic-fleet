@@ -1,79 +1,41 @@
-"""
-Enhanced DSPy signatures for Microsoft agent-framework workflow integration.
+"""Workflow-specific DSPy signatures.
+
+This module contains enhanced signatures for the fleet workflow, specifically
+targeting routing efficiency and tool planning optimization.
 """
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Protocol
+from typing import Literal
 
 import dspy
 
-if TYPE_CHECKING:  # pragma: no cover - typing helper
 
-    class SignatureBase(Protocol):
-        """Protocol version of dspy.Signature to keep mypy satisfied."""
+class EnhancedTaskRouting(dspy.Signature):
+    """Advanced task routing with efficiency and tool-planning awareness.
 
-        ...
+    Optimizes for latency and token usage by pre-planning tool usage
+    and setting execution constraints.
+    """
 
-    class _Field:
-        def __init__(self, desc: str = ""): ...
+    task: str = dspy.InputField(desc="Task to be routed")
+    team_capabilities: str = dspy.InputField(desc="Capabilities of available agents")
+    available_tools: str = dspy.InputField(desc="List of available tools")
+    current_context: str = dspy.InputField(desc="Execution context")
+    handoff_history: str = dspy.InputField(desc="History of agent handoffs")
+    workflow_state: str = dspy.InputField(desc="Current state of the workflow")
 
-    InputField = _Field
-    OutputField = _Field
-else:  # pragma: no cover - runtime path
-    SignatureBase = dspy.Signature
-    InputField = dspy.InputField
-    OutputField = dspy.OutputField
-
-
-class EnhancedTaskRouting(SignatureBase):
-    """Advanced task routing with agent-framework workflow integration."""
-
-    task = InputField(desc="task to be routed")
-    team_capabilities = InputField(desc="available team members and their skills")
-    available_tools = InputField(desc="available tools and their capabilities")
-    current_context = InputField(desc="current workflow state and history")
-    handoff_history = InputField(desc="recent handoff patterns and outcomes")
-    workflow_state = InputField(desc="current agent-framework workflow state")
-
-    assigned_to = OutputField(desc="primary agent(s) for initial work")
-    execution_mode = OutputField(desc="delegated|sequential|parallel|adaptive")
-    handoff_strategy = OutputField(desc="planned handoff checkpoints and triggers")
-    subtasks = OutputField(desc="task breakdown with handoff points marked")
-    workflow_gates = OutputField(desc="checkpoints requiring review before continuation")
-    # Tool-aware enhancements for ReAct-style planning
-    tool_plan = OutputField(desc="ordered list of tools to use (comma-separated)")
-    tool_goals = OutputField(desc="brief goals for why each tool is needed")
-    latency_budget = OutputField(desc="low|medium|high latency budget guidance")
-
-
-class WorkflowHandoffDecision(SignatureBase):
-    """DSPy signature for agent-framework handoff decisions."""
-
-    current_workflow_state = InputField(desc="current agent-framework workflow state")
-    agent_performance = InputField(desc="performance metrics for current agent")
-    task_progress = InputField(desc="current task completion status")
-    available_transitions = InputField(desc="possible handoff targets and conditions")
-
-    should_handoff = OutputField(desc="yes/no decision for handoff")
-    target_agent = OutputField(desc="which agent to transition to")
-    handoff_context = OutputField(desc="context package for handoff")
-    transition_strategy = OutputField(desc="how to execute the handoff")
-
-
-class JudgeEvaluation(SignatureBase):
-    """DSPy signature for structured judge evaluation with quality criteria."""
-
-    task = InputField(desc="original task that was executed")
-    result = InputField(desc="the result/output to be evaluated")
-    quality_criteria = InputField(desc="specific quality criteria checklist to evaluate against")
-
-    score = OutputField(desc="quality score from 0-10 reflecting completeness across all criteria")
-    missing_elements = OutputField(
-        desc="comma-separated list of missing elements: citations, vote_totals, dates, context"
+    assigned_to: list[str] = dspy.OutputField(desc="Agents assigned to the task")
+    execution_mode: Literal["delegated", "sequential", "parallel"] = dspy.OutputField(
+        desc="Execution mode"
     )
-    required_improvements = OutputField(desc="specific instructions for what needs to be improved")
-    refinement_agent = OutputField(
-        desc="which agent should handle the refinement: Researcher, Analyst, or Writer"
-    )
-    refinement_needed = OutputField(desc="yes or no - whether refinement is needed")
+    subtasks: list[str] = dspy.OutputField(desc="Breakdown of subtasks")
+
+    handoff_strategy: str = dspy.OutputField(desc="Strategy for agent handoffs")
+    workflow_gates: str = dspy.OutputField(desc="Quality gates and checkpoints")
+
+    # Efficiency and Tool Planning Fields
+    tool_plan: list[str] = dspy.OutputField(desc="Ordered list of tools to use")
+    tool_goals: str = dspy.OutputField(desc="Specific goals for tool usage")
+    latency_budget: str = dspy.OutputField(desc="Estimated time/latency budget")
+    reasoning: str = dspy.OutputField(desc="Reasoning for the routing decision")

@@ -1,8 +1,8 @@
 # DSPy Configuration
 dspy:
   model: gpt-5-mini
-  temperature: 0.7
-  max_tokens: 2000
+  temperature: 1.0
+  max_tokens: 16000
   optimization:
     enabled: true
     examples_path: data/supervisor_examples.json
@@ -43,7 +43,7 @@ workflow:
 
   execution:
     parallel_threshold: 3
-    timeout_seconds: 60 # Reduced from 300 to 60 seconds
+    timeout_seconds: 300 # Increased from 60 to 300 seconds for complex tasks
     retry_attempts: 2
     enable_parallel: true # Enable parallel agent execution where possible
     max_parallel_agents: 3 # Maximum concurrent agents
@@ -56,8 +56,8 @@ workflow:
     judge_threshold: 7.0 # Trigger refinement when Judge score < 7.0 (raised from 5.0)
     enable_judge: true # Enable Judge agent for quality evaluation
     max_refinement_rounds: 1 # Reduced from 2 to 1 for faster execution
-    judge_model: gpt-5-mini # Use gpt-5-mini for faster evaluation (changed from gpt-5)
-    judge_reasoning_effort: minimal # Changed from medium to minimal for speed
+    judge_model: gpt-5-mini # Use gpt-5-mini for faster evaluation
+    judge_reasoning_effort: minimal # Use low reasoning effort for Judge
     judge_timeout_seconds: 30 # Timeout for judge evaluation (new)
     refinement_min_improvement: 1.0 # Skip refinement if not improving by 1 point
 
@@ -73,48 +73,49 @@ workflow:
 # Agent Configuration
 agents:
   researcher:
-    model: gpt-4.1-mini
+    model: gpt-4.1
     tools:
       - TavilySearchTool # Requires TAVILY_API_KEY environment variable
     temperature: 0.5
     enable_dspy: true # Enable DSPy task enhancement
     cache_ttl: 300 # Cache responses for 5 minutes
-    timeout: 30 # Task timeout in seconds
+    timeout: 60 # Task timeout in seconds
 
   analyst:
-    model: gpt-4.1-mini
+    model: gpt-4.1
     tools:
       - HostedCodeInterpreterTool
     temperature: 0.3
     enable_dspy: true
     cache_ttl: 300
-    timeout: 45 # Longer timeout for computations
+    timeout: 90 # Longer timeout for computations
+    strategy: "react" # Switch to ReAct for stability
 
   writer:
-    model: gpt-5-nano
+    model: gpt-4.1
     tools: []
     temperature: 0.7
     enable_dspy: true
     cache_ttl: 600 # Cache longer for writing
-    timeout: 30
+    timeout: 60
 
   reviewer:
-    model: gpt-5-mini
+    model: gpt-5.1
     tools: []
     temperature: 0.2
     enable_dspy: true
     cache_ttl: 300
-    timeout: 20
+    timeout: 45
 
   # New expanded agent roster (configuration-driven; keeps legacy agents for compatibility)
   planner:
-    model: gpt-5-mini
+    model: gpt-5
     tools: []
     temperature: 0.5
     instructions: prompts.planner
     enable_dspy: true
     cache_ttl: 300
-    timeout: 25
+    timeout: 60
 
   executor:
     model: gpt-5-mini
@@ -123,35 +124,35 @@ agents:
     instructions: prompts.executor
     enable_dspy: true
     cache_ttl: 300
-    timeout: 30
+    timeout: 60
 
   coder:
-    model: gpt-5-mini
+    model: gpt-5.1-codex-mini
     tools:
       - HostedCodeInterpreterTool
     temperature: 0.3
     instructions: prompts.coder
     enable_dspy: true
     cache_ttl: 300
-    timeout: 45
+    timeout: 90
 
   verifier:
-    model: gpt-5-mini
+    model: gpt-5-nano
     tools: []
     temperature: 0.5
     instructions: prompts.verifier
     enable_dspy: true
     cache_ttl: 300
-    timeout: 30
+    timeout: 60
 
   generator:
-    model: gpt-5-mini
+    model: gpt-5.1-chat
     tools: []
     temperature: 0.8
     instructions: prompts.generator
     enable_dspy: true
     cache_ttl: 600
-    timeout: 30
+    timeout: 60
 
 # Tool Configuration
 tools:

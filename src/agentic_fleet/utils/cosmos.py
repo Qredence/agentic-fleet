@@ -23,10 +23,19 @@ import os
 import uuid
 from collections.abc import Iterable
 from datetime import UTC, datetime
+from enum import Enum
 from typing import Any
 
-from azure.cosmos import CosmosClient, exceptions  # type: ignore[import]
-from azure.identity import DefaultAzureCredential  # type: ignore[import]
+try:
+    from azure.cosmos import CosmosClient, exceptions  # type: ignore[import]
+    from azure.identity import DefaultAzureCredential  # type: ignore[import]
+
+    _HAS_COSMOS_SDK = True
+except ImportError:
+    _HAS_COSMOS_SDK = False
+    CosmosClient = None  # type: ignore
+    exceptions = None  # type: ignore
+    DefaultAzureCredential = None  # type: ignore
 
 from .logger import setup_logger
 
@@ -34,16 +43,6 @@ logger = setup_logger(__name__)
 
 # Cached singleton client to avoid re-creating connections.
 _COSMOS_CLIENT: CosmosClient | None = None
-
-# Prevent multiple missing user ID warnings.
-_MISSING_USER_ID_WARNING_EMITTED = False
-_MISSING_USER_ID_WARNING_EMITTED = False
-
-# Suppress duplicate logs for missing userId in agent memory writes.
-_MISSING_USER_ID_WARNING_EMITTED = False
-
-# Used to emit a missing user ID warning only once
-_MISSING_USER_ID_WARNING_EMITTED = False
 _MISSING_USER_ID_WARNING_EMITTED = False
 
 
@@ -226,6 +225,19 @@ def get_default_user_id() -> str | None:
     return None
 
 
+def _sanitize_for_cosmos(obj: Any) -> Any:
+    """Recursively convert objects to JSON-serializable formats."""
+    if hasattr(obj, "to_dict") and callable(obj.to_dict):
+        return _sanitize_for_cosmos(obj.to_dict())
+    if isinstance(obj, dict):
+        return {k: _sanitize_for_cosmos(v) for k, v in obj.items()}
+    if isinstance(obj, list | tuple):
+        return [_sanitize_for_cosmos(i) for i in obj]
+    if isinstance(obj, Enum):
+        return obj.value
+    return obj
+
+
 def mirror_execution_history(execution: dict[str, Any]) -> None:
     """Mirror a single execution record into Cosmos ``workflowRuns`` container.
 
@@ -245,7 +257,8 @@ def mirror_execution_history(execution: dict[str, Any]) -> None:
         return
 
     # Create a shallow copy so we do not mutate the caller's structure.
-    item: dict[str, Any] = dict(execution)
+    # And sanitize for JSON serialization (e.g. RoutingDecision objects)
+    item: dict[str, Any] = _sanitize_for_cosmos(execution)
 
     # Ensure we have a stable workflowId and id for Cosmos.
     workflow_id = item.get("workflowId")
@@ -258,7 +271,7 @@ def mirror_execution_history(execution: dict[str, Any]) -> None:
 
     try:
         # Partition key path for the container is /workflowId.
-        container.upsert_item(body=item, partition_key=item["workflowId"])
+        container.upsert_item(body=item)
     except exceptions.CosmosHttpResponseError as exc:  # type: ignore[attr-defined]
         logger.warning(
             "Failed to mirror execution to Cosmos (HTTP error); continuing without "
@@ -305,7 +318,7 @@ def save_agent_memory_item(item: dict[str, Any], *, user_id: str | None = None) 
     doc["updatedAt"] = now
 
     try:
-        container.upsert_item(doc, partition_key=resolved_user_id)
+        container.upsert_item(doc)
     except exceptions.CosmosHttpResponseError as exc:  # type: ignore[attr-defined]
         logger.warning("Failed to save agent memory: %s", exc, exc_info=True)
     except Exception as exc:  # pragma: no cover
@@ -388,7 +401,7 @@ def mirror_dspy_examples(
         doc.setdefault("createdAt", now)
 
         try:
-            container.upsert_item(doc, partition_key=resolved_user_id)
+            container.upsert_item(doc)
         except exceptions.CosmosHttpResponseError as exc:  # type: ignore[attr-defined]
             logger.debug("Failed to mirror DSPy example: %s", exc)
         except Exception as exc:  # pragma: no cover
@@ -422,7 +435,7 @@ def record_dspy_optimization_run(
     doc.setdefault("createdAt", datetime.now(UTC).isoformat())
 
     try:
-        container.upsert_item(doc, partition_key=resolved_user_id)
+        container.upsert_item(doc)
     except exceptions.CosmosHttpResponseError as exc:  # type: ignore[attr-defined]
         logger.debug("Failed to record optimization run: %s", exc)
     except Exception as exc:  # pragma: no cover
@@ -445,16 +458,50 @@ def mirror_cache_entry(cache_key: str, entry: dict[str, Any]) -> None:
     doc.setdefault("createdAt", datetime.now(UTC).isoformat())
 
     try:
-        container.upsert_item(doc, partition_key=cache_key)
+        container.upsert_item(doc)
     except exceptions.CosmosHttpResponseError as exc:  # type: ignore[attr-defined]
         logger.debug("Failed to mirror cache entry: %s", exc)
     except Exception as exc:  # pragma: no cover
         logger.debug("Unexpected error mirroring cache entry: %s", exc)
 
 
+def load_execution_history(limit: int = 20) -> list[dict[str, Any]]:
+    """Load execution history from Cosmos DB.
+
+    Args:
+        limit: Maximum number of entries to return
+
+    Returns:
+        List of execution dictionaries
+    """
+    if not is_cosmos_enabled():
+        return []
+
+    container = _get_history_container()
+    if container is None:
+        return []
+
+    query = "SELECT TOP @limit * FROM c ORDER BY c.createdAt DESC"
+    parameters = [{"name": "@limit", "value": limit}]
+
+    try:
+        items = container.query_items(
+            query=query,
+            parameters=parameters,
+            enable_cross_partition_query=True,
+        )
+        return list(items)
+    except exceptions.CosmosHttpResponseError as exc:  # type: ignore[attr-defined]
+        logger.warning("Failed to load execution history: %s", exc, exc_info=True)
+    except Exception as exc:  # pragma: no cover
+        logger.warning("Unexpected error while loading execution history: %s", exc, exc_info=True)
+    return []
+
+
 __all__ = [
     "get_default_user_id",
     "is_cosmos_enabled",
+    "load_execution_history",
     "mirror_cache_entry",
     "mirror_dspy_examples",
     "mirror_execution_history",

@@ -8,7 +8,7 @@
     "types": ["vite/client", "vitest/globals"],
     "skipLibCheck": true,
     "baseUrl": ".",
-    "ignoreDeprecations": "6.0",
+    "noEmit": true,
     "paths": {
       "@/*": ["./src/*"]
     },
@@ -19,7 +19,6 @@
     "moduleDetection": "force",
     "noEmit": true,
     "jsx": "react-jsx",
-
     /* Linting */
     "strict": true,
     "noUnusedLocals": true,

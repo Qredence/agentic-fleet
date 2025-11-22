@@ -73,19 +73,19 @@ uv run agentic-fleet self-improve --min-quality 8.5 --max-examples 15
 
 ```bash
 # Run self-improvement analysis
-uv run python scripts/self_improve.py
+uv run python src/agentic_fleet/scripts/self_improve.py
 
 # View statistics only
-uv run python scripts/self_improve.py --stats-only
+uv run python src/agentic_fleet/scripts/self_improve.py --stats-only
 
 # Customize parameters
-uv run python scripts/self_improve.py --min-quality 9.0 --max-examples 20 --lookback 50
+uv run python src/agentic_fleet/scripts/self_improve.py --min-quality 9.0 --max-examples 20 --lookback 50
 ```
 
 ### Programmatic Usage
 
 ```python
-from src.utils.self_improvement import SelfImprovementEngine
+from src.agentic_fleet.utils.self_improvement import SelfImprovementEngine
 
 # Create engine
 engine = SelfImprovementEngine(
@@ -215,7 +215,7 @@ Check if self-improvement is working:
 
 ```bash
 # View quality statistics
-uv run python scripts/analyze_history.py --all
+uv run python src/agentic_fleet/scripts/analyze_history.py --all
 
 # Look for improving average quality scores over time
 ```
@@ -241,7 +241,7 @@ After adding examples, test routing:
 
 ```bash
 # Clear cache to force recompilation
-uv run python -c "from src.utils.compiler import clear_cache; clear_cache()"
+uv run python -c "from src.agentic_fleet.utils.compiler import clear_cache; clear_cache()"
 
 # Run test task
 uv run agentic-fleet run -m "Test task similar to learned patterns" --verbose
@@ -311,7 +311,7 @@ engine.auto_improve(
 
 ```python
 # Only learn from specific execution patterns
-from src.utils.history_manager import HistoryManager
+from src.agentic_fleet.utils.history_manager import HistoryManager
 
 manager = HistoryManager()
 executions = manager.load_history()
@@ -339,7 +339,7 @@ research_tasks = [
 2. Run more tasks to build history
 3. Review quality assessments in history:
    ```bash
-   uv run python scripts/analyze_history.py --all
+   uv run python src/agentic_fleet/scripts/analyze_history.py --all
    ```
 
 ### Examples Not Improving Routing
@@ -351,7 +351,7 @@ research_tasks = [
 1. Verify cache was cleared:
 
    ```bash
-   uv run python -c "from src.utils.compiler import clear_cache; clear_cache()"
+   uv run python -c "from src.agentic_fleet.utils.compiler import clear_cache; clear_cache()"
    ```
 
 2. Check examples were added:
@@ -371,7 +371,7 @@ research_tasks = [
 
 **Solution**: The system automatically deduplicates. If you see many similar examples:
 
-1. Review fingerprinting logic in `src/utils/self_improvement.py`
+1. Review fingerprinting logic in `src/agentic_fleet/utils/self_improvement.py`
 2. Manually edit `data/supervisor_examples.json` to remove unwanted examples
 
 ## Performance Considerations
@@ -438,7 +438,7 @@ uv run agentic-fleet self-improve
 
 ```bash
 # Review overall improvement
-uv run python scripts/analyze_history.py --all
+uv run python src/agentic_fleet/scripts/analyze_history.py --all
 
 # Look for:
 # - Average quality score trending up

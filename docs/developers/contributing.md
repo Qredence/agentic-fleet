@@ -11,7 +11,7 @@
 
 - **Formatting**: Use `ruff format` with the project config (`pyproject.toml`)
 - **Linting**: Use `ruff` (configured in `pyproject.toml`)
-- **Type Checking**: Use `mypy` (Python 3.12 target; config in `pyproject.toml`)
+- **Type Checking**: Use `ty` (Python 3.12 target; config in `pyproject.toml`)
 - **Naming**: snake_case for functions, PascalCase for classes
 
 ## Testing
@@ -51,7 +51,7 @@ import typer
 from rich import Console
 
 # Local imports
-from src.workflows.supervisor_workflow import SupervisorWorkflow
+from agentic_fleet.workflows.supervisor_workflow import SupervisorWorkflow
 ```
 
 ## Adding New Features
@@ -59,20 +59,20 @@ from src.workflows.supervisor_workflow import SupervisorWorkflow
 ### Adding a New Agent
 
 1. Add config in `config/workflow_config.yaml` under `agents:`
-2. Instantiate in `supervisor_workflow.py:_create_agents()` using factory method
-3. Add to team description in `_get_supervisor_instructions()`
+2. Instantiate in `agents/coordinator.py:_create_agent()` using factory method
+3. Add to team description in `reasoner.py:get_execution_summary()`
 4. Add training examples in `data/supervisor_examples.json`
 
 ### Adding a New DSPy Signature
 
-1. Define in `src/dspy_modules/signatures.py`
-2. Add ChainOfThought wrapper in `supervisor.py:__init__`
+1. Define in `src/agentic_fleet/dspy_modules/signatures.py`
+2. Add ChainOfThought wrapper in `reasoner.py:__init__`
 3. Create method to call it (follow pattern of `route_task`, `analyze_task`)
 
 ### Adding a New Tool
 
-1. Implement `ToolProtocol` in `src/tools/<name>.py`
-2. Register in `supervisor_workflow.py:_create_agents()` when creating agents
+1. Implement `ToolProtocol` in `src/agentic_fleet/tools/<name>.py`
+2. Register in `agents/coordinator.py` when creating agents
 3. Tool will be automatically registered in `ToolRegistry`
 
 ## Commit Messages
@@ -86,7 +86,7 @@ from src.workflows.supervisor_workflow import SupervisorWorkflow
 1. Ensure all tests pass: `PYTHONPATH=. uv run pytest -q`
 2. Run formatter: `uv run ruff format .`
 3. Run linter: `uv run flake8`
-4. Run type checker: `uv run mypy`
+4. Run type checker: `uv run ty check src`
 5. Update documentation if needed
 
 ## Documentation

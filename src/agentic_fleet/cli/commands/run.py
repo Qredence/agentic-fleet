@@ -89,6 +89,11 @@ def run(
         "--fast",
         help="Optimize for latency (lighter judge/refinement settings where supported)",
     ),
+    mode: str = typer.Option(
+        "standard",
+        "--mode",
+        help="Workflow mode (standard, group_chat, concurrent, handoff)",
+    ),
 ) -> None:
     """
     Run the DSPy-enhanced workflow with a message.
@@ -133,6 +138,8 @@ def run(
             # In fast mode, request the light pipeline profile to reduce
             # the number of LM calls for simple queries.
             pipeline_profile="light" if fast else None,
+            mode=mode,
+            allow_gepa=False,  # Disable GEPA optimization during run
         )
         # Apply optional fast-mode tuning on top of the loaded config.
         if fast and runner.workflow_config is not None:

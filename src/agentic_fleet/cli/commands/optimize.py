@@ -10,10 +10,9 @@ from rich.console import Console
 from rich.panel import Panel
 from rich.progress import Progress
 
-from ...dspy_modules.supervisor import DSPySupervisor
-from ...utils.compiler import compile_supervisor
+from ...dspy_modules.reasoner import DSPyReasoner
+from ...utils.compiler import compile_reasoner
 from ...utils.config_loader import load_config
-from ...utils.tool_registry import ToolRegistry
 from ..utils import init_tracing, resolve_resource_path
 
 console = Console()
@@ -138,8 +137,7 @@ def gepa_optimize(
 
     configure_dspy_settings(model=effective_model, enable_cache=True)
 
-    supervisor = DSPySupervisor()
-    supervisor.set_tool_registry(ToolRegistry())
+    supervisor = DSPyReasoner()
 
     reflection_model_value = reflection_model or effective_model
     gepa_options = {
@@ -160,7 +158,7 @@ def gepa_optimize(
         task_id = progress.add_task("[cyan]Optimizing with GEPA...", start=False)
         progress.start_task(task_id)
 
-        compiled = compile_supervisor(
+        compiled = compile_reasoner(
             supervisor,
             examples_path=str(examples),
             use_cache=not no_cache,
@@ -169,7 +167,7 @@ def gepa_optimize(
         )
 
         progress.update(task_id, completed=100)
-    compiled_name = compiled.__class__.__name__ if compiled else "DSPySupervisor"
+    compiled_name = compiled.__class__.__name__ if compiled else "DSPyReasoner"
 
     console.print(
         Panel(

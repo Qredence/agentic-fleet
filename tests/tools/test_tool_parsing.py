@@ -4,7 +4,6 @@ import contextlib
 import os
 import sys
 import types
-from unittest.mock import MagicMock
 
 import pytest
 from agent_framework import ToolProtocol
@@ -105,9 +104,9 @@ class TestToolSerializationMixin:
         """Test HostedCodeInterpreterAdapter implements SerializationMixin."""
         tool = HostedCodeInterpreterAdapter()
 
-        assert isinstance(tool, SerializationMixin), (
-            "HostedCodeInterpreterAdapter should be SerializationMixin"
-        )
+        assert isinstance(
+            tool, SerializationMixin
+        ), "HostedCodeInterpreterAdapter should be SerializationMixin"
         assert isinstance(tool, ToolProtocol), "HostedCodeInterpreterAdapter should be ToolProtocol"
         assert hasattr(tool, "to_dict"), "HostedCodeInterpreterAdapter should have to_dict method"
 
@@ -289,7 +288,7 @@ class TestToolRegistration:
     @pytest.mark.asyncio
     async def test_tools_registered_successfully(self, monkeypatch):
         """Test that valid tools are registered successfully."""
-        from unittest.mock import AsyncMock
+        from unittest.mock import AsyncMock, MagicMock
 
         import dspy
         import openai
@@ -337,7 +336,7 @@ class TestToolRegistration:
     @pytest.mark.asyncio
     async def test_tool_validation_during_registration(self, monkeypatch):
         """Test that invalid tools are filtered during registration."""
-        from unittest.mock import AsyncMock
+        from unittest.mock import AsyncMock, MagicMock
 
         import dspy
         import openai
@@ -373,9 +372,9 @@ class TestToolRegistration:
             # Get the actual tool metadata object
             tool_metadata = registry.get_tool(tool_name)
             if tool_metadata and tool_metadata.tool_instance is not None:
-                assert workflow._validate_tool(tool_metadata.tool_instance), (
-                    f"Registered tool {tool_name} should be valid"
-                )
+                assert workflow._validate_tool(
+                    tool_metadata.tool_instance
+                ), f"Registered tool {tool_name} should be valid"
 
 
 class TestToolSchemaFormat:
@@ -404,9 +403,9 @@ class TestToolSchemaFormat:
         assert hasattr(tool, "name"), "TavilyMCPTool should have name attribute"
         assert tool.name == "tavily_search", "TavilyMCPTool should have correct name"
         assert hasattr(tool, "description"), "TavilyMCPTool should have description attribute"
-        assert "MANDATORY" in tool.description, (
-            "TavilyMCPTool description should emphasize mandatory usage"
-        )
+        assert (
+            "MANDATORY" in tool.description
+        ), "TavilyMCPTool description should emphasize mandatory usage"
 
     def test_browser_tool_schema_format(self):
         """Test BrowserTool schema has correct format."""

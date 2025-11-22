@@ -1,6 +1,6 @@
 [project]
 name = "agentic-fleet"
-version = "0.6.0"
+version = "0.6.2"
 description = "Multi-agent orchestration system built with Microsoft Agent Framework's Magentic Fleet pattern"
 authors = [{ name = "Qredence", email = "contact@qredence.ai" }]
 readme = "README.md"
@@ -27,7 +27,6 @@ dependencies = [
     "requests>=2.28.0",
     "pydantic>=2.12.3,<3.0",
     "tiktoken>=0.12.0,<1.0",
-    "agent-framework",
     "agent-framework-core",
     "agent-framework-a2a",
     "agent-framework-azure-ai",
@@ -64,11 +63,11 @@ dependencies = [
     "seaborn>=0.11.0",
     "plotly>=5.10.0",
     "pytest>=9.0.1,<10.0",
-    "pytest-asyncio>=0.21.0", # Updated from requirements.txt
-    "pytest-cov>=4.1.0", # Updated from requirements.txt
+    "pytest-asyncio>=0.21.0",           # Updated from requirements.txt
+    "pytest-cov>=4.1.0",                # Updated from requirements.txt
     "ruff>=0.0.200",
-    "mypy>=1.8.0", # Updated from requirements.txt
-    "flake8>=7.0.0", # Added from requirements.txt
+    "mypy>=1.8.0",                      # Updated from requirements.txt
+    "flake8>=7.0.0",                    # Added from requirements.txt
     "pytz>=2024.1",
     "setuptools>=80.9.0",
     "dspy>=3.0.3", # Updated from requirements.txt (was pinned to 3.0.4)
@@ -80,6 +79,7 @@ dependencies = [
     "gepa[dspy]>=0.0.17,<1.0",
     "anyio>=4.11.0,<5.0",
     "asyncer>=0.0.8,<1.0",
+    "sqlalchemy>=2.0.44",
 ]
 requires-python = ">=3.12,<4"
 
@@ -141,13 +141,13 @@ dev = [
     "pytest>=8.4.2",
     "pytest-asyncio>=1.2.0",
     "pytest-cov>=6.0.0",
-    "ruff>=0.14.0",
-    "mypy>=1.18.2",
     "debugpy>=1.8.17",
     "pre-commit>=3.5.0",
     "types-PyYAML>=6.0.0",
     "types-requests>=2.31.0",
     "types-aiofiles>=25.1.0.20251011",
+    "ruff>=0.14.6",
+    "ty>=0.0.1a27",
 ]
 
 [tool.uv.sources]
@@ -157,6 +157,8 @@ dev = [
 "agent-framework-copilotstudio" = { git = "https://github.com/microsoft/agent-framework.git", branch = "main", subdirectory = "python/packages/copilotstudio" }
 "agent-framework-mem0" = { git = "https://github.com/microsoft/agent-framework.git", branch = "main", subdirectory = "python/packages/mem0" }
 "agent-framework-devui" = { git = "https://github.com/microsoft/agent-framework.git", branch = "main", subdirectory = "python/packages/devui" }
+"agent-framework-ag-ui" = { git = "https://github.com/microsoft/agent-framework.git", branch = "main", subdirectory = "python/packages/ag-ui" }
+
 
 [tool.ruff]
 src = ["src"]
@@ -166,14 +168,42 @@ extend-exclude = ["*.ipynb"]
 
 
 [tool.ruff.lint]
-select = ["E", "F", "I", "UP", "B", "N", "A", "SIM", "RUF"]
-ignore = ["E501"]
-
+# Add "W" (pycodestyle warnings), "C90" (mccabe complexity), "I" (isort), "B" (bugbear)
+# "UP" (pyupgrade), "N" (pep8-naming), "SIM" (flake8-simplify), "A" (flake8-builtins)
+select = [
+    "E",
+    "F",
+    "W",   # Standard Flake8 (Error, Pyflakes, Warning)
+    "C90", # McCabe complexity
+    "I",   # isort
+    "UP",  # pyupgrade (modernize python syntax)
+    "B",   # flake8-bugbear (common bugs)
+    "N",   # pep8-naming
+    "A",   # flake8-builtins
+    "SIM", # flake8-simplify
+    "RUF", # Ruff-specific rules
+    "PT",  # flake8-pytest-style (since you use pytest)
+    "ARG", # flake8-unused-arguments
+    "C4",  # flake8-comprehensions
+]
+ignore = [
+    "E501",
+    "C901", # Ignore complex functions for existing code
+] # Ignore line length (let formatter handle it, or strictly enforce if you prefer)
 
 [tool.ruff.lint.per-file-ignores]
 "__init__.py" = ["F401"]
-"notebooks/*.ipynb" = ["A002"]            # Allow shadowing builtins in notebooks
-"src/agentic_fleet/console.py" = ["B008"] # Allow Typer Option in signatures
+"notebooks/*.ipynb" = ["A002", "E402"]
+"src/agentic_fleet/console.py" = ["B008"]
+"src/agentic_fleet/api/error_handlers.py" = ["ARG001"]
+"src/agentic_fleet/api/main.py" = ["ARG001"]
+"src/agentic_fleet/dspy_modules/*" = ["ARG002"]
+"src/agentic_fleet/tools/*" = ["ARG002"]
+"src/agentic_fleet/utils/*" = ["ARG001"]
+"src/agentic_fleet/workflows/*" = ["ARG001"]
+"tests/*" = [
+    "ARG", # Allow unused arguments in tests (fixtures, mocks)
+]
 
 [tool.ruff.lint.isort]
 known-first-party = ["agentic_fleet", "agenticfleet"]
@@ -197,54 +227,7 @@ exclude_lines = [
     "if __name__ == .__main__.:",
 ]
 
-[tool.mypy]
-python_version = "3.12"
-strict = false
-packages = ["agentic_fleet", "agenticfleet"]
-plugins = ["pydantic.mypy"]
-ignore_missing_imports = true
-warn_unused_ignores = false
-# Start with balanced defaults instead of full strictness so we can progressively
-# dial up coverage as we annotate more modules.
-
-
-[[tool.mypy.overrides]]
-module = "agentic_fleet.api.app"
-warn_unused_ignores = false
-
-[[tool.mypy.overrides]]
-module = "agentic_fleet.api.workflows.routes"
-warn_unused_ignores = false
-disallow_untyped_decorators = false
-
-
-[[tool.mypy.overrides]]
-module = "aiofiles"
-ignore_missing_imports = true
-disallow_untyped_decorators = false
-
-# Temporarily relax typing for complex subsystems until they are fully annotated.
-[[tool.mypy.overrides]]
-module = [
-    "agentic_fleet.tools.*",
-    "agentic_fleet.dspy_modules.*",
-    "agentic_fleet.workflows.*",
-    "agentic_fleet.agents.*",
-    "agentic_fleet.examples.*",
-    "agentic_fleet.utils.dspy_manager",
-    "agentic_fleet.utils.history_manager",
-    "agentic_fleet.evaluation.evaluator",
-    "agentic_fleet.cli.commands.benchmark",
-]
-ignore_errors = true
-
-# Tests are executable validation artifacts rather than library code; relax typing strictness
-# to prioritize production package guarantees while allowing incremental test annotation.
-[[tool.mypy.overrides]]
-module = "tests.*"
-ignore_errors = true
-
-[tool.pydantic-mypy]
-init_forbid_extra = true
-init_typed = true
-warn_required_dynamic_aliases = true
+[tool.ty]
+# ty will automatically discover your project structure and venv.
+# You can add specific type checking rules or suppressions here.
+# For now, the defaults are usually sufficient for a "best practice" start.

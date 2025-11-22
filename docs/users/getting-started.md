@@ -108,7 +108,7 @@ uv run agentic-fleet run -m "Your question here" --verbose 2>&1 | tee logs/outpu
 Integrate into your Python applications:
 
 ```python
-from agentic_fleet.workflows import create_supervisor_workflow
+from agentic_fleet.workflows.supervisor_workflow import create_supervisor_workflow
 import asyncio
 
 async def main():
@@ -132,7 +132,7 @@ asyncio.run(main())
 
 ```bash
 # Clear any existing compiled DSPy supervisor cache
-uv run python -m agentic_fleet.scripts.manage_cache --clear
+uv run python -m src.agentic_fleet.scripts.manage_cache --clear
 ```
 
 ### Run First Task
@@ -185,7 +185,7 @@ For development, install additional tools:
 uv pip install -e ".[dev]"
 
 # Or install dev tools separately
-uv pip install pytest pytest-asyncio pytest-cov ruff flake8 mypy
+uv pip install pytest pytest-asyncio pytest-cov ruff flake8 ty
 ```
 
 ## Upgrading
@@ -200,7 +200,7 @@ git pull origin main
 uv sync
 
 # Clear cache to force recompilation
-uv run python -m agentic_fleet.scripts.manage_cache --clear
+uv run python -m src.agentic_fleet.scripts.manage_cache --clear
 ```
 
 ## Uninstallation

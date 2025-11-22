@@ -1,7 +1,22 @@
-export type SSEEvent = {
-  type: string;
-  [key: string]: unknown;
-};
+export type SSEEvent =
+  | {
+      type: "response.delta";
+      delta: string;
+      agent_id?: string;
+      agentId?: string;
+    }
+  | { type: "response.completed" }
+  | { type: "orchestrator.message"; message: string; kind?: string }
+  | {
+      type: "agent.message.complete";
+      agent_id?: string;
+      agentId?: string;
+      content: string;
+    }
+  | { type: "reasoning.delta"; reasoning: string }
+  | { type: "reasoning.completed"; reasoning?: string }
+  | { type: "error"; error: string }
+  | { type: "__done__" };
 
 export function parseSSELine(line: string): SSEEvent | null {
   if (!line.startsWith("data: ")) return null;

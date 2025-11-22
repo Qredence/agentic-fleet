@@ -36,7 +36,7 @@ Fixes #
 - [ ] Configuration validation passes (`uv run python tests/test_config.py`)
 - [ ] Linting passes (`uv run ruff check .`)
 - [ ] Formatting is correct (`uv run black .`)
-- [ ] Type checking passes (`uv run mypy .`)
+- [ ] Type checking passes (`uv run ty check src`)
 
 ### Test Commands Run
 

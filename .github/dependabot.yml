@@ -39,5 +39,4 @@ updates:
           - "pytest*"
           - "black"
           - "ruff"
-          - "mypy"
     versioning-strategy: increase

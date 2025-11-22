@@ -3,7 +3,11 @@ Tests for routing helper functions.
 """
 
 from agentic_fleet.utils.models import ExecutionMode, RoutingDecision
-from agentic_fleet.workflows.routing import helpers, subtasks
+from agentic_fleet.workflows.helpers import (
+    detect_routing_edge_cases,
+    normalize_routing_decision,
+    prepare_subtasks,
+)
 
 
 def test_normalize_routing_decision_with_valid_input():
@@ -15,7 +19,7 @@ def test_normalize_routing_decision_with_valid_input():
         subtasks=("Subtask 1", "Subtask 2"),
     )
 
-    result = helpers.normalize_routing_decision(routing, "Test task")
+    result = normalize_routing_decision(routing, "Test task")
 
     assert result.assigned_to == ("Researcher", "Analyst")
     assert result.mode == ExecutionMode.SEQUENTIAL
@@ -31,7 +35,7 @@ def test_normalize_routing_decision_with_dict_input():
         "subtasks": ["Subtask 1", "Subtask 2"],
     }
 
-    result = helpers.normalize_routing_decision(routing_dict, "Test task")
+    result = normalize_routing_decision(routing_dict, "Test task")
 
     assert isinstance(result, RoutingDecision)
     assert len(result.assigned_to) == 2
@@ -46,7 +50,7 @@ def test_normalize_routing_decision_with_empty_assigned_to():
         mode=ExecutionMode.DELEGATED,
     )
 
-    result = helpers.normalize_routing_decision(routing, "Research task")
+    result = normalize_routing_decision(routing, "Research task")
 
     # Should fallback to Researcher for research tasks
     assert len(result.assigned_to) > 0
@@ -72,7 +76,7 @@ def test_normalize_routing_decision_with_invalid_mode():
     # Instead test the logic by checking the function handles it properly
 
     # Test with valid mode first
-    result = helpers.normalize_routing_decision(routing, "Test task")
+    result = normalize_routing_decision(routing, "Test task")
     assert result.mode in (
         ExecutionMode.DELEGATED,
         ExecutionMode.SEQUENTIAL,
@@ -89,7 +93,7 @@ def test_detect_routing_edge_cases_low_confidence():
         confidence=0.3,  # Low confidence
     )
 
-    edge_cases = helpers.detect_routing_edge_cases("Test task", routing)
+    edge_cases = detect_routing_edge_cases("Test task", routing)
 
     assert "Low confidence" in edge_cases[0]
     assert len(edge_cases) > 0
@@ -103,7 +107,7 @@ def test_detect_routing_edge_cases_parallel_single_agent():
         mode=ExecutionMode.PARALLEL,  # But parallel mode
     )
 
-    edge_cases = helpers.detect_routing_edge_cases("Test task", routing)
+    edge_cases = detect_routing_edge_cases("Test task", routing)
 
     assert any("Parallel mode with single agent" in case for case in edge_cases)
 
@@ -116,7 +120,7 @@ def test_detect_routing_edge_cases_delegated_multiple_agents():
         mode=ExecutionMode.DELEGATED,  # But delegated mode
     )
 
-    edge_cases = helpers.detect_routing_edge_cases("Test task", routing)
+    edge_cases = detect_routing_edge_cases("Test task", routing)
 
     assert any("Delegated mode with multiple agents" in case for case in edge_cases)
 
@@ -130,7 +134,7 @@ def test_detect_routing_edge_cases_parallel_empty_subtasks():
         subtasks=(),  # No subtasks
     )
 
-    edge_cases = helpers.detect_routing_edge_cases("Test task", routing)
+    edge_cases = detect_routing_edge_cases("Test task", routing)
 
     assert any("Parallel mode without subtasks" in case for case in edge_cases)
 
@@ -145,7 +149,7 @@ def test_detect_routing_edge_cases_no_edge_cases():
         confidence=0.9,  # High confidence
     )
 
-    edge_cases = helpers.detect_routing_edge_cases("Test task", routing)
+    edge_cases = detect_routing_edge_cases("Test task", routing)
 
     # Should return empty list when no edge cases
     assert len(edge_cases) == 0
@@ -157,7 +161,7 @@ def test_prepare_subtasks_with_aligned_agents_subtasks():
     subtasks_list = ["Research topic", "Analyze data"]
     fallback_task = "Default task"
 
-    result = subtasks.prepare_subtasks(agents, subtasks_list, fallback_task)
+    result = prepare_subtasks(agents, subtasks_list, fallback_task)
 
     assert len(result) == len(agents)
     assert result[0] == "Research topic"
@@ -170,7 +174,7 @@ def test_prepare_subtasks_with_fewer_subtasks_than_agents():
     subtasks_list = ["Research topic"]  # Only one subtask
     fallback_task = "Default task"
 
-    result = subtasks.prepare_subtasks(agents, subtasks_list, fallback_task)
+    result = prepare_subtasks(agents, subtasks_list, fallback_task)
 
     assert len(result) == len(agents)
     assert result[0] == "Research topic"
@@ -184,7 +188,7 @@ def test_prepare_subtasks_with_more_subtasks_than_agents():
     subtasks_list = ["Research", "Analyze", "Write", "Review"]  # 4 subtasks
     fallback_task = "Default task"
 
-    result = subtasks.prepare_subtasks(agents, subtasks_list, fallback_task)
+    result = prepare_subtasks(agents, subtasks_list, fallback_task)
 
     assert len(result) == len(agents)  # Should truncate to agent count
     assert result[0] == "Research"
@@ -197,7 +201,7 @@ def test_prepare_subtasks_with_empty_subtasks_list():
     subtasks_list = []
     fallback_task = "Default task"
 
-    result = subtasks.prepare_subtasks(agents, subtasks_list, fallback_task)
+    result = prepare_subtasks(agents, subtasks_list, fallback_task)
 
     assert len(result) == len(agents)
     assert all(task == fallback_task for task in result)
@@ -209,7 +213,7 @@ def test_prepare_subtasks_with_none_subtasks():
     subtasks_list = None
     fallback_task = "Default task"
 
-    result = subtasks.prepare_subtasks(agents, subtasks_list, fallback_task)
+    result = prepare_subtasks(agents, subtasks_list, fallback_task)
 
     assert len(result) == len(agents)
     assert all(task == fallback_task for task in result)
@@ -221,6 +225,6 @@ def test_prepare_subtasks_with_empty_agents():
     subtasks_list = ["Task 1", "Task 2"]
     fallback_task = "Default task"
 
-    result = subtasks.prepare_subtasks(agents, subtasks_list, fallback_task)
+    result = prepare_subtasks(agents, subtasks_list, fallback_task)
 
     assert len(result) == 0

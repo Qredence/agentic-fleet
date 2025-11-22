@@ -143,7 +143,7 @@ timings/decisions in `logs/execution_history.jsonl` for later inspection via
 Integrate into your Python applications:
 
 ```python
-from src.workflows import create_supervisor_workflow
+from agentic_fleet.workflows.supervisor_workflow import create_supervisor_workflow
 import asyncio
 
 async def main():
@@ -212,7 +212,7 @@ Every workflow execution follows 4 phases:
 ┌─────────────────────────────────────────────────────┐
 │ Phase 2: DSPy Task Routing                         │
 │ - Select agents based on analysis                  │
-│ - Choose execution mode (parallel/sequential/      │
+│ - Choose execution mode (parallel/sequential/
 │   delegated)                                       │
 │ - Prepare subtasks                                 │
 └─────────────────────────────────────────────────────┘
@@ -297,7 +297,7 @@ tools:
 # Logging
 logging:
   level: INFO
-  format: "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+  format: "% (asctime)s - %(name)s - %(levelname)s - %(message)s"
   file: logs/workflow.log
   save_history: true
   history_file: logs/execution_history.jsonl
@@ -398,6 +398,9 @@ result = await workflow.run(
 You can override default configuration per execution:
 
 ```python
+from agentic_fleet.workflows.config import WorkflowConfig
+from agentic_fleet.workflows.supervisor_workflow import create_supervisor_workflow
+
 # Create workflow with custom config
 config = WorkflowConfig(
     dspy_model="gpt-4.1",
@@ -406,8 +409,7 @@ config = WorkflowConfig(
     max_rounds=20,
 )
 
-workflow = SupervisorWorkflow(config=config)
-await workflow.initialize()
+workflow = await create_supervisor_workflow(config=config, compile_dspy=True)
 
 result = await workflow.run("Your task")
 ```
@@ -621,8 +623,7 @@ config = WorkflowConfig(
     enable_refinement=True,      # Enable auto-refinement
 )
 
-workflow = SupervisorWorkflow(config=config)
-await workflow.initialize()
+workflow = await create_supervisor_workflow(config=config)
 
 result = await workflow.run("Your task")
 # If initial quality < 8.0, Writer agent will refine the output
@@ -669,15 +670,15 @@ uv run python scripts/analyze_history.py
 uv run python scripts/analyze_history.py --all
 
 # Show specific information
-uv run python scripts/analyze_history.py --routing    # Routing mode distribution
-uv run python scripts/analyze_history.py --agents     # Agent usage stats
-uv run python scripts/analyze_history.py --timing     # Time breakdown by phase
+uv run scripts/analyze_history.py --routing    # Routing mode distribution
+uv run scripts/analyze_history.py --agents     # Agent usage stats
+uv run scripts/analyze_history.py --timing     # Time breakdown by phase
 ```
 
 ### Programmatic History Access
 
 ```python
-from src.utils.history_manager import HistoryManager
+from src.agentic_fleet.utils.history_manager import HistoryManager
 
 manager = HistoryManager(history_format="jsonl")
 
@@ -758,7 +759,7 @@ pip install -e .
 
 ```bash
 # Solution: Clear cache
-python -c "from src.utils.compiler import clear_cache; clear_cache()"
+python -c "from src.agentic_fleet.utils.compiler import clear_cache; clear_cache()"
 ```
 
 **5. Tests failing with import errors**
@@ -795,7 +796,8 @@ Enable maximum verbosity:
 
 ```python
 import logging
-from src.utils.logger import setup_logger
+from agentic_fleet.utils.logger import setup_logger
+from agentic_fleet.workflows.supervisor_workflow import create_supervisor_workflow
 
 setup_logger("dspy_agent_framework", "DEBUG")
 
@@ -816,7 +818,7 @@ Check logs at:
 Programmatic history control:
 
 ```python
-from src.utils.history_manager import HistoryManager
+from src.agentic_fleet.utils.history_manager import HistoryManager
 
 manager = HistoryManager(
     history_format="jsonl",
@@ -841,7 +843,7 @@ stats = manager.get_history_stats()
 Control DSPy compilation cache:
 
 ```python
-from src.utils.compiler import clear_cache, get_cache_info
+from src.agentic_fleet.utils.compiler import clear_cache, get_cache_info
 
 # View cache info
 info = get_cache_info()
@@ -857,7 +859,7 @@ clear_cache()
 Handle workflow errors gracefully:
 
 ```python
-from src.workflows.exceptions import (
+from src.agentic_fleet.workflows.exceptions import (
     WorkflowError,
     AgentExecutionError,
     RoutingError,
@@ -882,7 +884,7 @@ except HistoryError as e:
 Use Pydantic schemas for validation:
 
 ```python
-from src.utils.config_schema import validate_config, WorkflowConfigSchema
+from src.agentic_fleet.utils.config_schema import validate_config, WorkflowConfigSchema
 
 # Validate configuration
 try:
@@ -925,4 +927,4 @@ uv run python console.py gepa-optimize \
 - Add `--use-history` to merge high-quality records from `logs/execution_history.*` into the training split. Tune `--history-min-quality` and `--history-limit` as needed.
 - Results are cached at `logs/compiled_supervisor.pkl`. Delete the cache or pass `--no-cache` to force a fresh optimization run.
 
-Under the hood, the command configures `dspy.GEPA` with the routing feedback metric defined in `src/utils/gepa_optimizer.py`, ensuring actionable text feedback for each trajectory.
+Under the hood, the command configures `dspy.GEPA` with the routing feedback metric defined in `src/agentic_fleet/utils/gepa_optimizer.py`, ensuring actionable text feedback for each trajectory.

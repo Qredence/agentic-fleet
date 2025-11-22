@@ -30,7 +30,7 @@ uv run agentic-fleet run -m "Your task here"
 The framework will:
 
 1. Load training examples from `data/supervisor_examples.json`
-2. Compile the supervisor using BootstrapFewShot
+2. Compile the reasoner using BootstrapFewShot
 3. Cache the optimized module at `logs/compiled_supervisor.pkl`
 4. Use the optimized module for all task routing
 
@@ -246,7 +246,7 @@ uv run agentic-fleet run -m "Test task"
 Or use the Python API:
 
 ```python
-from src.utils.compiler import clear_cache, get_cache_info
+from src.agentic_fleet.utils.compiler import clear_cache, get_cache_info
 
 # Get cache metadata
 info = get_cache_info()
@@ -270,11 +270,10 @@ clear_cache()
 When you run a workflow, compilation happens automatically during initialization:
 
 ```python
-from src.workflows.supervisor_workflow import SupervisorWorkflow
+from agentic_fleet.workflows.supervisor_workflow import create_supervisor_workflow
 
 # Workflow reads config/workflow_config.yaml
-workflow = SupervisorWorkflow()
-await workflow.initialize()  # Compiles supervisor here
+workflow = await create_supervisor_workflow()  # Compiles supervisor here
 
 # Run with optimized module
 result = await workflow.run("Your task")
@@ -293,8 +292,7 @@ dspy:
 Or programmatically:
 
 ```python
-workflow = SupervisorWorkflow()
-await workflow.initialize(compile_dspy=False)
+workflow = await create_supervisor_workflow(compile_dspy=False)
 ```
 
 ## CLI Commands
@@ -451,7 +449,7 @@ git tag -a v1.0-optimized -m "GEPA optimization run 2025-11-07"
 ```bash
 # Check cache validity
 python -c "
-from src.utils.compiler import get_cache_info
+from src.agentic_fleet.utils.compiler import get_cache_info
 print(get_cache_info())
 "
 ```
@@ -512,7 +510,7 @@ dspy:
 
 ### Custom Metrics
 
-Edit `src/utils/compiler.py` to define custom routing metrics:
+Edit `src/agentic_fleet/utils/compiler.py` to define custom routing metrics:
 
 ```python
 def routing_metric(example, prediction, trace=None):
@@ -535,11 +533,11 @@ def routing_metric(example, prediction, trace=None):
 Use the compiler directly:
 
 ```python
-from src.utils.compiler import compile_supervisor
-from src.dspy_modules.supervisor import DSPySupervisor
+from src.agentic_fleet.utils.compiler import compile_supervisor
+from src.agentic_fleet.dspy_modules.reasoner import DSPyReasoner
 
 # Create supervisor
-supervisor = DSPySupervisor()
+supervisor = DSPyReasoner()
 
 # Compile with BootstrapFewShot
 compiled = compile_supervisor(

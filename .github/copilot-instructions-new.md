@@ -70,6 +70,6 @@ Wrong path (`src/agentic_fleet/...`). YAML tool names vs runtime instances. Spar
 2. Examples adjusted & cache cleared if needed
 3. Tests added/updated (routing, quality, tool parsing)
 4. Docs updated (`AGENTS.md` or this file)
-5. Lint & types pass (`ruff`, `mypy`, `black`)
+5. Lint & types pass (`ruff`, `ty`, `black`)
 
 Feedback welcome—request clarification if any pattern seems outdated.
