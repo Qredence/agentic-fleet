@@ -17,7 +17,7 @@ jobs:
       - uses: actions/checkout@1af3b93b6815bc44a9784bd300feb67ff0d1eeb3 # ratchet:actions/checkout@v5
 
       - name: Install uv
-        uses: astral-sh/setup-uv@5dbc9fba7434435c4cd0268139340fa3696d98f3 # ratchet:astral-sh/setup-uv@v7
+        uses: astral-sh/setup-uv@be7fc19b4169c26a2aa1b8a430af391f2a96b3c9 # ratchet:astral-sh/setup-uv@v7
 
       - name: Set up Python
         run: uv python install 3.12
