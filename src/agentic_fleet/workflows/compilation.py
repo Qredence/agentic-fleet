@@ -71,6 +71,7 @@ async def compile_supervisor_async(
     try:
         # Extract agent config for cache invalidation
         agent_config = {}
+
         def extract_tools(agent):
             # Try to get tools from chat_options
             if hasattr(agent, "chat_options") and getattr(agent.chat_options, "tools", None):
@@ -82,6 +83,7 @@ async def compile_supervisor_async(
             else:
                 tools = []
             return tools
+
         if agents:
             for agent_name, agent in agents.items():
                 tools_list = extract_tools(agent)

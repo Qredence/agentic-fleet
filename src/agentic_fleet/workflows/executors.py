@@ -217,25 +217,21 @@ class AnalysisExecutor(Executor):
         return len(words) <= max_words
 
     async def _call_with_retry(self, fn, *args, **kwargs):
-        import asyncio
+        from tenacity import AsyncRetrying, stop_after_attempt, wait_fixed
 
         attempts = max(1, int(self.context.config.dspy_retry_attempts))
         backoff = max(0.0, float(self.context.config.dspy_retry_backoff_seconds))
-        last_exc = None
-        for attempt in range(1, attempts + 1):
-            try:
+
+        async for attempt in AsyncRetrying(
+            stop=stop_after_attempt(attempts),
+            wait=wait_fixed(backoff),
+            reraise=True,
+        ):
+            with attempt:
                 result = fn(*args, **kwargs)
                 if asyncio.iscoroutine(result):
                     result = await result
                 return result
-            except Exception as exc:
-                last_exc = exc
-                logger.warning(f"DSPy call failed on attempt {attempt}/{attempts}: {exc}")
-                if attempt < attempts:
-                    await asyncio.sleep(backoff * attempt)
-        if last_exc:
-            raise last_exc
-        raise RuntimeError("DSPy call failed without exception")
 
 
 class RoutingExecutor(Executor):
@@ -286,10 +282,24 @@ class RoutingExecutor(Executor):
                     team=team_descriptions,
                     context=analysis_msg.analysis.search_context or "",
                     handoff_history="",
+                    max_backtracks=getattr(cfg, "dspy_max_backtracks", 2),
                 )
 
                 routing_decision = ensure_routing_decision(raw_routing)
                 routing_decision = normalize_routing_decision(routing_decision, analysis_msg.task)
+
+                # Auto-parallelization check
+                parallel_threshold = getattr(cfg, "parallel_threshold", 2)
+                if (
+                    len(routing_decision.subtasks) >= parallel_threshold
+                    and routing_decision.mode == ExecutionMode.DELEGATED
+                ):
+                    logger.info(
+                        f"Upgrading to PARALLEL execution (subtasks={len(routing_decision.subtasks)} >= threshold={parallel_threshold})"
+                    )
+                    # RoutingDecision is a frozen dataclass, use .update() (which wraps replace)
+                    routing_decision = routing_decision.update(mode=ExecutionMode.PARALLEL)
+
                 edge_cases = detect_routing_edge_cases(analysis_msg.task, routing_decision)
                 if edge_cases:
                     logger.info(f"Edge cases detected: {', '.join(edge_cases)}")
@@ -348,6 +358,24 @@ class RoutingExecutor(Executor):
             tool_requirements=(),
             confidence=0.0,
         )
+
+    async def _call_with_retry(self, fn, *args, **kwargs):
+        from tenacity import AsyncRetrying, stop_after_attempt, wait_fixed
+
+        attempts = max(1, int(self.context.config.dspy_retry_attempts))
+        backoff = max(0.0, float(self.context.config.dspy_retry_backoff_seconds))
+
+        async for attempt in AsyncRetrying(
+            stop=stop_after_attempt(attempts),
+            wait=wait_fixed(backoff),
+            reraise=True,
+        ):
+            with attempt:
+                result = fn(*args, **kwargs)
+                if asyncio.iscoroutine(result):
+                    result = await result
+                return result
+
 
 # Shared retry utility for executors
 class ExecutionExecutor(Executor):
@@ -517,18 +545,21 @@ class ProgressExecutor(Executor):
         )
 
     async def _call_with_retry(self, fn, *args, **kwargs):
+        from tenacity import AsyncRetrying, stop_after_attempt, wait_fixed
 
-        attempts = 3
-        for attempt in range(attempts):
-            try:
+        attempts = max(1, int(self.context.config.dspy_retry_attempts))
+        backoff = max(0.0, float(self.context.config.dspy_retry_backoff_seconds))
+
+        async for attempt in AsyncRetrying(
+            stop=stop_after_attempt(attempts),
+            wait=wait_fixed(backoff),
+            reraise=True,
+        ):
+            with attempt:
                 result = fn(*args, **kwargs)
                 if asyncio.iscoroutine(result):
                     result = await result
                 return result
-            except Exception:
-                if attempt == attempts - 1:
-                    raise
-                await asyncio.sleep(0.5)
 
 
 class QualityExecutor(Executor):
@@ -618,19 +649,21 @@ class QualityExecutor(Executor):
         )
 
     async def _call_with_retry(self, fn, *args, **kwargs):
-        import asyncio
+        from tenacity import AsyncRetrying, stop_after_attempt, wait_fixed
 
-        attempts = 3
-        for attempt in range(attempts):
-            try:
+        attempts = max(1, int(self.context.config.dspy_retry_attempts))
+        backoff = max(0.0, float(self.context.config.dspy_retry_backoff_seconds))
+
+        async for attempt in AsyncRetrying(
+            stop=stop_after_attempt(attempts),
+            wait=wait_fixed(backoff),
+            reraise=True,
+        ):
+            with attempt:
                 result = fn(*args, **kwargs)
                 if asyncio.iscoroutine(result):
                     result = await result
                 return result
-            except Exception:
-                if attempt == attempts - 1:
-                    raise
-                await asyncio.sleep(0.5)
 
 
 class JudgeRefineExecutor(Executor):
@@ -644,7 +677,7 @@ class JudgeRefineExecutor(Executor):
     async def handle_quality(
         self,
         quality_msg: QualityMessage,
-        ctx: WorkflowContext[FinalResultMessage],
+        ctx: Any,
     ) -> None:
         task = quality_msg.task
         result = quality_msg.result
@@ -657,8 +690,26 @@ class JudgeRefineExecutor(Executor):
         refinement_performed = False
         current_result = result
 
+        # Helper to yield streaming updates
+        async def _yield_update(status_msg: str, phase_state: str = "in_progress"):
+            partial_msg = FinalResultMessage(
+                result=current_result,
+                routing=quality_msg.routing
+                or RoutingDecision(
+                    task=task, assigned_to=(), mode=ExecutionMode.DELEGATED, subtasks=()
+                ),
+                quality=quality_msg.quality,  # Current quality snapshot
+                judge_evaluations=judge_evaluations,
+                execution_summary={"status": status_msg},
+                phase_timings=self.context.latest_phase_timings.copy(),
+                phase_status={**self.context.latest_phase_status, "judge": phase_state},
+                metadata={**quality_msg.metadata, "streaming_status": status_msg},
+            )
+            await ctx.yield_output(partial_msg)
+
         if self.context.config.enable_judge and "Judge" in agents:
             try:
+                await _yield_update("Starting Judge evaluation...")
                 judge_timeout = getattr(self.context.config, "judge_timeout_seconds", None)
 
                 async def run_judge():
@@ -675,7 +726,7 @@ class JudgeRefineExecutor(Executor):
 
                 if judge_eval:
                     judge_evaluations.append(judge_eval)
-                    # Stream intermediate output if possible (omitted for brevity)
+                    await _yield_update(f"Judge score: {judge_eval.get('score', 0)}")
 
                     refinement_rounds = 0
                     while (
@@ -693,6 +744,10 @@ class JudgeRefineExecutor(Executor):
                         if agent_name not in agents:
                             break
 
+                        await _yield_update(
+                            f"Refining with {agent_name} (Round {refinement_rounds})..."
+                        )
+
                         refinement_task = self._build_refinement_task(current_result, judge_eval)
                         try:
                             refined_result = await agents[agent_name].run(refinement_task)
@@ -704,6 +759,7 @@ class JudgeRefineExecutor(Executor):
                             break
 
                         # Re-evaluate
+                        await _yield_update("Re-evaluating refinement...")
                         if judge_timeout and judge_timeout > 0:
                             try:
                                 judge_eval = await asyncio.wait_for(
@@ -716,6 +772,7 @@ class JudgeRefineExecutor(Executor):
 
                         if judge_eval:
                             judge_evaluations.append(judge_eval)
+                            await _yield_update(f"New Judge score: {judge_eval.get('score', 0)}")
                             if judge_eval.get("score", 0.0) >= self.context.config.judge_threshold:
                                 break
                         else:

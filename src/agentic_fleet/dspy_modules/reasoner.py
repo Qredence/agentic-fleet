@@ -48,11 +48,14 @@ class DSPyReasoner(dspy.Module):
         self.analyzer = dspy.ChainOfThought(TaskAnalysis)
 
         if use_enhanced_signatures:
-            from .workflow_signatures import EnhancedTaskRouting
+            from .workflow_signatures import EnhancedTaskRouting, WorkflowStrategy
 
             self.router = dspy.ChainOfThought(EnhancedTaskRouting)
+            self.strategy_selector = dspy.ChainOfThought(WorkflowStrategy)
         else:
             self.router = dspy.ChainOfThought(TaskRouting)
+            # Fallback for standard strategy
+            self.strategy_selector = None
 
         self.quality_assessor = dspy.ChainOfThought(QualityAssessment)
         self.progress_evaluator = dspy.ChainOfThought(ProgressEvaluation)
@@ -61,6 +64,16 @@ class DSPyReasoner(dspy.Module):
         self.simple_responder = dspy.ChainOfThought(SimpleResponse)
 
         self.tool_registry: Any | None = None
+
+    def _robust_route(self, max_backtracks: int = 2, **kwargs) -> dspy.Prediction:
+        """Execute routing.
+
+        Note: DSPy Assertions (dspy.Suggest) are not available in this environment version (3.1.0b1).
+        Falling back to direct routing call without assertion-based backtracking.
+        """
+        # Call the router directly
+        # We preserve the max_backtracks arg for interface compatibility
+        return self.router(**kwargs)
 
     def forward(
         self,
@@ -82,7 +95,7 @@ class DSPyReasoner(dspy.Module):
         actual_context = current_context or context
 
         if self.use_enhanced_signatures:
-            return self.router(
+            return self._robust_route(
                 task=task,
                 team_capabilities=actual_team,
                 available_tools=available_tools,
@@ -91,7 +104,7 @@ class DSPyReasoner(dspy.Module):
                 workflow_state=kwargs.get("workflow_state", "Active"),
             )
         else:
-            return self.router(
+            return self._robust_route(
                 task=task,
                 team=actual_team,
                 context=actual_context,
@@ -112,7 +125,7 @@ class DSPyReasoner(dspy.Module):
         Note: GEPA expects ``predictors()`` to be callable; returning a
         list property breaks optimizer introspection.
         """
-        return [
+        preds = [
             self._get_predictor(self.analyzer),
             self._get_predictor(self.router),
             self._get_predictor(self.quality_assessor),
@@ -121,11 +134,14 @@ class DSPyReasoner(dspy.Module):
             self._get_predictor(self.judge),
             self._get_predictor(self.simple_responder),
         ]
+        if self.strategy_selector:
+            preds.append(self._get_predictor(self.strategy_selector))
+        return preds
 
     def named_predictors(self) -> list[tuple[str, dspy.Module]]:
         """Return predictor modules with stable names for GEPA."""
 
-        return [
+        preds = [
             ("analyzer", self._get_predictor(self.analyzer)),
             ("router", self._get_predictor(self.router)),
             ("quality_assessor", self._get_predictor(self.quality_assessor)),
@@ -134,10 +150,54 @@ class DSPyReasoner(dspy.Module):
             ("judge", self._get_predictor(self.judge)),
             ("simple_responder", self._get_predictor(self.simple_responder)),
         ]
+        if self.strategy_selector:
+            preds.append(("strategy_selector", self._get_predictor(self.strategy_selector)))
+        return preds
 
     def set_tool_registry(self, tool_registry: Any) -> None:
         """Attach a tool registry to the supervisor."""
         self.tool_registry = tool_registry
+
+    def select_workflow_mode(self, task: str) -> dict[str, str]:
+        """Select the optimal workflow architecture for a task.
+
+        Args:
+            task: The user's task description
+
+        Returns:
+            Dictionary containing:
+            - mode: 'handoff', 'standard', or 'fast_path'
+            - reasoning: Why this mode was chosen
+        """
+        logger.info(f"Selecting workflow mode for task: {task[:100]}...")
+
+        # Fast check for trivial tasks to avoid DSPy overhead
+        if self._is_simple_task(task):
+            return {
+                "mode": "fast_path",
+                "reasoning": "Trivial task detected via keyword matching.",
+            }
+
+        if not self.strategy_selector:
+            return {
+                "mode": "standard",
+                "reasoning": "Strategy selector not initialized (legacy mode).",
+            }
+
+        # Analyze complexity first
+        analysis = self.analyze_task(task)
+        complexity_desc = (
+            f"Complexity: {analysis['complexity']}, "
+            f"Steps: {analysis['estimated_steps']}, "
+            f"Time Sensitive: {analysis['time_sensitive']}"
+        )
+
+        prediction = self.strategy_selector(task=task, complexity_analysis=complexity_desc)
+
+        return {
+            "mode": getattr(prediction, "workflow_mode", "standard"),
+            "reasoning": getattr(prediction, "reasoning", ""),
+        }
 
     def analyze_task(
         self, task: str, use_tools: bool = False, perform_search: bool = False
@@ -174,6 +234,7 @@ class DSPyReasoner(dspy.Module):
         handoff_history: list[dict[str, Any]] | None = None,
         current_date: str | None = None,
         required_capabilities: list[str] | None = None,
+        max_backtracks: int = 2,
     ) -> dict[str, Any]:
         """Route a task to the most appropriate agent(s).
 
@@ -184,6 +245,7 @@ class DSPyReasoner(dspy.Module):
             handoff_history: Optional history of agent handoffs
             current_date: Optional current date string (YYYY-MM-DD)
             required_capabilities: Optional list of required capabilities to focus selection
+            max_backtracks: Maximum number of DSPy assertion retries (default: 2)
 
         Returns:
             Dictionary containing routing decision (assigned_to, mode, subtasks)
@@ -194,7 +256,9 @@ class DSPyReasoner(dspy.Module):
 
         if self._is_simple_task(task):
             if "Writer" in team:
-                logger.info("Detected simple/heartbeat task; routing directly to Writer (delegated).")
+                logger.info(
+                    "Detected simple/heartbeat task; routing directly to Writer (delegated)."
+                )
                 return {
                     "task": task,
                     "assigned_to": ["Writer"],
@@ -209,7 +273,9 @@ class DSPyReasoner(dspy.Module):
                     "reasoning": "Simple/heartbeat task → route to Writer only",
                 }
             else:
-                logger.warning("Simple/heartbeat task detected, but 'Writer' agent is not present in the team. Falling back to standard routing.")
+                logger.warning(
+                    "Simple/heartbeat task detected, but 'Writer' agent is not present in the team. Falling back to standard routing."
+                )
 
         # Format team description
         team_str = "\n".join([f"- {name}: {desc}" for name, desc in team.items()])
@@ -256,7 +322,7 @@ class DSPyReasoner(dspy.Module):
                     ]
                 )
 
-            prediction = self.router(
+            prediction = self._robust_route(
                 task=task,
                 team_capabilities=team_str,
                 available_tools=available_tools,
@@ -306,8 +372,12 @@ class DSPyReasoner(dspy.Module):
             }
 
         else:
-            prediction = self.router(
-                task=task, team=team_str, context=enhanced_context, current_date=current_date
+            prediction = self._robust_route(
+                max_backtracks=max_backtracks,
+                task=task,
+                team=team_str,
+                context=enhanced_context,
+                current_date=current_date,
             )
 
             assigned_to = list(getattr(prediction, "assigned_to", []))

@@ -20,7 +20,7 @@ class WorkflowConfig:
     pipeline_profile: str = "full"
     # Heuristic threshold for simple-task detection (word count)
     simple_task_max_words: int = 40
-    parallel_threshold: int = 3
+    parallel_threshold: int = 2
     dspy_model: str = "gpt-5-mini"
     dspy_temperature: float = 1.0
     dspy_max_tokens: int = 16000
@@ -50,12 +50,15 @@ class WorkflowConfig:
     quality_threshold: float = 8.0
     dspy_retry_attempts: int = 3
     dspy_retry_backoff_seconds: float = 1.0
+    # Maximum number of DSPy backtracks/retries for assertion failures.
+    # Setting this higher improves robustness but increases latency.
+    dspy_max_backtracks: int = 2
     analysis_cache_ttl_seconds: int = 3600
-    judge_threshold: float = 7.0
-    max_refinement_rounds: int = 2
+    judge_threshold: float = 6.5
+    max_refinement_rounds: int = 1
     enable_judge: bool = True
     judge_model: str | None = None
-    judge_reasoning_effort: str = "medium"
+    judge_reasoning_effort: str = "low"
 
     # ------------------------------------------------------------------
     # Backward-compatibility: some tests expect a ``config`` attribute

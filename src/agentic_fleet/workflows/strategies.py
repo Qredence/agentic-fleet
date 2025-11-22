@@ -85,7 +85,7 @@ async def run_execution_phase(
             agents=assigned_agents,
             task=task,
             enable_handoffs=context.enable_handoffs,
-            handoff_manager=context.handoff_manager,
+            handoff_manager=context.handoff,
         )
         tool_usage.extend(usage)
     else:

@@ -104,9 +104,9 @@ class TestToolSerializationMixin:
         """Test HostedCodeInterpreterAdapter implements SerializationMixin."""
         tool = HostedCodeInterpreterAdapter()
 
-        assert isinstance(
-            tool, SerializationMixin
-        ), "HostedCodeInterpreterAdapter should be SerializationMixin"
+        assert isinstance(tool, SerializationMixin), (
+            "HostedCodeInterpreterAdapter should be SerializationMixin"
+        )
         assert isinstance(tool, ToolProtocol), "HostedCodeInterpreterAdapter should be ToolProtocol"
         assert hasattr(tool, "to_dict"), "HostedCodeInterpreterAdapter should have to_dict method"
 
@@ -372,9 +372,9 @@ class TestToolRegistration:
             # Get the actual tool metadata object
             tool_metadata = registry.get_tool(tool_name)
             if tool_metadata and tool_metadata.tool_instance is not None:
-                assert workflow._validate_tool(
-                    tool_metadata.tool_instance
-                ), f"Registered tool {tool_name} should be valid"
+                assert workflow._validate_tool(tool_metadata.tool_instance), (
+                    f"Registered tool {tool_name} should be valid"
+                )
 
 
 class TestToolSchemaFormat:
@@ -403,9 +403,9 @@ class TestToolSchemaFormat:
         assert hasattr(tool, "name"), "TavilyMCPTool should have name attribute"
         assert tool.name == "tavily_search", "TavilyMCPTool should have correct name"
         assert hasattr(tool, "description"), "TavilyMCPTool should have description attribute"
-        assert (
-            "MANDATORY" in tool.description
-        ), "TavilyMCPTool description should emphasize mandatory usage"
+        assert "MANDATORY" in tool.description, (
+            "TavilyMCPTool description should emphasize mandatory usage"
+        )
 
     def test_browser_tool_schema_format(self):
         """Test BrowserTool schema has correct format."""

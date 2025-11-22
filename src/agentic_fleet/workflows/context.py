@@ -6,13 +6,16 @@ from typing import Any
 
 import openai
 
-from ...utils.cache import TTLCache
-from ...utils.history_manager import HistoryManager
-from ...utils.progress import NullProgressCallback, ProgressCallback
-from ...utils.tool_registry import ToolRegistry
-from ..config import WorkflowConfig
 from ..dspy_modules.reasoner import DSPyReasoner
+from ..utils.cache import TTLCache
+from ..utils.history_manager import HistoryManager
+from ..utils.progress import NullProgressCallback, ProgressCallback
+from ..utils.tool_registry import ToolRegistry
+from .config import WorkflowConfig
 from .handoff import HandoffManager
+
+if True:  # Lazy import to avoid circular dependency if needed, though direct import seems safe
+    from .compilation import CompilationState
 
 
 @dataclass
@@ -42,3 +45,4 @@ class SupervisorContext:
     compilation_status: str = "pending"
     compilation_task: asyncio.Task[Any] | None = None
     compilation_lock: asyncio.Lock | None = None
+    compilation_state: CompilationState | None = None

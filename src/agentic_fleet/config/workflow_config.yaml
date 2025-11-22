@@ -82,7 +82,7 @@ agents:
     timeout: 60 # Task timeout in seconds
 
   analyst:
-    model: gpt-4.1
+    model: gpt-5-mini
     tools:
       - HostedCodeInterpreterTool
     temperature: 0.3
@@ -92,7 +92,7 @@ agents:
     strategy: "react" # Switch to ReAct for stability
 
   writer:
-    model: gpt-4.1
+    model: gpt-5-mini
     tools: []
     temperature: 0.7
     enable_dspy: true
@@ -100,7 +100,7 @@ agents:
     timeout: 60
 
   reviewer:
-    model: gpt-5.1
+    model: gpt-5-mini
     tools: []
     temperature: 0.2
     enable_dspy: true
@@ -109,7 +109,7 @@ agents:
 
   # New expanded agent roster (configuration-driven; keeps legacy agents for compatibility)
   planner:
-    model: gpt-5
+    model: gpt-5-mini
     tools: []
     temperature: 0.5
     instructions: prompts.planner

@@ -3,8 +3,14 @@
 ## Running Workflows
 
 ```bash
-# Basic execution
+# Basic execution (Auto-mode)
 uv run agentic-fleet run -m "Your question"
+
+# Force Handoff mode (fast research)
+uv run agentic-fleet run -m "Quick query" --mode handoff
+
+# Force Standard mode (robust analysis)
+uv run agentic-fleet run -m "Deep analysis" --mode standard
 
 # With detailed logging
 uv run agentic-fleet run -m "Your question" --verbose

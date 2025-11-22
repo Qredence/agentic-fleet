@@ -44,7 +44,9 @@ def create_agent_event(
 
     message = ChatMessage(role=Role.ASSISTANT, text=text)
     metadata = StreamMetadata(stage=stage, event=event, agent=agent, payload=dict(payload or {}))
-    return _attach_metadata(MagenticAgentMessageEvent(agent_id=agent, message=message), metadata)
+    return _attach_metadata(
+        MagenticAgentMessageEvent(agent_id=agent or "unknown", message=message), metadata
+    )
 
 
 def create_system_event(
@@ -59,4 +61,6 @@ def create_system_event(
 
     message = ChatMessage(role=Role.ASSISTANT, text=text)
     metadata = StreamMetadata(stage=stage, event=event, agent=agent, payload=dict(payload or {}))
-    return _attach_metadata(MagenticAgentMessageEvent(agent_id=agent, message=message), metadata)
+    return _attach_metadata(
+        MagenticAgentMessageEvent(agent_id=agent or "system", message=message), metadata
+    )

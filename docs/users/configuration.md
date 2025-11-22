@@ -120,6 +120,9 @@ Many configuration values can be overridden at runtime without editing `workflow
 # Swap the DSPy model for a single run
 uv run agentic-fleet run -m "task" --model gpt-3.5-turbo
 
+# Force a specific workflow architecture
+uv run agentic-fleet run -m "task" --mode handoff
+
 # Skip compilation when iterating quickly
 uv run agentic-fleet run -m "task" --no-compile
 
