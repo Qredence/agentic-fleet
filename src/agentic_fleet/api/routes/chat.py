@@ -174,7 +174,7 @@ async def stream_chat_generator(
 
     except Exception as e:
         logger.error(f"Error in stream_chat_generator: {e}", exc_info=True)
-        error_msg = {"type": "error", "error": str(e)}
+        error_msg = {"type": "error", "error": "An internal error occurred."}
         yield f"data: {json.dumps(error_msg)}\n\n"
         # Still send completion events to properly terminate the stream
         done_msg = {"type": "response.completed"}
