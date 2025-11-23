@@ -5,7 +5,7 @@
 ### Highlights
 
 - **Optional Azure Cosmos DB persistence** – `AGENTICFLEET_USE_COSMOS=1` now mirrors workflow history, agent memory, DSPy datasets, and cache metadata into Cosmos NoSQL using a single helper module (`utils/cosmos.py`). The runtime degrades gracefully when Cosmos is unreachable.
-- **Data Model Documentation** – Added `cosmosdb_requirements.md` and `cosmosdb_data_model.md`, covering access patterns, container schemas, and provisioning guidance that follow Azure Cosmos DB best practices (high-cardinality partition keys, 2 MB limits, TTL guidance).
+- **Data Model Documentation** – Added `docs/developers/cosmosdb_requirements.md` and `docs/developers/cosmosdb_data_model.md`, covering access patterns, container schemas, and provisioning guidance that follow Azure Cosmos DB best practices (high-cardinality partition keys, 2 MB limits, TTL guidance).
 - **Quality & Persistence polish** – `HistoryManager` now mirrors executions asynchronously, the supervisor workflow records whether refinement ran, and tests gained realistic persistence utilities with summarization support.
 
 ### Changes
@@ -22,8 +22,43 @@
 
 ### Migration Notes
 
-- Cosmos mirroring is off by default. Set `AGENTICFLEET_USE_COSMOS=1` plus the relevant endpoint/key (or managed identity) variables to enable it. The helper never creates databases/containers; provision them ahead of time using the schemas in `cosmosdb_data_model.md`.
+- Cosmos mirroring is off by default. Set `AGENTICFLEET_USE_COSMOS=1` plus the relevant endpoint/key (or managed identity) variables to enable it. The helper never creates databases/containers; provision them ahead of time using the schemas in `docs/developers/cosmosdb_data_model.md`.
 - Container names default to `workflowRuns`, `agentMemory`, `dspyExamples`, `dspyOptimizationRuns`, and `cache`. Override via `AZURE_COSMOS_*_CONTAINER` env vars if your account uses different IDs.
+
+---
+
+## v0.6.2 (2025-11-23) – Code Quality & Tooling Hardening
+
+### Highlights
+
+- **Strict Quality Gates** – CI now enforces strict type checking (no `continue-on-error`) and a minimum **80% backend test coverage**.
+- **Unified QA Tooling** – Added `make qa` command to run the full quality suite (lint, format, type-check, backend tests, frontend tests) in one go.
+- **Cross-Editor Consistency** – Added `.editorconfig` to enforce consistent indentation and file settings across all IDEs.
+- **Docstring Policy** – Enforced presence of docstrings on all public APIs via Ruff (`D100`-`D104`), with exceptions for tests and scripts.
+- **Frontend Ergonomics** – Added `npm run format` script to `src/frontend/package.json` for easy Prettier formatting.
+
+### Changes
+
+- **Configuration**:
+  - Added `.editorconfig` to root.
+  - Updated `pyproject.toml`:
+    - Enabled Ruff docstring rules `D100`-`D104`.
+    - Configured `pytest-cov` with `fail_under = 80`.
+    - Added per-file ignores for docstrings in `tests/`, `examples/`, and `scripts/`.
+  - Updated `src/frontend/package.json`: Added `"format": "prettier --write ."` script.
+  - Updated `.gitignore`: Added `.editorconfig` (if not tracked) and other IDE artifacts.
+
+- **CI/CD**:
+  - Updated `.github/workflows/ci.yml`:
+    - Removed `continue-on-error: true` from `type-check` job.
+    - Updated `pytest` command to use correct coverage source path (`src/agentic_fleet`).
+
+- **Documentation**:
+  - Updated `docs/developers/contributing.md` with new QA commands and style guidelines.
+  - Updated `docs/developers/code-quality.md` with explicit coverage and docstring policies.
+
+- **Makefile**:
+  - Added `qa` target for comprehensive local testing.
 
 ---
 

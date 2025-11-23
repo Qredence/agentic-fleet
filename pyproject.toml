@@ -187,6 +187,12 @@ select = [
     "PT",  # flake8-pytest-style (since you use pytest)
     "ARG", # flake8-unused-arguments
     "C4",  # flake8-comprehensions
+    # Docstring rules (missing docstrings only)
+    "D100", # Missing docstring in public module
+    "D101", # Missing docstring in public class
+    "D102", # Missing docstring in public method
+    "D103", # Missing docstring in public function
+    "D104", # Missing docstring in public package
 ]
 ignore = [
     "E501",
@@ -205,7 +211,10 @@ ignore = [
 "src/agentic_fleet/workflows/*" = ["ARG001"]
 "tests/*" = [
     "ARG", # Allow unused arguments in tests (fixtures, mocks)
+    "D",   # Ignore docstring rules in tests
 ]
+"examples/*" = ["D"] # Ignore docstring rules in examples
+"scripts/*" = ["D"]  # Ignore docstring rules in scripts
 
 [tool.ruff.lint.isort]
 known-first-party = ["agentic_fleet", "agenticfleet"]
@@ -220,6 +229,7 @@ source = ["src/agentic_fleet", "src/agenticfleet"]
 omit = ["*/tests/*", "*/__pycache__/*", "*/.venv/*"]
 
 [tool.coverage.report]
+fail_under = 80
 exclude_lines = [
     "pragma: no cover",
     "def __repr__",

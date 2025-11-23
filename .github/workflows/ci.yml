@@ -73,7 +73,6 @@ jobs:
 
       - name: Run ty type checker
         run: uv run ty check src
-        continue-on-error: true # Don't fail CI on type errors yet
 
   test:
     name: Test (Python ${{ matrix.python-version }})
@@ -114,7 +113,7 @@ jobs:
           AZURE_AI_SEARCH_KEY: ${{ secrets.AZURE_AI_SEARCH_KEY }}
           AZURE_OPENAI_CHAT_COMPLETION_DEPLOYED_MODEL_NAME: ${{ secrets.AZURE_OPENAI_CHAT_COMPLETION_DEPLOYED_MODEL_NAME }}
           AZURE_OPENAI_EMBEDDING_DEPLOYED_MODEL_NAME: ${{ secrets.AZURE_OPENAI_EMBEDDING_DEPLOYED_MODEL_NAME }}
-        run: uv run pytest -v --tb=short -m "not e2e" --cov=src/agenticfleet --cov-report=xml --cov-report=term-missing
+        run: uv run pytest -v --tb=short -m "not e2e" --cov=src/agentic_fleet --cov-report=xml --cov-report=term-missing
 
   frontend-test:
     name: Frontend Tests
