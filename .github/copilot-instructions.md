@@ -29,7 +29,7 @@
 
 ## Extending agents & tools
 
-- Adding an agent: new module under `agents/`, wire prompts in `agents/prompts.py`, register in YAML `agents:` block, update training examples + `docs/AGENTS.md`, and add unit tests (routing + execution).
+- Adding an agent: new module under `agents/`, wire prompts in `agents/prompts.py`, register in YAML `agents:` block, update training examples + `AGENTS.md` (at the root or in `src/agentic_fleet/AGENTS.md`), and add unit tests (routing + execution).
 - Adding a tool: implement adapter in `tools/`, expose via `ToolRegistry`, list it by name in YAML, and document latency/cost expectations.
 - DSPy signatures (`dspy_modules/signatures.py`) must describe any new inputs/outputs; wrap models in `dspy.ChainOfThought` and keep reasoning hints short.
 
