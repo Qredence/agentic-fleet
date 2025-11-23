@@ -151,7 +151,6 @@ def optional_span(
         tracer_name: Name of tracer (defaults to module name).
         attributes: Optional mapping of attributes.
     """
-    span = None
     try:
         from opentelemetry import trace
 

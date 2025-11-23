@@ -18,7 +18,7 @@ if TYPE_CHECKING:  # pragma: no cover - typing helper
     class SignatureBase(Protocol):
         """Base protocol for DSPy signatures."""
 
-        ...
+        pass
 
     class _Field:
         """Type hint stub for DSPy fields."""
