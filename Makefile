@@ -37,7 +37,7 @@ help:
 	@echo "  make pre-commit-install  Install pre-commit hooks"
 	@echo "  make clean             Remove cache and build artifacts"
 	@echo "  make demo-hitl         Run the HITL walkthrough example"
-	@echo "  make validate-agents   Validate docs/AGENTS.md invariants"
+	@echo "  make validate-agents   Validate src/agentic_fleet/AGENTS.md invariants"
 	@echo ""
 	@echo "Load Testing:"
 	@echo "  make load-test-setup  Setup load testing environment"
