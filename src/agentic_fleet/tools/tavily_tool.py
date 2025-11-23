@@ -30,11 +30,15 @@ except (ImportError, ModuleNotFoundError) as exc:
 if TYPE_CHECKING:
 
     class TavilyResult(TypedDict, total=False):
+        """Type definition for a single Tavily search result."""
+
         title: str
         url: str
         content: str
 
     class TavilySearchResponse(TypedDict, total=False):
+        """Type definition for the Tavily search response."""
+
         results: list[TavilyResult]
         answer: str
 
@@ -77,6 +81,7 @@ class TavilySearchTool(ToolProtocol, SerializationMixin):
 
     @property
     def schema(self) -> dict:
+        """Return the tool schema."""
         return {
             "type": "function",
             "function": {

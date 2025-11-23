@@ -9,7 +9,7 @@ from __future__ import annotations
 import asyncio
 import time
 from collections.abc import AsyncIterable
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, cast
 
 from agent_framework import (
     AgentRunResponse,
@@ -181,20 +181,43 @@ class DSPyEnhancedAgent(ChatAgent):
             )
 
     def _normalize_input_to_text(
-        self, messages: str | ChatMessage | list[str] | list[ChatMessage] | None
+        self,
+        messages: str | ChatMessage | list[str] | list[ChatMessage] | None,
+        thread: AgentThread | None = None,
     ) -> str:
-        """Extract text prompt from various message formats."""
-        if not messages:
-            return ""
-        if isinstance(messages, str):
-            return messages
-        if isinstance(messages, ChatMessage):
-            return messages.text
+        """Extracts and formats the conversational history into a single string.
+
+        The last message is treated as the primary prompt, and previous messages
+        provide context.
+        """
+        history: list[str | ChatMessage] = []
+        if thread:
+            thread_messages = getattr(thread, "messages", None)
+            if thread_messages:
+                history.extend(list(cast(list[str | ChatMessage], thread_messages)))
+
         if isinstance(messages, list):
-            # Return the text of the last message if it's a list
-            last_msg = messages[-1]
-            return last_msg.text if isinstance(last_msg, ChatMessage) else str(last_msg)
-        return str(messages)
+            # If messages are provided, they are the source of truth.
+            history = list(cast(list[str | ChatMessage], messages))
+        elif messages and (not history or history[-1] != messages):
+            # If there's a single new message, add it to the history if it's not already there.
+            history.append(messages)
+
+        if not history:
+            return ""
+
+        # Format the history into a string
+        formatted_history = []
+        for msg in history:
+            if isinstance(msg, ChatMessage):
+                role_name = "User" if msg.role == Role.USER else "Assistant"
+                text = getattr(msg, "text", "") or ""
+                if text:  # Only include messages with content
+                    formatted_history.append(f"{role_name}: {text}")
+            else:
+                formatted_history.append(str(msg))
+
+        return "\n\n".join(formatted_history)
 
     async def run(
         self,
@@ -208,7 +231,7 @@ class DSPyEnhancedAgent(ChatAgent):
         Returns:
             AgentRunResponse containing the result.
         """
-        prompt = self._normalize_input_to_text(messages)
+        prompt = self._normalize_input_to_text(messages, thread=thread)
         agent_kwargs = dict(kwargs)
         logger.info(f"Agent {self.name} running with strategy: {self.reasoning_strategy}")
 
@@ -219,7 +242,7 @@ class DSPyEnhancedAgent(ChatAgent):
             if cached_result:
                 logger.info(f"Cache hit for agent {self.name}")
                 return AgentRunResponse(
-                    messages=ChatMessage(role=Role.ASSISTANT, text=cached_result),
+                    messages=[ChatMessage(role=Role.ASSISTANT, text=cached_result)],
                     additional_properties={"cached": True, "strategy": self.reasoning_strategy},
                 )
 
@@ -248,7 +271,7 @@ class DSPyEnhancedAgent(ChatAgent):
                     self.cache.set(prompt, response_text)
 
                     return AgentRunResponse(
-                        messages=ChatMessage(role=Role.ASSISTANT, text=response_text),
+                        messages=[ChatMessage(role=Role.ASSISTANT, text=response_text)],
                         additional_properties={"strategy": self.reasoning_strategy},
                     )
 
@@ -270,64 +293,37 @@ class DSPyEnhancedAgent(ChatAgent):
         thread: AgentThread | None = None,
         **kwargs: Any,
     ) -> AsyncIterable[AgentRunResponseUpdate]:
-        """Run the agent as a stream."""
-        prompt = self._normalize_input_to_text(messages)
+        """Run the agent as a stream.
 
-        # If DSPy is enabled and strategy is specialized (ReAct/PoT), we might want to run it.
-        # However, our current DSPy modules are blocking.
-        # We can yield a "Thinking" status then the result.
+        For DSPy strategies that do not support native streaming (ReAct, PoT),
+        this method runs the agent to get the full response and then yields it
+        as a single update. For other cases, it delegates to the parent's
+        streaming implementation.
+        """
+        # DSPy modules (ReAct, PoT) are blocking and do not support streaming.
+        if self.enable_dspy and self.reasoning_strategy in ("react", "program_of_thought"):
+            logger.warning(
+                f"Agent {self.name} with reasoning strategy '{self.reasoning_strategy}' "
+                "does not support true streaming. The full response will be sent at once."
+            )
+            # Execute the non-streaming run method to get the complete response.
+            response = await self.run(messages=messages, thread=thread, **kwargs)
 
-        should_use_dspy = self.enable_dspy and (
-            (self.reasoning_strategy == "react" and self.react_module)
-            or (self.reasoning_strategy == "program_of_thought" and self.pot_module)
-        )
+            # Determine the role for the update.
+            response_role = Role.ASSISTANT
+            if response.messages:
+                response_role = response.messages[0].role
 
-        if should_use_dspy:
-            # Check cache
-            cached_result = self.cache.get(prompt)
-            if cached_result:
-                yield AgentRunResponseUpdate(
-                    text=cached_result, role=Role.ASSISTANT, additional_properties={"cached": True}
-                )
-                return
+            # Yield a single update containing the full response.
+            yield AgentRunResponseUpdate(
+                text=response.text,
+                messages=response.messages,
+                additional_properties=response.additional_properties,
+                role=response_role,
+            )
+            return
 
-            try:
-                # Yield a "Thinking" status if possible, or just block.
-                # Since we can't easily stream partial DSPy steps yet without deep hooks,
-                # we'll just await the result and yield it.
-
-                response_text = ""
-                if self.reasoning_strategy == "react" and self.react_module:
-                    result = self.react_module(question=prompt, tools=self.tools)
-                    response_text = getattr(result, "answer", str(result))
-                elif self.reasoning_strategy == "program_of_thought" and self.pot_module:
-                    result = self.pot_module(question=prompt)
-                    response_text = getattr(result, "answer", str(result))
-
-                if response_text:
-                    self.cache.set(prompt, response_text)
-                    yield AgentRunResponseUpdate(
-                        text=response_text,
-                        role=Role.ASSISTANT,
-                        additional_properties={"strategy": self.reasoning_strategy},
-                    )
-                    return
-
-            except RuntimeError as exc:
-                async for update in self._yield_pot_stream_fallback(
-                    messages=messages,
-                    thread=thread,
-                    agent_kwargs=kwargs,
-                    error=exc,
-                ):
-                    yield update
-                return
-
-            except Exception as e:
-                logger.error(f"DSPy streaming strategy failed for {self.name}: {e}")
-                # Fall through to fallback
-
-        # Fallback to standard streaming
+        # For streaming-compatible strategies, delegate to the parent implementation.
         async for update in super().run_stream(messages=messages, thread=thread, **kwargs):
             yield update
 

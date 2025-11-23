@@ -32,11 +32,11 @@ dependencies = [
     "agent-framework-azure-ai",
     "agent-framework-mem0",
     "agent-framework-devui",
-    "mem0ai==1.0.0", # Pinned for stable memory API
+    "mem0ai==1.0.0",                            # Pinned for stable memory API
     "rich>=14.2.0",
     "prompt-toolkit>=3.0.47,<4.0",
     "ipykernel>=7.0.1,<8.0",
-    "openai>=2.5.1", # Updated from requirements.txt
+    "openai>=2.5.1",                            # Updated from requirements.txt
     "azure-ai-evaluation>=1.12.0,<2.0",
     "fastapi>=0.120.1,<1.0",
     "uvicorn[standard]>=0.24.0",
@@ -47,7 +47,7 @@ dependencies = [
     "pydantic-settings>=2.3.2,<3.0",
     "websockets>=10.4",
     "typer>=0.20.0,<0.21.0",
-    "textual>=6.5.0", # Added from requirements.txt for TUI
+    "textual>=6.5.0",                           # Added from requirements.txt for TUI
     "locust>=2.15.0",
     "aiohttp>=3.9.0",
     "aiosqlite>=0.20.0",
@@ -63,15 +63,15 @@ dependencies = [
     "seaborn>=0.11.0",
     "plotly>=5.10.0",
     "pytest>=9.0.1,<10.0",
-    "pytest-asyncio>=0.21.0",           # Updated from requirements.txt
-    "pytest-cov>=4.1.0",                # Updated from requirements.txt
+    "pytest-asyncio>=0.21.0",                   # Updated from requirements.txt
+    "pytest-cov>=4.1.0",                        # Updated from requirements.txt
     "ruff>=0.0.200",
-    "mypy>=1.8.0",                      # Updated from requirements.txt
-    "flake8>=7.0.0",                    # Added from requirements.txt
+    "mypy>=1.8.0",                              # Updated from requirements.txt
+    "flake8>=7.0.0",                            # Added from requirements.txt
     "pytz>=2024.1",
     "setuptools>=80.9.0",
-    "dspy>=3.0.3", # Updated from requirements.txt (was pinned to 3.0.4)
-    "tavily-python>=0.7.12", # Added version constraint from requirements.txt
+    "dspy>=3.0.3",                              # Updated from requirements.txt (was pinned to 3.0.4)
+    "tavily-python>=0.7.12",                    # Added version constraint from requirements.txt
     "dill>=0.3.8",
     "playwright>=1.40.0",
     "mcp>=1.21.0",
@@ -187,6 +187,12 @@ select = [
     "PT",  # flake8-pytest-style (since you use pytest)
     "ARG", # flake8-unused-arguments
     "C4",  # flake8-comprehensions
+    # Docstring rules (missing docstrings only)
+    "D100", # Missing docstring in public module
+    "D101", # Missing docstring in public class
+    "D102", # Missing docstring in public method
+    "D103", # Missing docstring in public function
+    "D104", # Missing docstring in public package
 ]
 ignore = [
     "E501",
@@ -197,6 +203,7 @@ ignore = [
 "__init__.py" = ["F401"]
 "notebooks/*.ipynb" = ["A002", "E402"]
 "src/agentic_fleet/console.py" = ["B008"]
+"src/agentic_fleet/api/routes/chat.py" = ["B008"]
 "src/agentic_fleet/api/error_handlers.py" = ["ARG001"]
 "src/agentic_fleet/api/main.py" = ["ARG001"]
 "src/agentic_fleet/dspy_modules/*" = ["ARG002"]
@@ -205,7 +212,10 @@ ignore = [
 "src/agentic_fleet/workflows/*" = ["ARG001"]
 "tests/*" = [
     "ARG", # Allow unused arguments in tests (fixtures, mocks)
+    "D",   # Ignore docstring rules in tests
 ]
+"examples/*" = ["D"] # Ignore docstring rules in examples
+"scripts/*" = ["D"] # Ignore docstring rules in scripts
 
 [tool.ruff.lint.isort]
 known-first-party = ["agentic_fleet", "agenticfleet"]
@@ -220,6 +230,7 @@ source = ["src/agentic_fleet", "src/agenticfleet"]
 omit = ["*/tests/*", "*/__pycache__/*", "*/.venv/*"]
 
 [tool.coverage.report]
+fail_under = 80
 exclude_lines = [
     "pragma: no cover",
     "def __repr__",

@@ -14,7 +14,7 @@ if TYPE_CHECKING:
         validate_tool,
     )
 
-__all__ = ["AgentFactory", "create_workflow_agents", "get_default_agent_metadata", "validate_tool"]
+__all__ = ["AgentFactory", "get_default_agent_metadata", "validate_tool"]
 
 
 def __getattr__(name: str) -> Any:

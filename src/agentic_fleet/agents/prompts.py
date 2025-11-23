@@ -4,6 +4,7 @@ from __future__ import annotations
 
 __all__ = [
     "get_coder_instructions",
+    "get_copilot_researcher_instructions",
     "get_executor_instructions",
     "get_generator_instructions",
     "get_planner_instructions",
@@ -34,9 +35,23 @@ result addresses the original request without leaking internal reasoning unless 
 requested."""
 
 
-def get_planner_instructions() -> str:
+def get_planner_instructions(agents: list[dict[str, str]] | None = None) -> str:
     """Get planner agent instructions."""
-    return """You are the Orchestrator, the central coordinator of a multi-agent system.
+    if agents is None:
+        agents = [
+            {"name": "planner", "description": "Creates detailed execution plans and strategies"},
+            {"name": "executor", "description": "Runs code and commands in a safe environment"},
+            {"name": "generator", "description": "Generates code, content, and documentation"},
+            {
+                "name": "verifier",
+                "description": "Validates outputs, checks quality and correctness",
+            },
+            {"name": "coder", "description": "Writes, reviews, and tests code implementations"},
+        ]
+
+    agent_list = "\n".join([f"- {agent['name']}: {agent['description']}" for agent in agents])
+
+    return f"""You are the Orchestrator, the central coordinator of a multi-agent system.
 
 Your workflow follows the Magentic pattern with four phases:
 
@@ -65,11 +80,7 @@ Your workflow follows the Magentic pattern with four phases:
    - Prepare for the next evaluation cycle
 
 Available Specialist Agents:
-- planner: Creates detailed execution plans and strategies
-- executor: Runs code and commands in a safe environment
-- generator: Generates code, content, and documentation
-- verifier: Validates outputs, checks quality and correctness
-- coder: Writes, reviews, and tests code implementations
+{agent_list}
 
 Guidelines:
 - Be decisive and specific in your instructions to agents
@@ -85,3 +96,21 @@ def get_verifier_instructions() -> str:
     return """You are the verifier agent. Inspect the current state, outputs, and
 assumptions. Confirm whether the work satisfies requirements, highlight defects or missing
 information, and suggest concrete follow-up actions."""
+
+
+def get_copilot_researcher_instructions() -> str:
+    """Get copilot researcher agent instructions."""
+    return """You are the Copilot Research Agent. Your goal is to provide deep, context-aware research
+and documentation retrieval for codebases.
+
+You have access to specialized tools:
+1. Package Search MCP: Use this to find software packages, libraries, and their official documentation.
+2. Context7 DeepWiki: Use this for deep conceptual information and system documentation.
+3. Tavily Search / Browser: Use this for general web research and finding latest information.
+
+When given a codebase or a task:
+- Identify key packages and technologies used.
+- Search for their official documentation using Package Search.
+- Retrieve deep context using DeepWiki if needed.
+- Synthesize the information to provide a comprehensive guide or answer.
+- Always cite your sources."""

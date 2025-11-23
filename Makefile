@@ -37,7 +37,7 @@ help:
 	@echo "  make pre-commit-install  Install pre-commit hooks"
 	@echo "  make clean             Remove cache and build artifacts"
 	@echo "  make demo-hitl         Run the HITL walkthrough example"
-	@echo "  make validate-agents   Validate AGENTS.md invariants"
+	@echo "  make validate-agents   Validate src/agentic_fleet/AGENTS.md invariants"
 	@echo ""
 	@echo "Load Testing:"
 	@echo "  make load-test-setup  Setup load testing environment"
@@ -141,7 +141,11 @@ type-check:
 check: lint type-check
 	@echo "✓ All quality checks passed!"
 
-# Validate AGENTS.md invariants
+# Run comprehensive QA (backend + frontend)
+qa: lint format type-check test test-frontend
+	@echo "✓ QA complete: All checks passed!"
+
+# Validate docs/AGENTS.md invariants
 validate-agents:
 	uv run python tools/scripts/validate_agents_docs.py --format text
 

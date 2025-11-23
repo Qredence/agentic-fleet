@@ -5,8 +5,11 @@ from __future__ import annotations
 import inspect
 import logging
 import os
+import warnings
+from pathlib import Path
 from typing import Any
 
+import yaml
 from agent_framework import ChatAgent
 from agent_framework.openai import OpenAIResponsesClient
 from dotenv import load_dotenv
@@ -137,27 +140,13 @@ class AgentFactory:
 
             base_url = os.getenv("OPENAI_BASE_URL") or None
 
-            # Prepare client arguments
-            client_kwargs = {
-                "model_id": model_id,
-                "api_key": api_key,
-                "base_url": base_url,
-                "reasoning_effort": reasoning_effort,
-                "reasoning_verbosity": reasoning_verbosity,
-                "store": store,
-                "temperature": temperature,
-                "max_tokens": max_tokens,
-            }
-
-            # Use shared client if available
-            if self.openai_client:
-                client_kwargs["async_client"] = self.openai_client
-
             # Create OpenAI client using agent_framework directly
+            # Use shared async_client if available for proper resource reuse
             chat_client = OpenAIResponsesClient(
                 model_id=model_id,
                 api_key=api_key,
                 base_url=base_url,
+                async_client=self.openai_client,  # Reuse shared client instance
                 reasoning_effort=reasoning_effort,
                 reasoning_verbosity=reasoning_verbosity,
                 store=store,
@@ -168,10 +157,8 @@ class AgentFactory:
             # Create agent name in PascalCase format
             agent_name = f"{name.capitalize()}Agent"
 
-            # Handle tools: if single tool, pass directly; if multiple, pass as tuple
-            tools_param: Any = None
-            if tools:
-                tools_param = tools[0] if len(tools) == 1 else tuple(tools)
+            # Handle tools: pass as list
+            tools_param: Any = tools if tools else None
 
             # Determine agent class based on configuration
             use_dspy = agent_config.get("enable_dspy", self.enable_dspy)
@@ -220,17 +207,34 @@ class AgentFactory:
             List of tool instances
         """
         tools: list[Any] = []
+        # Import tools module dynamically to avoid circular imports
+        import agentic_fleet.tools as fleet_tools
+
         for tool_name in tool_names:
             if not isinstance(tool_name, str):
                 logger.warning(f"Invalid tool name: {tool_name}, skipping")
                 continue
 
-            tool = self.tool_registry.get_tool(tool_name)
-            if tool is None:
-                logger.warning(f"Tool '{tool_name}' not found in registry, skipping")
+            # First check registry
+            tool_meta = self.tool_registry.get_tool(tool_name)
+            if tool_meta and tool_meta.tool_instance:
+                tools.append(tool_meta.tool_instance)
                 continue
 
-            tools.append(tool)
+            # Then check if it's a class in fleet_tools
+            if hasattr(fleet_tools, tool_name):
+                try:
+                    tool_cls = getattr(fleet_tools, tool_name)
+                    # Instantiate with no args (relying on env vars)
+                    tool_instance = tool_cls()
+                    tools.append(tool_instance)
+                    logger.debug(f"Instantiated tool '{tool_name}' from fleet_tools")
+                    continue
+                except Exception as e:
+                    logger.warning(f"Failed to instantiate tool '{tool_name}': {e}")
+                    continue
+
+            logger.warning(f"Tool '{tool_name}' not found in registry or fleet_tools, skipping")
 
         return tools
 
@@ -325,287 +329,6 @@ def validate_tool(tool: Any) -> bool:
         return False
 
 
-def create_workflow_agents(
-    config: Any,
-    openai_client: Any,
-    tool_registry: Any,
-    create_client_fn: Any | None = None,
-) -> dict[str, Any]:
-    """Create specialized agents for the workflow.
-
-    This function creates the default workflow agents (Researcher, Analyst, Writer, Judge, Reviewer)
-    with hardcoded instructions and tool setup. For YAML-based agent creation, use AgentFactory instead.
-
-    Args:
-        config: WorkflowConfig instance
-        openai_client: Shared OpenAI async client
-        tool_registry: ToolRegistry instance
-        create_client_fn: Optional function to create OpenAI client
-
-    Returns:
-        Dictionary mapping agent names to ChatAgent instances
-    """
-
-    from agent_framework import ChatAgent
-
-    from ..tools import BrowserTool, HostedCodeInterpreterAdapter, TavilyMCPTool
-
-    agents: dict[str, Any] = {}
-
-    # Use shared OpenAI client (should be provided by caller)
-    if openai_client is None:
-        if create_client_fn:
-            openai_client = create_client_fn(config.enable_completion_storage)
-            logger.warning("OpenAI client created lazily - should be created in initialize()")
-        else:
-            raise ValueError("openai_client must be provided or create_client_fn must be set")
-
-    def _create_agent(
-        name: str,
-        description: str,
-        instructions: str,
-        tools: Any | None = None,
-        model_override: str | None = None,
-        reasoning_effort: str | None = None,
-        reasoning_strategy: str = "chain_of_thought",
-    ) -> ChatAgent:
-        """Helper to create a single agent."""
-        agent_models = config.agent_models or {}
-        model_id = model_override or agent_models.get(name.lower(), config.dspy_model)
-
-        # Get agent-specific temperature if configured
-        agent_temperatures = config.agent_temperatures or {}
-        temperature = agent_temperatures.get(name.lower())
-
-        # Create chat client with optional temperature and reasoning effort
-        async_client = openai_client
-
-        chat_client_kwargs: dict[str, Any] = {
-            "model_id": model_id,
-            "async_client": async_client,
-        }
-
-        if temperature is not None:
-            logger.debug(f"Agent {name} temperature configured: {temperature}")
-
-        # Validate and filter tools before passing to ChatAgent
-        validated_tools = None
-        if tools is not None:
-            if isinstance(tools, list):
-                # Validate each tool in the list
-                validated_tools = [tool for tool in tools if validate_tool(tool)]
-                invalid_count = len(tools) - len(validated_tools)
-                if invalid_count > 0:
-                    logger.warning(
-                        f"Filtered out {invalid_count} invalid tool(s) for agent {name}. "
-                        f"Valid tools: {len(validated_tools)}"
-                    )
-                # Convert to single tool if only one, or None if empty
-                if len(validated_tools) == 0:
-                    validated_tools = None
-                elif len(validated_tools) == 1:
-                    validated_tools = validated_tools[0]
-            else:
-                # Single tool
-                if validate_tool(tools):
-                    validated_tools = tools
-                else:
-                    logger.warning(f"Invalid tool for agent {name}, skipping tool assignment")
-                    validated_tools = None
-
-        # Get agent-specific strategy if configured (overrides default/argument)
-        agent_strategies = config.agent_strategies or {}
-        configured_strategy = agent_strategies.get(name.lower())
-        effective_strategy = (
-            configured_strategy if configured_strategy is not None else reasoning_strategy
-        )
-        logger.debug(
-            f"Agent {name} strategy resolution: config={configured_strategy}, default={reasoning_strategy}, effective={effective_strategy}"
-        )
-
-        # Create the chat client
-        # Use the module-level _create_openai_client to ensure we use ResponsesClient if available
-        chat_client = _create_openai_client(**chat_client_kwargs)
-
-        # For Judge agent with reasoning effort, set extra_body after creation
-        if reasoning_effort is not None and name == "Judge":
-            try:
-                if hasattr(chat_client, "extra_body"):
-                    chat_client.extra_body = {  # type: ignore[attr-defined]
-                        "reasoning": {"effort": reasoning_effort}
-                    }
-                    logger.debug(
-                        f"Judge agent configured with reasoning effort via extra_body: {reasoning_effort}"
-                    )
-                else:
-                    chat_client._reasoning_effort = reasoning_effort  # type: ignore[attr-defined]
-                    logger.debug(
-                        f"Judge agent configured with reasoning effort via private attr: {reasoning_effort}"
-                    )
-            except Exception as e:
-                logger.warning(f"Failed to configure reasoning effort: {e}")
-
-        # Wrap in DSPyEnhancedAgent if reasoning strategy is not default
-        if effective_strategy != "chain_of_thought":
-            # Create a DSPyEnhancedAgent wrapper
-            # Note: This is a bit of a hack since we're recreating the agent,
-            # but create_workflow_agents is a legacy helper.
-            # Ideally we should use AgentFactory for everything.
-            return DSPyEnhancedAgent(
-                name=name,
-                description=description,
-                instructions=instructions,
-                chat_client=chat_client,
-                tools=validated_tools,
-                enable_dspy=True,
-                reasoning_strategy=effective_strategy,  # type: ignore[arg-type]
-            )
-
-        return ChatAgent(
-            name=name,
-            description=description,
-            instructions=instructions,
-            chat_client=chat_client,
-            tools=validated_tools,
-        )
-
-    # Researcher with Tavily (optional) and BrowserTool
-    researcher_tools = []
-    tavily_mcp_tool = None
-
-    try:
-        # Add Tavily if available (via MCP)
-        if os.getenv("TAVILY_API_KEY"):
-            tavily_mcp_tool = TavilyMCPTool()  # type: ignore[abstract]
-            researcher_tools.append(tavily_mcp_tool)
-            logger.info("TavilyMCPTool enabled for Researcher")
-        else:
-            logger.warning("TAVILY_API_KEY not set - Web search capability will be unavailable.")
-    except Exception as e:
-        logger.warning(f"Failed to initialize TavilyMCPTool: {e}")
-
-    # Add BrowserTool for real-time web browsing
-    try:
-        browser_tool = BrowserTool(headless=True)
-        researcher_tools.append(browser_tool)
-        logger.info("BrowserTool enabled for Researcher")
-    except ImportError as e:
-        logger.warning(
-            f"BrowserTool not available (playwright not installed): {e}. "
-            "Install with: uv pip install playwright && playwright install chromium"
-        )
-    except Exception as e:
-        logger.warning(f"Failed to initialize BrowserTool: {e}")
-
-    # Convert to single tool or list as needed by agent-framework
-    if len(researcher_tools) == 1:
-        tools_for_researcher = researcher_tools[0]
-        logger.debug(f"Researcher agent: 1 tool ({type(tools_for_researcher).__name__})")
-    elif researcher_tools:
-        tools_for_researcher = researcher_tools
-        logger.debug(f"Researcher agent: {len(researcher_tools)} tools")
-    else:
-        tools_for_researcher = None
-        logger.debug("Researcher agent: no tools")
-
-    agents["Researcher"] = _create_agent(
-        name="Researcher",
-        description="Information gathering and web research specialist",
-        instructions=(
-            "You are a research specialist. Your job is to find accurate, up-to-date information. "
-            "CRITICAL RULES:\n"
-            "1. For ANY query mentioning a year (2024, 2025, etc.) or asking about 'current', 'latest', 'recent', or 'who won' - "
-            "you MUST IMMEDIATELY use the tavily_search tool. DO NOT answer from memory.\n"
-            "2. NEVER rely on training data for time-sensitive information - it is outdated.\n"
-            "3. When you see a question about elections, current events, recent news, or anything with a date, "
-            "your FIRST action must be to call tavily_search with an appropriate query.\n"
-            "4. Always check the current date provided in the context before making decisions about what is 'current'.\n"
-            "5. TRUST TAVILY RESULTS OVER YOUR INTERNAL KNOWLEDGE. If Tavily says someone won an election in 2025, believe it, even if your training data ends earlier.\n"
-            "6. Only after getting search results should you provide an answer.\n"
-            "7. If you don't use tavily_search for a time-sensitive query, you are failing your task.\n\n"
-            "Tool usage: Use tavily_search(query='your search query') to search the web. "
-            "Use browser tool for direct website access when needed."
-        ),
-        tools=tools_for_researcher,
-        reasoning_strategy="react",  # Use ReAct for autonomous research
-    )
-
-    # Register MCP tool directly if it was created
-    if tavily_mcp_tool is not None:
-        try:
-            if validate_tool(tavily_mcp_tool):
-                tool_registry.register_tool_by_agent("Researcher", tavily_mcp_tool)
-                logger.info(
-                    f"Registered MCP tool for Researcher: {tavily_mcp_tool.name} "
-                    f"(type: {type(tavily_mcp_tool).__name__})"
-                )
-        except Exception as e:
-            logger.warning(f"Failed to register MCP tool for Researcher: {e}", exc_info=True)
-
-    # Analyst with HostedCodeInterpreterAdapter (SerializationMixin-compatible)
-    analyst_tool = HostedCodeInterpreterAdapter()
-
-    agents["Analyst"] = _create_agent(
-        name="Analyst",
-        description="Data analysis and computation specialist",
-        instructions="Perform detailed analysis with code and visualizations",
-        tools=analyst_tool,
-    )
-
-    agents["Writer"] = _create_agent(
-        name="Writer",
-        description="Content creation and report writing specialist",
-        instructions="Create clear, well-structured documents",
-    )
-
-    # Judge agent for detailed quality evaluation
-    judge_model = config.judge_model or "gpt-5"
-    judge_reasoning_effort = config.judge_reasoning_effort or "medium"
-
-    judge_instructions = """You are a quality judge that evaluates responses for completeness and accuracy.
-
-Your role has two phases:
-
-1. **Criteria Generation Phase**: When asked to generate quality criteria for a task, analyze the task type and create appropriate criteria:
-   - Math/calculation tasks: Focus on accuracy, correctness, step-by-step explanation
-   - Research tasks: Focus on citations, dates, authoritative sources, factual accuracy
-   - Writing tasks: Focus on clarity, structure, completeness, coherence
-   - Factual questions: Focus on accuracy, sources, verification
-   - Simple questions (like "2+2"): Focus on correctness and clarity (DO NOT require citations for basic facts)
-
-2. **Evaluation Phase**: When evaluating a response, use the provided task-specific criteria to assess:
-   - How well the response meets each criterion
-   - What's missing if the response is incomplete
-   - Which agent should handle refinement (Researcher for citations/sources, Analyst for calculations/data, Writer for clarity/structure)
-   - Specific improvement instructions
-
-Always adapt your evaluation to the task type - don't require citations for simple math problems, and don't require calculations for research questions.
-
-Output your evaluation in this format:
-Score: X/10 (where X reflects how well the response meets the task-specific criteria)
-Missing elements: List what's missing based on the criteria (comma-separated)
-Refinement agent: Agent name that should handle improvements (Researcher, Analyst, or Writer)
-Refinement needed: yes/no
-Required improvements: Specific instructions for the refinement agent"""
-
-    agents["Judge"] = _create_agent(
-        name="Judge",
-        description="Quality evaluation specialist with dynamic task-aware criteria assessment",
-        instructions=judge_instructions,
-        model_override=judge_model,
-        reasoning_effort=judge_reasoning_effort,
-    )
-
-    # Reviewer for backward compatibility
-    agents["Reviewer"] = _create_agent(
-        name="Reviewer",
-        description="Quality assurance and validation specialist",
-        instructions="Ensure accuracy, completeness, and quality",
-    )
-
-    return agents
-
-
 def get_default_agent_metadata() -> list[dict[str, Any]]:
     """Get metadata for default agents without instantiating them.
 
@@ -649,3 +372,84 @@ def get_default_agent_metadata() -> list[dict[str, Any]]:
             "model": "default (gpt-5-mini)",
         },
     ]
+
+
+def _resolve_workflow_config_path(config_path: str | Path | None = None) -> Path:
+    """Resolve the workflow configuration path.
+
+    Args:
+        config_path: Optional override for the workflow config location.
+
+    Returns:
+        Path to the workflow configuration file.
+    """
+
+    if config_path:
+        candidate = Path(config_path).expanduser().resolve()
+        if not candidate.is_file():
+            raise FileNotFoundError(f"Workflow config not found at: {candidate}")
+        return candidate
+
+    # src/agentic_fleet/config/workflow_config.yaml
+    primary = Path(__file__).resolve().parent.parent / "config" / "workflow_config.yaml"
+    if primary.exists():
+        return primary
+
+    # Repository root fallback (../../../../config/workflow_config.yaml)
+    fallback = (
+        Path(__file__).resolve().parent.parent.parent.parent / "config" / "workflow_config.yaml"
+    )
+    if fallback.exists():
+        return fallback
+
+    raise FileNotFoundError("Unable to locate workflow_config.yaml")
+
+
+def create_workflow_agents(
+    config_path: str | Path | None = None,
+    *,
+    tool_registry: ToolRegistry | None = None,
+    openai_client: Any | None = None,
+    agent_models: dict[str, str] | None = None,
+) -> dict[str, ChatAgent]:
+    """Create workflow agents from the declarative YAML configuration.
+
+    This helper preserves the legacy interface used by older modules that
+    expected a `create_workflow_agents()` factory. Internally it defers to the
+    modern :class:`AgentFactory` so that all validation and tool resolution
+    logic stays in one place.
+    """
+
+    warnings.warn(
+        "create_workflow_agents is deprecated; use AgentFactory directly",
+        DeprecationWarning,
+        stacklevel=2,
+    )
+
+    resolved_path = _resolve_workflow_config_path(config_path)
+    with resolved_path.open("r", encoding="utf-8") as stream:
+        config_data = yaml.safe_load(stream) or {}
+
+    yaml_agent_configs = config_data.get("agents", {}) or {}
+    factory = AgentFactory(tool_registry=tool_registry, openai_client=openai_client)
+
+    created_agents: dict[str, ChatAgent] = {}
+    for name, cfg in yaml_agent_configs.items():
+        if not isinstance(cfg, dict):
+            logger.warning("Skipping agent '%s' with invalid configuration", name)
+            continue
+
+        config_copy = dict(cfg)
+        model_overrides = agent_models or {}
+        override = model_overrides.get(name.lower())
+        if override:
+            config_copy["model"] = override
+
+        try:
+            created_agents[name] = factory.create_agent(name, config_copy)
+        except Exception as exc:  # pragma: no cover - defensive logging
+            logger.error("Failed to create agent '%s': %s", name, exc, exc_info=True)
+            raise
+
+    logger.info("Created %d workflow agents from %s", len(created_agents), resolved_path)
+    return created_agents

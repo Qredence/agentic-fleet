@@ -26,6 +26,7 @@ console = Console()
 
 
 def main():
+    """Run the self-improvement process."""
     parser = argparse.ArgumentParser(description="Self-improve DSPy routing from execution history")
     parser.add_argument(
         "--min-quality",

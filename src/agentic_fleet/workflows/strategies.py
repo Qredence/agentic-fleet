@@ -24,6 +24,32 @@ if TYPE_CHECKING:
 logger = setup_logger(__name__)
 
 
+def _get_agent(agents: dict[str, Any], name: str) -> Any | None:
+    """Get agent from map with case-insensitive lookup."""
+    if name in agents:
+        return agents[name]
+
+    # Try case-insensitive match
+    name_lower = name.lower()
+    if name_lower in agents:
+        return agents[name_lower]
+
+    # Try stripping "Agent" suffix (e.g. "ResearcherAgent" -> "researcher")
+    if name.endswith("Agent"):
+        short_name = name[:-5].lower()
+        if short_name in agents:
+            return agents[short_name]
+
+    # Try finding key that matches case-insensitive
+    for key, agent in agents.items():
+        if key.lower() == name_lower:
+            return agent
+
+    # Agent lookup failed - log available agents for debugging
+    logger.warning(f"Agent lookup failed for '{name}'. Available keys: {list(agents.keys())}")
+    return None
+
+
 def _extract_tool_usage(response: Any) -> list[dict[str, Any]]:
     """Extract tool usage metadata from an agent response."""
     usage = []
@@ -95,6 +121,9 @@ async def run_execution_phase(
         result, usage = await execute_delegated(agents_map, delegate, task)
         tool_usage.extend(usage)
 
+    logger.info(f"Execution result: {str(result)[:200]}...")
+    logger.info(f"Execution tool usage: {len(tool_usage)} items")
+
     return ExecutionOutcome(
         result=str(result),
         mode=routing.mode,
@@ -104,6 +133,55 @@ async def run_execution_phase(
         artifacts={},
         tool_usage=tool_usage,
     )
+
+
+async def run_execution_phase_streaming(
+    *,
+    routing: RoutingDecision,
+    task: str,
+    context: SupervisorContext,
+):
+    """Execute task with streaming events."""
+    agents_map = context.agents
+    if not agents_map:
+        raise ExecutionPhaseError("Agents must be initialized before execution phase runs.")
+
+    assigned_agents: list[str] = list(routing.assigned_to)
+    subtasks: list[str] = list(routing.subtasks)
+
+    # We will accumulate usage and result to return a final outcome if needed,
+    # but primarily we yield events.
+    # Since this is a generator, we can't 'return' the outcome easily.
+    # We will yield the events, and the caller will have to reconstruct the outcome
+    # or we yield a special final event.
+    # For now, let's yield events and then yield the ExecutionOutcome at the end.
+
+    if routing.mode is ExecutionMode.PARALLEL:
+        async for event in execute_parallel_streaming(agents_map, assigned_agents, subtasks):
+            if isinstance(event, MagenticAgentMessageEvent):
+                yield event
+            elif isinstance(event, WorkflowOutputEvent):
+                # This contains the result
+                yield event
+
+    elif routing.mode is ExecutionMode.SEQUENTIAL:
+        async for event in execute_sequential_streaming(
+            agents_map,
+            assigned_agents,
+            task,
+            enable_handoffs=context.enable_handoffs,
+            handoff=context.handoff,
+        ):
+            if isinstance(event, (MagenticAgentMessageEvent, WorkflowOutputEvent)):
+                yield event
+
+    else:
+        delegate = assigned_agents[0] if assigned_agents else None
+        if delegate is None:
+            raise ExecutionPhaseError("Delegated execution requires at least one assigned agent.")
+        async for event in execute_delegated_streaming(agents_map, delegate, task):
+            if isinstance(event, (MagenticAgentMessageEvent, WorkflowOutputEvent)):
+                yield event
 
 
 async def _execute_sequential_helper(
@@ -186,7 +264,7 @@ async def execute_delegated(
     task: str,
 ) -> tuple[str, list[dict[str, Any]]]:
     """Delegate the task to a single agent without streaming."""
-    agent = agents.get(agent_name)
+    agent = _get_agent(agents, agent_name)
     if not agent:
         raise AgentExecutionError(
             agent_name=agent_name,
@@ -263,7 +341,7 @@ async def execute_parallel(
     valid_agent_names = []
 
     for agent_name, subtask in zip(agent_names, subtasks, strict=False):
-        agent = agents.get(agent_name)
+        agent = _get_agent(agents, agent_name)
         if not agent:
             logger.warning("Skipping unknown agent '%s' during parallel execution", agent_name)
             continue
@@ -306,8 +384,9 @@ async def execute_parallel_streaming(
     valid_agent_names = []
     valid_subtasks = []
     for agent_name, subtask in zip(agent_names, subtasks, strict=False):
-        if agent_name in agents:
-            tasks.append(agents[agent_name].run(subtask))
+        agent = _get_agent(agents, agent_name)
+        if agent:
+            tasks.append(agent.run(subtask))
             valid_agent_names.append(agent_name)
             valid_subtasks.append(subtask)
 
@@ -431,7 +510,7 @@ async def execute_sequential(
     aggregated_usage = []
 
     for agent_name in agent_names:
-        agent = agents.get(agent_name)
+        agent = _get_agent(agents, agent_name)
         if not agent:
             logger.warning(
                 "Skipping unknown agent '%s' during sequential execution",
@@ -468,7 +547,7 @@ async def execute_sequential_with_handoffs(
     aggregated_usage = []
 
     for i, current_agent_name in enumerate(agent_names):
-        agent = agents.get(current_agent_name)
+        agent = _get_agent(agents, current_agent_name)
         if not agent:
             logger.warning(f"Skipping unknown agent '{current_agent_name}'")
             continue
@@ -554,7 +633,7 @@ async def execute_sequential_streaming(
     handoff_history: list[dict[str, Any]] = []
 
     for step_index, agent_name in enumerate(agent_names):
-        agent = agents.get(agent_name)
+        agent = _get_agent(agents, agent_name)
         if not agent:
             yield create_system_event(
                 stage="execution",

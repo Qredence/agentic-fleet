@@ -11,6 +11,7 @@ from typing import Any
 
 
 def _safe_get(d: dict[str, Any], *path: str, default: Any = None) -> Any:
+    """Safely retrieve nested dictionary values."""
     cur: Any = d
     for p in path:
         if not isinstance(cur, dict) or p not in cur:
@@ -20,6 +21,7 @@ def _safe_get(d: dict[str, Any], *path: str, default: Any = None) -> Any:
 
 
 def metric_quality_score(_task: dict[str, Any], metadata: dict[str, Any]) -> float | None:
+    """Extract quality score from metadata."""
     score = _safe_get(metadata, "quality", "score")
     if score is None:
         return None
@@ -35,6 +37,7 @@ def metric_quality_score(_task: dict[str, Any], metadata: dict[str, Any]) -> flo
 
 
 def metric_latency_seconds(_task: dict[str, Any], metadata: dict[str, Any]) -> float | None:
+    """Extract execution latency from metadata."""
     lat = metadata.get("execution_time")
     try:
         return float(lat) if lat is not None else None
@@ -43,6 +46,7 @@ def metric_latency_seconds(_task: dict[str, Any], metadata: dict[str, Any]) -> f
 
 
 def metric_routing_efficiency(_task: dict[str, Any], metadata: dict[str, Any]) -> float | None:
+    """Calculate routing efficiency (unique agents / assigned agents)."""
     routing = metadata.get("routing") or {}
     agents = routing.get("agents") or []
     # Placeholder: efficiency = unique agents used / agents assigned (currently same list)
@@ -55,6 +59,7 @@ def metric_routing_efficiency(_task: dict[str, Any], metadata: dict[str, Any]) -
 
 
 def metric_refinement_triggered(_task: dict[str, Any], metadata: dict[str, Any]) -> int | None:
+    """Check if refinement was triggered (1 if yes, 0 if no)."""
     # Represent as 1/0 for easier aggregation
     quality = metadata.get("quality") or {}
     improvements = quality.get("improvements")
@@ -65,6 +70,7 @@ def metric_refinement_triggered(_task: dict[str, Any], metadata: dict[str, Any])
 
 
 def metric_keyword_success(task: dict[str, Any], _metadata: dict[str, Any]) -> int | None:
+    """Check if all required keywords are present in the result."""
     keywords: list[str] = task.get("keywords") or []
     if not keywords:
         return None
@@ -145,6 +151,7 @@ METRIC_FUNCS.update(
 def compute_metrics(
     task: dict[str, Any], metadata: dict[str, Any], metric_names: list[str]
 ) -> dict[str, Any]:
+    """Compute requested metrics for a task execution."""
     task_copy = dict(task)
     # Provide result text to keyword metric if available in metadata root result
     computed: dict[str, Any] = {}

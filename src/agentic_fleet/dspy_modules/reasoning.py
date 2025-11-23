@@ -13,27 +13,41 @@ import dspy
 
 
 class FleetReAct(dspy.Module):
-    """ReAct (Reason + Act) module for autonomous tool usage."""
+    """ReAct (Reason + Act) module for autonomous tool usage.
 
-    def __init__(self, signature: Any = None, tools: list[Any] | None = None):
+    Configures ReAct with appropriate max_iters to balance between
+    thoroughness and latency/cost. Default max_iters=5 provides good
+    coverage while preventing infinite loops.
+
+    Args:
+        signature: DSPy signature defining input/output format
+        tools: List of tools available for the ReAct agent to use
+        max_iters: Maximum number of ReAct iterations to prevent infinite loops.
+                   Default is 5 to balance thoroughness with latency/cost.
+    """
+
+    def __init__(self, signature: Any = None, tools: list[Any] | None = None, max_iters: int = 5):
         super().__init__()
         # Use dspy.ReAct if available, otherwise fallback or implement custom
-        # For now, we wrap dspy.ReAct
-        self.react = dspy.ReAct(signature or "question -> answer", tools=tools or [])
+        # Configure max_iters to prevent infinite loops and control cost
+        # Default of 5 iterations balances thoroughness with latency
+        self.react = dspy.ReAct(
+            signature or "question -> answer", tools=tools or [], max_iters=max_iters
+        )
+        self.max_iters = max_iters
 
     def forward(self, question: str, tools: list[Any] | None = None) -> dspy.Prediction:
         """Execute ReAct loop.
 
         Args:
             question: The question/task to solve
-            tools: Optional list of tools to make available
+            tools: Optional list of tools to make available (typically set in constructor)
 
         Returns:
             Prediction with answer and reasoning
         """
-        # Note: dspy.ReAct typically takes tools in constructor or context
-        # Here we assume they are configured or passed via context manager if dynamic
-        return self.react(question=question)
+        # Pass tools to the react module if provided
+        return self.react(question=question, tools=tools)
 
 
 class FleetPoT(dspy.Module):

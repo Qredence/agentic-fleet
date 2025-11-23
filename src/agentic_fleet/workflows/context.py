@@ -1,3 +1,5 @@
+"""Context management for agentic-fleet workflows."""
+
 from __future__ import annotations
 
 import asyncio
@@ -11,11 +13,9 @@ from ..utils.cache import TTLCache
 from ..utils.history_manager import HistoryManager
 from ..utils.progress import NullProgressCallback, ProgressCallback
 from ..utils.tool_registry import ToolRegistry
+from .compilation import CompilationState
 from .config import WorkflowConfig
 from .handoff import HandoffManager
-
-# Direct import - no circular dependency detected
-from .compilation import CompilationState
 
 
 @dataclass

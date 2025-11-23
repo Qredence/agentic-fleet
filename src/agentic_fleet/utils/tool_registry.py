@@ -27,6 +27,7 @@ class RunnableTool(Protocol):
     """
 
     async def run(self, **kwargs: Any) -> Any:  # pragma: no cover - structural
+        """Execute the tool asynchronously."""
         ...
 
 

@@ -51,6 +51,7 @@ htmlcov/
 .npm-cache/
 # Logs
 *.log
+*.db
 
 # OS
 .DS_Store
@@ -61,6 +62,8 @@ AgenticFleet.code-workspace
 var/
 *.checkpoint
 
+.cache/
+.uv_cache/
 .gemini/
 gha-creds-*.json
 AgenticFleet.code-workspace
@@ -149,3 +152,75 @@ src/frontend/src/.npm-cache/_cacache/index-v5/86/47/86e70a82678db0560ecf5dfeb70e
 .trae/documents/AgenticFleet Architecture Analysis and Simplification Plan.md
 .trae/documents/Cleanup and Simplification of AgenticFleet via Agent Framework.md
 data/supervisor_examples.json
+src/frontend/.vite/deps/_metadata.json
+src/frontend/.vite/deps/@openai_apps-sdk-ui_components_AppsSDKUIProvider.js
+src/frontend/.vite/deps/@openai_apps-sdk-ui_components_AppsSDKUIProvider.js.map
+src/frontend/.vite/deps/@openai_apps-sdk-ui_components_Button.js
+src/frontend/.vite/deps/@openai_apps-sdk-ui_components_Button.js.map
+src/frontend/.vite/deps/@radix-ui_react-slot.js
+src/frontend/.vite/deps/@radix-ui_react-slot.js.map
+src/frontend/.vite/deps/@radix-ui_react-tooltip.js
+src/frontend/.vite/deps/@radix-ui_react-tooltip.js.map
+src/frontend/.vite/deps/chunk-4BPZ7PBZ.js
+src/frontend/.vite/deps/chunk-4BPZ7PBZ.js.map
+src/frontend/.vite/deps/chunk-5FBL4GI2.js
+src/frontend/.vite/deps/chunk-5FBL4GI2.js.map
+src/frontend/.vite/deps/chunk-FB4HJHFN.js
+src/frontend/.vite/deps/chunk-FB4HJHFN.js.map
+src/frontend/.vite/deps/chunk-G3PMV62Z.js
+src/frontend/.vite/deps/chunk-G3PMV62Z.js.map
+src/frontend/.vite/deps/chunk-GQ3ZCVRA.js
+src/frontend/.vite/deps/chunk-GQ3ZCVRA.js.map
+src/frontend/.vite/deps/chunk-KDVGFZWC.js
+src/frontend/.vite/deps/chunk-KDVGFZWC.js.map
+src/frontend/.vite/deps/chunk-OBXXTC3T.js
+src/frontend/.vite/deps/chunk-OBXXTC3T.js.map
+src/frontend/.vite/deps/chunk-OUWKCDPP.js
+src/frontend/.vite/deps/chunk-OUWKCDPP.js.map
+src/frontend/.vite/deps/chunk-R5F65CVE.js
+src/frontend/.vite/deps/chunk-R5F65CVE.js.map
+src/frontend/.vite/deps/chunk-WOIE32S3.js
+src/frontend/.vite/deps/chunk-WOIE32S3.js.map
+src/frontend/.vite/deps/class-variance-authority.js
+src/frontend/.vite/deps/class-variance-authority.js.map
+src/frontend/.vite/deps/clsx.js
+src/frontend/.vite/deps/clsx.js.map
+src/frontend/.vite/deps/lucide-react.js
+src/frontend/.vite/deps/lucide-react.js.map
+src/frontend/.vite/deps/package.json
+src/frontend/.vite/deps/react_jsx-dev-runtime.js
+src/frontend/.vite/deps/react_jsx-dev-runtime.js.map
+src/frontend/.vite/deps/react_jsx-runtime.js
+src/frontend/.vite/deps/react_jsx-runtime.js.map
+src/frontend/.vite/deps/react-dom_client.js
+src/frontend/.vite/deps/react-dom_client.js.map
+src/frontend/.vite/deps/react-dom.js
+src/frontend/.vite/deps/react-dom.js.map
+src/frontend/.vite/deps/react-markdown.js
+src/frontend/.vite/deps/react-markdown.js.map
+src/frontend/.vite/deps/react.js
+src/frontend/.vite/deps/react.js.map
+src/frontend/.vite/deps/remark-breaks.js
+src/frontend/.vite/deps/remark-breaks.js.map
+src/frontend/.vite/deps/remark-gfm.js
+src/frontend/.vite/deps/remark-gfm.js.map
+src/frontend/.vite/deps/tailwind-merge.js
+src/frontend/.vite/deps/tailwind-merge.js.map
+src/frontend/.vite/deps/zustand.js
+src/frontend/.vite/deps/zustand.js.map
+# EditorConfig
+# .editorconfig should be tracked
+
+# Security reports
+bandit-report.json
+
+# Coverage reports
+coverage.xml
+
+# Frontend cache
+src/frontend/.vite/
+src/frontend/tsconfig.tsbuildinfo
+
+# Temporary files
+curl_output.txt
+plan.md

@@ -26,6 +26,7 @@ class FleetJSONEncoder(json.JSONEncoder):
     """Custom JSON encoder for fleet objects."""
 
     def default(self, obj: Any) -> Any:
+        """Override default serialization for custom types."""
         if isinstance(obj, RoutingDecision):
             return obj.to_dict()
         if hasattr(obj, "to_dict"):

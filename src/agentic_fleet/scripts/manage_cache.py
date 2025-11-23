@@ -36,6 +36,7 @@ def show_cache_info() -> None:
 
 
 def main() -> None:
+    """Run the cache management script."""
     parser = argparse.ArgumentParser(
         description="Manage DSPy compiled module cache",
         formatter_class=argparse.RawDescriptionHelpFormatter,

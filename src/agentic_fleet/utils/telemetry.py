@@ -144,15 +144,25 @@ def optional_span(
     tracer_name: str | None = None,
     attributes: dict[str, Any] | None = None,
 ) -> Iterator[Any]:
-    """Yield a no-op span placeholder.
+    """Yield a span if OpenTelemetry is available and configured.
 
     Args:
         name: Logical name of the traced operation.
-        tracer_name: Name of tracer (unused placeholder).
-        attributes: Optional mapping of attributes (ignored in placeholder).
+        tracer_name: Name of tracer (defaults to module name).
+        attributes: Optional mapping of attributes.
     """
-    # Real implementation would start a span and expose attribute setters.
-    yield None
+    try:
+        from opentelemetry import trace
+
+        tracer = trace.get_tracer(tracer_name or __name__)
+        with tracer.start_as_current_span(name, attributes=attributes) as span:
+            yield span
+    except ImportError:
+        # OpenTelemetry not installed
+        yield None
+    except Exception:
+        # Tracing failed (e.g. not configured), fail open
+        yield None
 
 
 __all__ = ["ExecutionMetrics", "PerformanceTracker", "optional_span"]

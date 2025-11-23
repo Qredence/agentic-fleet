@@ -1,6 +1,6 @@
 # DSPy Configuration
 dspy:
-  model: gpt-5-mini
+  model: gpt-4o
   temperature: 1.0
   max_tokens: 16000
   optimization:
@@ -28,6 +28,16 @@ dspy:
     gepa_history_limit: 200
     gepa_val_split: 0.2
     gepa_seed: 13
+
+# API Configuration
+api:
+  chat:
+    # Agent IDs to include in streaming responses (only these agents' messages will be shown)
+    # By default, only show messages from orchestration agents that synthesize the final response
+    included_agent_ids:
+      - orchestrator
+      - critic_verifier
+      - synthesis_generator
 
 # Workflow Configuration
 workflow:
@@ -153,6 +163,19 @@ agents:
     enable_dspy: true
     cache_ttl: 600
     timeout: 60
+
+  copilot_researcher:
+    model: gpt-4.1
+    tools:
+      - PackageSearchMCPTool
+      - Context7DeepWikiTool
+      - TavilyMCPTool
+      - BrowserTool
+    temperature: 0.4
+    instructions: prompts.copilot_researcher
+    enable_dspy: true
+    cache_ttl: 300
+    timeout: 120
 
 # Tool Configuration
 tools:

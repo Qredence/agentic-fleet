@@ -1,3 +1,9 @@
+"""Workflow data models.
+
+Defines the data structures used to pass state between workflow executors,
+including analysis results, routing plans, execution outcomes, and quality reports.
+"""
+
 from __future__ import annotations
 
 from dataclasses import dataclass, field

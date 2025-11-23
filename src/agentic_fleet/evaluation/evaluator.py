@@ -20,12 +20,21 @@ logger = logging.getLogger(__name__)
 
 @dataclass
 class EvaluationResult:
+    """Container for single-task evaluation results."""
+
     task_id: str
     metrics: dict[str, Any]
     raw: dict[str, Any]
 
 
 class Evaluator:
+    """
+    Orchestrates batch evaluation of tasks against a workflow.
+
+    Loads tasks from a dataset, executes them, computes metrics, and generates
+    detailed reports and summaries.
+    """
+
     def __init__(
         self,
         workflow_factory,
@@ -35,6 +44,17 @@ class Evaluator:
         max_tasks: int = 0,
         stop_on_failure: bool = False,
     ) -> None:
+        """
+        Initialize the evaluator.
+
+        Args:
+            workflow_factory: Async callable returning an initialized workflow
+            dataset_path: Path to input dataset (JSON or JSONL)
+            output_dir: Directory for output reports
+            metrics: List of metric names to compute
+            max_tasks: Maximum number of tasks to process (0 for all)
+            stop_on_failure: Whether to stop on first metric failure
+        """
         self.workflow_factory = workflow_factory  # callable returning initialized workflow
         self.dataset_path = Path(dataset_path)
         self.output_dir = Path(output_dir)
@@ -44,6 +64,7 @@ class Evaluator:
         self.output_dir.mkdir(parents=True, exist_ok=True)
 
     def _load_tasks(self) -> list[dict[str, Any]]:
+        """Load tasks from the dataset file."""
         if not self.dataset_path.exists():
             return []
         tasks: list[dict[str, Any]] = []
@@ -71,9 +92,11 @@ class Evaluator:
         return tasks
 
     def _baseline_path(self) -> Path:
+        """Get path to baseline snapshot file."""
         return self.output_dir / "baseline_snapshot.json"
 
     def _load_baseline(self) -> dict[str, Any]:
+        """Load baseline snapshot if it exists."""
         path = self._baseline_path()
         if not path.exists():
             return {}
@@ -84,9 +107,16 @@ class Evaluator:
             return {}
 
     def _compute_output_hash(self, text: str) -> str:
+        """Compute SHA256 hash of output text for drift detection."""
         return hashlib.sha256(text.encode("utf-8")).hexdigest()
 
     async def run(self) -> dict[str, Any]:
+        """
+        Execute the evaluation run.
+
+        Returns:
+            Summary dictionary containing aggregate metrics
+        """
         tasks = self._load_tasks()
         results: list[EvaluationResult] = []
         workflow = await self.workflow_factory()
@@ -154,6 +184,7 @@ class Evaluator:
         return summary
 
     def _summarize(self, results: list[EvaluationResult]) -> dict[str, Any]:
+        """Compute aggregate statistics from individual results."""
         if not results:
             return {"total_tasks": 0, "metrics": {}}
         aggregate: dict[str, list[float]] = {}

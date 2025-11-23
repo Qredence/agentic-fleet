@@ -77,6 +77,7 @@ def extract_keywords(task: str) -> list[str]:
 
 
 def main() -> None:
+    """Run the evaluation task extraction."""
     # Paths
     workspace_root = Path(__file__).parent.parent
     history_path = workspace_root / "logs" / "execution_history.jsonl"

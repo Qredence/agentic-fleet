@@ -49,13 +49,17 @@ if _tools_mod_name not in sys.modules:
 
 # ruff: noqa: E402 - imports must come after sys.modules setup
 from .browser_tool import BrowserTool
+from .context7_deepwiki_tool import Context7DeepWikiTool
 from .hosted_code_adapter import HostedCodeInterpreterAdapter
+from .package_search_mcp_tool import PackageSearchMCPTool
 from .tavily_mcp_tool import TavilyMCPTool
 from .tavily_tool import TavilySearchTool
 
 __all__ = [
     "BrowserTool",
+    "Context7DeepWikiTool",
     "HostedCodeInterpreterAdapter",
+    "PackageSearchMCPTool",
     "TavilyMCPTool",
     "TavilySearchTool",
 ]

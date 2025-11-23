@@ -1,3 +1,5 @@
+"""Database session management."""
+
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 
 from agentic_fleet.api.settings import settings
@@ -16,5 +18,6 @@ AsyncSessionLocal = async_sessionmaker(
 
 
 async def get_db_session():
+    """Get a database session."""
     async with AsyncSessionLocal() as session:
         yield session
