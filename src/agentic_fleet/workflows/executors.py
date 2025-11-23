@@ -447,9 +447,10 @@ class ExecutionExecutor(Executor):
                 "mode": getattr(routing_msg.routing.decision, "mode", None),
             },
         ):
-            msg = f"DEBUG: ctx attributes: {dir(ctx)}"
-            logger.info(msg)
-            print(msg)  # Force stdout
+            logger.debug(
+                "Workflow context attributes: %s",
+                dir(ctx)
+            )
 
             routing_decision = routing_msg.routing.decision
             task = routing_msg.task
@@ -471,6 +472,8 @@ class ExecutionExecutor(Executor):
                         }
                         tool_plan_info = dspy_supervisor.decide_tools(task, team, "")
                 except Exception:
+                    # Silently ignore DSPy tool planning errors - workflow can continue
+                    # without tool planning information
                     pass
 
                 # Streaming execution
