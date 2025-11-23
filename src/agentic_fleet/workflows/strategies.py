@@ -46,9 +46,7 @@ def _get_agent(agents: dict[str, Any], name: str) -> Any | None:
             return agent
 
     # Agent lookup failed - log available agents for debugging
-    logger.warning(
-        f"Agent lookup failed for '{name}'. Available keys: {list(agents.keys())}"
-    )
+    logger.warning(f"Agent lookup failed for '{name}'. Available keys: {list(agents.keys())}")
     return None
 
 

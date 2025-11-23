@@ -29,7 +29,9 @@ _config = load_config()
 _api_config = _config.get("api", {})
 _chat_config = _api_config.get("chat", {})
 # Agent IDs to include in streaming responses (only these will be shown)
-INCLUDED_AGENT_IDS = _chat_config.get("included_agent_ids", ["orchestrator", "critic_verifier", "synthesis_generator"])
+INCLUDED_AGENT_IDS = _chat_config.get(
+    "included_agent_ids", ["orchestrator", "critic_verifier", "synthesis_generator"]
+)
 
 # --- Routes ---
 

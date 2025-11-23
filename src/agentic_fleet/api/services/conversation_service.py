@@ -23,7 +23,10 @@ async def create_conversation(db: AsyncSession, title: str | None = None) -> mod
             .filter(models.Conversation.id == new_conversation.id)
         )
         result = await db.execute(stmt)
-        return result.scalars().first()
+        conversation = result.scalars().first()
+        if not conversation:
+            raise ValueError("Failed to retrieve created conversation")
+        return conversation
     except Exception:
         await db.rollback()
         raise

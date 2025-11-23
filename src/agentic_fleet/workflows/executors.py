@@ -447,10 +447,7 @@ class ExecutionExecutor(Executor):
                 "mode": getattr(routing_msg.routing.decision, "mode", None),
             },
         ):
-            logger.debug(
-                "Workflow context attributes: %s",
-                dir(ctx)
-            )
+            logger.debug("Workflow context attributes: %s", dir(ctx))
 
             routing_decision = routing_msg.routing.decision
             task = routing_msg.task
