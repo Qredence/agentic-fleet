@@ -18,6 +18,12 @@ class FleetReAct(dspy.Module):
     Configures ReAct with appropriate max_iters to balance between
     thoroughness and latency/cost. Default max_iters=5 provides good
     coverage while preventing infinite loops.
+
+    Args:
+        signature: DSPy signature defining input/output format
+        tools: List of tools available for the ReAct agent to use
+        max_iters: Maximum number of ReAct iterations to prevent infinite loops.
+                   Default is 5 to balance thoroughness with latency/cost.
     """
 
     def __init__(self, signature: Any = None, tools: list[Any] | None = None, max_iters: int = 5):

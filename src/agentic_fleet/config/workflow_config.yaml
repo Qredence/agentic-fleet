@@ -29,6 +29,15 @@ dspy:
     gepa_val_split: 0.2
     gepa_seed: 13
 
+# API Configuration
+api:
+  chat:
+    # Agent IDs to exclude from streaming responses (internal/orchestration agents)
+    excluded_agent_ids:
+      - orchestrator
+      - critic_verifier
+      - synthesis_generator
+
 # Workflow Configuration
 workflow:
   supervisor:

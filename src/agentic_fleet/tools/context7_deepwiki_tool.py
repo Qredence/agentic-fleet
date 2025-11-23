@@ -111,6 +111,8 @@ class Context7DeepWikiTool(MCPStreamableHTTPTool):
                 if callable(disconnect_fn):
                     await disconnect_fn()
         except Exception:
+            # Silently ignore cleanup errors - connection may already be closed
+            # or session may have been invalidated by external factors
             pass
 
     @staticmethod

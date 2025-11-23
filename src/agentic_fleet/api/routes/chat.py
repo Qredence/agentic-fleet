@@ -19,9 +19,16 @@ from agentic_fleet.api.schemas.chat import (
     Message,
 )
 from agentic_fleet.api.services import conversation_service
+from agentic_fleet.utils.config_loader import load_config
 from agentic_fleet.workflows.supervisor import create_supervisor_workflow
 
 router = APIRouter()
+
+# Load API configuration
+_config = load_config()
+_api_config = _config.get("api", {})
+_chat_config = _api_config.get("chat", {})
+EXCLUDED_AGENT_IDS = _chat_config.get("excluded_agent_ids", ["orchestrator", "critic_verifier", "synthesis_generator"])
 
 # --- Routes ---
 
@@ -135,8 +142,8 @@ async def stream_chat_generator(
     try:
         async for event in workflow.run_stream(message):
             if isinstance(event, MagenticAgentMessageEvent):
-                # Only yield messages from actual agents, skip user/system messages
-                if event.agent_id not in ["orchestrator", "critic_verifier", "synthesis_generator"]:
+                # Only yield messages from actual agents, skip internal/orchestration agents
+                if event.agent_id not in EXCLUDED_AGENT_IDS:
                     continue
 
                 content = event.message.text

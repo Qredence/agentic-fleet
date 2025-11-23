@@ -45,10 +45,10 @@ def _get_agent(agents: dict[str, Any], name: str) -> Any | None:
         if key.lower() == name_lower:
             return agent
 
-    # Debug logging for failed lookup
-    msg = f"Agent lookup failed for '{name}'. Available keys: {list(agents.keys())}"
-    logger.warning(msg)
-    print(f"DEBUG: {msg}")  # Force output to stdout
+    # Agent lookup failed - log available agents for debugging
+    logger.warning(
+        f"Agent lookup failed for '{name}'. Available keys: {list(agents.keys())}"
+    )
     return None
 
 
@@ -386,11 +386,11 @@ async def execute_parallel_streaming(
     valid_agent_names = []
     valid_subtasks = []
     for agent_name, subtask in zip(agent_names, subtasks, strict=False):
-        if _get_agent(agents, agent_name):
-            agent = _get_agent(agents, agent_name)
+        agent = _get_agent(agents, agent_name)
         if agent:
             tasks.append(agent.run(subtask))
             valid_agent_names.append(agent_name)
+            valid_subtasks.append(subtask)
 
     if progress_callback:
         progress_callback.on_progress(
