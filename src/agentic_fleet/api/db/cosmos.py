@@ -1,3 +1,5 @@
+"""Cosmos DB integration for agentic-fleet."""
+
 import logging
 
 from azure.cosmos.aio import CosmosClient
@@ -8,11 +10,15 @@ logger = logging.getLogger(__name__)
 
 
 class CosmosDBConnection:
+    """Cosmos DB connection manager."""
+
     def __init__(self):
+        """Initialize Cosmos DB connection."""
         self.client = None
         self.database = None
 
     async def connect(self):
+        """Connect to Cosmos DB."""
         if not settings.AZURE_COSMOS_ENDPOINT or not settings.AZURE_COSMOS_KEY:
             logger.warning("Cosmos DB credentials missing")
             return
@@ -23,6 +29,7 @@ class CosmosDBConnection:
         self.database = self.client.get_database_client(settings.AZURE_COSMOS_DATABASE)
 
     async def get_container(self, container_name: str):
+        """Get a container client."""
         if not self.database:
             await self.connect()
         if not self.database:
@@ -30,6 +37,7 @@ class CosmosDBConnection:
         return self.database.get_container_client(container_name)
 
     async def close(self):
+        """Close the connection."""
         if self.client:
             await self.client.close()
 

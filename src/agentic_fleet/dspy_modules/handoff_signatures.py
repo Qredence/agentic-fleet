@@ -15,9 +15,14 @@ import dspy
 
 if TYPE_CHECKING:  # pragma: no cover - typing helper
 
-    class SignatureBase(Protocol): ...
+    class SignatureBase(Protocol):
+        """Base protocol for DSPy signatures."""
+
+        ...
 
     class _Field:
+        """Type hint stub for DSPy fields."""
+
         def __init__(self, desc: str = ""): ...
 
     InputField = _Field

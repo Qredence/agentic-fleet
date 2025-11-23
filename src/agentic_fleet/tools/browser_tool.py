@@ -97,6 +97,7 @@ class BrowserTool(SerializationMixin, ToolProtocol):
 
     @property
     def schema(self) -> dict:
+        """Return the tool schema."""
         return {
             "type": "function",
             "function": {

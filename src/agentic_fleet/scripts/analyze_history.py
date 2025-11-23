@@ -187,6 +187,7 @@ def print_timing_breakdown(executions: list[dict[str, Any]]):
 
 
 def main():
+    """Run the analysis script."""
     import argparse
 
     parser = argparse.ArgumentParser(

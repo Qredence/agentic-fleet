@@ -134,22 +134,38 @@ def display_result(result: dict[str, Any], console: Console | None = None) -> No
         )
 
     # 6. Show Execution Metadata
-    if "routing" in metadata:
-        routing = metadata["routing"]
-        exec_info = (
-            f"[bold]Execution Mode:[/bold] {routing.get('mode', 'unknown')}\n"
-            f"[bold]Agents Used:[/bold] {', '.join(routing.get('agents', []))}\n"
-            f"[bold]Confidence:[/bold] {routing.get('confidence', 0.0):.2f}"
-        )
+    # Prefer top-level routing info, fall back to metadata
+    routing_data = result.get("routing") or metadata.get("routing")
 
-        if "execution_time" in metadata:
-            exec_info += f"\n[bold]Total Time:[/bold] {metadata['execution_time']:.2f}s"
+    if routing_data:
+        # Handle RoutingDecision objects if present
+        if hasattr(routing_data, "to_dict"):
+            routing = routing_data.to_dict()
+        elif isinstance(routing_data, dict):
+            routing = routing_data
+        else:
+            routing = {}
 
-        console.print(
-            Panel(
-                exec_info, title="[bold blue]📊 Execution Details[/bold blue]", border_style="blue"
+        if routing:
+            # Handle key variations (assigned_to vs agents)
+            agents_list = routing.get("assigned_to") or routing.get("agents") or []
+
+            exec_info = (
+                f"[bold]Execution Mode:[/bold] {routing.get('mode', 'unknown')}\n"
+                f"[bold]Agents Used:[/bold] {', '.join(agents_list)}\n"
+                f"[bold]Confidence:[/bold] {routing.get('confidence', 0.0) or 0.0:.2f}"
             )
-        )
+
+            if "execution_time" in metadata:
+                exec_info += f"\n[bold]Total Time:[/bold] {metadata['execution_time']:.2f}s"
+
+            console.print(
+                Panel(
+                    exec_info,
+                    title="[bold blue]📊 Execution Details[/bold blue]",
+                    border_style="blue",
+                )
+            )
 
     console.print("\n" + "=" * 80 + "\n")
 

@@ -1,3 +1,5 @@
+"""API models for agentic-fleet."""
+
 from __future__ import annotations
 
 from enum import Enum
@@ -7,6 +9,8 @@ from pydantic import BaseModel, ConfigDict, Field
 
 
 class WorkflowStatus(str, Enum):
+    """Workflow execution status."""
+
     PENDING = "pending"
     RUNNING = "running"
     COMPLETED = "completed"
@@ -16,6 +20,8 @@ class WorkflowStatus(str, Enum):
 
 # Core Models
 class WorkflowRunRequest(BaseModel):
+    """Request model for running a workflow."""
+
     workflow_id: str = Field(..., description="ID of the workflow to run", min_length=1)
     inputs: dict[str, Any] | None = Field(default=None, description="Optional workflow inputs")
     verbose: bool = Field(default=False, description="Enable verbose logging")
@@ -24,12 +30,16 @@ class WorkflowRunRequest(BaseModel):
 
 
 class WorkflowRunResponse(BaseModel):
+    """Response model for a workflow run."""
+
     run_id: str
     status: WorkflowStatus
     output: dict[str, Any] | None = None
 
 
 class HistoryQuery(BaseModel):
+    """Query parameters for history retrieval."""
+
     all: bool | None = None
     summary: bool | None = None
     executions: bool | None = None
@@ -40,10 +50,14 @@ class HistoryQuery(BaseModel):
 
 
 class HistoryResponse(BaseModel):
+    """Response model for history retrieval."""
+
     runs: list[dict[str, Any]]
 
 
 class LogLevel(str, Enum):
+    """Log level enumeration."""
+
     DEBUG = "DEBUG"
     INFO = "INFO"
     WARNING = "WARNING"
@@ -52,18 +66,24 @@ class LogLevel(str, Enum):
 
 
 class LogQuery(BaseModel):
+    """Query parameters for log retrieval."""
+
     run_id: str | None = None
     level: LogLevel | None = None
     agent_id: str | None = None
 
 
 class LogResponse(BaseModel):
+    """Response model for log retrieval."""
+
     logs: list[dict[str, Any]]
 
 
 # Optimization/Agent models kept for compatibility if needed, but not strictly required by new schema
 # I will keep them if they are used by other parts of the system, but distinct from the requested schema.
 class AgentInfo(BaseModel):
+    """Information about an agent."""
+
     name: str
     description: str
     model: str
@@ -72,11 +92,15 @@ class AgentInfo(BaseModel):
 
 
 class AgentListResponse(BaseModel):
+    """Response model for listing agents."""
+
     agents: list[AgentInfo]
 
 
 # Self-Improvement Models
 class SelfImprovementRequest(BaseModel):
+    """Request model for self-improvement."""
+
     min_quality_score: float = Field(
         8.0,
         ge=0.0,
@@ -91,6 +115,8 @@ class SelfImprovementRequest(BaseModel):
 
 
 class ImprovementStats(BaseModel):
+    """Statistics for self-improvement."""
+
     total_executions: int
     high_quality_executions: int
     potential_new_examples: int
@@ -99,5 +125,7 @@ class ImprovementStats(BaseModel):
 
 
 class SelfImprovementResponse(BaseModel):
+    """Response model for self-improvement."""
+
     added_examples: int
     status: str

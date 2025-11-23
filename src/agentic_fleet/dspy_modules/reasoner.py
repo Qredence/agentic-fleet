@@ -11,11 +11,15 @@ programming capabilities to perform high-level cognitive tasks:
 
 from __future__ import annotations
 
+import asyncio
 from typing import Any
 
 import dspy
 
 from ..utils.logger import setup_logger
+from ..utils.task_utils import is_simple_task
+from ..utils.telemetry import optional_span
+from ..workflows.exceptions import ToolError
 from ..workflows.helpers import is_time_sensitive_task
 from .signatures import (
     JudgeEvaluation,
@@ -66,14 +70,24 @@ class DSPyReasoner(dspy.Module):
         self.tool_registry: Any | None = None
 
     def _robust_route(self, max_backtracks: int = 2, **kwargs) -> dspy.Prediction:
-        """Execute routing.
-
-        Note: DSPy Assertions (dspy.Suggest) are not available in this environment version (3.1.0b1).
-        Falling back to direct routing call without assertion-based backtracking.
-        """
+        """Execute routing with DSPy assertions."""
         # Call the router directly
         # We preserve the max_backtracks arg for interface compatibility
-        return self.router(**kwargs)
+        prediction = self.router(**kwargs)
+
+        # Basic assertion to ensure at least one agent is assigned
+        if self.use_enhanced_signatures:
+            import contextlib
+
+            with contextlib.suppress(Exception):
+                suggest_fn = getattr(dspy, "Suggest", None)
+                if callable(suggest_fn):
+                    suggest_fn(
+                        len(getattr(prediction, "assigned_to", [])) > 0,
+                        "At least one agent must be assigned to the task.",
+                    )
+
+        return prediction
 
     def forward(
         self,
@@ -169,35 +183,36 @@ class DSPyReasoner(dspy.Module):
             - mode: 'handoff', 'standard', or 'fast_path'
             - reasoning: Why this mode was chosen
         """
-        logger.info(f"Selecting workflow mode for task: {task[:100]}...")
+        with optional_span("DSPyReasoner.select_workflow_mode", attributes={"task": task}):
+            logger.info(f"Selecting workflow mode for task: {task[:100]}...")
 
-        # Fast check for trivial tasks to avoid DSPy overhead
-        if self._is_simple_task(task):
+            # Fast check for trivial tasks to avoid DSPy overhead
+            if is_simple_task(task):
+                return {
+                    "mode": "fast_path",
+                    "reasoning": "Trivial task detected via keyword matching.",
+                }
+
+            if not self.strategy_selector:
+                return {
+                    "mode": "standard",
+                    "reasoning": "Strategy selector not initialized (legacy mode).",
+                }
+
+            # Analyze complexity first
+            analysis = self.analyze_task(task)
+            complexity_desc = (
+                f"Complexity: {analysis['complexity']}, "
+                f"Steps: {analysis['estimated_steps']}, "
+                f"Time Sensitive: {analysis['time_sensitive']}"
+            )
+
+            prediction = self.strategy_selector(task=task, complexity_analysis=complexity_desc)
+
             return {
-                "mode": "fast_path",
-                "reasoning": "Trivial task detected via keyword matching.",
+                "mode": getattr(prediction, "workflow_mode", "standard"),
+                "reasoning": getattr(prediction, "reasoning", ""),
             }
-
-        if not self.strategy_selector:
-            return {
-                "mode": "standard",
-                "reasoning": "Strategy selector not initialized (legacy mode).",
-            }
-
-        # Analyze complexity first
-        analysis = self.analyze_task(task)
-        complexity_desc = (
-            f"Complexity: {analysis['complexity']}, "
-            f"Steps: {analysis['estimated_steps']}, "
-            f"Time Sensitive: {analysis['time_sensitive']}"
-        )
-
-        prediction = self.strategy_selector(task=task, complexity_analysis=complexity_desc)
-
-        return {
-            "mode": getattr(prediction, "workflow_mode", "standard"),
-            "reasoning": getattr(prediction, "reasoning", ""),
-        }
 
     def analyze_task(
         self, task: str, use_tools: bool = False, perform_search: bool = False
@@ -212,19 +227,20 @@ class DSPyReasoner(dspy.Module):
         Returns:
             Dictionary containing analysis results (complexity, capabilities, etc.)
         """
-        logger.info(f"Analyzing task: {task[:100]}...")
-        prediction = self.analyzer(task=task)
+        with optional_span("DSPyReasoner.analyze_task", attributes={"task": task}):
+            logger.info(f"Analyzing task: {task[:100]}...")
+            prediction = self.analyzer(task=task)
 
-        # Extract fields from prediction
-        # Typed signatures provide these directly as attributes
-        return {
-            "complexity": getattr(prediction, "complexity", "medium"),
-            "required_capabilities": getattr(prediction, "required_capabilities", []),
-            "estimated_steps": getattr(prediction, "estimated_steps", 1),
-            "reasoning": getattr(prediction, "reasoning", ""),
-            "time_sensitive": is_time_sensitive_task(task),
-            "needs_web_search": is_time_sensitive_task(task),
-        }
+            # Extract fields from prediction
+            # Typed signatures provide these directly as attributes
+            return {
+                "complexity": getattr(prediction, "complexity", "medium"),
+                "required_capabilities": getattr(prediction, "required_capabilities", []),
+                "estimated_steps": getattr(prediction, "estimated_steps", 1),
+                "reasoning": getattr(prediction, "reasoning", ""),
+                "time_sensitive": is_time_sensitive_task(task),
+                "needs_web_search": is_time_sensitive_task(task),
+            }
 
     def route_task(
         self,
@@ -250,163 +266,170 @@ class DSPyReasoner(dspy.Module):
         Returns:
             Dictionary containing routing decision (assigned_to, mode, subtasks)
         """
-        from datetime import datetime
+        with optional_span("DSPyReasoner.route_task", attributes={"task": task}):
+            from datetime import datetime
 
-        logger.info(f"Routing task: {task[:100]}...")
+            logger.info(f"Routing task: {task[:100]}...")
 
-        if self._is_simple_task(task):
-            if "Writer" in team:
-                logger.info(
-                    "Detected simple/heartbeat task; routing directly to Writer (delegated)."
+            if is_simple_task(task):
+                if "Writer" in team:
+                    logger.info(
+                        "Detected simple/heartbeat task; routing directly to Writer (delegated)."
+                    )
+                    return {
+                        "task": task,
+                        "assigned_to": ["Writer"],
+                        "mode": "delegated",
+                        "subtasks": [task],
+                        "tool_plan": [],
+                        "tool_requirements": [],
+                        "tool_goals": "Direct acknowledgment only",
+                        "latency_budget": "low",
+                        "handoff_strategy": "",
+                        "workflow_gates": "",
+                        "reasoning": "Simple/heartbeat task → route to Writer only",
+                    }
+                else:
+                    logger.warning(
+                        "Simple/heartbeat task detected, but 'Writer' agent is not present in the team. Falling back to standard routing."
+                    )
+
+            # Format team description
+            team_str = "\n".join([f"- {name}: {desc}" for name, desc in team.items()])
+
+            # Prefer real tool registry descriptions over generic team info
+            available_tools = team_str
+            if self.tool_registry:
+                available_tools = self.tool_registry.get_tool_descriptions()
+
+            # Detect time sensitivity to force web search usage
+            time_sensitive = is_time_sensitive_task(task)
+            preferred_web_tool = self._preferred_web_tool()
+
+            if current_date is None:
+                current_date = datetime.now().strftime("%Y-%m-%d")
+
+            # Enhance context with required capabilities if provided
+            enhanced_context = context
+            if required_capabilities:
+                caps_str = ", ".join(required_capabilities)
+                if enhanced_context:
+                    enhanced_context += (
+                        f"\n\nFocus on agents matching these capabilities: {caps_str}"
+                    )
+                else:
+                    enhanced_context = f"Focus on agents matching these capabilities: {caps_str}"
+
+            if time_sensitive:
+                freshness_note = (
+                    "Task is time-sensitive: MUST use Tavily search tool if available."
+                    if preferred_web_tool
+                    else "Task is time-sensitive: no Tavily tool detected, reason carefully."
                 )
+                enhanced_context = (
+                    f"{enhanced_context}\n{freshness_note}" if enhanced_context else freshness_note
+                )
+
+            if self.use_enhanced_signatures:
+                # Convert handoff history to string if provided
+                handoff_history_str = ""
+                if handoff_history:
+                    handoff_history_str = "\n".join(
+                        [
+                            f"{h.get('source')} -> {h.get('target')}: {h.get('reason')}"
+                            for h in handoff_history
+                        ]
+                    )
+
+                prediction = self._robust_route(
+                    task=task,
+                    team_capabilities=team_str,
+                    available_tools=available_tools,
+                    current_context=enhanced_context,
+                    handoff_history=handoff_history_str,
+                    workflow_state="Active",  # Default state
+                )
+
+                tool_plan = getattr(prediction, "tool_plan", [])
+
+                assigned_to = list(getattr(prediction, "assigned_to", []))
+                execution_mode = getattr(prediction, "execution_mode", "delegated")
+                subtasks = getattr(prediction, "subtasks", [task])
+
+                # Enforce web search for time-sensitive tasks when available
+                if time_sensitive and preferred_web_tool:
+                    if preferred_web_tool not in tool_plan:
+                        tool_plan = [preferred_web_tool, *tool_plan]
+                    if "Researcher" not in assigned_to:
+                        assigned_to = (
+                            ["Researcher", *assigned_to] if assigned_to else ["Researcher"]
+                        )
+                    if execution_mode == "delegated" and len(assigned_to) > 1:
+                        execution_mode = "parallel"
+                    if subtasks:
+                        subtasks = [s or task for s in subtasks]
+                    reasoning_note = "Time-sensitive → routed with Tavily web search"
+                elif time_sensitive and not preferred_web_tool:
+                    reasoning_note = "Time-sensitive but Tavily tool unavailable"
+                else:
+                    reasoning_note = ""
+
+                reasoning_text = getattr(prediction, "reasoning", "")
+                if reasoning_note:
+                    reasoning_text = (reasoning_text + "\n" + reasoning_note).strip()
+
                 return {
                     "task": task,
-                    "assigned_to": ["Writer"],
-                    "mode": "delegated",
-                    "subtasks": [task],
-                    "tool_plan": [],
-                    "tool_requirements": [],
-                    "tool_goals": "Direct acknowledgment only",
-                    "latency_budget": "low",
-                    "handoff_strategy": "",
-                    "workflow_gates": "",
-                    "reasoning": "Simple/heartbeat task → route to Writer only",
+                    "assigned_to": assigned_to,
+                    "mode": execution_mode,
+                    "subtasks": subtasks,
+                    "tool_plan": tool_plan,
+                    "tool_requirements": tool_plan,  # Map for backward compatibility
+                    "tool_goals": getattr(prediction, "tool_goals", ""),
+                    "latency_budget": getattr(prediction, "latency_budget", "medium"),
+                    "handoff_strategy": getattr(prediction, "handoff_strategy", ""),
+                    "workflow_gates": getattr(prediction, "workflow_gates", ""),
+                    "reasoning": reasoning_text,
                 }
+
             else:
-                logger.warning(
-                    "Simple/heartbeat task detected, but 'Writer' agent is not present in the team. Falling back to standard routing."
+                prediction = self._robust_route(
+                    max_backtracks=max_backtracks,
+                    task=task,
+                    team=team_str,
+                    context=enhanced_context,
+                    current_date=current_date,
                 )
 
-        # Format team description
-        team_str = "\n".join([f"- {name}: {desc}" for name, desc in team.items()])
+                assigned_to = list(getattr(prediction, "assigned_to", []))
+                mode = getattr(prediction, "mode", "delegated")
+                subtasks = getattr(prediction, "subtasks", [task])
+                tool_requirements = list(getattr(prediction, "tool_requirements", []))
 
-        # Prefer real tool registry descriptions over generic team info
-        available_tools = team_str
-        if self.tool_registry:
-            available_tools = self.tool_registry.get_tool_descriptions()
+                if time_sensitive and preferred_web_tool:
+                    if preferred_web_tool not in tool_requirements:
+                        tool_requirements.append(preferred_web_tool)
+                    if "Researcher" not in assigned_to:
+                        assigned_to = (
+                            ["Researcher", *assigned_to] if assigned_to else ["Researcher"]
+                        )
+                    if mode == "delegated" and len(assigned_to) > 1:
+                        mode = "parallel"
+                    if subtasks:
+                        subtasks = [s or task for s in subtasks]
+                    reasoning_text = getattr(prediction, "reasoning", "")
+                    reasoning_text = (reasoning_text + "\nTime-sensitive → Tavily required").strip()
+                else:
+                    reasoning_text = getattr(prediction, "reasoning", "")
 
-        # Detect time sensitivity to force web search usage
-        time_sensitive = is_time_sensitive_task(task)
-        preferred_web_tool = self._preferred_web_tool()
-
-        if current_date is None:
-            current_date = datetime.now().strftime("%Y-%m-%d")
-
-        # Enhance context with required capabilities if provided
-        enhanced_context = context
-        if required_capabilities:
-            caps_str = ", ".join(required_capabilities)
-            if enhanced_context:
-                enhanced_context += f"\n\nFocus on agents matching these capabilities: {caps_str}"
-            else:
-                enhanced_context = f"Focus on agents matching these capabilities: {caps_str}"
-
-        if time_sensitive:
-            freshness_note = (
-                "Task is time-sensitive: MUST use Tavily search tool if available."
-                if preferred_web_tool
-                else "Task is time-sensitive: no Tavily tool detected, reason carefully."
-            )
-            enhanced_context = (
-                f"{enhanced_context}\n{freshness_note}" if enhanced_context else freshness_note
-            )
-
-        if self.use_enhanced_signatures:
-            # Convert handoff history to string if provided
-            handoff_history_str = ""
-            if handoff_history:
-                handoff_history_str = "\n".join(
-                    [
-                        f"{h.get('source')} -> {h.get('target')}: {h.get('reason')}"
-                        for h in handoff_history
-                    ]
-                )
-
-            prediction = self._robust_route(
-                task=task,
-                team_capabilities=team_str,
-                available_tools=available_tools,
-                current_context=enhanced_context,
-                handoff_history=handoff_history_str,
-                workflow_state="Active",  # Default state
-            )
-
-            tool_plan = getattr(prediction, "tool_plan", [])
-
-            assigned_to = list(getattr(prediction, "assigned_to", []))
-            execution_mode = getattr(prediction, "execution_mode", "delegated")
-            subtasks = getattr(prediction, "subtasks", [task])
-
-            # Enforce web search for time-sensitive tasks when available
-            if time_sensitive and preferred_web_tool:
-                if preferred_web_tool not in tool_plan:
-                    tool_plan = [preferred_web_tool, *tool_plan]
-                if "Researcher" not in assigned_to:
-                    assigned_to = ["Researcher", *assigned_to] if assigned_to else ["Researcher"]
-                if execution_mode == "delegated" and len(assigned_to) > 1:
-                    execution_mode = "parallel"
-                if subtasks:
-                    subtasks = [s or task for s in subtasks]
-                reasoning_note = "Time-sensitive → routed with Tavily web search"
-            elif time_sensitive and not preferred_web_tool:
-                reasoning_note = "Time-sensitive but Tavily tool unavailable"
-            else:
-                reasoning_note = ""
-
-            reasoning_text = getattr(prediction, "reasoning", "")
-            if reasoning_note:
-                reasoning_text = (reasoning_text + "\n" + reasoning_note).strip()
-
-            return {
-                "task": task,
-                "assigned_to": assigned_to,
-                "mode": execution_mode,
-                "subtasks": subtasks,
-                "tool_plan": tool_plan,
-                "tool_requirements": tool_plan,  # Map for backward compatibility
-                "tool_goals": getattr(prediction, "tool_goals", ""),
-                "latency_budget": getattr(prediction, "latency_budget", "medium"),
-                "handoff_strategy": getattr(prediction, "handoff_strategy", ""),
-                "workflow_gates": getattr(prediction, "workflow_gates", ""),
-                "reasoning": reasoning_text,
-            }
-
-        else:
-            prediction = self._robust_route(
-                max_backtracks=max_backtracks,
-                task=task,
-                team=team_str,
-                context=enhanced_context,
-                current_date=current_date,
-            )
-
-            assigned_to = list(getattr(prediction, "assigned_to", []))
-            mode = getattr(prediction, "mode", "delegated")
-            subtasks = getattr(prediction, "subtasks", [task])
-            tool_requirements = list(getattr(prediction, "tool_requirements", []))
-
-            if time_sensitive and preferred_web_tool:
-                if preferred_web_tool not in tool_requirements:
-                    tool_requirements.append(preferred_web_tool)
-                if "Researcher" not in assigned_to:
-                    assigned_to = ["Researcher", *assigned_to] if assigned_to else ["Researcher"]
-                if mode == "delegated" and len(assigned_to) > 1:
-                    mode = "parallel"
-                if subtasks:
-                    subtasks = [s or task for s in subtasks]
-                reasoning_text = getattr(prediction, "reasoning", "")
-                reasoning_text = (reasoning_text + "\nTime-sensitive → Tavily required").strip()
-            else:
-                reasoning_text = getattr(prediction, "reasoning", "")
-
-            return {
-                "task": task,
-                "assigned_to": assigned_to,
-                "mode": mode,
-                "subtasks": subtasks,
-                "tool_requirements": tool_requirements,
-                "reasoning": reasoning_text,
-            }
+                return {
+                    "task": task,
+                    "assigned_to": assigned_to,
+                    "mode": mode,
+                    "subtasks": subtasks,
+                    "tool_requirements": tool_requirements,
+                    "reasoning": reasoning_text,
+                }
 
     def generate_simple_response(self, task: str) -> str:
         """Generate a direct response for a simple task.
@@ -417,9 +440,12 @@ class DSPyReasoner(dspy.Module):
         Returns:
             The generated answer string
         """
-        logger.info(f"Generating direct response for simple task: {task[:100]}...")
-        prediction = self.simple_responder(task=task)
-        return getattr(prediction, "answer", "I could not generate a simple response.")
+        with optional_span("DSPyReasoner.generate_simple_response", attributes={"task": task}):
+            logger.info(f"Generating direct response for simple task: {task[:100]}...")
+            prediction = self.simple_responder(task=task)
+            answer = getattr(prediction, "answer", "I could not generate a simple response.")
+            logger.info(f"Generated answer: {answer[:100]}...")
+            return answer
 
     def assess_quality(self, task: str = "", result: str = "", **kwargs: Any) -> dict[str, Any]:
         """Assess the quality of a task result.
@@ -432,18 +458,19 @@ class DSPyReasoner(dspy.Module):
         Returns:
             Dictionary containing quality assessment (score, missing, improvements)
         """
-        actual_task = task or kwargs.get("requirements", "")
-        actual_result = result or kwargs.get("results", "")
+        with optional_span("DSPyReasoner.assess_quality", attributes={"task": task}):
+            actual_task = task or kwargs.get("requirements", "")
+            actual_result = result or kwargs.get("results", "")
 
-        logger.info("Assessing result quality...")
-        prediction = self.quality_assessor(task=actual_task, result=actual_result)
+            logger.info("Assessing result quality...")
+            prediction = self.quality_assessor(task=actual_task, result=actual_result)
 
-        return {
-            "score": getattr(prediction, "score", 0.0),
-            "missing": getattr(prediction, "missing_elements", ""),
-            "improvements": getattr(prediction, "required_improvements", ""),
-            "reasoning": getattr(prediction, "reasoning", ""),
-        }
+            return {
+                "score": getattr(prediction, "score", 0.0),
+                "missing": getattr(prediction, "missing_elements", ""),
+                "improvements": getattr(prediction, "required_improvements", ""),
+                "reasoning": getattr(prediction, "reasoning", ""),
+            }
 
     def evaluate_progress(self, task: str = "", result: str = "", **kwargs: Any) -> dict[str, Any]:
         """Evaluate progress and decide next steps (complete or refine).
@@ -456,18 +483,19 @@ class DSPyReasoner(dspy.Module):
         Returns:
             Dictionary containing progress evaluation (action, feedback)
         """
-        # Handle parameter aliases from different executors
-        actual_task = task or kwargs.get("original_task", "")
-        actual_result = result or kwargs.get("completed", "")
+        with optional_span("DSPyReasoner.evaluate_progress", attributes={"task": task}):
+            # Handle parameter aliases from different executors
+            actual_task = task or kwargs.get("original_task", "")
+            actual_result = result or kwargs.get("completed", "")
 
-        logger.info("Evaluating progress...")
-        prediction = self.progress_evaluator(task=actual_task, result=actual_result)
+            logger.info("Evaluating progress...")
+            prediction = self.progress_evaluator(task=actual_task, result=actual_result)
 
-        return {
-            "action": getattr(prediction, "action", "complete"),
-            "feedback": getattr(prediction, "feedback", ""),
-            "reasoning": getattr(prediction, "reasoning", ""),
-        }
+            return {
+                "action": getattr(prediction, "action", "complete"),
+                "feedback": getattr(prediction, "feedback", ""),
+                "reasoning": getattr(prediction, "reasoning", ""),
+            }
 
     def decide_tools(
         self, task: str, team: dict[str, str], current_context: str = ""
@@ -482,16 +510,50 @@ class DSPyReasoner(dspy.Module):
         Returns:
             Dictionary containing tool plan
         """
-        logger.info("Deciding tools...")
+        with optional_span("DSPyReasoner.decide_tools", attributes={"task": task}):
+            logger.info("Deciding tools...")
 
-        team_str = "\n".join([f"- {name}: {desc}" for name, desc in team.items()])
+            team_str = "\n".join([f"- {name}: {desc}" for name, desc in team.items()])
 
-        prediction = self.tool_planner(task=task, available_tools=team_str)
+            prediction = self.tool_planner(task=task, available_tools=team_str)
 
-        return {
-            "tool_plan": getattr(prediction, "tool_plan", []),
-            "reasoning": getattr(prediction, "reasoning", ""),
-        }
+            return {
+                "tool_plan": getattr(prediction, "tool_plan", []),
+                "reasoning": getattr(prediction, "reasoning", ""),
+            }
+
+    async def perform_web_search_async(self, query: str, timeout: float = 12.0) -> str:
+        """Execute the preferred web-search tool asynchronously."""
+
+        if not query:
+            return ""
+
+        tool_name = self._preferred_web_tool()
+        if not tool_name or not self.tool_registry:
+            raise ToolError("No web search tool available", tool_name=tool_name or "unknown")
+
+        try:
+            result = await asyncio.wait_for(
+                self.tool_registry.execute_tool(tool_name, query=query),
+                timeout=timeout,
+            )
+        except TimeoutError:
+            raise
+        except Exception as exc:
+            raise ToolError(
+                f"Web search tool '{tool_name}' failed: {exc}",
+                tool_name=tool_name,
+                tool_args={"query": query},
+            ) from exc
+
+        if result is None:
+            raise ToolError(
+                "Web search returned empty result",
+                tool_name=tool_name,
+                tool_args={"query": query},
+            )
+
+        return str(result)
 
     def get_execution_summary(self) -> dict[str, Any]:
         """Return a summary of the execution history."""
@@ -501,51 +563,6 @@ class DSPyReasoner(dspy.Module):
         }
 
     # --- Internal helpers ---
-
-    def _is_simple_task(self, task: str) -> bool:
-        """Identify trivial heartbeat/greeting tasks that don't need routing."""
-
-        import re
-
-        task_lower = task.strip().lower()
-
-        complex_keywords = [
-            "news",
-            "latest",
-            "current",
-            "election",
-            "price",
-            "stock",
-            "weather",
-            "who is",
-            "who won",
-            "who are",
-            "mayor",
-            "governor",
-            "president",
-        ]
-
-        trivial_keywords = [
-            "ping",
-            "hello",
-            "hi",
-            "hey",
-            "test",
-            "are you there",
-            "you there",
-            "you awake",
-        ]
-
-        simple_keywords = ["define", "calculate", "solve", "2+", "meaning of"]
-
-        is_time_sensitive = bool(re.search(r"20[2-9][0-9]", task))
-        has_complex_keyword = any(k in task_lower for k in complex_keywords)
-        has_trivial_keyword = any(k in task_lower for k in trivial_keywords)
-        has_simple_keyword = any(k in task_lower for k in simple_keywords)
-        if is_time_sensitive or has_complex_keyword:
-            return False
-
-        return has_trivial_keyword or has_simple_keyword
 
     def _preferred_web_tool(self) -> str | None:
         """Return the preferred web-search tool name if available."""

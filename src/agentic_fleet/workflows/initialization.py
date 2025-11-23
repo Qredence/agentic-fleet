@@ -9,7 +9,7 @@ import asyncio
 from datetime import datetime
 from typing import TYPE_CHECKING, Any
 
-from ..agents import create_workflow_agents, validate_tool
+from ..agents import AgentFactory, validate_tool
 from ..dspy_modules.reasoner import DSPyReasoner
 from ..utils.agent_framework_shims import ensure_agent_framework_shims
 from ..utils.cache import TTLCache
@@ -18,6 +18,7 @@ from ..utils.env import validate_agentic_fleet_env
 from ..utils.history_manager import HistoryManager
 from ..utils.logger import setup_logger
 from ..utils.tool_registry import ToolRegistry
+from ..utils.tracing import initialize_tracing
 from .compilation import CompilationState, compile_supervisor_async, get_compiled_supervisor
 from .config import WorkflowConfig
 from .context import SupervisorContext
@@ -179,6 +180,9 @@ async def initialize_workflow_context(
 
     _validate_environment()
 
+    # Initialize tracing if enabled in config
+    initialize_tracing(config.config)
+
     openai_client, tool_registry = _create_shared_components(config)
 
     # Create DSPy reasoner with enhanced signatures enabled (reuse if provided)
@@ -190,14 +194,44 @@ async def initialize_workflow_context(
             "This may lead to inconsistent behavior."
         )
 
-    # Create specialized agents BEFORE compilation if tool-aware DSPy signatures need visibility
-    logger.info("Creating specialized agents...")
-    agents = create_workflow_agents(
-        config=config,
-        openai_client=openai_client,
-        tool_registry=tool_registry,
-        create_client_fn=lambda enable_storage: create_openai_client_with_store(enable_storage),
-    )
+    # Create AgentFactory
+    agent_factory = AgentFactory(tool_registry=tool_registry, openai_client=openai_client)
+
+    # Load agent configurations from YAML
+    from pathlib import Path
+
+    import yaml
+
+    # Try to load from src/agentic_fleet/config/workflow_config.yaml
+    config_path = Path(__file__).parent.parent / "config" / "workflow_config.yaml"
+
+    # Fallback to root config if not found (for development environment)
+    if not config_path.exists():
+        config_path = Path(__file__).parent.parent.parent.parent / "config" / "workflow_config.yaml"
+
+    try:
+        with open(config_path) as f:
+            full_config = yaml.safe_load(f)
+            agent_configs = full_config.get("agents", {})
+    except FileNotFoundError:
+        logger.error(f"Config file not found: {config_path}")
+        raise
+
+    agents = {}
+    for name, agent_config in agent_configs.items():
+        try:
+            # Allow workflow config to override model
+            agent_models = config.agent_models or {}
+            model_override = agent_models.get(name.lower())
+            if model_override:
+                agent_config["model"] = model_override
+
+            agents[name] = agent_factory.create_agent(name, agent_config)
+            logger.info(f"Successfully created agent: {name}")
+        except Exception as e:
+            logger.error(f"Failed to create agent '{name}': {e}", exc_info=True)
+            raise  # Or continue with other agents depending on requirements
+
     logger.info(f"Created {len(agents)} agents: {', '.join(agents.keys())}")
 
     _register_agent_tools(agents, tool_registry)

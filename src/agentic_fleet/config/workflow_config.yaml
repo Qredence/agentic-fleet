@@ -1,6 +1,6 @@
 # DSPy Configuration
 dspy:
-  model: gpt-5-mini
+  model: gpt-4o
   temperature: 1.0
   max_tokens: 16000
   optimization:
@@ -153,6 +153,19 @@ agents:
     enable_dspy: true
     cache_ttl: 600
     timeout: 60
+
+  copilot_researcher:
+    model: gpt-4.1
+    tools:
+      - PackageSearchMCPTool
+      - Context7DeepWikiTool
+      - TavilyMCPTool
+      - BrowserTool
+    temperature: 0.4
+    instructions: prompts.copilot_researcher
+    enable_dspy: true
+    cache_ttl: 300
+    timeout: 120
 
 # Tool Configuration
 tools:

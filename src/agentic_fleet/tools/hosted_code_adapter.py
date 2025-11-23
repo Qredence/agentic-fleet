@@ -21,9 +21,13 @@ if TYPE_CHECKING:  # pragma: no cover - typing helper
         description: str
 
         @property
-        def schema(self) -> dict[str, Any]: ...
+        def schema(self) -> dict[str, Any]:
+            """Return the tool schema."""
+            ...
 
-        def to_dict(self, **kwargs: Any) -> dict[str, Any]: ...
+        def to_dict(self, **kwargs: Any) -> dict[str, Any]:
+            """Convert tool to dictionary format."""
+            ...
 
 else:
     from agent_framework import ToolProtocol as ToolProtocolBase
@@ -44,6 +48,7 @@ class HostedCodeInterpreterAdapter(ToolProtocolBase, SerializationMixin):
 
     @property
     def schema(self) -> dict[str, Any]:
+        """Return the tool schema."""
         return {
             "type": "function",
             "function": {
