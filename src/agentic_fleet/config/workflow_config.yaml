@@ -32,8 +32,9 @@ dspy:
 # API Configuration
 api:
   chat:
-    # Agent IDs to exclude from streaming responses (internal/orchestration agents)
-    excluded_agent_ids:
+    # Agent IDs to include in streaming responses (only these agents' messages will be shown)
+    # By default, only show messages from orchestration agents that synthesize the final response
+    included_agent_ids:
       - orchestrator
       - critic_verifier
       - synthesis_generator
