@@ -2,7 +2,7 @@
 
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
-from sqlalchemy.orm import joinedload
+from sqlalchemy.orm import selectinload
 
 from agentic_fleet.api.db import models
 from agentic_fleet.api.schemas import chat as chat_schema
@@ -15,7 +15,15 @@ async def create_conversation(db: AsyncSession, title: str | None = None) -> mod
     try:
         await db.commit()
         await db.refresh(new_conversation)
-        return new_conversation
+
+        # Re-fetch with eager loading to ensure messages are loaded for Pydantic
+        stmt = (
+            select(models.Conversation)
+            .options(selectinload(models.Conversation.messages))
+            .filter(models.Conversation.id == new_conversation.id)
+        )
+        result = await db.execute(stmt)
+        return result.scalars().first()
     except Exception:
         await db.rollback()
         raise
@@ -25,23 +33,23 @@ async def get_conversation(db: AsyncSession, conversation_id: int) -> models.Con
     """Get a conversation by ID."""
     stmt = (
         select(models.Conversation)
-        .options(joinedload(models.Conversation.messages))
+        .options(selectinload(models.Conversation.messages))
         .filter(models.Conversation.id == conversation_id)
         .execution_options(populate_existing=True)
     )
 
     result = await db.execute(stmt)
-    return result.unique().scalars().first()
+    return result.scalars().first()
 
 
 async def list_conversations(db: AsyncSession) -> list[models.Conversation]:
     """List all conversations."""
     result = await db.execute(
         select(models.Conversation)
-        .options(joinedload(models.Conversation.messages))
+        .options(selectinload(models.Conversation.messages))
         .order_by(models.Conversation.created_at.desc())
     )
-    conversations = result.unique().scalars().all()
+    conversations = result.scalars().all()
     return list(conversations)
 
 
