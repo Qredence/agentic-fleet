@@ -63,7 +63,7 @@ var/
 *.checkpoint
 
 .cache/
-
+.uv_cache/
 .gemini/
 gha-creds-*.json
 AgenticFleet.code-workspace
