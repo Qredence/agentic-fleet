@@ -24,7 +24,11 @@ export function ConversationSidebar() {
   }, [loadConversations]);
 
   const handleSelectConversation = async (id: string) => {
-    await selectConversation(id);
+    try {
+      await selectConversation(id);
+    } catch (error) {
+      console.error("Failed to select conversation:", error);
+    }
   };
 
   const handleNewConversation = async () => {

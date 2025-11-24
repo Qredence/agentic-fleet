@@ -63,7 +63,8 @@ export function ChatContainer() {
       await sendMessage(conversationId, message);
     } catch (error) {
       console.error("Failed to send message:", error);
-      // Consider showing user-facing error notification
+      // TODO: Show toast/notification to user
+      // TODO: Consider removing the user message or marking it as failed
     }
   };
 

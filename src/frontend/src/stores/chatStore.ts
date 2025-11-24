@@ -115,13 +115,12 @@ export const useChatStore = create<ChatState>((set, get) => ({
   },
 
   selectConversation: async (conversationId: string) => {
-    // Optimistically switch conversation
-    set({ currentConversationId: conversationId, isLoading: true });
+    set({ isLoading: true, error: null });
 
     const existing = get().conversations.find((c) => c.id === conversationId);
     // If already have messages, no need to refetch
     if (existing && existing.messages?.length) {
-      set({ isLoading: false });
+      set({ currentConversationId: conversationId, isLoading: false });
       return;
     }
 
@@ -135,6 +134,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
         );
         return {
           conversations: [conversation, ...others],
+          currentConversationId: conversationId,
           isLoading: false,
         };
       });
@@ -156,6 +156,15 @@ export const useChatStore = create<ChatState>((set, get) => ({
     reasoning?: string,
   ) => {
     set((state) => {
+      const conversation = state.conversations.find(
+        (c) => c.id === conversationId,
+      );
+      if (!conversation && process.env.NODE_ENV === "development") {
+        console.warn(
+          `Attempted to add message to non-existent conversation: ${conversationId}`,
+        );
+      }
+
       const conversations = state.conversations.map((conv) => {
         if (conv.id === conversationId) {
           const message: Message = {

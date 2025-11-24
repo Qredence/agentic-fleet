@@ -1,5 +1,5 @@
 import { act, renderHook, waitFor } from "@testing-library/react";
-import { describe, expect, it, beforeEach } from "vitest";
+import { describe, expect, it, beforeAll, beforeEach } from "vitest";
 import { useStreamingChat } from "@/hooks/useStreamingChat";
 import { createConversation } from "@/lib/api/chatApi";
 
@@ -9,13 +9,18 @@ const RUN_INTEGRATION = process.env.RUN_LIVE_CHAT === "1";
 describe.skipIf(!RUN_INTEGRATION)(
   "useStreamingChat - Integration Tests",
   () => {
-    // Store original fetch
-    const originalFetch = globalThis.fetch;
+    let realFetch: typeof globalThis.fetch | undefined;
+
+    beforeAll(() => {
+      // Capture the real fetch implementation before mocks run.
+      realFetch = globalThis.fetch;
+    });
 
     beforeEach(() => {
       // Restore real fetch for integration tests
-      globalThis.fetch = originalFetch;
-      console.log("🔧 Restored real fetch for integration tests");
+      if (realFetch) {
+        globalThis.fetch = realFetch;
+      }
     });
 
     it("sends chat message and receives streaming response", async () => {
@@ -36,7 +41,7 @@ describe.skipIf(!RUN_INTEGRATION)(
       const { result } = renderHook(() =>
         useStreamingChat({
           onMessageComplete,
-          onError: (error) => console.error("Stream error:", error),
+          onError: (error: unknown) => console.error("Stream error:", error),
         }),
       );
 
