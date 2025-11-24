@@ -421,10 +421,10 @@ AgenticFleet can mirror workflow runs, long-term agent memory, DSPy datasets, op
 | `AZURE_COSMOS_CACHE_CONTAINER`                  | No                                  | `cache`                | Override for TTL cache metadata (partition key `/cacheKey`).                                                                                          |
 | `AGENTICFLEET_DEFAULT_USER_ID`                  | Recommended                         | _empty_                | High-cardinality identifier (tenant/workspace/developer) used when mirroring agent memory or DSPy artifacts that need a partition key.                |
 
-Best practices (aligned with [Cosmos DB data modeling guidance](../../cosmosdb_requirements.md)):
+Best practices (aligned with [Cosmos DB data modeling guidance](../developers/cosmosdb_requirements.md)):
 
 - Use **high-cardinality partition keys** (`workflowId`, `userId`, `cacheKey`) to avoid hot partitions and stay below the 20 GB logical partition limit. When mirroring agent memory, summarize or prune old entries so each document remains well under Cosmos’s 2 MB item cap.
-- Provision the database and containers up front (see `cosmosdb_data_model.md` for schemas). The helper intentionally avoids creating resources automatically so you retain control of RU/throughput settings.
+- Provision the database and containers up front (see `../developers/cosmosdb_data_model.md` for schemas). The helper intentionally avoids creating resources automatically so you retain control of RU/throughput settings.
 - Toggle the feature per-environment by supplying different `.env` files or deployment secrets. Local development can keep the flag off while production mirrors runs for analytics.
 - When using managed identity, grant the identity `Cosmos DB Built-in Data Contributor` on the account or specific database; the SDK uses `DefaultAzureCredential` which follows the usual Azure authentication chain.
 

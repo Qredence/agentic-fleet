@@ -9,17 +9,34 @@
 
 ## Code Style
 
-- **Formatting**: Use `ruff format` with the project config (`pyproject.toml`)
+- **Formatting**: Use `ruff format` with the project config (`pyproject.toml`). An `.editorconfig` file is provided to ensure consistent editor settings.
 - **Linting**: Use `ruff` (configured in `pyproject.toml`)
 - **Type Checking**: Use `ty` (Python 3.12 target; config in `pyproject.toml`)
 - **Naming**: snake_case for functions, PascalCase for classes
+- **Docstrings**: Public modules, classes, and functions must have docstrings (Google/NumPy style).
 
 ## Testing
 
 - Run tests: `make test` (or `uv run pytest -v`)
 - Run a specific test: `uv run pytest -q tests/workflows/test_supervisor_workflow.py::test_name`
-- With coverage: `uv run pytest --cov=src --cov-report=term-missing`
+- With coverage: `uv run pytest --cov=src/agentic_fleet --cov-report=term-missing`
 - Tests use `pytest-asyncio` for async tests
+
+## Quality Assurance
+
+Before submitting a PR, run the full QA suite:
+
+```bash
+make qa
+```
+
+This runs linting, formatting, type checking, backend tests, and frontend tests.
+
+## Frontend Development
+
+- **Formatting**: `npm run format` (uses Prettier)
+- **Linting**: `npm run lint` (uses ESLint)
+- **Testing**: `npm test` (uses Vitest)
 
 ## Code Organization
 

@@ -290,3 +290,34 @@ stats = cache.get_stats()
 - Constants: `src/agentic_fleet/utils/constants.py`
 - Async compiler: `src/agentic_fleet/utils/async_compiler.py`
 - CLI modules: `src/agentic_fleet/cli/`
+
+## Code Quality Standards
+
+### Coverage
+
+We enforce a minimum **80% backend line coverage** in CI.
+
+- New code should be well-tested.
+- If coverage drops below 80%, the CI build will fail.
+- We aim to increase this threshold to 85% and then 90% as the project matures.
+
+### Docstrings
+
+We enforce the presence of docstrings on all **public** APIs using Ruff (rules D100-D104).
+
+- **Required**:
+  - Public modules (`src/agentic_fleet/**/*.py`)
+  - Public classes, methods, and functions (names not starting with `_`)
+- **Exempt**:
+  - Tests (`tests/`)
+  - Examples (`examples/`)
+  - Scripts (`scripts/`)
+  - Private/internal helpers (names starting with `_`)
+  - Magic methods (e.g., `__init__`, `__str__`) are not strictly enforced yet.
+
+### Type Safety
+
+We enforce strict type checking in CI.
+
+- `ty check src` must pass without errors.
+- Use `typing` module features (Protocol, TypedDict, etc.) for better type safety.
