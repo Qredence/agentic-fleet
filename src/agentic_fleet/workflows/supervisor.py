@@ -224,10 +224,8 @@ class SupervisorWorkflow:
                 # Handle Handoff/GroupChat result (usually a list of messages or a single message)
                 result_text = ""
                 if isinstance(result, list):  # List[ChatMessage]
-                    # Find the last message
-                    if result:
-                        last_msg = result[-1]
-                        result_text = last_msg.text
+                    # TODO fix #
+                    result_text = self._extract_meaningful_result(result)
                 elif hasattr(result, "content"):
                     result_text = str(result.content)
                 else:
@@ -297,18 +295,80 @@ class SupervisorWorkflow:
             "SupervisorWorkflow.run_stream", attributes={"task": task, "mode": self.mode}
         ):
             logger.info(f"Running fleet workflow (streaming) for task: {task[:50]}...")
+            start_time = datetime.now()
             workflow_id = str(uuid4())
             current_mode = self.mode
+            reasoner = self.dspy_reasoner
+            mode_decision = None
 
-            # TODO  refactor properly to optimize fast-path and mode detection
-            is_simple = is_simple_task(task)
-            logger.info(f"is_simple_task('{task[:50]}...'): {is_simple}")
+            if current_mode == "auto" and reasoner and hasattr(reasoner, "select_workflow_mode"):
+                mode_decision = reasoner.select_workflow_mode(task)
+                detected_mode = mode_decision.get("mode", "standard")
+                if detected_mode == "fast_path":
+                    yield WorkflowStartedEvent(data=None)
+                    yield WorkflowStatusEvent(state=WorkflowRunState.IN_PROGRESS, data=None)
 
-            if self.dspy_reasoner and is_simple:
-                logger.info(f"Fast Path triggered for task: {task[:50]}...")
+                    result_text = reasoner.generate_simple_response(task)
+                    final_msg = FinalResultMessage(
+                        result=result_text,
+                        routing=RoutingDecision(
+                            task=task,
+                            assigned_to=("FastResponder",),
+                            mode=ExecutionMode.DELEGATED,
+                            subtasks=(task,),
+                        ),
+                        quality=QualityReport(score=10.0),
+                        judge_evaluations=[],
+                        execution_summary={},
+                        phase_timings={},
+                        phase_status={},
+                        metadata={
+                            "fast_path": True,
+                            "mode_reasoning": mode_decision.get("reasoning"),
+                        },
+                    )
+
+                    self.current_execution = {
+                        "workflowId": workflow_id,
+                        "task": task,
+                        "start_time": start_time.isoformat(),
+                        "end_time": datetime.now().isoformat(),
+                        "result": result_text,
+                        "routing": final_msg.routing.to_dict(),
+                        "quality": {
+                            "score": final_msg.quality.score,
+                            "missing": final_msg.quality.missing,
+                        },
+                        "metadata": final_msg.metadata,
+                    }
+                    if self.history_manager:
+                        try:
+                            await self.history_manager.save_execution_async(self.current_execution)
+                        except Exception:
+                            logger.debug(
+                                "Failed to persist fast-path execution history", exc_info=True
+                            )
+
+                    yield WorkflowOutputEvent(
+                        data=self._final_message_to_dict(final_msg),
+                        source_executor_id="fastpath",
+                    )
+                    yield WorkflowStatusEvent(state=WorkflowRunState.IDLE, data=None)
+                    return
+
+                if detected_mode != "standard":
+                    workflow_builder = build_fleet_workflow(
+                        reasoner,
+                        self.context,
+                        mode=detected_mode,
+                    )
+                    self.workflow = _materialize_workflow(workflow_builder)
+                    current_mode = detected_mode
+
+            if reasoner and is_simple_task(task):
                 yield WorkflowStartedEvent(data=None)
                 yield WorkflowStatusEvent(state=WorkflowRunState.IN_PROGRESS, data=None)
-                result_text = self.dspy_reasoner.generate_simple_response(task)
+                result_text = reasoner.generate_simple_response(task)
 
                 final_msg = FinalResultMessage(
                     result=result_text,
@@ -341,71 +401,83 @@ class SupervisorWorkflow:
             }
 
             final_msg = None
+            last_conversation_state = None
+
             if current_mode in ("group_chat", "handoff"):
                 msg = ChatMessage(role=Role.USER, text=task)
-                async for event in self.workflow.run_stream(msg):
-                    if isinstance(event, MagenticAgentMessageEvent):
-                        yield event
-                    elif isinstance(event, AgentRunUpdateEvent):
-                        # Convert AgentRunUpdateEvent to MagenticAgentMessageEvent for CLI compatibility
-                        text = ""
-                        if hasattr(event, "run") and hasattr(event.run, "delta"):
-                            delta = event.run.delta
-                            if hasattr(delta, "content") and delta.content:
-                                # Handle list of content parts or string
-                                if isinstance(delta.content, list):
-                                    text = "".join(str(part) for part in delta.content)
-                                else:
-                                    text = str(delta.content)
+                try:
+                    async for event in self.workflow.run_stream(msg):
+                        if isinstance(event, MagenticAgentMessageEvent):
+                            yield event
+                        elif isinstance(event, AgentRunUpdateEvent):
+                            # Convert AgentRunUpdateEvent to MagenticAgentMessageEvent for CLI compatibility
+                            text = ""
+                            if hasattr(event, "run") and hasattr(event.run, "delta"):
+                                delta = event.run.delta
+                                if hasattr(delta, "content") and delta.content:
+                                    # Handle list of content parts or string
+                                    if isinstance(delta.content, list):
+                                        text = "".join(str(part) for part in delta.content)
+                                    else:
+                                        text = str(delta.content)
 
-                        if text:
-                            # Create synthetic event for CLI streaming
-                            mag_msg = ChatMessage(role=Role.ASSISTANT, text=text)
-                            agent_id = (
-                                getattr(event.run, "agent_id", "unknown")
-                                if hasattr(event, "run")
-                                else "unknown"
-                            )
-                            mag_event = MagenticAgentMessageEvent(
-                                agent_id=agent_id, message=mag_msg
-                            )
-                            yield mag_event
+                            if text:
+                                # Create synthetic event for CLI streaming
+                                mag_msg = ChatMessage(role=Role.ASSISTANT, text=text)
+                                agent_id = (
+                                    getattr(event.run, "agent_id", "unknown")
+                                    if hasattr(event, "run")
+                                    else "unknown"
+                                )
+                                mag_event = MagenticAgentMessageEvent(
+                                    agent_id=agent_id, message=mag_msg
+                                )
+                                yield mag_event
 
-                    elif isinstance(event, RequestInfoEvent):
-                        # If request contains conversation, extracting last message might be useful
-                        if hasattr(event.data, "conversation") and event.data.conversation:
-                            last_msg = event.data.conversation[-1]
-                            # Log or capture partial result
-                            logger.info(
-                                f"RequestInfoEvent: Last message from {last_msg.author_name}: {last_msg.text[:50]}..."
-                            )
+                        elif isinstance(event, RequestInfoEvent):
+                            # If request contains conversation, extracting last message might be useful
+                            if hasattr(event.data, "conversation") and event.data.conversation:
+                                last_conversation_state = event.data.conversation
+                                last_msg = event.data.conversation[-1]
+                                # Log or capture partial result
+                                logger.info(
+                                    f"RequestInfoEvent: Last message from {last_msg.author_name}: {last_msg.text[:50]}..."
+                                )
 
-                    elif isinstance(event, WorkflowOutputEvent) and (
-                        isinstance(event.data, list)
-                        and event.data
-                        and isinstance(event.data[0], ChatMessage)
-                    ):
-                        last_msg = event.data[-1]
-                        final_msg = FinalResultMessage(
-                            result=last_msg.text,
-                            routing=RoutingDecision(
-                                task=task,
-                                assigned_to=(current_mode,),
-                                mode=ExecutionMode.DELEGATED,  # or GroupChat/Handoff specific
-                                subtasks=(task,),
-                            ),
-                            quality=QualityReport(score=0.0),
-                            judge_evaluations=[],
-                            execution_summary={},
-                            phase_timings={},
-                            phase_status={},
-                            metadata={"mode": current_mode},
-                        )
-                        # Yield the formatted output event
-                        yield WorkflowOutputEvent(
-                            data=self._final_message_to_dict(final_msg),
-                            source_executor_id=current_mode,
-                        )
+                        elif isinstance(event, WorkflowOutputEvent) and (
+                            isinstance(event.data, list)
+                            and event.data
+                            and isinstance(event.data[0], ChatMessage)
+                        ):
+                            result_text = self._extract_meaningful_result(event.data)
+                            final_msg = FinalResultMessage(
+                                result=result_text,
+                                routing=RoutingDecision(
+                                    task=task,
+                                    assigned_to=(current_mode,),
+                                    mode=ExecutionMode.DELEGATED,  # or GroupChat/Handoff specific
+                                    subtasks=(task,),
+                                ),
+                                quality=QualityReport(score=0.0),
+                                judge_evaluations=[],
+                                execution_summary={},
+                                phase_timings={},
+                                phase_status={},
+                                metadata={"mode": current_mode},
+                            )
+                            # Yield the formatted output event
+                            yield WorkflowOutputEvent(
+                                data=self._final_message_to_dict(final_msg),
+                                source_executor_id=current_mode,
+                            )
+                except Exception as e:
+                    # If we have a meaningful result from conversation history, we can suppress
+                    # the error (especially common cleanup errors) and yield the result.
+                    if last_conversation_state:
+                        logger.warning(f"Workflow stream interrupted, but result captured: {e}")
+                    else:
+                        raise e
+
             else:
                 task_msg = TaskMessage(task=task)
                 async for event in self.workflow.run_stream(task_msg):
@@ -429,11 +501,33 @@ class SupervisorWorkflow:
                                 final_msg = self._dict_to_final_message(data)
                         yield event
 
-            if final_msg is None and current_mode not in ("group_chat", "handoff"):
-                final_msg = await self._create_fallback_result(task)
-                yield WorkflowOutputEvent(
-                    data=self._final_message_to_dict(final_msg), source_executor_id="fallback"
-                )
+            if final_msg is None:
+                if current_mode in ("group_chat", "handoff") and last_conversation_state:
+                    result_text = self._extract_meaningful_result(last_conversation_state)
+                    final_msg = FinalResultMessage(
+                        result=result_text,
+                        routing=RoutingDecision(
+                            task=task,
+                            assigned_to=(current_mode,),
+                            mode=ExecutionMode.DELEGATED,
+                            subtasks=(task,),
+                        ),
+                        quality=QualityReport(score=0.0),
+                        judge_evaluations=[],
+                        execution_summary={},
+                        phase_timings={},
+                        phase_status={},
+                        metadata={"mode": current_mode, "fallback": True},
+                    )
+                    yield WorkflowOutputEvent(
+                        data=self._final_message_to_dict(final_msg),
+                        source_executor_id="fallback_handoff",
+                    )
+                elif current_mode not in ("group_chat", "handoff"):
+                    final_msg = await self._create_fallback_result(task)
+                    yield WorkflowOutputEvent(
+                        data=self._final_message_to_dict(final_msg), source_executor_id="fallback"
+                    )
 
             if final_msg is not None:
                 final_dict = self._final_message_to_dict(final_msg)
@@ -452,6 +546,38 @@ class SupervisorWorkflow:
             self.current_execution["end_time"] = datetime.now().isoformat()
             if self.history_manager:
                 await self.history_manager.save_execution_async(self.current_execution)
+
+    def _extract_meaningful_result(self, conversation: list[ChatMessage]) -> str:
+        """Extract a meaningful result from the conversation history.
+
+        If the last message is from Triage and is trivial (e.g. just "FINAL RESULT:"),
+        backtrack to find the last substantial message from a specialist.
+        """
+        if not conversation:
+            return ""
+
+        last_msg = conversation[-1]
+        text = last_msg.text.strip()
+
+        # If it's a substantial message, return it
+        # Heuristic: > 20 words or doesn't look like a mere signal
+        if len(text.split()) > 20:
+            return text
+
+        # If it's Triage saying "FINAL RESULT:" but empty content
+        if getattr(last_msg, "author_name", "") == "Triage" and "FINAL RESULT:" in text:
+            content = text.replace("FINAL RESULT:", "").strip()
+            if content:
+                return content
+
+        # Backtrack to find the last substantial message from a specialist
+        # We skip Triage messages that are just routing instructions
+        for msg in reversed(conversation[:-1]):
+            if msg.role == Role.ASSISTANT and getattr(msg, "author_name", "") != "Triage":
+                return msg.text
+
+        # Fallback to last message if nothing better found
+        return text
 
     def _final_message_to_dict(self, final_msg: FinalResultMessage) -> dict[str, Any]:
         return {

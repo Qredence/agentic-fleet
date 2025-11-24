@@ -197,7 +197,7 @@ def _build_handoff_workflow(
                 "1. Analyze the user task.\n"
                 "2. Hand off to the most relevant specialist (e.g., Researcher for questions, Writer for drafting).\n"
                 "3. Specialists can hand off to each other. You can also hand off to them.\n"
-                "4. When the task is complete and you have the final answer, reply to the user starting with 'FINAL RESULT:'."
+                "4. When the task is complete, you MUST provide a comprehensive summary of the findings or the final answer in your message. Do NOT just say 'Done'. Start your final response with 'FINAL RESULT:' followed by the detailed answer."
             ),
         )
 

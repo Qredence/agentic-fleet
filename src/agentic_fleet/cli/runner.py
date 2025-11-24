@@ -407,6 +407,19 @@ class WorkflowRunner:
 
                     # Handle final workflow outputs (metadata + result)
                     if isinstance(event, WorkflowOutputEvent) and isinstance(event.data, dict):
+                        # Persist the last agent's output before showing final result
+                        if current_agent:
+                            prev_text = agent_outputs.get(current_agent, "")
+                            if prev_text:
+                                live.console.print(
+                                    Panel(
+                                        Markdown(prev_text),
+                                        title=f"[bold green]{current_agent}[/bold green]",
+                                        border_style="green",
+                                    )
+                                )
+                            current_agent = None
+
                         final_data = event.data
 
                         # Show reasoning steps if not already shown
@@ -468,6 +481,18 @@ class WorkflowRunner:
                             continue
 
                         if agent_id:
+                            # Detect agent switch and persist previous agent's output
+                            if current_agent and agent_id != current_agent:
+                                prev_text = agent_outputs.get(current_agent, "")
+                                if prev_text:
+                                    live.console.print(
+                                        Panel(
+                                            Markdown(prev_text),
+                                            title=f"[bold green]{current_agent}[/bold green]",
+                                            border_style="green",
+                                        )
+                                    )
+
                             current_agent = agent_id
                             if current_agent not in agent_outputs:
                                 agent_outputs[current_agent] = ""

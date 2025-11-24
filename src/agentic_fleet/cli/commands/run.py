@@ -104,7 +104,7 @@ def run(
         agentic-fleet run --model gpt-5-mini "Compare AWS vs Azure AI"
     """
     # Setup logging
-    setup_logger("dspy_agent_framework", "DEBUG" if verbose else "INFO")
+    setup_logger("agentic_fleet", "DEBUG" if verbose else "WARNING")
 
     # Tracing (optional) - call early so agent creation is instrumented
     init_tracing()
