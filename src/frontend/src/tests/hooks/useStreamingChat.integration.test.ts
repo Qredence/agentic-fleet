@@ -5,6 +5,7 @@ import { createConversation } from "@/lib/api/chatApi";
 
 // Integration tests - no mocks, real backend required
 const RUN_INTEGRATION = process.env.RUN_LIVE_CHAT === "1";
+const INTEGRATION_TEST_TIMEOUT = 15000;
 
 describe.skipIf(!RUN_INTEGRATION)(
   "useStreamingChat - Integration Tests",
@@ -13,9 +14,10 @@ describe.skipIf(!RUN_INTEGRATION)(
     const originalFetch = globalThis.fetch;
 
     beforeEach(() => {
-      // Restore real fetch for integration tests
+      // Integration tests: no mocks, real backend required.
+      // Note: The test environment may have a mocked fetch; we restore the real fetch implementation
+      // before each test to ensure true integration testing.
       globalThis.fetch = originalFetch;
-      console.log("🔧 Restored real fetch for integration tests");
     });
 
     it("sends chat message and receives streaming response", async () => {
@@ -50,7 +52,7 @@ describe.skipIf(!RUN_INTEGRATION)(
         () => {
           expect(messageCompleted).toBe(true);
         },
-        { timeout: 15000 },
+        { timeout: INTEGRATION_TEST_TIMEOUT },
       );
 
       // 5. Verify content was received

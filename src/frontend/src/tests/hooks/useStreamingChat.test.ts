@@ -3,22 +3,12 @@ import { describe, expect, it, vi, beforeEach } from "vitest";
 
 import { useStreamingChat } from "@/hooks/useStreamingChat";
 import * as chatApi from "@/lib/api/chatApi";
+import { makeStream } from "@/tests/utils/testHelpers";
 
 // Mock chatApi.sendMessageStreaming to return a controlled SSE stream
 vi.mock("@/lib/api/chatApi", () => ({
   sendMessageStreaming: vi.fn(),
 }));
-
-const encoder = new TextEncoder();
-
-function makeStream(chunks: string[]): ReadableStream<Uint8Array> {
-  return new ReadableStream({
-    start(controller) {
-      chunks.forEach((chunk) => controller.enqueue(encoder.encode(chunk)));
-      controller.close();
-    },
-  });
-}
 
 describe("useStreamingChat", () => {
   beforeEach(() => {

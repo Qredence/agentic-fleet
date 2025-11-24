@@ -14,7 +14,7 @@
     "test:coverage": "vitest --coverage",
     "test:run": "vitest run",
     "test:watch": "vitest --watch",
-    "test:unit": "vitest run src/tests --exclude src/tests/hooks/useStreamingChat.integration.test.ts",
+    "test:unit": "vitest run src/tests --exclude=\"**/useStreamingChat.integration.test.ts\"",
     "test:integration": "RUN_LIVE_CHAT=1 vitest run src/tests/hooks/useStreamingChat.integration.test.ts"
   },
   "dependencies": {
