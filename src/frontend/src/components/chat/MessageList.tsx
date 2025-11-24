@@ -1,74 +1,109 @@
-import { useMemo } from "react";
-import type { ChatMessage } from "@/types/chat";
-import { MessageListItem } from "./MessageListItem";
+/**
+ * MessageList Component
+ * Scrollable list of messages with auto-scroll to bottom
+ */
+
+import { useEffect, useRef } from "react";
+import { MessageItem } from "./MessageItem";
+import type { Message } from "../../lib/api/chatApi";
+import { ReasoningDisplay } from "./ReasoningDisplay";
 
 interface MessageListProps {
-  messages: ChatMessage[];
-  currentStreamingMessage?: string;
-  currentStreamingMessageId?: string;
-  currentStreamingTimestamp?: number;
-  currentAgentId?: string;
-  currentReasoningContent?: string;
-  currentReasoningStreaming?: boolean;
+  messages: Message[];
+  streamingContent?: string;
+  orchestratorThought?: string;
+  streamingAgentId?: string;
+  streamingReasoning?: string;
+  isStreaming?: boolean;
 }
 
-/** Renders the chat message list with memoized streaming append and item memoization */
 export function MessageList({
   messages,
-  currentStreamingMessage,
-  currentStreamingMessageId,
-  currentStreamingTimestamp,
-  currentAgentId,
-  currentReasoningContent,
-  currentReasoningStreaming,
+  streamingContent,
+  orchestratorThought,
+  streamingAgentId,
+  streamingReasoning,
+  isStreaming = false,
 }: MessageListProps) {
-  // useMemo recalculates on every currentStreamingMessage change for real-time updates
-  // This ensures the streaming message content updates immediately in the UI
-  const allMessages = useMemo(() => {
-    if (!currentStreamingMessage) {
-      return messages;
+  const bottomRef = useRef<HTMLDivElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  // Auto-scroll to bottom when new messages arrive
+  useEffect(() => {
+    if (bottomRef.current) {
+      bottomRef.current.scrollIntoView({ behavior: "smooth" });
     }
-    const streamingId =
-      currentStreamingMessageId ??
-      `streaming-${currentStreamingTimestamp ?? Date.now()}`;
-    return [
-      ...messages,
-      {
-        id: streamingId,
-        role: "assistant" as const,
-        content: currentStreamingMessage,
-        agentId: currentAgentId,
-        createdAt: currentStreamingTimestamp ?? Date.now(),
-      },
-    ];
-  }, [
-    messages,
-    currentStreamingMessage,
-    currentStreamingMessageId,
-    currentStreamingTimestamp,
-    currentAgentId,
-  ]);
+  }, [messages.length, streamingContent]);
 
   return (
-    <div className="space-y-12">
-      {allMessages.map((message, index) => {
-        const isStreamingMessage =
-          Boolean(currentStreamingMessageId) &&
-          message.id === currentStreamingMessageId;
-        const isLastMessage = index === allMessages.length - 1;
+    <div
+      ref={containerRef}
+      className="flex-1 overflow-y-auto messages-container"
+    >
+      {/* Empty state */}
+      {messages.length === 0 && !isStreaming && (
+        <div className="flex h-full items-center justify-center">
+          <div className="text-center space-y-3">
+            <div className="text-6xl">💬</div>
+            <h2 className="heading-lg">Start a conversation</h2>
+            <p className="text-secondary text-sm max-w-sm">
+              Ask me anything! I'm here to help you with your questions.
+            </p>
+          </div>
+        </div>
+      )}
 
-        return (
-          <div key={message.id} data-testid={`message-item-${message.id}`}>
-            <MessageListItem
-              message={message}
-              isStreamingMessage={isStreamingMessage}
-              isLastMessage={isLastMessage}
-              currentReasoningContent={currentReasoningContent}
-              currentReasoningStreaming={currentReasoningStreaming}
+      {/* Messages */}
+      <div className="divide-y divide-subtle">
+        {messages.map((message) => (
+          <MessageItem key={message.id} message={message} />
+        ))}
+
+        {/* Orchestrator thought */}
+        {orchestratorThought && (
+          <div className="py-4 px-4 bg-surface-alt">
+            <div className="flex items-start gap-3">
+              <div className="shrink-0">
+                <div className="size-6 rounded-full bg-primary/20 flex items-center justify-center">
+                  <div className="size-2 rounded-full bg-primary animate-pulse" />
+                </div>
+              </div>
+              <div className="text-sm text-secondary italic">
+                {orchestratorThought}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Streaming message */}
+        {isStreaming && streamingContent && (
+          <MessageItem
+            message={{
+              id: "streaming",
+              role: "assistant",
+              content: streamingContent,
+              created_at: Date.now() / 1000,
+            }}
+            isStreaming={true}
+            streamingAgentId={streamingAgentId}
+          />
+        )}
+
+        {/* Streaming reasoning */}
+        {isStreaming && streamingReasoning && (
+          <div className="px-4 pb-4">
+            <ReasoningDisplay
+              content={streamingReasoning}
+              isStreaming
+              defaultOpen
+              triggerText="Model reasoning"
             />
           </div>
-        );
-      })}
+        )}
+      </div>
+
+      {/* Scroll anchor */}
+      <div ref={bottomRef} />
     </div>
   );
 }

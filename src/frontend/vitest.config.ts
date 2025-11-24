@@ -8,7 +8,7 @@ export default defineConfig({
     environment: "jsdom",
     setupFiles: ["./src/test/setup.ts"],
     env: {
-      VITE_API_URL: process.env.VITE_API_URL || "http://localhost:8000",
+      VITE_API_URL: process.env.VITE_API_URL || "http://localhost:8000/api",
     },
     // Use real API server for integration tests
     globals: true,
@@ -34,7 +34,7 @@ export default defineConfig({
         },
       },
     },
-    include: ["src/**/*.{test,spec}.{js,ts,jsx,tsx}"],
+    include: ["src/tests/**/*.{test,spec}.{js,ts,jsx,tsx}"],
     exclude: ["node_modules/", "dist/", "**/*.d.ts"],
   },
   resolve: {

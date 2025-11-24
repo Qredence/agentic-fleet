@@ -50,7 +50,7 @@ beforeAll(() => {
       console.log(`🔍 Mock fetch called with: ${url}`);
 
       // Mock health endpoint
-      if (url.includes("/v1/health")) {
+      if (url.includes("/api/health") || url.endsWith("/health")) {
         console.log("✅ Mocking health endpoint");
         return new Response(JSON.stringify({ status: "ok" }), {
           status: 200,
@@ -59,10 +59,7 @@ beforeAll(() => {
       }
 
       // Mock create conversation (both /v1 and direct)
-      if (
-        (url.includes("/v1/conversations") || url.includes("/conversations")) &&
-        init?.method === "POST"
-      ) {
+      if (url.includes("/conversations") && init?.method === "POST") {
         console.log("✅ Mocking create conversation");
         return new Response(
           JSON.stringify({
@@ -76,7 +73,7 @@ beforeAll(() => {
       }
 
       // Mock get conversation
-      if (url.match(/\/v1\/conversations\/[^/]+$/)) {
+      if (url.match(/\/api\/conversations\/[^/]+$/)) {
         console.log("✅ Mocking get conversation");
         return new Response(
           JSON.stringify({
@@ -90,7 +87,7 @@ beforeAll(() => {
       }
 
       // Mock send chat
-      if (url.includes("/v1/chat") && init?.method === "POST") {
+      if (url.includes("/api/chat") && init?.method === "POST") {
         console.log("✅ Mocking send chat");
         const body = init?.body ? JSON.parse(init.body as string) : {};
         const userMessage = body.message || "(no message)";
