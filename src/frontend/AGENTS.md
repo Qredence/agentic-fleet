@@ -36,6 +36,10 @@ state management, and development workflow for the SPA.
   by `lib/config.ts`.
 - When adjusting bundler or lint settings, update `vite.config.ts`, `tsconfig.json`, and
   `package.json` scripts together.
+- API clients should import `API_BASE_URL` from `src/lib/config.ts` and use the shared JSON fetch
+  helper in `src/lib/api/chatApi.ts` to ensure consistent headers, error shaping, and abort support.
+  Streaming chat uses `eventsource-parser` for SSE and supports `AbortController` cancellation.
+  Live chat integration tests are gated by `RUN_LIVE_CHAT=1` to avoid hanging CI.
 
 ## State & Data Flow
 
@@ -64,8 +68,10 @@ state management, and development workflow for the SPA.
 
 ## Testing & Quality
 
-- Unit and component tests: run `npm run test` (Vitest) from `src/frontend`. Specs live alongside
-  components (`*.test.tsx`) or in dedicated `__tests__` folders (e.g. `stores/__tests__/chatStore.test.ts`).
+- Unit and component tests: run `npm run test` (Vitest) from `src/frontend`. Specs live under
+  `src/tests/**` (e.g. `src/tests/chat/ChatContainer.test.tsx`). Integration chat streaming test
+  (`src/tests/hooks/useStreamingChat.integration.test.ts`) is gated by `RUN_LIVE_CHAT=1` and can be
+  run via `npm run test:integration`.
 - Linting & formatting: `npm run lint` executes ESLint with the same config as CI; Prettier runs via
   IDE integration. Keep formatting-only changes separate from logic updates.
 - End-to-end flows: `make test-e2e` (Playwright) requires both backend and frontend running via
