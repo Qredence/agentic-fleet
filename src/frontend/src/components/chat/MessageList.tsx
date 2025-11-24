@@ -33,7 +33,7 @@ export function MessageList({
     if (bottomRef.current) {
       bottomRef.current.scrollIntoView({ behavior: "smooth" });
     }
-  }, [messages.length, streamingContent]);
+  }, [messages.length, streamingContent, isStreaming]);
 
   return (
     <div

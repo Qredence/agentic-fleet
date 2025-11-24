@@ -144,7 +144,7 @@ export function useStreamingChat({
         }
       }
     },
-    [onMessageComplete, onReasoningDelta, onDelta, onError, currentAgentId],
+    [onMessageComplete, onReasoningDelta, onDelta, onError],
   );
 
   // Clean up on unmount
