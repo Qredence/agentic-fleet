@@ -2,14 +2,43 @@ import { API_BASE_URL } from "@/lib/config";
 
 export interface WorkflowRequest {
   task: string;
-  config?: Record<string, any>;
+  config?: Record<string, unknown>;
 }
 
 export interface WorkflowResponse {
   result: string;
   quality_score: number;
-  execution_summary: Record<string, any>;
-  metadata: Record<string, any>;
+  execution_summary: Record<string, unknown>;
+  metadata: Record<string, unknown>;
+}
+
+export interface HealthResponse {
+  status: string;
+  version: string;
+}
+
+export interface HistoryResponse {
+  runs: Array<{
+    run_id: string;
+    status: string;
+    task: string;
+    result: string;
+    routing?: Record<string, unknown>;
+    agents?: string[];
+    timing?: {
+      total: number;
+      phases: Record<string, number>;
+    };
+  }>;
+}
+
+export interface LogResponse {
+  logs: Array<{
+    timestamp: string;
+    level: string;
+    logger: string;
+    message: string;
+  }>;
 }
 
 export class AgenticFleetClient {
@@ -19,8 +48,16 @@ export class AgenticFleetClient {
     this.baseUrl = baseUrl;
   }
 
+  async getHealth(): Promise<HealthResponse> {
+    const response = await fetch(`${this.baseUrl}/health`);
+    if (!response.ok) {
+      throw new Error(`Health check failed: ${response.statusText}`);
+    }
+    return response.json();
+  }
+
   async runWorkflow(request: WorkflowRequest): Promise<WorkflowResponse> {
-    const response = await fetch(`${this.baseUrl}/workflow/run`, {
+    const response = await fetch(`${this.baseUrl}/workflows/run`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -35,6 +72,22 @@ export class AgenticFleetClient {
       );
     }
 
+    return response.json();
+  }
+
+  async getHistory(limit: number = 20): Promise<HistoryResponse> {
+    const response = await fetch(`${this.baseUrl}/history?last_n=${limit}`);
+    if (!response.ok) {
+      throw new Error(`Failed to fetch history: ${response.statusText}`);
+    }
+    return response.json();
+  }
+
+  async getLogs(limit: number = 100): Promise<LogResponse> {
+    const response = await fetch(`${this.baseUrl}/logs?limit=${limit}`);
+    if (!response.ok) {
+      throw new Error(`Failed to fetch logs: ${response.statusText}`);
+    }
     return response.json();
   }
 }

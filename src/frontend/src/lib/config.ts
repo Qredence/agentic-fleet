@@ -1,5 +1,5 @@
 /** API Configuration */
-const RAW_API_URL = import.meta.env.VITE_API_URL || "http://localhost:8000";
+const RAW_API_URL = import.meta.env.VITE_API_URL || "";
 const NORMALIZED_API_URL = RAW_API_URL.replace(/\/$/, "");
 
 // Ensure the frontend always targets the backend's /api prefix without double-appending

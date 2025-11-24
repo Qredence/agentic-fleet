@@ -1,21 +1,22 @@
-import { ChatPage } from "@/pages/ChatPage";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+/**
+ * Main App Component
+ * Entry point for the AgenticFleet chat application
+ */
 
-// Create a query client for React Query (available for future use)
-const queryClient = new QueryClient({
-  defaultOptions: {
-    queries: {
-      refetchOnWindowFocus: false,
-      retry: 1,
-    },
-  },
-});
+import { ConversationSidebar } from "./components/chat/ConversationSidebar";
+import { ChatContainer } from "./components/chat/ChatContainer";
 
 function App() {
   return (
-    <QueryClientProvider client={queryClient}>
-      <ChatPage />
-    </QueryClientProvider>
+    <div className="flex h-screen w-screen overflow-hidden bg-background text-foreground">
+      {/* Sidebar */}
+      <ConversationSidebar />
+
+      {/* Main Chat Area */}
+      <div className="flex-1">
+        <ChatContainer />
+      </div>
+    </div>
   );
 }
 

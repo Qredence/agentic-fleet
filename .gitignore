@@ -52,7 +52,7 @@ htmlcov/
 # Logs
 *.log
 *.db
-
+.cache/
 # OS
 .DS_Store
 Thumbs.db
@@ -72,7 +72,7 @@ AgenticFleet.code-workspace
 .cursor/
 # Node modules
 node_modules/
-
+.vite/
 # Exclude frontend build artifacts (regenerated in CI/CD)
 src/agentic_fleet/ui/
 
