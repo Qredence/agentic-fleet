@@ -96,9 +96,40 @@
 - **Phase A Code Quality Improvements** – Consolidated utility files, extracted magic numbers to configuration, and addressed TODO comments, reducing file count by 3 and improving maintainability.
 - **Phase B Docstring Standardization** – Added comprehensive Google-style docstrings with Args/Returns sections to all private methods in workflow helpers, executors, handoffs, and agent base classes.
 - **Phase C Type Safety Improvements** – Replaced `Any` types with proper `ChatAgent`, `Workflow`, and `DSPyReasoner` types across workflow modules, eliminating 15+ `Any` usages in public APIs.
+- **Phase D Test Coverage Expansion** – Added 97 new unit tests covering DSPy modules, agent base classes, workflow executors, and resilience utilities, bringing total test count to 128 (1 skipped due to discovered source bug).
 - **Optional Azure Cosmos DB persistence** – `AGENTICFLEET_USE_COSMOS=1` now mirrors workflow history, agent memory, DSPy datasets, and cache metadata into Cosmos NoSQL using a single helper module (`utils/cosmos.py`). The runtime degrades gracefully when Cosmos is unreachable.
 - **Data Model Documentation** – Added `docs/developers/cosmosdb_requirements.md` and `docs/developers/cosmosdb_data_model.md`, covering access patterns, container schemas, and provisioning guidance that follow Azure Cosmos DB best practices (high-cardinality partition keys, 2 MB limits, TTL guidance).
 - **Quality & Persistence polish** – `HistoryManager` now mirrors executions asynchronously, the supervisor workflow records whether refinement ran, and tests gained realistic persistence utilities with summarization support.
+
+### Phase D: Add Missing Test Coverage
+
+New test files created to improve unit test coverage:
+
+- **`tests/utils/test_resilience.py`** (15 tests):
+  - Tests for `log_retry_attempt()` function logging behavior
+  - Tests for `create_circuit_breaker()` retry decorator creation
+  - Tests for `async_call_with_retry()` sync/async function handling, retry logic, and error propagation
+
+- **`tests/dspy_modules/test_reasoner.py`** (25 tests):
+  - Tests for `DSPyReasoner` initialization with default and enhanced signatures
+  - Tests for `analyze_task()`, `route_task()`, `assess_quality()` cognitive functions
+  - Tests for `evaluate_progress()` and `decide_tools()` planning functions
+  - Tests for `generate_simple_response()` and `select_workflow_mode()` fast-path handling
+  - Tests for `predictors()` and `named_predictors()` DSPy introspection methods
+
+- **`tests/agents/test_base.py`** (35 tests, 1 skipped):
+  - Tests for `DSPyEnhancedAgent` initialization with all reasoning strategies
+  - Tests for `_enhance_task_with_dspy()` task enhancement and fallback handling
+  - Tests for `execute_with_timeout()` timeout and exception handling
+  - Tests for `_normalize_input_to_text()` message normalization
+  - Tests for `run()` caching, ReAct/PoT module usage, and fallback behavior
+  - **Bug discovered**: `_handle_pot_failure()` tries to set `ChatMessage.text` (read-only property)
+
+- **`tests/workflows/test_executors.py`** (22 tests):
+  - Tests for `AnalysisExecutor` fallback analysis and simple task detection
+  - Tests for `RoutingExecutor` fallback routing and agent assignment
+  - Tests for `ProgressExecutor` action normalization and report conversion
+  - Tests for `QualityExecutor` quality report conversion and defaults
 
 ### Changes
 
