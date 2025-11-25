@@ -1,326 +1,219 @@
-import type {
-  ChatActions,
-  ChatMessage,
-  ChatState,
-  Conversation,
-  OrchestratorMessage,
-} from "@/types/chat";
+/**
+ * Chat Store
+ * Manages conversation and message state using Zustand
+ */
+
 import { create } from "zustand";
+import type { Conversation, Message } from "../lib/api/chatApi";
+import * as chatApi from "../lib/api/chatApi";
 
-interface ChatStore extends ChatState, ChatActions {}
-
-let abortController: AbortController | null = null;
-
-export const useChatStore = create<ChatStore>((set, get) => ({
-  // Initial state
-  messages: [],
-  currentStreamingMessage: "",
-  currentAgentId: undefined,
-  currentStreamingMessageId: undefined,
-  currentStreamingTimestamp: undefined,
-  currentReasoningContent: undefined,
-  currentReasoningStreaming: false,
-  orchestratorMessages: [],
-  isLoading: false,
-  error: null,
-  conversationId: null,
-  conversations: [],
-  isLoadingConversations: false,
+interface ChatState {
+  // State
+  conversations: Conversation[];
+  currentConversationId: string | null;
+  isLoading: boolean;
+  error: string | null;
+  streamingContent: string;
+  streamingAgentId?: string;
+  streamingReasoning?: string;
 
   // Actions
-  sendMessage: async (message: string) => {
-    const state = get();
-    if (!message.trim()) return;
+  loadConversations: () => Promise<void>;
+  createConversation: (title?: string) => Promise<Conversation>;
+  selectConversation: (conversationId: string) => Promise<void>;
+  addMessage: (
+    conversationId: string,
+    role: "user" | "assistant",
+    content: string,
+    reasoning?: string,
+  ) => void;
+  updateLastMessage: (conversationId: string, content: string) => void;
+  setStreamingState: (payload: {
+    content?: string;
+    agentId?: string;
+    reasoning?: string;
+  }) => void;
+  clearStreaming: () => void;
+  clearError: () => void;
+}
 
-    // Use existing conversation ID or generate a local one
-    let conversationId = state.conversationId;
-    if (!conversationId) {
-      conversationId = `local-${Date.now()}`;
-      set({ conversationId });
-    }
+function ensureMessages(conv: Conversation): Conversation {
+  return { ...conv, messages: conv.messages || [] };
+}
 
-    const userMessage: ChatMessage = {
-      id: `user-${Date.now()}`,
-      role: "user",
-      content: message,
-      createdAt: Date.now(),
-    };
+export const useChatStore = create<ChatState>((set, get) => ({
+  // Initial state
+  conversations: [],
+  currentConversationId: null,
+  isLoading: false,
+  error: null,
+  streamingContent: "",
+  streamingAgentId: undefined,
+  streamingReasoning: undefined,
 
-    set({
-      messages: [...state.messages, userMessage],
-      isLoading: true,
-      error: null,
-      currentStreamingMessage: "",
-      currentAgentId: undefined,
-      currentStreamingMessageId: undefined,
-      currentStreamingTimestamp: undefined,
-    });
-
-    try {
-      // Import client dynamically or use the one we created
-      const { apiClient } = await import("@/lib/api/client");
-
-      const response = await apiClient.runWorkflow({
-        task: message,
-        config: { max_rounds: 10 }, // Default config
-      });
-
-      const assistantMessage: ChatMessage = {
-        id: `assistant-${Date.now()}`,
-        role: "assistant",
-        content: response.result,
-        createdAt: Date.now(),
-        reasoning: response.execution_summary
-          ? JSON.stringify(response.execution_summary, null, 2)
-          : undefined,
-      };
-
-      set((state) => ({
-        messages: [...state.messages, assistantMessage],
-        isLoading: false,
-      }));
-    } catch (error) {
-      set({
-        isLoading: false,
-        error:
-          error instanceof Error ? error.message : "Failed to run workflow",
-      });
-    }
-  },
-
-  appendDelta: (delta: string, agentId?: string) => {
-    set((state) => {
-      const timestamp = state.currentStreamingTimestamp ?? Date.now();
-      return {
-        currentStreamingMessage: state.currentStreamingMessage + delta,
-        currentAgentId: agentId || state.currentAgentId,
-        currentStreamingMessageId:
-          state.currentStreamingMessageId ?? `streaming-${timestamp}`,
-        currentStreamingTimestamp: timestamp,
-      };
-    });
-  },
-
-  addMessage: (message: Omit<ChatMessage, "id" | "createdAt">) => {
-    const newMessage: ChatMessage = {
-      ...message,
-      id: `${message.role}-${Date.now()}`,
-      createdAt: Date.now(),
-    };
-
-    set((state) => ({
-      messages: [...state.messages, newMessage],
-    }));
-  },
-
-  addOrchestratorMessage: (message: string, kind?: string) => {
-    const orchestratorMessage: OrchestratorMessage = {
-      id: `orchestrator-${Date.now()}-${Math.random()}`,
-      message,
-      kind,
-      timestamp: Date.now(),
-    };
-
-    set((state) => ({
-      orchestratorMessages: [
-        ...state.orchestratorMessages,
-        orchestratorMessage,
-      ],
-    }));
-  },
-
-  setLoading: (loading: boolean) => {
-    set({ isLoading: loading });
-  },
-
-  setError: (error: string | null) => {
-    set({ error });
-  },
-
-  setConversationId: (id: string) => {
-    set({ conversationId: id });
-  },
-
-  loadConversationHistory: async (conversationId: string) => {
-    try {
-      // Mock implementation
-      // In a real app, we would fetch messages for this ID
-      // For now, we just set the ID and clear messages or keep existing if it matches
-      const state = get();
-      if (state.conversationId !== conversationId) {
-        set({
-          conversationId: conversationId,
-          messages: [], // Start fresh or load from local storage if we implemented that
-          error: null,
-        });
-      }
-    } catch (error) {
-      set({
-        error:
-          error instanceof Error
-            ? error.message
-            : "Failed to load conversation history",
-      });
-      throw error;
-    }
-  },
-
+  // Actions
   loadConversations: async () => {
-    set({ isLoadingConversations: true });
+    set({ isLoading: true, error: null });
     try {
-      // Mock implementation for now as backend doesn't support conversations yet
-      const conversations: Conversation[] = [];
+      const fetchedConversations = (await chatApi.listConversations()).map(
+        ensureMessages,
+      );
 
-      set({
-        conversations,
-        isLoadingConversations: false,
-        error: null,
+      set((state) => {
+        // Keep current conversation if missing from fetched list
+        let newConversations = fetchedConversations;
+
+        if (state.currentConversationId) {
+          const currentInFetched = newConversations.find(
+            (c) => c.id === state.currentConversationId,
+          );
+          if (!currentInFetched) {
+            const currentInState = state.conversations.find(
+              (c) => c.id === state.currentConversationId,
+            );
+            if (currentInState) {
+              newConversations = [currentInState, ...newConversations];
+            }
+          }
+        }
+
+        return { conversations: newConversations, isLoading: false };
       });
     } catch (error) {
       set({
-        isLoadingConversations: false,
         error:
           error instanceof Error
             ? error.message
             : "Failed to load conversations",
+        isLoading: false,
       });
     }
   },
 
-  switchConversation: async (conversationId: string) => {
-    const state = get();
-    if (state.conversationId === conversationId) {
+  createConversation: async (title?: string) => {
+    set({ isLoading: true, error: null });
+    try {
+      const conversation = ensureMessages(
+        await chatApi.createConversation({ title }),
+      );
+      set((state) => ({
+        conversations: [conversation, ...state.conversations],
+        currentConversationId: conversation.id,
+        isLoading: false,
+      }));
+      return conversation;
+    } catch (error) {
+      set({
+        error:
+          error instanceof Error
+            ? error.message
+            : "Failed to create conversation",
+        isLoading: false,
+      });
+      throw error;
+    }
+  },
+
+  selectConversation: async (conversationId: string) => {
+    // Optimistically switch conversation
+    set({ currentConversationId: conversationId, isLoading: true });
+
+    const existing = get().conversations.find((c) => c.id === conversationId);
+    // If already have messages, no need to refetch
+    if (existing && existing.messages?.length) {
+      set({ isLoading: false });
       return;
     }
 
-    abortController?.abort();
-    abortController = null;
-
-    // Load conversation history
-    await get().loadConversationHistory(conversationId);
-
-    // Reload conversations list to ensure it's up to date
-    await get().loadConversations();
-  },
-
-  createNewConversation: async () => {
-    // Abort any active stream before creating new conversation
-    abortController?.abort();
-    abortController = null;
-
     try {
-      // Local only for now
-      const conversationId = `local-${Date.now()}`;
-      set({
-        conversationId,
-        messages: [],
-        currentStreamingMessage: "",
-        currentAgentId: undefined,
-        currentStreamingMessageId: undefined,
-        currentStreamingTimestamp: undefined,
-        currentReasoningContent: undefined,
-        currentReasoningStreaming: false,
-        orchestratorMessages: [],
-        isLoading: false,
-        error: null,
+      const conversation = ensureMessages(
+        await chatApi.getConversation(conversationId),
+      );
+      set((state) => {
+        const others = state.conversations.filter(
+          (c) => c.id !== conversationId,
+        );
+        return {
+          conversations: [conversation, ...others],
+          isLoading: false,
+        };
       });
     } catch (error) {
       set({
         error:
           error instanceof Error
             ? error.message
-            : "Failed to create new conversation",
-      });
-      throw error;
-    }
-  },
-
-  appendReasoningDelta: (reasoning: string) => {
-    const state = get();
-    set({
-      currentReasoningContent:
-        (state.currentReasoningContent || "") + reasoning,
-      currentReasoningStreaming: true,
-    });
-  },
-
-  completeReasoning: (reasoning: string) => {
-    set({
-      currentReasoningContent: reasoning,
-      currentReasoningStreaming: false,
-    });
-  },
-
-  completeStreaming: () => {
-    const state = get();
-    if (state.currentStreamingMessage) {
-      const assistantMessage: ChatMessage = {
-        id: `assistant-${Date.now()}`,
-        role: "assistant",
-        content: state.currentStreamingMessage,
-        createdAt: state.currentStreamingTimestamp ?? Date.now(),
-        agentId: state.currentAgentId,
-        reasoning: state.currentReasoningContent,
-        reasoningStreaming: false,
-      };
-
-      set({
-        messages: [...state.messages, assistantMessage],
-        currentStreamingMessage: "",
-        currentAgentId: undefined,
-        currentStreamingMessageId: undefined,
-        currentStreamingTimestamp: undefined,
-        currentReasoningContent: undefined,
-        currentReasoningStreaming: false,
+            : "Failed to load conversation",
         isLoading: false,
-      });
-    } else {
-      set({
-        isLoading: false,
-        currentStreamingMessageId: undefined,
-        currentStreamingTimestamp: undefined,
-        currentReasoningContent: undefined,
-        currentReasoningStreaming: false,
       });
     }
   },
 
-  /** Abort active SSE stream and cleanup streaming state */
-  cancelStreaming: () => {
-    // Abort controller and clear reference
-    abortController?.abort();
-    abortController = null;
-
-    set({
-      isLoading: false,
-      currentStreamingMessage: "",
-      currentAgentId: undefined,
-      currentStreamingMessageId: undefined,
-      currentStreamingTimestamp: undefined,
-      currentReasoningContent: undefined,
-      currentReasoningStreaming: false,
+  addMessage: (
+    conversationId: string,
+    role: "user" | "assistant",
+    content: string,
+    reasoning?: string,
+  ) => {
+    set((state) => {
+      const conversations = [...state.conversations];
+      const index = conversations.findIndex((c) => c.id === conversationId);
+      
+      if (index !== -1) {
+        const message: Message = {
+          id: crypto.randomUUID(),
+          role,
+          content,
+          created_at: Date.now() / 1000,
+          reasoning,
+        };
+        conversations[index] = {
+          ...conversations[index],
+          messages: [...(conversations[index].messages || []), message],
+        };
+      }
+      
+      return { conversations };
     });
   },
 
-  reset: () => {
-    // Abort any active stream on reset
-    abortController?.abort();
-    abortController = null;
-
-    set({
-      messages: [],
-      currentStreamingMessage: "",
-      currentAgentId: undefined,
-      currentStreamingMessageId: undefined,
-      currentStreamingTimestamp: undefined,
-      currentReasoningContent: undefined,
-      currentReasoningStreaming: false,
-      orchestratorMessages: [],
-      isLoading: false,
-      error: null,
-      conversationId: null,
-      conversations: [],
-      isLoadingConversations: false,
+  updateLastMessage: (conversationId: string, content: string) => {
+    set((state) => {
+      const conversations = [...state.conversations];
+      const index = conversations.findIndex((c) => c.id === conversationId);
+      
+      if (index !== -1) {
+        const messages = [...(conversations[index].messages || [])];
+        if (messages.length > 0) {
+          messages[messages.length - 1] = {
+            ...messages[messages.length - 1],
+            content,
+          };
+          conversations[index] = { ...conversations[index], messages };
+        }
+      }
+      
+      return { conversations };
     });
+  },
+
+  setStreamingState: ({ content, agentId, reasoning }) => {
+    set((state) => ({
+      streamingContent: content ?? state.streamingContent,
+      streamingAgentId: agentId ?? state.streamingAgentId,
+      streamingReasoning: reasoning ?? state.streamingReasoning,
+    }));
+  },
+
+  clearStreaming: () => {
+    set({
+      streamingContent: "",
+      streamingAgentId: undefined,
+      streamingReasoning: undefined,
+    });
+  },
+
+  clearError: () => {
+    set({ error: null });
   },
 }));
