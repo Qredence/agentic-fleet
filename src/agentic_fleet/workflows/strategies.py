@@ -8,14 +8,20 @@ from __future__ import annotations
 import asyncio
 from typing import TYPE_CHECKING, Any
 
-from agent_framework import ChatMessage, MagenticAgentMessageEvent, Role, WorkflowOutputEvent
+from agent_framework._types import ChatMessage, Role
+from agent_framework._workflows import MagenticAgentMessageEvent, WorkflowOutputEvent
 
 from ..utils.logger import setup_logger
 from ..utils.models import ExecutionMode, RoutingDecision
 from .exceptions import AgentExecutionError
 from .handoff import HandoffContext, HandoffManager
+from .helpers import (
+    derive_objectives,
+    estimate_remaining_work,
+    extract_artifacts,
+    synthesize_results,
+)
 from .models import ExecutionOutcome
-from .utils import derive_objectives, estimate_remaining_work, extract_artifacts, synthesize_results
 
 if TYPE_CHECKING:
     from ..utils.progress import ProgressCallback

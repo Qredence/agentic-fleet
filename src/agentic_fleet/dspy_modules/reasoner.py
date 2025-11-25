@@ -17,10 +17,9 @@ from typing import Any
 import dspy
 
 from ..utils.logger import setup_logger
-from ..utils.task_utils import is_simple_task
 from ..utils.telemetry import optional_span
 from ..workflows.exceptions import ToolError
-from ..workflows.helpers import is_time_sensitive_task
+from ..workflows.helpers import is_simple_task, is_time_sensitive_task
 from .signatures import (
     JudgeEvaluation,
     ProgressEvaluation,
