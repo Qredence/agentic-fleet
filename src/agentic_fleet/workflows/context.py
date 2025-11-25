@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import asyncio
 from dataclasses import dataclass, field
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 import openai
 
@@ -17,6 +17,10 @@ from .compilation import CompilationState
 from .config import WorkflowConfig
 from .handoff import HandoffManager
 
+if TYPE_CHECKING:
+    from agent_framework._agents import ChatAgent
+    from agent_framework._workflows import Workflow
+
 
 @dataclass
 class SupervisorContext:
@@ -24,8 +28,8 @@ class SupervisorContext:
 
     config: WorkflowConfig
     dspy_supervisor: DSPyReasoner | None = None
-    agents: dict[str, Any] | None = None
-    workflow: Any = None
+    agents: dict[str, ChatAgent] | None = None
+    workflow: Workflow | None = None
     verbose_logging: bool = True
 
     openai_client: openai.AsyncOpenAI | None = None

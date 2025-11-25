@@ -37,7 +37,10 @@ from .messages import FinalResultMessage, TaskMessage
 from .models import QualityReport
 
 if TYPE_CHECKING:
+    from agent_framework._agents import ChatAgent
     from agent_framework._workflows import Workflow
+
+    from ..dspy_modules.reasoner import DSPyReasoner
 
 # Type alias for workflow events that can be yielded by run_stream
 WorkflowEvent = (
@@ -51,7 +54,7 @@ WorkflowEvent = (
 logger = setup_logger(__name__)
 
 
-def _materialize_workflow(builder: Any) -> Any:
+def _materialize_workflow(builder: Workflow | Any) -> Workflow | Any:
     """Return a runnable workflow instance from a builder if needed."""
 
     build_fn = getattr(builder, "build", None)
@@ -67,9 +70,9 @@ class SupervisorWorkflow:
         self,
         context: SupervisorContext,
         workflow_runner: Workflow | None = None,
-        dspy_supervisor: Any | None = None,
+        dspy_supervisor: DSPyReasoner | None = None,
         *,
-        agents: dict[str, Any] | None = None,
+        agents: dict[str, ChatAgent] | None = None,
         history_manager: HistoryManager | None = None,
         tool_registry: ToolRegistry | None = None,
         handoff: HandoffManager | None = None,

@@ -6,7 +6,8 @@ from collections.abc import Mapping
 from dataclasses import dataclass, field
 from typing import Any
 
-from agent_framework import ChatMessage, MagenticAgentMessageEvent, Role
+from agent_framework._types import ChatMessage, Role
+from agent_framework._workflows import MagenticAgentMessageEvent
 
 StreamPayload = Mapping[str, Any]
 
@@ -21,12 +22,14 @@ class StreamMetadata:
     payload: dict[str, Any] = field(default_factory=dict)
 
 
-def _attach_metadata(event: Any, metadata: StreamMetadata) -> Any:
+def _attach_metadata(
+    event: MagenticAgentMessageEvent, metadata: StreamMetadata
+) -> MagenticAgentMessageEvent:
     """Attach stage/event metadata to Magentic events (best-effort)."""
 
-    event.stage = metadata.stage
-    event.event = metadata.event
-    event.payload = metadata.payload
+    event.stage = metadata.stage  # type: ignore[attr-defined]
+    event.event = metadata.event  # type: ignore[attr-defined]
+    event.payload = metadata.payload  # type: ignore[attr-defined]
     if metadata.agent and getattr(event, "agent_id", None) is None:
         event.agent_id = metadata.agent
     return event

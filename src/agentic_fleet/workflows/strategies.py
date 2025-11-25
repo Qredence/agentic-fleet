@@ -8,6 +8,7 @@ from __future__ import annotations
 import asyncio
 from typing import TYPE_CHECKING, Any
 
+from agent_framework._agents import ChatAgent
 from agent_framework._types import ChatMessage, Role
 from agent_framework._workflows import MagenticAgentMessageEvent, WorkflowOutputEvent
 
@@ -30,7 +31,7 @@ if TYPE_CHECKING:
 logger = setup_logger(__name__)
 
 
-def _get_agent(agents: dict[str, Any], name: str) -> Any | None:
+def _get_agent(agents: dict[str, ChatAgent], name: str) -> ChatAgent | None:
     """Get agent from map with case-insensitive lookup."""
     if name in agents:
         return agents[name]
@@ -265,7 +266,7 @@ def create_system_event(
 
 
 async def execute_delegated(
-    agents: dict[str, Any],
+    agents: dict[str, ChatAgent],
     agent_name: str,
     task: str,
 ) -> tuple[str, list[dict[str, Any]]]:
@@ -284,7 +285,7 @@ async def execute_delegated(
 
 
 async def execute_delegated_streaming(
-    agents: dict[str, Any],
+    agents: dict[str, ChatAgent],
     agent_name: str,
     task: str,
     progress_callback: ProgressCallback | None = None,
@@ -338,7 +339,7 @@ async def execute_delegated_streaming(
 
 
 async def execute_parallel(
-    agents: dict[str, Any],
+    agents: dict[str, ChatAgent],
     agent_names: list[str],
     subtasks: list[str],
 ) -> tuple[str, list[dict[str, Any]]]:
@@ -380,7 +381,7 @@ async def execute_parallel(
 
 
 async def execute_parallel_streaming(
-    agents: dict[str, Any],
+    agents: dict[str, ChatAgent],
     agent_names: list[str],
     subtasks: list[str],
     progress_callback: ProgressCallback | None = None,
@@ -491,7 +492,7 @@ Please continue the work based on the above context.
 
 
 async def execute_sequential(
-    agents: dict[str, Any],
+    agents: dict[str, ChatAgent],
     agent_names: list[str],
     task: str,
     enable_handoffs: bool = False,
@@ -538,7 +539,7 @@ async def execute_sequential(
 
 
 async def execute_sequential_with_handoffs(
-    agents: dict[str, Any],
+    agents: dict[str, ChatAgent],
     agent_names: list[str],
     task: str,
     handoff: HandoffManager,
@@ -614,7 +615,7 @@ async def execute_sequential_with_handoffs(
 
 
 async def execute_sequential_streaming(
-    agents: dict[str, Any],
+    agents: dict[str, ChatAgent],
     agent_names: list[str],
     task: str,
     progress_callback: ProgressCallback | None = None,

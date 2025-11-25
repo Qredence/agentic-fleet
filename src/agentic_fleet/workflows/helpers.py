@@ -459,7 +459,7 @@ def call_judge_with_reasoning(
 
 async def get_quality_criteria(
     task: str,
-    agents: dict[str, Any],
+    agents: dict[str, ChatAgent],
     call_judge_fn: Callable[[ChatAgent, str], Awaitable[Any]],
 ) -> str:
     """Generate task-specific quality criteria using Judge agent."""
@@ -612,7 +612,7 @@ Please enhance the response by addressing the missing elements and required impr
 async def refine_results(
     results: Any,
     improvements: str,
-    agents: dict[str, Any],
+    agents: dict[str, ChatAgent],
 ) -> Any:
     """Refine results based on quality assessment."""
     writer = agents.get("Writer")

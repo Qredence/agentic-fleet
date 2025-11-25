@@ -7,12 +7,15 @@ from __future__ import annotations
 
 import asyncio
 import logging
-from typing import Any
+from typing import TYPE_CHECKING
 
 from ..dspy_modules.reasoner import DSPyReasoner
 from ..utils.compiler import compile_reasoner
-from ..utils.progress import LoggingProgressCallback, NullProgressCallback
+from ..utils.progress import LoggingProgressCallback, NullProgressCallback, ProgressCallback
 from .config import WorkflowConfig
+
+if TYPE_CHECKING:
+    from agent_framework._agents import ChatAgent
 
 logger = logging.getLogger(__name__)
 
@@ -30,8 +33,8 @@ class CompilationState:
 async def compile_supervisor_async(
     supervisor: DSPyReasoner,
     config: WorkflowConfig,
-    agents: dict[str, Any],
-    progress_callback: Any | None = None,
+    agents: dict[str, ChatAgent],
+    progress_callback: ProgressCallback | None = None,
     state: CompilationState | None = None,
 ) -> DSPyReasoner:
     """Compile DSPy reasoner asynchronously in background.

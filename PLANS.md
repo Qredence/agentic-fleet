@@ -89,7 +89,24 @@ This document tracks planned code quality improvements identified during codebas
 
 ### 7. Reduce `Any` Type Usage
 
-**Status**: 🔲 Not Started
+**Status**: ✅ Completed
+**Changes Made**:
+
+- Replaced `dict[str, Any]` with `dict[str, ChatAgent]` for agent dictionaries across workflow files:
+  - `workflows/strategies.py` — All execution functions now use typed agent dicts
+  - `workflows/helpers.py` — `get_quality_criteria()` and `refine_results()` typed
+  - `workflows/context.py` — `SupervisorContext.agents` and `workflow` properly typed
+  - `workflows/supervisor.py` — `SupervisorWorkflow.__init__` agents parameter typed
+  - `workflows/compilation.py` — `compile_supervisor_async()` agents parameter typed
+- Replaced `Any` with `MagenticAgentMessageEvent` in `workflows/execution/streaming_events.py`
+- Added `TYPE_CHECKING` imports for `ChatAgent`, `Workflow`, `DSPyReasoner` to avoid circular imports
+
+**Remaining `Any` Usage** (Intentional):
+
+- Exception classes with arbitrary config values (`config_value: Any`, `value: Any`)
+- `**_: Any` for ignored kwargs patterns
+- `_extract_tool_usage(response: Any)` — responses from diverse agent types
+- Loop accumulators that hold mixed types during iteration
 
 ---
 
@@ -346,7 +363,7 @@ Phase E: Architecture Refactors (Requires Phase D)
 | 4   | Centralize env var access            | 🟡 Medium | ✅ Completed      |
 | 5   | Deduplicate `_call_with_retry`       | 🟡 Medium | ✅ Completed      |
 | 6   | Add missing tests                    | 🟡 Medium | 🔲 Not Started    |
-| 7   | Reduce `Any` usage                   | 🟡 Medium | 🔲 Not Started    |
+| 7   | Reduce `Any` usage                   | 🟡 Medium | ✅ Completed      |
 | 8   | Extract magic numbers                | 🟢 Low    | ✅ Completed      |
 | 9   | Address TODO comments                | 🟢 Low    | ✅ Completed      |
 | 10  | Standardize docstrings               | 🟢 Low    | ✅ Completed      |
