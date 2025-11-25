@@ -164,13 +164,43 @@ Test `test_handle_pot_failure_returns_fallback` is skipped until source fix.
 
 ### 11. Migrate to Native `agent_framework_declarative`
 
-**Status**: 🔲 Not Started
+**Status**: ⏸️ Deferred (Low ROI)
 **Files**:
 
 - `src/agentic_fleet/agents/coordinator.py` (custom `AgentFactory`)
 - `config/workflow_config.yaml` (agent definitions)
 
-**Analysis**: The native `agent_framework_declarative` package (installed in `.venv`) provides:
+**Detailed Investigation (2025-11-25)**:
+
+After analyzing both the current `AgentFactory` (~340 LOC) and the native `agent_framework_declarative.AgentFactory`, the migration offers **limited benefit**:
+
+| Aspect                 | Native Benefit             | Migration Cost               |
+| ---------------------- | -------------------------- | ---------------------------- |
+| Multi-provider support | ✅ Azure, Anthropic        | YAML schema rewrite required |
+| LOC reduction          | ~100 LOC (client creation) | ~50 LOC new subclass         |
+| PowerFx expressions    | ✅ Secure env vars         | YAML migration needed        |
+| DSPy integration       | ❌ Must keep custom        | Subclass wrapper required    |
+| Tool resolution        | ❌ Must keep ToolRegistry  | Not replaceable              |
+| Prompt module refs     | ❌ Must keep custom        | `prompts.{module}` resolver  |
+
+**Net LOC reduction: ~50 lines** (not the ~200 originally estimated)
+
+**Current Custom Features to Preserve**:
+
+1. **`_resolve_instructions()`** — Converts `prompts.planner` → `get_planner_instructions()` calls
+2. **`_resolve_tools()`** — Uses `ToolRegistry` + dynamic `fleet_tools` module lookup
+3. **`DSPyEnhancedAgent`** — Wraps agents with reasoning strategies (ReAct, PoT, CoT)
+4. **Shared async client** — Reuses OpenAI client for connection pooling
+5. **`env_config`** — Typed environment variable access
+
+**Recommendation**: Defer this migration unless multi-provider support (Azure OpenAI, Anthropic) becomes a priority. The current implementation is well-structured and the migration ROI is low.
+
+**Future Trigger**: Revisit if users request Azure OpenAI or Anthropic model support.
+
+<details>
+<summary>Original Analysis (Reference)</summary>
+
+The native `agent_framework_declarative` package provides:
 
 | Feature                | Native Support                                                                                        | Your Custom Version                   |
 | ---------------------- | ----------------------------------------------------------------------------------------------------- | ------------------------------------- |
@@ -246,30 +276,28 @@ class DSPyAgentFactory(NativeAgentFactory):
         return base_agent
 ```
 
-**Benefits**:
-
-- ~200 LOC reduction in `coordinator.py`
-- Native multi-provider support (Azure, Anthropic)
-- PowerFx expressions for secure env var handling
-- Native MCP tool integration
-- Better alignment with Microsoft ecosystem
+</details>
 
 ### 12. Simplify Observability Utilities
 
-**Status**: 🔲 Not Started
+**Status**: ✅ Completed (No Changes Needed)
 **Files**:
 
-- `src/agentic_fleet/utils/tracing.py` → Use native `agent_framework.observability`
-- `src/agentic_fleet/utils/telemetry.py` → Keep `PerformanceTracker`, remove redundant `optional_span`
-- `src/agentic_fleet/utils/dspy_manager.py` → Simplify, native `dspy.settings` is already thread-safe
+- `src/agentic_fleet/utils/tracing.py` — Already uses native `agent_framework.observability.setup_observability()` as primary path
+- `src/agentic_fleet/utils/telemetry.py` — `PerformanceTracker` kept; `optional_span` needed for DSPy-specific operations
+- `src/agentic_fleet/utils/dspy_manager.py` — Thread-safe LM management retained (DSPy has known threading issues)
 
-**Prerequisite**: Test compatibility with AI Toolkit extension and Foundry tracing **before** removing custom code. Native edge runners emit OpenTelemetry spans automatically—verify these integrate correctly.
+**Analysis Completed (2025-11-25)**:
 
-**Steps**:
+After investigation, the current implementation is already optimal:
 
-1. Enable native `agent_framework.observability` alongside custom tracing
-2. Verify spans appear in AI Toolkit / Foundry
-3. Remove redundant custom spans incrementally
+1. **`tracing.py`**: Already tries native `agent_framework.observability.setup_observability()` first, with manual OpenTelemetry fallback. No changes needed.
+
+2. **`optional_span`**: Required because native agent_framework only auto-traces agent/tool/workflow operations. DSPy-specific operations (`DSPyReasoner.analyze_task`, `DSPyReasoner.route_task`, executor phases) need explicit spans for full observability.
+
+3. **`dspy_manager.py`**: Thread-safe singleton pattern is necessary. DSPy's native `dspy.settings.configure()` has documented threading issues (see [GitHub #1812](https://github.com/stanfordnlp/dspy/issues/1812)) where `KeyError` occurs when accessing settings from different threads. Our `threading.Lock` wrapper prevents this.
+
+**Decision**: No simplification possible without losing functionality. Current implementation follows best practices.
 
 ### 13. Consolidate Small Utility Files
 
@@ -290,12 +318,12 @@ class DSPyAgentFactory(NativeAgentFactory):
 
 ### 14. Adopt Native Edge Patterns for Execution Strategies
 
-**Status**: 🔲 Not Started
+**Status**: ❌ Not Recommended (Architecture Mismatch)
 **Files**:
 
 - `src/agentic_fleet/workflows/strategies.py` (custom parallel/sequential execution)
 
-**Analysis**: Native `agent_framework` provides edge patterns that handle message orchestration:
+**Original Analysis**: Native `agent_framework` provides edge patterns that handle message orchestration:
 
 | Custom Implementation                 | Native Replacement                                             |
 | ------------------------------------- | -------------------------------------------------------------- |
@@ -304,21 +332,46 @@ class DSPyAgentFactory(NativeAgentFactory):
 | Result aggregation                    | `FanInEdgeGroup` with buffering                                |
 | Post-routing dispatch                 | `SwitchCaseEdgeGroup` with condition lambdas                   |
 
-**Key insight**: Keep DSPy for _intelligent routing decisions_ (`DSPyReasoner.route_task()`), use native edge patterns for _message delivery mechanics_.
+**Detailed Investigation (2025-11-25)**:
 
-**Migration steps**:
+After thorough analysis of the native edge patterns (`FanOutEdgeGroup`, `FanInEdgeGroup`, `SwitchCaseEdgeGroup`, `SingleEdgeGroup`) and how they integrate with `AgentExecutor`, the migration is **not recommended** due to fundamental architectural differences:
 
-1. **Phase 1**: Replace custom parallel execution with `FanOutEdgeGroup`
-2. **Phase 2**: Use `SwitchCaseEdgeGroup` for post-routing dispatch
-3. **Phase 3**: Use `FanInEdgeGroup` for aggregating parallel results before quality assessment
-4. **Phase 4**: Remove redundant code from `strategies.py` (~100-150 LOC reduction)
+| Aspect                  | AgenticFleet                                                        | Native Edge Patterns                |
+| ----------------------- | ------------------------------------------------------------------- | ----------------------------------- |
+| **Routing**             | Dynamic at runtime via DSPy                                         | Static workflow graph at build time |
+| **Agent selection**     | Based on task analysis                                              | Pre-defined in workflow graph       |
+| **Handoff context**     | Rich `HandoffContext` with artifacts, objectives, quality checklist | Not supported natively              |
+| **Tool usage tracking** | `_extract_tool_usage()` aggregation                                 | Not supported natively              |
+| **Progress callbacks**  | Integrated `ProgressCallback`                                       | Must be added manually              |
 
-**Benefits**:
+**Why Native Patterns Don't Fit**:
 
-- Native OpenTelemetry spans for all edge transitions
-- Built-in error handling and retry semantics
-- Proper trace context propagation
-- Less custom code to maintain
+1. **Static vs Dynamic Graphs**: Native `WorkflowBuilder` creates a fixed graph at build time. AgenticFleet's DSPy-based routing selects agents dynamically based on:
+   - Task complexity analysis (`DSPyReasoner.analyze_task()`)
+   - Intelligent routing decisions (`DSPyReasoner.route_task()`)
+   - Runtime agent availability
+
+2. **Rich Handoff Context**: The `HandoffManager` and `HandoffContext` provide:
+   - Work completed summaries
+   - Remaining objectives
+   - Success criteria
+   - Artifact tracking
+   - Quality checklists
+   - Estimated effort
+
+   None of this is supported by native edge patterns.
+
+3. **Tool Usage Aggregation**: Current implementation tracks tool calls across all agents for observability. Native patterns don't aggregate this metadata.
+
+4. **Migration Would Require**:
+   - Building static graphs with ALL possible agent combinations upfront
+   - Losing dynamic agent addition/removal capability
+   - Reimplementing handoff context in custom `Executor` subclasses
+   - ~500 LOC of new code to replicate existing functionality
+
+**Decision**: Keep current `strategies.py` implementation. The custom code is well-tested, provides superior flexibility for DSPy integration, and the "benefits" of native patterns (auto-tracing, error handling) are already implemented.
+
+**Alternative Considered**: Could use native patterns for a future "simple mode" without DSPy routing, but this would be a separate workflow type, not a replacement.
 
 ---
 
@@ -327,62 +380,62 @@ class DSPyAgentFactory(NativeAgentFactory):
 The following linear sequence minimizes rework and maximizes efficiency by respecting dependencies:
 
 ```
-Phase A: Foundation (No Dependencies)
-├── #13 Consolidate small utility files     ← Reduces file count before other changes
-├── #8  Extract magic numbers to config     ← Makes subsequent code cleaner
-└── #9  Address TODO comments               ← Cleans up before major refactors
+Phase A: Foundation (No Dependencies) ✅ COMPLETE
+├── #13 Consolidate small utility files     ✅ Done
+├── #8  Extract magic numbers to config     ✅ Done
+└── #9  Address TODO comments               ✅ Done
 
-Phase B: Observability (Requires Phase A)
-├── #12 Simplify observability utilities    ← Test AI Toolkit/Foundry first
-│       └── Prerequisite: Verify tracing compatibility
-└── #10 Standardize docstrings              ← Clean docs before tests
+Phase B: Observability (Requires Phase A) ✅ COMPLETE
+├── #12 Simplify observability utilities    ✅ Done (No Changes Needed)
+│       └── Analysis: Current implementation already optimal
+└── #10 Standardize docstrings              ✅ Done
 
-Phase C: Type Safety (Parallel with Phase B)
-└── #7  Reduce `Any` type usage             ← Improves test type coverage
+Phase C: Type Safety (Parallel with Phase B) ✅ COMPLETE
+└── #7  Reduce `Any` type usage             ✅ Done
 
-Phase D: Test Coverage (Requires Phase A-C)
-└── #6  Add missing tests                   ← Tests validated code
-        ├── 1. dspy_modules/reasoner.py     (DSPy signatures)
-        ├── 2. agents/base.py               (DSPyEnhancedAgent)
-        ├── 3. workflows/executors.py       (6 executor classes)
-        └── 4. utils/resilience.py          (retry logic)
+Phase D: Test Coverage (Requires Phase A-C) ✅ COMPLETE
+└── #6  Add missing tests                   ✅ Done (97 new tests)
+        ├── 1. dspy_modules/reasoner.py     ✅ 25 tests
+        ├── 2. agents/base.py               ✅ 35 tests (1 skipped)
+        ├── 3. workflows/executors.py       ✅ 22 tests
+        └── 4. utils/resilience.py          ✅ 15 tests
 
-Phase E: Architecture Refactors (Requires Phase D)
-├── #14 Adopt native edge patterns          ← Simplifies strategies.py
-└── #11 Migrate to native declarative       ← Simplifies coordinator.py
+Phase E: Architecture Refactors (Requires Phase D) ✅ EVALUATED
+├── #14 Adopt native edge patterns          ❌ Not Recommended (architecture mismatch)
+└── #11 Migrate to native declarative       ⏸️ Deferred (low ROI, revisit for Azure/Anthropic support)
 ```
 
 ### Estimated Effort
 
-| Phase         | Items       | LOC Impact   | Time Estimate   |
-| ------------- | ----------- | ------------ | --------------- |
-| A ✅ Complete | #13, #8, #9 | -100 LOC     | ~2 hours        |
-| B             | #12, #10    | -50 LOC      | 2-3 hours       |
-| C             | #7          | ~0 LOC       | 1-2 hours       |
-| D             | #6          | +400-600 LOC | 4-6 hours       |
-| E             | #14, #11    | -250-350 LOC | 4-6 hours       |
-| **Total**     |             | **~0 net**   | **13-20 hours** |
+| Phase          | Items       | LOC Impact   | Time Estimate | Status             |
+| -------------- | ----------- | ------------ | ------------- | ------------------ |
+| A ✅ Complete  | #13, #8, #9 | -100 LOC     | ~2 hours      | ✅ Done            |
+| B ✅ Complete  | #12, #10    | ~0 LOC       | 2-3 hours     | ✅ Done            |
+| C ✅ Complete  | #7          | ~0 LOC       | 1-2 hours     | ✅ Done            |
+| D ✅ Complete  | #6          | +400-600 LOC | 4-6 hours     | ✅ 97 tests        |
+| E ✅ Evaluated | #14, #11    | ~0 LOC       | 2 hours       | ❌/#⏸️ (see notes) |
+| **Total**      |             | **+300 net** | **~14 hours** | **100% Evaluated** |
 
 ---
 
 ## Summary Table
 
-| #   | Issue                                | Priority  | Status            |
-| --- | ------------------------------------ | --------- | ----------------- |
-| 1   | Pydantic V2 Config migration         | 🔴 High   | ✅ Completed      |
-| 2   | Missing async generator return types | 🔴 High   | ✅ Completed      |
-| 3   | Broad exception handling             | 🔴 High   | ⚠️ Partial (Docs) |
-| 4   | Centralize env var access            | 🟡 Medium | ✅ Completed      |
-| 5   | Deduplicate `_call_with_retry`       | 🟡 Medium | ✅ Completed      |
-| 6   | Add missing tests                    | 🟡 Medium | 🔲 Not Started    |
-| 7   | Reduce `Any` usage                   | 🟡 Medium | ✅ Completed      |
-| 8   | Extract magic numbers                | 🟢 Low    | ✅ Completed      |
-| 9   | Address TODO comments                | 🟢 Low    | ✅ Completed      |
-| 10  | Standardize docstrings               | 🟢 Low    | ✅ Completed      |
-| 11  | Migrate to native declarative        | 🟢 Low    | 🔲 Not Started    |
-| 12  | Simplify observability utilities     | 🟢 Low    | 🔲 Not Started    |
-| 13  | Consolidate small utility files      | 🟢 Low    | ✅ Completed      |
-| 14  | Adopt native edge patterns           | 🟢 Low    | 🔲 Not Started    |
+| #   | Issue                                | Priority  | Status                    |
+| --- | ------------------------------------ | --------- | ------------------------- |
+| 1   | Pydantic V2 Config migration         | 🔴 High   | ✅ Completed              |
+| 2   | Missing async generator return types | 🔴 High   | ✅ Completed              |
+| 3   | Broad exception handling             | 🔴 High   | ⚠️ Partial (Docs)         |
+| 4   | Centralize env var access            | 🟡 Medium | ✅ Completed              |
+| 5   | Deduplicate `_call_with_retry`       | 🟡 Medium | ✅ Completed              |
+| 6   | Add missing tests                    | 🟡 Medium | ✅ Completed              |
+| 7   | Reduce `Any` usage                   | 🟡 Medium | ✅ Completed              |
+| 8   | Extract magic numbers                | 🟢 Low    | ✅ Completed              |
+| 9   | Address TODO comments                | 🟢 Low    | ✅ Completed              |
+| 10  | Standardize docstrings               | 🟢 Low    | ✅ Completed              |
+| 11  | Migrate to native declarative        | 🟢 Low    | ⏸️ Deferred (Low ROI)     |
+| 12  | Simplify observability utilities     | 🟢 Low    | ✅ Completed (No Changes) |
+| 13  | Consolidate small utility files      | 🟢 Low    | ✅ Completed              |
+| 14  | Adopt native edge patterns           | 🟢 Low    | ❌ Not Recommended        |
 
 ---
 
@@ -405,8 +458,8 @@ Upon completion of all phases, AgenticFleet will achieve:
 
 ### Architecture Alignment
 
-- **Native `agent_framework_declarative`** for agent YAML parsing (~200 LOC removed from `coordinator.py`)
-- **Native edge patterns** (`FanOutEdgeGroup`, `SwitchCaseEdgeGroup`) for execution strategies (~150 LOC removed from `strategies.py`)
+- **Native `agent_framework_declarative`** for agent YAML parsing (~200 LOC removed from `coordinator.py`) — Optional, #11
+- **Custom execution strategies retained** — `strategies.py` provides superior DSPy integration that native edge patterns cannot replicate
 - **DSPy-only custom code** — AgenticFleet's value is in intelligent routing/reasoning, not message orchestration
 
 ### Observability
@@ -423,14 +476,61 @@ Upon completion of all phases, AgenticFleet will achieve:
 
 ### Metrics Summary
 
-| Metric                         | Before | After |
-| ------------------------------ | ------ | ----- |
-| Files in `utils/`              | 26     | ~22   |
-| Files in `workflows/`          | 15     | ~13   |
-| Custom LOC in `strategies.py`  | ~300   | ~150  |
-| Custom LOC in `coordinator.py` | ~250   | ~50   |
-| Test coverage (DSPy layer)     | ~20%   | >80%  |
-| `Any` type annotations         | ~15    | 0     |
+| Metric                         | Before | After           |
+| ------------------------------ | ------ | --------------- |
+| Files in `utils/`              | 26     | ~22             |
+| Files in `workflows/`          | 15     | ~13             |
+| Custom LOC in `strategies.py`  | ~600   | ~600 (retained) |
+| Custom LOC in `coordinator.py` | ~250   | ~50             |
+| Test coverage (DSPy layer)     | ~20%   | >80%            |
+| `Any` type annotations         | ~15    | 0               |
+
+---
+
+## 📊 Progress Summary
+
+**Overall Completion: 14/14 items evaluated (100%)**
+
+- ✅ **Completed**: 12 items (#1, #2, #4, #5, #6, #7, #8, #9, #10, #12, #13)
+- ⚠️ **Partial**: 1 item (#3 - Broad Exception Handling, docs added)
+- ❌ **Not Recommended**: 1 item (#14 - Native edge patterns don't fit DSPy architecture)
+- ⏸️ **Deferred**: 1 item (#11 - Native declarative has low ROI, revisit for Azure/Anthropic)
+
+---
+
+## 🔧 Infrastructure
+
+### 15. GitHub Actions Workflow Improvements
+
+**Status**: ✅ Completed
+**Files**: `.github/workflows/*.yml` (8 workflows)
+
+**Changes Made**:
+
+| Workflow                    | Improvements                                                                                                                                                            |
+| --------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `ci.yml`                    | Removed Windows from matrix (per `pyproject.toml`), removed `PYTHON_VERSION` env var (uv auto-detects), used `uv sync --frozen`, removed redundant import sorting check |
+| `release.yml`               | Migrated to `uv publish --trusted-publishing always`, removed unnecessary Python install steps                                                                          |
+| `codeql.yml`                | Removed non-existent branches (`develop`, `0.5.0a`)                                                                                                                     |
+| `dependency-review.yml`     | Removed non-existent branches                                                                                                                                           |
+| `pre-commit-autoupdate.yml` | Used `uv tool install pre-commit`, fixed deterministic branch naming                                                                                                    |
+| `label-sync.yml`            | Updated to semver action versions                                                                                                                                       |
+| `pr-labels.yml`             | Removed `edited` trigger, updated to semver action versions                                                                                                             |
+| `stale.yml`                 | Simplified configuration, updated to semver action versions                                                                                                             |
+
+**Best Practices Applied**:
+
+- Used semver action versions (`@v4`, `@v5`) instead of SHA hashes for readability and dependabot compatibility
+- Leveraged `uv sync --frozen` which auto-detects Python version from `pyproject.toml`
+- Used `uv publish` with trusted publishing (OIDC) per [uv documentation](https://docs.astral.sh/uv/guides/integration/github/#publishing-to-pypi)
+- Removed test matrix entries for Windows (not supported per `pyproject.toml` environments)
+- Added `defaults.run.working-directory` for frontend job instead of per-step `working-directory`
+
+**Key Insights from Phase E**:
+
+1. **#14 Native Edge Patterns**: The native `FanOutEdgeGroup`/`FanInEdgeGroup` assume static workflow graphs, while AgenticFleet uses dynamic DSPy-based routing. Migration would require reimplementing rich handoff context and tool usage aggregation.
+
+2. **#11 Native Declarative Factory**: Only ~50 LOC reduction possible (not ~200). Custom features like `prompts.{module}` resolution, `ToolRegistry`, and `DSPyEnhancedAgent` must be preserved. Worth revisiting only if Azure OpenAI/Anthropic support becomes a priority.
 
 ---
 

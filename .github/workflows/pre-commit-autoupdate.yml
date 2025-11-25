@@ -2,8 +2,7 @@ name: Pre-commit Auto-update
 
 on:
   schedule:
-    # Run weekly on Monday at 00:00 UTC
-    - cron: "0 0 * * 1"
+    - cron: "0 0 * * 1" # Weekly on Monday at 00:00 UTC
   workflow_dispatch:
 
 permissions:
@@ -11,47 +10,36 @@ permissions:
   pull-requests: write
 
 jobs:
-  auto-update:
+  update:
+    name: Update Hooks
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@1af3b93b6815bc44a9784bd300feb67ff0d1eeb3
+      - uses: actions/checkout@v4
 
       - name: Install uv
-        uses: astral-sh/setup-uv@be7fc19b4169c26a2aa1b8a430af391f2a96b3c9
+        uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+          cache-dependency-glob: "uv.lock"
 
       - name: Set up Python
         run: uv python install 3.12
 
-      - name: Install pre-commit
-        run: uv pip install pre-commit
-
       - name: Update pre-commit hooks
-        run: uv run pre-commit autoupdate
-
-      - name: Validate pre-commit updates
         run: |
-          uv sync
-          uv run pre-commit run --all-files || true
-        continue-on-error: true
+          uv tool install pre-commit
+          pre-commit autoupdate
 
       - name: Create Pull Request
-        uses: peter-evans/create-pull-request@271a8d0340265f705b14b6d32b9829c1cb33d45e
+        uses: peter-evans/create-pull-request@v7
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
-          branch: pre-commit-auto-update-${{ github.run_id }}-${{ github.run_attempt }}
-          commit-message: "chore: update pre-commit hooks"
-          title: "chore: update pre-commit hooks"
+          branch: chore/pre-commit-autoupdate
+          commit-message: "chore(deps): update pre-commit hooks"
+          title: "chore(deps): update pre-commit hooks"
           body: |
             Automated pre-commit hook updates.
 
             This PR was automatically created by the pre-commit auto-update workflow.
-
-            **Workflow Run:** ${{ github.run_id }}
-          labels: |
-            dependencies
-            github-actions
+          labels: dependencies
           delete-branch: true
-          # Uncomment to add assignees (requires users to have write access)
-          # assignees: |
-          #   username1
-          #   username2

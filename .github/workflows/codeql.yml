@@ -1,13 +1,12 @@
-name: "CodeQL Security Analysis"
+name: CodeQL
 
 on:
   push:
-    branches: [main, develop, 0.5.0a]
+    branches: [main]
   pull_request:
     branches: [main]
   schedule:
-    # Run weekly on Monday at 06:00 UTC
-    - cron: "0 6 * * 1"
+    - cron: "0 6 * * 1" # Weekly on Monday at 06:00 UTC
   workflow_dispatch:
 
 permissions:
@@ -17,24 +16,22 @@ permissions:
 
 jobs:
   analyze:
-    name: Analyze Python Code
+    name: Analyze
     runs-on: ubuntu-latest
     timeout-minutes: 30
-
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@1af3b93b6815bc44a9784bd300feb67ff0d1eeb3
+      - uses: actions/checkout@v4
 
       - name: Initialize CodeQL
-        uses: github/codeql-action/init@2152c31696c8409983789c80ab57c4d91465a2fc
+        uses: github/codeql-action/init@v3
         with:
           languages: python
           queries: security-and-quality
 
       - name: Autobuild
-        uses: github/codeql-action/autobuild@2152c31696c8409983789c80ab57c4d91465a2fc
+        uses: github/codeql-action/autobuild@v3
 
       - name: Perform CodeQL Analysis
-        uses: github/codeql-action/analyze@2152c31696c8409983789c80ab57c4d91465a2fc
+        uses: github/codeql-action/analyze@v3
         with:
           category: "/language:python"

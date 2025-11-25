@@ -1,9 +1,8 @@
-name: Mark Stale Issues and PRs
+name: Stale Issues and PRs
 
 on:
   schedule:
-    # Run daily at 01:00 UTC
-    - cron: "0 1 * * *"
+    - cron: "0 1 * * *" # Daily at 01:00 UTC
   workflow_dispatch:
 
 permissions:
@@ -12,33 +11,25 @@ permissions:
 
 jobs:
   stale:
+    name: Mark Stale
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/stale@5f858e3efba33a5ca4407a664cc011ad407f2008
+      - uses: actions/stale@v9
         with:
           repo-token: ${{ secrets.GITHUB_TOKEN }}
-
           # Issue settings
           days-before-stale: 45
           days-before-close: 14
-          stale-issue-message: |
+          stale-issue-message: >
             This issue has been automatically marked as stale because it has not had
             recent activity. It will be closed if no further activity occurs within 14 days.
-            Thank you for your contributions!
-          close-issue-message: |
-            This issue has been automatically closed due to inactivity.
-            If you believe this is still relevant, please reopen the issue or create a new one.
-          stale-issue-label: "stale"
-          exempt-issue-labels: "pinned,security,roadmap,waiting-for-response"
-
+          stale-issue-label: stale
+          exempt-issue-labels: pinned,security,roadmap
           # PR settings
           days-before-pr-stale: 30
           days-before-pr-close: 7
-          stale-pr-message: |
+          stale-pr-message: >
             This pull request has been automatically marked as stale because it has not had
             recent activity. It will be closed if no further activity occurs within 7 days.
-          close-pr-message: |
-            This pull request has been automatically closed due to inactivity.
-            If you'd like to continue work on this, please reopen or create a new PR.
-          stale-pr-label: "stale"
-          exempt-pr-labels: "pinned,security,in-progress"
+          stale-pr-label: stale
+          exempt-pr-labels: pinned,security,in-progress
