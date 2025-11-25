@@ -11,14 +11,9 @@ import time
 from collections.abc import AsyncIterable
 from typing import TYPE_CHECKING, Any, cast
 
-from agent_framework import (
-    AgentRunResponse,
-    AgentRunResponseUpdate,
-    AgentThread,
-    ChatAgent,
-    ChatMessage,
-    Role,
-)
+from agent_framework._agents import ChatAgent
+from agent_framework._threads import AgentThread
+from agent_framework._types import AgentRunResponse, AgentRunResponseUpdate, ChatMessage, Role
 
 from ..dspy_modules.reasoning import FleetPoT, FleetReAct
 from ..utils.cache import TTLCache
@@ -88,11 +83,22 @@ class DSPyEnhancedAgent(ChatAgent):
 
     @property
     def tools(self) -> Any:
-        """Expose tools from the internal chat agent."""
+        """Expose tools from the internal chat agent.
+
+        Returns:
+            List of tools assigned to this agent, or empty list if none.
+        """
         return getattr(self, "_tools", [])
 
     def _get_agent_role_description(self) -> str:
-        """Get agent role description for DSPy enhancement."""
+        """Get agent role description for DSPy enhancement.
+
+        Extracts role description from agent configuration, preferring
+        description over instructions, truncated to 200 characters.
+
+        Returns:
+            Truncated role description string.
+        """
         instructions = getattr(self.chat_options, "instructions", None)
         role_description = self.description or instructions or ""
         return role_description[:200]
@@ -383,7 +389,17 @@ class DSPyEnhancedAgent(ChatAgent):
             yield update
 
     def _build_pot_error_note(self, error: Exception) -> str:
-        """Create a user-facing note describing why PoT fell back."""
+        """Create a user-facing note describing why PoT fell back.
+
+        Extracts the last error from the PoT module if available,
+        otherwise uses the exception message.
+
+        Args:
+            error: The exception that caused the fallback.
+
+        Returns:
+            Formatted error note string prefixed with 'Program of Thought fallback:'.
+        """
 
         fallback_reason = None
         if self.pot_module:
@@ -393,7 +409,17 @@ class DSPyEnhancedAgent(ChatAgent):
 
     @staticmethod
     def _apply_note_to_text(text: str, note: str) -> str:
-        """Prepend note to existing text while preserving whitespace."""
+        """Prepend note to existing text while preserving whitespace.
+
+        Avoids duplicating notes if already present at the start of text.
+
+        Args:
+            text: The original text content.
+            note: The note to prepend.
+
+        Returns:
+            Combined text with note prepended, or just note if text is empty.
+        """
 
         if not text:
             return note
@@ -402,7 +428,17 @@ class DSPyEnhancedAgent(ChatAgent):
         return f"{note}\n\n{text}"
 
     def _create_timeout_response(self, timeout: int) -> ChatMessage:
-        """Create a timeout response message."""
+        """Create a timeout response message.
+
+        Generates a standardized ChatMessage indicating the task
+        exceeded its time limit.
+
+        Args:
+            timeout: The timeout duration in seconds.
+
+        Returns:
+            ChatMessage with role=ASSISTANT and timeout metadata.
+        """
         return ChatMessage(
             role=Role.ASSISTANT,
             text=f"Task execution timed out after {timeout} seconds.",

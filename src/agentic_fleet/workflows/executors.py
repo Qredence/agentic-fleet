@@ -12,7 +12,7 @@ from dataclasses import replace
 from time import perf_counter
 from typing import Any
 
-from agent_framework import (
+from agent_framework._workflows import (
     Executor,
     MagenticAgentMessageEvent,
     WorkflowContext,
@@ -22,6 +22,7 @@ from agent_framework import (
 from ..dspy_modules.reasoner import DSPyReasoner
 from ..utils.logger import setup_logger
 from ..utils.models import ExecutionMode, RoutingDecision, ensure_routing_decision
+from ..utils.resilience import async_call_with_retry
 from ..utils.telemetry import optional_span
 from .context import SupervisorContext
 from .exceptions import ToolError
@@ -51,10 +52,20 @@ logger = setup_logger(__name__)
 
 # --- Decorator helper (local implementation) ---
 def handler(func):
-    """Decorator to handle type hints for executors."""
+    """Decorator to handle type hints for executors.
+
+    Ensures type hints are properly resolved and available at runtime
+    for the agent framework's handler registration mechanism.
+
+    Args:
+        func: The handler function to decorate.
+
+    Returns:
+        The decorated function with resolved type annotations.
+    """
     from typing import get_type_hints
 
-    from agent_framework import handler as _framework_handler
+    from agent_framework._workflows import handler as _framework_handler
 
     try:
         hints = get_type_hints(func, globalns=func.__globals__, localns=None)
@@ -115,11 +126,17 @@ class AnalysisExecutor(Executor):
                         analysis_dict = cached
                         self.context.latest_phase_status["analysis"] = "cached"
                     else:
-                        analysis_dict = await self._call_with_retry(
+                        retry_attempts = max(1, int(self.context.config.dspy_retry_attempts))
+                        retry_backoff = max(
+                            0.0, float(self.context.config.dspy_retry_backoff_seconds)
+                        )
+                        analysis_dict = await async_call_with_retry(
                             self.supervisor.analyze_task,
                             task_msg.task,
                             use_tools=True,
                             perform_search=True,
+                            attempts=retry_attempts,
+                            backoff_seconds=retry_backoff,
                         )
                         if cache is not None:
                             cache.set(cache_key, analysis_dict)
@@ -171,6 +188,9 @@ class AnalysisExecutor(Executor):
                 await ctx.send_message(analysis_msg)
 
             except Exception as e:
+                # Intentional broad exception handling: DSPy/LLM operations can fail for various
+                # transient reasons (rate limits, network issues, model errors). We gracefully
+                # degrade to heuristic-based analysis to maintain system availability.
                 logger.exception(f"Analysis failed: {e}")
                 fallback_dict = self._fallback_analysis(task_msg.task)
                 analysis_result = self._to_analysis_result(fallback_dict)
@@ -183,7 +203,18 @@ class AnalysisExecutor(Executor):
                 await ctx.send_message(analysis_msg)
 
     def _fallback_analysis(self, task: str) -> dict[str, Any]:
-        """Perform fallback analysis when DSPy fails."""
+        """Perform fallback analysis when DSPy fails.
+
+        Uses simple heuristics based on word count to estimate task
+        complexity when the DSPy analyzer is unavailable.
+
+        Args:
+            task: The task string to analyze.
+
+        Returns:
+            Dictionary with keys: complexity, capabilities, tool_requirements,
+            steps, search_context, needs_web_search, search_query.
+        """
         word_count = len(task.split())
         complexity = "simple"
         if word_count > 150:
@@ -202,7 +233,17 @@ class AnalysisExecutor(Executor):
         }
 
     def _to_analysis_result(self, payload: dict[str, Any]) -> AnalysisResult:
-        """Convert dictionary payload to AnalysisResult."""
+        """Convert dictionary payload to AnalysisResult.
+
+        Safely extracts and validates fields from a dictionary,
+        providing sensible defaults for missing or invalid values.
+
+        Args:
+            payload: Dictionary containing analysis data from DSPy or fallback.
+
+        Returns:
+            Validated AnalysisResult dataclass instance.
+        """
         complexity = str(payload.get("complexity", "moderate") or "moderate")
         capabilities = [
             str(cap).strip() for cap in payload.get("capabilities", []) if str(cap).strip()
@@ -229,7 +270,18 @@ class AnalysisExecutor(Executor):
         )
 
     def _is_simple_task(self, task: str, max_words: int) -> bool:
-        """Check if a task is simple enough for light path."""
+        """Check if a task is simple enough for light path.
+
+        Uses pattern matching and word count to identify trivial tasks
+        that can bypass the full DSPy analysis pipeline.
+
+        Args:
+            task: The task string to evaluate.
+            max_words: Maximum word count threshold for simple tasks.
+
+        Returns:
+            True if the task qualifies for light-path processing.
+        """
         if not task:
             return False
         simple_patterns = [
@@ -241,28 +293,6 @@ class AnalysisExecutor(Executor):
             return True
         words = task.strip().split()
         return len(words) <= max_words
-
-    async def _call_with_retry(self, fn, *args, **kwargs):
-        """Call a function with retry logic."""
-        from tenacity import AsyncRetrying, stop_after_attempt, wait_fixed
-
-        attempts = max(1, int(self.context.config.dspy_retry_attempts))
-        backoff = max(0.0, float(self.context.config.dspy_retry_backoff_seconds))
-
-        async for attempt in AsyncRetrying(
-            stop=stop_after_attempt(attempts),
-            wait=wait_fixed(backoff),
-            reraise=True,
-        ):
-            with attempt:
-                result = fn(*args, **kwargs)
-                if asyncio.iscoroutine(result):
-                    result = await result
-                return result
-
-        # Defensive fallback: This line should never be reached due to reraise=True in AsyncRetrying.
-        # If reached, it indicates unexpected behavior or a bug in the tenacity library.
-        raise RuntimeError("Retry loop completed without result or exception")
 
 
 class RoutingExecutor(Executor):
@@ -314,13 +344,17 @@ class RoutingExecutor(Executor):
                         for name, agent in agents.items()
                     }
 
-                    raw_routing = await self._call_with_retry(
+                    retry_attempts = max(1, int(cfg.dspy_retry_attempts))
+                    retry_backoff = max(0.0, float(cfg.dspy_retry_backoff_seconds))
+                    raw_routing = await async_call_with_retry(
                         self.supervisor.route_task,
                         task=analysis_msg.task,
                         team=team_descriptions,
                         context=analysis_msg.analysis.search_context or "",
                         handoff_history="",
                         max_backtracks=getattr(cfg, "dspy_max_backtracks", 2),
+                        attempts=retry_attempts,
+                        backoff_seconds=retry_backoff,
                     )
 
                     routing_decision = ensure_routing_decision(raw_routing)
@@ -371,6 +405,8 @@ class RoutingExecutor(Executor):
                 await ctx.send_message(routing_msg)
 
             except Exception as e:
+                # Intentional broad exception handling: DSPy routing can fail for various
+                # transient reasons. Degrade to first-available-agent fallback routing.
                 logger.exception(f"Routing failed: {e}")
                 fallback_routing = self._fallback_routing(analysis_msg.task)
                 routing_decision = normalize_routing_decision(fallback_routing, analysis_msg.task)
@@ -388,7 +424,20 @@ class RoutingExecutor(Executor):
                 await ctx.send_message(routing_msg)
 
     def _fallback_routing(self, task: str) -> RoutingDecision:
-        """Perform fallback routing when DSPy fails."""
+        """Perform fallback routing when DSPy fails.
+
+        Assigns the task to the first available agent when the DSPy
+        router is unavailable or returns invalid results.
+
+        Args:
+            task: The task to route.
+
+        Returns:
+            RoutingDecision with the first available agent assigned.
+
+        Raises:
+            RuntimeError: If no agents are registered.
+        """
         agents = self.context.agents or {}
         if not agents:
             raise RuntimeError("No agents registered for routing.")
@@ -401,27 +450,6 @@ class RoutingExecutor(Executor):
             tool_requirements=(),
             confidence=0.0,
         )
-
-    async def _call_with_retry(self, fn, *args, **kwargs):
-        """Call a function with retry logic."""
-        from tenacity import AsyncRetrying, stop_after_attempt, wait_fixed
-
-        attempts = max(1, int(self.context.config.dspy_retry_attempts))
-        backoff = max(0.0, float(self.context.config.dspy_retry_backoff_seconds))
-
-        async for attempt in AsyncRetrying(
-            stop=stop_after_attempt(attempts),
-            wait=wait_fixed(backoff),
-            reraise=True,
-        ):
-            with attempt:
-                result = fn(*args, **kwargs)
-                if asyncio.iscoroutine(result):
-                    result = await result
-                return result
-
-        # This line should never be reached due to reraise=True above
-        raise RuntimeError("Retry loop completed without result or exception")
 
 
 # Shared retry utility for executors
@@ -526,6 +554,9 @@ class ExecutionExecutor(Executor):
                 await ctx.send_message(execution_msg)
 
             except Exception as e:
+                # Intentional broad exception handling: Agent execution can fail for many
+                # reasons (LLM errors, tool failures, timeouts). Return an error outcome
+                # to allow downstream phases to handle appropriately.
                 logger.exception(f"Execution failed: {e}")
                 error_outcome = ExecutionOutcome(
                     result=f"Execution failed: {e!s}",
@@ -582,11 +613,15 @@ class ProgressExecutor(Executor):
                     )
                     used_fallback = True
                 else:
-                    progress_dict = await self._call_with_retry(
+                    retry_attempts = max(1, int(cfg.dspy_retry_attempts))
+                    retry_backoff = max(0.0, float(cfg.dspy_retry_backoff_seconds))
+                    progress_dict = await async_call_with_retry(
                         self.supervisor.evaluate_progress,
                         original_task=execution_msg.task,
                         completed=execution_msg.outcome.result,
                         status="completion",
+                        attempts=retry_attempts,
+                        backoff_seconds=retry_backoff,
                     )
                     progress_report = self._to_progress_report(progress_dict)
                     used_fallback = False
@@ -620,6 +655,8 @@ class ProgressExecutor(Executor):
                 await ctx.send_message(progress_msg)
 
             except Exception as e:
+                # Intentional broad exception handling: Progress evaluation is non-critical.
+                # Default to "continue" action to allow workflow to proceed.
                 logger.exception(f"Progress evaluation failed: {e}")
                 progress_report = ProgressReport(action="continue", feedback="", used_fallback=True)
                 self.context.latest_phase_status["progress"] = "failed"
@@ -632,7 +669,17 @@ class ProgressExecutor(Executor):
                 await ctx.send_message(progress_msg)
 
     def _to_progress_report(self, payload: dict[str, Any]) -> ProgressReport:
-        """Convert dictionary payload to ProgressReport."""
+        """Convert dictionary payload to ProgressReport.
+
+        Validates and normalizes action field to one of the allowed values:
+        continue, refine, complete, or escalate.
+
+        Args:
+            payload: Dictionary containing progress evaluation data.
+
+        Returns:
+            Validated ProgressReport dataclass instance.
+        """
         action = str(payload.get("action", "continue") or "continue").strip().lower()
         if action not in {"continue", "refine", "complete", "escalate"}:
             action = "continue"
@@ -641,27 +688,6 @@ class ProgressExecutor(Executor):
             feedback=str(payload.get("feedback", "") or ""),
             used_fallback=bool(payload.get("used_fallback")),
         )
-
-    async def _call_with_retry(self, fn, *args, **kwargs):
-        """Call a function with retry logic."""
-        from tenacity import AsyncRetrying, stop_after_attempt, wait_fixed
-
-        attempts = max(1, int(self.context.config.dspy_retry_attempts))
-        backoff = max(0.0, float(self.context.config.dspy_retry_backoff_seconds))
-
-        async for attempt in AsyncRetrying(
-            stop=stop_after_attempt(attempts),
-            wait=wait_fixed(backoff),
-            reraise=True,
-        ):
-            with attempt:
-                result = fn(*args, **kwargs)
-                if asyncio.iscoroutine(result):
-                    result = await result
-                return result
-
-        # This line should never be reached due to reraise=True above
-        raise RuntimeError("Retry loop completed without result or exception")
 
 
 class QualityExecutor(Executor):
@@ -703,10 +729,14 @@ class QualityExecutor(Executor):
                     )
                     used_fallback = True
                 else:
-                    quality_dict = await self._call_with_retry(
+                    retry_attempts = max(1, int(cfg.dspy_retry_attempts))
+                    retry_backoff = max(0.0, float(cfg.dspy_retry_backoff_seconds))
+                    quality_dict = await async_call_with_retry(
                         self.supervisor.assess_quality,
                         requirements=progress_msg.task,
                         results=progress_msg.result,
+                        attempts=retry_attempts,
+                        backoff_seconds=retry_backoff,
                     )
                     quality_report = self._to_quality_report(quality_dict)
                     used_fallback = False
@@ -735,6 +765,8 @@ class QualityExecutor(Executor):
                 await ctx.send_message(quality_msg)
 
             except Exception as e:
+                # Intentional broad exception handling: Quality assessment is optional.
+                # Return a zero-score fallback to allow workflow completion.
                 logger.exception(f"Quality assessment failed: {e}")
                 # Use 0.0 to indicate "not evaluated" or missing quality data
                 quality_report = QualityReport(
@@ -750,7 +782,17 @@ class QualityExecutor(Executor):
                 await ctx.send_message(quality_msg)
 
     def _to_quality_report(self, payload: dict[str, Any]) -> QualityReport:
-        """Convert dictionary payload to QualityReport."""
+        """Convert dictionary payload to QualityReport.
+
+        Extracts quality metrics including score, missing elements,
+        improvements needed, and optional judge evaluation data.
+
+        Args:
+            payload: Dictionary containing quality assessment data.
+
+        Returns:
+            Validated QualityReport dataclass instance.
+        """
         return QualityReport(
             score=float(payload.get("score", 0.0) or 0.0),
             missing=str(payload.get("missing", "")),
@@ -759,27 +801,6 @@ class QualityExecutor(Executor):
             final_evaluation=payload.get("final_evaluation"),
             used_fallback=bool(payload.get("used_fallback")),
         )
-
-    async def _call_with_retry(self, fn, *args, **kwargs):
-        """Call a function with retry logic."""
-        from tenacity import AsyncRetrying, stop_after_attempt, wait_fixed
-
-        attempts = max(1, int(self.context.config.dspy_retry_attempts))
-        backoff = max(0.0, float(self.context.config.dspy_retry_backoff_seconds))
-
-        async for attempt in AsyncRetrying(
-            stop=stop_after_attempt(attempts),
-            wait=wait_fixed(backoff),
-            reraise=True,
-        ):
-            with attempt:
-                result = fn(*args, **kwargs)
-                if asyncio.iscoroutine(result):
-                    result = await result
-                return result
-
-        # This line should never be reached due to reraise=True above
-        raise RuntimeError("Retry loop completed without result or exception")
 
 
 class JudgeRefineExecutor(Executor):
@@ -991,7 +1012,20 @@ class JudgeRefineExecutor(Executor):
         result: str,
         agents: dict[str, Any],
     ) -> dict[str, Any]:
-        """Run the judge phase."""
+        """Run the judge phase.
+
+        Invokes the Judge agent to evaluate the quality of the result
+        against task-specific criteria.
+
+        Args:
+            task: The original task description.
+            result: The result to evaluate.
+            agents: Dictionary of available agents (must contain 'Judge').
+
+        Returns:
+            Dictionary containing evaluation data: score, missing_elements,
+            refinement_needed, refinement_agent, and required_improvements.
+        """
 
         async def get_criteria(t):
             return await get_quality_criteria(
@@ -1027,7 +1061,19 @@ class JudgeRefineExecutor(Executor):
         )
 
     def _determine_refinement_agent(self, missing: str) -> str | None:
-        """Determine the best agent for refinement."""
+        """Determine the best agent for refinement.
+
+        Analyzes missing elements to select the most appropriate agent
+        for addressing gaps in the response.
+
+        Args:
+            missing: Description of missing elements from judge evaluation.
+
+        Returns:
+            Agent name best suited for refinement, or None if undetermined.
+            Returns 'Researcher' for citation/source issues,
+            'Analyst' for code/calculation issues, 'Writer' otherwise.
+        """
         m = missing.lower()
         if "citation" in m or "source" in m:
             return "Researcher"
@@ -1036,5 +1082,17 @@ class JudgeRefineExecutor(Executor):
         return "Writer"
 
     def _build_refinement_task(self, result: str, eval_data: dict) -> str:
-        """Build a refinement task."""
+        """Build a refinement task.
+
+        Constructs a prompt for the refinement agent based on
+        the judge's evaluation feedback.
+
+        Args:
+            result: The current result to be refined.
+            eval_data: Dictionary containing judge evaluation data
+                with keys like 'missing_elements' and 'required_improvements'.
+
+        Returns:
+            Formatted refinement task prompt string.
+        """
         return build_refinement_task(result, eval_data)

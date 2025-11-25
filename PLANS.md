@@ -116,6 +116,23 @@ This document tracks planned code quality improvements identified during codebas
 
 ### 10. Standardize Docstring Format
 
+**Status**: ✅ Completed
+**Format**: Google-style docstrings (Args/Returns/Raises/Example sections)
+
+**Files Updated**:
+
+- `src/agentic_fleet/workflows/helpers.py` — Added comprehensive docstrings to routing/quality helpers (`_fallback_analysis`, `_to_analysis_result`, `_is_simple_task`, `_fallback_routing`)
+- `src/agentic_fleet/workflows/executors.py` — Added docstrings to `handler` decorator, `_run_judge_phase`, and conversion helpers
+- `src/agentic_fleet/workflows/handoff.py` — Added docstrings to private helpers (`_sup`, `_count_handoff_pairs`, `_calculate_avg_handoffs`, `_get_common_handoffs`, `_get_effort_distribution`)
+- `src/agentic_fleet/agents/base.py` — Enhanced docstrings for `tools` property, `_get_agent_role_description`, `_build_pot_error_note`, `_apply_note_to_text`, `_create_timeout_response`
+
+**Approach Applied**:
+
+1. Used Google-style format consistently (Args/Returns sections)
+2. Focused on public APIs and complex private methods
+3. Kept one-liner docstrings for trivial/self-explanatory methods
+4. All ruff checks passing
+
 ### 11. Migrate to Native `agent_framework_declarative`
 
 **Status**: 🔲 Not Started
@@ -332,7 +349,7 @@ Phase E: Architecture Refactors (Requires Phase D)
 | 7   | Reduce `Any` usage                   | 🟡 Medium | 🔲 Not Started    |
 | 8   | Extract magic numbers                | 🟢 Low    | ✅ Completed      |
 | 9   | Address TODO comments                | 🟢 Low    | ✅ Completed      |
-| 10  | Standardize docstrings               | 🟢 Low    | 🔲 Not Started    |
+| 10  | Standardize docstrings               | 🟢 Low    | ✅ Completed      |
 | 11  | Migrate to native declarative        | 🟢 Low    | 🔲 Not Started    |
 | 12  | Simplify observability utilities     | 🟢 Low    | 🔲 Not Started    |
 | 13  | Consolidate small utility files      | 🟢 Low    | ✅ Completed      |

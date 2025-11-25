@@ -105,14 +105,21 @@ def synthesize_results(results: list[Any]) -> str:
 def extract_artifacts(result: Any) -> dict[str, Any]:
     """Extract artifacts from agent result.
 
-    In a real implementation, this would parse structured output,
-    identify files/data produced, etc. For now, it's a placeholder.
+    Parses agent output to identify structured data, files, or
+    other artifacts produced during execution. Currently returns
+    a summary placeholder.
 
     Args:
-        result: The result to extract artifacts from
+        result: The raw result from an agent execution.
 
     Returns:
-        Dictionary of extracted artifacts
+        Dictionary mapping artifact names to their values.
+        Currently contains a 'result_summary' key with truncated output.
+
+    Example:
+        >>> artifacts = extract_artifacts("Long agent response...")
+        >>> print(artifacts["result_summary"])
+        'Long agent response...'
     """
     # Placeholder - could be enhanced to extract structured data
     return {"result_summary": str(result)[:200]}
@@ -282,11 +289,22 @@ def normalize_routing_decision(
 
 
 def detect_routing_edge_cases(task: str, routing: RoutingDecision) -> list[str]:
-    """
-    Detect edge cases in routing decisions for logging and learning.
+    """Detect edge cases in routing decisions for logging and learning.
+
+    Identifies potential issues or unusual patterns in routing decisions
+    that may require attention or could be used for improving future routing.
+
+    Args:
+        task: The original task being routed.
+        routing: The routing decision to analyze.
 
     Returns:
-        List of detected edge case descriptions
+        List of detected edge case descriptions. Empty if no issues found.
+
+    Example:
+        >>> edge_cases = detect_routing_edge_cases("Find today's news", routing)
+        >>> if edge_cases:
+        ...     logger.warning(f"Edge cases: {edge_cases}")
     """
     edge_cases = []
 
@@ -323,7 +341,19 @@ def detect_routing_edge_cases(task: str, routing: RoutingDecision) -> list[str]:
 def prepare_subtasks(
     agents: list[str], subtasks: list[str] | None, fallback_task: str
 ) -> list[str]:
-    """Normalize DSPy-provided subtasks to align with assigned agents."""
+    """Normalize DSPy-provided subtasks to align with assigned agents.
+
+    Ensures the number of subtasks matches the number of agents by
+    either padding with the fallback task or truncating excess subtasks.
+
+    Args:
+        agents: List of agent names assigned to the task.
+        subtasks: Optional list of subtasks from DSPy routing.
+        fallback_task: Task to use when subtasks are missing or insufficient.
+
+    Returns:
+        List of subtasks with length equal to number of agents.
+    """
     if not agents:
         return []
 
