@@ -7,7 +7,7 @@ from __future__ import annotations
 
 from collections.abc import AsyncIterator
 from datetime import datetime
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, cast
 from uuid import uuid4
 
 from agent_framework._types import ChatMessage, Role
@@ -27,7 +27,7 @@ from ..utils.logger import setup_logger
 from ..utils.models import ExecutionMode, RoutingDecision, ensure_routing_decision
 from ..utils.telemetry import optional_span
 from ..utils.tool_registry import ToolRegistry
-from .builder import build_fleet_workflow
+from .builder import WorkflowMode, build_fleet_workflow
 from .config import WorkflowConfig
 from .context import SupervisorContext
 from .handoff import HandoffManager
@@ -219,16 +219,18 @@ class SupervisorWorkflow:
                 and hasattr(self.dspy_reasoner, "select_workflow_mode")
             ):
                 decision = self.dspy_reasoner.select_workflow_mode(task)
-                detected_mode = decision.get("mode", "standard")
-                if detected_mode not in ("standard", "fast_path"):
-                    logger.info(f"Switching workflow to mode: {detected_mode}")
+                detected_mode_str = decision.get("mode", "standard")
+                if detected_mode_str not in ("standard", "fast_path"):
+                    logger.info(f"Switching workflow to mode: {detected_mode_str}")
+                    # Cast to WorkflowMode - validated by the condition above
+                    detected_mode = cast(WorkflowMode, detected_mode_str)
                     workflow_builder = build_fleet_workflow(
                         self.dspy_reasoner,
                         self.context,
                         mode=detected_mode,
                     )
                     self.workflow = _materialize_workflow(workflow_builder)
-                    current_mode = detected_mode
+                    current_mode = detected_mode_str
 
             if self.workflow is None:
                 raise RuntimeError("Workflow runner not initialized.")

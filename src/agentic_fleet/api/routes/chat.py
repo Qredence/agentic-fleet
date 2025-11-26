@@ -165,7 +165,7 @@ async def stream_chat_generator(
                 if event.agent_id not in INCLUDED_AGENT_IDS:
                     continue
 
-                content = event.message.text
+                content = event.message.text if event.message else None
                 if content:
                     full_response += content
                     delta_msg = {
@@ -185,7 +185,7 @@ async def stream_chat_generator(
                 yield f"data: {json.dumps(status_msg)}\n\n"
 
             elif isinstance(event, ExecutorCompletedEvent):
-                output = event.output
+                output = getattr(event, "output", None)
                 thought_data = None
 
                 if isinstance(output, AnalysisMessage):

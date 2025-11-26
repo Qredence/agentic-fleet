@@ -10,12 +10,12 @@ analysis succeeds without altering runtime behavior.
 from __future__ import annotations
 
 import asyncio
-import os
 from typing import TYPE_CHECKING, Any, TypedDict
 
-from agent_framework import ToolProtocol
+from agent_framework._tools import ToolProtocol
 
 from agentic_fleet.tools.serialization import SerializationMixin
+from agentic_fleet.utils.env import env_config
 from agentic_fleet.utils.resilience import external_api_retry
 
 try:  # Optional dependency — keep import non-fatal at module load time
@@ -54,7 +54,7 @@ class TavilySearchTool(ToolProtocol, SerializationMixin):
             api_key: Tavily API key (defaults to TAVILY_API_KEY env var)
             max_results: Maximum number of search results to return
         """
-        self.api_key = api_key or os.getenv("TAVILY_API_KEY")
+        self.api_key = api_key or env_config.tavily_api_key
         if not self.api_key:
             raise ValueError("TAVILY_API_KEY must be set in environment or passed to constructor")
 

@@ -10,7 +10,11 @@ import os
 from datetime import datetime
 from typing import Any
 
-from agent_framework import ExecutorCompletedEvent, MagenticAgentMessageEvent, WorkflowOutputEvent
+from agent_framework._workflows import (
+    ExecutorCompletedEvent,
+    MagenticAgentMessageEvent,
+    WorkflowOutputEvent,
+)
 from rich.console import Console
 from rich.live import Live
 from rich.markdown import Markdown

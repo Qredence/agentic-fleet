@@ -8,10 +8,10 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Literal
 
 try:
-    from agent_framework import GroupChatBuilder, HandoffBuilder, WorkflowBuilder
+    from agent_framework._workflows import GroupChatBuilder, HandoffBuilder, WorkflowBuilder
 except ImportError:
     # Fallback for environments where these are missing (e.g. older agent_framework)
-    from agent_framework import WorkflowBuilder
+    from agent_framework._workflows import WorkflowBuilder
 
     # Create minimal stub implementations that raise clear errors if used
     class GroupChatBuilder:

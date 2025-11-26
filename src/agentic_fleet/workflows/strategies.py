@@ -574,15 +574,16 @@ async def execute_sequential_with_handoffs(
             remaining_work = estimate_remaining_work(task, str(agent_result))
 
             # Evaluate if handoff should proceed
+            available_agents_map: dict[str, str] = {
+                name: agents[name].description or ""
+                for name in agent_names[i + 1 :]
+                if name in agents
+            }
             handoff_decision = await handoff.evaluate_handoff(
                 current_agent=current_agent_name,
                 work_completed=str(agent_result),
                 remaining_work=remaining_work,
-                available_agents={
-                    name: agents[name].description
-                    for name in agent_names[i + 1 :]
-                    if name in agents
-                },
+                available_agents=available_agents_map,
             )
 
             # Create handoff package if recommended

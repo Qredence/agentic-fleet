@@ -2,10 +2,10 @@
 
 from __future__ import annotations
 
-import os
-
 from rich.console import Console
 from rich.table import Table
+
+from ...utils.env import env_config
 
 console = Console()
 
@@ -13,7 +13,7 @@ console = Console()
 def list_agents() -> None:
     """List all available agents and their capabilities."""
     # Check tool availability
-    tavily_available = bool(os.getenv("TAVILY_API_KEY"))
+    tavily_available = bool(env_config.tavily_api_key)
 
     agents_info = [
         {
