@@ -95,7 +95,7 @@ class SelfImprovementEngine:
         high_quality = self._filter_high_quality_executions(executions)
 
         logger.info(
-            f"Found {len(high_quality)} high-quality executions (score >= {self.min_quality_score})"
+            f"Found {len(high_quality)} high-quality executions (score >= {_sanitize_for_log(str(self.min_quality_score))})"
         )
 
         if not high_quality:
