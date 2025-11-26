@@ -17,7 +17,7 @@
 ## Environment & configuration
 
 - `OPENAI_API_KEY` is mandatory; copy `.env.example` → `.env` and fill it plus optional `TAVILY_API_KEY`, `DSPY_COMPILE`, tracing, Cosmos, etc.
-- Keep knobs in YAML—never hardcode thresholds, prompts, or tool lists inside Python. Update `workflow_config.yaml` and align docs in `AGENTS.md` when behavior changes.
+- Keep knobs in YAML—never hardcode thresholds, prompts, or tool lists inside Python. Update `workflow_config.yaml` and align docs in `docs/developers/internals/AGENTS.md` when behavior changes.
 - DSPy caches compilation to `logs/compiled_supervisor.pkl`; clear via `uv run python -m agentic_fleet.scripts.manage_cache --clear` whenever signatures, prompts, or examples change.
 
 ## Everyday workflows
@@ -29,7 +29,7 @@
 
 ## Extending agents & tools
 
-- Adding an agent: new module under `agents/`, wire prompts in `agents/prompts.py`, register in YAML `agents:` block, update training examples + `src/agentic_fleet/AGENTS.md`, and add unit tests (routing + execution).
+- Adding an agent: new module under `agents/`, wire prompts in `agents/prompts.py`, register in YAML `agents:` block, update training examples + `docs/developers/internals/AGENTS.md`, and add unit tests (routing + execution).
 - Adding a tool: implement adapter in `tools/`, expose via `ToolRegistry`, list it by name in YAML, and document latency/cost expectations.
 - DSPy signatures (`dspy_modules/signatures.py`) must describe any new inputs/outputs; wrap models in `dspy.ChainOfThought` and keep reasoning hints short.
 
@@ -50,7 +50,7 @@
 - Paths are relative to `src/agentic_fleet/...`; avoid importing from root-level modules directly.
 - Tool names in YAML must match registry keys; mismatches lead to runtime warnings.
 - Parallel mode auto-normalizes to delegated if only one agent survives routing—double-check DSPy output before forcing execution strategies.
-- Always touch docs (`AGENTS.md`, `docs/guides/quick-reference.md`, or this file) when agent rosters, tools, or workflows change.
+- Always touch docs (`docs/developers/internals/AGENTS.md`, `docs/guides/quick-reference.md`, or this file) when agent rosters, tools, or workflows change.
 
 ## Optional persistence (Cosmos)
 

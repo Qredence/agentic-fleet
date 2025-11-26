@@ -221,15 +221,16 @@ Slow-phase detection: per-phase timing is recorded in `phase_timings` (analysis/
 - `uv run python -m agentic_fleet.cli.console handoff --interactive` – Explore agent handoffs with `HandoffManager`.
 - `uv run python -m agentic_fleet.cli.console analyze --dataset data/evaluation_tasks.jsonl` – Batch evaluation with metrics logged to `logs/evaluation/`.
 - `uv run python -m agentic_fleet.scripts.manage_cache --info|--clear` – Inspect or clear DSPy compilation cache.
-- Entry point `dspy-fleet` wraps the console for shorter commands.
-- `scripts/self_improve.py` updates DSPy training examples from history; `scripts/analyze_history.py` surfaces execution analytics.
+- Entry points `agentic-fleet` or `fleet` wrap the console for shorter commands.
+- `make analyze-history` – Analyze workflow execution history using `scripts/analyze_history.py`.
+- `make self-improve` – Run self-improvement analysis using `scripts/self_improve.py`.
 
 ## Testing & Validation
 
 - `make test` / `uv run pytest -v` – Backend tests (stubs avoid external API calls).
 - `make test-config` – Validates YAML wiring and agent imports.
-- `make check` – Runs Ruff (lint + format) and mypy to enforce style and typing.
-- `make validate-agents` – Ensures documentation and configuration stay in sync (when the validation script is enabled).
+- `make check` – Runs Ruff linter and ty type checker to enforce style and typing.
+- `make qa` – Comprehensive QA: lint, format, type-check, backend tests, and frontend tests.
 
 ## Troubleshooting
 
