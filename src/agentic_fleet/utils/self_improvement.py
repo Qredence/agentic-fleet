@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import json
 import logging
+import re
 from pathlib import Path
 from typing import Any
 
@@ -16,6 +17,24 @@ from .cosmos import get_default_user_id, mirror_dspy_examples
 from .history_manager import HistoryManager
 
 logger = logging.getLogger(__name__)
+
+
+def _sanitize_for_log(value: str) -> str:
+    """
+    Sanitize a string for safe logging to prevent log injection attacks.
+
+    Removes or replaces control characters, newlines, and other potentially
+    dangerous characters that could be used for log forging.
+    """
+    # Replace newlines and carriage returns with escaped versions
+    sanitized = value.replace("\n", "\\n").replace("\r", "\\r")
+    # Remove other control characters (except tab which is often harmless)
+    sanitized = re.sub(r"[\x00-\x08\x0b\x0c\x0e-\x1f\x7f]", "", sanitized)
+    # Limit length to prevent log flooding
+    max_len = 500
+    if len(sanitized) > max_len:
+        sanitized = sanitized[:max_len] + "..."
+    return sanitized
 
 
 class SelfImprovementEngine:
@@ -250,7 +269,9 @@ class SelfImprovementEngine:
                             memory_type="edge_case_example",
                         )
             except Exception as e:
-                logger.warning(f"Failed to convert execution to example: {e}")
+                logger.warning(
+                    "Failed to convert execution to example: %s", _sanitize_for_log(str(e))
+                )
                 continue
 
         # Also capture edge cases from failed routings (low quality executions)
@@ -276,7 +297,10 @@ class SelfImprovementEngine:
                             memory_type="edge_case_example",
                         )
             except Exception as e:
-                logger.debug(f"Failed to process edge case from failed execution: {e}")
+                logger.debug(
+                    "Failed to process edge case from failed execution: %s",
+                    _sanitize_for_log(str(e)),
+                )
                 continue
 
         # Combine examples, prioritizing high-quality ones
@@ -376,7 +400,7 @@ class SelfImprovementEngine:
         examples_path = Path(examples_file)
 
         if not examples_path.exists():
-            logger.warning(f"Training examples file not found: {examples_file}")
+            logger.warning("Training examples file not found: %s", _sanitize_for_log(examples_file))
             return []
 
         try:
@@ -390,7 +414,7 @@ class SelfImprovementEngine:
                 )
                 return []
         except Exception as e:
-            logger.error(f"Failed to load existing examples: {e}")
+            logger.error("Failed to load existing examples: %s", _sanitize_for_log(str(e)))
             return []
 
     def _add_new_examples(
@@ -437,7 +461,10 @@ class SelfImprovementEngine:
                 json.dump(updated, f, indent=2)
 
             logger.info(
-                f"Saved {len(updated)} total examples to {examples_file} ({len(unique_new)} new)"
+                "Saved %d total examples to %s (%d new)",
+                len(updated),
+                _sanitize_for_log(examples_file),
+                len(unique_new),
             )
 
             if unique_new:
@@ -446,7 +473,7 @@ class SelfImprovementEngine:
             return unique_new
 
         except Exception as e:
-            logger.error(f"Failed to save updated examples: {e}")
+            logger.error("Failed to save updated examples: %s", _sanitize_for_log(str(e)))
             return []
 
     def _create_fingerprint(self, example: dict[str, Any]) -> str:
@@ -527,7 +554,7 @@ class SelfImprovementEngine:
                     clear_cache()
                     status += "Cache cleared for recompilation."
                 except Exception as e:
-                    logger.warning(f"Failed to clear cache: {e}")
+                    logger.warning("Failed to clear cache: %s", _sanitize_for_log(str(e)))
 
             return added, status
         else:
