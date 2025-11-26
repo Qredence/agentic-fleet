@@ -1,8 +1,8 @@
+import { useEffect } from "react";
+import { MessageSquare, Plus, Loader2, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useChatStore } from "@/stores/chatStore";
 import { cn } from "@/lib/utils";
-import { MessageSquare, Plus, Loader2, X } from "lucide-react";
-import { useEffect } from "react";
 
 interface ConversationsSidebarProps {
   isOpen?: boolean;
@@ -16,21 +16,21 @@ export function ConversationsSidebar({
 }: ConversationsSidebarProps) {
   const {
     conversations,
-    isLoadingConversations,
-    conversationId,
+    isLoading,
+    currentConversationId,
     loadConversations,
-    switchConversation,
-    createNewConversation,
+    selectConversation,
+    createConversation,
   } = useChatStore();
 
   // Load conversations on mount
   useEffect(() => {
-    loadConversations();
+    void loadConversations();
   }, [loadConversations]);
 
   const handleNewConversation = async () => {
     try {
-      await createNewConversation();
+      await createConversation("New Conversation");
       // Close sidebar on mobile after creating new conversation
       if (onClose) {
         onClose();
@@ -42,11 +42,11 @@ export function ConversationsSidebar({
   };
 
   const handleConversationClick = async (id: string) => {
-    if (id === conversationId) {
+    if (id === currentConversationId) {
       return; // Already on this conversation
     }
     try {
-      await switchConversation(id);
+      await selectConversation(id);
       // Close sidebar on mobile after switching
       if (onClose) {
         onClose();
@@ -124,16 +124,14 @@ export function ConversationsSidebar({
 
       {/* Conversations List */}
       <div className="flex-1 overflow-y-auto">
-        {isLoadingConversations ? (
+        {isLoading ? (
           <div className="flex items-center justify-center p-8">
             <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
           </div>
         ) : conversations.length === 0 ? (
           <div className="flex flex-col items-center justify-center p-8 text-center">
             <MessageSquare className="mb-2 h-8 w-8 text-muted-foreground" />
-            <p className="text-sm text-muted-foreground">
-              No conversations yet
-            </p>
+            <p className="text-sm text-muted-foreground">No conversations yet</p>
             <p className="mt-1 text-xs text-muted-foreground">
               Start a new conversation to get started
             </p>
@@ -141,7 +139,7 @@ export function ConversationsSidebar({
         ) : (
           <div className="p-2">
             {conversations.map((conv) => {
-              const isActive = conv.id === conversationId;
+              const isActive = conv.id === currentConversationId;
               return (
                 <button
                   key={conv.id}
