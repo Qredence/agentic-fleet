@@ -149,7 +149,7 @@ AgenticFleet uses the **OpenAI Response format** throughout, ensuring compatibil
 **ChatMessage + Role Enum:**
 
 ```python
-from agent_framework import ChatMessage, Role
+from agent_framework._types import ChatMessage, Role
 
 # Used in event streaming
 MagenticAgentMessageEvent(

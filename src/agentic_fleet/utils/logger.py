@@ -5,11 +5,12 @@ Logging utilities for the workflow system.
 from __future__ import annotations
 
 import logging
-import os
 import sys
 from pathlib import Path
 
 from pythonjsonlogger import jsonlogger
+
+from .env import env_config
 
 
 class _EnsureRequestIdFilter(logging.Filter):
@@ -39,7 +40,7 @@ def setup_logger(
         json_format: Whether to use JSON formatting (overrides format_string)
     """
     # Check env var for global JSON logging override
-    if os.getenv("LOG_FORMAT", "text").lower() == "json":
+    if env_config.log_format == "json":
         json_format = True
 
     logger = logging.getLogger(name)

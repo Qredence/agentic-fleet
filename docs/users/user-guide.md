@@ -495,7 +495,7 @@ To add a new tool:
 
 ```python
 # src/tools/my_tool.py
-from agent_framework import ToolProtocol
+from agent_framework._tools import ToolProtocol
 
 class MyCustomTool(ToolProtocol):
     """Custom tool description."""
