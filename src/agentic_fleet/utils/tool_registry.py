@@ -13,6 +13,7 @@ from dataclasses import dataclass, field
 from typing import Any, Protocol, cast, runtime_checkable
 
 from ..utils.cache import CacheStats, TTLCache  # type: ignore
+from ..workflows.exceptions import ToolError
 
 logger = logging.getLogger(__name__)
 
@@ -330,7 +331,7 @@ class ToolRegistry:
         tool = self._tools.get(tool_name)
         return tool is not None and tool.available and tool.tool_instance is not None
 
-    async def execute_tool(self, tool_name: str, **kwargs: Any) -> str | None:
+    async def execute_tool(self, tool_name: str, **kwargs: Any) -> str:
         """
         Execute a tool directly.
 
@@ -339,11 +340,30 @@ class ToolRegistry:
             **kwargs: Arguments to pass to tool.run()
 
         Returns:
-            Tool execution result, or None if tool not found/unavailable
+            Tool execution result as a string
+
+        Raises:
+            ToolError: If tool not found, unavailable, or execution fails
         """
         meta = self._tools.get(tool_name)
-        if not meta or meta.tool_instance is None or not meta.available:
-            return None
+        if not meta:
+            raise ToolError(
+                f"Tool '{tool_name}' not found in registry",
+                tool_name=tool_name,
+                tool_args=kwargs,
+            )
+        if meta.tool_instance is None:
+            raise ToolError(
+                f"Tool '{tool_name}' has no executable instance (metadata-only)",
+                tool_name=tool_name,
+                tool_args=kwargs,
+            )
+        if not meta.available:
+            raise ToolError(
+                f"Tool '{tool_name}' is currently unavailable",
+                tool_name=tool_name,
+                tool_args=kwargs,
+            )
 
         tool_instance = meta.tool_instance
 
@@ -359,8 +379,15 @@ class ToolRegistry:
             if len(result_str) <= 5000:
                 self._tool_result_cache.set(cache_key, result_str)
             return result_str
+        except ToolError:
+            # Re-raise ToolError as-is to preserve context
+            raise
         except Exception as e:
-            return f"Error executing tool {tool_name}: {e!s}"
+            raise ToolError(
+                f"Tool '{tool_name}' execution failed: {e!s}",
+                tool_name=tool_name,
+                tool_args=kwargs,
+            ) from e
 
     def get_tool_cache_stats(self) -> CacheStats:
         """Expose cache statistics for tool result caching."""

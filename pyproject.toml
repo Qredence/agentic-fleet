@@ -1,6 +1,11 @@
+# ============================================================================
+# Project Metadata (PEP 621)
+# See: https://packaging.python.org/en/latest/specifications/pyproject-toml/
+# ============================================================================
+
 [project]
 name = "agentic-fleet"
-version = "0.6.2"
+version = "0.6.4"
 description = "Multi-agent orchestration system built with Microsoft Agent Framework's Magentic Fleet pattern"
 authors = [{ name = "Qredence", email = "contact@qredence.ai" }]
 readme = "README.md"
@@ -32,11 +37,11 @@ dependencies = [
     "agent-framework-azure-ai",
     "agent-framework-mem0",
     "agent-framework-devui",
-    "mem0ai==1.0.0",                            # Pinned for stable memory API
+    "mem0ai==1.0.0",                             # Pinned for stable memory API
     "rich>=14.2.0",
     "prompt-toolkit>=3.0.47,<4.0",
     "ipykernel>=7.0.1,<8.0",
-    "openai>=2.5.1",                            # Updated from requirements.txt
+    "openai>=2.5.1",                             # Updated from requirements.txt
     "azure-ai-evaluation>=1.12.0,<2.0",
     "fastapi>=0.120.1,<1.0",
     "uvicorn[standard]>=0.24.0",
@@ -47,8 +52,7 @@ dependencies = [
     "pydantic-settings>=2.3.2,<3.0",
     "websockets>=10.4",
     "typer>=0.20.0,<0.21.0",
-    "textual>=6.5.0",                           # Added from requirements.txt for TUI
-    "locust>=2.15.0",
+    "textual>=6.5.0",                            # Added from requirements.txt for TUI
     "aiohttp>=3.9.0",
     "aiosqlite>=0.20.0",
     "prometheus-client>=0.16.0",
@@ -62,16 +66,10 @@ dependencies = [
     "matplotlib>=3.6.0",
     "seaborn>=0.11.0",
     "plotly>=5.10.0",
-    "pytest>=9.0.1,<10.0",
-    "pytest-asyncio>=0.21.0",                   # Updated from requirements.txt
-    "pytest-cov>=4.1.0",                        # Updated from requirements.txt
-    "ruff>=0.0.200",
-    "mypy>=1.8.0",                              # Updated from requirements.txt
-    "flake8>=7.0.0",                            # Added from requirements.txt
     "pytz>=2024.1",
     "setuptools>=80.9.0",
-    "dspy>=3.0.3",                              # Updated from requirements.txt (was pinned to 3.0.4)
-    "tavily-python>=0.7.12",                    # Added version constraint from requirements.txt
+    "dspy>=3.0.3",                               # Updated from requirements.txt (was pinned to 3.0.4)
+    "tavily-python>=0.7.12",                     # Added version constraint from requirements.txt
     "dill>=0.3.8",
     "playwright>=1.40.0",
     "mcp>=1.21.0",
@@ -83,8 +81,17 @@ dependencies = [
     "tenacity>=8.2.3",
     "prometheus-fastapi-instrumentator>=6.1.0",
     "python-json-logger>=2.0.7",
+    "agent-framework-declarative>=1.0.0b251120",
+    "agent-framework-azure-ai-search>=0.0.0a1",
+    "agent-framework-azurefunctions>=0.0.0a1",
+    "agent-framework>=1.0.0b251120",
 ]
 requires-python = ">=3.12,<4"
+
+# ============================================================================
+# Optional Dependencies (Extras)
+# Install with: pip install agentic-fleet[azure] or uv add agentic-fleet[all]
+# ============================================================================
 
 [project.optional-dependencies]
 # Core Azure integration
@@ -105,8 +112,6 @@ all = ["agentic-fleet[azure,memory,ui,evaluation]"]
 [project.scripts]
 agentic-fleet = "agentic_fleet.cli.console:app"
 fleet = "agentic_fleet.cli.console:app"
-dynamic-fleet = "agentic_fleet.cli.console:app"
-workflow = "agentic_fleet.cli.console:app"
 
 
 [project.urls]
@@ -115,8 +120,13 @@ Documentation = "https://github.com/Qredence/agentic-fleet/docs"
 Repository = "https://github.com/Qredence/agentic-fleet"
 Issues = "https://github.com/Qredence/agentic-fleet/issues"
 
+# ============================================================================
+# Build System (Hatchling)
+# See: https://hatch.pypa.io/latest/config/build/
+# ============================================================================
+
 [build-system]
-requires = ["hatchling"]
+requires = ["hatchling>=1.25.0"]
 build-backend = "hatchling.build"
 
 [tool.hatch.metadata]
@@ -135,32 +145,83 @@ include = [
     "/docs/AGENTS.md",
     "/pyproject.toml",
 ]
-exclude = ["/.github", "/var", "/logs", "/__pycache__", "*.pyc"]
+exclude = [
+    "/.github",
+    "/var",
+    "/logs",
+    "/__pycache__",
+    "*.pyc",
+    "*.pyo",
+    ".coverage",
+    ".pytest_cache",
+    ".ruff_cache",
+    ".venv",
+    "*.egg-info",
+]
 
 
-# Development dependencies (uv's preferred format)
+# ============================================================================
+# Dependency Groups (PEP 735)
+# Use: uv sync --group <name> or uv sync (installs default-groups)
+# See: https://docs.astral.sh/uv/concepts/projects/dependencies/
+# ============================================================================
+
 [dependency-groups]
+# Core development tools (installed by default)
 dev = [
+    # Testing
     "pytest>=8.4.2",
     "pytest-asyncio>=1.2.0",
     "pytest-cov>=6.0.0",
-    "debugpy>=1.8.17",
-    "pre-commit>=3.5.0",
+    # Linting & Formatting
+    "ruff>=0.14.6",
+    # Type Checking
+    "ty>=0.0.1a27",
     "types-PyYAML>=6.0.0",
     "types-requests>=2.31.0",
     "types-aiofiles>=25.1.0.20251011",
-    "ruff>=0.14.6",
-    "ty>=0.0.1a27",
+    # Pre-commit hooks
+    "pre-commit>=3.5.0",
+    # Debugging
+    "debugpy>=1.8.17",
 ]
 
-[tool.uv.sources]
-"agent-framework-core" = { git = "https://github.com/microsoft/agent-framework.git", branch = "main", subdirectory = "python/packages/core" }
-"agent-framework-azure-ai" = { git = "https://github.com/microsoft/agent-framework.git", branch = "main", subdirectory = "python/packages/azure-ai" }
-"agent-framework-a2a" = { git = "https://github.com/microsoft/agent-framework.git", branch = "main", subdirectory = "python/packages/a2a" }
-"agent-framework-copilotstudio" = { git = "https://github.com/microsoft/agent-framework.git", branch = "main", subdirectory = "python/packages/copilotstudio" }
-"agent-framework-mem0" = { git = "https://github.com/microsoft/agent-framework.git", branch = "main", subdirectory = "python/packages/mem0" }
-"agent-framework-devui" = { git = "https://github.com/microsoft/agent-framework.git", branch = "main", subdirectory = "python/packages/devui" }
+# Load testing tools (optional, install with: uv sync --group load-test)
+load-test = ["locust>=2.15.0"]
 
+# ============================================================================
+# uv Configuration
+# See: https://docs.astral.sh/uv/reference/settings/
+# ============================================================================
+
+[tool.uv]
+# Enforce minimum uv version for reproducibility
+required-version = ">=0.9.0"
+
+# Prefer uv-managed Python installations over system Python
+python-preference = "managed"
+
+# Allow pre-release versions for packages that only publish pre-releases
+# (e.g., agent-framework beta packages)
+prerelease = "if-necessary-or-explicit"
+
+# Default version specifier style when adding dependencies
+add-bounds = "lower"
+
+# Limit resolution to supported platforms (macOS and Linux only)
+# This speeds up resolution and avoids Windows-specific issues
+environments = ["sys_platform == 'darwin'", "sys_platform == 'linux'"]
+
+# Install dev group by default during development
+default-groups = ["dev"]
+
+# Compile bytecode for faster startup (good for CLI tools)
+compile-bytecode = true
+
+# ============================================================================
+# Ruff Configuration (Linter & Formatter)
+# See: https://docs.astral.sh/ruff/settings/
+# ============================================================================
 
 [tool.ruff]
 src = ["src"]
@@ -220,10 +281,20 @@ ignore = [
 [tool.ruff.lint.isort]
 known-first-party = ["agentic_fleet", "agenticfleet"]
 
+# ============================================================================
+# Pytest Configuration
+# See: https://docs.pytest.org/en/stable/reference/customize.html
+# ============================================================================
+
 [tool.pytest.ini_options]
 pythonpath = "src"
 testpaths = ["tests"]
 
+
+# ============================================================================
+# Coverage Configuration
+# See: https://coverage.readthedocs.io/en/latest/config.html
+# ============================================================================
 
 [tool.coverage.run]
 source = ["src/agentic_fleet", "src/agenticfleet"]
@@ -231,6 +302,8 @@ omit = ["*/tests/*", "*/__pycache__/*", "*/.venv/*"]
 
 [tool.coverage.report]
 fail_under = 80
+show_missing = true
+skip_covered = true
 exclude_lines = [
     "pragma: no cover",
     "def __repr__",
@@ -239,6 +312,11 @@ exclude_lines = [
     "raise NotImplementedError",
     "if __name__ == .__main__.:",
 ]
+
+# ============================================================================
+# Type Checker Configuration (ty)
+# See: https://github.com/astral-sh/ty
+# ============================================================================
 
 [tool.ty]
 # ty will automatically discover your project structure and venv.

@@ -8,7 +8,6 @@ from __future__ import annotations
 
 import logging
 from collections.abc import Callable
-from typing import TypeVar
 
 from tenacity import (
     RetryCallState,
@@ -19,8 +18,6 @@ from tenacity import (
 )
 
 logger = logging.getLogger(__name__)
-
-T = TypeVar("T")
 
 
 def log_retry_attempt(retry_state: RetryCallState) -> None:
@@ -38,7 +35,7 @@ def log_retry_attempt(retry_state: RetryCallState) -> None:
         )
 
 
-def create_circuit_breaker(
+def create_circuit_breaker[T](
     max_failures: int = 5,
     reset_timeout: int = 60,
     exceptions: tuple[type[Exception], ...] = (Exception,),
@@ -74,3 +71,52 @@ external_api_retry = create_circuit_breaker(
         # Add other transient errors here
     ),
 )
+
+
+async def async_call_with_retry[T](
+    fn: Callable[..., T],
+    *args: object,
+    attempts: int = 3,
+    backoff_seconds: float = 1.0,
+    **kwargs: object,
+) -> T:
+    """Call a sync or async function with retry logic.
+
+    This is a shared utility for DSPy and other callable invocations that may fail
+    transiently. Handles both sync and async callables uniformly.
+
+    Args:
+        fn: The function to call (sync or async).
+        *args: Positional arguments to pass to the function.
+        attempts: Maximum number of retry attempts (default: 3).
+        backoff_seconds: Fixed wait time between retries in seconds (default: 1.0).
+        **kwargs: Keyword arguments to pass to the function.
+
+    Returns:
+        The result of the function call.
+
+    Raises:
+        Exception: Re-raises the last exception if all retries fail.
+    """
+    import asyncio
+
+    from tenacity import AsyncRetrying, stop_after_attempt, wait_fixed
+
+    # Ensure valid bounds
+    attempts = max(1, attempts)
+    backoff_seconds = max(0.0, backoff_seconds)
+
+    async for attempt in AsyncRetrying(
+        stop=stop_after_attempt(attempts),
+        wait=wait_fixed(backoff_seconds),
+        reraise=True,
+        before_sleep=log_retry_attempt,
+    ):
+        with attempt:
+            result = fn(*args, **kwargs)
+            if asyncio.iscoroutine(result):
+                result = await result
+            return result  # type: ignore[return-value]
+
+    # This line should never be reached due to reraise=True above
+    raise RuntimeError("Retry loop completed without result or exception")

@@ -2,7 +2,7 @@ name: PR Labels
 
 on:
   pull_request:
-    types: [opened, edited, synchronize, reopened]
+    types: [opened, synchronize, reopened]
 
 permissions:
   contents: read
@@ -10,9 +10,10 @@ permissions:
 
 jobs:
   label:
+    name: Apply Labels
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/labeler@634933edcd8ababfe52f92936142cc22ac488b1b
+      - uses: actions/labeler@v5
         with:
           repo-token: ${{ secrets.GITHUB_TOKEN }}
           configuration-path: .github/labeler.yml

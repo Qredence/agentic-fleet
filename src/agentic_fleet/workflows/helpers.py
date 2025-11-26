@@ -1,21 +1,206 @@
-"""Helper functions for routing and quality assessment.
+"""Helper functions for routing, quality assessment, and workflow utilities.
 
-Consolidated from routing/ and quality/ submodules.
+Consolidated from routing/, quality/ submodules, task_utils, and workflow utilities.
 """
 
 from __future__ import annotations
 
 import contextlib
+import os
 import re
 from collections.abc import Awaitable, Callable
 from typing import Any
 
-from agent_framework import ChatAgent
+import openai
+from agent_framework._agents import ChatAgent
 
 from ..utils.logger import setup_logger
 from ..utils.models import ExecutionMode, RoutingDecision, ensure_routing_decision
 
 logger = setup_logger(__name__)
+
+
+# --- Task Classification Helpers ---
+
+
+def is_simple_task(task: str) -> bool:
+    """Identify trivial heartbeat/greeting tasks that don't need routing.
+
+    This function detects simple tasks like greetings or trivial calculations
+    that can be answered directly without involving the full routing pipeline.
+
+    Args:
+        task: The task string to classify
+
+    Returns:
+        True if the task is simple enough to bypass routing, False otherwise
+    """
+    task_lower = task.strip().lower()
+
+    # Keywords that imply real-time or specific entity knowledge
+    complex_keywords = [
+        "news",
+        "latest",
+        "current",
+        "election",
+        "price",
+        "stock",
+        "weather",
+        "who is",
+        "who won",
+        "who are",
+        "mayor",
+        "governor",
+        "president",
+    ]
+
+    # Heartbeat / greeting style tasks that should be answered directly
+    trivial_keywords = [
+        "ping",
+        "hello",
+        "hi",
+        "hey",
+        "test",
+        "are you there",
+        "you there",
+        "you awake",
+    ]
+
+    # Keywords that imply a simple deterministic response
+    simple_keywords = ["define", "calculate", "solve", "2+", "meaning of"]
+
+    is_time_sensitive = bool(re.search(r"20[2-9][0-9]", task))
+    has_complex_keyword = any(
+        re.search(r"\b" + re.escape(k) + r"\b", task_lower) for k in complex_keywords
+    )
+    has_trivial_keyword = any(
+        re.search(r"\b" + re.escape(k) + r"\b", task_lower) for k in trivial_keywords
+    )
+    has_simple_keyword = any(
+        re.search(r"\b" + re.escape(k) + r"\b", task_lower) for k in simple_keywords
+    )
+
+    # Consider very short, punctuation-free tasks as simple if not time-sensitive
+    if is_time_sensitive or has_complex_keyword:
+        return False
+
+    return has_trivial_keyword or has_simple_keyword
+
+
+# --- Workflow Utility Functions ---
+
+
+def synthesize_results(results: list[Any]) -> str:
+    """Combine parallel results into a single string.
+
+    Args:
+        results: List of results from parallel execution
+
+    Returns:
+        Combined results as a single string
+    """
+    return "\n\n".join([str(r) for r in results])
+
+
+def extract_artifacts(result: Any) -> dict[str, Any]:
+    """Extract artifacts from agent result.
+
+    Parses agent output to identify structured data, files, or
+    other artifacts produced during execution. Currently returns
+    a summary placeholder.
+
+    Args:
+        result: The raw result from an agent execution.
+
+    Returns:
+        Dictionary mapping artifact names to their values.
+        Currently contains a 'result_summary' key with truncated output.
+
+    Example:
+        >>> artifacts = extract_artifacts("Long agent response...")
+        >>> print(artifacts["result_summary"])
+        'Long agent response...'
+    """
+    # Placeholder - could be enhanced to extract structured data
+    return {"result_summary": str(result)[:200]}
+
+
+def estimate_remaining_work(original_task: str, work_done: str) -> str:
+    """Estimate what work remains based on original task and progress.
+
+    Args:
+        original_task: The original task description
+        work_done: Description of work completed so far
+
+    Returns:
+        Description of remaining work
+    """
+    # Simple heuristic - in practice, could use DSPy for this
+    return f"Continue working on: {original_task}. Already completed: {work_done[:100]}..."
+
+
+def derive_objectives(remaining_work: str) -> list[str]:
+    """Derive specific objectives from remaining work description.
+
+    Args:
+        remaining_work: Description of remaining work
+
+    Returns:
+        List of specific objectives
+    """
+    # Simple extraction - could use NLP or DSPy
+    objectives = [remaining_work]
+    return objectives
+
+
+def create_openai_client_with_store(
+    enable_storage: bool = False,
+    reasoning_effort: str | None = None,
+) -> openai.AsyncOpenAI:
+    """Create AsyncOpenAI client configured to optionally store completions and set reasoning effort.
+
+    Args:
+        enable_storage: Whether to enable completion storage
+        reasoning_effort: Optional reasoning effort level ("minimal", "medium", "maximal") for GPT-5 models
+
+    Returns:
+        AsyncOpenAI client with default_query set to include store=true if enabled
+    """
+    kwargs: dict[str, Any] = {}
+
+    api_key = os.getenv("OPENAI_API_KEY")
+    if api_key:
+        kwargs["api_key"] = api_key
+
+    base_url = os.getenv("OPENAI_BASE_URL")
+    if base_url:
+        normalized = base_url.strip()
+        if "://" not in normalized:
+            normalized = "https://" + normalized.lstrip("/")
+            logger.warning(
+                "OPENAI_BASE_URL was missing scheme; normalized to %s",
+                normalized,
+            )
+        kwargs["base_url"] = normalized
+
+    default_query: dict[str, Any] = {}
+    if enable_storage:
+        default_query["store"] = "true"
+
+    # Reasoning effort is passed in the request body, not query params
+    # We'll need to handle this via extra_body in the actual request
+    # For now, we store it as a client attribute for later use
+    client = openai.AsyncOpenAI(**kwargs)
+    if reasoning_effort is not None:
+        # Store reasoning effort as client attribute for use in requests
+        client._reasoning_effort = reasoning_effort  # type: ignore[attr-defined]
+
+    if default_query:
+        # Note: default_query might not support nested dicts for reasoning
+        # Reasoning effort needs to be in request body, not query params
+        pass
+
+    return client
 
 
 # --- Routing Helpers ---
@@ -104,11 +289,22 @@ def normalize_routing_decision(
 
 
 def detect_routing_edge_cases(task: str, routing: RoutingDecision) -> list[str]:
-    """
-    Detect edge cases in routing decisions for logging and learning.
+    """Detect edge cases in routing decisions for logging and learning.
+
+    Identifies potential issues or unusual patterns in routing decisions
+    that may require attention or could be used for improving future routing.
+
+    Args:
+        task: The original task being routed.
+        routing: The routing decision to analyze.
 
     Returns:
-        List of detected edge case descriptions
+        List of detected edge case descriptions. Empty if no issues found.
+
+    Example:
+        >>> edge_cases = detect_routing_edge_cases("Find today's news", routing)
+        >>> if edge_cases:
+        ...     logger.warning(f"Edge cases: {edge_cases}")
     """
     edge_cases = []
 
@@ -145,7 +341,19 @@ def detect_routing_edge_cases(task: str, routing: RoutingDecision) -> list[str]:
 def prepare_subtasks(
     agents: list[str], subtasks: list[str] | None, fallback_task: str
 ) -> list[str]:
-    """Normalize DSPy-provided subtasks to align with assigned agents."""
+    """Normalize DSPy-provided subtasks to align with assigned agents.
+
+    Ensures the number of subtasks matches the number of agents by
+    either padding with the fallback task or truncating excess subtasks.
+
+    Args:
+        agents: List of agent names assigned to the task.
+        subtasks: Optional list of subtasks from DSPy routing.
+        fallback_task: Task to use when subtasks are missing or insufficient.
+
+    Returns:
+        List of subtasks with length equal to number of agents.
+    """
     if not agents:
         return []
 
@@ -251,7 +459,7 @@ def call_judge_with_reasoning(
 
 async def get_quality_criteria(
     task: str,
-    agents: dict[str, Any],
+    agents: dict[str, ChatAgent],
     call_judge_fn: Callable[[ChatAgent, str], Awaitable[Any]],
 ) -> str:
     """Generate task-specific quality criteria using Judge agent."""
@@ -404,7 +612,7 @@ Please enhance the response by addressing the missing elements and required impr
 async def refine_results(
     results: Any,
     improvements: str,
-    agents: dict[str, Any],
+    agents: dict[str, ChatAgent],
 ) -> Any:
     """Refine results based on quality assessment."""
     writer = agents.get("Writer")

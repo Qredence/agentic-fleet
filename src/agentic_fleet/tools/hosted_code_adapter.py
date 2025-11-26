@@ -8,7 +8,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any, Protocol
 
-from agent_framework import HostedCodeInterpreterTool
+from agent_framework._tools import HostedCodeInterpreterTool
 
 from agentic_fleet.tools.serialization import SerializationMixin
 

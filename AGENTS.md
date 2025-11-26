@@ -1,0 +1,43 @@
+# AgenticFleet – Working Agreements
+
+- **Purpose**: Quick, living guide for contributors. Update this file whenever workflows, tooling, or conventions change.
+
+## Toolchain Defaults
+
+- Shell: `zsh`.
+- Python: `uv` (Python 3.12+). Never activate venvs manually; use `uv run ...`.
+- Frontend: `npm` (Vite + React 19 + Tailwind). `bun` is _not_ used here.
+- Type/lint: Ruff (formatter + lint), `ty` type checker, pytest for tests.
+
+## First-Time Setup
+
+- Install deps: `make install` (uv syncs all extras). Frontend deps: `make frontend-install`.
+- Environment: copy `.env.example` → `.env`; set `OPENAI_API_KEY` (required) and optionally `TAVILY_API_KEY`, Cosmos settings, `DSPY_COMPILE`.
+- Optional: `make pre-commit-install` to enable hooks.
+
+## Run & Develop
+
+- Backend CLI: `make run` (`agentic-fleet` Typer console).
+- Dev servers: `make dev` (backend on :8000, frontend on :5173). Backend only: `make backend`. Frontend only: `make frontend-dev`. Build UI: `make build-frontend`.
+- Config: tune models/agents in `config/workflow_config.yaml`; caches live under `logs/` (compiled DSPy, history).
+
+## Testing & Quality
+
+- Full suite: `make test` (pytest -v).
+- Config smoke: `make test-config` (validates workflow configs).
+- Frontend tests: `make test-frontend`; E2E: `make test-e2e` (requires dev servers; install Playwright browsers with `npx playwright install chromium`).
+- Lint/format: `make lint`, `make format`; type-check: `make type-check`; quick all-in-one: `make check`.
+
+## Agents & Orchestration
+
+- Stack: DSPy + Microsoft `agent-framework` (magentic-fleet pattern). Agents live under `src/agentic_fleet/agents/`; orchestration in `src/agentic_fleet/workflows/`; DSPy reasoning in `src/agentic_fleet/dspy_modules/`.
+- Routing/quality loops configured via `config/workflow_config.yaml`; history & tracing in `logs/execution_history.jsonl`.
+- When adding or modifying agents/workflows, keep prompts/factories in sync and update config schema validation.
+- For multi-agent expansion with OpenAI Agents SDK, treat Codex CLI as an MCP server and mirror roles from `.github/agents/agent-framework-spec.md`; document new roles/prompts here and in `docs/` as needed.
+
+## Conventions & Notes
+
+- Keep code typed; follow Ruff/ty defaults (line length 100, py312 syntax, docstrings for public APIs).
+- Avoid committing artifacts from `logs/`, `var/`, caches, or compiled DSPy outputs.
+- Prefer `make` targets over raw commands; if adding new workflows/tests, add a Make target and update this file.
+- If you change how to start, test, or observe the system, append the updated commands here and, for larger shifts, create an ExecPlan entry in `PLANS.md`.

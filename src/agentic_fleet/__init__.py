@@ -26,6 +26,8 @@ Example:
 
 from __future__ import annotations
 
+from importlib.metadata import PackageNotFoundError
+from importlib.metadata import version as _get_version
 from typing import TYPE_CHECKING
 
 from agentic_fleet.utils.agent_framework_shims import (
@@ -46,7 +48,10 @@ if TYPE_CHECKING:
         create_supervisor_workflow,
     )
 
-__version__ = "0.6.2"
+try:
+    __version__ = _get_version("agentic-fleet")
+except PackageNotFoundError:
+    __version__ = "0.0.0.dev0"  # Fallback for editable installs without metadata
 
 __all__ = [
     "AgentFactory",

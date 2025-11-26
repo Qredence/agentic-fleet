@@ -1,29 +1,140 @@
 # Changelog
 
-## Unreleased
+## v0.6.4 (2025-11-25) – Code Quality & Type Safety Improvements
 
 ### Highlights
 
-- **Optional Azure Cosmos DB persistence** – `AGENTICFLEET_USE_COSMOS=1` now mirrors workflow history, agent memory, DSPy datasets, and cache metadata into Cosmos NoSQL using a single helper module (`utils/cosmos.py`). The runtime degrades gracefully when Cosmos is unreachable.
-- **Data Model Documentation** – Added `docs/developers/cosmosdb_requirements.md` and `docs/developers/cosmosdb_data_model.md`, covering access patterns, container schemas, and provisioning guidance that follow Azure Cosmos DB best practices (high-cardinality partition keys, 2 MB limits, TTL guidance).
-- **Quality & Persistence polish** – `HistoryManager` now mirrors executions asynchronously, the supervisor workflow records whether refinement ran, and tests gained realistic persistence utilities with summarization support.
+- **Pydantic V2 Migration** – Migrated deprecated `class Config` to `model_config = ConfigDict()` pattern, eliminating Pydantic deprecation warnings and ensuring compatibility with Pydantic V3.
+- **Improved Type Safety** – Added proper return type annotations for async generators, defined `WorkflowEvent` type alias, and fixed 4 type checker errors across workflow modules.
+- **Dependency Hygiene** – Moved dev/test dependencies (`pytest`, `ruff`, `mypy`, `flake8`, `locust`) from main dependencies to `[dependency-groups.dev]`.
+- **Dynamic Versioning** – Package version is now read dynamically from `pyproject.toml` using `importlib.metadata`, eliminating version mismatch issues.
+- **Refactored Fast-Path Logic** – Consolidated duplicate fast-path code in `SupervisorWorkflow` into reusable helper methods.
+- **Better Error Handling** – `ToolRegistry.execute_tool()` now raises typed `ToolError` exceptions with full context instead of returning error strings.
+- **Deduplicated Retry Logic** – Consolidated 4 identical `_call_with_retry` methods into a shared `async_call_with_retry` utility in `resilience.py`.
+- **Documented Graceful Degradation** – Added documentation comments to all executor exception handlers explaining the intentional broad exception handling pattern for system availability.
+- **Centralized Environment Variables** – Added `EnvConfig` class with instance-level caching (replacing `@lru_cache` on methods to avoid memory leaks) for typed environment variable access.
+- **Phase A-E Code Quality Plan Completed** – All 14 items evaluated (12 completed, 1 partial, 1 deferred, 1 not recommended). Added 97 new unit tests, standardized docstrings, and improved type safety.
+- **Makefile Cleanup** – Removed non-existent targets (`demo-hitl`, `validate-agents`, `test-automation`, `load-test-*`) and added `analyze-history` and `self-improve` targets for existing scripts.
+- **GitHub Actions Workflow Overhaul** – Simplified and modernized all 8 CI/CD workflows with best practices, semver action versions, and `uv publish` for trusted publishing.
 
 ### Changes
 
-- Introduced `src/agentic_fleet/utils/cosmos.py`, a cached helper that manages Cosmos clients (managed identity or key auth), container lookups, and best-effort mirroring APIs for executions, agent memory items, DSPy examples/optimization runs, and cache entries.
-- Updated `utils/history_manager.py`, `workflows/quality/refiner.py`, `workflows/supervisor_workflow.py`, and supporting modules to call the new helper without blocking the critical path.
-- Added lightweight, in-memory persistence utilities (`utils/persistence.py`) used by `tests/test_persistence.py` to verify summarization thresholds (`summary_threshold` / `summary_keep_recent`).
-- Expanded documentation: README (configuration, observability, new Cosmos section), `docs/users/configuration.md` (environment reference), and both `AGENTS.md` files to describe Cosmos-backed long-term memory.
+- **`src/agentic_fleet/__init__.py`**:
+  - Version now read dynamically via `importlib.metadata.version("agentic-fleet")` with fallback for editable installs.
 
-### Testing
+- **`src/agentic_fleet/api/schemas/chat.py`**:
+  - Migrated `Message` and `Conversation` models from deprecated `class Config` to `model_config = ConfigDict(from_attributes=True)`.
 
-- Updated `tests/test_persistence.py` with real persistence helpers and summarization assertions.
-- Extended workflow quality suites (`tests/workflows/test_judge_refinement.py`, `tests/workflows/test_quality_modules.py`) to ensure the new refinement and quality metadata paths behave as expected.
+- **`src/agentic_fleet/workflows/supervisor.py`**:
+  - Added `WorkflowEvent` type alias for workflow events union type.
+  - Added `AsyncIterator[WorkflowEvent]` return type to `run_stream()` method.
+  - Extracted `_should_fast_path()` and `_handle_fast_path()` helper methods to eliminate code duplication.
+  - Added type assertions to satisfy type checker for `dspy_reasoner` attribute.
+
+- **`src/agentic_fleet/workflows/executors.py`**:
+  - Removed 4 duplicate `_call_with_retry` methods from `AnalysisExecutor`, `RoutingExecutor`, `ProgressExecutor`, and `QualityExecutor`.
+  - Now uses shared `async_call_with_retry` utility from `resilience.py`.
+  - Added documentation comments to all `except Exception` handlers explaining the graceful degradation pattern.
+
+- **`src/agentic_fleet/utils/resilience.py`**:
+  - Added `async_call_with_retry[T]()` function for centralized retry logic.
+  - Uses PEP 695 type parameters for modern generic syntax.
+  - Supports both sync and async callables with configurable attempts and backoff.
+  - Logs retry attempts via existing `log_retry_attempt` callback.
+
+- **`src/agentic_fleet/utils/tool_registry.py`**:
+  - `execute_tool()` now raises `ToolError` with tool name and arguments context instead of returning error strings.
+
+- **`.github/workflows/*.yml`** (all 8 workflows):
+  - **ci.yml**: Removed Windows from test matrix (per `pyproject.toml`), removed redundant import sorting check, used `uv sync --frozen` (auto-detects Python from `pyproject.toml`), simplified branch triggers.
+  - **release.yml**: Migrated to `uv publish --trusted-publishing always` per [uv docs](https://docs.astral.sh/uv/guides/integration/github/#publishing-to-pypi), removed unnecessary Python install steps.
+  - **codeql.yml**: Removed non-existent branches (`develop`, `0.5.0a`).
+  - **dependency-review.yml**: Removed non-existent branches.
+  - **pre-commit-autoupdate.yml**: Used `uv tool install pre-commit`, fixed deterministic branch naming.
+  - **All workflows**: Updated to semver action versions (`@v4`, `@v5`) instead of SHA hashes for better readability and dependabot compatibility.
+  - Improved error handling with exception chaining (`from e`) to preserve stack traces.
+
+- **`pyproject.toml`**:
+  - Removed dev/test packages from main `dependencies`: `pytest`, `pytest-asyncio`, `pytest-cov`, `ruff`, `mypy`, `flake8`, `locust`.
+  - Added `mypy`, `flake8`, `locust` to `[dependency-groups.dev]`.
+  - Removed redundant CLI aliases (`dynamic-fleet`, `workflow`), keeping only `agentic-fleet` and `fleet`.
+
+- **`src/agentic_fleet/utils/env.py`**:
+  - Added `EnvConfig` class with instance-level dictionary caching (avoiding `@lru_cache` on methods which causes memory leaks - B019).
+  - Added `get_env_bool()`, `get_env_int()`, `get_env_float()` helper functions with type safety.
+  - Added `env_config` singleton instance for easy access throughout the codebase.
+  - Added `clear_cache()` method for testing scenarios where env vars change at runtime.
+  - Updated `validate_agentic_fleet_env()` to use `EnvConfig` internally.
+
+- **`Makefile`**:
+  - Removed non-existent targets: `demo-hitl`, `validate-agents`, `test-automation`, all `load-test-*` targets.
+  - Added `analyze-history` target for `agentic_fleet.scripts.analyze_history`.
+  - Added `self-improve` target for `agentic_fleet.scripts.self_improve`.
+  - Updated `.PHONY` declaration to match actual targets.
+
+- **`src/agentic_fleet/api/routes/chat.py`**:
+  - Fixed `event.message.text` null check (possibly-missing-attribute warning).
+  - Fixed `event.output` access using `getattr()` for type safety.
+
+- **`src/agentic_fleet/workflows/strategies.py`**:
+  - Fixed `available_agents` dict type annotation for `evaluate_handoff()` call.
+  - Added explicit `dict[str, str]` typing with `or ""` for nullable descriptions.
+
+- **`src/agentic_fleet/workflows/supervisor.py`**:
+  - Imported `WorkflowMode` type and used `cast()` for type-safe mode switching.
+
+- **`src/agentic_fleet/agents/coordinator.py`**:
+  - Now uses `env_config.enable_dspy_agents`, `env_config.openai_api_key`, and `env_config.openai_base_url`.
+
+- **`src/agentic_fleet/utils/logger.py`**:
+  - Now uses `env_config.log_format` instead of direct `os.getenv()`.
+
+- **`src/agentic_fleet/cli/utils.py`**, **`src/agentic_fleet/cli/commands/agents.py`**:
+  - Migrated to use `env_config.mlflow_dspy_autolog` and `env_config.tavily_api_key`.
+
+- **`src/agentic_fleet/tools/tavily_tool.py`**:
+  - Now uses `env_config.tavily_api_key` instead of direct `os.getenv()`.
 
 ### Migration Notes
 
-- Cosmos mirroring is off by default. Set `AGENTICFLEET_USE_COSMOS=1` plus the relevant endpoint/key (or managed identity) variables to enable it. The helper never creates databases/containers; provision them ahead of time using the schemas in `docs/developers/cosmosdb_data_model.md`.
-- Container names default to `workflowRuns`, `agentMemory`, `dspyExamples`, `dspyOptimizationRuns`, and `cache`. Override via `AZURE_COSMOS_*_CONTAINER` env vars if your account uses different IDs.
+- **Tool Registry Error Handling**: If you were checking for error strings from `ToolRegistry.execute_tool()`, update your code to catch `ToolError` exceptions instead:
+
+  ```python
+  # Before
+  result = await registry.execute_tool("my_tool", arg="value")
+  if result and result.startswith("Error"):
+      handle_error(result)
+
+  # After
+  from agentic_fleet.workflows.exceptions import ToolError
+  try:
+      result = await registry.execute_tool("my_tool", arg="value")
+  except ToolError as e:
+      handle_error(e)
+  ```
+
+- **CLI Aliases**: The `dynamic-fleet` and `workflow` CLI commands have been removed. Use `agentic-fleet` or `fleet` instead.
+
+---
+
+## v0.6.3 (2025-11-25) – Agent Framework Compatibility Fixes
+
+### Highlights
+
+- **Agent Framework v0.5+ Compatibility** – Resolved import errors caused by the namespace package structure of `agent_framework` v0.5+.
+- **Stability** – Fixed 40+ static analysis errors to ensure `make check` passes cleanly.
+
+### Changes
+
+- Updated imports across the codebase to use specific submodules (`_agents`, `_workflows`, `_tools`, `_mcp`, `_types`) instead of the top-level `agent_framework` package.
+- Affected modules:
+  - `src/agentic_fleet/agents/base.py`
+  - `src/agentic_fleet/agents/coordinator.py`
+  - `src/agentic_fleet/api/routes/chat.py`
+  - `src/agentic_fleet/cli/runner.py`
+  - `src/agentic_fleet/tools/*.py`
+  - `src/agentic_fleet/utils/types.py`
+  - `src/agentic_fleet/workflows/*.py`
 
 ---
 

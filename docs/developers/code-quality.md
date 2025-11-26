@@ -186,6 +186,52 @@ Benefits:
 - **LRU eviction** when max size is reached
 - **Statistics tracking** for optimization
 
+## Centralized Environment Variables
+
+### EnvConfig Class
+
+The `EnvConfig` class in `utils/env.py` provides centralized, type-safe access to environment variables:
+
+```python
+from agentic_fleet.utils.env import env_config
+
+# Access typed environment variables
+api_key = env_config.openai_api_key
+if env_config.use_cosmos:
+    endpoint = env_config.cosmos_endpoint
+
+# Clear cache if env vars change at runtime
+env_config.clear_cache()
+```
+
+### Available Properties
+
+- `openai_api_key` - OpenAI API key
+- `openai_base_url` - Optional base URL override
+- `tavily_api_key` - Tavily search API key
+- `log_format` - Logging format (`text` or `json`)
+- `enable_dspy_agents` - DSPy agent toggle (default: `True`)
+- `use_cosmos` - Cosmos DB integration toggle
+- `cosmos_endpoint`, `cosmos_key`, `cosmos_database` - Cosmos DB settings
+- `otel_exporter_endpoint` - OpenTelemetry endpoint
+- `host`, `port`, `environment` - Server settings
+
+### Helper Functions
+
+For one-off environment variable access:
+
+```python
+from agentic_fleet.utils.env import get_env_bool, get_env_int, get_env_float
+
+debug = get_env_bool("DEBUG", default=False)
+max_workers = get_env_int("MAX_WORKERS", default=4)
+temperature = get_env_float("MODEL_TEMPERATURE", default=0.7)
+```
+
+### Implementation Note
+
+The `EnvConfig` class uses instance-level dictionary caching instead of `@lru_cache` decorators on methods. This avoids the B019 linter warning about potential memory leaks when using `lru_cache` on instance methods.
+
 ## Best Practices
 
 ### Error Handling

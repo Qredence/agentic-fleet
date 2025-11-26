@@ -123,7 +123,14 @@ class HandoffManager:
         self.handoff_history: list[HandoffContext] = []
 
     def _sup(self) -> DSPyReasoner:
-        """Return preferred reasoner (compiled if provider is available)."""
+        """Return preferred reasoner (compiled if provider is available).
+
+        Attempts to retrieve the compiled DSPy reasoner from the provider.
+        Falls back to the base supervisor if the provider fails or is unavailable.
+
+        Returns:
+            The compiled DSPyReasoner if available, otherwise the base supervisor.
+        """
         if self._get_compiled_supervisor is not None:
             try:
                 sup = self._get_compiled_supervisor()
@@ -387,7 +394,17 @@ class HandoffManager:
         }
 
     def _derive_success_criteria(self, objectives: list[str]) -> list[str]:
-        """Derive success criteria from objectives."""
+        """Derive success criteria from objectives.
+
+        Converts high-level objectives into measurable success criteria
+        by analyzing the objective type (analyze, create, find, etc.).
+
+        Args:
+            objectives: List of remaining objectives for the task.
+
+        Returns:
+            List of measurable success criteria strings.
+        """
         if not objectives:
             return ["Task completed successfully"]
 
@@ -406,7 +423,16 @@ class HandoffManager:
         return criteria
 
     def _identify_required_tools(self, agent_name: str) -> list[str]:
-        """Identify tools required by the receiving agent."""
+        """Identify tools required by the receiving agent.
+
+        Queries the tool registry to find tools assigned to the specified agent.
+
+        Args:
+            agent_name: Name of the agent receiving the handoff.
+
+        Returns:
+            List of tool names available to the agent, empty if no registry.
+        """
         # Use reasoner's tool registry if available
         if hasattr(self.supervisor, "tool_registry") and self.supervisor.tool_registry:
             agent_tools = self.supervisor.tool_registry.get_agent_tools(agent_name)
@@ -414,7 +440,17 @@ class HandoffManager:
         return []
 
     def _parse_checklist(self, checklist_str: str) -> list[str]:
-        """Parse quality checklist from DSPy output."""
+        """Parse quality checklist from DSPy output.
+
+        Extracts individual checklist items from DSPy-generated text,
+        removing common bullet point prefixes.
+
+        Args:
+            checklist_str: Raw checklist string from DSPy output.
+
+        Returns:
+            List of cleaned checklist items.
+        """
         if not checklist_str:
             return ["Verify handoff context"]
 
@@ -432,7 +468,16 @@ class HandoffManager:
         return items if items else ["Verify handoff context"]
 
     def _parse_score(self, score_str: str) -> float:
-        """Parse quality score from DSPy output."""
+        """Parse quality score from DSPy output.
+
+        Handles various score formats including "8/10" and "8.5".
+
+        Args:
+            score_str: Raw score string from DSPy output.
+
+        Returns:
+            Parsed float score, defaults to 5.0 on parsing failure.
+        """
         try:
             # Extract numeric value from strings like "8/10" or "8.5"
             if "/" in score_str:
@@ -442,7 +487,13 @@ class HandoffManager:
             return 5.0  # Default middle score
 
     def _count_handoff_pairs(self) -> dict[str, int]:
-        """Count occurrences of each handoff pair."""
+        """Count occurrences of each handoff pair.
+
+        Analyzes handoff history to identify common agent-to-agent patterns.
+
+        Returns:
+            Dictionary mapping "FromAgent → ToAgent" strings to occurrence counts.
+        """
         pairs: dict[str, int] = {}
         for handoff in self.handoff_history:
             pair = f"{handoff.from_agent} → {handoff.to_agent}"
@@ -450,7 +501,14 @@ class HandoffManager:
         return pairs
 
     def _calculate_avg_handoffs(self) -> float:
-        """Calculate average handoffs per task."""
+        """Calculate average handoffs per task.
+
+        Note: This is a simplified implementation that returns total handoffs.
+        A full implementation would track unique tasks and compute true averages.
+
+        Returns:
+            Total number of handoffs (simplified metric).
+        """
         if not self.handoff_history:
             return 0.0
 
@@ -460,13 +518,27 @@ class HandoffManager:
         return float(len(self.handoff_history))
 
     def _get_common_handoffs(self, top_n: int = 5) -> list[tuple]:
-        """Get most common handoff patterns."""
+        """Get most common handoff patterns.
+
+        Args:
+            top_n: Maximum number of patterns to return.
+
+        Returns:
+            List of (pair_string, count) tuples sorted by frequency descending.
+        """
         pairs = self._count_handoff_pairs()
         sorted_pairs = sorted(pairs.items(), key=lambda x: x[1], reverse=True)
         return sorted_pairs[:top_n]
 
     def _get_effort_distribution(self) -> dict[str, int]:
-        """Get distribution of estimated effort."""
+        """Get distribution of estimated effort across handoffs.
+
+        Aggregates estimated effort levels (simple, moderate, complex)
+        from handoff history.
+
+        Returns:
+            Dictionary mapping effort level to count.
+        """
         distribution = {"simple": 0, "moderate": 0, "complex": 0}
         for handoff in self.handoff_history:
             effort = handoff.estimated_effort.lower()
@@ -474,8 +546,12 @@ class HandoffManager:
                 distribution[effort] += 1
         return distribution
 
-    def clear_history(self):
-        """Clear handoff history."""
+    def clear_history(self) -> None:
+        """Clear handoff history.
+
+        Removes all stored handoff records. Useful for testing
+        or when starting a new session.
+        """
         self.handoff_history.clear()
         logger.info("Handoff history cleared")
 

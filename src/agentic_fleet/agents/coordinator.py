@@ -4,17 +4,17 @@ from __future__ import annotations
 
 import inspect
 import logging
-import os
 import warnings
 from pathlib import Path
 from typing import Any
 
 import yaml
-from agent_framework import ChatAgent
+from agent_framework._agents import ChatAgent
 from agent_framework.openai import OpenAIResponsesClient
 from dotenv import load_dotenv
 
 from agentic_fleet.agents.base import DSPyEnhancedAgent
+from agentic_fleet.utils.env import env_config
 from agentic_fleet.utils.telemetry import optional_span
 from agentic_fleet.utils.tool_registry import ToolRegistry
 
@@ -80,7 +80,7 @@ class AgentFactory:
         self.openai_client = openai_client
 
         # Check if DSPy enhancement should be enabled globally
-        self.enable_dspy = os.getenv("ENABLE_DSPY_AGENTS", "true").lower() == "true"
+        self.enable_dspy = env_config.enable_dspy_agents
 
     def create_agent(
         self,
@@ -134,11 +134,11 @@ class AgentFactory:
                     span.set_attribute("agent.tool_names", ",".join(tool_names))
 
             # Get API key at runtime
-            api_key = os.getenv("OPENAI_API_KEY")
+            api_key = env_config.openai_api_key
             if not api_key:
                 raise ValueError("OPENAI_API_KEY environment variable is required")
 
-            base_url = os.getenv("OPENAI_BASE_URL") or None
+            base_url = env_config.openai_base_url
 
             # Create OpenAI client using agent_framework directly
             # Use shared async_client if available for proper resource reuse

@@ -1,5 +1,5 @@
 import { render, screen } from "@testing-library/react";
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect, vi } from "vitest";
 import { ChatContainer } from "@/components/chat/ChatContainer";
 import { useChatStore } from "@/stores/chatStore";
 import { useStreamingChat } from "@/hooks/useStreamingChat";

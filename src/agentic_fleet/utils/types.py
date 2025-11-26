@@ -145,7 +145,7 @@ class HistoryManagerProtocol(Protocol):
 
 # Type aliases for common patterns
 if TYPE_CHECKING:
-    from agent_framework import ChatAgent
+    from agent_framework._agents import ChatAgent
 
     AgentDict = dict[str, ChatAgent]
     EventStream = AsyncIterator[Any]

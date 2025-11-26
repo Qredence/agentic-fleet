@@ -156,43 +156,41 @@ export const useChatStore = create<ChatState>((set, get) => ({
     reasoning?: string,
   ) => {
     set((state) => {
-      const conversations = [...state.conversations];
-      const index = conversations.findIndex((c) => c.id === conversationId);
-      
-      if (index !== -1) {
-        const message: Message = {
-          id: crypto.randomUUID(),
-          role,
-          content,
-          created_at: Date.now() / 1000,
-          reasoning,
-        };
-        conversations[index] = {
-          ...conversations[index],
-          messages: [...(conversations[index].messages || []), message],
-        };
-      }
-      
+      const conversations = state.conversations.map((conv) => {
+        if (conv.id === conversationId) {
+          const message: Message = {
+            id: crypto.randomUUID(),
+            role,
+            content,
+            created_at: Date.now() / 1000,
+            reasoning,
+          };
+          return {
+            ...conv,
+            messages: [...(conv.messages || []), message],
+          };
+        }
+        return conv;
+      });
       return { conversations };
     });
   },
 
   updateLastMessage: (conversationId: string, content: string) => {
     set((state) => {
-      const conversations = [...state.conversations];
-      const index = conversations.findIndex((c) => c.id === conversationId);
-      
-      if (index !== -1) {
-        const messages = [...(conversations[index].messages || [])];
-        if (messages.length > 0) {
-          messages[messages.length - 1] = {
-            ...messages[messages.length - 1],
-            content,
-          };
-          conversations[index] = { ...conversations[index], messages };
+      const conversations = state.conversations.map((conv) => {
+        if (conv.id === conversationId) {
+          const messages = [...(conv.messages || [])];
+          if (messages.length > 0) {
+            messages[messages.length - 1] = {
+              ...messages[messages.length - 1],
+              content,
+            };
+          }
+          return { ...conv, messages };
         }
-      }
-      
+        return conv;
+      });
       return { conversations };
     });
   },

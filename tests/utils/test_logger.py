@@ -2,6 +2,7 @@ import logging
 import os
 from unittest.mock import patch
 
+from agentic_fleet.utils.env import env_config
 from agentic_fleet.utils.logger import setup_logger
 
 
@@ -38,6 +39,8 @@ def test_setup_logger_file(tmp_path):
 
 def test_setup_logger_env_override():
     with patch.dict(os.environ, {"LOG_FORMAT": "json"}):
+        # Clear the cached env values so the patched env var is read
+        env_config.clear_cache()
         logger = setup_logger("env_logger")
         handler = logger.handlers[0]
         assert "JsonFormatter" in str(type(handler.formatter))

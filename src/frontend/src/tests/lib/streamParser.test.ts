@@ -1,6 +1,16 @@
 import { describe, expect, it } from "vitest";
 import { parseSSEStream } from "@/lib/streamParser";
-import { makeStream } from "@/tests/utils/testHelpers";
+
+const encoder = new TextEncoder();
+
+function makeStream(chunks: string[]): ReadableStream<Uint8Array> {
+  return new ReadableStream({
+    start(controller) {
+      chunks.forEach((chunk) => controller.enqueue(encoder.encode(chunk)));
+      controller.close();
+    },
+  });
+}
 
 describe("parseSSEStream", () => {
   it("parses named events, multi-line data, and preserves agent ids", async () => {

@@ -23,7 +23,7 @@ from .compilation import CompilationState, compile_supervisor_async, get_compile
 from .config import WorkflowConfig
 from .context import SupervisorContext
 from .handoff import HandoffManager
-from .utils import create_openai_client_with_store
+from .helpers import create_openai_client_with_store
 
 if TYPE_CHECKING:
     from openai import AsyncOpenAI

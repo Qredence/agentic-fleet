@@ -59,7 +59,7 @@ beforeAll(() => {
       }
 
       // Mock create conversation (both /v1 and direct)
-      if (url.includes("/api/conversations") && init?.method === "POST") {
+      if (url.includes("/conversations") && init?.method === "POST") {
         console.log("✅ Mocking create conversation");
         return new Response(
           JSON.stringify({

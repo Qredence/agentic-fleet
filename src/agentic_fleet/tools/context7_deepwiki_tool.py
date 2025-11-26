@@ -9,10 +9,10 @@ from collections.abc import Sequence
 from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
-    from agent_framework import MCPStreamableHTTPTool
+    from agent_framework._mcp import MCPStreamableHTTPTool
 else:
     try:
-        from agent_framework import MCPStreamableHTTPTool
+        from agent_framework._mcp import MCPStreamableHTTPTool
     except (ImportError, ModuleNotFoundError, AttributeError):
 
         class MCPStreamableHTTPTool:

@@ -8,6 +8,7 @@ from pathlib import Path
 from typing import Any
 
 from ..utils.config_loader import load_config
+from ..utils.env import env_config
 
 logger = logging.getLogger(__name__)
 
@@ -17,9 +18,7 @@ def init_tracing() -> dict[str, Any]:
     cfg = load_config()
     # Optional MLflow DSPy autologging behind env flag
     try:
-        import os
-
-        if os.getenv("MLFLOW_DSPY_AUTOLOG", "false").lower() in ("1", "true", "yes", "on"):
+        if env_config.mlflow_dspy_autolog:
             import mlflow  # type: ignore
 
             # Minimal autolog setup; users can point MLflow to a tracking URI externally

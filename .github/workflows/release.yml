@@ -2,8 +2,7 @@ name: Release
 
 on:
   push:
-    tags:
-      - "v*.*.*"
+    tags: ["v*.*.*"]
   workflow_dispatch:
     inputs:
       version:
@@ -11,60 +10,59 @@ on:
         required: true
         type: string
 
-concurrency:
-  group: release-${{ github.ref }}
-  cancel-in-progress: false
-
 permissions:
   contents: write
   id-token: write
 
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+env:
+  GIT_LFS_SKIP_SMUDGE: "1"
+
 jobs:
+  # ============================================================================
+  # Build Distribution
+  # ============================================================================
   build:
-    name: Build Distribution
+    name: Build
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@1af3b93b6815bc44a9784bd300feb67ff0d1eeb3
+      - uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
       - name: Install uv
-        uses: astral-sh/setup-uv@be7fc19b4169c26a2aa1b8a430af391f2a96b3c9
+        uses: astral-sh/setup-uv@v5
         with:
           enable-cache: true
           cache-dependency-glob: "uv.lock"
 
-      - name: Set up Python
-        run: uv python install 3.12
-
-      - name: Install dependencies
-        run: uv sync --all-extras
-        env:
-          GIT_LFS_SKIP_SMUDGE: "1"
-
-      - name: Validate version tag matches package version
+      - name: Validate version
         if: github.event_name == 'push'
         run: |
           TAG_VERSION="${GITHUB_REF#refs/tags/v}"
           PACKAGE_VERSION=$(uv run python -c "import tomllib; print(tomllib.load(open('pyproject.toml', 'rb'))['project']['version'])")
-          echo "Tag version: $TAG_VERSION"
-          echo "Package version: $PACKAGE_VERSION"
           if [ "$TAG_VERSION" != "$PACKAGE_VERSION" ]; then
             echo "❌ Version mismatch: tag=$TAG_VERSION, package=$PACKAGE_VERSION"
             exit 1
           fi
-          echo "✅ Version validation passed"
+          echo "✅ Version: $PACKAGE_VERSION"
 
       - name: Build package
         run: uv build
 
-      - name: Store the distribution packages
-        uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
         with:
           name: python-package-distributions
           path: dist/
 
-  publish-to-pypi:
+  # ============================================================================
+  # Publish to PyPI (production) - uses uv with trusted publishing
+  # ============================================================================
+  publish-pypi:
     name: Publish to PyPI
     needs: build
     runs-on: ubuntu-latest
@@ -72,74 +70,67 @@ jobs:
       name: pypi-production
       url: https://pypi.org/p/agentic-fleet
     permissions:
-      id-token: write # IMPORTANT: mandatory for trusted publishing
-
+      id-token: write
     steps:
-      - name: Download all the dists
-        uses: actions/download-artifact@018cc2cf5baa6db3ef3c5f8a56943fffe632ef53
+      - uses: actions/download-artifact@v4
         with:
           name: python-package-distributions
           path: dist/
 
-      - name: Publish distribution to PyPI
-        uses: pypa/gh-action-pypi-publish@ed0c53931b1dc9bd32cbe73a98c7f6766f8a527e
-        with:
-          skip-existing: true
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
 
-  publish-to-testpypi:
+      - name: Publish to PyPI
+        run: uv publish --trusted-publishing always dist/*
+
+  # ============================================================================
+  # Publish to TestPyPI (manual dispatch only)
+  # ============================================================================
+  publish-testpypi:
     name: Publish to TestPyPI
     needs: build
+    if: github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
-    if: ${{ github.event_name == 'workflow_dispatch' }}
     environment:
       name: testpypi
       url: https://test.pypi.org/p/agentic-fleet
     permissions:
-      id-token: write # IMPORTANT: mandatory for trusted publishing
-
+      id-token: write
     steps:
-      - name: Download all the dists
-        uses: actions/download-artifact@018cc2cf5baa6db3ef3c5f8a56943fffe632ef53
+      - uses: actions/download-artifact@v4
         with:
           name: python-package-distributions
           path: dist/
 
-      - name: Publish distribution to TestPyPI
-        uses: pypa/gh-action-pypi-publish@ed0c53931b1dc9bd32cbe73a98c7f6766f8a527e
-        with:
-          repository-url: https://test.pypi.org/legacy/
-          skip-existing: true
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
 
+      - name: Publish to TestPyPI
+        run: uv publish --trusted-publishing always --publish-url https://test.pypi.org/legacy/ dist/*
+
+  # ============================================================================
+  # Create GitHub Release
+  # ============================================================================
   github-release:
     name: Create GitHub Release
-    needs: publish-to-pypi
+    needs: publish-pypi
     runs-on: ubuntu-latest
     permissions:
       contents: write
-
     steps:
-      - uses: actions/checkout@1af3b93b6815bc44a9784bd300feb67ff0d1eeb3
+      - uses: actions/checkout@v4
 
-      - name: Download all the dists
-        uses: actions/download-artifact@018cc2cf5baa6db3ef3c5f8a56943fffe632ef53
+      - uses: actions/download-artifact@v4
         with:
           name: python-package-distributions
           path: dist/
 
-      - name: Create GitHub Release
+      - name: Create Release
         env:
           GITHUB_TOKEN: ${{ github.token }}
         run: |
-          gh release create \
-            '${{ github.ref_name }}' \
+          gh release create '${{ github.ref_name }}' \
             --repo '${{ github.repository }}' \
             --generate-notes \
-            --title "AgenticFleet ${{ github.ref_name }}"
-
-      - name: Upload artifacts to GitHub Release
-        env:
-          GITHUB_TOKEN: ${{ github.token }}
-        run: |
-          gh release upload \
-            '${{ github.ref_name }}' dist/** \
-            --repo '${{ github.repository }}'
+            --title "AgenticFleet ${{ github.ref_name }}" \
+            dist/**

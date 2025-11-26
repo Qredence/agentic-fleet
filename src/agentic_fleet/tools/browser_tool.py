@@ -12,9 +12,14 @@ from collections.abc import Callable
 from typing import TYPE_CHECKING, Any, cast
 from urllib.parse import urlparse
 
-from agent_framework import ToolProtocol
+from agent_framework._tools import ToolProtocol
 
 from agentic_fleet.tools.serialization import SerializationMixin
+from agentic_fleet.utils.constants import (
+    DEFAULT_BROWSER_MAX_TEXT_LENGTH,
+    DEFAULT_BROWSER_SELECTOR_TIMEOUT_MS,
+    DEFAULT_BROWSER_TIMEOUT_MS,
+)
 
 if TYPE_CHECKING:
     from playwright.async_api import Browser, Page  # type: ignore[import]
@@ -44,13 +49,13 @@ class BrowserTool(SerializationMixin, ToolProtocol):
     _shared_browser: Browser | None = None
     _shared_playwright: Any | None = None
 
-    def __init__(self, headless: bool = True, timeout: int = 30000):
+    def __init__(self, headless: bool = True, timeout: int = DEFAULT_BROWSER_TIMEOUT_MS):
         """
         Initialize browser tool.
 
         Args:
             headless: Run browser in headless mode (default: True)
-            timeout: Page navigation timeout in milliseconds (default: 30000)
+            timeout: Page navigation timeout in milliseconds (default: DEFAULT_BROWSER_TIMEOUT_MS)
         """
         if not PLAYWRIGHT_AVAILABLE:
             raise ImportError(
@@ -122,8 +127,8 @@ class BrowserTool(SerializationMixin, ToolProtocol):
                         },
                         "max_length": {
                             "type": "integer",
-                            "description": "Maximum length of extracted text (default: 10000 characters)",
-                            "default": 10000,
+                            "description": f"Maximum length of extracted text (default: {DEFAULT_BROWSER_MAX_TEXT_LENGTH} characters)",
+                            "default": DEFAULT_BROWSER_MAX_TEXT_LENGTH,
                         },
                     },
                     "required": ["url"],
@@ -136,7 +141,7 @@ class BrowserTool(SerializationMixin, ToolProtocol):
         url: str,
         action: str = "extract_text",
         wait_for: str | None = None,
-        max_length: int = 10000,
+        max_length: int = DEFAULT_BROWSER_MAX_TEXT_LENGTH,
     ) -> str:
         """
         Browse a website and perform the specified action.
@@ -182,13 +187,15 @@ class BrowserTool(SerializationMixin, ToolProtocol):
             if wait_for:
                 try:
                     # Try as CSS selector first
-                    await page.wait_for_selector(wait_for, timeout=5000)
+                    await page.wait_for_selector(
+                        wait_for, timeout=DEFAULT_BROWSER_SELECTOR_TIMEOUT_MS
+                    )
                 except PlaywrightTimeoutError:
                     # Try as text content
                     try:  # noqa: SIM105
                         await page.wait_for_function(
                             f"document.body.innerText.includes('{wait_for}')",
-                            timeout=5000,
+                            timeout=DEFAULT_BROWSER_SELECTOR_TIMEOUT_MS,
                         )
                     except PlaywrightTimeoutError:
                         pass  # Continue anyway

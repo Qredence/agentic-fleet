@@ -3,11 +3,13 @@
 from datetime import datetime
 from typing import Any
 
-from pydantic import BaseModel, field_serializer
+from pydantic import BaseModel, ConfigDict, field_serializer
 
 
 class Message(BaseModel):
     """Message schema."""
+
+    model_config = ConfigDict(from_attributes=True)
 
     id: str | int | None = None
     content: str
@@ -24,12 +26,11 @@ class Message(BaseModel):
             return dt
         return 0.0
 
-    class Config:
-        from_attributes = True
-
 
 class Conversation(BaseModel):
     """Conversation schema."""
+
+    model_config = ConfigDict(from_attributes=True)
 
     id: str | int | None = None
     title: str | None = None
@@ -44,9 +45,6 @@ class Conversation(BaseModel):
         if isinstance(dt, float):
             return dt
         return 0.0
-
-    class Config:
-        from_attributes = True
 
 
 class CreateConversationRequest(BaseModel):

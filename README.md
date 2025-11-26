@@ -33,8 +33,8 @@ AgenticFleet is a hybrid **DSPy + Microsoft agent-framework** runtime that deliv
     - [Optional Frontend](#optional-frontend)
     - [Playwright (Browser Tool)](#playwright-browser-tool)
   - [Configuration \& Environment](#configuration--environment)
-  - [Quick Start](#quick-start)
-    - [TUI / CLI](#tui--cli)
+    - [Quick Start](#quick-start)
+      - [TUI / CLI](#tui--cli)
     - [Python API](#python-api)
     - [Backend API](#backend-api)
     - [Streaming](#streaming)
@@ -42,7 +42,6 @@ AgenticFleet is a hybrid **DSPy + Microsoft agent-framework** runtime that deliv
   - [Agents](#agents)
   - [DSPy Optimization](#dspy-optimization)
   - [Observability \& History](#observability--history)
-  - [Azure Cosmos DB Integration](#azure-cosmos-db-integration)
   - [Evaluation \& Self-Improvement](#evaluation--self-improvement)
   - [Testing \& Quality](#testing--quality)
   - [Troubleshooting](#troubleshooting)
@@ -151,10 +150,11 @@ Recent optimizations have significantly improved the responsiveness and scalabil
 | `src/agentic_fleet/utils/`         | Compiler cache, GEPA optimizer, history, tracing, registry                     |
 | `src/agentic_fleet/evaluation/`    | Metrics & evaluator engine                                                     |
 | `src/agentic_fleet/cli/console.py` | Rich / Typer CLI (dspy-fleet)                                                  |
+| `src/frontend/`                    | Optional Vite + React streaming UI                                             |
 | `examples/`                        | Minimal workflow samples                                                       |
 | `scripts/`                         | Analysis, self-improvement, benchmarking, dataset gen                          |
 | `logs/`                            | Execution history, compilation artifacts                                       |
-| `frontend/`                        | Optional Vite + React streaming UI                                             |
+| `docs/`                            | Documentation (users/, developers/, guides/)                                   |
 
 ---
 
@@ -281,7 +281,7 @@ asyncio.run(main())
 Start the FastAPI backend server:
 
 ```bash
-./start_backend.sh
+./scripts/start_backend.sh
 # Server runs at http://localhost:8000
 # API Docs: http://localhost:8000/api/docs
 ```
@@ -314,7 +314,7 @@ Reasoner chooses based on task structure + examples; can be overridden via confi
 
 Core specialists: Researcher, Analyst, Writer, Reviewer, Judge (quality). Extended handoff specialists: Planner, Executor, Coder, Verifier, Generator.
 
-See **[AGENTS.md](AGENTS.md)** for detailed roles, tool usage, configuration examples, and selection guidelines.
+See **[AGENTS.md](docs/AGENTS.md)** for detailed roles, tool usage, configuration examples, and selection guidelines.
 
 ---
 
@@ -436,8 +436,8 @@ MIT License – see [LICENSE](LICENSE).
 - Tracing: `docs/guides/tracing.md`
 - Self Improvement: `docs/users/self-improvement.md`
 - Troubleshooting: `docs/users/troubleshooting.md`
-- Cosmos Requirements: `cosmosdb_requirements.md`
-- Cosmos Data Model: `cosmosdb_data_model.md`
+- Cosmos Requirements: `docs/developers/cosmosdb_requirements.md`
+- Cosmos Data Model: `docs/developers/cosmosdb_data_model.md`
 
 ---
 

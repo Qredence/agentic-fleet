@@ -17,10 +17,10 @@ from typing import TYPE_CHECKING, Any
 from agent_framework.exceptions import ToolException, ToolExecutionException
 
 if TYPE_CHECKING:  # pragma: no cover - typing helper
-    from agent_framework import MCPStreamableHTTPTool
+    from agent_framework._mcp import MCPStreamableHTTPTool
 else:
     try:
-        from agent_framework import MCPStreamableHTTPTool
+        from agent_framework._mcp import MCPStreamableHTTPTool
     except (ImportError, ModuleNotFoundError, AttributeError):  # pragma: no cover - optional dep
 
         class MCPStreamableHTTPTool:  # type: ignore[too-many-ancestors]

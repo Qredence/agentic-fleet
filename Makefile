@@ -1,4 +1,4 @@
- .PHONY: help install sync clean test test-config test-e2e test-frontend test-automation lint format type-check check run demo-hitl pre-commit-install dev backend frontend-install frontend-dev build-frontend validate-agents load-test-setup load-test-smoke load-test-load load-test-stress load-test-dashboard
+ .PHONY: help install sync clean test test-config test-e2e test-frontend lint format type-check check run pre-commit-install dev backend frontend-install frontend-dev build-frontend analyze-history self-improve
 
 # Centralized frontend directory variable to avoid repeating literal path strings.
 # Update here if the frontend root moves.
@@ -25,7 +25,6 @@ help:
 	@echo "  make test-config       Run configuration validation"
 	@echo "  make test-e2e          Run end-to-end frontend tests (requires dev running)"
 	@echo "  make test-frontend     Run frontend unit tests"
-	@echo "  make test-automation   Run automated test suite with quality monitoring"
 	@echo ""
 	@echo "Code Quality:"
 	@echo "  make lint              Run Ruff linter"
@@ -36,15 +35,8 @@ help:
 	@echo "Tools:"
 	@echo "  make pre-commit-install  Install pre-commit hooks"
 	@echo "  make clean             Remove cache and build artifacts"
-	@echo "  make demo-hitl         Run the HITL walkthrough example"
-	@echo "  make validate-agents   Validate src/agentic_fleet/AGENTS.md invariants"
-	@echo ""
-	@echo "Load Testing:"
-	@echo "  make load-test-setup  Setup load testing environment"
-	@echo "  make load-test-smoke  Run smoke test (quick validation)"
-	@echo "  make load-test-load   Run normal load test"
-	@echo "  make load-test-stress Run stress test"
-	@echo "  make load-test-dashboard Start performance dashboard"
+	@echo "  make analyze-history   Analyze workflow execution history"
+	@echo "  make self-improve      Run self-improvement analysis on execution history"
 	@echo ""
 
 # Setup commands
@@ -122,10 +114,6 @@ test-frontend:
 	@echo "Running frontend unit tests..."
 	cd $(FRONTEND_DIR) && npm test
 
-test-automation:
-	@echo "Running automated test suite with quality monitoring..."
-	uv run python tests/test_automation.py
-
 # Code quality
 lint:
 	uv run ruff check .
@@ -145,14 +133,19 @@ check: lint type-check
 qa: lint format type-check test test-frontend
 	@echo "✓ QA complete: All checks passed!"
 
-# Validate docs/AGENTS.md invariants
-validate-agents:
-	uv run python tools/scripts/validate_agents_docs.py --format text
-
 # Pre-commit
 pre-commit-install:
 	uv run pre-commit install
 	@echo "✓ Pre-commit hooks installed"
+
+# Analysis tools
+analyze-history:
+	@echo "Analyzing workflow execution history..."
+	uv run python -m agentic_fleet.scripts.analyze_history
+
+self-improve:
+	@echo "Running self-improvement analysis..."
+	uv run python -m agentic_fleet.scripts.self_improve
 
 # Cleanup
 clean:
@@ -161,27 +154,3 @@ clean:
 	find . -type d -name ".pytest_cache" -exec rm -rf {} + 2>/dev/null || true
 	find . -type d -name ".ruff_cache" -exec rm -rf {} + 2>/dev/null || true
 	@echo "✓ Cleaned cache directories"
-
-# Load Testing
-load-test-setup:
-	@echo "🚀 Setting up load testing environment..."
-	cd tests/load_testing && ./setup.sh
-
-load-test-smoke:
-	@echo "🔍 Running smoke test..."
-	@echo "Note: Make sure the backend is running with 'make backend'"
-	cd tests/load_testing && python3 run_load_tests.py --scenario smoke_test --health-check
-
-load-test-load:
-	@echo "⚡ Running load test..."
-	@echo "Note: Make sure the backend is running with 'make backend'"
-	cd tests/load_testing && python3 run_load_tests.py --scenario normal_load --health-check
-
-load-test-stress:
-	@echo "💪 Running stress test..."
-	@echo "Note: Make sure the backend is running with 'make backend'"
-	cd tests/load_testing && python3 run_load_tests.py --scenario stress_test --health-check
-
-load-test-dashboard:
-	@echo "📊 Starting performance dashboard..."
-	cd tests/load_testing && python3 dashboard.py

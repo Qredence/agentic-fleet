@@ -5,44 +5,56 @@ Consolidated public API and implementation.
 
 from __future__ import annotations
 
+from collections.abc import AsyncIterator
 from datetime import datetime
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, cast
 from uuid import uuid4
 
-from agent_framework import (
+from agent_framework._types import ChatMessage, Role
+from agent_framework._workflows import (
     AgentRunUpdateEvent,
-    ChatMessage,
     ExecutorCompletedEvent,
     MagenticAgentMessageEvent,
     RequestInfoEvent,
-    Role,
     WorkflowOutputEvent,
     WorkflowRunState,
     WorkflowStartedEvent,
     WorkflowStatusEvent,
 )
 
-if TYPE_CHECKING:
-    from agent_framework import Workflow
-
 from ..utils.history_manager import HistoryManager
 from ..utils.logger import setup_logger
 from ..utils.models import ExecutionMode, RoutingDecision, ensure_routing_decision
-from ..utils.task_utils import is_simple_task
 from ..utils.telemetry import optional_span
 from ..utils.tool_registry import ToolRegistry
-from .builder import build_fleet_workflow
+from .builder import WorkflowMode, build_fleet_workflow
 from .config import WorkflowConfig
 from .context import SupervisorContext
 from .handoff import HandoffManager
+from .helpers import is_simple_task
 from .initialization import initialize_workflow_context
 from .messages import FinalResultMessage, TaskMessage
 from .models import QualityReport
 
+if TYPE_CHECKING:
+    from agent_framework._agents import ChatAgent
+    from agent_framework._workflows import Workflow
+
+    from ..dspy_modules.reasoner import DSPyReasoner
+
+# Type alias for workflow events that can be yielded by run_stream
+WorkflowEvent = (
+    WorkflowStartedEvent
+    | WorkflowStatusEvent
+    | WorkflowOutputEvent
+    | MagenticAgentMessageEvent
+    | ExecutorCompletedEvent
+)
+
 logger = setup_logger(__name__)
 
 
-def _materialize_workflow(builder: Any) -> Any:
+def _materialize_workflow(builder: Workflow | Any) -> Workflow | Any:
     """Return a runnable workflow instance from a builder if needed."""
 
     build_fn = getattr(builder, "build", None)
@@ -58,9 +70,9 @@ class SupervisorWorkflow:
         self,
         context: SupervisorContext,
         workflow_runner: Workflow | None = None,
-        dspy_supervisor: Any | None = None,
+        dspy_supervisor: DSPyReasoner | None = None,
         *,
-        agents: dict[str, Any] | None = None,
+        agents: dict[str, ChatAgent] | None = None,
         history_manager: HistoryManager | None = None,
         tool_registry: ToolRegistry | None = None,
         handoff: HandoffManager | None = None,
@@ -91,6 +103,94 @@ class SupervisorWorkflow:
         self.execution_history: list[dict[str, Any]] = []
         self.current_execution: dict[str, Any] = {}
 
+    def _should_fast_path(self, task: str) -> bool:
+        """Determine if a task should use the fast-path execution.
+
+        Fast-path bypasses the full workflow for simple tasks that can be
+        answered directly by the DSPy reasoner without agent delegation.
+
+        Args:
+            task: The task string to evaluate
+
+        Returns:
+            True if fast-path should be used, False otherwise
+        """
+        if not self.dspy_reasoner:
+            return False
+
+        # Check auto-mode fast-path detection
+        if self.mode == "auto" and hasattr(self.dspy_reasoner, "select_workflow_mode"):
+            decision = self.dspy_reasoner.select_workflow_mode(task)
+            if decision.get("mode") == "fast_path":
+                return True
+
+        # Check simple task heuristic
+        return is_simple_task(task)
+
+    async def _handle_fast_path(
+        self,
+        task: str,
+        workflow_id: str,
+        start_time: datetime,
+        *,
+        mode_reasoning: str | None = None,
+    ) -> dict[str, Any]:
+        """Handle fast-path execution for simple tasks.
+
+        Args:
+            task: The task to execute
+            workflow_id: Unique identifier for this workflow run
+            start_time: When the workflow started
+            mode_reasoning: Optional reasoning from mode detection
+
+        Returns:
+            Standard workflow result dictionary
+        """
+        # Assertion for type checker - _should_fast_path ensures dspy_reasoner is not None
+        assert self.dspy_reasoner is not None
+
+        logger.info(f"Fast Path triggered for task: {task[:50]}...")
+        result_text = self.dspy_reasoner.generate_simple_response(task)
+
+        routing = RoutingDecision(
+            task=task,
+            assigned_to=("FastResponder",),
+            mode=ExecutionMode.DELEGATED,
+            subtasks=(task,),
+        )
+
+        metadata: dict[str, Any] = {"fast_path": True}
+        if mode_reasoning:
+            metadata["mode_reasoning"] = mode_reasoning
+
+        execution_record = {
+            "workflowId": workflow_id,
+            "task": task,
+            "start_time": start_time.isoformat(),
+            "end_time": datetime.now().isoformat(),
+            "result": result_text,
+            "routing": routing.to_dict(),
+            "quality": {"score": 10.0},
+            "metadata": metadata,
+        }
+
+        if self.history_manager:
+            try:
+                await self.history_manager.save_execution_async(execution_record)
+            except Exception:
+                logger.debug("Failed to persist fast-path execution history", exc_info=True)
+
+        return {
+            "result": result_text,
+            "routing": routing.to_dict(),
+            "quality": {"score": 10.0},
+            "judge_evaluations": [],
+            "execution_summary": {},
+            "phase_timings": {},
+            "phase_status": {},
+            "metadata": metadata,
+        }
+
     async def run(self, task: str) -> dict[str, Any]:
         """Execute the workflow for a single task."""
         with optional_span("SupervisorWorkflow.run", attributes={"task": task, "mode": self.mode}):
@@ -98,112 +198,39 @@ class SupervisorWorkflow:
             workflow_id = str(uuid4())
             current_mode = self.mode
 
+            # Unified fast-path check (consolidates auto-mode detection + simple task heuristic)
+            if self._should_fast_path(task):
+                mode_reasoning = None
+                if (
+                    self.mode == "auto"
+                    and self.dspy_reasoner
+                    and hasattr(self.dspy_reasoner, "select_workflow_mode")
+                ):
+                    decision = self.dspy_reasoner.select_workflow_mode(task)
+                    mode_reasoning = decision.get("reasoning")
+                return await self._handle_fast_path(
+                    task, workflow_id, start_time, mode_reasoning=mode_reasoning
+                )
+
+            # Dynamic mode switching for auto mode (non-fast-path cases)
             if (
                 self.mode == "auto"
                 and self.dspy_reasoner
                 and hasattr(self.dspy_reasoner, "select_workflow_mode")
             ):
-                logger.info(f"Auto-detecting workflow mode for task: {task[:50]}...")
                 decision = self.dspy_reasoner.select_workflow_mode(task)
-                detected_mode = decision.get("mode", "standard")
-
-                # Map 'fast_path' to internal handling
-                if detected_mode == "fast_path":
-                    logger.info(f"Fast Path triggered for task: {task[:50]}...")
-                    result_text = self.dspy_reasoner.generate_simple_response(task)
-                    execution_record = {
-                        "workflowId": workflow_id,
-                        "task": task,
-                        "start_time": start_time.isoformat(),
-                        "end_time": datetime.now().isoformat(),
-                        "result": result_text,
-                        "routing": RoutingDecision(
-                            task=task,
-                            assigned_to=("FastResponder",),
-                            mode=ExecutionMode.DELEGATED,
-                            subtasks=(task,),
-                        ).to_dict(),
-                        "quality": {"score": 10.0},
-                        "metadata": {
-                            "fast_path": True,
-                            "mode_reasoning": decision.get("reasoning"),
-                        },
-                    }
-                    if self.history_manager:
-                        try:
-                            await self.history_manager.save_execution_async(execution_record)
-                        except Exception:
-                            logger.debug(
-                                "Failed to persist fast-path execution history", exc_info=True
-                            )
-                    return {
-                        "result": result_text,
-                        "routing": RoutingDecision(
-                            task=task,
-                            assigned_to=("FastResponder",),
-                            mode=ExecutionMode.DELEGATED,
-                            subtasks=(task,),
-                        ).to_dict(),
-                        "quality": {"score": 10.0},
-                        "judge_evaluations": [],
-                        "execution_summary": {},
-                        "phase_timings": {},
-                        "phase_status": {},
-                        "metadata": {
-                            "fast_path": True,
-                            "mode_reasoning": decision.get("reasoning"),
-                        },
-                    }
-
-                # Dynamic mode switching
-                if detected_mode != "standard":
-                    logger.info(f"Switching workflow to mode: {detected_mode}")
+                detected_mode_str = decision.get("mode", "standard")
+                if detected_mode_str not in ("standard", "fast_path"):
+                    logger.info(f"Switching workflow to mode: {detected_mode_str}")
+                    # Cast to WorkflowMode - validated by the condition above
+                    detected_mode = cast(WorkflowMode, detected_mode_str)
                     workflow_builder = build_fleet_workflow(
                         self.dspy_reasoner,
                         self.context,
                         mode=detected_mode,
                     )
                     self.workflow = _materialize_workflow(workflow_builder)
-                    current_mode = detected_mode
-
-            if self.dspy_reasoner and is_simple_task(task):
-                logger.info(f"Fast Path triggered for task: {task[:50]}...")
-                result_text = self.dspy_reasoner.generate_simple_response(task)
-                execution_record = {
-                    "workflowId": workflow_id,
-                    "task": task,
-                    "start_time": start_time.isoformat(),
-                    "end_time": datetime.now().isoformat(),
-                    "result": result_text,
-                    "routing": RoutingDecision(
-                        task=task,
-                        assigned_to=("FastResponder",),
-                        mode=ExecutionMode.DELEGATED,
-                        subtasks=(task,),
-                    ).to_dict(),
-                    "quality": {"score": 10.0},
-                    "metadata": {"fast_path": True},
-                }
-                if self.history_manager:
-                    try:
-                        await self.history_manager.save_execution_async(execution_record)
-                    except Exception:
-                        logger.debug("Failed to persist fast-path execution history", exc_info=True)
-                return {
-                    "result": result_text,
-                    "routing": RoutingDecision(
-                        task=task,
-                        assigned_to=("FastResponder",),
-                        mode=ExecutionMode.DELEGATED,
-                        subtasks=(task,),
-                    ).to_dict(),
-                    "quality": {"score": 10.0},
-                    "judge_evaluations": [],
-                    "execution_summary": {},
-                    "phase_timings": {},
-                    "phase_status": {},
-                    "metadata": {"fast_path": True},
-                }
+                    current_mode = detected_mode_str
 
             if self.workflow is None:
                 raise RuntimeError("Workflow runner not initialized.")
@@ -291,8 +318,16 @@ class SupervisorWorkflow:
 
             return result_dict
 
-    async def run_stream(self, task: str):
-        """Execute the workflow for a single task, streaming events."""
+    async def run_stream(self, task: str) -> AsyncIterator[WorkflowEvent]:
+        """Execute the workflow for a single task, streaming events.
+
+        Args:
+            task: The task string to execute
+
+        Yields:
+            WorkflowEvent: Workflow events including status updates, agent messages,
+                and the final output event containing the result.
+        """
         with optional_span(
             "SupervisorWorkflow.run_stream", attributes={"task": task, "mode": self.mode}
         ):
@@ -300,11 +335,11 @@ class SupervisorWorkflow:
             workflow_id = str(uuid4())
             current_mode = self.mode
 
-            # TODO  refactor properly to optimize fast-path and mode detection
-            is_simple = is_simple_task(task)
-            logger.info(f"is_simple_task('{task[:50]}...'): {is_simple}")
+            # Unified fast-path check for streaming
+            if self._should_fast_path(task):
+                # Assertion for type checker - _should_fast_path ensures dspy_reasoner is not None
+                assert self.dspy_reasoner is not None
 
-            if self.dspy_reasoner and is_simple:
                 logger.info(f"Fast Path triggered for task: {task[:50]}...")
                 yield WorkflowStartedEvent(data=None)
                 yield WorkflowStatusEvent(state=WorkflowRunState.IN_PROGRESS, data=None)

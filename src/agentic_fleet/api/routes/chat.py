@@ -3,7 +3,12 @@
 import json
 from collections.abc import AsyncGenerator
 
-from agent_framework import MagenticAgentMessageEvent, WorkflowOutputEvent, WorkflowStatusEvent
+from agent_framework._workflows import (
+    ExecutorCompletedEvent,
+    MagenticAgentMessageEvent,
+    WorkflowOutputEvent,
+    WorkflowStatusEvent,
+)
 from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import StreamingResponse
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -20,6 +25,13 @@ from agentic_fleet.api.schemas.chat import (
 )
 from agentic_fleet.api.services import conversation_service
 from agentic_fleet.utils.config_loader import load_config
+from agentic_fleet.workflows.messages import (
+    AnalysisMessage,
+    ExecutionMessage,
+    ProgressMessage,
+    QualityMessage,
+    RoutingMessage,
+)
 from agentic_fleet.workflows.supervisor import create_supervisor_workflow
 
 router = APIRouter()
@@ -129,7 +141,11 @@ async def stream_chat_generator(
     """Stream chat response from SupervisorWorkflow."""
 
     # Initialize workflow
-    # TODO: Pass conversation history if supported by SupervisorWorkflow in the future
+    # NOTE: Conversation history integration planned for future release.
+    # Currently, each workflow run is stateless. To support multi-turn conversations:
+    # 1. Load history via PersistenceManager.get_conversation_history(conversation_id)
+    # 2. Pass history to create_supervisor_workflow() or include in context
+    # 3. Update SupervisorContext to maintain message history across runs
     workflow = await create_supervisor_workflow()
 
     # 1. Send orchestrator thought (start)
@@ -149,7 +165,7 @@ async def stream_chat_generator(
                 if event.agent_id not in INCLUDED_AGENT_IDS:
                     continue
 
-                content = event.message.text
+                content = event.message.text if event.message else None
                 if content:
                     full_response += content
                     delta_msg = {
@@ -167,6 +183,70 @@ async def stream_chat_generator(
                     "kind": "status",
                 }
                 yield f"data: {json.dumps(status_msg)}\n\n"
+
+            elif isinstance(event, ExecutorCompletedEvent):
+                output = getattr(event, "output", None)
+                thought_data = None
+
+                if isinstance(output, AnalysisMessage):
+                    thought_data = {
+                        "title": "Analysis",
+                        "description": f"Complexity: {output.analysis.complexity}, Steps: {output.analysis.steps}",
+                        "status": "success",
+                        "items": [
+                            {"type": "text", "text": f"Complexity: {output.analysis.complexity}"},
+                            {
+                                "type": "text",
+                                "text": f"Capabilities: {', '.join(output.analysis.capabilities)}",
+                            },
+                            {"type": "text", "text": f"Steps: {output.analysis.steps}"},
+                        ],
+                    }
+                elif isinstance(output, RoutingMessage):
+                    thought_data = {
+                        "title": "Routing",
+                        "description": f"Mode: {output.routing.decision.mode.value}, Agents: {len(output.routing.decision.assigned_to)}",
+                        "status": "success",
+                        "items": [
+                            {"type": "text", "text": f"Mode: {output.routing.decision.mode.value}"},
+                            {
+                                "type": "text",
+                                "text": f"Assigned: {', '.join(output.routing.decision.assigned_to)}",
+                            },
+                        ],
+                    }
+                elif isinstance(output, ExecutionMessage):
+                    thought_data = {
+                        "title": "Execution",
+                        "description": "Task execution completed",
+                        "status": output.outcome.status,
+                        "items": [
+                            {"type": "text", "text": f"Status: {output.outcome.status}"},
+                        ],
+                    }
+                elif isinstance(output, ProgressMessage):
+                    thought_data = {
+                        "title": "Progress Evaluation",
+                        "description": f"Action: {output.progress.action}",
+                        "status": "success",
+                        "items": [
+                            {"type": "text", "text": f"Action: {output.progress.action}"},
+                            {"type": "text", "text": f"Feedback: {output.progress.feedback}"},
+                        ],
+                    }
+                elif isinstance(output, QualityMessage):
+                    thought_data = {
+                        "title": "Quality Assessment",
+                        "description": f"Score: {output.quality.score}",
+                        "status": "success",
+                        "items": [
+                            {"type": "text", "text": f"Score: {output.quality.score}"},
+                            {"type": "text", "text": f"Missing: {output.quality.missing}"},
+                        ],
+                    }
+
+                if thought_data:
+                    yield f"data: {json.dumps({'type': 'orchestrator.thought', 'thought': thought_data})}\n\n"
 
             elif isinstance(event, WorkflowOutputEvent):
                 # Final result
