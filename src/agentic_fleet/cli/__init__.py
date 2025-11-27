@@ -15,7 +15,7 @@ from agentic_fleet.cli.runner import WorkflowRunner
 if TYPE_CHECKING:  # pragma: no cover - helps IDEs without eager import
     from agentic_fleet.cli.console import app as _app
 
-__all__ = ["WorkflowRunner", "app", "display_result", "show_help", "show_status"]
+__all__ = ["WorkflowRunner", "display_result", "show_help", "show_status"]
 
 
 def __getattr__(name: str):
