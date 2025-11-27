@@ -53,6 +53,8 @@ AgenticFleet combines **Microsoft's agent-framework** with **DSPy's prompt optim
                   ▼
 ┌─────────────────────────────────────────────────────────────┐
 │                     Response                                 │
+│  - WorkflowOutputEvent (list[ChatMessage])                  │
+│  - BridgeMiddleware (History Capture)                       │
 └─────────────────────────────────────────────────────────────┘
 ```
 

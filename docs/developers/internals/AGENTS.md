@@ -82,6 +82,15 @@ Updates to any roster require concurrent changes in `config/workflow_config.yaml
 
 Keep behaviour declarative—modify the YAML, prompt helpers, and doc updates together so the running roster, documentation, and evaluation suites stay in lock-step.
 
+## Group Chat & Discussion Mode
+
+The framework supports multi-turn, multi-agent discussions via `DSPyGroupChatManager`. This mode allows agents to collaborate dynamically rather than just executing a static plan.
+
+- **Discussion Mode**: Enabled via `execution_mode: discussion` in the workflow config or CLI.
+- **Dynamic Speaker Selection**: The `DSPyReasoner` selects the next speaker based on the conversation history and the current goal.
+- **Termination**: The discussion ends when the goal is met or a maximum number of turns is reached.
+- **Workflow as Agent**: Workflows can participate in group chats as if they were single agents using the `workflow.as_agent()` pattern.
+
 ## DSPy Reasoner & Workflow Pipeline
 
 1. **Task Intake & Analysis** – `workflows.executors.AnalysisExecutor` wraps `DSPyReasoner.analyze_task` and records cache hits in `SupervisorContext.analysis_cache`. It automatically falls back to heuristic analysis for `/fast` runs (`pipeline_profile="light"`) or when DSPy is unavailable.
