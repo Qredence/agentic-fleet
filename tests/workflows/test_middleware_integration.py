@@ -223,9 +223,9 @@ async def test_supervisor_middleware_chaining():
     supervisor._should_fast_path = MagicMock(return_value=False)
 
     await supervisor.run("Test task")
-    # Both should be called; check the order (on_start for all, then on_end for all)
-    assert call_log == ["MW1_start", "MW2_start", "MW1_end", "MW2_end"] or call_log == ["MW1_start", "MW2_start", "MW2_end", "MW1_end"]
-    # The order for on_end depends on implementation (forward or reverse)
+    # Both should be called; check the order of start calls and presence of end calls
+    assert call_log[:2] == ["MW1_start", "MW2_start"]
+    assert set(call_log[2:]) == {"MW1_end", "MW2_end"}
 
 
 @pytest.mark.asyncio

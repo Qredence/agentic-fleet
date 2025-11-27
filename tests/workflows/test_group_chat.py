@@ -119,7 +119,7 @@ async def test_group_chat_run_with_run_method(mock_agent_with_run, mock_reasoner
 
     # Verify run was called (not process)
     assert mock_agent_with_run.run.called
-    assert not hasattr(mock_agent_with_run, "process")
+    assert mock_agent_with_run.process is None
 
 
 @pytest.mark.asyncio
@@ -146,7 +146,7 @@ async def test_group_chat_run_with_process_method(mock_agent_with_process_only, 
 
     # Verify process was called (not run)
     assert mock_agent_with_process_only.process.called
-    assert not hasattr(mock_agent_with_process_only, "run")
+    assert mock_agent_with_process_only.run is None
 
 
 @pytest.mark.asyncio
@@ -170,9 +170,9 @@ async def test_group_chat_run_with_fallback(mock_agent_with_neither, mock_reason
     assert history[1].role == Role.ASSISTANT
     # Fallback response should still have the agent name
     assert history[1].additional_properties["name"] == "FallbackAgent"
-    # Verify fallback response text/content (example assumes generic fallback message)
-    assert history[1].text in ["No response available", "No valid agent response available.", "This agent cannot process requests."] or history[1].text.strip() != ""
+    # Verify fallback response text/content (should be non-empty)
+    assert history[1].text.strip() != ""
 
-    # Verify neither run nor process exist
-    assert not hasattr(mock_agent_with_neither, "run")
-    assert not hasattr(mock_agent_with_neither, "process")
+    # Verify neither run nor process are callable (set to None)
+    assert mock_agent_with_neither.run is None
+    assert mock_agent_with_neither.process is None
