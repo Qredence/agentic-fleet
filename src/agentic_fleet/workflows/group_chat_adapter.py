@@ -87,9 +87,13 @@ class DSPyGroupChatManager:
                     # Extract the last message from the response
                     if response_obj.messages:
                         response = response_obj.messages[-1]
-                        # Ensure name is set
+                        # Ensure name is set by creating a new ChatMessage to avoid mutating frozen objects
                         if "name" not in response.additional_properties:
-                            response.additional_properties["name"] = next_speaker_name
+                            response = ChatMessage(
+                                role=response.role,
+                                text=response.text,
+                                additional_properties={**response.additional_properties, "name": next_speaker_name},
+                            )
                     else:
                         response = ChatMessage(
                             role=Role.ASSISTANT,
