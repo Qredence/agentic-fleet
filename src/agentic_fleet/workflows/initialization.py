@@ -298,29 +298,12 @@ async def initialize_workflow_context(
 
     # Optionally compile DSPy supervisor
     if compile_dspy and config.compile_dspy:
-        # DISABLED for v0.6.5: Runtime compilation is blocked to ensure stability.
+        # Runtime compilation is disabled (Offline Layer architecture).
         # Use `agentic-fleet optimize` for offline compilation.
         logger.info("Runtime DSPy compilation is disabled (Offline Layer architecture).")
         logger.info("Using loaded artifact or zero-shot prompts.")
         compilation_state.compilation_status = "skipped"
         context.compilation_status = "skipped"
-
-        # logger.info("Setting up DSPy compilation (lazy/background mode)...")
-        # # Start background compilation task (non-blocking)
-        # compilation_task = asyncio.create_task(
-        #     compile_supervisor_async(
-        #         supervisor=dspy_supervisor,
-        #         config=config,
-        #         agents=agents,
-        #         progress_callback=None,  # Can be set via context later
-        #         state=compilation_state,
-        #     )
-        # )
-        # compilation_state.compilation_task = compilation_task
-        # context.compilation_task = compilation_task
-        # context.compilation_status = "compiling"
-
-        # logger.info("DSPy compilation started in background (workflow can start immediately)")
     else:
         logger.info("Skipping DSPy compilation (using base prompts)")
         compilation_state.compilation_status = "skipped"

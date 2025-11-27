@@ -183,7 +183,7 @@ async def run_execution_phase_streaming(
             if isinstance(event, (MagenticAgentMessageEvent, WorkflowOutputEvent)):
                 yield event
 
-    elif routing.mode is ExecutionMode.DISCUSSION or routing.mode == "discussion":
+    elif routing.mode is ExecutionMode.DISCUSSION:
         async for event in execute_discussion_streaming(
             agents_map,
             assigned_agents,
