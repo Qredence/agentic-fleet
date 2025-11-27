@@ -1,5 +1,53 @@
 # Changelog
 
+## v0.6.5 (2025-11-27) – DSPy Dynamic Prompt & GEPA Enhancement
+
+### Highlights
+
+- **Offline Layer Architecture** – Enforced strict separation between offline DSPy compilation and runtime execution. Runtime compilation is now explicitly disabled in `initialization.py`, ensuring zero-latency overhead for optimized prompts.
+- **Dynamic Agent Prompts** – Introduced `PlannerInstructionSignature` and updated `AgentFactory` to support dynamic, optimizer-tunable agent instructions, replacing static prompt templates for the Planner agent.
+- **Enhanced GEPA Optimizer** – Upgraded `GEPAConfig` with latency-aware metrics (`gepa_latency_weight`) and assertion-aware feedback (`gepa_feedback_weight`) to optimize for both quality and speed.
+- **Systematic Assertions** – Integrated `dspy.Assert` and `dspy.Suggest` into routing logic (`reasoner.py`, `signatures.py`) to enforce critical constraints (e.g., valid agent count) and provide soft guidance (e.g., tool availability).
+- **Bridge Middleware** – Implemented `BridgeMiddleware` to capture runtime execution history and convert it into DSPy training examples, closing the data feedback loop.
+- **Agent Framework Alignment** – Updated `WorkflowOutputEvent` to return `list[ChatMessage]` instead of a dictionary, aligning with the latest `agent-framework` SDK breaking changes.
+- **RAG Integration** – Added `AzureAISearchContextProvider` implementation for retrieval-augmented generation within agent workflows.
+
+### Changes
+
+- **`src/agentic_fleet/workflows/initialization.py`**:
+  - Explicitly disabled runtime compilation (`compile_dspy=False`) to enforce the Offline Layer pattern.
+
+- **`src/agentic_fleet/dspy_modules/agent_signatures.py`**:
+  - Added `PlannerInstructionSignature` for dynamic instruction generation.
+
+- **`src/agentic_fleet/agents/coordinator.py`**:
+  - Updated `AgentFactory` to use `PlannerInstructionSignature` when available, enabling dynamic prompts.
+
+- **`src/agentic_fleet/dspy_modules/reasoner.py`**:
+  - Integrated `dspy.Assert` and `dspy.Suggest` into `_robust_route` for validation.
+
+- **`src/agentic_fleet/dspy_modules/signatures.py`**:
+  - Added assertion logic to `EnhancedTaskRouting` signature.
+
+- **`src/agentic_fleet/api/middlewares.py`**:
+  - Added `BridgeMiddleware` for history capture and conversion.
+
+- **`src/agentic_fleet/workflows/supervisor.py`**:
+  - Updated `WorkflowOutputEvent` to return `list[ChatMessage]`.
+
+- **`src/agentic_fleet/tools/azure_search_provider.py`**:
+  - Added `AzureAISearchContextProvider` implementation.
+
+- **`src/agentic_fleet/config/workflow_config.yaml`** (schema):
+  - Added `gepa_latency_weight` and `gepa_feedback_weight` to `GEPAConfig`.
+
+### Migration Notes
+
+- **Workflow Output Format**: If you consume `WorkflowOutputEvent.data`, update your code to handle `list[ChatMessage]` instead of a dictionary.
+- **Offline Compilation**: Ensure you run `scripts/optimize.py` (or `make optimize`) to generate cached modules before deploying to production, as runtime compilation is now disabled.
+
+---
+
 ## v0.6.4 (2025-11-25) – Code Quality & Type Safety Improvements
 
 ### Highlights
