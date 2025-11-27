@@ -82,18 +82,39 @@ class DSPyGroupChatManager:
                     # Pass the full history to the agent
                     # Note: We pass the history as messages.
                     # The agent's run method should handle list[ChatMessage].
-                    response_obj = await agent.run(messages=self.history)
+                    try:
+                        response_obj = await agent.run(messages=self.history)
+                    except TypeError as e:
+                        logger.warning(
+                            f"Agent {next_speaker_name}.run() does not accept 'messages' parameter: {e}. "
+                            "Falling back to process method or mock response."
+                        )
+                        # Try fallback to process method
+                        if hasattr(agent, "process") and self.history:
+                            last_msg = self.history[-1]
+                            response = await agent.process(last_msg)
+                        else:
+                            response = ChatMessage(
+                                role=Role.ASSISTANT,
+                                text=f"Mock response from {next_speaker_name} (method signature mismatch)",
+                                additional_properties={"name": next_speaker_name},
+                            )
+                        self.history.append(response)
+                        current_speaker = next_speaker_name
+                        rounds += 1
+                        continue
 
                     # Extract the last message from the response
                     if response_obj.messages:
                         response = response_obj.messages[-1]
                         # Ensure name is set by creating a new ChatMessage to avoid mutating frozen objects
-                        if "name" not in response.additional_properties:
+                        additional_props = response.additional_properties or {}
+                        if "name" not in additional_props:
                             response = ChatMessage(
                                 role=response.role,
                                 text=response.text,
                                 additional_properties={
-                                    **response.additional_properties,
+                                    **additional_props,
                                     "name": next_speaker_name,
                                 },
                             )

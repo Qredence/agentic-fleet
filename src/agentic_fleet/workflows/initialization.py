@@ -197,7 +197,10 @@ async def initialize_workflow_context(
             logger.info(f"Loaded compiled DSPy supervisor from {compiled_path}")
             dspy_supervisor = loaded_supervisor
         else:
-            logger.info("No compiled supervisor found, using zero-shot reasoner")
+            logger.warning(
+                "No compiled supervisor found, using zero-shot reasoner. "
+                "Performance may be degraded. Run 'agentic-fleet optimize' for offline compilation."
+            )
             dspy_supervisor = DSPyReasoner(use_enhanced_signatures=True)
     elif not getattr(dspy_supervisor, "use_enhanced_signatures", False):
         logger.warning(

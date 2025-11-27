@@ -244,10 +244,10 @@ class AgentFactory:
             module = importlib.import_module(module_name)
             workflow_cls = getattr(module, class_name)
 
-            # Instantiate workflow
-            # We assume the workflow class takes some config or no args
-            # This is a simplification; real implementation might need more complex init
-            workflow = workflow_cls()
+            # Instantiate workflow with configuration if available
+            # Pass configuration if available; fallback to no-arg constructor for legacy support.
+            init_kwargs = agent_config.get("init_kwargs") or agent_config.get("config") or {}
+            workflow = workflow_cls(**init_kwargs) if init_kwargs else workflow_cls()
 
             # Wrap as agent
             if hasattr(workflow, "as_agent"):
