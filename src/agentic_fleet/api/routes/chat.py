@@ -251,8 +251,15 @@ async def stream_chat_generator(
             elif isinstance(event, WorkflowOutputEvent):
                 # Final result
                 # If we haven't streamed any content yet (e.g. Fast Path), send the result now
-                if not full_response and event.data and isinstance(event.data, dict):
-                    result = event.data.get("result")
+                if not full_response and event.data:
+                    result = None
+                    if isinstance(event.data, dict):
+                        result = event.data.get("result")
+                    elif isinstance(event.data, list) and len(event.data) > 0:
+                        # New format: list[ChatMessage]
+                        last_msg = event.data[-1]
+                        additional_props = getattr(last_msg, "additional_properties", {}) or {}
+                        result = getattr(last_msg, "text", None) or additional_props.get("result")
                     if result:
                         full_response = result
                         delta_msg = {
