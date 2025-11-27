@@ -61,6 +61,15 @@ class WorkflowConfig:
     judge_reasoning_effort: str = "low"
 
     # ------------------------------------------------------------------
+    # DSPy Compilation Settings
+    # ------------------------------------------------------------------
+    # When True, raise an error if no compiled DSPy artifact is found.
+    # This is recommended for production environments to avoid degraded
+    # performance from zero-shot fallback. Run 'agentic-fleet optimize'
+    # to generate compiled artifacts before enabling this flag.
+    require_compiled_dspy: bool = False
+
+    # ------------------------------------------------------------------
     # Backward-compatibility: some tests expect a ``config`` attribute
     # exposing dict-like access to underlying settings.
     # ------------------------------------------------------------------

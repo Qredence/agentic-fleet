@@ -3,6 +3,10 @@ dspy:
   model: gpt-4o
   temperature: 1.0
   max_tokens: 16000
+  # When true, raise an error if no compiled DSPy artifact is found.
+  # Recommended for production environments to prevent degraded performance
+  # from zero-shot fallback. Run 'agentic-fleet optimize' before enabling.
+  require_compiled: false
   optimization:
     enabled: true
     examples_path: data/supervisor_examples.json
