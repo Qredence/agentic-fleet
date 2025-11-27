@@ -5,6 +5,7 @@ from __future__ import annotations
 import time
 import uuid
 from collections.abc import Callable
+from typing import Any
 
 from fastapi import Request, Response
 from starlette.middleware.base import BaseHTTPMiddleware
@@ -82,3 +83,26 @@ class LoggingMiddleware(BaseHTTPMiddleware):
         )
 
         return response
+
+
+class ChatMiddleware:
+    """Base class for chat middlewares.
+
+    Allows interception of chat workflow lifecycle events.
+    """
+
+    async def on_start(self, task: str, context: dict[str, Any]) -> None:
+        """Called when a chat workflow starts."""
+        pass
+
+    async def on_event(self, event: Any) -> None:
+        """Called when a workflow event occurs."""
+        pass
+
+    async def on_end(self, result: Any) -> None:
+        """Called when a chat workflow completes successfully."""
+        pass
+
+    async def on_error(self, error: Exception) -> None:
+        """Called when a chat workflow fails."""
+        pass

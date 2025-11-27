@@ -130,8 +130,6 @@ class SupervisorWorkflow:
     async def _handle_fast_path(
         self,
         task: str,
-        workflow_id: str,
-        start_time: datetime,
         *,
         mode_reasoning: str | None = None,
     ) -> dict[str, Any]:
@@ -139,8 +137,6 @@ class SupervisorWorkflow:
 
         Args:
             task: The task to execute
-            workflow_id: Unique identifier for this workflow run
-            start_time: When the workflow started
             mode_reasoning: Optional reasoning from mode detection
 
         Returns:
@@ -163,22 +159,9 @@ class SupervisorWorkflow:
         if mode_reasoning:
             metadata["mode_reasoning"] = mode_reasoning
 
-        execution_record = {
-            "workflowId": workflow_id,
-            "task": task,
-            "start_time": start_time.isoformat(),
-            "end_time": datetime.now().isoformat(),
-            "result": result_text,
-            "routing": routing.to_dict(),
-            "quality": {"score": 10.0},
-            "metadata": metadata,
-        }
-
         if self.history_manager:
-            try:
-                await self.history_manager.save_execution_async(execution_record)
-            except Exception:
-                logger.debug("Failed to persist fast-path execution history", exc_info=True)
+            # History persistence is now handled by BridgeMiddleware
+            pass
 
         return {
             "result": result_text,
@@ -198,6 +181,18 @@ class SupervisorWorkflow:
             workflow_id = str(uuid4())
             current_mode = self.mode
 
+            # Notify middlewares
+            if hasattr(self.context, "middlewares"):
+                for mw in self.context.middlewares:
+                    await mw.on_start(
+                        task,
+                        {
+                            "workflowId": workflow_id,
+                            "mode": current_mode,
+                            "start_time": start_time.isoformat(),
+                        },
+                    )
+
             # Unified fast-path check (consolidates auto-mode detection + simple task heuristic)
             if self._should_fast_path(task):
                 mode_reasoning = None
@@ -208,9 +203,11 @@ class SupervisorWorkflow:
                 ):
                     decision = self.dspy_reasoner.select_workflow_mode(task)
                     mode_reasoning = decision.get("reasoning")
-                return await self._handle_fast_path(
-                    task, workflow_id, start_time, mode_reasoning=mode_reasoning
-                )
+                result = await self._handle_fast_path(task, mode_reasoning=mode_reasoning)
+                if hasattr(self.context, "middlewares"):
+                    for mw in self.context.middlewares:
+                        await mw.on_end(result)
+                return result
 
             # Dynamic mode switching for auto mode (non-fast-path cases)
             if (
@@ -269,19 +266,17 @@ class SupervisorWorkflow:
                         "end_time": datetime.now().isoformat(),
                     }
                 )
-                if self.history_manager:
-                    try:
-                        await self.history_manager.save_execution_async(self.current_execution)
-                    except Exception:
-                        logger.debug("Failed to persist execution history", exc_info=True)
-
-                return {
+                result_dict = {
                     "result": result_text,
                     "routing": {"mode": current_mode},
                     "quality": {"score": 0.0},
                     "judge_evaluations": [],
                     "metadata": {"mode": current_mode},
                 }
+                if hasattr(self.context, "middlewares"):
+                    for mw in self.context.middlewares:
+                        await mw.on_end(result_dict)
+                return result_dict
 
             task_msg = TaskMessage(task=task)
             result = await self.workflow.run(task_msg)
@@ -310,11 +305,9 @@ class SupervisorWorkflow:
                 }
             )
 
-            if self.history_manager:
-                try:
-                    await self.history_manager.save_execution_async(self.current_execution)
-                except Exception:
-                    logger.debug("Failed to persist execution history", exc_info=True)
+            if hasattr(self.context, "middlewares"):
+                for mw in self.context.middlewares:
+                    await mw.on_end(result_dict)
 
             return result_dict
 
@@ -334,6 +327,18 @@ class SupervisorWorkflow:
             logger.info(f"Running fleet workflow (streaming) for task: {task[:50]}...")
             workflow_id = str(uuid4())
             current_mode = self.mode
+
+            # Notify middlewares
+            if hasattr(self.context, "middlewares"):
+                for mw in self.context.middlewares:
+                    await mw.on_start(
+                        task,
+                        {
+                            "workflowId": workflow_id,
+                            "mode": current_mode,
+                            "start_time": datetime.now().isoformat(),
+                        },
+                    )
 
             # Unified fast-path check for streaming
             if self._should_fast_path(task):
@@ -361,7 +366,7 @@ class SupervisorWorkflow:
                     metadata={"fast_path": True},
                 )
                 yield WorkflowOutputEvent(
-                    data=self._final_message_to_dict(final_msg), source_executor_id="fastpath"
+                    data=self._create_output_event_data(final_msg), source_executor_id="fastpath"
                 )
                 yield WorkflowStatusEvent(state=WorkflowRunState.IDLE, data=None)
                 return
@@ -438,7 +443,7 @@ class SupervisorWorkflow:
                         )
                         # Yield the formatted output event
                         yield WorkflowOutputEvent(
-                            data=self._final_message_to_dict(final_msg),
+                            data=self._create_output_event_data(final_msg),
                             source_executor_id=current_mode,
                         )
             else:
@@ -451,10 +456,9 @@ class SupervisorWorkflow:
                             data = event.data
                             if isinstance(data, FinalResultMessage):
                                 final_msg = data
-                                # Convert to dict for consistency with run() and CLI expectations
-                                dict_data = self._final_message_to_dict(data)
+                                # Convert to list[ChatMessage] for consistency with new format
                                 yield WorkflowOutputEvent(
-                                    data=dict_data,
+                                    data=self._create_output_event_data(data),
                                     source_executor_id=getattr(
                                         event, "source_executor_id", "workflow"
                                     ),
@@ -467,7 +471,7 @@ class SupervisorWorkflow:
             if final_msg is None and current_mode not in ("group_chat", "handoff"):
                 final_msg = await self._create_fallback_result(task)
                 yield WorkflowOutputEvent(
-                    data=self._final_message_to_dict(final_msg), source_executor_id="fallback"
+                    data=self._create_output_event_data(final_msg), source_executor_id="fallback"
                 )
 
             if final_msg is not None:
@@ -485,8 +489,22 @@ class SupervisorWorkflow:
                 )
 
             self.current_execution["end_time"] = datetime.now().isoformat()
-            if self.history_manager:
-                await self.history_manager.save_execution_async(self.current_execution)
+            if hasattr(self.context, "middlewares"):
+                for mw in self.context.middlewares:
+                    await mw.on_end(self.current_execution)
+
+    def _create_output_event_data(self, final_msg: FinalResultMessage) -> list[ChatMessage]:
+        """Create output event data in list[ChatMessage] format."""
+        # Convert structured data to dict
+        data_dict = self._final_message_to_dict(final_msg)
+
+        # Create ChatMessage with result text and metadata
+        msg = ChatMessage(
+            role=Role.ASSISTANT,
+            text=final_msg.result,
+            additional_properties=data_dict,
+        )
+        return [msg]
 
     def _final_message_to_dict(self, final_msg: FinalResultMessage) -> dict[str, Any]:
         return {

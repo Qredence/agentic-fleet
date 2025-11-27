@@ -45,6 +45,7 @@ class SupervisorContext:
     progress_callback: ProgressCallback = field(default_factory=NullProgressCallback)
     current_execution: dict[str, Any] = field(default_factory=dict)
     execution_history: list[dict[str, Any]] = field(default_factory=list)
+    middlewares: list[Any] = field(default_factory=list)
 
     compilation_status: str = "pending"
     compilation_task: asyncio.Task[Any] | None = None

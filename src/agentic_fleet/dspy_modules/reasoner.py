@@ -21,6 +21,7 @@ from ..utils.telemetry import optional_span
 from ..workflows.exceptions import ToolError
 from ..workflows.helpers import is_simple_task, is_time_sensitive_task
 from .signatures import (
+    GroupChatSpeakerSelection,
     JudgeEvaluation,
     ProgressEvaluation,
     QualityAssessment,
@@ -65,6 +66,7 @@ class DSPyReasoner(dspy.Module):
         self.tool_planner = dspy.ChainOfThought(ToolPlan)
         self.judge = dspy.ChainOfThought(JudgeEvaluation)
         self.simple_responder = dspy.ChainOfThought(SimpleResponse)
+        self.group_chat_selector = dspy.ChainOfThought(GroupChatSpeakerSelection)
 
         self.tool_registry: Any | None = None
 
@@ -78,13 +80,30 @@ class DSPyReasoner(dspy.Module):
         if self.use_enhanced_signatures:
             import contextlib
 
+            from ..utils.models import ExecutionMode, RoutingDecision
+            from .assertions import validate_routing_decision
+
             with contextlib.suppress(Exception):
                 suggest_fn = getattr(dspy, "Suggest", None)
                 if callable(suggest_fn):
+                    # Basic check
                     suggest_fn(
                         len(getattr(prediction, "assigned_to", [])) > 0,
                         "At least one agent must be assigned to the task.",
                     )
+
+                    # Advanced validation
+                    task = kwargs.get("task", "")
+                    decision = RoutingDecision(
+                        task=task,
+                        assigned_to=tuple(getattr(prediction, "assigned_to", [])),
+                        mode=ExecutionMode.from_raw(
+                            getattr(prediction, "execution_mode", "delegated")
+                        ),
+                        subtasks=tuple(getattr(prediction, "subtasks", [])),
+                        tool_requirements=tuple(getattr(prediction, "tool_requirements", [])),
+                    )
+                    validate_routing_decision(decision, task)
 
         return prediction
 
@@ -146,6 +165,7 @@ class DSPyReasoner(dspy.Module):
             self._get_predictor(self.tool_planner),
             self._get_predictor(self.judge),
             self._get_predictor(self.simple_responder),
+            self._get_predictor(self.group_chat_selector),
         ]
         if self.strategy_selector:
             preds.append(self._get_predictor(self.strategy_selector))
@@ -162,6 +182,7 @@ class DSPyReasoner(dspy.Module):
             ("tool_planner", self._get_predictor(self.tool_planner)),
             ("judge", self._get_predictor(self.judge)),
             ("simple_responder", self._get_predictor(self.simple_responder)),
+            ("group_chat_selector", self._get_predictor(self.group_chat_selector)),
         ]
         if self.strategy_selector:
             preds.append(("strategy_selector", self._get_predictor(self.strategy_selector)))
@@ -429,6 +450,29 @@ class DSPyReasoner(dspy.Module):
                     "tool_requirements": tool_requirements,
                     "reasoning": reasoning_text,
                 }
+
+    def select_next_speaker(
+        self, history: str, participants: str, last_speaker: str
+    ) -> dict[str, str]:
+        """Select the next speaker in a group chat.
+
+        Args:
+            history: The conversation history
+            participants: List of participants and their roles
+            last_speaker: The name of the last speaker
+
+        Returns:
+            Dictionary containing next_speaker and reasoning
+        """
+        with optional_span("DSPyReasoner.select_next_speaker"):
+            logger.info("Selecting next speaker...")
+            prediction = self.group_chat_selector(
+                history=history, participants=participants, last_speaker=last_speaker
+            )
+            return {
+                "next_speaker": getattr(prediction, "next_speaker", "TERMINATE"),
+                "reasoning": getattr(prediction, "reasoning", ""),
+            }
 
     def generate_simple_response(self, task: str) -> str:
         """Generate a direct response for a simple task.

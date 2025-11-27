@@ -155,14 +155,14 @@ def optional_span(
         from opentelemetry import trace
 
         tracer = trace.get_tracer(tracer_name or __name__)
-        with tracer.start_as_current_span(name, attributes=attributes) as span:
-            yield span
-    except ImportError:
-        # OpenTelemetry not installed
+        cm = tracer.start_as_current_span(name, attributes=attributes)
+    except (ImportError, Exception):
+        # OpenTelemetry not installed or tracing failed to init
         yield None
-    except Exception:
-        # Tracing failed (e.g. not configured), fail open
-        yield None
+        return
+
+    with cm as span:
+        yield span
 
 
 __all__ = ["ExecutionMetrics", "PerformanceTracker", "optional_span"]

@@ -8,10 +8,12 @@ from __future__ import annotations
 import asyncio
 import contextlib
 import re
+from collections.abc import Callable
 from dataclasses import replace
 from time import perf_counter
 from typing import Any
 
+from agent_framework._types import ChatMessage
 from agent_framework._workflows import (
     Executor,
     MagenticAgentMessageEvent,
@@ -514,12 +516,25 @@ class ExecutionExecutor(Executor):
                         # Emit intermediate event
                         if hasattr(ctx, "add_event"):
                             ctx.add_event(event)
-                    elif isinstance(event, WorkflowOutputEvent) and isinstance(event.data, dict):
-                        # Capture final result
-                        final_result = event.data.get("result")
-                        # Try to extract tool usage if available, or ignore for now
-                        if "tool_usage" in event.data:
-                            tool_usage = event.data["tool_usage"]
+                    elif isinstance(event, WorkflowOutputEvent):
+                        # Handle list[ChatMessage] format (standard)
+                        if (
+                            isinstance(event.data, list)
+                            and event.data
+                            and isinstance(event.data[0], ChatMessage)
+                        ):
+                            msg = event.data[0]
+                            final_result = msg.text
+                            if (
+                                msg.additional_properties
+                                and "tool_usage" in msg.additional_properties
+                            ):
+                                tool_usage = msg.additional_properties["tool_usage"]
+                        # Handle dict format (legacy/fallback)
+                        elif isinstance(event.data, dict):
+                            final_result = event.data.get("result")
+                            if "tool_usage" in event.data:
+                                tool_usage = event.data["tool_usage"]
 
                 if final_result is None:
                     # Fallback if no result event received (should not happen)
@@ -1096,3 +1111,80 @@ class JudgeRefineExecutor(Executor):
             Formatted refinement task prompt string.
         """
         return build_refinement_task(result, eval_data)
+
+
+class DSPyExecutor(Executor):
+    """Generic Executor that runs a DSPy module.
+
+    Allows placing any compiled DSPy module directly into the workflow graph.
+    """
+
+    def __init__(
+        self,
+        executor_id: str,
+        module: Any,  # dspy.Module
+        input_mapper: Callable[[Any], dict[str, Any]],
+        output_mapper: Callable[[Any, Any], Any],
+        context: SupervisorContext,
+    ) -> None:
+        """Initialize the DSPy executor.
+
+        Args:
+            executor_id: Unique ID for the executor.
+            module: The DSPy module to execute.
+            input_mapper: Function to map input message to module kwargs.
+            output_mapper: Function to map module prediction to output message.
+            context: Supervisor context.
+        """
+        super().__init__(id=executor_id)
+        self.module = module
+        self.input_mapper = input_mapper
+        self.output_mapper = output_mapper
+        self.context = context
+
+    @handler
+    async def handle_message(
+        self,
+        msg: Any,
+        ctx: WorkflowContext[Any],
+    ) -> None:
+        """Handle a generic message."""
+        with optional_span(
+            f"DSPyExecutor.{self.id}", attributes={"module": self.module.__class__.__name__}
+        ):
+            start_t = perf_counter()
+
+            try:
+                # Map input
+                kwargs = self.input_mapper(msg)
+
+                # Execute DSPy module
+                # We use async_call_with_retry for resilience
+                retry_attempts = max(1, int(self.context.config.dspy_retry_attempts))
+                retry_backoff = max(0.0, float(self.context.config.dspy_retry_backoff_seconds))
+
+                async def _run_module():
+                    # DSPy modules are callable
+                    return self.module(**kwargs)
+
+                prediction = await async_call_with_retry(
+                    _run_module,
+                    attempts=retry_attempts,
+                    backoff_seconds=retry_backoff,
+                )
+
+                # Map output
+                output_msg = self.output_mapper(msg, prediction)
+
+                # Record timing
+                duration = max(0.0, perf_counter() - start_t)
+                self.context.latest_phase_timings[self.id] = duration
+                self.context.latest_phase_status[self.id] = "success"
+
+                await ctx.send_message(output_msg)
+
+            except Exception as e:
+                logger.exception(f"DSPy execution failed in {self.id}: {e}")
+                self.context.latest_phase_status[self.id] = "failed"
+                # Propagate error to allow workflow error handling
+                raise e

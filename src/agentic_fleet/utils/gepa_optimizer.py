@@ -39,6 +39,7 @@ class RoutingDecision:
     agents: list[str]
     mode: str
     tools: list[str]
+    latency_budget: str = "medium"
 
 
 def load_example_dicts(examples_path: str) -> list[dict[str, Any]]:
@@ -384,7 +385,17 @@ def build_routing_feedback_metric(perfect_score: float = 1.0) -> GEPAFeedbackMet
             else 1.0
         )
 
-        weighted_score = (assignment_score * 0.6) + (mode_score * 0.3) + (tool_score * 0.1)
+        # Latency check
+        expected_latency = getattr(gold, "latency_budget", "medium")
+        predicted_latency = getattr(pred, "latency_budget", "medium")
+        latency_score = 1.0 if expected_latency == predicted_latency else 0.0
+
+        weighted_score = (
+            (assignment_score * 0.5)
+            + (mode_score * 0.3)
+            + (tool_score * 0.1)
+            + (latency_score * 0.1)
+        )
         final_score = max(0.0, min(perfect_score, weighted_score * perfect_score))
 
         # Build comprehensive feedback following DSPy tutorial patterns
@@ -400,10 +411,16 @@ def build_routing_feedback_metric(perfect_score: float = 1.0) -> GEPAFeedbackMet
 
         # Step 2: Edge-case detection
         expected_decision = RoutingDecision(
-            agents=expected_agents, mode=expected_mode, tools=expected_tools
+            agents=expected_agents,
+            mode=expected_mode,
+            tools=expected_tools,
+            latency_budget=expected_latency,
         )
         predicted_decision = RoutingDecision(
-            agents=predicted_agents, mode=predicted_mode, tools=predicted_tools
+            agents=predicted_agents,
+            mode=predicted_mode,
+            tools=predicted_tools,
+            latency_budget=predicted_latency,
         )
         edge_cases = _detect_edge_cases(task, expected_decision, predicted_decision)
         if edge_cases:
@@ -481,6 +498,14 @@ def build_routing_feedback_metric(perfect_score: float = 1.0) -> GEPAFeedbackMet
                 feedback_parts.append("  ⚠️ Tools assigned but none required for this task.")
             else:
                 feedback_parts.append("  ✅ No tools required (correct).")
+
+        # Latency feedback
+        if latency_score == 1.0:
+            feedback_parts.append(f"  ✅ Latency budget '{expected_latency}' is correct.")
+        else:
+            feedback_parts.append(
+                f"  ❌ Latency budget mismatch: Used '{predicted_latency}' but expected '{expected_latency}'."
+            )
 
         # Step 4: Clarifying examples for similar tasks
         if final_score < 0.9:
