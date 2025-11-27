@@ -104,7 +104,9 @@ async def test_group_chat_run_with_run_method(mock_agent_with_run, mock_reasoner
         {"next_speaker": "TERMINATE", "reasoning": "Done"},
     ]
 
-    manager = DSPyGroupChatManager(agents=[mock_agent_with_run], reasoner=mock_reasoner, max_rounds=5)
+    manager = DSPyGroupChatManager(
+        agents=[mock_agent_with_run], reasoner=mock_reasoner, max_rounds=5
+    )
 
     history = await manager.run_chat("Start chat")
 
@@ -129,7 +131,9 @@ async def test_group_chat_run_with_process_method(mock_agent_with_process_only, 
         {"next_speaker": "TERMINATE", "reasoning": "Done"},
     ]
 
-    manager = DSPyGroupChatManager(agents=[mock_agent_with_process_only], reasoner=mock_reasoner, max_rounds=5)
+    manager = DSPyGroupChatManager(
+        agents=[mock_agent_with_process_only], reasoner=mock_reasoner, max_rounds=5
+    )
 
     history = await manager.run_chat("Start chat")
 
@@ -154,7 +158,9 @@ async def test_group_chat_run_with_fallback(mock_agent_with_neither, mock_reason
         {"next_speaker": "TERMINATE", "reasoning": "Done"},
     ]
 
-    manager = DSPyGroupChatManager(agents=[mock_agent_with_neither], reasoner=mock_reasoner, max_rounds=5)
+    manager = DSPyGroupChatManager(
+        agents=[mock_agent_with_neither], reasoner=mock_reasoner, max_rounds=5
+    )
 
     history = await manager.run_chat("Start chat")
 

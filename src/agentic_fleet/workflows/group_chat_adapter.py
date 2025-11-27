@@ -92,7 +92,10 @@ class DSPyGroupChatManager:
                             response = ChatMessage(
                                 role=response.role,
                                 text=response.text,
-                                additional_properties={**response.additional_properties, "name": next_speaker_name},
+                                additional_properties={
+                                    **response.additional_properties,
+                                    "name": next_speaker_name,
+                                },
                             )
                     else:
                         response = ChatMessage(
