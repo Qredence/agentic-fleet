@@ -7,7 +7,7 @@ from __future__ import annotations
 
 from collections.abc import AsyncIterator
 from datetime import datetime
-from typing import TYPE_CHECKING, Any, cast
+from typing import TYPE_CHECKING, Any
 from uuid import uuid4
 
 from agent_framework._types import ChatMessage, Role
@@ -219,8 +219,8 @@ class SupervisorWorkflow:
                 detected_mode_str = decision.get("mode", "standard")
                 if detected_mode_str not in ("standard", "fast_path"):
                     logger.info(f"Switching workflow to mode: {detected_mode_str}")
-                    # Cast to WorkflowMode - validated by the condition above
-                    detected_mode = cast(WorkflowMode, detected_mode_str)
+                    # Validate and convert string to WorkflowMode enum member
+                    detected_mode = WorkflowMode(detected_mode_str)
                     workflow_builder = build_fleet_workflow(
                         self.dspy_reasoner,
                         self.context,
@@ -342,33 +342,8 @@ class SupervisorWorkflow:
 
             # Unified fast-path check for streaming
             if self._should_fast_path(task):
-                # Assertion for type checker - _should_fast_path ensures dspy_reasoner is not None
-                assert self.dspy_reasoner is not None
-
-                logger.info(f"Fast Path triggered for task: {task[:50]}...")
-                yield WorkflowStartedEvent(data=None)
-                yield WorkflowStatusEvent(state=WorkflowRunState.IN_PROGRESS, data=None)
-                result_text = self.dspy_reasoner.generate_simple_response(task)
-
-                final_msg = FinalResultMessage(
-                    result=result_text,
-                    routing=RoutingDecision(
-                        task=task,
-                        assigned_to=("FastResponder",),
-                        mode=ExecutionMode.DELEGATED,
-                        subtasks=(task,),
-                    ),
-                    quality=QualityReport(score=10.0),
-                    judge_evaluations=[],
-                    execution_summary={},
-                    phase_timings={},
-                    phase_status={},
-                    metadata={"fast_path": True},
-                )
-                yield WorkflowOutputEvent(
-                    data=self._create_output_event_data(final_msg), source_executor_id="fastpath"
-                )
-                yield WorkflowStatusEvent(state=WorkflowRunState.IDLE, data=None)
+                async for event in self._yield_fast_path_events(task):
+                    yield event
                 return
 
             if self.workflow is None:
@@ -492,6 +467,35 @@ class SupervisorWorkflow:
             if hasattr(self.context, "middlewares"):
                 for mw in self.context.middlewares:
                     await mw.on_end(self.current_execution)
+
+    async def _yield_fast_path_events(self, task: str) -> AsyncIterator[WorkflowEvent]:
+        # Assertion for type checker - _should_fast_path ensures dspy_reasoner is not None
+        assert self.dspy_reasoner is not None
+
+        logger.info(f"Fast Path triggered for task: {task[:50]}...")
+        yield WorkflowStartedEvent(data=None)
+        yield WorkflowStatusEvent(state=WorkflowRunState.IN_PROGRESS, data=None)
+        result_text = self.dspy_reasoner.generate_simple_response(task)
+
+        final_msg = FinalResultMessage(
+            result=result_text,
+            routing=RoutingDecision(
+                task=task,
+                assigned_to=("FastResponder",),
+                mode=ExecutionMode.DELEGATED,
+                subtasks=(task,),
+            ),
+            quality=QualityReport(score=10.0),
+            judge_evaluations=[],
+            execution_summary={},
+            phase_timings={},
+            phase_status={},
+            metadata={"fast_path": True},
+        )
+        yield WorkflowOutputEvent(
+            data=self._create_output_event_data(final_msg), source_executor_id="fastpath"
+        )
+        yield WorkflowStatusEvent(state=WorkflowRunState.IDLE, data=None)
 
     def _create_output_event_data(self, final_msg: FinalResultMessage) -> list[ChatMessage]:
         """Create output event data in list[ChatMessage] format."""

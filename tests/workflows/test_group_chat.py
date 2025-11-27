@@ -31,7 +31,7 @@ def mock_agent_with_run():
     agent.run = AsyncMock(return_value=run_response)
 
     # Remove process to ensure run path is tested
-    del agent.process
+    agent.process = None
 
     return agent
 
@@ -52,7 +52,7 @@ def mock_agent_with_process_only():
     agent.process = AsyncMock(return_value=response)
 
     # Remove run to ensure process path is tested
-    del agent.run
+    agent.run = None
 
     return agent
 
@@ -65,8 +65,8 @@ def mock_agent_with_neither():
     agent.description = "A mock agent with neither run nor process"
 
     # Remove both methods to test fallback
-    del agent.run
-    del agent.process
+    agent.run = None
+    agent.process = None
 
     return agent
 
@@ -170,6 +170,8 @@ async def test_group_chat_run_with_fallback(mock_agent_with_neither, mock_reason
     assert history[1].role == Role.ASSISTANT
     # Fallback response should still have the agent name
     assert history[1].additional_properties["name"] == "FallbackAgent"
+    # Verify fallback response text/content (example assumes generic fallback message)
+    assert history[1].text in ["No response available", "No valid agent response available.", "This agent cannot process requests."] or history[1].text.strip() != ""
 
     # Verify neither run nor process exist
     assert not hasattr(mock_agent_with_neither, "run")

@@ -189,11 +189,23 @@ class AnalysisExecutor(Executor):
                 )
                 await ctx.send_message(analysis_msg)
 
+            except (TimeoutError, ConnectionError) as e:
+                logger.warning(f"Analysis failed due to a network or timeout error ({type(e).__name__}): {e}", exc_info=True)
+                fallback_dict = self._fallback_analysis(task_msg.task)
+                analysis_result = self._to_analysis_result(fallback_dict)
+                analysis_msg = AnalysisMessage(
+                    task=task_msg.task,
+                    analysis=analysis_result,
+                    metadata={**task_msg.metadata, "used_fallback": True},
+                )
+                self.context.latest_phase_status["analysis"] = "fallback"
+                await ctx.send_message(analysis_msg)
+
             except Exception as e:
                 # Intentional broad exception handling: DSPy/LLM operations can fail for various
                 # transient reasons (rate limits, network issues, model errors). We gracefully
                 # degrade to heuristic-based analysis to maintain system availability.
-                logger.exception(f"Analysis failed: {e}")
+                logger.exception(f"Analysis failed with unexpected error ({type(e).__name__}): {e}")
                 fallback_dict = self._fallback_analysis(task_msg.task)
                 analysis_result = self._to_analysis_result(fallback_dict)
                 analysis_msg = AnalysisMessage(
@@ -1187,4 +1199,4 @@ class DSPyExecutor(Executor):
                 logger.exception(f"DSPy execution failed in {self.id}: {e}")
                 self.context.latest_phase_status[self.id] = "failed"
                 # Propagate error to allow workflow error handling
-                raise e
+                raise
