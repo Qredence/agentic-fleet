@@ -197,6 +197,13 @@ async def initialize_workflow_context(
             logger.info(f"Loaded compiled DSPy supervisor from {compiled_path}")
             dspy_supervisor = loaded_supervisor
         else:
+            if config.require_compiled_dspy:
+                raise RuntimeError(
+                    f"Compiled DSPy artifact not found at {compiled_path} and "
+                    "dspy.require_compiled is enabled. Run 'agentic-fleet optimize' "
+                    "to compile DSPy modules, or set dspy.require_compiled=false "
+                    "in workflow_config.yaml to allow zero-shot fallback."
+                )
             logger.warning(
                 "No compiled supervisor found, using zero-shot reasoner. "
                 "Performance may be degraded. Run 'agentic-fleet optimize' for offline compilation."

@@ -179,6 +179,7 @@ class WorkflowRunner:
             dspy_temperature=yaml_config.get("dspy", {}).get("temperature", 0.7),
             dspy_max_tokens=yaml_config.get("dspy", {}).get("max_tokens", 2000),
             compile_dspy=compile_dspy,
+            require_compiled_dspy=yaml_config.get("dspy", {}).get("require_compiled", False),
             refinement_threshold=quality_cfg.get("refinement_threshold", 8.0),
             enable_refinement=quality_cfg.get("enable_refinement", True),
             enable_progress_eval=quality_cfg.get("enable_progress_eval", True),
