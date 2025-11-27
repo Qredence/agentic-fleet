@@ -1,7 +1,7 @@
 from unittest.mock import patch
 
 import pytest
-from agent_framework import ChatMessage
+from agent_framework._types import ChatMessage
 
 from agentic_fleet.tools.azure_search_provider import AzureAISearchContextProvider
 
