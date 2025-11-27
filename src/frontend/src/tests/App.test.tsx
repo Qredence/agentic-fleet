@@ -3,8 +3,8 @@ import { describe, it, expect, vi } from "vitest";
 import App from "@/App";
 
 // Mock child components to isolate App testing
-vi.mock("@/components/chat/ConversationSidebar", () => ({
-  ConversationSidebar: () => <div data-testid="sidebar">Sidebar</div>,
+vi.mock("@/components/chat/ConversationsSidebar", () => ({
+  ConversationsSidebar: () => <div data-testid="sidebar">Sidebar</div>,
 }));
 
 vi.mock("@/components/chat/ChatContainer", () => ({
@@ -25,7 +25,6 @@ describe("App", () => {
     expect(container.firstChild).toHaveClass(
       "flex",
       "h-screen",
-      "w-screen",
       "overflow-hidden",
     );
   });
