@@ -38,6 +38,7 @@ class DSPyConfig(BaseModel):
     max_tokens: int = Field(default=2000, ge=1, le=32000)
     # When true, raise an error if no compiled DSPy artifact is found.
     # Recommended for production environments to prevent degraded performance.
+    # Run 'agentic-fleet optimize' to generate compiled artifacts before enabling.
     require_compiled: bool = False
     optimization: DSPyOptimizationConfig = DSPyOptimizationConfig()
 
