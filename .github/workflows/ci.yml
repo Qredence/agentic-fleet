@@ -35,6 +35,9 @@ jobs:
           enable-cache: true
           cache-dependency-glob: "uv.lock"
 
+      - name: Create uv virtual environment
+        run: uv venv
+
       - name: Install dependencies
         run: uv sync --frozen
 
@@ -55,6 +58,9 @@ jobs:
         with:
           enable-cache: true
           cache-dependency-glob: "uv.lock"
+
+      - name: Create uv virtual environment
+        run: uv venv
 
       - name: Install dependencies
         run: uv sync --frozen
@@ -88,6 +94,9 @@ jobs:
 
       - name: Set up Python ${{ matrix.python-version }}
         run: uv python install ${{ matrix.python-version }}
+
+      - name: Create uv virtual environment
+        run: uv venv
 
       - name: Install dependencies
         run: uv sync --frozen
@@ -154,6 +163,9 @@ jobs:
           enable-cache: true
           cache-dependency-glob: "uv.lock"
 
+      - name: Create uv virtual environment
+        run: uv venv
+
       - name: Build package
         run: uv build
 
@@ -183,6 +195,9 @@ jobs:
         with:
           enable-cache: true
           cache-dependency-glob: "uv.lock"
+
+      - name: Create uv virtual environment
+        run: uv venv
 
       - name: Run Bandit security linter
         run: |
