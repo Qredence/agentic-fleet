@@ -9,7 +9,7 @@ from agentic_fleet.utils.models import ExecutionMode, RoutingDecision
 if TYPE_CHECKING:
     # Mock for type checking if dspy stubs are missing Suggest
     def Suggest(condition: bool, message: str) -> None:  # noqa: N802, D103
-        ...
+        pass
 else:
     Suggest = getattr(dspy, "Suggest", None)
     if Suggest is None:
