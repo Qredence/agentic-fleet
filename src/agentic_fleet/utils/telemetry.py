@@ -151,14 +151,20 @@ def optional_span(
         tracer_name: Name of tracer (defaults to module name).
         attributes: Optional mapping of attributes.
     """
+    span_cm = None
     try:
         from opentelemetry import trace
 
         tracer = trace.get_tracer(tracer_name or __name__)
-        with tracer.start_as_current_span(name, attributes=attributes) as span:
-            yield span
+        span_cm = tracer.start_as_current_span(name, attributes=attributes)
     except (ImportError, Exception):
         # OpenTelemetry not installed or tracing failed to init
+        pass
+
+    if span_cm:
+        with span_cm as span:
+            yield span
+    else:
         yield None
 
 
