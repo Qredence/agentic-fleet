@@ -31,7 +31,11 @@
 ## Agents & Orchestration
 
 - Stack: DSPy + Microsoft `agent-framework` (magentic-fleet pattern). Agents live under `src/agentic_fleet/agents/`; orchestration in `src/agentic_fleet/workflows/`; DSPy reasoning in `src/agentic_fleet/dspy_modules/`.
+- **Offline Layer**: DSPy compilation is strictly offline (via `scripts/optimize.py`). Runtime uses cached modules (`logs/compiled_supervisor.pkl`) and never compiles on the fly.
+- **Dynamic Prompts**: Agent instructions (e.g., Planner) are generated dynamically via DSPy signatures (`PlannerInstructionSignature`) and optimized offline.
+- **Middleware**: `ChatMiddleware` handles cross-cutting concerns. `BridgeMiddleware` captures runtime history for offline learning.
 - Routing/quality loops configured via `config/workflow_config.yaml`; history & tracing in `logs/execution_history.jsonl`.
+- **Group Chat**: Multi-agent discussions are supported via `DSPyGroupChatManager` and `GroupChatBuilder`. Workflows can participate as agents using the `workflow.as_agent()` pattern.
 - When adding or modifying agents/workflows, keep prompts/factories in sync and update config schema validation.
 - For multi-agent expansion with OpenAI Agents SDK, treat Codex CLI as an MCP server and mirror roles from `.github/agents/agent-framework-spec.md`; document new roles/prompts here and in `docs/` as needed.
 

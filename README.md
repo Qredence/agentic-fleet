@@ -1,6 +1,5 @@
 ![AgenticFleet Architecture](assets/banner.png)
 
-
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](./LICENSE)
 [![PyPI Downloads](https://static.pepy.tech/personalized-badge/agentic-fleet?period=total&units=INTERNATIONAL_SYSTEM&left_color=GREY&right_color=BLUE&left_text=downloads)](https://pepy.tech/projects/agentic-fleet)
 [![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/qredence/agentic-fleet)
@@ -12,7 +11,7 @@
 
 # AgenticFleet – DSPy‑Enhanced Multi‑Agent Orchestration
 
-AgenticFleet is a hybrid **DSPy + Microsoft agent-framework** runtime that delivers a self‑optimizing fleet of specialized AI agents. DSPy handles task analysis, routing, progress & quality assessment; agent-framework provides robust orchestration primitives, event streaming, and tool execution. Together they enable delegated, sequential, parallel, and handoff‑driven workflows with iterative refinement loops.
+AgenticFleet is a hybrid **DSPy + Microsoft agent-framework** runtime that delivers a self‑optimizing fleet of specialized AI agents. DSPy handles task analysis, routing, progress & quality assessment; agent-framework provides robust orchestration primitives, event streaming, and tool execution. Together they enable delegated, sequential, parallel, discussion, and handoff‑driven workflows with iterative refinement loops.
 
 ---
 
@@ -53,7 +52,8 @@ AgenticFleet is a hybrid **DSPy + Microsoft agent-framework** runtime that deliv
 
 ## Key Features
 
-- **Adaptive Routing** – DSPy reasoner analyzes tasks and decides agent roster + execution mode (delegated / sequential / parallel).
+- **Adaptive Routing** – DSPy reasoner analyzes tasks and decides agent roster + execution mode (delegated / sequential / parallel / discussion).
+- **Group Chat** – Multi-turn, multi-agent discussions orchestrated by `DSPyGroupChatManager` with dynamic speaker selection.
 - **Advanced Reasoning** – Pluggable strategies per agent: **ReAct** for autonomous tool loops (Researcher) and **Program of Thought** for code-based logic (Analyst).
 - **Quality Loops** – Automatic Judge / Reviewer refinement when quality score drops below configurable threshold.
 - **Tool‑Aware Decisions** – Signatures include tool context; Reasoner recommends tool usage (code interpreter, search, browser, etc.).
@@ -297,13 +297,14 @@ async for event in workflow.run_stream("Compare AWS vs Azure AI offerings"):
 
 ## Execution Modes
 
-| Mode       | Description                                        | Use Case                               |
-| ---------- | -------------------------------------------------- | -------------------------------------- |
-| **Auto**   | **Default.** DSPy analyzes task to pick best mode. | General usage.                         |
-| Delegated  | Single agent manages entire task                   | Focused research, simple writeups      |
-| Sequential | Output of one feeds next                           | Research → Analyze → Write report      |
-| Parallel   | Multiple agents concurrently; synthesis afterwards | Multi‑source comparisons               |
-| Handoff    | Collaborative graph with direct agent handoffs     | Fast research, linear specialist flows |
+| Mode       | Description                                          | Use Case                               |
+| ---------- | ---------------------------------------------------- | -------------------------------------- |
+| **Auto**   | **Default.** DSPy analyzes task to pick best mode.   | General usage.                         |
+| Delegated  | Single agent manages entire task                     | Focused research, simple writeups      |
+| Sequential | Output of one feeds next                             | Research → Analyze → Write report      |
+| Parallel   | Multiple agents concurrently; synthesis afterwards   | Multi‑source comparisons               |
+| Handoff    | Collaborative graph with direct agent handoffs       | Fast research, linear specialist flows |
+| Discussion | Multi-turn group chat with dynamic speaker selection | Brainstorming, complex problem solving |
 
 Reasoner chooses based on task structure + examples; can be overridden via configuration or explicit flags.
 

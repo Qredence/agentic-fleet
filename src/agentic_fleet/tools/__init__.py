@@ -48,6 +48,7 @@ if _tools_mod_name not in sys.modules:
     sys.modules[_tools_mod_name] = _tools_mod
 
 # ruff: noqa: E402 - imports must come after sys.modules setup
+from .azure_search_provider import AzureAISearchContextProvider
 from .browser_tool import BrowserTool
 from .context7_deepwiki_tool import Context7DeepWikiTool
 from .hosted_code_adapter import HostedCodeInterpreterAdapter
@@ -56,6 +57,7 @@ from .tavily_mcp_tool import TavilyMCPTool
 from .tavily_tool import TavilySearchTool
 
 __all__ = [
+    "AzureAISearchContextProvider",
     "BrowserTool",
     "Context7DeepWikiTool",
     "HostedCodeInterpreterAdapter",

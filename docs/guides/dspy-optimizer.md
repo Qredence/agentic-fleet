@@ -122,6 +122,9 @@ dspy:
     gepa_perfect_score: 1.0
     gepa_val_split: 0.2
     gepa_seed: 13
+    # Enhanced GEPA settings
+    gepa_latency_weight: 0.2 # Penalize slow predictions
+    gepa_feedback_weight: 0.7 # Weight of feedback vs metric
 ```
 
 **Important:** Only set ONE of these:
@@ -201,7 +204,12 @@ def routing_metric(example, prediction, trace=None):
     base_score = float(correct_assignment and correct_mode)
     tool_score = 1.0  # Could check tool usage
 
-    return base_score * 0.8 + tool_score * 0.2
+    # Assertion penalty (if trace available)
+    assertion_penalty = 0.0
+    if trace and hasattr(trace, 'assertion_failures'):
+        assertion_penalty = len(trace.assertion_failures) * 0.1
+
+    return max(0.0, base_score * 0.8 + tool_score * 0.2 - assertion_penalty)
 ```
 
 **Interpretation:**
@@ -209,6 +217,7 @@ def routing_metric(example, prediction, trace=None):
 - 1.0 = Perfect routing decision
 - 0.8 = Correct agents or mode, not both
 - 0.0 = Wrong agents and mode
+- <0.8 = Penalized for assertion failures (e.g., invalid agent count)
 
 ## Cache Management
 

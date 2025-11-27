@@ -2,18 +2,21 @@
 
 from __future__ import annotations
 
+import importlib
 import inspect
 import logging
 import warnings
 from pathlib import Path
 from typing import Any
 
+import dspy
 import yaml
 from agent_framework._agents import ChatAgent
 from agent_framework.openai import OpenAIResponsesClient
 from dotenv import load_dotenv
 
 from agentic_fleet.agents.base import DSPyEnhancedAgent
+from agentic_fleet.dspy_modules.agent_signatures import PlannerInstructionSignature
 from agentic_fleet.utils.env import env_config
 from agentic_fleet.utils.telemetry import optional_span
 from agentic_fleet.utils.tool_registry import ToolRegistry
@@ -82,6 +85,13 @@ class AgentFactory:
         # Check if DSPy enhancement should be enabled globally
         self.enable_dspy = env_config.enable_dspy_agents
 
+        self.instruction_generator = None
+        if self.enable_dspy:
+            try:
+                self.instruction_generator = dspy.ChainOfThought(PlannerInstructionSignature)
+            except Exception as e:
+                logger.warning(f"Failed to initialize DSPy instruction generator: {e}")
+
     def create_agent(
         self,
         name: str,
@@ -105,6 +115,10 @@ class AgentFactory:
             attributes={"agent.name": name},
         ) as span:
             # Extract configuration values
+            workflow_ref = agent_config.get("workflow")
+            if workflow_ref:
+                return self._create_workflow_agent(name, workflow_ref, agent_config)
+
             model_id = agent_config.get("model")
             if not model_id:
                 raise ValueError(f"Agent '{name}' missing required 'model' field")
@@ -128,10 +142,16 @@ class AgentFactory:
             tool_names = agent_config.get("tools", [])
             tools = self._resolve_tools(tool_names)
 
+            # Resolve context providers
+            context_provider_names = agent_config.get("context_providers", [])
+            context_providers = self._resolve_context_providers(context_provider_names)
+
             if span is not None:
                 span.set_attribute("agent.tool_count", len(tools))
                 if tool_names:
                     span.set_attribute("agent.tool_names", ",".join(tool_names))
+                if context_provider_names:
+                    span.set_attribute("agent.context_providers", ",".join(context_provider_names))
 
             # Get API key at runtime
             api_key = env_config.openai_api_key
@@ -179,6 +199,7 @@ class AgentFactory:
                     cache_ttl=cache_ttl,
                     timeout=timeout,
                     reasoning_strategy=reasoning_strategy,
+                    context_providers=context_providers,
                 )
                 logger.debug(
                     f"Created DSPy-enhanced agent '{agent_name}' with model '{model_id}', "
@@ -192,10 +213,90 @@ class AgentFactory:
                     instructions=instructions,
                     chat_client=chat_client,
                     tools=tools_param,
+                    context_providers=context_providers,
                 )
                 logger.debug(f"Created standard agent '{agent_name}' with model '{model_id}'")
 
             return agent
+
+    def _create_workflow_agent(
+        self,
+        name: str,
+        workflow_ref: str,
+        agent_config: dict[str, Any],
+    ) -> ChatAgent:
+        """Create an agent from a workflow definition.
+
+        Args:
+            name: Agent name
+            workflow_ref: Reference to workflow class (module.Class)
+            agent_config: Agent configuration
+
+        Returns:
+            ChatAgent instance wrapping the workflow
+        """
+        try:
+            # Parse module and class
+            if "." not in workflow_ref:
+                raise ValueError(f"Invalid workflow reference: {workflow_ref}")
+
+            module_name, class_name = workflow_ref.rsplit(".", 1)
+            module = importlib.import_module(module_name)
+            workflow_cls = getattr(module, class_name)
+
+            # Instantiate workflow with configuration if available
+            # Pass configuration if available; fallback to no-arg constructor for legacy support.
+            init_kwargs = agent_config.get("init_kwargs") or agent_config.get("config") or {}
+            workflow = workflow_cls(**init_kwargs) if init_kwargs else workflow_cls()
+
+            # Wrap as agent
+            if hasattr(workflow, "as_agent"):
+                agent = workflow.as_agent()
+                # Override name/description if provided
+                # Note: as_agent() might return a specific Agent subclass
+                # We try to set attributes if possible
+                if name and hasattr(agent, "name"):
+                    agent.name = name
+                if agent_config.get("description") and hasattr(agent, "description"):
+                    agent.description = agent_config.get("description")
+                return agent
+            else:
+                raise ValueError(f"Workflow class {class_name} does not have as_agent() method")
+
+        except Exception as e:
+            logger.error(f"Failed to create workflow agent {name}: {e}")
+            raise
+
+    def _resolve_context_providers(self, provider_names: list[str]) -> list[Any]:
+        """Resolve context provider names to instances.
+
+        Args:
+            provider_names: List of provider names from YAML
+
+        Returns:
+            List of context provider instances
+        """
+        providers: list[Any] = []
+        import agentic_fleet.tools as fleet_tools
+
+        for name in provider_names:
+            if not isinstance(name, str):
+                continue
+
+            if hasattr(fleet_tools, name):
+                try:
+                    cls = getattr(fleet_tools, name)
+                    instance = cls()
+                    providers.append(instance)
+                    logger.debug(f"Instantiated context provider '{name}' from fleet_tools")
+                    continue
+                except Exception as e:
+                    logger.warning(f"Failed to instantiate context provider '{name}': {e}")
+                    continue
+
+            logger.warning(f"Context provider '{name}' not found, skipping")
+
+        return providers
 
     def _resolve_tools(self, tool_names: list[str]) -> list[Any]:
         """Resolve tool names to tool instances.
@@ -259,6 +360,26 @@ class AgentFactory:
         if instructions.startswith("prompts."):
             try:
                 module_name = instructions[len("prompts.") :]
+
+                # Dynamic generation for planner
+                if module_name == "planner" and self.instruction_generator:
+                    try:
+                        # Get default agents for context
+                        default_agents = get_default_agent_metadata()
+                        agents_desc = "\n".join(
+                            [f"- {a['name']}: {a['description']}" for a in default_agents]
+                        )
+
+                        result = self.instruction_generator(
+                            available_agents=agents_desc,
+                            workflow_goal="Coordinate the multi-agent system to solve complex user tasks efficiently by planning, delegating, and verifying work.",
+                        )
+                        logger.info("Generated dynamic planner instructions using DSPy")
+                        return result.agent_instructions
+                    except Exception as e:
+                        logger.warning(f"Failed to generate dynamic planner instructions: {e}")
+                        # Fallback to static below
+
                 # Import the consolidated prompts module
                 import agentic_fleet.agents.prompts as prompts_module
 

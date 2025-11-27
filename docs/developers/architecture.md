@@ -26,22 +26,27 @@ AgenticFleet combines Microsoft's agent-framework with DSPy's intelligent prompt
 │ DSPyReasoner  │ │   Agents    │ │  ToolRegistry   │
 │  (Routing)    │ │  (Execute)   │ │   (Metadata)    │
 └───────┬──────┘ └──────────────┘ └─────────────────┘
-        │
-┌───────▼──────┐
-│  Signatures  │
-│  (Prompts)   │
-└──────────────┘
+        │                  ▲
+┌───────▼──────┐           │
+│  Signatures  │           │
+│  (Prompts)   │           │
+└───────┬──────┘           │
+        │                  │
+┌───────▼──────────────────┴──────┐
+│          Offline Layer          │
+│ (Cached Modules & Optimization) │
+└─────────────────────────────────┘
 ```
 
 ### Data Flow
 
 1. **Task Input** → Console receives user task
-2. **DSPy Analysis** → Reasoner analyzes task complexity and requirements
+2. **DSPy Analysis** → Reasoner (using cached module) analyzes task
 3. **DSPy Routing** → Reasoner routes task to appropriate agents
 4. **Agent Execution** → Agents execute in parallel/sequential/delegated mode
 5. **Quality Assessment** → DSPy evaluates output quality
 6. **Refinement** → Optional refinement if quality < threshold
-7. **History Persistence** → Execution saved to history
+7. **History Persistence** → Execution saved via `BridgeMiddleware`
 
 ### Agent-Framework Integration Architecture
 
@@ -266,11 +271,12 @@ async for event in workflow_agent.run_stream(task_msg):
   - `reasoner.py` - `DSPyReasoner` module orchestrating analysis, routing, progress, and quality. Uses enhanced signatures (`EnhancedTaskRouting`, `JudgeEvaluation`) by default for better workflow integration. Verbose about reasoning traces via `get_execution_summary()`.
   - `workflow_signatures.py` - **Canonical workflow-oriented signatures**: `EnhancedTaskRouting`, `JudgeEvaluation`, `WorkflowHandoffDecision` (follows dspy.ai signature patterns)
   - `signatures.py` - Core DSPy signatures: `TaskAnalysis`, `TaskRouting`, `QualityAssessment`, `ProgressEvaluation`
+  - `agent_signatures.py` - Dynamic agent instruction signatures (e.g., `PlannerInstructionSignature`)
   - `handoff_signatures.py` - Handoff-specific DSPy signatures: `HandoffDecision`, `HandoffProtocol`, `HandoffQualityAssessment`
 
 - `src/agents/` - **Canonical agent layer** (single source of truth)
   - `coordinator.py` - `AgentFactory` for YAML-based agent creation, `create_workflow_agents` for default workflow agents, `validate_tool` utility
-  - `prompts.py` - Consolidated prompt templates
+  - `prompts.py` - Consolidated prompt templates (static fallbacks)
   - `base.py` - Base agent classes
 
 - `src/cli/` - Command-line interface (modular structure)
@@ -328,6 +334,10 @@ Task flows through agents in order, output of one becomes input of next.
 ### Parallel Mode
 
 Multiple agents work simultaneously on subtasks, results are synthesized.
+
+### Discussion Mode
+
+Agents participate in a multi-turn group chat orchestrated by `DSPyGroupChatManager`. The `DSPyReasoner` dynamically selects the next speaker based on conversation history.
 
 ## DSPy Integration
 

@@ -15,6 +15,7 @@ class ExecutionMode(str, Enum):
     SEQUENTIAL = "sequential"
     DELEGATED = "delegated"
     GROUP_CHAT = "group_chat"
+    DISCUSSION = "discussion"
 
     @classmethod
     def from_raw(cls, value: Any) -> ExecutionMode:

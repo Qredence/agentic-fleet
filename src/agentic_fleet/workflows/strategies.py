@@ -15,6 +15,7 @@ from agent_framework._workflows import MagenticAgentMessageEvent, WorkflowOutput
 from ..utils.logger import setup_logger
 from ..utils.models import ExecutionMode, RoutingDecision
 from .exceptions import AgentExecutionError
+from .group_chat_builder import GroupChatBuilder
 from .handoff import HandoffContext, HandoffManager
 from .helpers import (
     derive_objectives,
@@ -182,6 +183,17 @@ async def run_execution_phase_streaming(
             if isinstance(event, (MagenticAgentMessageEvent, WorkflowOutputEvent)):
                 yield event
 
+    elif routing.mode is ExecutionMode.DISCUSSION:
+        async for event in execute_discussion_streaming(
+            agents_map,
+            assigned_agents,
+            task,
+            reasoner=context.dspy_supervisor,
+            progress_callback=context.progress_callback,
+        ):
+            if isinstance(event, (MagenticAgentMessageEvent, WorkflowOutputEvent)):
+                yield event
+
     else:
         delegate = assigned_agents[0] if assigned_agents else None
         if delegate is None:
@@ -322,11 +334,10 @@ async def execute_delegated_streaming(
     )
 
     # Yield final result
+    metadata = {"agent": agent_name}
+    msg = ChatMessage(role=Role.ASSISTANT, text=result_text, additional_properties=metadata)
     summary_event = WorkflowOutputEvent(
-        data={
-            "result": result_text,
-            "agent": agent_name,
-        },
+        data=[msg],
         source_executor_id="delegated_execution",
     )
     yield create_system_event(
@@ -454,11 +465,11 @@ async def execute_parallel_streaming(
         text="Parallel execution complete",
         payload={"agents": valid_agent_names},
     )
+
+    metadata = {"agents": valid_agent_names}
+    msg = ChatMessage(role=Role.ASSISTANT, text=final_result, additional_properties=metadata)
     yield WorkflowOutputEvent(
-        data={
-            "result": final_result,
-            "agents": valid_agent_names,
-        },
+        data=[msg],
         source_executor_id="parallel_execution",
     )
 
@@ -739,7 +750,6 @@ async def execute_sequential_streaming(
         result = result_text
 
     final_payload = {
-        "result": result,
         "agent_executions": agent_trace,
         "handoff_history": handoff_history,
         "artifacts": artifacts,
@@ -751,7 +761,76 @@ async def execute_sequential_streaming(
         text="Sequential execution complete",
         payload={"agents": agent_names},
     )
+
+    msg = ChatMessage(role=Role.ASSISTANT, text=result, additional_properties=final_payload)
     yield WorkflowOutputEvent(
-        data=final_payload,
+        data=[msg],
         source_executor_id="sequential_execution",
     )
+
+
+async def execute_discussion_streaming(
+    agents: dict[str, ChatAgent],
+    agent_names: list[str],
+    task: str,
+    reasoner: Any,  # DSPyReasoner
+    progress_callback: ProgressCallback | None = None,
+):
+    """Execute task via group chat discussion."""
+
+    if not agent_names:
+        raise AgentExecutionError(
+            agent_name="unknown",
+            task="discussion execution",
+            original_error=RuntimeError("Discussion execution requires at least one agent"),
+        )
+
+    # Build group chat manager
+    builder = GroupChatBuilder()
+    for name in agent_names:
+        agent = _get_agent(agents, name)
+        if agent:
+            builder.add_agent(agent)
+
+    if reasoner:
+        builder.set_reasoner(reasoner)
+
+    manager = builder.build()
+
+    if progress_callback:
+        progress_callback.on_progress("Starting group discussion...")
+
+    yield create_system_event(
+        stage="execution",
+        event="discussion.start",
+        text="Starting group discussion",
+        payload={"participants": agent_names},
+    )
+
+    # Run chat
+    history = await manager.run_chat(initial_message=task)
+
+    # Yield events for each message in history (except the first user message)
+    for msg in history[1:]:
+        yield create_agent_event(
+            stage="execution",
+            event="agent.message",
+            agent=getattr(msg, "name", "unknown"),
+            text=msg.text,
+            payload={"role": msg.role},
+        )
+
+    yield create_system_event(
+        stage="execution",
+        event="discussion.completed",
+        text="Group discussion completed",
+        payload={"rounds": len(history)},
+    )
+
+    # Yield final result (last message content)
+    if history:
+        last_msg = history[-1]
+        yield WorkflowOutputEvent(
+            data=[last_msg],
+            source_executor_id="discussion_execution",
+        )

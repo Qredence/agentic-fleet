@@ -47,6 +47,7 @@ class DSPyEnhancedAgent(ChatAgent):
         timeout: int = 30,
         cache_ttl: int = 300,
         reasoning_strategy: str = "chain_of_thought",
+        context_providers: Any = None,
         **_kwargs: Any,
     ) -> None:
         """Initialize the DSPy-enhanced agent.
@@ -61,6 +62,7 @@ class DSPyEnhancedAgent(ChatAgent):
             timeout: Maximum execution time per task in seconds
             cache_ttl: Cache time-to-live in seconds (0 to disable)
             reasoning_strategy: Strategy to use (chain_of_thought, react, program_of_thought)
+            context_providers: Context providers for the agent
         """
         super().__init__(
             name=name,
@@ -68,6 +70,7 @@ class DSPyEnhancedAgent(ChatAgent):
             instructions=instructions,
             chat_client=chat_client,
             tools=tools,
+            context_providers=context_providers,
         )
 
         self.enable_dspy = enable_dspy

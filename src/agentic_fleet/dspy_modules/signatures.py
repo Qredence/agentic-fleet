@@ -109,3 +109,14 @@ class JudgeEvaluation(dspy.Signature):
     required_improvements: str = dspy.OutputField(desc="What needs to be improved")
     refinement_agent: str = dspy.OutputField(desc="Agent best suited for refinement")
     reasoning: str = dspy.OutputField(desc="Detailed evaluation reasoning")
+
+
+class GroupChatSpeakerSelection(dspy.Signature):
+    """Select the next speaker in a group chat."""
+
+    history: str = dspy.InputField(desc="The conversation history so far")
+    participants: str = dspy.InputField(desc="List of available participants and their roles")
+    last_speaker: str = dspy.InputField(desc="The name of the last speaker")
+
+    next_speaker: str = dspy.OutputField(desc="The name of the next speaker, or 'TERMINATE' to end")
+    reasoning: str = dspy.OutputField(desc="Reasoning for the selection")

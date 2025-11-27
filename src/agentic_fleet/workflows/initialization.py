@@ -187,7 +187,28 @@ async def initialize_workflow_context(
 
     # Create DSPy reasoner with enhanced signatures enabled (reuse if provided)
     if dspy_supervisor is None:
-        dspy_supervisor = DSPyReasoner(use_enhanced_signatures=True)
+        # Try to load compiled artifact first (Offline Layer directive)
+        from ..utils.compiler import load_compiled_module
+
+        compiled_path = "logs/compiled_supervisor.pkl"
+        loaded_supervisor = load_compiled_module(compiled_path)
+
+        if loaded_supervisor and isinstance(loaded_supervisor, DSPyReasoner):
+            logger.info(f"Loaded compiled DSPy supervisor from {compiled_path}")
+            dspy_supervisor = loaded_supervisor
+        else:
+            if config.require_compiled_dspy:
+                raise RuntimeError(
+                    f"Compiled DSPy artifact not found at {compiled_path} and "
+                    "dspy.require_compiled is enabled. Run 'agentic-fleet optimize' "
+                    "to compile DSPy modules, or set dspy.require_compiled=false "
+                    "in workflow_config.yaml to allow zero-shot fallback."
+                )
+            logger.warning(
+                "No compiled supervisor found, using zero-shot reasoner. "
+                "Performance may be degraded. Run 'agentic-fleet optimize' for offline compilation."
+            )
+            dspy_supervisor = DSPyReasoner(use_enhanced_signatures=True)
     elif not getattr(dspy_supervisor, "use_enhanced_signatures", False):
         logger.warning(
             "Provided dspy_supervisor does not have use_enhanced_signatures=True. "
@@ -279,24 +300,20 @@ async def initialize_workflow_context(
         compilation_lock=asyncio.Lock(),
     )
 
+    # Register middlewares
+    from ..core.bridge_middleware import BridgeMiddleware
+
+    if context.history_manager:
+        context.middlewares.append(BridgeMiddleware(context.history_manager))
+
     # Optionally compile DSPy supervisor
     if compile_dspy and config.compile_dspy:
-        logger.info("Setting up DSPy compilation (lazy/background mode)...")
-        # Start background compilation task (non-blocking)
-        compilation_task = asyncio.create_task(
-            compile_supervisor_async(
-                supervisor=dspy_supervisor,
-                config=config,
-                agents=agents,
-                progress_callback=None,  # Can be set via context later
-                state=compilation_state,
-            )
-        )
-        compilation_state.compilation_task = compilation_task
-        context.compilation_task = compilation_task
-        context.compilation_status = "compiling"
-
-        logger.info("DSPy compilation started in background (workflow can start immediately)")
+        # Runtime compilation is disabled (Offline Layer architecture).
+        # Use `agentic-fleet optimize` for offline compilation.
+        logger.info("Runtime DSPy compilation is disabled (Offline Layer architecture).")
+        logger.info("Using loaded artifact or zero-shot prompts.")
+        compilation_state.compilation_status = "skipped"
+        context.compilation_status = "skipped"
     else:
         logger.info("Skipping DSPy compilation (using base prompts)")
         compilation_state.compilation_status = "skipped"

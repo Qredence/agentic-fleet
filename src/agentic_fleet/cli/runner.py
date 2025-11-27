@@ -179,6 +179,7 @@ class WorkflowRunner:
             dspy_temperature=yaml_config.get("dspy", {}).get("temperature", 0.7),
             dspy_max_tokens=yaml_config.get("dspy", {}).get("max_tokens", 2000),
             compile_dspy=compile_dspy,
+            require_compiled_dspy=yaml_config.get("dspy", {}).get("require_compiled", False),
             refinement_threshold=quality_cfg.get("refinement_threshold", 8.0),
             enable_refinement=quality_cfg.get("enable_refinement", True),
             enable_progress_eval=quality_cfg.get("enable_progress_eval", True),
@@ -410,11 +411,19 @@ class WorkflowRunner:
                         continue
 
                     # Handle final workflow outputs (metadata + result)
-                    if isinstance(event, WorkflowOutputEvent) and isinstance(event.data, dict):
-                        final_data = event.data
+                    if isinstance(event, WorkflowOutputEvent):
+                        if isinstance(event.data, dict):
+                            final_data = event.data
+                        elif isinstance(event.data, list) and event.data:
+                            # Handle list[ChatMessage]
+                            # We assume the last message contains the result and metadata
+                            last_msg = event.data[-1]
+                            if hasattr(last_msg, "text"):
+                                final_data = getattr(last_msg, "additional_properties", {}) or {}
+                                final_data["result"] = last_msg.text
 
-                        # Show reasoning steps if not already shown
-                        if not reasoning_shown:
+                        if final_data:
+                            # Show reasoning steps if not already shown
                             execution_summary = final_data.get("execution_summary", {})
                             routing_history = execution_summary.get("routing_history", [])
 
@@ -447,10 +456,10 @@ class WorkflowRunner:
                                 reasoning_shown = True
                                 live.start()
 
-                        # Collect judge evaluations
-                        judge_evals = final_data.get("judge_evaluations", [])
-                        if judge_evals:
-                            judge_evaluations = judge_evals
+                            # Collect judge evaluations
+                            judge_evals = final_data.get("judge_evaluations", [])
+                            if judge_evals:
+                                judge_evaluations = judge_evals
 
                         # Don't treat WorkflowOutputEvent as an agent message
                         continue

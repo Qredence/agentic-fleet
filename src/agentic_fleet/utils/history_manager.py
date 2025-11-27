@@ -25,13 +25,13 @@ _background_tasks: set[asyncio.Task[Any]] = set()
 class FleetJSONEncoder(json.JSONEncoder):
     """Custom JSON encoder for fleet objects."""
 
-    def default(self, obj: Any) -> Any:
+    def default(self, o: Any) -> Any:
         """Override default serialization for custom types."""
-        if isinstance(obj, RoutingDecision):
-            return obj.to_dict()
-        if hasattr(obj, "to_dict"):
-            return obj.to_dict()
-        return super().default(obj)
+        if isinstance(o, RoutingDecision):
+            return o.to_dict()
+        if hasattr(o, "to_dict"):
+            return o.to_dict()
+        return super().default(o)
 
 
 class HistoryManager:

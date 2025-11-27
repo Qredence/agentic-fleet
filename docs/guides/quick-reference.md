@@ -12,6 +12,9 @@ uv run agentic-fleet run -m "Quick query" --mode handoff
 # Force Standard mode (robust analysis)
 uv run agentic-fleet run -m "Deep analysis" --mode standard
 
+# Force Discussion mode (group chat)
+uv run agentic-fleet run -m "Brainstorm ideas for a new product" --mode discussion
+
 # With detailed logging
 uv run agentic-fleet run -m "Your question" --verbose
 
