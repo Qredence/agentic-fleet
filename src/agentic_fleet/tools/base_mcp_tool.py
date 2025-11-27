@@ -158,9 +158,7 @@ class BaseMCPTool(MCPStreamableHTTPTool):
                 and getattr(self, "is_connected", False)
                 and hasattr(self, "disconnect")
             ):
-                disconnect_fn = getattr(self, "disconnect", None)
-                if callable(disconnect_fn):
-                    await disconnect_fn()
+                await self.disconnect()  # type: ignore[attr-defined]
         except Exception as e:
             # Log but don't raise - cleanup is best effort
             logger.debug(f"Error during MCP disconnect: {e}")
