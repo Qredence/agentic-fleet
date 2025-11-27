@@ -83,6 +83,10 @@ class BridgeMiddleware(ChatMiddleware):
         output = self.execution_data.get("result")
 
         if not task or not output:
+            logger.warning(
+                f"Skipping DSPy example: missing task ({bool(task)}) or output ({bool(output)}) "
+                f"for workflowId {self.execution_data.get('workflowId')}."
+            )
             return
 
         try:

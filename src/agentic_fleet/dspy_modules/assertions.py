@@ -1,10 +1,13 @@
 """DSPy assertions for validating routing decisions."""
 
+import logging
 from typing import TYPE_CHECKING
 
 import dspy
 
 from agentic_fleet.utils.models import ExecutionMode, RoutingDecision
+
+logger = logging.getLogger(__name__)
 
 if TYPE_CHECKING:
     # Mock for type checking if dspy stubs are missing Suggest
@@ -13,6 +16,11 @@ if TYPE_CHECKING:
 else:
     Suggest = getattr(dspy, "Suggest", None)
     if Suggest is None:
+        logger.warning(
+            "dspy.Suggest is not available; routing assertions will not be enforced. "
+            "Consider upgrading DSPy to enable assertion-based validation."
+        )
+
         # Fallback or dummy if not found at runtime
         def Suggest(condition: bool, message: str) -> None:  # noqa: N802, D103
             pass

@@ -520,7 +520,7 @@ class ExecutionExecutor(Executor):
                         # Handle list[ChatMessage] format (standard)
                         if (
                             isinstance(event.data, list)
-                            and event.data
+                            and len(event.data) > 0
                             and isinstance(event.data[0], ChatMessage)
                         ):
                             msg = event.data[0]
