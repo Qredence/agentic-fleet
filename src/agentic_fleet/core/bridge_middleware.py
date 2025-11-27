@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 import json
 import os
 from datetime import datetime
@@ -56,8 +57,8 @@ class BridgeMiddleware(ChatMiddleware):
             # Save execution history
             await self.history_manager.save_execution_async(self.execution_data)
 
-            # Convert to DSPy example and save
-            self._save_dspy_example()
+            # Convert to DSPy example and save asynchronously
+            await self._save_dspy_example()
 
         except Exception as e:
             logger.error(f"Failed to save execution history in middleware: {e}")
@@ -73,19 +74,19 @@ class BridgeMiddleware(ChatMiddleware):
         except Exception as e:
             logger.error(f"Failed to save error history in middleware: {e}")
 
-    def _save_dspy_example(self) -> None:
-        """Convert execution data to DSPy example and save it."""
+    async def _save_dspy_example(self) -> None:
+        """Convert execution data to DSPy example and save it without blocking the event loop."""
         if not self.dspy_examples_path:
             return
 
+        task = self.execution_data.get("task")
+        output = self.execution_data.get("result")
+
+        if not task or not output:
+            return
+
         try:
-            task = self.execution_data.get("task")
-            output = self.execution_data.get("result")
-
-            if not task or not output:
-                return
-
-            # Create a simple example from the result
+            # Create a simple example from the result (cheap operation, keep in event loop)
             example = BridgeConverter.thread_to_example(
                 messages=[
                     {"role": "user", "content": task},
@@ -94,14 +95,17 @@ class BridgeMiddleware(ChatMiddleware):
                 task_override=task,
             )
 
-            # Ensure directory exists
-            os.makedirs(os.path.dirname(self.dspy_examples_path), exist_ok=True)
-
-            # Convert example to dict for serialization
             example_dict = dict(example.items())
+            line = json.dumps(example_dict) + "\n"
+            path = self.dspy_examples_path
+            dir_path = os.path.dirname(path)
 
-            with open(self.dspy_examples_path, "a", encoding="utf-8") as f:
-                f.write(json.dumps(example_dict) + "\n")
+            def write_file():
+                os.makedirs(dir_path, exist_ok=True)
+                with open(path, "a", encoding="utf-8") as f:
+                    f.write(line)
 
+            # Offload blocking file system operations to a thread
+            await asyncio.to_thread(write_file)
         except Exception as e:
             logger.error(f"Failed to save DSPy example: {e}")
