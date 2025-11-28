@@ -224,8 +224,7 @@ async def test_supervisor_middleware_chaining():
 
     await supervisor.run("Test task")
     # Both should be called; check the order of start calls and presence of end calls
-    assert call_log[:2] == ["MW1_start", "MW2_start"]
-    assert set(call_log[2:]) == {"MW1_end", "MW2_end"}
+    assert call_log == ["MW1_start", "MW2_start", "MW2_end", "MW1_end"]
 
 
 @pytest.mark.asyncio
