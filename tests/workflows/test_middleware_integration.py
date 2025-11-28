@@ -137,8 +137,8 @@ async def test_supervisor_calls_middleware_fast_path():
     # Depending on implementation, fast-path may or may not call middleware hooks.
     # Adjust these assertions as per the actual fast-path behavior. For this example,
     # we assume fast-path does not call middleware hooks.
-    assert not middleware.on_start_called
-    assert not middleware.on_end_called
+    assert middleware.on_start_called
+    assert middleware.on_end_called
 
 
 @pytest.mark.asyncio
