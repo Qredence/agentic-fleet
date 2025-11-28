@@ -21,6 +21,7 @@ from typing import Any
 # Limit for the number of recent errors to display in stats
 RECENT_ERRORS_LIMIT = 5
 
+
 @dataclass
 class ExecutionMetrics:
     """Metrics for a single execution."""

@@ -50,7 +50,9 @@ def _import_base_mcp_tool():
         sys.modules["agent_framework._mcp"] = mock_mcp
 
     # Import the module directly from file path
-    module_path = Path(__file__).parent.parent.parent / "src" / "agentic_fleet" / "tools" / "base_mcp_tool.py"
+    module_path = (
+        Path(__file__).parent.parent.parent / "src" / "agentic_fleet" / "tools" / "base_mcp_tool.py"
+    )
     spec = importlib.util.spec_from_file_location("base_mcp_tool", module_path)
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
@@ -418,6 +420,7 @@ class TestFormatContents:
 
     def test_falls_back_to_string_conversion(self):
         """Test fallback to string conversion for unknown types."""
+
         # Create a simple class without text/content/to_dict
         class SimpleItem:
             def __str__(self) -> str:
@@ -436,7 +439,7 @@ class TestAbstractRunMethod:
     def test_run_method_is_defined_in_base_class(self):
         """Test that BaseMCPTool defines a run method."""
         # Check that run method exists
-        assert hasattr(BaseMCPTool, 'run')
+        assert hasattr(BaseMCPTool, "run")
         assert callable(BaseMCPTool.run)
 
     def test_run_method_has_correct_signature(self):
@@ -447,9 +450,9 @@ class TestAbstractRunMethod:
         params = list(sig.parameters.keys())
 
         # Should have self, query, and **kwargs
-        assert 'self' in params
-        assert 'query' in params
-        assert 'kwargs' in params
+        assert "self" in params
+        assert "query" in params
+        assert "kwargs" in params
 
     @pytest.mark.asyncio
     async def test_concrete_implementation_works(self):

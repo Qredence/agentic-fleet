@@ -146,6 +146,7 @@ async def test_supervisor_middleware_error_handling():
     class FailingMiddleware(ChatMiddleware):
         async def on_start(self, task, context):
             raise RuntimeError("on_start error")
+
         async def on_end(self, result):
             self.called = True  # Should not be called in this case
 
@@ -175,14 +176,18 @@ async def test_supervisor_middleware_error_handling():
 @pytest.mark.asyncio
 async def test_supervisor_middleware_chaining():
     call_log = []
+
     class MW1(ChatMiddleware):
         async def on_start(self, task, context):
             call_log.append("MW1_start")
+
         async def on_end(self, result):
             call_log.append("MW1_end")
+
     class MW2(ChatMiddleware):
         async def on_start(self, task, context):
             call_log.append("MW2_start")
+
         async def on_end(self, result):
             call_log.append("MW2_end")
 
@@ -222,8 +227,8 @@ async def test_supervisor_middleware_chaining():
     supervisor._should_fast_path = MagicMock(return_value=False)
 
     await supervisor.run("Test task")
-    # Both should be called; check the order of start calls and presence of end calls
-    assert call_log == ["MW1_start", "MW2_start", "MW2_end", "MW1_end"]
+    # Both should be called; on_end hooks are called in same order as on_start
+    assert call_log == ["MW1_start", "MW2_start", "MW1_end", "MW2_end"]
 
 
 @pytest.mark.asyncio

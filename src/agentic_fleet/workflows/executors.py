@@ -190,7 +190,10 @@ class AnalysisExecutor(Executor):
                 await ctx.send_message(analysis_msg)
 
             except (TimeoutError, ConnectionError) as e:
-                logger.warning(f"Analysis failed due to a network or timeout error ({type(e).__name__}): {e}", exc_info=True)
+                logger.warning(
+                    f"Analysis failed due to a network or timeout error ({type(e).__name__}): {e}",
+                    exc_info=True,
+                )
                 fallback_dict = self._fallback_analysis(task_msg.task)
                 analysis_result = self._to_analysis_result(fallback_dict)
                 analysis_msg = AnalysisMessage(

@@ -217,12 +217,21 @@ class SupervisorWorkflow:
             ):
                 decision = self.dspy_reasoner.select_workflow_mode(task)
                 detected_mode_str = decision.get("mode", "standard")
+
+                # Validate against all valid modes first
+                valid_modes = (
+                    "group_chat",
+                    "concurrent",
+                    "handoff",
+                    "standard",
+                    "fast_path",
+                )
+                if detected_mode_str not in valid_modes:
+                    logger.warning(f"Invalid mode '{detected_mode_str}', defaulting to 'standard'")
+                    detected_mode_str = "standard"
+
+                # Rebuild workflow only for modes that require different workflow structure
                 if detected_mode_str not in ("standard", "fast_path"):
-                    # Validate that detected_mode_str is a valid WorkflowMode literal
-                    valid_modes = ("group_chat", "concurrent", "handoff", "standard")
-                    if detected_mode_str not in valid_modes:
-                        logger.warning(f"Invalid mode '{detected_mode_str}', defaulting to 'standard'")
-                        detected_mode_str = "standard"
                     logger.info(f"Switching workflow to mode: {detected_mode_str}")
                     workflow_builder = build_fleet_workflow(
                         self.dspy_reasoner,
