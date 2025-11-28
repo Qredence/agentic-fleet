@@ -415,8 +415,9 @@ async def chat_stream(
         EventSourceResponse streaming workflow events.
     """
     msg_preview = request.message[:50] if len(request.message) > 50 else request.message
+    sanitized_preview = msg_preview.replace('\r', '').replace('\n', '')
     logger.info(
-        f"Chat stream request received: message_preview={msg_preview}, "
+        f"Chat stream request received: message_preview={sanitized_preview}, "
         f"stream={request.stream}, reasoning_effort={request.reasoning_effort}"
     )
 
