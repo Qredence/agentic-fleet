@@ -1,5 +1,57 @@
 # Changelog
 
+## v0.6.6 (2025-11-28) – Latency Optimization & Judge Phase Removal
+
+### Highlights
+
+- **66% Latency Reduction** – Complex queries now complete in ~2 minutes vs ~6 minutes previously. Achieved by removing the redundant Judge phase and optimizing DSPy module selection.
+- **5-Phase Pipeline** – Workflow graph simplified from 6 phases to 5: `analysis → routing → execution → progress → quality`. The redundant `JudgeRefineExecutor` has been removed.
+- **DSPy Module Optimization** – Switched `self.router` from `dspy.ChainOfThought` to `dspy.Predict` for faster routing without reasoning traces.
+- **Fast Model Tier** – Added `dspy.routing_model: gpt-5-mini` configuration for cost-effective analysis/routing phases.
+- **Judge Phase Disabled** – Set `enable_judge: false` and `max_refinement_rounds: 0` in default config to eliminate redundant quality evaluation.
+
+### Performance Results
+
+| Phase     | Before     | After          |
+| --------- | ---------- | -------------- |
+| Analysis  | ~15s       | 10.7s          |
+| Routing   | ~25s       | 20.0s          |
+| Execution | ~180s      | 66.6s          |
+| Progress  | ~15s       | 11.5s          |
+| Quality   | ~20s       | 12.9s          |
+| **Judge** | **~60s**   | **0.0003s** ✅ |
+| **Total** | **~6 min** | **~2 min**     |
+
+### Changes
+
+- **`src/agentic_fleet/workflows/builder.py`**:
+  - Removed `JudgeRefineExecutor` import and workflow edge.
+  - Pipeline now terminates at `QualityExecutor`.
+
+- **`src/agentic_fleet/config/workflow_config.yaml`**:
+  - Added `dspy.routing_model: gpt-5-mini` for fast cognitive tasks.
+  - Set `quality.enable_judge: false` to disable judge evaluation.
+  - Set `quality.max_refinement_rounds: 0` to disable refinement loops.
+
+- **`src/agentic_fleet/dspy_modules/signatures.py`**:
+  - Removed `JudgeEvaluation` signature class (redundant with `QualityAssessment`).
+
+- **`src/agentic_fleet/dspy_modules/reasoner.py`**:
+  - Removed `self.judge` module initialization.
+  - Changed `self.router` from `dspy.ChainOfThought` → `dspy.Predict`.
+  - Updated `predictors()` and `named_predictors()` to exclude judge module.
+
+- **`src/agentic_fleet/workflows/executors.py`**:
+  - Added deprecation warning to `JudgeRefineExecutor` (retained for backwards compatibility).
+
+### Migration Notes
+
+- **Clear DSPy Cache**: Run `uv run python -m agentic_fleet.scripts.manage_cache --clear` after upgrading.
+- **Custom Workflows**: If you used `JudgeRefineExecutor` in custom workflow configurations, it will emit a deprecation warning but continue to function.
+- **Quality Assessment**: The `QualityAssessment` signature still provides scoring—only the redundant judge layer was removed.
+
+---
+
 ## v0.6.5 (2025-11-28) – DSPy Dynamic Prompt, GEPA Enhancement & Discussion Mode
 
 ### Highlights

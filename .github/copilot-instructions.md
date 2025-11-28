@@ -1,58 +1,64 @@
 # AgenticFleet Copilot Instructions
 
-## System snapshot
+## Project Overview
 
-- Hybrid runtime: DSPy handles analysis/routing/quality (`src/agentic_fleet/dspy_modules/`), Microsoft agent-framework executes plans (`src/agentic_fleet/workflows/`).
-- Four phases always fire in order: Task → DSPy analysis → DSPy routing → Agent execution → Quality/Judge → optional refinement. See `workflows/supervisor.py`.
-- Configuration is declarative; `config/workflow_config.yaml` defines models, agents, thresholds, tracing, and evaluation options.
+AgenticFleet is a hybrid **DSPy + Microsoft Agent Framework** runtime for multi-agent orchestration.
 
-## Key directories you’ll reference
+- **Core Logic**: `src/agentic_fleet/` (Backend), `src/frontend/` (React/Vite UI).
+- **Architecture**: 5-Phase Pipeline: Analysis → Routing → Execution → Progress → Quality.
+- **Key Config**: `config/workflow_config.yaml` controls models, agents, thresholds, and tracing. **Never hardcode these in Python.**
 
-- `src/agentic_fleet/agents/` (specialist definitions, prompts, `AgentFactory`).
-- `src/agentic_fleet/tools/` + `utils/tool_registry.py` (tool adapters + registration rules).
-- `src/agentic_fleet/workflows/` (builder, strategies, executors, handoffs, exceptions).
-- `src/agentic_fleet/dspy_modules/` (signatures + reasoner logic). Training data lives in `src/agentic_fleet/data/supervisor_examples.json`.
-- CLI entry: `src/agentic_fleet/cli/console.py`; backend FastAPI server under `src/agentic_fleet/api/`.
+## Critical Workflows
 
-## Environment & configuration
+- **Package Management**: Uses `uv`. Never use `pip` directly.
+  - Install: `make install` (syncs all dependencies).
+  - Add dependency: `uv add <package>` (then run `make install`).
+- **Development**:
+  - Full Stack: `make dev` (Backend :8000, Frontend :5173).
+  - Backend only: `make backend`.
+  - Frontend only: `make frontend-dev`.
+- **Quality Gates**:
+  - Run all checks: `make check` (Linting + Formatting + Type Checking).
+  - Tests: `make test` (Backend), `make test-frontend` (Frontend).
+  - **Always run `make check` before committing.**
 
-- `OPENAI_API_KEY` is mandatory; copy `.env.example` → `.env` and fill it plus optional `TAVILY_API_KEY`, `DSPY_COMPILE`, tracing, Cosmos, etc.
-- Keep knobs in YAML—never hardcode thresholds, prompts, or tool lists inside Python. Update `workflow_config.yaml` and align docs in `docs/developers/internals/AGENTS.md` when behavior changes.
-- DSPy caches compilation to `logs/compiled_supervisor.pkl`; clear via `uv run python -m agentic_fleet.scripts.manage_cache --clear` whenever signatures, prompts, or examples change.
+## Codebase Conventions
 
-## Everyday workflows
+- **Python (Backend)**:
+  - **Version**: Python 3.12+. Use modern syntax (e.g., `type | None` instead of `Optional[type]`).
+  - **Typing**: Strict typing required. Use `ty` for checking. Avoid `Any`.
+  - **Imports**: Use absolute imports from `agentic_fleet` (e.g., `from agentic_fleet.utils import ...`).
+  - **DSPy**:
+    - Signatures live in `src/agentic_fleet/dspy_modules/signatures.py`.
+    - Compilation is **offline**. Do not compile at runtime.
+    - Cache: `logs/compiled_supervisor.pkl`. Clear with `uv run python -m agentic_fleet.scripts.manage_cache --clear`.
+- **TypeScript/React (Frontend)**:
+  - **State**: `src/frontend/src/stores/chatStore.ts` (Zustand) is the single source of truth.
+  - **API**: Use `src/frontend/src/lib/api/` for backend calls.
+  - **Components**: `src/frontend/src/components/ui/` for shared atoms (shadcn/ui).
 
-- Install/sync with `uv sync` (`make install` or `make dev-setup` to cover frontend + hooks).
-- Run backend workflows via `uv run python -m agentic_fleet.cli.console run -m "..."`; use `make dev` for backend+frontend stack or `make backend` / `make frontend-dev` individually.
-- Quality gates: `make check` (ruff + ty) and `make test` (pytest). Frontend checks live under `src/frontend` (`npm test`, `npm run lint`).
-- History & analytics scripts live in `scripts/` (e.g., `analyze_history.py`, `self_improve.py`, `benchmark_api.py`).
+## Key Files & Directories
 
-## Extending agents & tools
+- `config/workflow_config.yaml`: **Read this first** to understand active agents and models.
+- `src/agentic_fleet/workflows/supervisor.py`: Main orchestration logic.
+- `src/agentic_fleet/dspy_modules/reasoner.py`: DSPy logic for analysis and routing.
+- `src/agentic_fleet/agents/`: Agent definitions. Register new agents in `config/workflow_config.yaml`.
+- `logs/execution_history.jsonl`: Execution logs for debugging routing/quality issues.
 
-- Adding an agent: new module under `agents/`, wire prompts in `agents/prompts.py`, register in YAML `agents:` block, update training examples + `docs/developers/internals/AGENTS.md`, and add unit tests (routing + execution).
-- Adding a tool: implement adapter in `tools/`, expose via `ToolRegistry`, list it by name in YAML, and document latency/cost expectations.
-- DSPy signatures (`dspy_modules/signatures.py`) must describe any new inputs/outputs; wrap models in `dspy.ChainOfThought` and keep reasoning hints short.
+## Common Tasks
 
-## DSPy optimization & datasets
+- **Adding an Agent**:
+  1. Create module in `src/agentic_fleet/agents/`.
+  2. Add prompts to `src/agentic_fleet/agents/prompts.py`.
+  3. Register in `config/workflow_config.yaml` under `agents:`.
+  4. Update `docs/developers/internals/AGENTS.md`.
+- **Adding a Tool**:
+  1. Implement adapter in `src/agentic_fleet/tools/`.
+  2. Register in `src/agentic_fleet/utils/tool_registry.py`.
+  3. Add to `config/workflow_config.yaml`.
 
-- Training examples: edit `src/agentic_fleet/data/supervisor_examples.json` and recompile DSPy. Keep examples in sync with agent roster and execution modes.
-- GEPA/BootstrapFewShot knobs live under `dspy.optimization` in YAML; tune `gepa_max_metric_calls` or disable with `DSPY_COMPILE=false` for rapid iteration.
-- Execution history + compiled modules live under `logs/`; never hand-edit `compiled_supervisor.pkl`, always regenerate via the cache script.
+## Debugging
 
-## Quality, testing, and debugging
-
-- `make test-config` validates YAML/agent wiring; `make validate-agents` ensures docs describe the current roster.
-- Use typed exceptions from `workflows/exceptions.py` (e.g., `CompilationError`, `ToolError`) and protocols in `utils/types.py`; avoid ad-hoc exceptions or `Any` typing.
-- When routing degrades, inspect `logs/execution_history.jsonl`, refresh examples, and rerun compilation. Weak judge scores often mean `quality.max_refinement_rounds` or `judge_threshold` needs tuning in YAML.
-
-## Pitfalls & reminders
-
-- Paths are relative to `src/agentic_fleet/...`; avoid importing from root-level modules directly.
-- Tool names in YAML must match registry keys; mismatches lead to runtime warnings.
-- Parallel mode auto-normalizes to delegated if only one agent survives routing—double-check DSPy output before forcing execution strategies.
-- Always touch docs (`docs/developers/internals/AGENTS.md`, `docs/guides/quick-reference.md`, or this file) when agent rosters, tools, or workflows change.
-
-## Optional persistence (Cosmos)
-
-- Enable with `AGENTICFLEET_USE_COSMOS=1`; provide `AZURE_COSMOS_ENDPOINT` plus credential (key or managed identity). Containers default to `workflowRuns`, `agentMemory`, `dspyExamples`, `dspyOptimizationRuns`, `cache` with partition keys `/workflowId` or `/userId`—keep payloads <2 MB and ensure high-cardinality IDs.
-- Cosmos writes are best-effort; failures shouldn’t block workflows but should log warnings. Consult `docs/developers/cosmosdb_data_model.md` before schema changes.
+- **Backend**: Use `agentic-fleet run -m "task" --verbose` for CLI debugging.
+- **Frontend**: Check `VITE_API_URL` in `.env`.
+- **DSPy**: If routing is poor, inspect `logs/execution_history.jsonl` and consider updating examples in `src/agentic_fleet/data/supervisor_examples.json`.
