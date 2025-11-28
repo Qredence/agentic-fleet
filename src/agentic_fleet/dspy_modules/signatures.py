@@ -92,23 +92,8 @@ class SimpleResponse(dspy.Signature):
     answer: str = dspy.OutputField(desc="Concise and accurate answer")
 
 
-class JudgeEvaluation(dspy.Signature):
-    """Detailed evaluation by a judge agent.
-
-    If the task asks about a specific entity and the result correctly states that it does not exist or is not public,
-    score this highly for accuracy. Do not penalize for missing 'features' of non-existent products.
-    """
-
-    task: str = dspy.InputField(desc="The original task")
-    result: str = dspy.InputField(desc="The result to evaluate")
-    criteria: str = dspy.InputField(desc="Evaluation criteria")
-
-    score: float = dspy.OutputField(desc="Score between 0.0 and 10.0")
-    refinement_needed: Literal["yes", "no"] = dspy.OutputField(desc="Whether refinement is needed")
-    missing_elements: str = dspy.OutputField(desc="What is missing")
-    required_improvements: str = dspy.OutputField(desc="What needs to be improved")
-    refinement_agent: str = dspy.OutputField(desc="Agent best suited for refinement")
-    reasoning: str = dspy.OutputField(desc="Detailed evaluation reasoning")
+# NOTE: JudgeEvaluation signature removed in Plan #4 optimization
+# Quality assessment is now handled solely by QualityAssessment signature
 
 
 class GroupChatSpeakerSelection(dspy.Signature):
