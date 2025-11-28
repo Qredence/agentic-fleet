@@ -65,12 +65,12 @@ workflow:
 
   quality:
     refinement_threshold: 8.0
-    enable_refinement: true
+    enable_refinement: false # DISABLED: Refinement disabled for Plan #4
     quality_threshold: 7.0 # Lowered from 8.0 to reduce refinement cycles
     # Judge-based refinement settings (DISABLED in Plan #4 optimization)
     judge_threshold: 7.0 # Trigger refinement when Judge score < 7.0 (raised from 5.0)
-    enable_judge: false # DISABLED: Judge phase removed for latency optimization (Plan #4)
-    max_refinement_rounds: 0 # DISABLED: No refinement rounds (Plan #4)
+
+    max_refinement_rounds: 1 # Set to 1 to satisfy schema validation, but disabled via enable_refinement
     judge_model: gpt-5-mini # Use gpt-5-mini for faster evaluation
     judge_reasoning_effort: minimal # Use low reasoning effort for Judge
     judge_timeout_seconds: 30 # Timeout for judge evaluation (new)
