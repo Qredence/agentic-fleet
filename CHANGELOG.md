@@ -1,16 +1,22 @@
 # Changelog
 
-## v0.6.5 (2025-11-27) – DSPy Dynamic Prompt & GEPA Enhancement
+## v0.6.5 (2025-11-28) – DSPy Dynamic Prompt, GEPA Enhancement & Discussion Mode
 
 ### Highlights
 
 - **Offline Layer Architecture** – Enforced strict separation between offline DSPy compilation and runtime execution. Runtime compilation is now explicitly disabled in `initialization.py`, ensuring zero-latency overhead for optimized prompts.
 - **Dynamic Agent Prompts** – Introduced `PlannerInstructionSignature` and updated `AgentFactory` to support dynamic, optimizer-tunable agent instructions, replacing static prompt templates for the Planner agent.
+- **Discussion Mode** – Introduced a new interaction mode enabling multi-agent group chats and discussions.
 - **Enhanced GEPA Optimizer** – Upgraded `GEPAConfig` with latency-aware metrics (`gepa_latency_weight`) and assertion-aware feedback (`gepa_feedback_weight`) to optimize for both quality and speed.
 - **Systematic Assertions** – Integrated `dspy.Assert` and `dspy.Suggest` into routing logic (`reasoner.py`, `signatures.py`) to enforce critical constraints (e.g., valid agent count) and provide soft guidance (e.g., tool availability).
 - **Bridge Middleware** – Implemented `BridgeMiddleware` to capture runtime execution history and convert it into DSPy training examples, closing the data feedback loop.
 - **Agent Framework Alignment** – Updated `WorkflowOutputEvent` to return `list[ChatMessage]` instead of a dictionary, aligning with the latest `agent-framework` SDK breaking changes.
 - **RAG Integration** – Added `AzureAISearchContextProvider` implementation for retrieval-augmented generation within agent workflows.
+
+### Internal Improvements
+
+- **MCP Tool Refactor** – Consolidated MCP tool logic into a reusable `BaseMCPTool` class, improving connection reliability and reducing code duplication (#391).
+- **Resilience** – Enhanced error handling with specific exceptions and configurable thresholds (#392).
 
 ### Changes
 
