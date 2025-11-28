@@ -31,7 +31,7 @@ def mock_agent_with_run():
     agent.run = AsyncMock(return_value=run_response)
 
     # Remove process to ensure run path is tested
-    del agent.process
+    agent.process = None
 
     return agent
 
@@ -52,7 +52,7 @@ def mock_agent_with_process_only():
     agent.process = AsyncMock(return_value=response)
 
     # Remove run to ensure process path is tested
-    del agent.run
+    agent.run = None
 
     return agent
 
@@ -65,8 +65,8 @@ def mock_agent_with_neither():
     agent.description = "A mock agent with neither run nor process"
 
     # Remove both methods to test fallback
-    del agent.run
-    del agent.process
+    agent.run = None
+    agent.process = None
 
     return agent
 
@@ -119,7 +119,7 @@ async def test_group_chat_run_with_run_method(mock_agent_with_run, mock_reasoner
 
     # Verify run was called (not process)
     assert mock_agent_with_run.run.called
-    assert not hasattr(mock_agent_with_run, "process")
+    assert mock_agent_with_run.process is None
 
 
 @pytest.mark.asyncio
@@ -146,7 +146,7 @@ async def test_group_chat_run_with_process_method(mock_agent_with_process_only, 
 
     # Verify process was called (not run)
     assert mock_agent_with_process_only.process.called
-    assert not hasattr(mock_agent_with_process_only, "run")
+    assert mock_agent_with_process_only.run is None
 
 
 @pytest.mark.asyncio
@@ -170,7 +170,9 @@ async def test_group_chat_run_with_fallback(mock_agent_with_neither, mock_reason
     assert history[1].role == Role.ASSISTANT
     # Fallback response should still have the agent name
     assert history[1].additional_properties["name"] == "FallbackAgent"
+    # Verify fallback response text/content (should be non-empty)
+    assert "FallbackAgent" in history[1].text
 
-    # Verify neither run nor process exist
-    assert not hasattr(mock_agent_with_neither, "run")
-    assert not hasattr(mock_agent_with_neither, "process")
+    # Verify neither run nor process are callable (set to None)
+    assert mock_agent_with_neither.run is None
+    assert mock_agent_with_neither.process is None

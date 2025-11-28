@@ -10,12 +10,16 @@ Replace with real OpenTelemetry integration when ENABLE_OTEL=true.
 
 from __future__ import annotations
 
+import logging
 import time
 from collections import defaultdict
 from collections.abc import Iterator
 from contextlib import contextmanager
 from dataclasses import dataclass, field
 from typing import Any
+
+# Limit for the number of recent errors to display in stats
+RECENT_ERRORS_LIMIT = 5
 
 
 @dataclass
@@ -43,8 +47,13 @@ class PerformanceTracker:
         stats = tracker.get_stats()
     """
 
-    def __init__(self) -> None:
-        """Initialize performance tracker."""
+    def __init__(self, slow_exec_threshold: float = 30.0) -> None:
+        """Initialize performance tracker.
+
+        Args:
+            slow_exec_threshold: Threshold in seconds for logging slow executions.
+        """
+        self.slow_exec_threshold = slow_exec_threshold
         self.executions: list[ExecutionMetrics] = []
         self.metrics_by_agent: dict[str, list[ExecutionMetrics]] = defaultdict(list)
 
@@ -77,9 +86,7 @@ class PerformanceTracker:
         self.metrics_by_agent[agent_name].append(metrics)
 
         # Log slow executions
-        if duration > 30:
-            import logging
-
+        if duration > self.slow_exec_threshold:
             logger = logging.getLogger(__name__)
             logger.warning(f"Slow execution: {agent_name} took {duration:.2f}s")
 
@@ -112,7 +119,7 @@ class PerformanceTracker:
             "avg_duration": sum(durations) / len(durations),
             "min_duration": min(durations),
             "max_duration": max(durations),
-            "recent_errors": [e.error for e in executions[-5:] if e.error],
+            "recent_errors": [e.error for e in executions[-RECENT_ERRORS_LIMIT:] if e.error],
         }
 
     def get_bottlenecks(self, threshold: float = 5.0) -> list[dict[str, Any]]:
@@ -157,7 +164,7 @@ def optional_span(
 
         tracer = trace.get_tracer(tracer_name or __name__)
         span_cm = tracer.start_as_current_span(name, attributes=attributes)
-    except (ImportError, Exception):
+    except (ImportError, AttributeError):
         # OpenTelemetry not installed or tracing failed to init
         pass
 
