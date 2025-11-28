@@ -7,7 +7,7 @@ from typing import Any
 
 import dspy
 from fastapi import APIRouter, HTTPException, status
-
+import logging
 from agentic_fleet.app.dependencies import WorkflowDep
 
 router = APIRouter()
