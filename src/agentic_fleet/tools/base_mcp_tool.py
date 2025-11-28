@@ -28,6 +28,27 @@ else:
                 self.name = kwargs.get("name", "mcp_tool")
                 self.description = kwargs.get("description", "")
 
+            async def connect(self, *args: Any, **kwargs: Any) -> None:
+                """Stub connect method - raises error when agent_framework unavailable."""
+                raise RuntimeError(
+                    "MCPStreamableHTTPTool fallback stub: 'connect' called but "
+                    "agent_framework is not available."
+                )
+
+            async def call_tool(self, *args: Any, **kwargs: Any) -> Any:
+                """Stub call_tool method - raises error when agent_framework unavailable."""
+                raise RuntimeError(
+                    "MCPStreamableHTTPTool fallback stub: 'call_tool' called but "
+                    "agent_framework is not available."
+                )
+
+            async def disconnect(self, *args: Any, **kwargs: Any) -> None:
+                """Stub disconnect method - raises error when agent_framework unavailable."""
+                raise RuntimeError(
+                    "MCPStreamableHTTPTool fallback stub: 'disconnect' called but "
+                    "agent_framework is not available."
+                )
+
 
 logger = logging.getLogger(__name__)
 
@@ -36,7 +57,7 @@ class BaseMCPTool(MCPStreamableHTTPTool):
     """Base class for MCP-based tools with shared connection and formatting logic.
 
     Provides common infrastructure for:
-    - Connection management with thread-safe locking
+    - Connection management with async-safe locking (concurrency control for async operations)
     - Remote tool name resolution
     - Safe disconnection handling
     - Content formatting from MCP responses
@@ -94,8 +115,11 @@ class BaseMCPTool(MCPStreamableHTTPTool):
     async def _ensure_connection(self) -> None:
         """Ensure the MCP session is connected before invoking a tool.
 
-        Uses double-checked locking pattern for thread safety while minimizing
+        Uses a double-checked locking pattern for async safety, preventing
+        concurrent connection attempts from multiple async tasks while minimizing
         lock contention in the common case where connection is already established.
+        Note: This does not provide thread safety; it only synchronizes coroutines
+        within the same event loop.
         """
         if getattr(self, "session", None) and getattr(self, "is_connected", False):
             return
