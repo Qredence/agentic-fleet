@@ -10,6 +10,7 @@ import json
 from collections.abc import AsyncIterator
 from datetime import datetime
 from typing import TYPE_CHECKING, Any
+import re  # For robust input sanitization
 
 from agent_framework._workflows import (
     ExecutorCompletedEvent,
@@ -415,7 +416,8 @@ async def chat_stream(
         EventSourceResponse streaming workflow events.
     """
     msg_preview = request.message[:50] if len(request.message) > 50 else request.message
-    sanitized_preview = msg_preview.replace('\r', '').replace('\n', '')
+    # Remove all control chars (including \r, \n, tabs, Unicode separators) from user message before logging
+    sanitized_preview = re.sub(r'[\x00-\x1F\x7F\u2028\u2029]', '', msg_preview)
     logger.info(
         f"Chat stream request received: message_preview={sanitized_preview}, "
         f"stream={request.stream}, reasoning_effort={request.reasoning_effort}"
