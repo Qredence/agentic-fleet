@@ -283,6 +283,129 @@ class HistoryManager:
         except Exception as e:
             logger.warning(f"Failed to rotate history file: {e}")
 
+    def get_execution(self, workflow_id: str) -> dict[str, Any] | None:
+        """
+        Retrieve a specific execution by ID.
+
+        Args:
+            workflow_id: The workflow ID to retrieve
+
+        Returns:
+            Execution dictionary or None if not found
+        """
+        # Try Cosmos DB first if enabled
+        try:
+            from .cosmos import get_execution, is_cosmos_enabled
+
+            if is_cosmos_enabled():
+                return get_execution(workflow_id)
+        except Exception as e:
+            logger.warning(f"Failed to load execution from Cosmos DB: {e}")
+
+        # Scan local files
+        # Check JSONL first
+        jsonl_file = self.history_dir / "execution_history.jsonl"
+        if jsonl_file.exists():
+            try:
+                with open(jsonl_file) as f:
+                    for line in f:
+                        try:
+                            entry = json.loads(line)
+                            if entry.get("workflowId") == workflow_id:
+                                return entry
+                        except json.JSONDecodeError:
+                            continue
+            except Exception as e:
+                logger.warning(f"Failed to scan JSONL history: {e}")
+
+        # Check JSON
+        json_file = self.history_dir / "execution_history.json"
+        if json_file.exists():
+            try:
+                with open(json_file) as f:
+                    entries = json.load(f)
+                    for entry in entries:
+                        if entry.get("workflowId") == workflow_id:
+                            return entry
+            except Exception as e:
+                logger.warning(f"Failed to scan JSON history: {e}")
+
+        return None
+
+    def delete_execution(self, workflow_id: str) -> bool:
+        """
+        Delete a specific execution by ID.
+
+        Args:
+            workflow_id: The workflow ID to delete
+
+        Returns:
+            True if deleted, False otherwise
+        """
+        deleted = False
+
+        # Handle JSONL
+        jsonl_file = self.history_dir / "execution_history.jsonl"
+        if jsonl_file.exists():
+            try:
+                lines = []
+                file_changed = False
+                with open(jsonl_file) as f:
+                    for line in f:
+                        try:
+                            entry = json.loads(line)
+                            if entry.get("workflowId") == workflow_id:
+                                file_changed = True
+                                deleted = True
+                                continue  # Skip this line
+                            lines.append(line)
+                        except json.JSONDecodeError:
+                            lines.append(line)
+
+                if file_changed:
+                    with open(jsonl_file, "w") as f:
+                        f.writelines(lines)
+            except Exception as e:
+                logger.warning(f"Failed to delete from JSONL history: {e}")
+
+        # Handle JSON
+        json_file = self.history_dir / "execution_history.json"
+        if json_file.exists():
+            try:
+                with open(json_file) as f:
+                    entries = json.load(f)
+
+                new_entries = [e for e in entries if e.get("workflowId") != workflow_id]
+                if len(new_entries) < len(entries):
+                    deleted = True
+                    with open(json_file, "w") as f:
+                        json.dump(new_entries, f, indent=2, cls=FleetJSONEncoder)
+            except Exception as e:
+                logger.warning(f"Failed to delete from JSON history: {e}")
+
+        return deleted
+
+    def get_recent_executions(self, limit: int = 20, offset: int = 0) -> list[dict[str, Any]]:
+        """
+        Get recent executions, newest first.
+
+        Args:
+            limit: Maximum number of entries to return
+            offset: Number of entries to skip
+
+        Returns:
+            List of execution dictionaries
+        """
+        # Load all history (this is inefficient for large files but acceptable for now)
+        executions = self.load_history(limit=None)
+
+        # Reverse to get newest first
+        executions.reverse()
+
+        start = offset
+        end = offset + limit
+        return executions[start:end]
+
     def load_history(self, limit: int | None = None) -> list[dict[str, Any]]:
         """
         Load execution history.

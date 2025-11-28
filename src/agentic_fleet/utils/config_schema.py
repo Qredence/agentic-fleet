@@ -6,7 +6,7 @@ from __future__ import annotations
 
 from typing import Any, Literal
 
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 
 class DSPyOptimizationConfig(BaseModel):
@@ -108,7 +108,7 @@ class AgentConfig(BaseModel):
     strategy: str | None = None
     instructions: str | None = None
 
-    model_config = {"extra": "allow"}
+    model_config = ConfigDict(extra="allow")
 
 
 class AgentsConfig(BaseModel):
@@ -119,7 +119,7 @@ class AgentsConfig(BaseModel):
     writer: AgentConfig = AgentConfig()
     reviewer: AgentConfig = AgentConfig()
 
-    model_config = {"extra": "allow"}
+    model_config = ConfigDict(extra="allow")
 
 
 class ToolsConfig(BaseModel):
@@ -140,6 +140,9 @@ class LoggingConfig(BaseModel):
     save_history: bool = True
     history_file: str = "logs/execution_history.jsonl"
     verbose: bool = True
+    # Log verbose GPT-5 reasoning tokens to execution history (default: false)
+    # Enable for debugging/evaluation; disable in production to reduce storage
+    log_reasoning: bool = False
 
     @field_validator("level")
     @classmethod
