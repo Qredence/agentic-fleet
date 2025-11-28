@@ -1,78 +1,105 @@
-from unittest.mock import patch
+"""Tests for history endpoints."""
+
+from unittest.mock import MagicMock
 
 import pytest
+from fastapi import status
 from fastapi.testclient import TestClient
 
-
-@pytest.fixture
-def mock_history_manager():
-    with patch("agentic_fleet.api.routes.history.HistoryManager") as mock_manager:
-        instance = mock_manager.return_value
-        yield instance
+from agentic_fleet.app.main import app
 
 
-def test_get_history_empty(client: TestClient, mock_history_manager):
-    mock_history_manager.load_history.return_value = []
+class TestHistoryEndpoints:
+    """Tests for history management endpoints."""
 
-    response = client.get("/api/history")
-    assert response.status_code == 200
-    data = response.json()
-    assert data["runs"] == []
+    @pytest.fixture
+    def client(self):
+        return TestClient(app)
 
+    @pytest.fixture
+    def mock_workflow(self):
+        from agentic_fleet.app.dependencies import _get_workflow
 
-def test_get_history_with_data(client: TestClient, mock_history_manager):
-    mock_data = [
-        {
-            "workflowId": "run-123",
-            "task": "Test Task",
-            "result": "Success",
-            "routing": {"assigned_to": ["AgentA"]},
-            "total_time_seconds": 1.5,
-            "phase_timings": {"analysis": 0.1},
-        }
-    ]
-    mock_history_manager.load_history.return_value = mock_data
+        workflow = MagicMock()
 
-    response = client.get("/api/history")
-    assert response.status_code == 200
-    data = response.json()
-    assert len(data["runs"]) == 1
-    run = data["runs"][0]
-    assert run["run_id"] == "run-123"
-    assert run["task"] == "Test Task"
-    # Default fields shouldn't include detailed routing/timing unless requested
-    assert "routing" not in run
-    assert "timing" not in run
+        def override_get_workflow():
+            return workflow
 
+        app.dependency_overrides[_get_workflow] = override_get_workflow
+        yield workflow
+        app.dependency_overrides = {}
 
-def test_get_history_with_params(client: TestClient, mock_history_manager):
-    mock_data = [
-        {
-            "workflowId": "run-123",
-            "task": "Test Task",
-            "result": "Success",
-            "routing": {"assigned_to": ["AgentA"]},
-            "total_time_seconds": 1.5,
-            "phase_timings": {"analysis": 0.1},
-        }
-    ]
-    mock_history_manager.load_history.return_value = mock_data
+    def test_get_history_pagination(self, client, mock_workflow):
+        """Test history retrieval with pagination."""
+        # Mock history manager
+        manager = MagicMock()
+        mock_workflow.history_manager = manager
 
-    # Request with all details
-    response = client.get("/api/history?routing=true&agents=true&timing=true")
-    assert response.status_code == 200
-    data = response.json()
-    run = data["runs"][0]
+        # Mock get_recent_executions
+        manager.get_recent_executions.return_value = [
+            {"workflowId": "1"},
+            {"workflowId": "2"},
+        ]
 
-    assert "routing" in run
-    assert "agents" in run
-    assert run["agents"] == ["AgentA"]
-    assert "timing" in run
-    assert run["timing"]["total"] == 1.5
+        response = client.get("/api/v1/history?limit=10&offset=5")
 
+        assert response.status_code == status.HTTP_200_OK
+        assert len(response.json()) == 2
+        manager.get_recent_executions.assert_called_with(limit=10, offset=5)
 
-def test_get_history_error(client: TestClient, mock_history_manager):
-    mock_history_manager.load_history.side_effect = Exception("DB Error")
+    def test_get_execution_details(self, client, mock_workflow):
+        """Test retrieving specific execution details."""
+        manager = MagicMock()
+        mock_workflow.history_manager = manager
 
-    response = client.get("/api/history")
-    assert response.status_code == 500
+        manager.get_execution.return_value = {"workflowId": "123", "status": "completed"}
+
+        response = client.get("/api/v1/history/123")
+
+        assert response.status_code == status.HTTP_200_OK
+        assert response.json()["workflowId"] == "123"
+        manager.get_execution.assert_called_with("123")
+
+    def test_get_execution_not_found(self, client, mock_workflow):
+        """Test retrieving non-existent execution."""
+        manager = MagicMock()
+        mock_workflow.history_manager = manager
+
+        manager.get_execution.return_value = None
+
+        response = client.get("/api/v1/history/999")
+
+        assert response.status_code == status.HTTP_404_NOT_FOUND
+
+    def test_delete_execution(self, client, mock_workflow):
+        """Test deleting an execution."""
+        manager = MagicMock()
+        mock_workflow.history_manager = manager
+
+        manager.delete_execution.return_value = True
+
+        response = client.delete("/api/v1/history/123")
+
+        assert response.status_code == status.HTTP_204_NO_CONTENT
+        manager.delete_execution.assert_called_with("123")
+
+    def test_delete_execution_not_found(self, client, mock_workflow):
+        """Test deleting non-existent execution."""
+        manager = MagicMock()
+        mock_workflow.history_manager = manager
+
+        manager.delete_execution.return_value = False
+
+        response = client.delete("/api/v1/history/999")
+
+        assert response.status_code == status.HTTP_404_NOT_FOUND
+
+    def test_clear_history(self, client, mock_workflow):
+        """Test clearing all history."""
+        manager = MagicMock()
+        mock_workflow.history_manager = manager
+
+        response = client.delete("/api/v1/history")
+
+        assert response.status_code == status.HTTP_204_NO_CONTENT
+        manager.clear_history.assert_called_once()

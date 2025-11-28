@@ -69,18 +69,19 @@ AgenticFleet is a hybrid **DSPy + Microsoft agent-framework** runtime that deliv
 
 ## Architecture Overview
 
-Four‑phase pipeline:
+Five‑phase pipeline (optimized in v0.6.6):
 
 ```
-Task → [1] DSPy Analysis → [2] DSPy Routing → [3] Agent Execution → [4] Quality / Judge Assessment → (Optional Refinement)
+Task → [1] DSPy Analysis → [2] DSPy Routing → [3] Agent Execution → [4] Progress Eval → [5] Quality Assessment → Final Output
 ```
 
-| Phase     | Responsibility                            | Source                                                |
-| --------- | ----------------------------------------- | ----------------------------------------------------- |
-| Analysis  | Extract goals, complexity, constraints    | `dspy_modules/reasoner.py` (`analyze_task`)           |
-| Routing   | Pick agents + execution mode, tools       | `dspy_modules/reasoner.py` (`route_task`)             |
-| Execution | Orchestrate agents & tools; stream events | `workflows/supervisor.py`                             |
-| Quality   | Score output, recommend improvements      | `dspy_modules/reasoner.py` (`assess_quality` + Judge) |
+| Phase     | Responsibility                            | Source                                           |
+| --------- | ----------------------------------------- | ------------------------------------------------ |
+| Analysis  | Extract goals, complexity, constraints    | `dspy_modules/reasoner.py` (`analyze_task`)      |
+| Routing   | Pick agents + execution mode, tools       | `dspy_modules/reasoner.py` (`route_task`)        |
+| Execution | Orchestrate agents & tools; stream events | `workflows/supervisor.py`                        |
+| Progress  | Evaluate progress, decide next steps      | `dspy_modules/reasoner.py` (`evaluate_progress`) |
+| Quality   | Score output, recommend improvements      | `dspy_modules/reasoner.py` (`assess_quality`)    |
 
 ### Workflow Diagram
 
@@ -91,15 +92,14 @@ B --> C[DSPy routing]
 C --> D1[Agent execution delegated]
 C --> D2[Agent execution sequential]
 C --> D3[Agent execution parallel]
-D1 --> E[Quality assessment]
-D2 --> E
-D3 --> E
+D1 --> P[Progress evaluation]
+D2 --> P
+D3 --> P
+P --> E[Quality assessment]
 E --> F[Final output]
-E --> G[Refinement loop]
-G --> F
 ```
 
-Refinement triggers when score < threshold (default 8 or judge threshold ≥ 7). Handoffs coordinate multi‑agent chains via `HandoffManager` (in `workflows/handoff.py`).
+> **Note**: The Judge/Refinement phase was removed in v0.6.6 for ~66% latency improvement. Quality assessment via `QualityAssessment` signature is retained.
 
 Consult: `docs/developers/architecture.md` & `docs/guides/quick-reference.md`.
 
@@ -114,9 +114,9 @@ Common bottlenecks and how to mitigate:
 - External tool calls (OpenAI, Tavily, Hosted Interpreter)
   - Prefer lighter Reasoner model `dspy.model: gpt-5-mini`
   - Disable pre‑analysis tool usage for simple tasks
-- Judge/refinement loops
-  - Set `quality.max_refinement_rounds: 1`
-  - Use `judge_reasoning_effort: minimal`
+- **Judge/refinement loops (DISABLED by default in v0.6.6)**
+  - Judge phase removed from default pipeline for ~66% latency reduction
+  - Re-enable with `quality.enable_judge: true` if needed
 - Parallel fan‑out synthesis
   - Cap `execution.max_parallel_agents` to a small number
   - Enable streaming to surface progress early

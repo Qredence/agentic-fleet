@@ -42,7 +42,6 @@ from ..utils.telemetry import optional_span
 from .executors import (
     AnalysisExecutor,
     ExecutionExecutor,
-    JudgeRefineExecutor,
     ProgressExecutor,
     QualityExecutor,
     RoutingExecutor,
@@ -90,7 +89,8 @@ def _build_standard_workflow(
         execution_executor = ExecutionExecutor("execution", context)
         progress_executor = ProgressExecutor("progress", supervisor, context)
         quality_executor = QualityExecutor("quality", supervisor, context)
-        judge_refine_executor = JudgeRefineExecutor("judge_refine", context)
+        # NOTE: JudgeRefineExecutor removed in Plan #4 optimization
+        # Workflow now terminates at QualityExecutor for faster execution
 
         return (
             WorkflowBuilder()
@@ -99,7 +99,6 @@ def _build_standard_workflow(
             .add_edge(routing_executor, execution_executor)
             .add_edge(execution_executor, progress_executor)
             .add_edge(progress_executor, quality_executor)
-            .add_edge(quality_executor, judge_refine_executor)
         )
 
 

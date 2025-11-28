@@ -286,7 +286,14 @@ This ensures:
 
 ## Integration with DSPy
 
-Self-improvement works seamlessly with DSPy optimization:
+Self-improvement works seamlessly with DSPy optimization through a "Lazy Loading" architecture:
+
+1. **Data Preparation (Fast)**: The `self-improve` command analyzes history and updates `data/supervisor_examples.json`. It does _not_ run the expensive DSPy compilation process itself.
+2. **Cache Invalidation**: It clears the compilation cache (`logs/compiled_supervisor.pkl`), signaling that the current model is outdated.
+3. **Just-in-Time Optimization**: The _next_ time you run `agentic-fleet run`, the system detects the missing cache and automatically triggers the DSPy compiler.
+4. **Result**: The new run uses a fresh model optimized with your latest high-quality examples.
+
+This separation ensures that the `self-improve` command remains instant and lightweight, deferring the heavy lifting to the next execution cycle.
 
 1. **New examples added** to `data/supervisor_examples.json`
 2. **Cache cleared** to force recompilation

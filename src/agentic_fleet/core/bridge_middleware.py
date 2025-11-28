@@ -8,10 +8,10 @@ import os
 from datetime import datetime
 from typing import Any
 
-from ..api.middlewares import ChatMiddleware
 from ..utils.history_manager import HistoryManager
 from ..utils.logger import setup_logger
 from .converters import BridgeConverter
+from .middlewares import ChatMiddleware
 
 logger = setup_logger(__name__)
 

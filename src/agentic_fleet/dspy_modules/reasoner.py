@@ -22,7 +22,6 @@ from ..workflows.exceptions import ToolError
 from ..workflows.helpers import is_simple_task, is_time_sensitive_task
 from .signatures import (
     GroupChatSpeakerSelection,
-    JudgeEvaluation,
     ProgressEvaluation,
     QualityAssessment,
     SimpleResponse,
@@ -54,17 +53,19 @@ class DSPyReasoner(dspy.Module):
         if use_enhanced_signatures:
             from .workflow_signatures import EnhancedTaskRouting, WorkflowStrategy
 
-            self.router = dspy.ChainOfThought(EnhancedTaskRouting)
+            # Use dspy.Predict for routing (no reasoning trace needed) - Plan #4 optimization
+            self.router = dspy.Predict(EnhancedTaskRouting)
             self.strategy_selector = dspy.ChainOfThought(WorkflowStrategy)
         else:
-            self.router = dspy.ChainOfThought(TaskRouting)
+            # Use dspy.Predict for routing (faster, no reasoning trace needed)
+            self.router = dspy.Predict(TaskRouting)
             # Fallback for standard strategy
             self.strategy_selector = None
 
         self.quality_assessor = dspy.ChainOfThought(QualityAssessment)
         self.progress_evaluator = dspy.ChainOfThought(ProgressEvaluation)
         self.tool_planner = dspy.ChainOfThought(ToolPlan)
-        self.judge = dspy.ChainOfThought(JudgeEvaluation)
+        # NOTE: self.judge removed in Plan #4 optimization - Judge phase eliminated
         self.simple_responder = dspy.ChainOfThought(SimpleResponse)
         self.group_chat_selector = dspy.ChainOfThought(GroupChatSpeakerSelection)
 
@@ -163,7 +164,7 @@ class DSPyReasoner(dspy.Module):
             self._get_predictor(self.quality_assessor),
             self._get_predictor(self.progress_evaluator),
             self._get_predictor(self.tool_planner),
-            self._get_predictor(self.judge),
+            # NOTE: self.judge removed in Plan #4 optimization
             self._get_predictor(self.simple_responder),
             self._get_predictor(self.group_chat_selector),
         ]
@@ -180,7 +181,7 @@ class DSPyReasoner(dspy.Module):
             ("quality_assessor", self._get_predictor(self.quality_assessor)),
             ("progress_evaluator", self._get_predictor(self.progress_evaluator)),
             ("tool_planner", self._get_predictor(self.tool_planner)),
-            ("judge", self._get_predictor(self.judge)),
+            # NOTE: ("judge", ...) removed in Plan #4 optimization
             ("simple_responder", self._get_predictor(self.simple_responder)),
             ("group_chat_selector", self._get_predictor(self.group_chat_selector)),
         ]
