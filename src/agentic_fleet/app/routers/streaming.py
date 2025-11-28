@@ -533,4 +533,5 @@ async def cancel_session(
             WorkflowStatus.CANCELLED,
             completed_at=datetime.now(),
         )
-        logger.info(f"Cancelled workflow session: workflow_id={workflow_id}")
+        sanitized_workflow_id = workflow_id.replace('\n', '').replace('\r', '')
+        logger.info(f"Cancelled workflow session: workflow_id={sanitized_workflow_id}")
