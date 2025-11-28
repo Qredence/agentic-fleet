@@ -7,7 +7,7 @@ from typing import Any
 
 import dspy
 from fastapi import APIRouter, HTTPException, status
-
+import logging
 from agentic_fleet.app.dependencies import WorkflowDep
 
 router = APIRouter()
@@ -100,7 +100,7 @@ async def get_dspy_prompts(
                     for k, v in demo.items():
                         demo_dict[k] = str(v)
                 except Exception:
-                    pass
+                    logging.exception("Failed to process demo items for predictor '%s'", name)
                 demos.append(demo_dict)
 
         prompts[name] = {
