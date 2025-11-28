@@ -12,6 +12,7 @@ def wait_for_server(url, timeout=30):
             if response.status_code == 200:
                 return True
         except requests.ConnectionError:
+            # Connection errors are expected while waiting for the server to start; retry until timeout.
             pass
         time.sleep(1)
     return False

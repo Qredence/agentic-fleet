@@ -100,6 +100,7 @@ async def get_dspy_prompts(
                     for k, v in demo.items():
                         demo_dict[k] = str(v)
                 except Exception:
+                    # Demo objects may have various formats; skip malformed demos gracefully.
                     pass
                 demos.append(demo_dict)
 
