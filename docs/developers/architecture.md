@@ -44,9 +44,11 @@ AgenticFleet combines Microsoft's agent-framework with DSPy's intelligent prompt
 2. **DSPy Analysis** → Reasoner (using cached module) analyzes task
 3. **DSPy Routing** → Reasoner routes task to appropriate agents
 4. **Agent Execution** → Agents execute in parallel/sequential/delegated mode
-5. **Quality Assessment** → DSPy evaluates output quality
-6. **Refinement** → Optional refinement if quality < threshold
+5. **Progress Evaluation** → DSPy evaluates execution progress
+6. **Quality Assessment** → DSPy evaluates output quality
 7. **History Persistence** → Execution saved via `BridgeMiddleware`
+
+> **Note**: The Judge/Refinement phase was removed in v0.6.6 for ~66% latency improvement (from ~6 min to ~2 min for complex queries).
 
 ### Agent-Framework Integration Architecture
 
@@ -101,7 +103,6 @@ graph TB
     BUILDER -->|add_edge| EE
     BUILDER -->|add_edge| PE
     BUILDER -->|add_edge| QE
-    BUILDER -->|add_edge| JE
 
     AE -->|uses| DSPY
     RE -->|uses| DSPY
@@ -111,7 +112,6 @@ graph TB
     DSPY -->|uses| SIGS
 
     EE -->|creates| CA
-    JE -->|creates| CA
 
     CA -->|uses| OAI
     CA -->|uses| TOOLS
@@ -120,8 +120,7 @@ graph TB
     RE -->|emits| MAE
     EE -->|emits| MAE
     PE -->|emits| MAE
-    QE -->|emits| MAE
-    JE -->|emits| WOE
+    QE -->|emits| WOE
 
     MAE -->|contains| CM
     WOE -->|contains| CM
@@ -132,7 +131,6 @@ graph TB
     style EE fill:#fff4e1
     style PE fill:#fff4e1
     style QE fill:#fff4e1
-    style JE fill:#fff4e1
     style CA fill:#e8f5e9
     style OAI fill:#e8f5e9
     style MAE fill:#fce4ec
@@ -140,10 +138,12 @@ graph TB
     style CM fill:#fce4ec
 ```
 
+> **Note**: `JudgeRefineExecutor` was removed in v0.6.6 for latency optimization. The workflow now terminates at `QualityExecutor`.
+
 **Key Agent-Framework Components:**
 
 1. **WorkflowBuilder** (blue): Constructs the executor graph with `.set_start_executor()` and `.add_edge()`
-2. **Executors** (orange): All 6 fleet executors extend `agent_framework.Executor` and use `@handler` decorator
+2. **Executors** (orange): All 5 fleet executors extend `agent_framework.Executor` and use `@handler` decorator
 3. **ChatAgent** (green): Created via `agent_framework.ChatAgent` with `OpenAIResponsesClient`
 4. **Events** (pink): `MagenticAgentMessageEvent` and `WorkflowOutputEvent` with `ChatMessage` + `Role` enum
 

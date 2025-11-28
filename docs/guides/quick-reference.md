@@ -82,6 +82,9 @@ code config/workflow_config.yaml
 # - dspy.optimization.enabled: true/false
 # - logging.save_history: true/false
 # - logging.verbose: true/false
+# - quality.enable_judge: false         # Judge phase disabled (v0.6.6)
+# - quality.max_refinement_rounds: 0    # No refinement loops
+# - routing_model: gpt-5-mini           # Fast model for routing decisions
 ```
 
 ## Common Tasks
@@ -136,7 +139,9 @@ tail -f logs/workflow.log
 
 - Check network connectivity (OpenAI API, Tavily API)
 - Review timing breakdown: `python src/agentic_fleet/scripts/analyze_history.py --timing`
-- Consider adjusting max_rounds in config
+- Clear DSPy cache after config changes: `make clear-cache` or `uv run python -m agentic_fleet.scripts.manage_cache --clear`
+- The 5-phase pipeline (v0.6.6) should complete in ~2 minutes for complex queries
+- Consider using `gpt-5-mini` for routing via `routing_model` config
 
 ### Quality scores always 10/10
 
@@ -186,3 +191,5 @@ LOG_LEVEL=INFO                  # Logging level
 5. **Keep execution history** for training and debugging
 6. **Use tee** to save console output while viewing it live
 7. **Check logs/** directory for detailed debugging information
+8. **Clear DSPy cache** after changing signatures, prompts, or training examples
+9. **Pipeline phases** (v0.6.6): analysis → routing → execution → progress → quality (~2 min for complex tasks)
