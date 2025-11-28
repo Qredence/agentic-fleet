@@ -171,7 +171,7 @@ async def test_group_chat_run_with_fallback(mock_agent_with_neither, mock_reason
     # Fallback response should still have the agent name
     assert history[1].additional_properties["name"] == "FallbackAgent"
     # Verify fallback response text/content (should be non-empty)
-    assert history[1].text.strip() != ""
+    assert "FallbackAgent" in history[1].text
 
     # Verify neither run nor process are callable (set to None)
     assert mock_agent_with_neither.run is None
