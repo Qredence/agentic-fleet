@@ -100,7 +100,8 @@ async def get_dspy_prompts(
                     for k, v in demo.items():
                         demo_dict[k] = str(v)
                 except Exception:
-                    logging.exception("Failed to process demo items for predictor '%s'", name)
+                    # Demo objects may have various formats; skip malformed demos gracefully.
+                    pass
                 demos.append(demo_dict)
 
         prompts[name] = {
