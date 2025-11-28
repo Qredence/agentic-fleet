@@ -27,7 +27,7 @@ from ..utils.logger import setup_logger
 from ..utils.models import ExecutionMode, RoutingDecision, ensure_routing_decision
 from ..utils.telemetry import optional_span
 from ..utils.tool_registry import ToolRegistry
-from .builder import WorkflowMode, build_fleet_workflow
+from .builder import build_fleet_workflow
 from .config import WorkflowConfig
 from .context import SupervisorContext
 from .handoff import HandoffManager
@@ -218,13 +218,16 @@ class SupervisorWorkflow:
                 decision = self.dspy_reasoner.select_workflow_mode(task)
                 detected_mode_str = decision.get("mode", "standard")
                 if detected_mode_str not in ("standard", "fast_path"):
+                    # Validate that detected_mode_str is a valid WorkflowMode literal
+                    valid_modes = ("group_chat", "concurrent", "handoff", "standard")
+                    if detected_mode_str not in valid_modes:
+                        logger.warning(f"Invalid mode '{detected_mode_str}', defaulting to 'standard'")
+                        detected_mode_str = "standard"
                     logger.info(f"Switching workflow to mode: {detected_mode_str}")
-                    # Validate and convert string to WorkflowMode enum member
-                    detected_mode = WorkflowMode(detected_mode_str)
                     workflow_builder = build_fleet_workflow(
                         self.dspy_reasoner,
                         self.context,
-                        mode=detected_mode,
+                        mode=detected_mode_str,  # type: ignore[arg-type]
                     )
                     self.workflow = _materialize_workflow(workflow_builder)
                     current_mode = detected_mode_str

@@ -117,6 +117,7 @@ async def test_supervisor_calls_middleware_fast_path():
     workflow_runner.run.return_value = workflow_result
 
     dspy_reasoner = MagicMock()
+    dspy_reasoner.generate_simple_response = MagicMock(return_value="Fast path response")
 
     supervisor = SupervisorWorkflow(
         context=context,
@@ -134,9 +135,7 @@ async def test_supervisor_calls_middleware_fast_path():
     # Verify fast-path logic was checked
     supervisor._should_fast_path.assert_called_once()
 
-    # Depending on implementation, fast-path may or may not call middleware hooks.
-    # Adjust these assertions as per the actual fast-path behavior. For this example,
-    # we assume fast-path does not call middleware hooks.
+    # Fast-path should still call middleware hooks (on_start before fast-path, on_end after)
     assert middleware.on_start_called
     assert middleware.on_end_called
 
