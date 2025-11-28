@@ -833,11 +833,32 @@ class QualityExecutor(Executor):
         )
 
 
+# =============================================================================
+# DEPRECATED: JudgeRefineExecutor removed from workflow graph in Plan #4
+# This class is retained for backwards compatibility but is no longer used.
+# The workflow now terminates at QualityExecutor for improved latency.
+# =============================================================================
+
+
 class JudgeRefineExecutor(Executor):
-    """Executor for judge evaluation and refinement."""
+    """Executor for judge evaluation and refinement.
+
+    DEPRECATED: This executor is no longer part of the default workflow graph.
+    Removed in Plan #4 optimization to reduce latency. The workflow now
+    terminates at QualityExecutor. This class is retained for backwards
+    compatibility with custom workflow configurations.
+    """
 
     def __init__(self, executor_id: str, context: SupervisorContext) -> None:
         """Initialize the judge refine executor."""
+        import warnings
+
+        warnings.warn(
+            "JudgeRefineExecutor is deprecated and no longer used in the default workflow. "
+            "It was removed in Plan #4 optimization. See PLANS.md for details.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
         super().__init__(id=executor_id)
         self.context = context
 

@@ -22,6 +22,24 @@ class StreamMetadata:
     payload: dict[str, Any] = field(default_factory=dict)
 
 
+@dataclass(slots=True)
+class ReasoningStreamEvent:
+    """Event for streaming GPT-5 verbose reasoning tokens.
+
+    This event type captures reasoning/chain-of-thought output from
+    GPT-5 series models separately from the main response content.
+
+    Attributes:
+        reasoning: The reasoning text delta.
+        agent_id: The agent that produced this reasoning (if applicable).
+        is_complete: Whether this marks the end of reasoning output.
+    """
+
+    reasoning: str
+    agent_id: str | None = None
+    is_complete: bool = False
+
+
 def _attach_metadata(
     event: MagenticAgentMessageEvent, metadata: StreamMetadata
 ) -> MagenticAgentMessageEvent:

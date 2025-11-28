@@ -30,6 +30,7 @@ from ..utils.tool_registry import ToolRegistry
 from .builder import build_fleet_workflow
 from .config import WorkflowConfig
 from .context import SupervisorContext
+from .execution.streaming_events import ReasoningStreamEvent
 from .handoff import HandoffManager
 from .helpers import is_simple_task
 from .initialization import initialize_workflow_context
@@ -49,6 +50,7 @@ WorkflowEvent = (
     | WorkflowOutputEvent
     | MagenticAgentMessageEvent
     | ExecutorCompletedEvent
+    | ReasoningStreamEvent
 )
 
 logger = setup_logger(__name__)
@@ -374,6 +376,25 @@ class SupervisorWorkflow:
                     if isinstance(event, MagenticAgentMessageEvent):
                         yield event
                     elif isinstance(event, AgentRunUpdateEvent):
+                        # Check for reasoning events from GPT-5 models
+                        if hasattr(event, "run") and hasattr(event.run, "delta"):
+                            delta = event.run.delta
+                            # Check for reasoning content (GPT-5 series)
+                            if hasattr(delta, "type") and "reasoning" in str(
+                                getattr(delta, "type", "")
+                            ):
+                                reasoning_text = getattr(delta, "delta", "")
+                                if reasoning_text:
+                                    agent_id = (
+                                        getattr(event.run, "agent_id", "unknown")
+                                        if hasattr(event, "run")
+                                        else "unknown"
+                                    )
+                                    yield ReasoningStreamEvent(
+                                        reasoning=reasoning_text, agent_id=agent_id
+                                    )
+                                continue
+
                         # Convert AgentRunUpdateEvent to MagenticAgentMessageEvent for CLI compatibility
                         text = ""
                         if hasattr(event, "run") and hasattr(event.run, "delta"):
