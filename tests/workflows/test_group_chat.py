@@ -60,13 +60,13 @@ def mock_agent_with_process_only():
 @pytest.fixture
 def mock_agent_with_neither():
     """Create a mock agent that has neither run nor process methods."""
-    agent = MagicMock()
+    # Use spec to limit attributes, then configure only what we need
+    agent = MagicMock(spec=["name", "description"])
     agent.name = "FallbackAgent"
     agent.description = "A mock agent with neither run nor process"
 
-    # Remove both methods to test fallback
-    agent.run = None
-    agent.process = None
+    # With spec=[], the mock won't have run or process attributes at all
+    # hasattr(agent, "run") will now return False
 
     return agent
 
@@ -81,8 +81,8 @@ def mock_reasoner():
     return reasoner
 
 
-@pytest.mark.asyncio
 def test_group_chat_builder(mock_agent_with_run, mock_reasoner):
+    """Test that GroupChatBuilder creates a valid DSPyGroupChatManager."""
     builder = GroupChatBuilder()
     builder.add_agent(mock_agent_with_run)
     builder.set_reasoner(mock_reasoner)
@@ -173,6 +173,6 @@ async def test_group_chat_run_with_fallback(mock_agent_with_neither, mock_reason
     # Verify fallback response text/content (should be non-empty)
     assert "FallbackAgent" in history[1].text
 
-    # Verify neither run nor process are callable (set to None)
-    assert mock_agent_with_neither.run is None
-    assert mock_agent_with_neither.process is None
+    # Verify neither run nor process exist on the mock (spec limits attributes)
+    assert not hasattr(mock_agent_with_neither, "run")
+    assert not hasattr(mock_agent_with_neither, "process")

@@ -9,7 +9,7 @@ import importlib.util
 import sys
 from pathlib import Path
 from typing import Any
-from unittest.mock import AsyncMock, MagicMock
+from unittest.mock import AsyncMock, MagicMock, PropertyMock, patch
 
 import pytest
 
@@ -207,12 +207,14 @@ class TestResolveRemoteToolName:
         func2 = MagicMock()
         func2.name = "search_documents"
 
-        tool.functions = [func1, func2]
+        # Use PropertyMock to mock the read-only functions property
+        with patch.object(type(tool), "functions", new_callable=PropertyMock) as mock_funcs:
+            mock_funcs.return_value = [func1, func2]
 
-        result = tool._resolve_remote_tool_name()
+            result = tool._resolve_remote_tool_name()
 
-        assert result == "search_documents"
-        assert tool._resolved_tool_name == "search_documents"
+            assert result == "search_documents"
+            assert tool._resolved_tool_name == "search_documents"
 
     def test_uses_first_function_when_no_keyword_match(self):
         """Test that first function is used when no keyword matches."""
@@ -228,11 +230,13 @@ class TestResolveRemoteToolName:
         func2 = MagicMock()
         func2.name = "second_function"
 
-        tool.functions = [func1, func2]
+        # Use PropertyMock to mock the read-only functions property
+        with patch.object(type(tool), "functions", new_callable=PropertyMock) as mock_funcs:
+            mock_funcs.return_value = [func1, func2]
 
-        result = tool._resolve_remote_tool_name()
+            result = tool._resolve_remote_tool_name()
 
-        assert result == "first_function"
+            assert result == "first_function"
 
     def test_falls_back_to_local_name_when_no_functions(self):
         """Test fallback to local name when no functions available."""
@@ -242,11 +246,13 @@ class TestResolveRemoteToolName:
             description="Test description",
         )
 
-        tool.functions = []
+        # Use PropertyMock to mock the read-only functions property
+        with patch.object(type(tool), "functions", new_callable=PropertyMock) as mock_funcs:
+            mock_funcs.return_value = []
 
-        result = tool._resolve_remote_tool_name()
+            result = tool._resolve_remote_tool_name()
 
-        assert result == "fallback_name"
+            assert result == "fallback_name"
 
     def test_custom_preferred_keywords(self):
         """Test that custom preferred keywords are used."""
@@ -261,12 +267,14 @@ class TestResolveRemoteToolName:
         func2 = MagicMock()
         func2.name = "custom_function"
 
-        tool.functions = [func1, func2]
+        # Use PropertyMock to mock the read-only functions property
+        with patch.object(type(tool), "functions", new_callable=PropertyMock) as mock_funcs:
+            mock_funcs.return_value = [func1, func2]
 
-        # Use custom keywords that match func2 instead of default
-        result = tool._resolve_remote_tool_name(preferred_keywords=["custom"])
+            # Use custom keywords that match func2 instead of default
+            result = tool._resolve_remote_tool_name(preferred_keywords=["custom"])
 
-        assert result == "custom_function"
+            assert result == "custom_function"
 
 
 class TestSafeDisconnect:
