@@ -14,6 +14,7 @@ import aiofiles
 
 from ..utils.models import RoutingDecision
 from ..workflows.exceptions import HistoryError
+from .constants import DEFAULT_HISTORY_PATH
 
 logger = logging.getLogger(__name__)
 
@@ -47,7 +48,7 @@ class HistoryManager:
         """
         self.history_format = history_format
         self.max_entries = max_entries
-        self.history_dir = Path("logs")
+        self.history_dir = Path(DEFAULT_HISTORY_PATH).parent
         self.history_dir.mkdir(parents=True, exist_ok=True)
 
         # Warn about JSON format performance implications
