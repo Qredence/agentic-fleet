@@ -5,7 +5,7 @@
 
 [project]
 name = "agentic-fleet"
-version = "0.6.5"
+version = "0.6.6"
 description = "Multi-agent orchestration system built with Microsoft Agent Framework's Magentic Fleet pattern"
 authors = [{ name = "Qredence", email = "contact@qredence.ai" }]
 readme = "README.md"
@@ -197,7 +197,7 @@ load-test = ["locust>=2.15.0"]
 
 [tool.uv]
 # Enforce minimum uv version for reproducibility
-required-version = ">=0.9.0"
+required-version = ">=0.8.0"
 
 # Prefer uv-managed Python installations over system Python
 python-preference = "managed"

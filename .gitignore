@@ -151,7 +151,7 @@ src/frontend/src/.npm-cache/_cacache/index-v5/86/47/86e70a82678db0560ecf5dfeb70e
 .claude/skills/webapp-testing/scripts/with_server.py
 .trae/documents/AgenticFleet Architecture Analysis and Simplification Plan.md
 .trae/documents/Cleanup and Simplification of AgenticFleet via Agent Framework.md
-data/supervisor_examples.json
+src/agentic_fleet/data/logs/
 src/frontend/.vite/deps/_metadata.json
 src/frontend/.vite/deps/@openai_apps-sdk-ui_components_AppsSDKUIProvider.js
 src/frontend/.vite/deps/@openai_apps-sdk-ui_components_AppsSDKUIProvider.js.map

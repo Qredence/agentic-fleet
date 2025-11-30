@@ -152,7 +152,7 @@ Recent optimizations have significantly improved the responsiveness and scalabil
 | `src/frontend/`                    | Optional Vite + React streaming UI                                             |
 | `examples/`                        | Minimal workflow samples                                                       |
 | `scripts/`                         | Analysis, self-improvement, benchmarking, dataset gen                          |
-| `logs/`                            | Execution history, compilation artifacts                                       |
+| `src/agentic_fleet/data/logs/`     | Execution history, compilation artifacts                                       |
 | `docs/`                            | Documentation (users/, developers/, guides/)                                   |
 
 ---
@@ -331,7 +331,7 @@ Training examples live in `src/agentic_fleet/data/supervisor_examples.json`:
 }
 ```
 
-Compilation (BootstrapFewShot + GEPA) occurs on first run (if `DSPY_COMPILE=true`). Cache stored under `logs/compiled_supervisor.pkl`. Refresh via:
+Compilation (BootstrapFewShot + GEPA) occurs on first run (if `DSPY_COMPILE=true`). Cache stored under `src/agentic_fleet/data/logs/compiled_supervisor.pkl`. Refresh via:
 
 ```bash
 uv run python -m agentic_fleet.scripts.manage_cache --clear
@@ -341,7 +341,7 @@ uv run python -m agentic_fleet.scripts.manage_cache --clear
 
 ## Observability & History
 
-- **History**: Structured events appended to `logs/execution_history.jsonl`.
+- **History**: Structured events appended to `src/agentic_fleet/data/logs/execution_history.jsonl`.
 - **Tracing**: Enable OpenTelemetry in YAML; export to AI Toolkit / OTLP endpoint.
 - **Logging**: Adjustable log level via env (`AGENTIC_FLEET_LOG_LEVEL=DEBUG`).
 - **Analysis**: `scripts/analyze_history.py --all` surfaces aggregate metrics.
@@ -353,7 +353,7 @@ uv run python -m agentic_fleet.scripts.manage_cache --clear
 Run batch evaluations against curated tasks:
 
 ```bash
-uv run python -m agentic_fleet.cli.console analyze --dataset data/evaluation_tasks.jsonl
+uv run python -m agentic_fleet.cli.console analyze --dataset src/agentic_fleet/data/evaluation_tasks.jsonl
 ```
 
 Generate evaluation datasets from history:

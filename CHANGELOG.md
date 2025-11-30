@@ -1,5 +1,29 @@
 # Changelog
 
+## v0.6.7 (2025-11-30) – Frontend Architecture Overhaul
+
+### Highlights
+
+- **Modernized Frontend Architecture** – Complete refactor of the React frontend to align with the new 5-phase pipeline and event streaming model.
+- **Event-Driven UI** – New `WorkflowEvents` and `ChatStep` components to visualize the granular execution progress (Analysis -> Routing -> Execution).
+- **Simplified State** – Removed legacy `useStreamingChat` in favor of a robust `useChat` hook with better error handling and type safety.
+- **Component Cleanup** – Deleted 20+ deprecated UI components (`chat-container`, `markdown`, `code-block`) to reduce technical debt.
+- **Prompt Kit Integration** – Added `prompt-kit` for enhanced input handling.
+
+### Changes
+
+- **`src/frontend/src/components/`**:
+  - Added `AgentMessageGroup.tsx`, `ChatStep.tsx`, `WorkflowEvents.tsx`.
+  - Deleted legacy components: `chat-container.tsx`, `message.tsx`, `response-stream.tsx`, etc.
+- **`src/frontend/src/hooks/`**:
+  - Refactored `useChat.ts`.
+  - Removed `useStreamingChat.ts`.
+- **`src/frontend/src/lib/api/`**:
+  - Consolidated API logic in `client.ts`.
+  - Removed `chatApi.ts`, `magentic-workflow.ts`.
+
+---
+
 ## v0.6.6 (2025-11-28) – Latency Optimization & Judge Phase Removal
 
 ### Highlights
@@ -316,7 +340,7 @@ agentic_fleet/
 ├── config/                  # Configuration files
 │   └── workflow_config.yaml # Centralized workflow configuration
 │
-├── data/                    # Training and evaluation data
+├── src/agentic_fleet/data/                    # Training and evaluation data
 │   ├── supervisor_examples.json           # DSPy training examples
 │   ├── evaluation_tasks.jsonl             # Evaluation tasks
 │   └── history_evaluation_tasks.jsonl     # Historical evaluation data
@@ -417,7 +441,7 @@ agentic_fleet/
 3. **Evaluation Framework**: Structured evaluation with:
    - `evaluation/evaluator.py` - Evaluation orchestration
    - `evaluation/metrics.py` - Metric definitions
-   - `data/*.jsonl` - Evaluation datasets
+   - `src/agentic_fleet/data/*.jsonl` - Evaluation datasets
 
 4. **Tool Registry**: Centralized tool management via `utils/tool_registry.py`:
    - Automatic tool discovery
