@@ -24,6 +24,7 @@ export const Sidebar = () => {
         <button
           onClick={() => setIsCollapsed(!isCollapsed)}
           className="p-2 text-gray-400 hover:text-white hover:bg-gray-800 rounded-md transition-colors"
+          aria-label={isCollapsed ? "Expand sidebar" : "Collapse sidebar"}
         >
           {isCollapsed ? (
             <PanelLeftOpen size={20} />

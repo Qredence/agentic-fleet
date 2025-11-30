@@ -87,7 +87,7 @@ export const ChainOfThoughtContent = ({
       )}
       {...props}
     >
-      <div className="grid grid-cols-[min-content_minmax(0,1fr)] gap-x-4">
+      <div className="grid grid-cols-[min-content_min-content_minmax(0,1fr)] gap-x-4">
         <div className="bg-primary/20 ml-1.75 h-full w-px group-data-[last=true]:hidden" />
         <div className="ml-1.75 h-full w-px bg-transparent group-data-[last=false]:hidden" />
         <div className="mt-2 space-y-2">{children}</div>

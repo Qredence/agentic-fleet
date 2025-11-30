@@ -64,6 +64,12 @@ export const InputBar: React.FC<InputBarProps> = ({
           "absolute -top-12 left-1/2 -translate-x-1/2 flex items-center gap-2 bg-gray-900/80 backdrop-blur-sm border border-gray-800 rounded-full px-4 py-1.5 text-sm text-gray-300 cursor-pointer hover:bg-gray-800 transition-colors",
           isDisabled && "opacity-50 pointer-events-none",
         )}
+        role="button"
+        tabIndex={isDisabled ? -1 : 0}
+        aria-label="Think harder - extended reasoning mode"
+        onClick={() => {
+          /* TODO: implement think harder toggle */
+        }}
       >
         <Lightbulb size={14} />
         <span>Think harder</span>
@@ -117,13 +123,22 @@ export const InputBar: React.FC<InputBarProps> = ({
             <button
               className="p-2 text-gray-400 hover:text-white hover:bg-gray-800 rounded-full transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               title="Attach file"
+              aria-label="Attach file"
               disabled={isDisabled}
+              onClick={() => {
+                /* TODO: implement file attachment */
+              }}
             >
               <Paperclip size={20} />
             </button>
             <button
               className="flex items-center gap-1 px-3 py-1.5 text-gray-400 hover:text-white hover:bg-gray-800 rounded-full transition-colors text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed"
               disabled={isDisabled}
+              aria-label="Select mode"
+              aria-haspopup="listbox"
+              onClick={() => {
+                /* TODO: implement mode selection */
+              }}
             >
               <span>Auto</span>
               <ChevronDown size={14} />

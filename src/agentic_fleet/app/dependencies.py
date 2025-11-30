@@ -58,26 +58,6 @@ class ConversationManager:
             The created Conversation.
         """
         conversation_id = str(uuid4())
-        # Use simple numeric ID for compatibility with frontend expectations if it expects numbers?
-        # Frontend client says: getConversation(id: number).
-        # Wait, let's check frontend types.ts.
-        # "id: number" in interface Conversation.
-        # But uuid4 is string.
-        # "id: string" in ChatMessage.
-        # Let's check api/client.ts again.
-        # getConversation(id: number).
-        # But in api/types.ts: Conversation { id: number; ... }
-        # However, in ChatState, conversationId: string | null.
-        # This is inconsistent in the frontend code provided.
-        # `src/frontend/src/api/types.ts` says `id: number`.
-        # `src/frontend/src/types/chat.ts` says `id: string`.
-        # I should probably support strings, as uuids are standard.
-        # If the frontend fails parsing, I might need to change it there or here.
-        # Given "number" in `api/types.ts`, I should try to be careful.
-        # But `ChatRequest` in `api/types.ts` has `conversation_id: number`.
-        # I'll stick to string UUIDs because "number" is likely a legacy or placeholder type in the frontend that should be string.
-        # Most React apps use UUID strings.
-        # I'll use UUIDs. If it breaks, I'll fix the frontend types.
 
         conversation = Conversation(
             id=conversation_id,

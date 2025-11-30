@@ -47,8 +47,14 @@ function CodeBlockCode({
         return;
       }
 
-      const html = await codeToHtml(code, { lang: language, theme });
-      setHighlightedHtml(html);
+      try {
+        const html = await codeToHtml(code, { lang: language, theme });
+        setHighlightedHtml(html);
+      } catch (err) {
+        console.error("Syntax highlighting failed:", err);
+        // Fallback: avoid innerHTML construction and use safe JSX rendering instead
+        setHighlightedHtml(null);
+      }
     }
     highlight();
   }, [code, language, theme]);

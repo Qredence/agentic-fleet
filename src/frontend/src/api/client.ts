@@ -24,11 +24,15 @@ export const api = {
     return response.json();
   },
 
-  async sendMessage(request: ChatRequest): Promise<Response> {
+  async sendMessage(
+    request: ChatRequest,
+    signal?: AbortSignal,
+  ): Promise<Response> {
     const response = await fetch(`${API_PREFIX}/chat`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(request),
+      signal,
     });
     if (!response.ok) throw new Error("Failed to send message");
     return response;

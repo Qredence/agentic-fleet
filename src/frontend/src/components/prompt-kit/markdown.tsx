@@ -48,7 +48,12 @@ const INITIAL_COMPONENTS: Partial<Components> = {
 
     return (
       <CodeBlock className={className}>
-        <CodeBlockCode code={children as string} language={language} />
+        <CodeBlockCode
+          code={
+            typeof children === "string" ? children : String(children ?? "")
+          }
+          language={language}
+        />
       </CodeBlock>
     );
   },

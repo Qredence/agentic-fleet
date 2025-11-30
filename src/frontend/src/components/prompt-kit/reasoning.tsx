@@ -95,8 +95,10 @@ function ReasoningTrigger({
 
   return (
     <button
+      type="button"
       className={cn("flex cursor-pointer items-center gap-2", className)}
       onClick={() => onOpenChange(!isOpen)}
+      aria-expanded={isOpen}
       {...props}
     >
       <span className="text-primary">{children}</span>
