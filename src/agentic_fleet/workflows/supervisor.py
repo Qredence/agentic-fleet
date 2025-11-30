@@ -459,6 +459,49 @@ class SupervisorWorkflow:
                 async for event in self.workflow.run_stream(task_msg):
                     if isinstance(event, MagenticAgentMessageEvent | ExecutorCompletedEvent):
                         yield event
+                    elif isinstance(event, AgentRunUpdateEvent):
+                        # Check for reasoning events from GPT-5 models
+                        if hasattr(event, "run") and hasattr(event.run, "delta"):
+                            delta = event.run.delta
+                            # Check for reasoning content (GPT-5 series)
+                            if hasattr(delta, "type") and "reasoning" in str(
+                                getattr(delta, "type", "")
+                            ):
+                                reasoning_text = getattr(delta, "delta", "")
+                                if reasoning_text:
+                                    agent_id = (
+                                        getattr(event.run, "agent_id", "unknown")
+                                        if hasattr(event, "run")
+                                        else "unknown"
+                                    )
+                                    yield ReasoningStreamEvent(
+                                        reasoning=reasoning_text, agent_id=agent_id
+                                    )
+                                continue
+
+                        # Convert AgentRunUpdateEvent to MagenticAgentMessageEvent for CLI compatibility
+                        text = ""
+                        if hasattr(event, "run") and hasattr(event.run, "delta"):
+                            delta = event.run.delta
+                            if hasattr(delta, "content") and delta.content:
+                                # Handle list of content parts or string
+                                if isinstance(delta.content, list):
+                                    text = "".join(str(part) for part in delta.content)
+                                else:
+                                    text = str(delta.content)
+
+                        if text:
+                            # Create synthetic event for CLI streaming
+                            mag_msg = ChatMessage(role=Role.ASSISTANT, text=text)
+                            agent_id = (
+                                getattr(event.run, "agent_id", "unknown")
+                                if hasattr(event, "run")
+                                else "unknown"
+                            )
+                            mag_event = MagenticAgentMessageEvent(
+                                agent_id=agent_id, message=mag_msg
+                            )
+                            yield mag_event
                     elif isinstance(event, WorkflowOutputEvent):
                         if hasattr(event, "data"):
                             data = event.data
@@ -474,6 +517,25 @@ class SupervisorWorkflow:
                                 continue
                             elif isinstance(data, dict) and "result" in data:
                                 final_msg = self._dict_to_final_message(data)
+                            elif isinstance(data, list) and data:
+                                # Handle legacy list[ChatMessage] format from strategies
+                                last_msg = data[-1]
+                                text = getattr(last_msg, "text", str(last_msg))
+                                final_msg = FinalResultMessage(
+                                    result=text,
+                                    routing=RoutingDecision(
+                                        task=task,
+                                        assigned_to=(),
+                                        mode=ExecutionMode.SEQUENTIAL,
+                                        subtasks=(),
+                                    ),
+                                    quality=QualityReport(score=0.0),
+                                    judge_evaluations=[],
+                                    execution_summary={},
+                                    phase_timings={},
+                                    phase_status={},
+                                    metadata={"legacy_list_output": True},
+                                )
                         yield event
 
             if final_msg is None and current_mode not in ("group_chat", "handoff"):

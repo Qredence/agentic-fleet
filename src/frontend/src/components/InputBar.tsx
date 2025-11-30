@@ -1,65 +1,56 @@
-import React, { useState } from "react";
-import { Rocket, ChevronDown, Zap, Users, Sparkles } from "lucide-react";
-import { Select } from "@openai/apps-sdk-ui/components/Select";
-
-const ModeOptionDescription = ({ children }: { children: React.ReactNode }) => (
-  <div className="font-normal text-secondary py-px text-[0.935em] leading-[1.45]">
-    {children}
-  </div>
-);
-
-const modes = [
-  {
-    value: "auto",
-    label: "Auto",
-    description: (
-      <ModeOptionDescription>
-        Automatically determines the best path for your query
-      </ModeOptionDescription>
-    ),
-  },
-  {
-    value: "fast",
-    label: "Fast Path",
-    description: (
-      <ModeOptionDescription>
-        Quick responses with minimal processing
-      </ModeOptionDescription>
-    ),
-  },
-  {
-    value: "agentic",
-    label: "Agentic Fleet",
-    description: (
-      <ModeOptionDescription>
-        Multi-agent collaboration for complex tasks
-      </ModeOptionDescription>
-    ),
-  },
-];
+import { useState, useRef, useEffect } from "react";
+import {
+  Paperclip,
+  Send,
+  ChevronDown,
+  Lightbulb,
+  Square,
+  Loader2,
+} from "lucide-react";
+import { cn } from "@/lib/utils";
 
 interface InputBarProps {
   onSendMessage: (content: string) => void;
   disabled?: boolean;
+  onCancel?: () => void;
+  isStreaming?: boolean;
+  /** Current workflow phase to display (e.g., "Routing...", "Executing...") */
+  workflowPhase?: string;
 }
 
 export const InputBar: React.FC<InputBarProps> = ({
   onSendMessage,
   disabled,
+  onCancel,
+  isStreaming,
+  workflowPhase,
 }) => {
   const [input, setInput] = useState("");
-  const [mode, setMode] = useState("auto");
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const isDisabled = disabled || isStreaming;
+
+  // Auto-resize textarea
+  useEffect(() => {
+    if (textareaRef.current) {
+      textareaRef.current.style.height = "auto";
+      textareaRef.current.style.height = `${Math.min(textareaRef.current.scrollHeight, 200)}px`;
+    }
+  }, [input]);
 
   const handleSubmit = (e?: React.FormEvent) => {
     e?.preventDefault();
-    if (input.trim() && !disabled) {
+    if (input.trim() && !isDisabled) {
       onSendMessage(input);
       setInput("");
+      // Reset textarea height
+      if (textareaRef.current) {
+        textareaRef.current.style.height = "auto";
+      }
     }
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === "Enter" && !e.shiftKey) {
+    if (e.key === "Enter" && !e.shiftKey && !isDisabled) {
       e.preventDefault();
       handleSubmit();
     }
@@ -69,93 +60,95 @@ export const InputBar: React.FC<InputBarProps> = ({
     <div className="w-full max-w-3xl mx-auto relative">
       {/* Think harder toggle */}
       <div
-        className="absolute -top-12 left-1/2 -translate-x-1/2 flex items-center gap-2 backdrop-blur-sm rounded-full px-4 py-1.5 text-sm cursor-pointer transition-colors hover:opacity-80"
-        style={{
-          backgroundColor: "var(--color-surface-secondary)",
-          color: "var(--color-text-secondary)",
-          border: "1px solid var(--gray-200)",
-        }}
+        className={cn(
+          "absolute -top-12 left-1/2 -translate-x-1/2 flex items-center gap-2 bg-gray-900/80 backdrop-blur-sm border border-gray-800 rounded-full px-4 py-1.5 text-sm text-gray-300 cursor-pointer hover:bg-gray-800 transition-colors",
+          isDisabled && "opacity-50 pointer-events-none",
+        )}
       >
-        <Sparkles size={14} />
+        <Lightbulb size={14} />
         <span>Think harder</span>
       </div>
 
-      {/* Scroll down indicator (optional, based on UI) */}
       <div
-        className="absolute -top-12 right-0 p-2 rounded-full cursor-pointer transition-colors hover:opacity-80"
-        style={{
-          backgroundColor: "var(--color-surface-secondary)",
-          color: "var(--color-text-tertiary)",
-          border: "1px solid var(--gray-200)",
-        }}
+        className={cn(
+          "bg-gray-900 rounded-3xl p-2 border shadow-lg relative overflow-hidden transition-all duration-300",
+          isStreaming
+            ? "border-blue-500/50 shadow-blue-500/10"
+            : "border-gray-800",
+        )}
       >
-        <ChevronDown size={16} />
-      </div>
+        {/* Loading indicator bar at top when streaming */}
+        {isStreaming && (
+          <div className="absolute top-0 left-0 right-0 h-0.5 bg-linear-to-r from-blue-500 via-purple-500 to-blue-500 animate-shimmer bg-size-[200%_100%]" />
+        )}
 
-      <div
-        className="rounded-[32px] p-2 shadow-lg relative overflow-hidden"
-        style={{
-          backgroundColor: "var(--color-surface-secondary)",
-          border: "1px solid var(--gray-200)",
-        }}
-      >
         <div className="px-4 py-3">
-          <input
-            type="text"
+          {/* Workflow phase indicator when streaming */}
+          {isStreaming && workflowPhase && (
+            <div className="flex items-center gap-2 mb-2 text-xs text-blue-400">
+              <Loader2 size={12} className="animate-spin" />
+              <span>{workflowPhase}</span>
+            </div>
+          )}
+          <textarea
+            ref={textareaRef}
             value={input}
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={handleKeyDown}
-            placeholder="Ask Anything"
-            className="w-full bg-transparent text-lg focus:outline-none"
-            style={{ color: "var(--color-text)" }}
-            disabled={disabled}
+            placeholder={
+              isStreaming ? "Waiting for response..." : "Ask Anything..."
+            }
+            className={cn(
+              "w-full bg-transparent text-white text-lg placeholder-gray-500 focus:outline-none resize-none min-h-7 max-h-[200px] transition-opacity",
+              isDisabled && "opacity-50 cursor-not-allowed",
+            )}
+            disabled={isDisabled}
+            rows={1}
           />
         </div>
 
         <div className="flex items-center justify-between px-2 pb-1 mt-2">
-          <div className="flex items-center gap-2">
-            <Select
-              value={mode}
-              options={modes}
-              placeholder="Select mode..."
-              align="start"
-              listMinWidth={260}
-              variant="ghost"
-              size="sm"
-              onChange={({ value }) => setMode(value)}
-              TriggerStartIcon={
-                mode === "auto" ? Rocket : mode === "fast" ? Zap : Users
-              }
-              triggerClassName="font-semibold"
-              optionClassName="font-semibold"
-            />
+          <div
+            className={cn(
+              "flex items-center gap-2 transition-opacity",
+              isDisabled && "opacity-50 pointer-events-none",
+            )}
+          >
+            <button
+              className="p-2 text-gray-400 hover:text-white hover:bg-gray-800 rounded-full transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              title="Attach file"
+              disabled={isDisabled}
+            >
+              <Paperclip size={20} />
+            </button>
+            <button
+              className="flex items-center gap-1 px-3 py-1.5 text-gray-400 hover:text-white hover:bg-gray-800 rounded-full transition-colors text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+              disabled={isDisabled}
+            >
+              <span>Auto</span>
+              <ChevronDown size={14} />
+            </button>
           </div>
 
-          <button
-            onClick={() => handleSubmit()}
-            disabled={!input.trim() || disabled}
-            className="flex items-center justify-center gap-2 h-9 px-3.5 rounded-full text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-            style={{
-              backgroundColor: "var(--gray-900)",
-              color: "var(--gray-0)",
-            }}
-          >
-            <div className="flex gap-0.5 items-center">
-              <div
-                className="w-0.5 h-3 rounded-full animate-pulse"
-                style={{ backgroundColor: "var(--gray-0)" }}
-              ></div>
-              <div
-                className="w-0.5 h-2 rounded-full animate-pulse delay-75"
-                style={{ backgroundColor: "var(--gray-0)" }}
-              ></div>
-              <div
-                className="w-0.5 h-4 rounded-full animate-pulse delay-150"
-                style={{ backgroundColor: "var(--gray-0)" }}
-              ></div>
-            </div>
-            <span>Submit</span>
-          </button>
+          {isStreaming ? (
+            <button
+              onClick={onCancel}
+              className="flex items-center gap-2 bg-red-600 text-white px-4 py-2 rounded-full font-medium hover:bg-red-700 transition-colors"
+              title="Stop generating"
+            >
+              <Square size={16} className="fill-current" />
+              <span>Stop</span>
+            </button>
+          ) : (
+            <button
+              onClick={() => handleSubmit()}
+              disabled={!input.trim() || isDisabled}
+              className="flex items-center gap-2 bg-white text-black px-4 py-2 rounded-full font-medium hover:bg-gray-200 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              <Send size={16} />
+              <span>Send</span>
+            </button>
+          )}
         </div>
       </div>
     </div>

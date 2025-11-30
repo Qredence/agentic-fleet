@@ -58,7 +58,7 @@ const MessageContent = ({
   ...props
 }: MessageContentProps) => {
   const classNames = cn(
-    "rounded-lg p-2 text-foreground bg-secondary break-words whitespace-normal",
+    "rounded-lg p-2 text-foreground bg-secondary prose break-words whitespace-normal",
     className,
   );
 
@@ -84,7 +84,7 @@ const MessageActions = ({
   ...props
 }: MessageActionsProps) => (
   <div
-    className={cn("text-muted-foreground flex items-start gap-2", className)}
+    className={cn("text-muted-foreground flex items-center gap-2", className)}
     {...props}
   >
     {children}
@@ -119,8 +119,8 @@ const MessageAction = ({
 
 export {
   Message,
-  MessageAction,
-  MessageActions,
   MessageAvatar,
   MessageContent,
+  MessageActions,
+  MessageAction,
 };

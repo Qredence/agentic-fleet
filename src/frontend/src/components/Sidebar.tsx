@@ -1,256 +1,94 @@
-import React from "react";
+import { useState } from "react";
 import {
-  Menu,
-  Edit,
-  MessageSquare,
-  Image as ImageIcon,
-  Users,
-  Sun,
-  Moon,
-  Monitor,
+  PanelLeftClose,
+  PanelLeftOpen,
   Plus,
-  MoreHorizontal,
+  MessageSquare,
+  Search,
+  Grid,
+  Settings,
 } from "lucide-react";
-import { motion } from "framer-motion";
 import { clsx } from "clsx";
-import { useTheme } from "../hooks/useTheme";
 
-interface Conversation {
-  id: string;
-  title: string;
-  timestamp: Date;
-  preview?: string;
-}
-
-interface SidebarProps {
-  isOpen: boolean;
-  toggleSidebar: () => void;
-  conversations?: Conversation[];
-  activeConversationId?: string;
-  onNewConversation?: () => void;
-  onSelectConversation?: (id: string) => void;
-}
-
-export const Sidebar: React.FC<SidebarProps> = ({
-  isOpen,
-  toggleSidebar,
-  conversations = [],
-  activeConversationId,
-  onNewConversation,
-  onSelectConversation,
-}) => {
-  const { theme, setTheme } = useTheme();
-
-  const toggleTheme = () => {
-    if (theme === "light") setTheme("dark");
-    else if (theme === "dark") setTheme("system");
-    else setTheme("light");
-  };
-
-  const getThemeIcon = () => {
-    switch (theme) {
-      case "light":
-        return <Sun size={18} />;
-      case "dark":
-        return <Moon size={18} />;
-      case "system":
-        return <Monitor size={18} />;
-    }
-  };
-
-  const getThemeLabel = () => {
-    switch (theme) {
-      case "light":
-        return "Light Mode";
-      case "dark":
-        return "Dark Mode";
-      case "system":
-        return "System";
-    }
-  };
+export const Sidebar = () => {
+  const [isCollapsed, setIsCollapsed] = useState(false);
 
   return (
-    <motion.div
+    <div
       className={clsx(
-        "fixed left-0 top-0 h-full z-50 flex flex-col transition-all duration-300 ease-in-out",
-        isOpen ? "w-64" : "w-0 opacity-0 pointer-events-none",
+        "h-screen bg-gray-1000 border-r border-gray-800 flex flex-col transition-all duration-300 ease-in-out",
+        isCollapsed ? "w-16" : "w-[260px]",
       )}
-      style={{
-        backgroundColor: "var(--color-surface)",
-        borderRight: "1px solid var(--gray-200)",
-      }}
-      initial={false}
-      animate={{ width: isOpen ? 256 : 0, opacity: isOpen ? 1 : 0 }}
     >
-      <div className="p-4 flex items-center justify-between">
+      <div className="p-3 flex items-center justify-between">
         <button
-          onClick={toggleSidebar}
-          className="p-2 rounded-md transition-colors hover:opacity-80"
-          style={{ color: "var(--color-text-secondary)" }}
+          onClick={() => setIsCollapsed(!isCollapsed)}
+          className="p-2 text-gray-400 hover:text-white hover:bg-gray-800 rounded-md transition-colors"
         >
-          <Menu size={20} />
-        </button>
-        <button
-          className="p-2 rounded-md transition-colors hover:opacity-80"
-          style={{ color: "var(--color-text-secondary)" }}
-        >
-          <Edit size={20} />
-        </button>
-      </div>
-
-      <nav className="px-2 py-4 space-y-2">
-        <NavItem
-          icon={<MessageSquare size={18} />}
-          label="Agentic Fleet"
-          active
-        />
-        <NavItem icon={<ImageIcon size={18} />} label="Fleets" />
-        <NavItem icon={<Users size={18} />} label="Companions" />
-      </nav>
-
-      {/* Conversations Section */}
-      <div className="flex-1 flex flex-col min-h-0 px-2">
-        <div className="flex items-center justify-between py-2 px-2">
-          <span
-            className="text-xs font-semibold uppercase tracking-wider"
-            style={{ color: "var(--color-text-muted)" }}
-          >
-            Conversations
-          </span>
-          <button
-            onClick={onNewConversation}
-            className="p-1 rounded transition-colors hover:opacity-80"
-            style={{ color: "var(--color-text-secondary)" }}
-            title="New conversation"
-          >
-            <Plus size={16} />
-          </button>
-        </div>
-
-        <div className="flex-1 overflow-y-auto space-y-1 pb-2">
-          {conversations.length === 0 ? (
-            <p
-              className="text-xs px-2 py-4 text-center"
-              style={{ color: "var(--color-text-muted)" }}
-            >
-              No conversations yet
-            </p>
+          {isCollapsed ? (
+            <PanelLeftOpen size={20} />
           ) : (
-            conversations.map((conversation) => (
-              <ConversationItem
-                key={conversation.id}
-                conversation={conversation}
-                isActive={conversation.id === activeConversationId}
-                onClick={() => onSelectConversation?.(conversation.id)}
-              />
-            ))
+            <PanelLeftClose size={20} />
           )}
-        </div>
+        </button>
+        {!isCollapsed && (
+          <button className="p-2 text-gray-400 hover:text-white hover:bg-gray-800 rounded-md transition-colors">
+            <Search size={20} />
+          </button>
+        )}
       </div>
 
-      <div className="p-4" style={{ borderTop: "1px solid var(--gray-200)" }}>
+      <div className="px-3 py-2">
         <button
-          onClick={toggleTheme}
-          className="flex items-center gap-3 w-full px-3 py-2 rounded-lg text-sm font-medium transition-colors hover:opacity-80"
-          style={{ color: "var(--color-text-secondary)" }}
+          className={clsx(
+            "flex items-center gap-2 w-full p-2 text-gray-100 hover:bg-gray-800 rounded-md transition-colors border border-gray-800",
+            isCollapsed ? "justify-center" : "justify-start",
+          )}
         >
-          {getThemeIcon()}
-          <span>{getThemeLabel()}</span>
+          <Plus size={16} />
+          {!isCollapsed && (
+            <span className="text-sm font-medium">New Chat</span>
+          )}
         </button>
       </div>
-    </motion.div>
-  );
-};
 
-const NavItem = ({
-  icon,
-  label,
-  active = false,
-}: {
-  icon: React.ReactNode;
-  label: string;
-  active?: boolean;
-}) => (
-  <button
-    className="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors"
-    style={{
-      backgroundColor: active
-        ? "var(--color-surface-secondary)"
-        : "transparent",
-      color: active ? "var(--color-text)" : "var(--color-text-secondary)",
-    }}
-  >
-    {icon}
-    <span>{label}</span>
-  </button>
-);
-
-const ConversationItem = ({
-  conversation,
-  isActive,
-  onClick,
-}: {
-  conversation: Conversation;
-  isActive: boolean;
-  onClick: () => void;
-}) => {
-  const formatDate = (date: Date) => {
-    const now = new Date();
-    const diff = now.getTime() - date.getTime();
-    const days = Math.floor(diff / (1000 * 60 * 60 * 24));
-
-    if (days === 0) return "Today";
-    if (days === 1) return "Yesterday";
-    if (days < 7) return `${days} days ago`;
-    return date.toLocaleDateString();
-  };
-
-  return (
-    <button
-      onClick={onClick}
-      className={clsx(
-        "w-full group flex items-center gap-2 px-2 py-2 rounded-lg text-sm transition-colors text-left",
-      )}
-      style={{
-        backgroundColor: isActive
-          ? "var(--color-surface-secondary)"
-          : "transparent",
-        color: isActive ? "var(--color-text)" : "var(--color-text-secondary)",
-      }}
-    >
-      <MessageSquare
-        size={14}
-        className="shrink-0"
-        style={{ color: "var(--color-text-muted)" }}
-      />
-      <div className="flex-1 min-w-0">
-        <p
-          className="truncate font-medium"
-          style={{
-            color: isActive
-              ? "var(--color-text)"
-              : "var(--color-text-secondary)",
-          }}
-        >
-          {conversation.title}
-        </p>
-        <p
-          className="text-xs truncate"
-          style={{ color: "var(--color-text-muted)" }}
-        >
-          {formatDate(conversation.timestamp)}
-        </p>
+      <div className="flex-1 overflow-y-auto py-2 px-3 space-y-1">
+        {[1, 2, 3].map((i) => (
+          <button
+            key={i}
+            className={clsx(
+              "flex items-center gap-3 w-full p-2 text-gray-400 hover:text-white hover:bg-gray-800 rounded-md transition-colors text-left group",
+              isCollapsed ? "justify-center" : "justify-start",
+            )}
+          >
+            <MessageSquare size={16} />
+            {!isCollapsed && (
+              <span className="text-sm truncate">Previous Chat {i}</span>
+            )}
+          </button>
+        ))}
       </div>
-      <button
-        className="opacity-0 group-hover:opacity-100 p-1 rounded transition-opacity hover:opacity-80"
-        style={{ color: "var(--color-text-muted)" }}
-        onClick={(e) => {
-          e.stopPropagation();
-          // TODO: Add menu for rename/delete
-        }}
-      >
-        <MoreHorizontal size={14} />
-      </button>
-    </button>
+
+      <div className="p-3 border-t border-gray-800 space-y-1">
+        <button
+          className={clsx(
+            "flex items-center gap-3 w-full p-2 text-gray-400 hover:text-white hover:bg-gray-800 rounded-md transition-colors",
+            isCollapsed ? "justify-center" : "justify-start",
+          )}
+        >
+          <Grid size={18} />
+          {!isCollapsed && <span className="text-sm">Apps</span>}
+        </button>
+        <button
+          className={clsx(
+            "flex items-center gap-3 w-full p-2 text-gray-400 hover:text-white hover:bg-gray-800 rounded-md transition-colors",
+            isCollapsed ? "justify-center" : "justify-start",
+          )}
+        >
+          <Settings size={18} />
+          {!isCollapsed && <span className="text-sm">Settings</span>}
+        </button>
+      </div>
+    </div>
   );
 };

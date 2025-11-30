@@ -65,7 +65,6 @@ class DSPyReasoner(dspy.Module):
         self.quality_assessor = dspy.ChainOfThought(QualityAssessment)
         self.progress_evaluator = dspy.ChainOfThought(ProgressEvaluation)
         self.tool_planner = dspy.ChainOfThought(ToolPlan)
-        # NOTE: self.judge removed in Plan #4 optimization - Judge phase eliminated
         self.simple_responder = dspy.ChainOfThought(SimpleResponse)
         self.group_chat_selector = dspy.ChainOfThought(GroupChatSpeakerSelection)
 
