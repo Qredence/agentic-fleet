@@ -1,5 +1,6 @@
 "use client";
 
+import React from "react";
 import { cn } from "@/lib/utils";
 import { StickToBottom } from "use-stick-to-bottom";
 
@@ -13,9 +14,9 @@ export type ChatContainerContentProps = {
   className?: string;
 } & React.HTMLAttributes<HTMLDivElement>;
 
+// Scroll anchor props no longer define a `ref` directly; we forward it via React.forwardRef.
 export type ChatContainerScrollAnchorProps = {
   className?: string;
-  ref?: React.RefObject<HTMLDivElement>;
 } & React.HTMLAttributes<HTMLDivElement>;
 
 function ChatContainerRoot({
@@ -51,17 +52,20 @@ function ChatContainerContent({
   );
 }
 
-function ChatContainerScrollAnchor({
-  className,
-  ...props
-}: ChatContainerScrollAnchorProps) {
+const ChatContainerScrollAnchor = React.forwardRef<
+  HTMLDivElement,
+  ChatContainerScrollAnchorProps
+>(({ className, ...props }, ref) => {
   return (
     <div
+      ref={ref}
       className={cn("h-px w-full shrink-0 scroll-mt-4", className)}
       aria-hidden="true"
       {...props}
     />
   );
-}
+});
+
+ChatContainerScrollAnchor.displayName = "ChatContainerScrollAnchor";
 
 export { ChatContainerRoot, ChatContainerContent, ChatContainerScrollAnchor };
