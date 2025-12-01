@@ -105,6 +105,41 @@ class SupervisorWorkflow:
         self.execution_history: list[dict[str, Any]] = []
         self.current_execution: dict[str, Any] = {}
 
+    def _get_mode_decision(self, task: str) -> dict[str, str]:
+        """Get cached mode decision for a task.
+
+        Caches the result to avoid duplicate DSPy calls within the same workflow run.
+
+        Args:
+            task: The task string to evaluate
+
+        Returns:
+            Dictionary with 'mode' and 'reasoning' keys
+        """
+        # Check if we have a cached decision for this task
+        cache_key = f"mode_decision_{hash(task)}"
+        cached = getattr(self, "_mode_decision_cache", {}).get(cache_key)
+        if cached is not None:
+            return cached
+
+        # Initialize cache if needed
+        if not hasattr(self, "_mode_decision_cache"):
+            self._mode_decision_cache: dict[str, dict[str, str]] = {}
+
+        # Compute mode decision
+        if (
+            self.mode == "auto"
+            and self.dspy_reasoner
+            and hasattr(self.dspy_reasoner, "select_workflow_mode")
+        ):
+            decision = self.dspy_reasoner.select_workflow_mode(task)
+        else:
+            decision = {"mode": self.mode, "reasoning": ""}
+
+        # Cache and return
+        self._mode_decision_cache[cache_key] = decision
+        return decision
+
     def _should_fast_path(self, task: str) -> bool:
         """Determine if a task should use the fast-path execution.
 
@@ -120,9 +155,9 @@ class SupervisorWorkflow:
         if not self.dspy_reasoner:
             return False
 
-        # Check auto-mode fast-path detection
-        if self.mode == "auto" and hasattr(self.dspy_reasoner, "select_workflow_mode"):
-            decision = self.dspy_reasoner.select_workflow_mode(task)
+        # Check auto-mode fast-path detection (uses cached decision)
+        if self.mode == "auto":
+            decision = self._get_mode_decision(task)
             if decision.get("mode") == "fast_path":
                 return True
 
@@ -197,14 +232,9 @@ class SupervisorWorkflow:
 
             # Unified fast-path check (consolidates auto-mode detection + simple task heuristic)
             if self._should_fast_path(task):
-                mode_reasoning = None
-                if (
-                    self.mode == "auto"
-                    and self.dspy_reasoner
-                    and hasattr(self.dspy_reasoner, "select_workflow_mode")
-                ):
-                    decision = self.dspy_reasoner.select_workflow_mode(task)
-                    mode_reasoning = decision.get("reasoning")
+                # Use cached decision to avoid duplicate DSPy call
+                decision = self._get_mode_decision(task)
+                mode_reasoning = decision.get("reasoning")
                 result = await self._handle_fast_path(task, mode_reasoning=mode_reasoning)
                 if hasattr(self.context, "middlewares"):
                     for mw in self.context.middlewares:
@@ -212,12 +242,9 @@ class SupervisorWorkflow:
                 return result
 
             # Dynamic mode switching for auto mode (non-fast-path cases)
-            if (
-                self.mode == "auto"
-                and self.dspy_reasoner
-                and hasattr(self.dspy_reasoner, "select_workflow_mode")
-            ):
-                decision = self.dspy_reasoner.select_workflow_mode(task)
+            # Uses cached decision from _should_fast_path check
+            if self.mode == "auto" and self.dspy_reasoner:
+                decision = self._get_mode_decision(task)
                 detected_mode_str = decision.get("mode", "standard")
 
                 # Validate against all valid modes first

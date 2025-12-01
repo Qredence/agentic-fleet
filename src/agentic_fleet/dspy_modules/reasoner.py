@@ -33,6 +33,10 @@ from .signatures import (
 logger = setup_logger(__name__)
 
 
+# Module-level cache for DSPy module instances (stateless, can be shared)
+_MODULE_CACHE: dict[str, dspy.Module] = {}
+
+
 class DSPyReasoner(dspy.Module):
     """Reasoner that uses DSPy modules for orchestration decisions."""
 
@@ -45,30 +49,187 @@ class DSPyReasoner(dspy.Module):
         super().__init__()
         self.use_enhanced_signatures = use_enhanced_signatures
         self._execution_history: list[dict[str, Any]] = []
-
-        # Initialize DSPy modules
-        # We use ChainOfThought for robust reasoning before outputting the structured result.
-        self.analyzer = dspy.ChainOfThought(TaskAnalysis)
-
-        if use_enhanced_signatures:
-            from .workflow_signatures import EnhancedTaskRouting, WorkflowStrategy
-
-            # Use dspy.Predict for routing (no reasoning trace needed) - Plan #4 optimization
-            self.router = dspy.Predict(EnhancedTaskRouting)
-            self.strategy_selector = dspy.ChainOfThought(WorkflowStrategy)
-        else:
-            # Use dspy.Predict for routing (faster, no reasoning trace needed)
-            self.router = dspy.Predict(TaskRouting)
-            # Fallback for standard strategy
-            self.strategy_selector = None
-
-        self.quality_assessor = dspy.ChainOfThought(QualityAssessment)
-        self.progress_evaluator = dspy.ChainOfThought(ProgressEvaluation)
-        self.tool_planner = dspy.ChainOfThought(ToolPlan)
-        self.simple_responder = dspy.ChainOfThought(SimpleResponse)
-        self.group_chat_selector = dspy.ChainOfThought(GroupChatSpeakerSelection)
-
+        self._modules_initialized = False
         self.tool_registry: Any | None = None
+
+        # Placeholders for lazy-initialized modules
+        self._analyzer: dspy.Module | None = None
+        self._router: dspy.Module | None = None
+        self._strategy_selector: dspy.Module | None = None
+        self._quality_assessor: dspy.Module | None = None
+        self._progress_evaluator: dspy.Module | None = None
+        self._tool_planner: dspy.Module | None = None
+        self._simple_responder: dspy.Module | None = None
+        self._group_chat_selector: dspy.Module | None = None
+
+    def _ensure_modules_initialized(self) -> None:
+        """Lazily initialize DSPy modules on first use.
+
+        Only initializes modules that haven't been manually set (e.g., via setters
+        for testing or loading compiled modules).
+        """
+        if self._modules_initialized:
+            return
+
+        global _MODULE_CACHE
+
+        # Use cached modules if available (DSPy modules are stateless)
+        cache_key_prefix = "enhanced" if self.use_enhanced_signatures else "standard"
+
+        # Only initialize if not already set (allows mocking in tests)
+        # Analyzer
+        if self._analyzer is None:
+            analyzer_key = f"{cache_key_prefix}_analyzer"
+            if analyzer_key not in _MODULE_CACHE:
+                _MODULE_CACHE[analyzer_key] = dspy.ChainOfThought(TaskAnalysis)
+            self._analyzer = _MODULE_CACHE[analyzer_key]
+
+        # Router and strategy selector
+        if self._router is None:
+            if self.use_enhanced_signatures:
+                from .workflow_signatures import EnhancedTaskRouting, WorkflowStrategy
+
+                router_key = f"{cache_key_prefix}_router"
+                if router_key not in _MODULE_CACHE:
+                    _MODULE_CACHE[router_key] = dspy.Predict(EnhancedTaskRouting)
+                self._router = _MODULE_CACHE[router_key]
+
+                if self._strategy_selector is None:
+                    strategy_key = f"{cache_key_prefix}_strategy"
+                    if strategy_key not in _MODULE_CACHE:
+                        _MODULE_CACHE[strategy_key] = dspy.ChainOfThought(WorkflowStrategy)
+                    self._strategy_selector = _MODULE_CACHE[strategy_key]
+            else:
+                router_key = f"{cache_key_prefix}_router"
+                if router_key not in _MODULE_CACHE:
+                    _MODULE_CACHE[router_key] = dspy.Predict(TaskRouting)
+                self._router = _MODULE_CACHE[router_key]
+
+        # Quality assessor
+        if self._quality_assessor is None:
+            qa_key = "quality_assessor"
+            if qa_key not in _MODULE_CACHE:
+                _MODULE_CACHE[qa_key] = dspy.ChainOfThought(QualityAssessment)
+            self._quality_assessor = _MODULE_CACHE[qa_key]
+
+        # Progress evaluator
+        if self._progress_evaluator is None:
+            pe_key = "progress_evaluator"
+            if pe_key not in _MODULE_CACHE:
+                _MODULE_CACHE[pe_key] = dspy.ChainOfThought(ProgressEvaluation)
+            self._progress_evaluator = _MODULE_CACHE[pe_key]
+
+        # Tool planner
+        if self._tool_planner is None:
+            tp_key = "tool_planner"
+            if tp_key not in _MODULE_CACHE:
+                _MODULE_CACHE[tp_key] = dspy.ChainOfThought(ToolPlan)
+            self._tool_planner = _MODULE_CACHE[tp_key]
+
+        # Simple responder - use Predict for faster response (no CoT needed)
+        if self._simple_responder is None:
+            sr_key = "simple_responder"
+            if sr_key not in _MODULE_CACHE:
+                _MODULE_CACHE[sr_key] = dspy.Predict(SimpleResponse)
+            self._simple_responder = _MODULE_CACHE[sr_key]
+
+        # Group chat selector
+        if self._group_chat_selector is None:
+            gc_key = "group_chat_selector"
+            if gc_key not in _MODULE_CACHE:
+                _MODULE_CACHE[gc_key] = dspy.ChainOfThought(GroupChatSpeakerSelection)
+            self._group_chat_selector = _MODULE_CACHE[gc_key]
+
+        self._modules_initialized = True
+        logger.debug("DSPy modules initialized (lazy)")
+
+    @property
+    def analyzer(self) -> dspy.Module:
+        """Lazily initialized task analyzer."""
+        self._ensure_modules_initialized()
+        return self._analyzer  # type: ignore[return-value]
+
+    @analyzer.setter
+    def analyzer(self, value: dspy.Module) -> None:
+        """Allow setting analyzer (for compiled module loading)."""
+        self._analyzer = value
+
+    @property
+    def router(self) -> dspy.Module:
+        """Lazily initialized task router."""
+        self._ensure_modules_initialized()
+        return self._router  # type: ignore[return-value]
+
+    @router.setter
+    def router(self, value: dspy.Module) -> None:
+        """Allow setting router (for compiled module loading)."""
+        self._router = value
+
+    @property
+    def strategy_selector(self) -> dspy.Module | None:
+        """Lazily initialized strategy selector."""
+        self._ensure_modules_initialized()
+        return self._strategy_selector
+
+    @strategy_selector.setter
+    def strategy_selector(self, value: dspy.Module | None) -> None:
+        """Allow setting strategy selector (for compiled module loading)."""
+        self._strategy_selector = value
+
+    @property
+    def quality_assessor(self) -> dspy.Module:
+        """Lazily initialized quality assessor."""
+        self._ensure_modules_initialized()
+        return self._quality_assessor  # type: ignore[return-value]
+
+    @quality_assessor.setter
+    def quality_assessor(self, value: dspy.Module) -> None:
+        """Allow setting quality assessor (for compiled module loading)."""
+        self._quality_assessor = value
+
+    @property
+    def progress_evaluator(self) -> dspy.Module:
+        """Lazily initialized progress evaluator."""
+        self._ensure_modules_initialized()
+        return self._progress_evaluator  # type: ignore[return-value]
+
+    @progress_evaluator.setter
+    def progress_evaluator(self, value: dspy.Module) -> None:
+        """Allow setting progress evaluator (for compiled module loading)."""
+        self._progress_evaluator = value
+
+    @property
+    def tool_planner(self) -> dspy.Module:
+        """Lazily initialized tool planner."""
+        self._ensure_modules_initialized()
+        return self._tool_planner  # type: ignore[return-value]
+
+    @tool_planner.setter
+    def tool_planner(self, value: dspy.Module) -> None:
+        """Allow setting tool planner (for compiled module loading)."""
+        self._tool_planner = value
+
+    @property
+    def simple_responder(self) -> dspy.Module:
+        """Lazily initialized simple responder."""
+        self._ensure_modules_initialized()
+        return self._simple_responder  # type: ignore[return-value]
+
+    @simple_responder.setter
+    def simple_responder(self, value: dspy.Module) -> None:
+        """Allow setting simple responder (for compiled module loading)."""
+        self._simple_responder = value
+
+    @property
+    def group_chat_selector(self) -> dspy.Module:
+        """Lazily initialized group chat selector."""
+        self._ensure_modules_initialized()
+        return self._group_chat_selector  # type: ignore[return-value]
+
+    @group_chat_selector.setter
+    def group_chat_selector(self, value: dspy.Module) -> None:
+        """Allow setting group chat selector (for compiled module loading)."""
+        self._group_chat_selector = value
 
     def _robust_route(self, max_backtracks: int = 2, **kwargs) -> dspy.Prediction:
         """Execute routing with DSPy assertions."""
