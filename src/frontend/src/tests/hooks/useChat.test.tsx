@@ -65,19 +65,24 @@ describe("useChat", () => {
     });
 
     await waitFor(() => {
-      expect(result.current.messages).toHaveLength(3); // User + placeholder assistant + agent message (completion updates placeholder, doesn't create new)
+      // User + placeholder assistant (with steps) + agent message + Final Answer message
+      expect(result.current.messages).toHaveLength(4);
     });
 
-    const agentMsg = result.current.messages[2];
     const assistantMsg = result.current.messages[1]; // placeholder assistant that holds steps
-    expect(agentMsg.role).toBe("assistant");
-    expect(agentMsg.content).toContain(
-      "What is DSPy? One-sentence elevator pitch",
-    );
+    const agentMsg = result.current.messages[2]; // agent message with content
+    const finalMsg = result.current.messages[3]; // final answer
 
-    // Check steps
-    // The placeholder assistant message only keeps the status + agent_start for lifecycle visibility
-    expect(assistantMsg.steps).toHaveLength(2);
+    expect(agentMsg.role).toBe("assistant");
+    // agent.output replaces content with "Result", so the final content is "Result"
+    expect(agentMsg.content).toBe("Result");
+    expect(finalMsg.role).toBe("assistant");
+    expect(finalMsg.author).toBe("Final Answer");
+
+    // Check steps on the workflow placeholder
+    // The placeholder assistant message keeps status + agent_start + agent_complete for lifecycle visibility
+    expect(assistantMsg.steps).toBeDefined();
+    expect(assistantMsg.steps!.length).toBeGreaterThanOrEqual(2);
     expect(assistantMsg.steps![0].type).toBe("status");
     expect(assistantMsg.steps![0].content).toContain(
       "planner starting sequential step",

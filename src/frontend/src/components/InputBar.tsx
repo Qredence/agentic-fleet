@@ -8,9 +8,13 @@ import {
   Loader2,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import type { ReasoningEffort } from "@/lib/constants";
 
 interface InputBarProps {
-  onSendMessage: (content: string) => void;
+  onSendMessage: (
+    content: string,
+    options?: { reasoning_effort?: ReasoningEffort },
+  ) => void;
   disabled?: boolean;
   onCancel?: () => void;
   isStreaming?: boolean;
@@ -26,6 +30,7 @@ export const InputBar: React.FC<InputBarProps> = ({
   workflowPhase,
 }) => {
   const [input, setInput] = useState("");
+  const [thinkHarder, setThinkHarder] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const isDisabled = disabled || isStreaming;
 
@@ -40,7 +45,9 @@ export const InputBar: React.FC<InputBarProps> = ({
   const handleSubmit = (e?: React.FormEvent) => {
     e?.preventDefault();
     if (input.trim() && !isDisabled) {
-      onSendMessage(input);
+      onSendMessage(input, {
+        reasoning_effort: thinkHarder ? "maximal" : undefined,
+      });
       setInput("");
       // Reset textarea height
       if (textareaRef.current) {
@@ -61,24 +68,35 @@ export const InputBar: React.FC<InputBarProps> = ({
       {/* Think harder toggle */}
       <div
         className={cn(
-          "absolute -top-12 left-1/2 -translate-x-1/2 flex items-center gap-2 bg-gray-900/80 backdrop-blur-sm border border-gray-800 rounded-full px-4 py-1.5 text-sm text-gray-300 cursor-pointer hover:bg-gray-800 transition-colors",
+          "absolute -top-12 left-1/2 -translate-x-1/2 flex items-center gap-2 bg-gray-900/80 backdrop-blur-sm border rounded-full px-4 py-1.5 text-sm cursor-pointer hover:bg-gray-800 transition-colors",
+          thinkHarder
+            ? "border-yellow-500/50 text-yellow-400"
+            : "border-gray-800 text-gray-300",
           isDisabled && "opacity-50 pointer-events-none",
         )}
         role="button"
         tabIndex={isDisabled ? -1 : 0}
-        aria-label="Think harder - extended reasoning mode"
+        aria-label={`Think harder - extended reasoning mode (${thinkHarder ? "enabled" : "disabled"})`}
+        aria-pressed={thinkHarder}
         onClick={() => {
-          /* TODO: implement think harder toggle */
+          if (!isDisabled) {
+            setThinkHarder(!thinkHarder);
+          }
         }}
         onKeyDown={(e) => {
           if ((e.key === "Enter" || e.key === " ") && !isDisabled) {
             e.preventDefault();
-            /* TODO: implement think harder toggle */
+            setThinkHarder(!thinkHarder);
           }
         }}
       >
-        <Lightbulb size={14} />
+        <Lightbulb size={14} className={thinkHarder ? "fill-current" : ""} />
         <span>Think harder</span>
+        {thinkHarder && (
+          <span className="text-xs bg-yellow-500/20 px-1.5 py-0.5 rounded">
+            ON
+          </span>
+        )}
       </div>
 
       <div

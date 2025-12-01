@@ -3,6 +3,7 @@ import type {
   ChatRequest,
   WorkflowSession,
   AgentInfo,
+  Message,
 } from "./types";
 
 const API_PREFIX = "/api";
@@ -22,6 +23,17 @@ export const api = {
     const response = await fetch(`${API_PREFIX}/conversations/${id}`);
     if (!response.ok) throw new Error("Failed to get conversation");
     return response.json();
+  },
+
+  async listConversations(): Promise<Conversation[]> {
+    const response = await fetch(`${API_PREFIX}/conversations`);
+    if (!response.ok) throw new Error("Failed to list conversations");
+    return response.json();
+  },
+
+  async loadConversationMessages(id: string): Promise<Message[]> {
+    const conversation = await this.getConversation(id);
+    return conversation.messages || [];
   },
 
   async sendMessage(

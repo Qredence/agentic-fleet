@@ -1,7 +1,12 @@
 import { useState, useRef, useCallback } from "react";
 import { createParser, type EventSourceMessage } from "eventsource-parser";
 import { api } from "../api/client";
-import type { Message, StreamEvent, ConversationStep } from "../api/types";
+import type {
+  Message,
+  StreamEvent,
+  ConversationStep,
+  Conversation,
+} from "../api/types";
 
 // Generate unique IDs for steps and messages to avoid React key collisions
 let stepIdCounter = 0;
@@ -13,16 +18,23 @@ function generateMessageId(): string {
   return `msg-${Date.now()}-${++messageIdCounter}-${Math.random().toString(36).substring(2, 9)}`;
 }
 
+interface SendMessageOptions {
+  reasoning_effort?: "minimal" | "medium" | "maximal";
+}
+
 interface UseChatReturn {
   messages: Message[];
   isLoading: boolean;
   currentReasoning: string;
   isReasoningStreaming: boolean;
   currentWorkflowPhase: string;
-  sendMessage: (content: string) => Promise<void>;
+  sendMessage: (content: string, options?: SendMessageOptions) => Promise<void>;
   cancelStreaming: () => void;
   conversationId: string | null;
   createConversation: () => Promise<void>;
+  conversations: Conversation[];
+  loadConversations: () => Promise<void>;
+  selectConversation: (id: string) => Promise<void>;
 }
 
 // Workflow phase mapping based on event types and kinds
@@ -45,6 +57,7 @@ export const useChat = (): UseChatReturn => {
   const [currentReasoning, setCurrentReasoning] = useState<string>("");
   const [isReasoningStreaming, setIsReasoningStreaming] = useState(false);
   const [currentWorkflowPhase, setCurrentWorkflowPhase] = useState<string>("");
+  const [conversations, setConversations] = useState<Conversation[]>([]);
   const abortControllerRef = useRef<AbortController | null>(null);
   const currentGroupIdRef = useRef<string>("");
 
@@ -58,18 +71,47 @@ export const useChat = (): UseChatReturn => {
     }
   }, []);
 
+  const loadConversations = useCallback(async () => {
+    try {
+      const convs = await api.listConversations();
+      // Sort by updated_at descending (most recent first)
+      const sorted = convs.sort(
+        (a, b) =>
+          new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime(),
+      );
+      setConversations(sorted);
+    } catch (error) {
+      console.error("Failed to load conversations:", error);
+    }
+  }, []);
+
+  const selectConversation = useCallback(async (id: string) => {
+    try {
+      const convMessages = await api.loadConversationMessages(id);
+      setConversationId(id);
+      setMessages(convMessages);
+      setCurrentReasoning("");
+      setIsReasoningStreaming(false);
+      setCurrentWorkflowPhase("");
+    } catch (error) {
+      console.error("Failed to load conversation:", error);
+    }
+  }, []);
+
   const createConversation = useCallback(async () => {
     try {
       const conv = await api.createConversation("New Chat");
       setConversationId(conv.id);
       setMessages([]);
+      // Refresh conversation list
+      await loadConversations();
     } catch (error) {
       console.error("Failed to create conversation:", error);
     }
-  }, []);
+  }, [loadConversations]);
 
   const sendMessage = useCallback(
-    async (content: string) => {
+    async (content: string, options?: SendMessageOptions) => {
       if (!content.trim()) return;
 
       let currentConvId = conversationId;
@@ -118,11 +160,15 @@ export const useChat = (): UseChatReturn => {
         }
         abortControllerRef.current = new AbortController();
 
-        const response = await api.sendMessage({
-          conversation_id: currentConvId,
-          message: content,
-          stream: true,
-        });
+        const response = await api.sendMessage(
+          {
+            conversation_id: currentConvId,
+            message: content,
+            stream: true,
+            reasoning_effort: options?.reasoning_effort,
+          },
+          abortControllerRef.current.signal,
+        );
 
         if (!response.body) throw new Error("No response body");
 
@@ -375,8 +421,10 @@ export const useChat = (): UseChatReturn => {
                           isWorkflowPlaceholder: false,
                           workflowPhase: undefined,
                         };
-                      } else {
-                        // If there's already content, add the final answer as a new message
+                      } else if (
+                        lastMsg.content.trim() !== finalContent.trim()
+                      ) {
+                        // Only add new message if content differs from existing
                         const finalAnswerMessage: Message = {
                           id: generateMessageId(),
                           role: "assistant",
@@ -388,6 +436,7 @@ export const useChat = (): UseChatReturn => {
                         };
                         newMessages.push(finalAnswerMessage);
                       }
+                      // If content is the same, don't create duplicate message
                     }
                     return newMessages;
                   });
@@ -400,6 +449,9 @@ export const useChat = (): UseChatReturn => {
                   type: "error",
                   content: data.error || "Unknown error",
                   timestamp: new Date().toISOString(),
+                  data: data.reasoning_partial
+                    ? { reasoning_partial: true }
+                    : undefined,
                 };
                 setMessages((prev) => {
                   const newMessages = [...prev];
@@ -413,6 +465,11 @@ export const useChat = (): UseChatReturn => {
                   }
                   return newMessages;
                 });
+                // If reasoning was interrupted, keep partial reasoning visible
+                if (data.reasoning_partial) {
+                  setIsReasoningStreaming(false);
+                  // Don't clear currentReasoning so user can see partial output
+                }
               } else if (data.type === "reasoning.delta" && data.reasoning) {
                 // Accumulate reasoning tokens from GPT-5 models
                 setIsReasoningStreaming(true);
@@ -458,6 +515,10 @@ export const useChat = (): UseChatReturn => {
           parser.feed(decoder.decode(value));
         }
       } catch (error) {
+        // Handle user-initiated abort gracefully
+        if (error instanceof DOMException && error.name === "AbortError") {
+          return;
+        }
         console.error("Failed to send message:", error);
       } finally {
         setIsLoading(false);
@@ -478,5 +539,8 @@ export const useChat = (): UseChatReturn => {
     cancelStreaming,
     conversationId,
     createConversation,
+    conversations,
+    loadConversations,
+    selectConversation,
   };
 };

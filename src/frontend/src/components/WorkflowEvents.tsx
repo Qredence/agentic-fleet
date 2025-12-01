@@ -22,6 +22,7 @@ import {
 } from "./prompt-kit/steps";
 import { TextShimmer } from "./prompt-kit/text-shimmer";
 import { cn } from "@/lib/utils";
+import { WORKFLOW_EVENT_TYPES, type WorkflowEventType } from "../lib/constants";
 
 interface WorkflowEventsProps {
   steps: ConversationStep[];
@@ -29,16 +30,6 @@ interface WorkflowEventsProps {
   workflowPhase?: string;
   className?: string;
 }
-
-// Event types that should be displayed as workflow events (not agent messages)
-const WORKFLOW_EVENT_TYPES = [
-  "status",
-  "agent_start",
-  "agent_complete",
-  "thought",
-] as const;
-
-type WorkflowEventType = (typeof WORKFLOW_EVENT_TYPES)[number];
 
 function isWorkflowEvent(step: ConversationStep): boolean {
   return WORKFLOW_EVENT_TYPES.includes(step.type as WorkflowEventType);
@@ -141,7 +132,7 @@ export const WorkflowEvents: React.FC<WorkflowEventsProps> = ({
           </span>
         </StepsTrigger>
         <StepsContent>
-          <div className="space-y-1.5">
+          <div className="space-y-1">
             {workflowSteps.map((step, index) => {
               const isLatest = index === workflowSteps.length - 1;
               const showShimmer = isStreaming && isLatest;
@@ -150,12 +141,12 @@ export const WorkflowEvents: React.FC<WorkflowEventsProps> = ({
                 <StepsItem
                   key={step.id || index}
                   className={cn(
-                    "flex items-start gap-2 py-1 px-2 rounded transition-colors",
-                    isLatest && isStreaming && "bg-muted/20",
+                    "flex items-start gap-2",
+                    isLatest && isStreaming && "text-foreground",
                   )}
                 >
                   <span className="mt-0.5 shrink-0">{getEventIcon(step)}</span>
-                  <span className="flex-1 text-xs text-muted-foreground">
+                  <span className="flex-1">
                     {showShimmer ? (
                       <TextShimmer duration={2.5} spread={25}>
                         {formatEventContent(step.content)}
@@ -164,7 +155,7 @@ export const WorkflowEvents: React.FC<WorkflowEventsProps> = ({
                       formatEventContent(step.content)
                     )}
                   </span>
-                  <span className="text-[10px] text-muted-foreground/50 shrink-0">
+                  <span className="text-[10px] text-muted-foreground/50 shrink-0 ml-auto">
                     {new Date(step.timestamp).toLocaleTimeString([], {
                       hour: "2-digit",
                       minute: "2-digit",

@@ -29,6 +29,14 @@ vi.mock("@/hooks/useChat", () => ({
     sendMessage: vi.fn(),
     createConversation: vi.fn(),
     isLoading: false,
+    currentReasoning: "",
+    isReasoningStreaming: false,
+    currentWorkflowPhase: "",
+    cancelStreaming: vi.fn(),
+    conversationId: null,
+    conversations: [],
+    loadConversations: vi.fn(),
+    selectConversation: vi.fn(),
   }),
 }));
 

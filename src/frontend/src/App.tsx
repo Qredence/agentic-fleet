@@ -21,11 +21,16 @@ function App() {
     isReasoningStreaming,
     currentWorkflowPhase,
     cancelStreaming,
+    conversations,
+    loadConversations,
+    selectConversation,
+    conversationId,
   } = useChat();
 
   useEffect(() => {
+    loadConversations();
     createConversation();
-  }, [createConversation]);
+  }, [loadConversations, createConversation]);
 
   // Group messages by agent for better visual separation
   const messageGroups = useMemo(
@@ -46,12 +51,24 @@ function App() {
   const flatMessageCount = messages.length;
 
   return (
-    <Layout>
+    <Layout
+      onNewChat={createConversation}
+      conversations={conversations}
+      currentConversationId={conversationId}
+      onSelectConversation={selectConversation}
+    >
       <div className="flex-1 flex flex-col h-full relative overflow-hidden">
         <ChatContainerRoot className="flex-1 px-4 py-8 flex flex-col">
-          <ChatContainerContent className="max-w-3xl mx-auto space-y-6 pb-4">
+          <ChatContainerContent
+            className="max-w-3xl mx-auto space-y-6 pb-4"
+            aria-live="polite"
+            aria-atomic="false"
+          >
             {messages.length === 0 && !isLoading && (
-              <div className="text-center text-muted-foreground mt-20">
+              <div
+                className="text-center text-muted-foreground mt-20"
+                role="status"
+              >
                 <h2 className="text-2xl font-semibold mb-2">
                   Welcome to Agentic Fleet
                 </h2>
@@ -96,6 +113,7 @@ function App() {
                     return (
                       <MessageBubble
                         key={msg.id || msg.created_at}
+                        id={msg.id}
                         role={msg.role}
                         content={msg.content}
                         steps={msg.steps}
@@ -114,7 +132,6 @@ function App() {
                         workflowPhase={
                           msg.workflowPhase || currentWorkflowPhase
                         }
-                        isWorkflowPlaceholder={msg.isWorkflowPlaceholder}
                         showAvatar={showAvatar}
                         isGrouped={isGrouped}
                         isFirstInGroup={isFirstInGroup}

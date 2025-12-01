@@ -44,6 +44,8 @@ export interface ChatRequest {
   conversation_id: string;
   message: string;
   stream?: boolean;
+  /** Per-request reasoning effort override for GPT-5 models */
+  reasoning_effort?: "minimal" | "medium" | "maximal";
 }
 
 export interface CreateConversationRequest {
@@ -76,18 +78,22 @@ export interface StreamEvent {
   kind?: string;
   data?: Record<string, unknown>;
   timestamp?: string;
+  /** True if reasoning was interrupted mid-stream (on error events) */
+  reasoning_partial?: boolean;
 }
 
 export interface WorkflowSession {
-  session_id: string;
-  status: string;
+  workflow_id: string;
+  task: string;
+  status: "created" | "running" | "completed" | "failed" | "cancelled";
   created_at: string;
-  updated_at: string;
-  metadata?: Record<string, unknown>;
+  started_at?: string;
+  completed_at?: string;
+  reasoning_effort?: string;
 }
 
 export interface AgentInfo {
   name: string;
   description: string;
-  capabilities?: string[];
+  type: string;
 }

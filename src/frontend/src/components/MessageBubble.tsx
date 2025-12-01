@@ -1,12 +1,5 @@
 import { useState, useMemo } from "react";
-import {
-  Copy,
-  ThumbsUp,
-  ThumbsDown,
-  Volume2,
-  RefreshCw,
-  Check,
-} from "lucide-react";
+import { Copy, Check } from "lucide-react";
 import { ChatStep } from "./ChatStep";
 import type { Message as MessageType, ConversationStep } from "../api/types";
 import {
@@ -24,8 +17,16 @@ import {
   ReasoningContent,
 } from "./prompt-kit/reasoning";
 import { WorkflowEvents } from "./WorkflowEvents";
+import {
+  WORKFLOW_EVENT_TYPES,
+  REASONING_STEP_TYPES,
+  type WorkflowEventType,
+  type ReasoningStepType,
+} from "../lib/constants";
 
 interface MessageBubbleProps {
+  /** Unique message ID for memoization optimization */
+  id?: string;
   role: "user" | "assistant" | "system";
   content: string;
   isFast?: boolean;
@@ -39,9 +40,6 @@ interface MessageBubbleProps {
   isStreaming?: boolean;
   /** Current workflow phase for shimmer display */
   workflowPhase?: string;
-  /** Whether this is a workflow placeholder (no content yet) */
-  isWorkflowPlaceholder?: boolean;
-  /** Whether to show avatar (for grouped messages) */
   showAvatar?: boolean;
   /** Whether this message is part of a group */
   isGrouped?: boolean;
@@ -51,19 +49,6 @@ interface MessageBubbleProps {
   isLastInGroup?: boolean;
 }
 
-// Types of steps that should be displayed as workflow events
-const WORKFLOW_EVENT_TYPES = [
-  "status",
-  "agent_start",
-  "agent_complete",
-  "thought",
-  "agent_thought",
-  "agent_output",
-] as const;
-
-// Types of steps that should be displayed as chain-of-thought reasoning
-const REASONING_STEP_TYPES = ["reasoning"] as const;
-
 function categorizeSteps(steps: ConversationStep[]): {
   workflowEvents: ConversationStep[];
   reasoningSteps: ConversationStep[];
@@ -72,17 +57,9 @@ function categorizeSteps(steps: ConversationStep[]): {
   const reasoningSteps: ConversationStep[] = [];
 
   for (const step of steps) {
-    if (
-      WORKFLOW_EVENT_TYPES.includes(
-        step.type as (typeof WORKFLOW_EVENT_TYPES)[number],
-      )
-    ) {
+    if (WORKFLOW_EVENT_TYPES.includes(step.type as WorkflowEventType)) {
       workflowEvents.push(step);
-    } else if (
-      REASONING_STEP_TYPES.includes(
-        step.type as (typeof REASONING_STEP_TYPES)[number],
-      )
-    ) {
+    } else if (REASONING_STEP_TYPES.includes(step.type as ReasoningStepType)) {
       reasoningSteps.push(step);
     }
     // error steps are handled separately in the UI
@@ -92,6 +69,7 @@ function categorizeSteps(steps: ConversationStep[]): {
 }
 
 export const MessageBubble: React.FC<MessageBubbleProps> = ({
+  id,
   role,
   content,
   isFast,
@@ -103,7 +81,6 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({
   onCancelStreaming,
   isStreaming = false,
   workflowPhase,
-  // isWorkflowPlaceholder is used for type checking but not in render
   showAvatar = true,
   isGrouped = false,
   isFirstInGroup = true,
@@ -211,16 +188,13 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({
             stopLabel="Stop generating"
           />
         ) : (
-          <MessageContent markdown>{content}</MessageContent>
+          <MessageContent markdown id={id}>
+            {content}
+          </MessageContent>
         )}
 
         {!isProcessing && isLastInGroup && (
           <MessageActions>
-            <MessageAction tooltip="Read aloud">
-              <button className="p-1 hover:text-foreground transition-colors">
-                <Volume2 size={14} />
-              </button>
-            </MessageAction>
             <MessageAction tooltip={copied ? "Copied!" : "Copy"}>
               <button
                 onClick={handleCopy}
@@ -231,21 +205,6 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({
                 ) : (
                   <Copy size={14} />
                 )}
-              </button>
-            </MessageAction>
-            <MessageAction tooltip="Good response">
-              <button className="p-1 hover:text-foreground transition-colors">
-                <ThumbsUp size={14} />
-              </button>
-            </MessageAction>
-            <MessageAction tooltip="Bad response">
-              <button className="p-1 hover:text-foreground transition-colors">
-                <ThumbsDown size={14} />
-              </button>
-            </MessageAction>
-            <MessageAction tooltip="Regenerate">
-              <button className="p-1 hover:text-foreground transition-colors">
-                <RefreshCw size={14} />
               </button>
             </MessageAction>
           </MessageActions>

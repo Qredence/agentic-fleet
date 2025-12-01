@@ -9,8 +9,53 @@ import {
   Settings,
 } from "lucide-react";
 import { clsx } from "clsx";
+import type { Conversation } from "../api/types";
 
-export const Sidebar = () => {
+interface SidebarProps {
+  onNewChat?: () => void;
+  conversations?: Conversation[];
+  currentConversationId?: string | null;
+  onSelectConversation?: (id: string) => void;
+}
+
+function formatRelativeTime(dateString: string): string {
+  const date = new Date(dateString);
+  const now = new Date();
+  const diffMs = now.getTime() - date.getTime();
+  const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+
+  if (diffDays === 0) {
+    return "Today";
+  } else if (diffDays === 1) {
+    return "Yesterday";
+  } else if (diffDays < 7) {
+    return `${diffDays} days ago`;
+  } else {
+    return date.toLocaleDateString();
+  }
+}
+
+function getConversationTitle(conv: Conversation): string {
+  if (conv.title && conv.title !== "New Chat") {
+    return conv.title;
+  }
+  // Try to get first user message as title
+  const firstUserMsg = conv.messages?.find((m) => m.role === "user");
+  if (firstUserMsg?.content) {
+    return (
+      firstUserMsg.content.slice(0, 50) +
+      (firstUserMsg.content.length > 50 ? "..." : "")
+    );
+  }
+  return conv.title || "New Chat";
+}
+
+export const Sidebar: React.FC<SidebarProps> = ({
+  onNewChat,
+  conversations = [],
+  currentConversationId,
+  onSelectConversation,
+}) => {
   const [isCollapsed, setIsCollapsed] = useState(false);
 
   return (
@@ -41,10 +86,12 @@ export const Sidebar = () => {
 
       <div className="px-3 py-2">
         <button
+          onClick={onNewChat}
           className={clsx(
             "flex items-center gap-2 w-full p-2 text-gray-100 hover:bg-gray-800 rounded-md transition-colors border border-gray-800",
             isCollapsed ? "justify-center" : "justify-start",
           )}
+          aria-label="Start new chat"
         >
           <Plus size={16} />
           {!isCollapsed && (
@@ -54,20 +101,42 @@ export const Sidebar = () => {
       </div>
 
       <div className="flex-1 overflow-y-auto py-2 px-3 space-y-1">
-        {[1, 2, 3].map((i) => (
-          <button
-            key={i}
-            className={clsx(
-              "flex items-center gap-3 w-full p-2 text-gray-400 hover:text-white hover:bg-gray-800 rounded-md transition-colors text-left group",
-              isCollapsed ? "justify-center" : "justify-start",
-            )}
-          >
-            <MessageSquare size={16} />
-            {!isCollapsed && (
-              <span className="text-sm truncate">Previous Chat {i}</span>
-            )}
-          </button>
-        ))}
+        {conversations.length === 0 ? (
+          <div className="text-center text-gray-500 text-sm py-4">
+            {!isCollapsed && "No conversations yet"}
+          </div>
+        ) : (
+          conversations.map((conv) => {
+            const isActive = conv.id === currentConversationId;
+            const title = getConversationTitle(conv);
+            const timeLabel = formatRelativeTime(conv.updated_at);
+
+            return (
+              <button
+                key={conv.id}
+                onClick={() => onSelectConversation?.(conv.id)}
+                className={clsx(
+                  "flex items-center gap-3 w-full p-2 rounded-md transition-colors text-left group",
+                  isCollapsed ? "justify-center" : "justify-start",
+                  isActive
+                    ? "bg-gray-800 text-white"
+                    : "text-gray-400 hover:text-white hover:bg-gray-800",
+                )}
+                title={!isCollapsed ? undefined : title}
+              >
+                <MessageSquare size={16} className="shrink-0" />
+                {!isCollapsed && (
+                  <div className="flex-1 min-w-0">
+                    <span className="text-sm truncate block">{title}</span>
+                    <span className="text-xs text-gray-500 truncate block">
+                      {timeLabel}
+                    </span>
+                  </div>
+                )}
+              </button>
+            );
+          })
+        )}
       </div>
 
       <div className="p-3 border-t border-gray-800 space-y-1">
