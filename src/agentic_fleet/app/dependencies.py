@@ -108,6 +108,15 @@ class ConversationManager:
         message = Message(role=role, content=content)
         conversation.messages.append(message)
         conversation.updated_at = datetime.now()
+
+        # Update title from first user message if still default
+        if role == MessageRole.USER and conversation.title == "New Chat":
+            # Use first 50 chars of message as title
+            new_title = content[:50].strip()
+            if len(content) > 50:
+                new_title += "..."
+            conversation.title = new_title
+
         return message
 
 

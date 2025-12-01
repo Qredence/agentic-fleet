@@ -302,27 +302,6 @@ def _map_workflow_event(
                 accumulated_reasoning,
             )
 
-    # Generic objects with .message.text and .role (safety net)
-    if hasattr(event, "message") and hasattr(event.message, "text"):
-        text = getattr(event.message, "text", "") or ""
-        if text:
-            role = getattr(event, "role", None) or getattr(event.message, "role", None)
-            author_name = getattr(event, "author_name", None) or getattr(
-                event.message, "author_name", None
-            )
-            agent_id = getattr(event, "agent_id", None) or getattr(event.message, "author", None)
-            return (
-                StreamEvent(
-                    type=StreamEventType.AGENT_MESSAGE,
-                    message=text,
-                    agent_id=agent_id,
-                    author=author_name,
-                    role=role.value if hasattr(role, "value") else role,
-                    kind=None,
-                ),
-                accumulated_reasoning,
-            )
-
         if isinstance(data, RoutingMessage):
             agents = list(data.decision.assigned_to) if data.decision.assigned_to else []
             return (
@@ -374,6 +353,27 @@ def _map_workflow_event(
             ),
             accumulated_reasoning,
         )
+
+    # Generic objects with .message.text and .role (safety net)
+    if hasattr(event, "message") and hasattr(event.message, "text"):
+        text = getattr(event.message, "text", "") or ""
+        if text:
+            role = getattr(event, "role", None) or getattr(event.message, "role", None)
+            author_name = getattr(event, "author_name", None) or getattr(
+                event.message, "author_name", None
+            )
+            agent_id = getattr(event, "agent_id", None) or getattr(event.message, "author", None)
+            return (
+                StreamEvent(
+                    type=StreamEventType.AGENT_MESSAGE,
+                    message=text,
+                    agent_id=agent_id,
+                    author=author_name,
+                    role=role.value if hasattr(role, "value") else role,
+                    kind=None,
+                ),
+                accumulated_reasoning,
+            )
 
     if isinstance(event, WorkflowOutputEvent):
         # Final output event
@@ -614,9 +614,24 @@ async def chat_stream(
         full_response = ""
 
         async for event_data in _event_generator(workflow, session, session_manager, log_reasoning):
-            # Capture response delta for history
-            if event_data.get("type") == StreamEventType.RESPONSE_DELTA:
+            event_type = event_data.get("type")
+
+            # Capture response content for history from various event types
+            if event_type == StreamEventType.RESPONSE_DELTA.value:
                 full_response += event_data.get("delta", "")
+            elif event_type == StreamEventType.RESPONSE_COMPLETED.value:
+                # Final response - use this as the definitive content
+                completed_msg = event_data.get("message", "")
+                if completed_msg:
+                    full_response = completed_msg
+            elif event_type in (
+                StreamEventType.AGENT_OUTPUT.value,
+                StreamEventType.AGENT_MESSAGE.value,
+            ):
+                # Capture agent output/message as response content
+                agent_msg = event_data.get("message", "")
+                if agent_msg:
+                    full_response = agent_msg
 
             yield {"data": json.dumps(event_data)}
 
