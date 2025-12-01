@@ -290,6 +290,9 @@ known-first-party = ["agentic_fleet", "agenticfleet"]
 [tool.pytest.ini_options]
 pythonpath = "src"
 testpaths = ["tests"]
+asyncio_mode = "auto"
+addopts = "-m 'not e2e'"
+markers = ["e2e: End-to-end tests requiring a running server (deselect with '-m \"not e2e\"')"]
 
 
 # ============================================================================

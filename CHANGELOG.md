@@ -1,38 +1,31 @@
 # Changelog
 
-## v0.6.7 (2025-11-30) – Frontend Architecture Overhaul
+## v0.6.6 (2025-12-01) – Latency Optimization, Frontend Overhaul & Conversation History
 
 ### Highlights
 
-- **Modernized Frontend Architecture** – Complete refactor of the React frontend to align with the new 5-phase pipeline and event streaming model.
-- **Event-Driven UI** – New `WorkflowEvents` and `ChatStep` components to visualize the granular execution progress (Analysis -> Routing -> Execution).
-- **Simplified State** – Removed legacy `useStreamingChat` in favor of a robust `useChat` hook with better error handling and type safety.
-- **Component Cleanup** – Deleted 20+ deprecated UI components (`chat-container`, `markdown`, `code-block`) to reduce technical debt.
-- **Prompt Kit Integration** – Added `prompt-kit` for enhanced input handling.
-
-### Changes
-
-- **`src/frontend/src/components/`**:
-  - Added `AgentMessageGroup.tsx`, `ChatStep.tsx`, `WorkflowEvents.tsx`.
-  - Deleted legacy components: `chat-container.tsx`, `message.tsx`, `response-stream.tsx`, etc.
-- **`src/frontend/src/hooks/`**:
-  - Refactored `useChat.ts`.
-  - Removed `useStreamingChat.ts`.
-- **`src/frontend/src/lib/api/`**:
-  - Consolidated API logic in `client.ts`.
-  - Removed `chatApi.ts`, `magentic-workflow.ts`.
-
----
-
-## v0.6.6 (2025-11-28) – Latency Optimization & Judge Phase Removal
-
-### Highlights
+#### Performance
 
 - **66% Latency Reduction** – Complex queries now complete in ~2 minutes vs ~6 minutes previously. Achieved by removing the redundant Judge phase and optimizing DSPy module selection.
 - **5-Phase Pipeline** – Workflow graph simplified from 6 phases to 5: `analysis → routing → execution → progress → quality`. The redundant `JudgeRefineExecutor` has been removed.
 - **DSPy Module Optimization** – Switched `self.router` from `dspy.ChainOfThought` to `dspy.Predict` for faster routing without reasoning traces.
 - **Fast Model Tier** – Added `dspy.routing_model: gpt-5-mini` configuration for cost-effective analysis/routing phases.
-- **Judge Phase Disabled** – Set `enable_judge: false` and `max_refinement_rounds: 0` in default config to eliminate redundant quality evaluation.
+
+#### Frontend Architecture
+
+- **Modernized Frontend Architecture** – Complete refactor of the React frontend to align with the new 5-phase pipeline and event streaming model.
+- **Event-Driven UI** – New `WorkflowEvents` and `ChatStep` components to visualize granular execution progress (Analysis → Routing → Execution).
+- **Simplified State** – Removed legacy `useStreamingChat` in favor of a robust `useChat` hook with better error handling and type safety.
+- **Component Cleanup** – Deleted 20+ deprecated UI components (`chat-container`, `markdown`, `code-block`) to reduce technical debt.
+- **Prompt Kit Integration** – Added `prompt-kit` for enhanced input handling with Steps, Markdown, TextShimmer, Reasoning, ChainOfThought, and Message components.
+- **Schema Alignment** – Fixed all frontend TypeScript types to match backend Pydantic schemas for proper real-time streaming.
+
+#### Conversation History
+
+- **Conversation History in Sidebar** – Sidebar now displays all past conversations with titles, timestamps, and click-to-load functionality.
+- **Message Persistence Fix** – Assistant responses are now properly saved to conversations, enabling conversation reload.
+- **Auto-Generated Conversation Titles** – Conversations are automatically titled based on the first user message instead of "New Chat".
+- **Streaming Memoization** – Added message ID propagation for Markdown block-level memoization during streaming responses.
 
 ### Performance Results
 
@@ -47,6 +40,8 @@
 | **Total** | **~6 min** | **~2 min**     |
 
 ### Changes
+
+#### Backend
 
 - **`src/agentic_fleet/workflows/builder.py`**:
   - Removed `JudgeRefineExecutor` import and workflow edge.
@@ -68,11 +63,89 @@
 - **`src/agentic_fleet/workflows/executors.py`**:
   - Added deprecation warning to `JudgeRefineExecutor` (retained for backwards compatibility).
 
+- **`src/agentic_fleet/app/routers/streaming.py`**:
+  - Fixed unreachable code in `_map_workflow_event` (RoutingMessage, QualityMessage, ProgressMessage handlers were incorrectly nested).
+  - Fixed message capture to save assistant responses from `RESPONSE_COMPLETED`, `AGENT_OUTPUT`, and `AGENT_MESSAGE` events.
+
+- **`src/agentic_fleet/app/dependencies.py`**:
+  - `add_message()` now auto-updates conversation title from first user message content.
+
+#### Frontend
+
+- **`src/frontend/src/api/types.ts`**:
+  - Added `reasoning_effort` to `ChatRequest` for per-request GPT-5 reasoning control.
+  - Added `reasoning_partial` to `StreamEvent` for interrupted reasoning detection.
+  - Fixed `WorkflowSession` schema (`session_id` → `workflow_id`, added `task`, `started_at`, `completed_at`).
+  - Fixed `AgentInfo` schema (added `type`, removed non-existent `capabilities`).
+
+- **`src/frontend/src/api/client.ts`**:
+  - Added `listConversations()` method to fetch all conversations.
+  - Added `loadConversationMessages()` method to load a specific conversation's messages.
+
+- **`src/frontend/src/hooks/useChat.ts`**:
+  - Added `SendMessageOptions` interface with `reasoning_effort` parameter.
+  - Added `conversations` state array for sidebar display.
+  - Added `loadConversations()` to fetch conversation list from backend.
+  - Added `selectConversation(id)` to switch between conversations and load their messages.
+  - Enhanced error handling to preserve partial reasoning when `reasoning_partial` is true.
+  - Fixed missing `AbortController` signal in API calls (cancel button now works).
+  - Added explicit handling for user-initiated stream abortion.
+  - Added duplicate message prevention in `response.completed` handler.
+
+- **`src/frontend/src/components/`**:
+  - Added `AgentMessageGroup.tsx`, `ChatStep.tsx`, `WorkflowEvents.tsx`.
+  - Synchronized `WORKFLOW_EVENT_TYPES` between `WorkflowEvents.tsx` and `MessageBubble.tsx`.
+  - Deleted legacy components: `chat-container.tsx`, `message.tsx`, `response-stream.tsx`, etc.
+
+- **`src/frontend/src/components/Sidebar.tsx`**:
+  - Now accepts `conversations`, `currentConversationId`, and `onSelectConversation` props.
+  - Displays real conversations instead of hardcoded placeholders.
+  - Shows relative timestamps ("Today", "Yesterday", "X days ago").
+  - Highlights the currently active conversation.
+
+- **`src/frontend/src/components/Layout.tsx`**:
+  - Extended props to pass conversation data to Sidebar.
+
+- **`src/frontend/src/components/MessageBubble.tsx`**:
+  - Added `id` prop for message identification.
+  - Passes `id` to `MessageContent` for Markdown memoization during streaming.
+
+- **`src/frontend/src/components/WorkflowEvents.tsx`**:
+  - Refined styling to better match prompt-kit Steps component patterns.
+
+- **`src/frontend/src/App.tsx`**:
+  - Wired up conversation list loading and selection.
+  - Passes `id` prop to `MessageBubble` for memoization optimization.
+
+### Bug Fixes
+
+- **Cancel Streaming** – Fixed cancel button not aborting HTTP requests (missing AbortController signal).
+- **Phase Event Mapping** – Fixed `RoutingMessage`, `QualityMessage`, and `ProgressMessage` events not being emitted (unreachable code bug).
+- **Workflow Events Display** – Added `agent_thought` and `agent_output` to workflow event types for consistent display.
+- **Conversation Messages Not Saving** – Fixed assistant responses not being persisted due to incorrect event type matching.
+- **Empty Conversation Titles** – Conversations now show meaningful titles from user's first message.
+- **Conversation Selection** – Clicking a conversation in sidebar now properly loads its messages.
+- **Duplicate Final Answer Messages** – Fixed potential duplicate messages when `response.completed` content matched existing content.
+
+### Schema Alignment (Frontend ↔ Backend)
+
+| Type              | Field               | Before         | After           |
+| ----------------- | ------------------- | -------------- | --------------- |
+| `WorkflowSession` | `session_id`        | ✗ wrong name   | `workflow_id` ✓ |
+| `WorkflowSession` | `task`              | ✗ missing      | ✓ added         |
+| `WorkflowSession` | `started_at`        | ✗ missing      | ✓ added         |
+| `WorkflowSession` | `completed_at`      | ✗ missing      | ✓ added         |
+| `AgentInfo`       | `type`              | ✗ missing      | ✓ added         |
+| `AgentInfo`       | `capabilities`      | ✗ non-existent | removed         |
+| `ChatRequest`     | `reasoning_effort`  | ✗ missing      | ✓ added         |
+| `StreamEvent`     | `reasoning_partial` | ✗ missing      | ✓ added         |
+
 ### Migration Notes
 
 - **Clear DSPy Cache**: Run `uv run python -m agentic_fleet.scripts.manage_cache --clear` after upgrading.
 - **Custom Workflows**: If you used `JudgeRefineExecutor` in custom workflow configurations, it will emit a deprecation warning but continue to function.
 - **Quality Assessment**: The `QualityAssessment` signature still provides scoring—only the redundant judge layer was removed.
+- **Existing Conversations**: No breaking changes. Existing conversations created before this update will retain "New Chat" titles but new messages will be saved correctly.
 
 ---
 
