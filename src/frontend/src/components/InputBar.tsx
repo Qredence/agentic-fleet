@@ -70,6 +70,12 @@ export const InputBar: React.FC<InputBarProps> = ({
         onClick={() => {
           /* TODO: implement think harder toggle */
         }}
+        onKeyDown={(e) => {
+          if ((e.key === "Enter" || e.key === " ") && !isDisabled) {
+            e.preventDefault();
+            /* TODO: implement think harder toggle */
+          }
+        }}
       >
         <Lightbulb size={14} />
         <span>Think harder</span>

@@ -49,6 +49,10 @@ def write_records(path: Path, records: list[dict[str, Any]]) -> None:
     path.write_text(json.dumps(records, indent=2, ensure_ascii=False) + "\n")
 
 
+def format_path_for_display(path: Path) -> str:
+    return str(path.relative_to(REPO_ROOT))
+
+
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument(
@@ -91,12 +95,7 @@ def main() -> None:
     buckets: list[list[dict[str, Any]]] = []
     for path in [args.module_data, args.root_data, *args.extra]:
         records = load_records(path)
-        # Robust path display: handle external/absolute paths that may not be relative to REPO_ROOT.
-        try:
-            display_path = str(path.relative_to(REPO_ROOT))
-        except ValueError:
-            # Fall back to absolute resolved path for anything outside the repository
-            display_path = str(path.resolve())
+        display_path = format_path_for_display(path)
         if records:
             print(f"Loaded {len(records):>4} examples from {display_path}")
         else:
