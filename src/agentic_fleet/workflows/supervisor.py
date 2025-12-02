@@ -430,8 +430,12 @@ class SupervisorWorkflow:
                     logger.debug(
                         f"Applied reasoning_effort={reasoning_effort} to agent {agent_name}"
                     )
+                except AttributeError as e:
+                    logger.warning(f"Agent {agent_name} chat_client doesn't support reasoning_effort: {e}")
+                except TypeError as e:
+                    logger.warning(f"Invalid type when setting reasoning_effort on {agent_name}: {e}")
                 except Exception as e:
-                    logger.warning(f"Could not set reasoning effort on agent {agent_name}: {e}")
+                    logger.error(f"Unexpected error setting reasoning_effort on {agent_name}: {e}", exc_info=True)
 
     async def run_stream(
         self,
