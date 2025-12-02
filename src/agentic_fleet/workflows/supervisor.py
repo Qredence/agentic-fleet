@@ -410,11 +410,11 @@ class SupervisorWorkflow:
                     # Try setting via extra_body (most common approach)
                     # Type ignores needed for dynamic attribute assignment on chat clients
                     if hasattr(chat_client, "extra_body"):
-                        existing = getattr(chat_client, "extra_body", None) or {}
+                        existing = dict(getattr(chat_client, "extra_body", None) or {})
                         existing["reasoning"] = {"effort": reasoning_effort}
                         chat_client.extra_body = existing  # type: ignore[assignment]
                     elif hasattr(chat_client, "_default_extra_body"):
-                        existing = getattr(chat_client, "_default_extra_body", None) or {}
+                        existing = dict(getattr(chat_client, "_default_extra_body", None) or {})
                         existing["reasoning"] = {"effort": reasoning_effort}
                         chat_client._default_extra_body = existing  # type: ignore[assignment]
                     else:
