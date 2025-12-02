@@ -40,18 +40,17 @@ jobs:
             exit 1
           fi
           mkdir -p ~/.factory || { echo "Error: Failed to create ~/.factory directory"; exit 1; }
-          cat > ~/.factory/config.json << EOF
-          {
-            "custom_models": [{
-              "model_display_name": "Claude Opus 4.5 [AzureAnthropic]",
-              "model": "claude-opus-4-5",
-              "provider": "anthropic",
-              "base_url": "https://${AZURE_RESOURCE_NAME}.azure.com/anthropic",
-              "api_key": "${FOUNDRY_API_KEY}",
-              "max_tokens": 32000
-            }]
-          }
-          EOF
+          jq -n \
+            --arg resource "$AZURE_RESOURCE_NAME" \
+            --arg key "$FOUNDRY_API_KEY" \
+            '{custom_models: [{
+              model_display_name: "Claude Opus 4.5 [AzureAnthropic]",
+              model: "claude-opus-4-5",
+              provider: "anthropic",
+              base_url: ("https://" + $resource + ".azure.com/anthropic"),
+              api_key: $key,
+              max_tokens: 32000
+            }]}' > ~/.factory/config.json
           if [ ! -f ~/.factory/config.json ]; then
             echo "Error: Failed to create config.json"
             exit 1
