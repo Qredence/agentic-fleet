@@ -844,5 +844,142 @@
     "assigned_to": "",
     "mode": "delegated",
     "tool_requirements": []
+  },
+  {
+    "task": "Hello world",
+    "team": "Writer: Content creation",
+    "available_tools": "No tools available",
+    "context": "Self-improvement: Quality score 10.0/10",
+    "assigned_to": "FastResponder",
+    "mode": "delegated",
+    "tool_requirements": []
+  },
+  {
+    "task": "What is 2+2?",
+    "team": "Writer: Content creation",
+    "available_tools": "No tools available",
+    "context": "Self-improvement: Quality score 10.0/10",
+    "assigned_to": "FastResponder",
+    "mode": "delegated",
+    "tool_requirements": []
+  },
+  {
+    "task": "1+1",
+    "team": "Writer: Content creation",
+    "available_tools": "No tools available",
+    "context": "Self-improvement: Quality score 10.0/10",
+    "assigned_to": "executor",
+    "mode": "parallel",
+    "tool_requirements": []
+  },
+  {
+    "task": "Test message for verification",
+    "team": "Writer: Content creation",
+    "available_tools": "No tools available",
+    "context": "Self-improvement: Quality score 10.0/10",
+    "assigned_to": "FastResponder",
+    "mode": "delegated",
+    "tool_requirements": []
+  },
+  {
+    "task": "Hello",
+    "team": "Writer: Content creation",
+    "available_tools": "No tools available",
+    "context": "Self-improvement: Quality score 10.0/10",
+    "assigned_to": "FastResponder",
+    "mode": "delegated",
+    "tool_requirements": []
+  },
+  {
+    "task": "write a poem about a cat",
+    "team": "Writer: Content creation",
+    "available_tools": "No tools available",
+    "context": "Self-improvement: Quality score 9.0/10",
+    "assigned_to": "planner,writer,reviewer",
+    "mode": "sequential",
+    "tool_requirements": []
+  },
+  {
+    "task": "Hello, who are you?",
+    "team": "Writer: Content creation",
+    "available_tools": "No tools available",
+    "context": "Self-improvement: Quality score 9.0/10",
+    "assigned_to": "generator",
+    "mode": "parallel",
+    "tool_requirements": []
+  },
+  {
+    "task": "What are the key differences between Python and JavaScript? Provide a brief comparison.",
+    "team": "Writer: Content creation",
+    "available_tools": "No tools available",
+    "context": "Self-improvement: Quality score 8.5/10",
+    "assigned_to": "researcher,writer,reviewer,generator",
+    "mode": "sequential",
+    "tool_requirements": []
+  },
+  {
+    "task": "What is Gemini 3 Pro?",
+    "team": "Writer: Content creation",
+    "available_tools": "- TavilySearchTool/TavilyMCPTool (available to Researcher): Search the web for real-time information using Tavily. Provides accurate, up-to-date results with source citations. [Capabilities: web_search, real_time, citations]",
+    "context": "Self-improvement: Quality score 8.5/10",
+    "assigned_to": "researcher,copilot_researcher",
+    "mode": "sequential",
+    "tool_requirements": [
+      "TavilySearchTool for querying about Gemini 3 Pro",
+      "BrowserTool for gathering additional details if required"
+    ]
+  },
+  {
+    "task": "Who won the NY mayoral race?",
+    "team": "Writer: Content creation",
+    "available_tools": "- TavilySearchTool/TavilyMCPTool (available to Researcher): Search the web for real-time information using Tavily. Provides accurate, up-to-date results with source citations. [Capabilities: web_search, real_time, citations]",
+    "context": "Self-improvement: Quality score 8.5/10",
+    "assigned_to": "researcher,copilot_researcher",
+    "mode": "parallel",
+    "tool_requirements": ["tavily_search", "browser"]
+  },
+  {
+    "task": "Explain what is an LLM",
+    "team": "Writer: Content creation",
+    "available_tools": "- TavilySearchTool/TavilyMCPTool (available to Researcher): Search the web for real-time information using Tavily. Provides accurate, up-to-date results with source citations. [Capabilities: web_search, real_time, citations]",
+    "context": "Self-improvement: Quality score 8.5/10",
+    "assigned_to": "researcher,copilot_researcher,analyst,writer,reviewer,generator",
+    "mode": "parallel",
+    "tool_requirements": ["TavilySearchTool", "BrowserTool"]
+  },
+  {
+    "task": "yuy",
+    "team": "Writer: Content creation",
+    "available_tools": "- TavilySearchTool/TavilyMCPTool (available to Researcher): Search the web for real-time information using Tavily. Provides accurate, up-to-date results with source citations. [Capabilities: web_search, real_time, citations]",
+    "context": "Self-improvement: Quality score 8.0/10",
+    "assigned_to": "planner,copilot_researcher,writer,verifier",
+    "mode": "sequential",
+    "tool_requirements": ["TavilySearch (on-demand)", "Browser (on-demand)"]
+  },
+  {
+    "task": "tttyyt",
+    "team": "Writer: Content creation",
+    "available_tools": "- TavilySearchTool/TavilyMCPTool (available to Researcher): Search the web for real-time information using Tavily. Provides accurate, up-to-date results with source citations. [Capabilities: web_search, real_time, citations]",
+    "context": "Self-improvement: Quality score 8.0/10",
+    "assigned_to": "planner,copilot_researcher,researcher,analyst,coder,writer,reviewer,verifier,generator,executor",
+    "mode": "sequential",
+    "tool_requirements": [
+      "TavilySearch (TavilySearchTool) — use only for queries about events/data from 2024 onwards or when up-to-date web data is required",
+      "BrowserTool — optional, used by Copilot_researcher for deep site browsing or extracting complex web content",
+      "No-tool — default until user confirms research is needed"
+    ]
+  },
+  {
+    "task": "what is the weather today ?",
+    "team": "Researcher: Web research specialist\nAnalyst: Data analysis expert\nWriter: Content creation\nReviewer: Quality assurance",
+    "available_tools": "- TavilySearchTool/TavilyMCPTool (available to Researcher): Search the web for real-time information using Tavily. Provides accurate, up-to-date results with source citations. [Capabilities: web_search, real_time, citations]\n- HostedCodeInterpreterTool (available to Analyst): Execute Python snippets in a managed sandbox. [Capabilities: code_execution]",
+    "context": "Self-improvement: Quality score 8.0/10",
+    "assigned_to": "Researcher,Analyst,Writer,Reviewer,Judge",
+    "mode": "sequential",
+    "tool_requirements": [
+      "tavily_search",
+      "browser",
+      "HostedCodeInterpreterTool"
+    ]
   }
 ]

@@ -27,8 +27,10 @@ help:
 	@echo "  make test-frontend     Run frontend unit tests"
 	@echo ""
 	@echo "Code Quality:"
-	@echo "  make lint              Run Ruff linter"
-	@echo "  make format            Format code with Ruff (lint + style)"
+	@echo "  make lint              Run Ruff linter (backend)"
+	@echo "  make format            Format code with Ruff (backend)"
+	@echo "  make frontend-lint     Run ESLint (frontend)"
+	@echo "  make frontend-format   Format code with Prettier (frontend)"
 	@echo "  make type-check        Run ty type checker"
 	@echo "  make check             Run all quality checks (lint + format + type)"
 	@echo ""
@@ -112,15 +114,23 @@ test-e2e:
 
 test-frontend:
 	@echo "Running frontend unit tests..."
-	cd $(FRONTEND_DIR) && npm test
+	cd $(FRONTEND_DIR) && npm run test:run
 
 # Code quality
 lint:
 	uv run ruff check .
 
+frontend-lint:
+	@echo "Running frontend linter..."
+	cd $(FRONTEND_DIR) && npm run lint
+
 format:
 	uv run ruff check --fix .
 	uv run ruff format .
+
+frontend-format:
+	@echo "Formatting frontend code..."
+	cd $(FRONTEND_DIR) && npm run format
 
 type-check:
 	uv run ty check src
@@ -130,7 +140,7 @@ check: lint type-check
 	@echo "✓ All quality checks passed!"
 
 # Run comprehensive QA (backend + frontend)
-qa: lint format type-check test test-frontend
+qa: lint format type-check test test-frontend frontend-lint
 	@echo "✓ QA complete: All checks passed!"
 
 # Pre-commit

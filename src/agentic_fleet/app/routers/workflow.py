@@ -50,7 +50,7 @@ async def run_workflow(request: RunRequest, workflow: WorkflowDep) -> RunRespons
     except Exception as e:
         logger.exception(
             "Workflow execution failed for task: %s",
-            request.task[:100].replace('\r', '').replace('\n', '')
+            request.task[:100].replace("\r", "").replace("\n", ""),
         )
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,

@@ -101,7 +101,7 @@ print(f"Average quality: {stats['average_quality_score']:.2f}/10")
 
 # Perform self-improvement
 added, status = engine.auto_improve(
-    examples_file="data/supervisor_examples.json",
+    examples_file="src/agentic_fleet/data/supervisor_examples.json",
     force_recompile=True  # Clear cache to force relearning
 )
 
@@ -270,7 +270,7 @@ The system tracks:
 - **Excellent (9-10)**: Outstanding executions, learn immediately
 - **Good (8-9)**: Solid executions, default learning threshold
 - **Acceptable (7-8)**: Decent but room for improvement
-- **Needs Improvement (<7)**: Low quality, refinement triggered
+- **Needs Improvement (<7)**: Low quality, requires manual intervention or retry
 
 ## Deduplication
 
@@ -288,14 +288,14 @@ This ensures:
 
 Self-improvement works seamlessly with DSPy optimization through a "Lazy Loading" architecture:
 
-1. **Data Preparation (Fast)**: The `self-improve` command analyzes history and updates `data/supervisor_examples.json`. It does _not_ run the expensive DSPy compilation process itself.
-2. **Cache Invalidation**: It clears the compilation cache (`logs/compiled_supervisor.pkl`), signaling that the current model is outdated.
+1. **Data Preparation (Fast)**: The `self-improve` command analyzes history and updates `src/agentic_fleet/data/supervisor_examples.json`. It does _not_ run the expensive DSPy compilation process itself.
+2. **Cache Invalidation**: It clears the compilation cache (`src/agentic_fleet/data/logs/compiled_supervisor.pkl`), signaling that the current model is outdated.
 3. **Just-in-Time Optimization**: The _next_ time you run `agentic-fleet run`, the system detects the missing cache and automatically triggers the DSPy compiler.
 4. **Result**: The new run uses a fresh model optimized with your latest high-quality examples.
 
 This separation ensures that the `self-improve` command remains instant and lightweight, deferring the heavy lifting to the next execution cycle.
 
-1. **New examples added** to `data/supervisor_examples.json`
+1. **New examples added** to `src/agentic_fleet/data/supervisor_examples.json`
 2. **Cache cleared** to force recompilation
 3. **Next execution** triggers DSPy BootstrapFewShot compilation
 4. **Improved routing** from learned patterns
@@ -309,7 +309,7 @@ engine = SelfImprovementEngine()
 
 # Use custom examples file
 engine.auto_improve(
-    examples_file="data/custom_examples.json",
+    examples_file="src/agentic_fleet/data/custom_examples.json",
     force_recompile=True
 )
 ```
@@ -364,7 +364,7 @@ research_tasks = [
 2. Check examples were added:
 
    ```bash
-   uv run python -c "import json; print(len(json.load(open('data/supervisor_examples.json'))))"
+   uv run python -c "import json; print(len(json.load(open('src/agentic_fleet/data/supervisor_examples.json'))))"
    ```
 
 3. Run with compilation enabled:
@@ -379,7 +379,7 @@ research_tasks = [
 **Solution**: The system automatically deduplicates. If you see many similar examples:
 
 1. Review fingerprinting logic in `src/agentic_fleet/utils/self_improvement.py`
-2. Manually edit `data/supervisor_examples.json` to remove unwanted examples
+2. Manually edit `src/agentic_fleet/data/supervisor_examples.json` to remove unwanted examples
 
 ## Performance Considerations
 

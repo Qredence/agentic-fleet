@@ -1,88 +1,77 @@
-import type { Conversation, ChatRequest } from "./types";
+import type {
+  Conversation,
+  ChatRequest,
+  WorkflowSession,
+  AgentInfo,
+  Message,
+} from "./types";
 
-const API_PREFIX = import.meta.env.VITE_API_PREFIX || "/api";
+const API_PREFIX = "/api";
 
 export const api = {
-  /**
-   * Create a new conversation
-   */
-  createConversation: async (title?: string): Promise<Conversation> => {
+  async createConversation(title: string = "New Chat"): Promise<Conversation> {
     const response = await fetch(`${API_PREFIX}/conversations`, {
       method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ title }),
     });
-
-    if (!response.ok) {
-      throw new Error("Failed to create conversation");
-    }
-
+    if (!response.ok) throw new Error("Failed to create conversation");
     return response.json();
   },
 
-  /**
-   * List all conversations
-   */
-  listConversations: async (): Promise<Conversation[]> => {
-    const response = await fetch(`${API_PREFIX}/conversations`);
-
-    if (!response.ok) {
-      throw new Error("Failed to list conversations");
-    }
-
-    const data = await response.json();
-    // Backend returns { items: [...] } format
-    return data.items || data;
-  },
-
-  /**
-   * Get a specific conversation by ID
-   */
-  getConversation: async (id: number | string): Promise<Conversation> => {
+  async getConversation(id: string): Promise<Conversation> {
     const response = await fetch(`${API_PREFIX}/conversations/${id}`);
-
-    if (!response.ok) {
-      throw new Error("Failed to get conversation");
-    }
-
+    if (!response.ok) throw new Error("Failed to get conversation");
     return response.json();
   },
 
-  /**
-   * Send a message to the chat endpoint (supports streaming)
-   */
-  sendMessage: async (
+  async listConversations(): Promise<Conversation[]> {
+    const response = await fetch(`${API_PREFIX}/conversations`);
+    if (!response.ok) throw new Error("Failed to list conversations");
+    return response.json();
+  },
+
+  async loadConversationMessages(id: string): Promise<Message[]> {
+    const conversation = await this.getConversation(id);
+    return conversation.messages || [];
+  },
+
+  async sendMessage(
     request: ChatRequest,
     signal?: AbortSignal,
-  ): Promise<Response> => {
+  ): Promise<Response> {
     const response = await fetch(`${API_PREFIX}/chat`, {
       method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify(request),
       signal,
     });
-
-    if (!response.ok) {
-      throw new Error("Failed to send message");
-    }
-
+    if (!response.ok) throw new Error("Failed to send message");
     return response;
   },
 
-  /**
-   * Health check endpoint
-   */
-  healthCheck: async (): Promise<{ status: string }> => {
-    const response = await fetch(`${API_PREFIX}/health`);
+  async listSessions(): Promise<WorkflowSession[]> {
+    const response = await fetch(`${API_PREFIX}/sessions`);
+    if (!response.ok) throw new Error("Failed to list sessions");
+    return response.json();
+  },
 
-    if (!response.ok) {
-      throw new Error("Health check failed");
-    }
+  async getSession(id: string): Promise<WorkflowSession> {
+    const response = await fetch(`${API_PREFIX}/sessions/${id}`);
+    if (!response.ok) throw new Error("Failed to get session");
+    return response.json();
+  },
 
+  async cancelSession(id: string): Promise<void> {
+    const response = await fetch(`${API_PREFIX}/sessions/${id}`, {
+      method: "DELETE",
+    });
+    if (!response.ok) throw new Error("Failed to cancel session");
+  },
+
+  async listAgents(): Promise<AgentInfo[]> {
+    const response = await fetch(`${API_PREFIX}/v1/agents`);
+    if (!response.ok) throw new Error("Failed to list agents");
     return response.json();
   },
 };

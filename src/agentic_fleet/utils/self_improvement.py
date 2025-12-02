@@ -13,6 +13,7 @@ import re
 from pathlib import Path
 from typing import Any
 
+from .constants import DEFAULT_EXAMPLES_PATH
 from .cosmos import get_default_user_id, mirror_dspy_examples
 from .history_manager import HistoryManager
 
@@ -66,9 +67,7 @@ class SelfImprovementEngine:
         self.history_manager = HistoryManager()
         self.user_id = user_id or get_default_user_id()
 
-    def analyze_and_improve(
-        self, examples_file: str = "data/supervisor_examples.json"
-    ) -> dict[str, Any]:
+    def analyze_and_improve(self, examples_file: str = DEFAULT_EXAMPLES_PATH) -> dict[str, Any]:
         """
         Analyze execution history and generate new training examples.
 
@@ -523,7 +522,7 @@ class SelfImprovementEngine:
 
     def auto_improve(
         self,
-        examples_file: str = "data/supervisor_examples.json",
+        examples_file: str = DEFAULT_EXAMPLES_PATH,
         force_recompile: bool = True,
     ) -> tuple[int, str]:
         """

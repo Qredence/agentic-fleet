@@ -14,7 +14,13 @@ from uuid import uuid4
 
 from fastapi import Depends, FastAPI, HTTPException, Request, status
 
-from agentic_fleet.app.schemas import WorkflowSession, WorkflowStatus
+from agentic_fleet.app.schemas import (
+    Conversation,
+    Message,
+    MessageRole,
+    WorkflowSession,
+    WorkflowStatus,
+)
 from agentic_fleet.workflows.supervisor import SupervisorWorkflow, create_supervisor_workflow
 
 logger = logging.getLogger(__name__)
@@ -24,6 +30,110 @@ logger = logging.getLogger(__name__)
 # =============================================================================
 
 MAX_CONCURRENT_WORKFLOWS = int(os.getenv("MAX_CONCURRENT_WORKFLOWS", "10"))
+
+
+# =============================================================================
+# Conversation Manager
+# =============================================================================
+
+
+class ConversationManager:
+    """Manages persistent chat conversations.
+
+    Provides in-memory storage for conversations and messages.
+    In a real implementation, this would interact with a database.
+    """
+
+    def __init__(self) -> None:
+        """Initialize the conversation manager."""
+        self._conversations: dict[str, Conversation] = {}
+
+    def create_conversation(self, title: str = "New Chat") -> Conversation:
+        """Create a new conversation.
+
+        Args:
+            title: The title of the conversation.
+
+        Returns:
+            The created Conversation.
+        """
+        conversation_id = str(uuid4())
+
+        conversation = Conversation(
+            id=conversation_id,
+            title=title,
+        )
+        self._conversations[conversation_id] = conversation
+        logger.info(f"Created conversation: {conversation_id}")
+        return conversation
+
+    def get_conversation(self, conversation_id: str) -> Conversation | None:
+        """Get a conversation by ID.
+
+        Args:
+            conversation_id: The conversation ID.
+
+        Returns:
+            The conversation if found, None otherwise.
+        """
+        return self._conversations.get(str(conversation_id))
+
+    def list_conversations(self) -> list[Conversation]:
+        """List all conversations.
+
+        Returns:
+            List of all conversations, sorted by update time desc.
+        """
+        return sorted(
+            self._conversations.values(),
+            key=lambda c: c.updated_at,
+            reverse=True,
+        )
+
+    def add_message(self, conversation_id: str, role: MessageRole, content: str) -> Message | None:
+        """Add a message to a conversation.
+
+        Args:
+            conversation_id: The conversation ID.
+            role: The sender role.
+            content: The message content.
+
+        Returns:
+            The added Message if conversation exists, None otherwise.
+        """
+        conversation = self._conversations.get(str(conversation_id))
+        if not conversation:
+            return None
+
+        message = Message(role=role, content=content)
+        conversation.messages.append(message)
+        conversation.updated_at = datetime.now()
+
+        # Update title from first user message if still default
+        if role == MessageRole.USER and conversation.title == "New Chat":
+            # Use first 50 chars of message as title
+            new_title = content[:50].strip()
+            if len(content) > 50:
+                new_title += "..."
+            conversation.title = new_title
+
+        return message
+
+
+# Global conversation manager instance
+_conversation_manager: ConversationManager | None = None
+
+
+def get_conversation_manager() -> ConversationManager:
+    """Get the global conversation manager instance.
+
+    Returns:
+        The ConversationManager singleton.
+    """
+    global _conversation_manager
+    if _conversation_manager is None:
+        _conversation_manager = ConversationManager()
+    return _conversation_manager
 
 
 # =============================================================================
@@ -212,6 +322,7 @@ def _get_workflow(request: Request) -> SupervisorWorkflow:
 # Annotated dependency for cleaner injection in route handlers
 WorkflowDep = Annotated[SupervisorWorkflow, Depends(_get_workflow)]
 SessionManagerDep = Annotated[WorkflowSessionManager, Depends(get_session_manager)]
+ConversationManagerDep = Annotated[ConversationManager, Depends(get_conversation_manager)]
 
 
 # Legacy alias for backward compatibility
@@ -240,9 +351,10 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     workflow = await create_supervisor_workflow()
     app.state.workflow = workflow
 
-    # Initialize session manager
-    global _session_manager
+    # Initialize managers
+    global _session_manager, _conversation_manager
     _session_manager = WorkflowSessionManager()
+    _conversation_manager = ConversationManager()
 
     logger.info(f"AgenticFleet API ready: max_concurrent_workflows={MAX_CONCURRENT_WORKFLOWS}")
     yield
@@ -250,3 +362,4 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     # Cleanup
     logger.info("Shutting down AgenticFleet API...")
     _session_manager = None
+    _conversation_manager = None
