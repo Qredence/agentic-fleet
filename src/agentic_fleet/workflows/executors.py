@@ -206,9 +206,10 @@ class AnalysisExecutor(Executor):
                 await ctx.send_message(analysis_msg)
 
             except Exception as e:
-                # Intentional broad exception handling: DSPy/LLM operations can fail for various
-                # transient reasons (rate limits, network issues, model errors). We gracefully
-                # degrade to heuristic-based analysis to maintain system availability.
+                # Intentional broad exception handling: DSPy/LLM operations and LLM API calls can fail
+                # for various transient reasons (e.g., APIError, rate limits, parsing/model errors,
+                # or other unexpected exceptions from external libraries). TimeoutError and ConnectionError
+                # are handled separately above. We gracefully degrade to heuristic-based analysis to maintain system availability.
                 logger.exception(f"Analysis failed with unexpected error ({type(e).__name__}): {e}")
                 fallback_dict = self._fallback_analysis(task_msg.task)
                 analysis_result = self._to_analysis_result(fallback_dict)
@@ -422,9 +423,16 @@ class RoutingExecutor(Executor):
                 )
                 await ctx.send_message(routing_msg)
 
+            # Broad exception handling is intentional here:
+            # During the routing phase, various exception types can occur, including but not limited to:
+            # - Model inference errors (e.g., timeouts, response parsing failures),
+            # - Network, serialization, or deserialization errors,
+            # - Transient infrastructure issues or unexpected inputs from agent plugins.
+            # Since any of these errors make the routing output invalid, *all* exceptions are handled
+            # uniformly by degrading to the fallback routing strategy. This ensures graceful degradation
+            # and avoids disrupting the workflow due to unpredictable exceptions.
+            # It is considered safe in this context because the fallback is guaranteed to yield a valid, minimal routing plan.
             except Exception as e:
-                # Intentional broad exception handling: DSPy routing can fail for various
-                # transient reasons. Degrade to first-available-agent fallback routing.
                 logger.exception(f"Routing failed: {e}")
                 fallback_routing = self._fallback_routing(analysis_msg.task)
                 routing_decision = normalize_routing_decision(fallback_routing, analysis_msg.task)
