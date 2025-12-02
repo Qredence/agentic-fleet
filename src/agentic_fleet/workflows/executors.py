@@ -207,9 +207,9 @@ class AnalysisExecutor(Executor):
 
             except Exception as e:
                 # Intentional broad exception handling: DSPy/LLM operations and LLM API calls can fail
-                # for various transient reasons (e.g., TimeoutError, ConnectionError, APIError,
-                # rate limits, parsing/model errors, or other unexpected exceptions from external libraries).
-                # We gracefully degrade to heuristic-based analysis to maintain system availability.
+                # for various transient reasons (e.g., APIError, rate limits, parsing/model errors,
+                # or other unexpected exceptions from external libraries). TimeoutError and ConnectionError
+                # are handled separately above. We gracefully degrade to heuristic-based analysis to maintain system availability.
                 logger.exception(f"Analysis failed with unexpected error ({type(e).__name__}): {e}")
                 fallback_dict = self._fallback_analysis(task_msg.task)
                 analysis_result = self._to_analysis_result(fallback_dict)
