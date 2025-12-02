@@ -103,7 +103,7 @@ def get_default_config() -> dict[str, Any]:
     pkg = _package_root()
     return {
         "dspy": {
-            "model": "gpt-4o",
+            "model": "gpt-4.1",
             "temperature": 0.7,
             "max_tokens": 2000,
             "optimization": {
@@ -207,7 +207,7 @@ def get_default_config() -> dict[str, Any]:
     }
 
 
-def get_agent_model(config: dict[str, Any], agent_name: str, default: str = "gpt-4o") -> str:
+def get_agent_model(config: dict[str, Any], agent_name: str, default: str = "gpt-4.1") -> str:
     """Get model for specific agent from config."""
     try:
         value = config.get("agents", {}).get(agent_name.lower(), {}).get("model", default)
