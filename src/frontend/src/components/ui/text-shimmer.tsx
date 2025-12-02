@@ -1,5 +1,3 @@
-"use client";
-
 import { cn } from "@/lib/utils";
 
 export type TextShimmerProps = {
@@ -24,7 +22,7 @@ export function TextShimmer({
     <Component
       className={cn(
         "bg-size-[200%_auto] bg-clip-text font-medium text-transparent",
-        "animate-[text-shimmer_4s_infinite_linear]",
+        "animate-[shimmer_4s_infinite_linear]",
         className,
       )}
       style={{

@@ -431,11 +431,18 @@ class SupervisorWorkflow:
                         f"Applied reasoning_effort={reasoning_effort} to agent {agent_name}"
                     )
                 except AttributeError as e:
-                    logger.warning(f"Agent {agent_name} chat_client doesn't support reasoning_effort: {e}")
+                    logger.warning(
+                        f"Agent {agent_name} chat_client doesn't support reasoning_effort: {e}"
+                    )
                 except TypeError as e:
-                    logger.warning(f"Invalid type when setting reasoning_effort on {agent_name}: {e}")
+                    logger.warning(
+                        f"Invalid type when setting reasoning_effort on {agent_name}: {e}"
+                    )
                 except Exception as e:
-                    logger.error(f"Unexpected error setting reasoning_effort on {agent_name}: {e}", exc_info=True)
+                    logger.error(
+                        f"Unexpected error setting reasoning_effort on {agent_name}: {e}",
+                        exc_info=True,
+                    )
 
     async def run_stream(
         self,
@@ -463,10 +470,14 @@ class SupervisorWorkflow:
             # Apply reasoning effort override if provided
             if reasoning_effort:
                 if reasoning_effort not in ("minimal", "medium", "maximal"):
-                    logger.warning(f"Invalid reasoning_effort value: {reasoning_effort}. Expected minimal, medium, or maximal.")
+                    logger.warning(
+                        f"Invalid reasoning_effort value: {reasoning_effort}. Expected minimal, medium, or maximal."
+                    )
                     yield WorkflowStatusEvent(
-                        status=WorkflowRunState.FAILED,
-                        message=f"Invalid reasoning_effort: {reasoning_effort}. Must be minimal, medium, or maximal."
+                        state=WorkflowRunState.FAILED,
+                        data={
+                            "message": f"Invalid reasoning_effort: {reasoning_effort}. Must be minimal, medium, or maximal."
+                        },
                     )
                     # Notify middlewares of termination if present
                     if hasattr(self.context, "middlewares"):
@@ -483,8 +494,8 @@ class SupervisorWorkflow:
                             )
                     # Yield a terminal event to signal end of stream
                     yield WorkflowStatusEvent(
-                        status=WorkflowRunState.COMPLETED,
-                        message="Workflow terminated due to invalid reasoning_effort."
+                        state=WorkflowRunState.IDLE,
+                        data={"message": "Workflow terminated due to invalid reasoning_effort."},
                     )
                     return
                 logger.info(f"Applying reasoning_effort={reasoning_effort} for this request")

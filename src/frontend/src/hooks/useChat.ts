@@ -1,4 +1,4 @@
-import { useState, useRef, useCallback } from "react";
+import { useState, useRef, useCallback, useEffect } from "react";
 import { createParser, type EventSourceMessage } from "eventsource-parser";
 import { api } from "../api/client";
 import type {
@@ -25,16 +25,19 @@ interface SendMessageOptions {
 interface UseChatReturn {
   messages: Message[];
   isLoading: boolean;
+  isInitializing: boolean;
   currentReasoning: string;
   isReasoningStreaming: boolean;
   currentWorkflowPhase: string;
+  currentAgent: string | null;
   sendMessage: (content: string, options?: SendMessageOptions) => Promise<void>;
   cancelStreaming: () => void;
   conversationId: string | null;
   createConversation: () => Promise<void>;
   conversations: Conversation[];
-  loadConversations: () => Promise<void>;
+  loadConversations: () => Promise<Conversation[]>;
   selectConversation: (id: string) => Promise<void>;
+  isConversationsLoading: boolean;
 }
 
 // Workflow phase mapping based on event types and kinds
@@ -50,16 +53,93 @@ function getWorkflowPhase(event: StreamEvent): string {
   return "Processing...";
 }
 
+// Batched update helper - accumulates updates and flushes on rAF
+function createStreamingBatcher(
+  onContentUpdate: (content: string) => void,
+  onStepsUpdate: (steps: ConversationStep[]) => void,
+) {
+  let pendingContent = "";
+  let pendingSteps: ConversationStep[] = [];
+  let rafId: number | null = null;
+  let lastFlushTime = 0;
+  const minInterval = 16; // ~60fps
+
+  function scheduleFlush() {
+    if (rafId !== null) return;
+
+    rafId = requestAnimationFrame(() => {
+      doFlush();
+      rafId = null;
+    });
+  }
+
+  function doFlush() {
+    if (pendingContent) {
+      onContentUpdate(pendingContent);
+      pendingContent = "";
+    }
+
+    if (pendingSteps.length > 0) {
+      onStepsUpdate(pendingSteps);
+      pendingSteps = [];
+    }
+
+    lastFlushTime = performance.now();
+  }
+
+  function flush() {
+    const now = performance.now();
+    if (now - lastFlushTime < minInterval) {
+      scheduleFlush();
+      return;
+    }
+    doFlush();
+  }
+
+  return {
+    pushContent(content: string) {
+      pendingContent += content;
+      scheduleFlush();
+    },
+
+    pushStep(step: ConversationStep) {
+      pendingSteps.push(step);
+      scheduleFlush();
+    },
+
+    flush,
+
+    // Force flush ignoring rate limiting - for use at stream end
+    forceFlush: doFlush,
+
+    reset() {
+      if (rafId !== null) {
+        cancelAnimationFrame(rafId);
+        rafId = null;
+      }
+      pendingContent = "";
+      pendingSteps = [];
+    },
+  };
+}
+
+type StreamingBatcher = ReturnType<typeof createStreamingBatcher>;
+
 export const useChat = (): UseChatReturn => {
   const [messages, setMessages] = useState<Message[]>([]);
   const [isLoading, setIsLoading] = useState(false);
+  const [isInitializing, setIsInitializing] = useState(true);
+  const [isConversationsLoading, setIsConversationsLoading] = useState(false);
   const [conversationId, setConversationId] = useState<string | null>(null);
   const [currentReasoning, setCurrentReasoning] = useState<string>("");
   const [isReasoningStreaming, setIsReasoningStreaming] = useState(false);
   const [currentWorkflowPhase, setCurrentWorkflowPhase] = useState<string>("");
+  const [currentAgent, setCurrentAgent] = useState<string | null>(null);
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const abortControllerRef = useRef<AbortController | null>(null);
   const currentGroupIdRef = useRef<string>("");
+  const batcherRef = useRef<StreamingBatcher | null>(null);
+  const accumulatedContentRef = useRef<string>("");
 
   const cancelStreaming = useCallback(() => {
     if (abortControllerRef.current) {
@@ -68,10 +148,13 @@ export const useChat = (): UseChatReturn => {
       setIsLoading(false);
       setIsReasoningStreaming(false);
       setCurrentWorkflowPhase("");
+      setCurrentAgent(null);
+      batcherRef.current?.reset();
     }
   }, []);
 
   const loadConversations = useCallback(async () => {
+    setIsConversationsLoading(true);
     try {
       const convs = await api.listConversations();
       // Sort by updated_at descending (most recent first)
@@ -80,8 +163,13 @@ export const useChat = (): UseChatReturn => {
           new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime(),
       );
       setConversations(sorted);
+      return sorted;
     } catch (error) {
       console.error("Failed to load conversations:", error);
+      return [];
+    } finally {
+      setIsConversationsLoading(false);
+      setIsInitializing(false);
     }
   }, []);
 
@@ -93,6 +181,7 @@ export const useChat = (): UseChatReturn => {
       setCurrentReasoning("");
       setIsReasoningStreaming(false);
       setCurrentWorkflowPhase("");
+      setCurrentAgent(null);
     } catch (error) {
       console.error("Failed to load conversation:", error);
     }
@@ -110,6 +199,25 @@ export const useChat = (): UseChatReturn => {
     }
   }, [loadConversations]);
 
+  useEffect(() => {
+    let cancelled = false;
+
+    (async () => {
+      const convs = await loadConversations();
+      if (cancelled) return;
+
+      if (convs.length > 0) {
+        await selectConversation(convs[0].id);
+      } else {
+        await createConversation();
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [loadConversations, selectConversation, createConversation]);
+
   const sendMessage = useCallback(
     async (content: string, options?: SendMessageOptions) => {
       if (!content.trim()) return;
@@ -126,7 +234,7 @@ export const useChat = (): UseChatReturn => {
         }
       }
 
-      // Add user message immediately
+      // OPTIMISTIC UPDATE: Add user message immediately with pending state
       const userMessage: Message = {
         id: generateMessageId(),
         role: "user",
@@ -150,9 +258,76 @@ export const useChat = (): UseChatReturn => {
         workflowPhase: "Starting...",
       };
 
+      // Optimistic state update - UI responds immediately
       setMessages((prev) => [...prev, userMessage, assistantMessage]);
       setIsLoading(true);
       setCurrentWorkflowPhase("Starting...");
+      accumulatedContentRef.current = "";
+
+      // Initialize streaming batcher for this session
+      batcherRef.current = createStreamingBatcher(
+        // Content update handler - batched for performance
+        (batchedContent) => {
+          accumulatedContentRef.current += batchedContent;
+          const finalContent = accumulatedContentRef.current;
+          setMessages((prev) => {
+            const newMessages = [...prev];
+            const lastMsgIndex = newMessages.length - 1;
+            if (newMessages[lastMsgIndex]?.role === "assistant") {
+              newMessages[lastMsgIndex] = {
+                ...newMessages[lastMsgIndex],
+                content: finalContent,
+                isWorkflowPlaceholder: false,
+              };
+            }
+            return newMessages;
+          });
+        },
+        // Steps update handler - batched for performance
+        // Steps should go to the workflow placeholder message (the first assistant message after user message)
+        (batchedSteps) => {
+          setMessages((prev) => {
+            const newMessages = [...prev];
+            // Find the workflow placeholder message (first assistant message that has isWorkflowPlaceholder or no content yet)
+            // We look for the first assistant message after the last user message
+            let placeholderIdx = -1;
+            for (let i = newMessages.length - 1; i >= 0; i--) {
+              if (newMessages[i].role === "user") {
+                // Found the user message, check if next is the placeholder
+                if (
+                  i + 1 < newMessages.length &&
+                  newMessages[i + 1].role === "assistant"
+                ) {
+                  placeholderIdx = i + 1;
+                }
+                break;
+              }
+            }
+
+            // Fallback to last assistant if no placeholder found
+            if (placeholderIdx === -1) {
+              for (let i = newMessages.length - 1; i >= 0; i--) {
+                if (newMessages[i].role === "assistant") {
+                  placeholderIdx = i;
+                  break;
+                }
+              }
+            }
+
+            if (
+              placeholderIdx >= 0 &&
+              newMessages[placeholderIdx]?.role === "assistant"
+            ) {
+              const currentSteps = newMessages[placeholderIdx].steps || [];
+              newMessages[placeholderIdx] = {
+                ...newMessages[placeholderIdx],
+                steps: [...currentSteps, ...batchedSteps],
+              };
+            }
+            return newMessages;
+          });
+        },
+      );
 
       try {
         if (abortControllerRef.current) {
@@ -174,7 +349,6 @@ export const useChat = (): UseChatReturn => {
 
         const reader = response.body.getReader();
         const decoder = new TextDecoder();
-        let assistantMessageContent = "";
 
         const parser = createParser({
           onEvent: (event: EventSourceMessage) => {
@@ -184,6 +358,11 @@ export const useChat = (): UseChatReturn => {
               // Update workflow phase for shimmer display
               const phase = getWorkflowPhase(data);
               setCurrentWorkflowPhase(phase);
+
+              // Track current agent for typing indicator
+              if (data.agent_id || data.author) {
+                setCurrentAgent(data.author || data.agent_id || null);
+              }
 
               if (data.type === "response.delta" && data.delta) {
                 // If the delta is clearly an execution/handoff status, treat it as a step
@@ -197,35 +376,22 @@ export const useChat = (): UseChatReturn => {
                     data: data.data,
                   };
 
+                  // Use batched step update
+                  batcherRef.current?.pushStep(statusStep);
                   setMessages((prev) => {
                     const newMessages = [...prev];
                     const lastMsgIndex = newMessages.length - 1;
                     if (newMessages[lastMsgIndex].role === "assistant") {
-                      const currentSteps =
-                        newMessages[lastMsgIndex].steps || [];
                       newMessages[lastMsgIndex] = {
                         ...newMessages[lastMsgIndex],
-                        steps: [...currentSteps, statusStep],
                         workflowPhase: phase,
                       };
                     }
                     return newMessages;
                   });
                 } else {
-                  // Otherwise, stream into the assistant visible content
-                  assistantMessageContent += data.delta;
-                  setMessages((prev) => {
-                    const newMessages = [...prev];
-                    const lastMsgIndex = newMessages.length - 1;
-                    if (newMessages[lastMsgIndex].role === "assistant") {
-                      newMessages[lastMsgIndex] = {
-                        ...newMessages[lastMsgIndex],
-                        content: assistantMessageContent,
-                        isWorkflowPlaceholder: false,
-                      };
-                    }
-                    return newMessages;
-                  });
+                  // Use batched content update for streaming text
+                  batcherRef.current?.pushContent(data.delta);
                 }
               } else if (
                 data.type === "orchestrator.message" ||
@@ -241,14 +407,14 @@ export const useChat = (): UseChatReturn => {
                   data: data.data,
                 };
 
+                // Use batched step update
+                batcherRef.current?.pushStep(newStep);
                 setMessages((prev) => {
                   const newMessages = [...prev];
                   const lastMsgIndex = newMessages.length - 1;
                   if (newMessages[lastMsgIndex].role === "assistant") {
-                    const currentSteps = newMessages[lastMsgIndex].steps || [];
                     newMessages[lastMsgIndex] = {
                       ...newMessages[lastMsgIndex],
-                      steps: [...currentSteps, newStep],
                       workflowPhase: phase,
                     };
                   }
@@ -297,15 +463,15 @@ export const useChat = (): UseChatReturn => {
                     },
                   };
 
+                  // Use batched step update
+                  batcherRef.current?.pushStep(newStep);
                   setMessages((prev) => {
                     const newMessages = [...prev];
                     // Find the workflow placeholder message or the last assistant message
                     for (let i = newMessages.length - 1; i >= 0; i--) {
                       if (newMessages[i].role === "assistant") {
-                        const currentSteps = newMessages[i].steps || [];
                         newMessages[i] = {
                           ...newMessages[i],
-                          steps: [...currentSteps, newStep],
                           workflowPhase: phase,
                         };
                         break;
@@ -344,6 +510,7 @@ export const useChat = (): UseChatReturn => {
                         ...lastMsg,
                         content: agentContent,
                         author: agentLabel,
+                        agent_id: data.agent_id ?? lastMsg.agent_id,
                         isWorkflowPlaceholder: false,
                         workflowPhase: undefined,
                       };
@@ -358,6 +525,7 @@ export const useChat = (): UseChatReturn => {
                         content: agentContent,
                         created_at: new Date().toISOString(),
                         author: agentLabel,
+                        agent_id: data.agent_id,
                         groupId,
                         isWorkflowPlaceholder: false,
                       };
@@ -378,6 +546,7 @@ export const useChat = (): UseChatReturn => {
                             ...newMessages[i],
                             content: newContent,
                             author: agentLabel,
+                            agent_id: data.agent_id ?? newMessages[i].agent_id,
                             isWorkflowPlaceholder: false,
                           };
                           break;
@@ -388,6 +557,9 @@ export const useChat = (): UseChatReturn => {
                   });
                 }
               } else if (data.type === "response.completed") {
+                // Force flush any pending batched updates before final response
+                batcherRef.current?.forceFlush();
+
                 // Final response - this is the synthesized answer to the user's query
                 // Always show the final answer as a new message from "Final Answer" or update last empty one
                 if (data.message && data.message.trim().length > 0) {
@@ -442,6 +614,7 @@ export const useChat = (): UseChatReturn => {
                   });
                 }
                 setCurrentWorkflowPhase("");
+                setCurrentAgent(null);
               } else if (data.type === "error") {
                 console.error("Stream error event:", data.error);
                 const errorStep: ConversationStep = {
@@ -453,18 +626,10 @@ export const useChat = (): UseChatReturn => {
                     ? { reasoning_partial: true }
                     : undefined,
                 };
-                setMessages((prev) => {
-                  const newMessages = [...prev];
-                  const lastMsgIndex = newMessages.length - 1;
-                  if (newMessages[lastMsgIndex].role === "assistant") {
-                    const currentSteps = newMessages[lastMsgIndex].steps || [];
-                    newMessages[lastMsgIndex] = {
-                      ...newMessages[lastMsgIndex],
-                      steps: [...currentSteps, errorStep],
-                    };
-                  }
-                  return newMessages;
-                });
+                // Use batched step update for errors too
+                batcherRef.current?.pushStep(errorStep);
+                batcherRef.current?.forceFlush();
+
                 // If reasoning was interrupted, keep partial reasoning visible
                 if (data.reasoning_partial) {
                   setIsReasoningStreaming(false);
@@ -481,14 +646,14 @@ export const useChat = (): UseChatReturn => {
                   timestamp: new Date().toISOString(),
                   data: { agent_id: data.agent_id },
                 };
+                // Use batched step update for reasoning
+                batcherRef.current?.pushStep(reasoningStep);
                 setMessages((prev) => {
                   const newMessages = [...prev];
                   const lastMsgIndex = newMessages.length - 1;
                   if (newMessages[lastMsgIndex].role === "assistant") {
-                    const currentSteps = newMessages[lastMsgIndex].steps || [];
                     newMessages[lastMsgIndex] = {
                       ...newMessages[lastMsgIndex],
-                      steps: [...currentSteps, reasoningStep],
                       workflowPhase: "Reasoning...",
                     };
                   }
@@ -498,10 +663,12 @@ export const useChat = (): UseChatReturn => {
                 // Reasoning stream finished
                 setIsReasoningStreaming(false);
               } else if (data.type === "done") {
-                // Stream complete, reset reasoning state
+                // Stream complete, force flush any pending batched updates
+                batcherRef.current?.forceFlush();
                 setIsReasoningStreaming(false);
                 setCurrentReasoning("");
                 setCurrentWorkflowPhase("");
+                setCurrentAgent(null);
               }
             } catch (e) {
               console.error("Error parsing SSE event:", e);
@@ -514,16 +681,37 @@ export const useChat = (): UseChatReturn => {
           if (done) break;
           parser.feed(decoder.decode(value));
         }
+
+        // Final force flush after stream completes
+        batcherRef.current?.forceFlush();
       } catch (error) {
         // Handle user-initiated abort gracefully
         if (error instanceof DOMException && error.name === "AbortError") {
           return;
         }
         console.error("Failed to send message:", error);
+
+        // Mark the message as errored for visual feedback
+        setMessages((prev) => {
+          const newMessages = [...prev];
+          const lastMsgIndex = newMessages.length - 1;
+          if (newMessages[lastMsgIndex]?.role === "assistant") {
+            newMessages[lastMsgIndex] = {
+              ...newMessages[lastMsgIndex],
+              isWorkflowPlaceholder: false,
+              content: "Sorry, something went wrong. Please try again.",
+              workflowPhase: undefined,
+            };
+          }
+          return newMessages;
+        });
       } finally {
         setIsLoading(false);
         setCurrentWorkflowPhase("");
+        setCurrentAgent(null);
         abortControllerRef.current = null;
+        batcherRef.current?.reset();
+        accumulatedContentRef.current = "";
       }
     },
     [conversationId],
@@ -532,9 +720,11 @@ export const useChat = (): UseChatReturn => {
   return {
     messages,
     isLoading,
+    isInitializing,
     currentReasoning,
     isReasoningStreaming,
     currentWorkflowPhase,
+    currentAgent,
     sendMessage,
     cancelStreaming,
     conversationId,
@@ -542,5 +732,6 @@ export const useChat = (): UseChatReturn => {
     conversations,
     loadConversations,
     selectConversation,
+    isConversationsLoading,
   };
 };

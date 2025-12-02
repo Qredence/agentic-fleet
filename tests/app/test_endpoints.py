@@ -50,6 +50,14 @@ def test_get_agents(client: TestClient, mock_workflow: MagicMock):
     assert data[1]["name"] == "agent2"
 
 
+def test_request_id_header(client: TestClient):
+    response = client.get("/health")
+    assert response.status_code == 200
+    assert "X-Request-ID" in response.headers
+    # header should be non-empty
+    assert response.headers["X-Request-ID"].strip()
+
+
 def test_get_history(client: TestClient, mock_workflow: MagicMock):
     mock_workflow.history_manager.get_recent_executions.return_value = [
         {"workflowId": "1", "task": "task1", "result": "res1"},

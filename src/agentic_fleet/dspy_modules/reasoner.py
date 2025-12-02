@@ -68,6 +68,27 @@ class DSPyReasoner(dspy.Module):
         Only initializes modules that haven't been manually set (e.g., via setters
         for testing or loading compiled modules).
         """
+        # Backward compatibility: compiled supervisors pickled before these fields
+        # existed won't have them set on load.
+        if not hasattr(self, "_modules_initialized"):
+            self._modules_initialized = False
+        if not hasattr(self, "_execution_history"):
+            self._execution_history = []
+
+        # Ensure lazy module placeholders exist for deserialized objects
+        for attr in (
+            "_analyzer",
+            "_router",
+            "_strategy_selector",
+            "_quality_assessor",
+            "_progress_evaluator",
+            "_tool_planner",
+            "_simple_responder",
+            "_group_chat_selector",
+        ):
+            if not hasattr(self, attr):
+                setattr(self, attr, None)
+
         if self._modules_initialized:
             return
 

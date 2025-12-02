@@ -117,7 +117,11 @@ export const WorkflowEvents: React.FC<WorkflowEventsProps> = ({
           <span className="flex items-center gap-2">
             {isStreaming ? (
               <>
-                <TextShimmer duration={2} spread={30}>
+                <TextShimmer
+                  duration={2}
+                  spread={30}
+                  className="inline-block min-w-[120px]"
+                >
                   {workflowPhase || "Processing..."}
                 </TextShimmer>
                 <span className="text-muted-foreground/60">

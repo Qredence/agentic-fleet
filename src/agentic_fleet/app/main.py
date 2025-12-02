@@ -6,13 +6,14 @@ and streaming chat.
 """
 
 import logging
-import os
 import sys
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from pythonjsonlogger import jsonlogger
 
 from agentic_fleet.app.dependencies import lifespan
+from agentic_fleet.app.middleware import RequestIDMiddleware
 from agentic_fleet.app.routers import (
     agents,
     conversations,
@@ -21,6 +22,7 @@ from agentic_fleet.app.routers import (
     streaming,
     workflow,
 )
+from agentic_fleet.app.settings import get_settings
 
 # =============================================================================
 # Logging Configuration
@@ -33,16 +35,29 @@ def _configure_logging() -> None:
     Sets up structured logging with timestamps that flush immediately
     to stdout for real-time visibility.
     """
-    log_level = os.getenv("LOG_LEVEL", "INFO").upper()
-    log_format = os.getenv(
-        "LOG_FORMAT",
-        "%(asctime)s | %(levelname)-8s | %(name)s | %(message)s",
-    )
+    settings = get_settings()
+    log_level = settings.log_level
+    structured = settings.log_json
+    log_format = settings.log_format
 
     # Create a handler that writes to stdout with immediate flushing
     handler = logging.StreamHandler(sys.stdout)
     handler.setLevel(getattr(logging, log_level, logging.INFO))
-    handler.setFormatter(logging.Formatter(log_format, datefmt="%H:%M:%S"))
+
+    if structured:
+        # Emit JSON logs for easier ingestion (e.g., Datadog, Loki)
+        formatter = jsonlogger.JsonFormatter(
+            "%(asctime)s %(levelname)s %(name)s %(message)s %(module)s %(lineno)d",
+            rename_fields={
+                "asctime": "timestamp",
+                "levelname": "level",
+                "message": "msg",
+            },
+        )
+    else:
+        formatter = logging.Formatter(log_format, datefmt="%H:%M:%S")
+
+    handler.setFormatter(formatter)
 
     # Configure root logger
     root_logger = logging.getLogger()
@@ -75,14 +90,13 @@ def _get_allowed_origins() -> list[str]:
     Returns:
         List of allowed origin URLs.
     """
-    origins = os.getenv("CORS_ALLOWED_ORIGINS", "http://localhost:5173,http://localhost:3000")
-    return [o.strip() for o in origins.split(",") if o.strip()]
+    return get_settings().cors_allowed_origins
 
 
 app = FastAPI(
-    title="AgenticFleet API",
+    title=get_settings().app_name,
     description="API for AgenticFleet Supervisor Workflow with streaming support",
-    version="0.3.0",
+    version=get_settings().app_version,
     lifespan=lifespan,
     docs_url="/docs",
     redoc_url="/redoc",
@@ -96,6 +110,9 @@ app.add_middleware(
     allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
     allow_headers=["*"],
 )
+
+# Attach request IDs for traceability
+app.add_middleware(RequestIDMiddleware)  # type: ignore[arg-type]
 
 # Versioned API routes
 app.include_router(workflow.router, prefix="/api/v1", tags=["workflow"])

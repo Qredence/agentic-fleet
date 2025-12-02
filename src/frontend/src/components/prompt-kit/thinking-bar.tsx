@@ -27,11 +27,15 @@ export function ThinkingBar({
           onClick={onClick}
           className="flex items-center gap-1 text-sm transition-opacity hover:opacity-80"
         >
-          <TextShimmer className="font-medium">{text}</TextShimmer>
+          <TextShimmer className="inline-block min-w-[100px] font-medium">
+            {text}
+          </TextShimmer>
           <ChevronRight className="text-muted-foreground size-4" />
         </button>
       ) : (
-        <TextShimmer className="cursor-default font-medium">{text}</TextShimmer>
+        <TextShimmer className="inline-block min-w-[100px] cursor-default font-medium">
+          {text}
+        </TextShimmer>
       )}
       {onStop ? (
         <button

@@ -120,6 +120,7 @@ This code review assessed the AgenticFleet codebase, a hybrid DSPy + Microsoft a
    - **Recommendation:** Consider implementing conversation history support or document why it's deferred
 
 2. **src/agentic_fleet/workflows/supervisor.py**
+
    ```python
    # TODO: refactor properly to optimize fast-path and mode detection
    ```

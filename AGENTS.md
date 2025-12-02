@@ -46,4 +46,6 @@
 - Keep code typed; follow Ruff/ty defaults (line length 100, py312 syntax, docstrings for public APIs).
 - Avoid committing artifacts from `.var/` (logs, caches, compiled DSPy outputs).
 - Prefer `make` targets over raw commands; if adding new workflows/tests, add a Make target and update this file.
+- Chat conversations persist to `.var/data/conversations.json` by default (override with `CONVERSATIONS_PATH`); delete the file to reset local chat history.
+- Structured logging: JSON logs are **on by default**. Set `LOG_JSON=0` to use human-readable logs instead.
 - If you change how to start, test, or observe the system, append the updated commands here and, for larger shifts, create an ExecPlan entry in `docs/plans/current.md`.

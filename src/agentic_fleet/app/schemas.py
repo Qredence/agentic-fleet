@@ -75,12 +75,16 @@ class Message(BaseModel):
         role: The sender's role.
         content: The message content.
         created_at: Creation timestamp.
+        author: Optional human-readable author or agent name.
+        agent_id: Agent identifier if applicable.
         id: Unique message ID.
     """
 
     role: MessageRole
     content: str
     created_at: datetime = Field(default_factory=datetime.now)
+    author: str | None = Field(default=None, description="Author or agent display name")
+    agent_id: str | None = Field(default=None, description="Agent identifier if applicable")
     id: str = Field(default_factory=lambda: uuid4().hex)
 
     model_config = ConfigDict(from_attributes=True)

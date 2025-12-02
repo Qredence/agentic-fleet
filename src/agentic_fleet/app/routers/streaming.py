@@ -594,6 +594,7 @@ async def chat_stream(
             request.conversation_id,
             MessageRole.USER,
             request.message,
+            author="User",
         )
 
     # Create session (will raise 429 if limit exceeded)
@@ -611,11 +612,19 @@ async def chat_stream(
 
     async def generate():
         full_response = ""
+        last_author: str | None = None
+        last_agent_id: str | None = None
 
         async for event_data in _event_generator(
             workflow, session, session_manager, log_reasoning, request.reasoning_effort
         ):
             event_type = event_data.get("type")
+
+            # Track author/agent metadata for final conversation save
+            author = event_data.get("author") or event_data.get("agent_id")
+            if author:
+                last_author = event_data.get("author") or last_author or author
+                last_agent_id = event_data.get("agent_id") or last_agent_id
 
             # Capture response content for history from various event types
             if event_type == StreamEventType.RESPONSE_DELTA.value:
@@ -625,6 +634,7 @@ async def chat_stream(
                 completed_msg = event_data.get("message", "")
                 if completed_msg:
                     full_response = completed_msg
+                last_author = event_data.get("author") or last_author
             elif event_type in (
                 StreamEventType.AGENT_OUTPUT.value,
                 StreamEventType.AGENT_MESSAGE.value,
@@ -642,6 +652,8 @@ async def chat_stream(
                 request.conversation_id,
                 MessageRole.ASSISTANT,
                 full_response,
+                author=last_author,
+                agent_id=last_agent_id,
             )
 
     return EventSourceResponse(generate())

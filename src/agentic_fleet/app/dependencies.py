@@ -5,7 +5,6 @@ lifecycle management for the AgenticFleet API.
 """
 
 import logging
-import os
 from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
 from datetime import datetime
@@ -14,6 +13,7 @@ from uuid import uuid4
 
 from fastapi import Depends, FastAPI, HTTPException, Request, status
 
+from agentic_fleet.app.conversation_store import ConversationStore
 from agentic_fleet.app.schemas import (
     Conversation,
     Message,
@@ -21,16 +21,10 @@ from agentic_fleet.app.schemas import (
     WorkflowSession,
     WorkflowStatus,
 )
+from agentic_fleet.app.settings import AppSettings, get_settings
 from agentic_fleet.workflows.supervisor import SupervisorWorkflow, create_supervisor_workflow
 
 logger = logging.getLogger(__name__)
-
-# =============================================================================
-# Configuration
-# =============================================================================
-
-MAX_CONCURRENT_WORKFLOWS = int(os.getenv("MAX_CONCURRENT_WORKFLOWS", "10"))
-
 
 # =============================================================================
 # Conversation Manager
@@ -38,15 +32,10 @@ MAX_CONCURRENT_WORKFLOWS = int(os.getenv("MAX_CONCURRENT_WORKFLOWS", "10"))
 
 
 class ConversationManager:
-    """Manages persistent chat conversations.
+    """Manages chat conversations backed by a JSON store."""
 
-    Provides in-memory storage for conversations and messages.
-    In a real implementation, this would interact with a database.
-    """
-
-    def __init__(self) -> None:
-        """Initialize the conversation manager."""
-        self._conversations: dict[str, Conversation] = {}
+    def __init__(self, store: ConversationStore | None = None) -> None:
+        self._store = store or ConversationStore()
 
     def create_conversation(self, title: str = "New Chat") -> Conversation:
         """Create a new conversation.
@@ -59,13 +48,10 @@ class ConversationManager:
         """
         conversation_id = str(uuid4())
 
-        conversation = Conversation(
-            id=conversation_id,
-            title=title,
-        )
-        self._conversations[conversation_id] = conversation
+        conversation = Conversation(id=conversation_id, title=title)
+        saved = self._store.upsert(conversation)
         logger.info(f"Created conversation: {conversation_id}")
-        return conversation
+        return saved
 
     def get_conversation(self, conversation_id: str) -> Conversation | None:
         """Get a conversation by ID.
@@ -76,7 +62,7 @@ class ConversationManager:
         Returns:
             The conversation if found, None otherwise.
         """
-        return self._conversations.get(str(conversation_id))
+        return self._store.get(str(conversation_id))
 
     def list_conversations(self) -> list[Conversation]:
         """List all conversations.
@@ -84,28 +70,35 @@ class ConversationManager:
         Returns:
             List of all conversations, sorted by update time desc.
         """
-        return sorted(
-            self._conversations.values(),
-            key=lambda c: c.updated_at,
-            reverse=True,
-        )
+        conversations = self._store.list_conversations()
+        return sorted(conversations, key=lambda c: c.updated_at, reverse=True)
 
-    def add_message(self, conversation_id: str, role: MessageRole, content: str) -> Message | None:
+    def add_message(
+        self,
+        conversation_id: str,
+        role: MessageRole,
+        content: str,
+        *,
+        author: str | None = None,
+        agent_id: str | None = None,
+    ) -> Message | None:
         """Add a message to a conversation.
 
         Args:
             conversation_id: The conversation ID.
             role: The sender role.
             content: The message content.
+            author: Optional author/agent name.
+            agent_id: Optional agent identifier.
 
         Returns:
             The added Message if conversation exists, None otherwise.
         """
-        conversation = self._conversations.get(str(conversation_id))
+        conversation = self._store.get(str(conversation_id))
         if not conversation:
             return None
 
-        message = Message(role=role, content=content)
+        message = Message(role=role, content=content, author=author, agent_id=agent_id)
         conversation.messages.append(message)
         conversation.updated_at = datetime.now()
 
@@ -117,6 +110,7 @@ class ConversationManager:
                 new_title += "..."
             conversation.title = new_title
 
+        self._store.upsert(conversation)
         return message
 
 
@@ -125,11 +119,8 @@ _conversation_manager: ConversationManager | None = None
 
 
 def get_conversation_manager() -> ConversationManager:
-    """Get the global conversation manager instance.
+    """Get the global conversation manager instance."""
 
-    Returns:
-        The ConversationManager singleton.
-    """
     global _conversation_manager
     if _conversation_manager is None:
         _conversation_manager = ConversationManager()
@@ -148,7 +139,7 @@ class WorkflowSessionManager:
     Thread-safe operations for session lifecycle management.
     """
 
-    def __init__(self, max_concurrent: int = MAX_CONCURRENT_WORKFLOWS) -> None:
+    def __init__(self, max_concurrent: int = 10) -> None:
         """Initialize the session manager.
 
         Args:
@@ -291,11 +282,8 @@ _session_manager: WorkflowSessionManager | None = None
 
 
 def get_session_manager() -> WorkflowSessionManager:
-    """Get the global session manager instance.
+    """Get the global session manager instance."""
 
-    Returns:
-        The WorkflowSessionManager singleton.
-    """
     global _session_manager
     if _session_manager is None:
         _session_manager = WorkflowSessionManager()
@@ -329,6 +317,13 @@ ConversationManagerDep = Annotated[ConversationManager, Depends(get_conversation
 get_workflow = _get_workflow
 
 
+def _get_settings(request: Request) -> AppSettings:
+    return request.app.state.settings
+
+
+SettingsDep = Annotated[AppSettings, Depends(_get_settings)]
+
+
 # =============================================================================
 # Lifespan Management
 # =============================================================================
@@ -348,15 +343,23 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
         None after startup initialization is complete.
     """
     logger.info("Starting AgenticFleet API...")
+
+    settings = get_settings()
+    app.state.settings = settings
+
     workflow = await create_supervisor_workflow()
     app.state.workflow = workflow
 
-    # Initialize managers
+    # Initialize managers with settings-aware configuration
     global _session_manager, _conversation_manager
-    _session_manager = WorkflowSessionManager()
-    _conversation_manager = ConversationManager()
+    _session_manager = WorkflowSessionManager(max_concurrent=settings.max_concurrent_workflows)
+    _conversation_manager = ConversationManager(ConversationStore(settings.conversations_path))
 
-    logger.info(f"AgenticFleet API ready: max_concurrent_workflows={MAX_CONCURRENT_WORKFLOWS}")
+    logger.info(
+        "AgenticFleet API ready: max_concurrent_workflows=%s, conversations_path=%s",
+        settings.max_concurrent_workflows,
+        settings.conversations_path,
+    )
     yield
 
     # Cleanup
