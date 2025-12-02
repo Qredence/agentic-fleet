@@ -40,12 +40,12 @@ TOOL_WEIGHT = 0.1
 LATENCY_WEIGHT = 0.1
 
 # Validate that weights sum to 1.0 (allowing for floating point error)
-assert abs(
-    ASSIGNMENT_WEIGHT + MODE_WEIGHT + TOOL_WEIGHT + LATENCY_WEIGHT - 1.0
-) < 1e-8, (
+assert abs(ASSIGNMENT_WEIGHT + MODE_WEIGHT + TOOL_WEIGHT + LATENCY_WEIGHT - 1.0) < 1e-8, (
     "GEPA scoring weights must sum to 1.0. "
     f"Current sum: {ASSIGNMENT_WEIGHT + MODE_WEIGHT + TOOL_WEIGHT + LATENCY_WEIGHT}"
 )
+
+
 @dataclass
 class RoutingDecision:
     """Represents routing decisions for comparison and analysis."""
