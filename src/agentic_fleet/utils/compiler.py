@@ -627,8 +627,9 @@ def save_compiled_module(module: Any, filepath: str) -> str:
     try:
         if os.path.exists(tmp_path):
             os.remove(tmp_path)
-    except Exception:
-        pass
+    except Exception as e:
+        # Suppress errors if removing the temp file fails (e.g., if file doesn't exist or is locked).
+        logger.warning(f"Failed to remove existing temp file {tmp_path}: {e}")
 
     strategies = [
         ("cloudpickle", _attempt_cloudpickle),
