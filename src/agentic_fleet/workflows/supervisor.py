@@ -407,7 +407,7 @@ class SupervisorWorkflow:
             reasoning_effort: Reasoning effort level ("minimal", "medium", "maximal").
                 Must match API schema values defined in ChatRequest.
         """
-        if not reasoning_effort or not self.agents:
+        if not self.agents:
             return
 
         for agent_name, agent in self.agents.items():
