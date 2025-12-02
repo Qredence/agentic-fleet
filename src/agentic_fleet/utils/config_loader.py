@@ -103,7 +103,7 @@ def get_default_config() -> dict[str, Any]:
     pkg = _package_root()
     return {
         "dspy": {
-            "model": "gpt-4.1",
+            "model": "gpt-4o",
             "temperature": 0.7,
             "max_tokens": 2000,
             "optimization": {
