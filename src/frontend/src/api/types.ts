@@ -1,62 +1,99 @@
+export interface ConversationStep {
+  id: string;
+  type:
+    | "thought"
+    | "status"
+    | "reasoning"
+    | "error"
+    | "agent_start"
+    | "agent_complete"
+    | "agent_output"
+    | "agent_thought";
+  content: string;
+  timestamp: string;
+  kind?: string; // e.g., 'routing', 'analysis', 'quality'
+  data?: Record<string, unknown>;
+  isExpanded?: boolean;
+}
+
 export interface Message {
-  id?: number | string;
+  id?: string;
   role: "user" | "assistant" | "system";
   content: string;
-  created_at?: string;
+  created_at: string;
+  agent_id?: string;
+  author?: string;
+  steps?: ConversationStep[];
+  /** Group ID for consecutive messages from the same agent */
+  groupId?: string;
+  /** Whether this message is a workflow placeholder (contains only events, no content yet) */
+  isWorkflowPlaceholder?: boolean;
+  /** Current workflow phase for shimmer display (e.g., "Routing...", "Executing...") */
+  workflowPhase?: string;
 }
 
 export interface Conversation {
-  id: number | string;
+  id: string;
   title: string;
   created_at: string;
-  updated_at?: string;
-  messages?: Message[];
+  updated_at: string;
+  messages: Message[];
+}
+
+export interface ChatRequest {
+  conversation_id: string;
+  message: string;
+  stream?: boolean;
+  /** Per-request reasoning effort override for GPT-5 models */
+  reasoning_effort?: "minimal" | "medium" | "maximal";
 }
 
 export interface CreateConversationRequest {
   title?: string;
 }
 
-export interface ChatRequest {
-  conversation_id: number | string;
-  message: string;
-  stream?: boolean;
-}
-
-export interface ChatResponse {
-  conversation_id: number | string;
-  message: string;
-  messages: Message[];
-}
-
-export interface ThoughtItem {
-  type: "text" | "file";
-  text: string;
-  file?: {
-    name: string;
-    icon?: string;
-    color?: string;
-  };
-}
-
-export interface Thought {
-  title: string;
-  description?: string;
-  status: "pending" | "in_progress" | "success" | "failed";
-  items?: ThoughtItem[];
-}
-
 export interface StreamEvent {
   type:
-    | "orchestrator.message"
-    | "orchestrator.thought"
     | "response.delta"
     | "response.completed"
-    | "error";
-  message?: string;
+    | "error"
+    | "orchestrator.message"
+    | "orchestrator.thought"
+    | "reasoning.delta"
+    | "reasoning.completed"
+    | "done"
+    | "agent.start"
+    | "agent.complete"
+    | "agent.output"
+    | "agent.thought"
+    | "agent.message";
   delta?: string;
   agent_id?: string;
-  kind?: "thought" | "status";
+  author?: string;
+  role?: "user" | "assistant" | "system";
+  content?: string;
+  message?: string;
   error?: string;
-  thought?: Thought;
+  reasoning?: string;
+  kind?: string;
+  data?: Record<string, unknown>;
+  timestamp?: string;
+  /** True if reasoning was interrupted mid-stream (on error events) */
+  reasoning_partial?: boolean;
+}
+
+export interface WorkflowSession {
+  workflow_id: string;
+  task: string;
+  status: "created" | "running" | "completed" | "failed" | "cancelled";
+  created_at: string;
+  started_at?: string;
+  completed_at?: string;
+  reasoning_effort?: string;
+}
+
+export interface AgentInfo {
+  name: string;
+  description: string;
+  type: string;
 }

@@ -18,7 +18,7 @@
     "test:integration": "RUN_LIVE_CHAT=1 vitest run src/tests/hooks/useStreamingChat.integration.test.ts"
   },
   "dependencies": {
-    "@openai/apps-sdk-ui": "^0.1.0",
+    "@openai/apps-sdk-ui": "^0.2.0",
     "@radix-ui/react-avatar": "^1.1.10",
     "@radix-ui/react-collapsible": "^1.1.12",
     "@radix-ui/react-hover-card": "^1.1.5",
@@ -33,7 +33,7 @@
     "eventsource-parser": "^3.0.6",
     "framer-motion": "^12.23.24",
     "lucide-react": "^0.552.0",
-    "marked": "^16.4.1",
+    "marked": "^16.4.2",
     "motion": "^12.23.24",
     "react": "^19.1.1",
     "react-dom": "^19.1.1",
@@ -41,7 +41,7 @@
     "react-syntax-highlighter": "^16.1.0",
     "remark-breaks": "^4.0.0",
     "remark-gfm": "^4.0.1",
-    "shiki": "^3.14.0",
+    "shiki": "^3.17.0",
     "tailwind-merge": "^3.3.1",
     "tailwindcss": "^4.1.16",
     "tailwindcss-animate": "^1.0.7",

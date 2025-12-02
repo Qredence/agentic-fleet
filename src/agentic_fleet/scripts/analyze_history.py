@@ -12,12 +12,14 @@ import statistics
 from pathlib import Path
 from typing import Any
 
+from agentic_fleet.utils.constants import DEFAULT_HISTORY_PATH
+
 
 def load_history() -> list[dict[str, Any]]:
     """Load execution history from JSON or JSONL file."""
 
     # Try JSONL first (new format)
-    jsonl_file = Path("logs/execution_history.jsonl")
+    jsonl_file = Path(DEFAULT_HISTORY_PATH)
     if jsonl_file.exists():
         executions = []
         with open(jsonl_file) as f:
@@ -30,16 +32,14 @@ def load_history() -> list[dict[str, Any]]:
             return executions
 
     # Fall back to legacy JSON format
-    json_file = Path("logs/execution_history.json")
+    json_file = jsonl_file.with_suffix(".json")
     if json_file.exists():
         with open(json_file) as f:
             executions = json.load(f)
         print(f"✓ Loaded {len(executions)} executions from {json_file}")
         return executions
 
-    print(
-        "❌ No execution history found at logs/execution_history.jsonl or logs/execution_history.json"
-    )
+    print(f"❌ No execution history found at {jsonl_file} or {json_file}")
     return []
 
 
