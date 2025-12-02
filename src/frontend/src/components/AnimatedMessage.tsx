@@ -1,73 +1,14 @@
 "use client";
 
 import React, { memo } from "react";
-import { motion, AnimatePresence, type Variants } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import { cn } from "@/lib/utils";
-
-// Animation variants for message entry/exit
-const messageVariants: Variants = {
-  initial: {
-    opacity: 0,
-    y: 20,
-    scale: 0.95,
-  },
-  animate: {
-    opacity: 1,
-    y: 0,
-    scale: 1,
-    transition: {
-      type: "spring",
-      stiffness: 350,
-      damping: 25,
-      mass: 0.8,
-    },
-  },
-  exit: {
-    opacity: 0,
-    y: -10,
-    scale: 0.95,
-    transition: {
-      duration: 0.15,
-      ease: "easeOut",
-    },
-  },
-};
-
-// Stagger variants for grouped messages
-const groupVariants: Variants = {
-  initial: {},
-  animate: {
-    transition: {
-      staggerChildren: 0.05,
-    },
-  },
-};
-
-// Subtle slide-in for streaming content
-const streamingVariants: Variants = {
-  initial: {
-    opacity: 0,
-  },
-  animate: {
-    opacity: 1,
-    transition: {
-      duration: 0.2,
-    },
-  },
-};
-
-// Typing indicator animation
-const typingDotVariants: Variants = {
-  initial: { y: 0 },
-  animate: {
-    y: [0, -6, 0],
-    transition: {
-      duration: 0.6,
-      repeat: Infinity,
-      ease: "easeInOut",
-    },
-  },
-};
+import {
+  messageVariants,
+  groupVariants,
+  streamingVariants,
+  typingDotVariants,
+} from "@/lib/animations";
 
 interface AnimatedMessageProps {
   /** Unique key for AnimatePresence */

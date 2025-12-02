@@ -140,6 +140,7 @@ export const useChat = (): UseChatReturn => {
   const currentGroupIdRef = useRef<string>("");
   const batcherRef = useRef<StreamingBatcher | null>(null);
   const accumulatedContentRef = useRef<string>("");
+  const isInitializedRef = useRef(false);
 
   const cancelStreaming = useCallback(() => {
     if (abortControllerRef.current) {
@@ -200,6 +201,10 @@ export const useChat = (): UseChatReturn => {
   }, [loadConversations]);
 
   useEffect(() => {
+    // Prevent double initialization in React StrictMode or HMR
+    if (isInitializedRef.current) return;
+    isInitializedRef.current = true;
+
     let cancelled = false;
 
     (async () => {
@@ -216,7 +221,8 @@ export const useChat = (): UseChatReturn => {
     return () => {
       cancelled = true;
     };
-  }, [loadConversations, selectConversation, createConversation]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const sendMessage = useCallback(
     async (content: string, options?: SendMessageOptions) => {
