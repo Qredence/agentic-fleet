@@ -198,6 +198,18 @@ def prepare_gepa_datasets(
 
 
 def _normalize_agents(value: Any) -> list[str]:
+    """
+    Normalize agent identifiers into a list of non-empty, stripped strings.
+
+    Args:
+        value: Agent(s) to normalize. Can be:
+            - A comma-separated string of agent names.
+            - An iterable (list, tuple, set) of agent names.
+            - A single value (e.g., string, number) representing one agent.
+
+    Returns:
+        List of normalized (stripped) non-empty agent names as strings.
+    """
     if not value:
         return []
     if isinstance(value, str):
@@ -210,12 +222,42 @@ def _normalize_agents(value: Any) -> list[str]:
 
 
 def _normalize_mode(value: Any) -> str:
+    """
+    Normalize the execution mode value.
+
+    Converts the input value to a lowercased, stripped string. If the input is falsy (None, empty, etc.),
+    returns an empty string. This normalization ensures consistent handling of execution mode strings for downstream logic.
+
+    Args:
+        value: Any input representing execution mode (expected to be convertible to str).
+
+    Returns:
+        A lowercased, stripped string representation of the mode, or an empty string if input is falsy.
+    """
     if not value:
         return ""
     return str(value).strip().lower()
 
 
 def _normalize_tools(value: Any) -> list[str]:
+    """
+    Normalize a value representing tool names into a list of lowercased, stripped strings.
+
+    Accepts:
+        - A string (tool names separated by commas, newlines, or both).
+        - An iterable (list, tuple, set) of tool names.
+
+    Strategy:
+        - If given a string, splits on newlines and commas.
+        - Lowercases and strips whitespace from each tool name.
+        - Filters out empty or blank entries.
+
+    Args:
+        value: Tool names as a string or iterable.
+
+    Returns:
+        List of normalized tool names (lowercased, stripped).
+    """
     if not value:
         return []
     parts = value.replace("\n", ",").split(",") if isinstance(value, str) else list(value)

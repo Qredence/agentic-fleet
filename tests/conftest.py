@@ -28,11 +28,6 @@ def disable_cosmos(monkeypatch):
     monkeypatch.delenv("AZURE_COSMOS_ENDPOINT", raising=False)
     monkeypatch.delenv("AZURE_COSMOS_KEY", raising=False)
 
-    # Force disable Cosmos DB usage in settings
-    # from agentic_fleet.api.settings import settings
-    # monkeypatch.setattr(settings, "AGENTICFLEET_USE_COSMOS", False)
-    return
-
 
 @pytest.fixture
 def client():
