@@ -498,8 +498,40 @@ def load_execution_history(limit: int = 20) -> list[dict[str, Any]]:
     return []
 
 
+def get_execution(workflow_id: str) -> dict[str, Any] | None:
+    """Retrieve a specific execution by ID from Cosmos DB.
+
+    Args:
+        workflow_id: The workflow ID to retrieve
+
+    Returns:
+        Execution dictionary or None if not found
+    """
+    if not is_cosmos_enabled():
+        return None
+
+    container = _get_history_container()
+    if container is None:
+        return None
+
+    try:
+        # Read item directly by ID and partition key (workflowId)
+        # Note: We assume partition key is workflowId as per mirror_execution_history
+        item = container.read_item(item=workflow_id, partition_key=workflow_id)
+        return item
+    except exceptions.CosmosResourceNotFoundError:  # type: ignore[attr-defined]
+        return None
+    except exceptions.CosmosHttpResponseError as exc:  # type: ignore[attr-defined]
+        logger.warning("Failed to get execution %s: %s", workflow_id, exc, exc_info=True)
+        return None
+    except Exception as exc:  # pragma: no cover
+        logger.warning("Unexpected error getting execution %s: %s", workflow_id, exc, exc_info=True)
+        return None
+
+
 __all__ = [
     "get_default_user_id",
+    "get_execution",
     "is_cosmos_enabled",
     "load_execution_history",
     "mirror_cache_entry",
