@@ -7,7 +7,7 @@ Note: These tests are self-contained and avoid importing from agent_framework
 directly due to known import issues with that package.
 """
 
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock
 import sys
 
 import pytest
