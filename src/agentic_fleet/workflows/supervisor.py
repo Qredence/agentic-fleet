@@ -460,6 +460,10 @@ class SupervisorWorkflow:
             if reasoning_effort:
                 if reasoning_effort not in ("minimal", "medium", "maximal"):
                     logger.warning(f"Invalid reasoning_effort value: {reasoning_effort}. Expected minimal, medium, or maximal.")
+                    yield WorkflowStatusEvent(
+                        status=WorkflowRunState.IDLE,
+                        message=f"Invalid reasoning_effort: {reasoning_effort}. Must be minimal, medium, or maximal."
+                    )
                     return
                 logger.info(f"Applying reasoning_effort={reasoning_effort} for this request")
                 self._apply_reasoning_effort(reasoning_effort)
