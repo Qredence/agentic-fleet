@@ -1,10 +1,11 @@
 import { cn } from "@/lib/utils";
+import { ensureCodeFormatting } from "@/lib/codeDetection";
 import { marked } from "marked";
 import { memo, useId, useMemo } from "react";
 import ReactMarkdown, { type Components } from "react-markdown";
 import remarkBreaks from "remark-breaks";
 import remarkGfm from "remark-gfm";
-import { CodeBlock, CodeBlockCode } from "./code-block";
+import { CodeBlock, CodeBlockCode, CodeBlockHeader } from "./code-block";
 
 export type MarkdownProps = {
   children: string;
@@ -45,15 +46,13 @@ const INITIAL_COMPONENTS: Partial<Components> = {
     }
 
     const language = extractLanguage(className);
+    const codeString =
+      typeof children === "string" ? children : String(children ?? "");
 
     return (
       <CodeBlock className={className}>
-        <CodeBlockCode
-          code={
-            typeof children === "string" ? children : String(children ?? "")
-          }
-          language={language}
-        />
+        <CodeBlockHeader language={language} code={codeString} />
+        <CodeBlockCode code={codeString} language={language} />
       </CodeBlock>
     );
   },
@@ -94,7 +93,17 @@ function MarkdownComponent({
 }: MarkdownProps) {
   const generatedId = useId();
   const blockId = id ?? generatedId;
-  const blocks = useMemo(() => parseMarkdownIntoBlocks(children), [children]);
+
+  // Pre-process content to wrap unformatted code in markdown fences
+  const processedContent = useMemo(
+    () => ensureCodeFormatting(children),
+    [children],
+  );
+
+  const blocks = useMemo(
+    () => parseMarkdownIntoBlocks(processedContent),
+    [processedContent],
+  );
 
   return (
     <div className={className}>
