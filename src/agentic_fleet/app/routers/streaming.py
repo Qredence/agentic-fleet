@@ -25,9 +25,11 @@ from sse_starlette.sse import EventSourceResponse
 from agentic_fleet.app.dependencies import ConversationManagerDep, SessionManagerDep, WorkflowDep
 from agentic_fleet.app.schemas import (
     ChatRequest,
+    EventCategory,
     MessageRole,
     StreamEvent,
     StreamEventType,
+    UIHint,
     WorkflowSession,
     WorkflowStatus,
 )
@@ -91,6 +93,106 @@ def _log_stream_event(event: StreamEvent, workflow_id: str) -> None:
 
 
 # =============================================================================
+# Event Classification Utilities
+# =============================================================================
+
+
+def _classify_event(
+    event_type: StreamEventType,
+    kind: str | None = None,
+) -> tuple[EventCategory, UIHint]:
+    """Rule-based event classification for UI component routing.
+
+    Maps StreamEventType and optional kind to semantic category and UI hints.
+    This enables the frontend to route events to appropriate components.
+
+    Args:
+        event_type: The stream event type.
+        kind: Optional event kind hint (routing, analysis, quality, progress).
+
+    Returns:
+        Tuple of (EventCategory, UIHint) for frontend rendering.
+    """
+    # Orchestrator thought events - categorize by kind
+    if event_type == StreamEventType.ORCHESTRATOR_THOUGHT:
+        if kind == "routing":
+            return EventCategory.PLANNING, UIHint(
+                component="ChatStep", priority="high", collapsible=True, icon_hint="routing"
+            )
+        if kind == "analysis":
+            return EventCategory.THOUGHT, UIHint(
+                component="ChatStep", priority="medium", collapsible=True, icon_hint="analysis"
+            )
+        if kind == "quality":
+            return EventCategory.OUTPUT, UIHint(
+                component="ChatStep", priority="medium", collapsible=True, icon_hint="quality"
+            )
+        if kind == "progress":
+            return EventCategory.STATUS, UIHint(
+                component="ChatStep", priority="low", collapsible=True, icon_hint="progress"
+            )
+        # Default thought
+        return EventCategory.THOUGHT, UIHint(
+            component="ChatStep", priority="medium", collapsible=True
+        )
+
+    # Orchestrator message events - status updates
+    if event_type == StreamEventType.ORCHESTRATOR_MESSAGE:
+        return EventCategory.STATUS, UIHint(component="ChatStep", priority="low", collapsible=True)
+
+    # Agent lifecycle events
+    if event_type == StreamEventType.AGENT_START:
+        return EventCategory.STEP, UIHint(
+            component="ChatStep", priority="low", collapsible=True, icon_hint="agent_start"
+        )
+    if event_type == StreamEventType.AGENT_COMPLETE:
+        return EventCategory.STEP, UIHint(
+            component="ChatStep", priority="low", collapsible=True, icon_hint="agent_complete"
+        )
+    if event_type == StreamEventType.AGENT_MESSAGE:
+        return EventCategory.OUTPUT, UIHint(
+            component="MessageBubble", priority="medium", collapsible=False
+        )
+    if event_type == StreamEventType.AGENT_OUTPUT:
+        return EventCategory.OUTPUT, UIHint(
+            component="MessageBubble", priority="high", collapsible=False
+        )
+
+    # Reasoning events (GPT-5 chain-of-thought)
+    if event_type == StreamEventType.REASONING_DELTA:
+        return EventCategory.REASONING, UIHint(
+            component="Reasoning", priority="medium", collapsible=True
+        )
+    if event_type == StreamEventType.REASONING_COMPLETED:
+        return EventCategory.REASONING, UIHint(
+            component="Reasoning", priority="medium", collapsible=True
+        )
+
+    # Response events
+    if event_type == StreamEventType.RESPONSE_DELTA:
+        return EventCategory.RESPONSE, UIHint(
+            component="MessageBubble", priority="high", collapsible=False
+        )
+    if event_type == StreamEventType.RESPONSE_COMPLETED:
+        return EventCategory.RESPONSE, UIHint(
+            component="MessageBubble", priority="high", collapsible=False
+        )
+
+    # Error events
+    if event_type == StreamEventType.ERROR:
+        return EventCategory.ERROR, UIHint(
+            component="ErrorStep", priority="high", collapsible=False
+        )
+
+    # Control events (done) - no UI representation needed
+    if event_type == StreamEventType.DONE:
+        return EventCategory.STATUS, UIHint(component="ChatStep", priority="low", collapsible=True)
+
+    # Fallback
+    return EventCategory.STATUS, UIHint(component="ChatStep", priority="low", collapsible=True)
+
+
+# =============================================================================
 # Event Mapping Utilities
 # =============================================================================
 
@@ -109,20 +211,28 @@ def _map_workflow_event(
         Tuple of (StreamEvent or None, updated accumulated_reasoning).
     """
     if isinstance(event, WorkflowStartedEvent):
+        event_type = StreamEventType.ORCHESTRATOR_MESSAGE
+        category, ui_hint = _classify_event(event_type)
         return (
             StreamEvent(
-                type=StreamEventType.ORCHESTRATOR_MESSAGE,
+                type=event_type,
                 message="Workflow started",
+                category=category,
+                ui_hint=ui_hint,
             ),
             accumulated_reasoning,
         )
 
     if isinstance(event, WorkflowStatusEvent):
+        event_type = StreamEventType.ORCHESTRATOR_MESSAGE
+        category, ui_hint = _classify_event(event_type)
         status_msg = f"Workflow status: {event.state.value}" if event.state else "Status update"
         return (
             StreamEvent(
-                type=StreamEventType.ORCHESTRATOR_MESSAGE,
+                type=event_type,
                 message=status_msg,
+                category=category,
+                ui_hint=ui_hint,
             ),
             accumulated_reasoning,
         )
@@ -131,19 +241,27 @@ def _map_workflow_event(
         # GPT-5 reasoning token
         new_accumulated = accumulated_reasoning + event.reasoning
         if event.is_complete:
+            event_type = StreamEventType.REASONING_COMPLETED
+            category, ui_hint = _classify_event(event_type)
             return (
                 StreamEvent(
-                    type=StreamEventType.REASONING_COMPLETED,
+                    type=event_type,
                     reasoning=event.reasoning,
                     agent_id=event.agent_id,
+                    category=category,
+                    ui_hint=ui_hint,
                 ),
                 new_accumulated,
             )
+        event_type = StreamEventType.REASONING_DELTA
+        category, ui_hint = _classify_event(event_type)
         return (
             StreamEvent(
-                type=StreamEventType.REASONING_DELTA,
+                type=event_type,
                 reasoning=event.reasoning,
                 agent_id=event.agent_id,
+                category=category,
+                ui_hint=ui_hint,
             ),
             new_accumulated,
         )
@@ -181,6 +299,9 @@ def _map_workflow_event(
         if not author_name:
             author_name = event.agent_id
 
+        # Classify the event for UI routing
+        category, ui_hint = _classify_event(event_type, kind)
+
         return (
             StreamEvent(
                 type=event_type,
@@ -189,6 +310,8 @@ def _map_workflow_event(
                 kind=kind,
                 author=author_name,
                 role="assistant",
+                category=category,
+                ui_hint=ui_hint,
             ),
             accumulated_reasoning,
         )
@@ -210,14 +333,18 @@ def _map_workflow_event(
         if text:
             author_name = getattr(event, "author_name", None) or getattr(event, "author", None)
             role = getattr(event, "role", None)
+            event_type = StreamEventType.AGENT_MESSAGE
+            category, ui_hint = _classify_event(event_type)
             return (
                 StreamEvent(
-                    type=StreamEventType.AGENT_MESSAGE,
+                    type=event_type,
                     message=text,
                     agent_id=getattr(event, "agent_id", None),
                     author=author_name,
                     role=role.value if hasattr(role, "value") else role,
                     kind=None,
+                    category=category,
+                    ui_hint=ui_hint,
                 ),
                 accumulated_reasoning,
             )
@@ -229,14 +356,18 @@ def _map_workflow_event(
             role = getattr(event, "role", None)
             author_name = getattr(event, "author_name", None) or getattr(event, "author", None)
             agent_id = getattr(event, "agent_id", None) or author_name
+            event_type = StreamEventType.AGENT_MESSAGE
+            category, ui_hint = _classify_event(event_type)
             return (
                 StreamEvent(
-                    type=StreamEventType.AGENT_MESSAGE,
+                    type=event_type,
                     message=text,
                     agent_id=agent_id,
                     author=author_name,
                     role=role.value if hasattr(role, "value") else role,
                     kind=None,
+                    category=category,
+                    ui_hint=ui_hint,
                 ),
                 accumulated_reasoning,
             )
@@ -269,6 +400,7 @@ def _map_workflow_event(
                 if event_dict.get("event") == "agent.output":
                     event_type = StreamEventType.AGENT_OUTPUT
 
+                category, ui_hint = _classify_event(event_type)
                 return (
                     StreamEvent(
                         type=event_type,
@@ -277,6 +409,8 @@ def _map_workflow_event(
                         author=author_name,
                         role=role_value,
                         kind=None,
+                        category=category,
+                        ui_hint=ui_hint,
                     ),
                     accumulated_reasoning,
                 )
@@ -288,68 +422,92 @@ def _map_workflow_event(
 
         # Map different phase message types to thoughts
         if isinstance(data, AnalysisMessage):
+            event_type = StreamEventType.ORCHESTRATOR_THOUGHT
+            kind = "analysis"
+            category, ui_hint = _classify_event(event_type, kind)
             return (
                 StreamEvent(
-                    type=StreamEventType.ORCHESTRATOR_THOUGHT,
+                    type=event_type,
                     message=f"Analysis complete: {data.complexity} complexity",
-                    kind="analysis",
+                    kind=kind,
                     data={
                         "complexity": data.complexity,
                         "capabilities": list(data.capabilities) if data.capabilities else [],
                         "steps": list(data.steps) if data.steps else [],
                     },
+                    category=category,
+                    ui_hint=ui_hint,
                 ),
                 accumulated_reasoning,
             )
 
         if isinstance(data, RoutingMessage):
+            event_type = StreamEventType.ORCHESTRATOR_THOUGHT
+            kind = "routing"
+            category, ui_hint = _classify_event(event_type, kind)
             agents = list(data.decision.assigned_to) if data.decision.assigned_to else []
             return (
                 StreamEvent(
-                    type=StreamEventType.ORCHESTRATOR_THOUGHT,
+                    type=event_type,
                     message=f"Routing decision: {data.decision.mode.value} mode with {agents}",
-                    kind="routing",
+                    kind=kind,
                     data={
                         "mode": data.decision.mode.value,
                         "assigned_to": agents,
                         "subtasks": list(data.decision.subtasks) if data.decision.subtasks else [],
                     },
+                    category=category,
+                    ui_hint=ui_hint,
                 ),
                 accumulated_reasoning,
             )
 
         if isinstance(data, QualityMessage):
+            event_type = StreamEventType.ORCHESTRATOR_THOUGHT
+            kind = "quality"
+            category, ui_hint = _classify_event(event_type, kind)
             return (
                 StreamEvent(
-                    type=StreamEventType.ORCHESTRATOR_THOUGHT,
+                    type=event_type,
                     message=f"Quality assessment: score {data.score:.1f}/10",
-                    kind="quality",
+                    kind=kind,
                     data={
                         "score": data.score,
                         "missing": list(data.missing) if data.missing else [],
                         "improvements": list(data.improvements) if data.improvements else [],
                     },
+                    category=category,
+                    ui_hint=ui_hint,
                 ),
                 accumulated_reasoning,
             )
 
         if isinstance(data, ProgressMessage):
+            event_type = StreamEventType.ORCHESTRATOR_MESSAGE
+            kind = "progress"
+            category, ui_hint = _classify_event(event_type, kind)
             return (
                 StreamEvent(
-                    type=StreamEventType.ORCHESTRATOR_MESSAGE,
+                    type=event_type,
                     message=f"Progress: {data.action}",
-                    kind="progress",
+                    kind=kind,
                     data={"action": data.action, "feedback": data.feedback},
+                    category=category,
+                    ui_hint=ui_hint,
                 ),
                 accumulated_reasoning,
             )
 
         # Generic phase completion
+        event_type = StreamEventType.ORCHESTRATOR_MESSAGE
+        category, ui_hint = _classify_event(event_type)
         return (
             StreamEvent(
-                type=StreamEventType.ORCHESTRATOR_MESSAGE,
+                type=event_type,
                 message="Phase completed",
                 data={"phase_data": str(data)[:200]},
+                category=category,
+                ui_hint=ui_hint,
             ),
             accumulated_reasoning,
         )
@@ -363,14 +521,18 @@ def _map_workflow_event(
                 event.message, "author_name", None
             )
             agent_id = getattr(event, "agent_id", None) or getattr(event.message, "author", None)
+            event_type = StreamEventType.AGENT_MESSAGE
+            category, ui_hint = _classify_event(event_type)
             return (
                 StreamEvent(
-                    type=StreamEventType.AGENT_MESSAGE,
+                    type=event_type,
                     message=text,
                     agent_id=agent_id,
                     author=author_name,
                     role=role.value if hasattr(role, "value") else role,
                     kind=None,
+                    category=category,
+                    ui_hint=ui_hint,
                 ),
                 accumulated_reasoning,
             )
@@ -399,21 +561,29 @@ def _map_workflow_event(
                 author = getattr(msg, "author_name", None) or getattr(msg, "author", None)
                 agent_id = getattr(msg, "author", None)
                 if text:
+                    msg_event_type = StreamEventType.AGENT_MESSAGE
+                    msg_category, msg_ui_hint = _classify_event(msg_event_type)
                     events.append(
                         StreamEvent(
-                            type=StreamEventType.AGENT_MESSAGE,
+                            type=msg_event_type,
                             message=text,
                             agent_id=agent_id,
                             author=author,
                             role=role.value if hasattr(role, "value") else role,
+                            category=msg_category,
+                            ui_hint=msg_ui_hint,
                         )
                     )
 
         # Always push a final completion event
+        final_event_type = StreamEventType.RESPONSE_COMPLETED
+        final_category, final_ui_hint = _classify_event(final_event_type)
         events.append(
             StreamEvent(
-                type=StreamEventType.RESPONSE_COMPLETED,
+                type=final_event_type,
                 message=result_text,
+                category=final_category,
+                ui_hint=final_ui_hint,
             )
         )
 
@@ -461,9 +631,13 @@ async def _event_generator(
         )
 
         # Yield initial orchestrator message
+        init_event_type = StreamEventType.ORCHESTRATOR_MESSAGE
+        init_category, init_ui_hint = _classify_event(init_event_type)
         yield StreamEvent(
-            type=StreamEventType.ORCHESTRATOR_MESSAGE,
+            type=init_event_type,
             message="Starting workflow execution...",
+            category=init_category,
+            ui_hint=init_ui_hint,
         ).to_sse_dict()
 
         # Stream workflow events with optional reasoning effort override
@@ -484,10 +658,14 @@ async def _event_generator(
         )
 
         # Yield error event with partial reasoning flag if applicable
+        error_event_type = StreamEventType.ERROR
+        error_category, error_ui_hint = _classify_event(error_event_type)
         error_event = StreamEvent(
-            type=StreamEventType.ERROR,
+            type=error_event_type,
             error=error_message,
             reasoning_partial=bool(accumulated_reasoning) if accumulated_reasoning else None,
+            category=error_category,
+            ui_hint=error_ui_hint,
         )
         yield error_event.to_sse_dict()
 
@@ -508,7 +686,13 @@ async def _event_generator(
             )
 
         # Yield done event
-        yield StreamEvent(type=StreamEventType.DONE).to_sse_dict()
+        done_event_type = StreamEventType.DONE
+        done_category, done_ui_hint = _classify_event(done_event_type)
+        yield StreamEvent(
+            type=done_event_type,
+            category=done_category,
+            ui_hint=done_ui_hint,
+        ).to_sse_dict()
 
         logger.info(
             f"Workflow stream completed: workflow_id={session.workflow_id}, "
