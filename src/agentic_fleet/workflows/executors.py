@@ -51,6 +51,16 @@ from .strategies import run_execution_phase_streaming
 
 logger = setup_logger(__name__)
 
+# Fallback analysis step calculation heuristics:
+# These values are chosen based on empirical observation of agentic workflow granularity:
+# - MIN_STEPS (3): Ensures that even simple tasks are broken down into at least a few actionable steps,
+#   preventing under-segmentation and promoting agent reasoning.
+# - MAX_STEPS (6): Prevents over-segmentation, which can overwhelm agents and reduce efficiency.
+# - WORDS_PER_STEP (40): Based on typical agentic step complexity, 40 words per step balances
+#   granularity and cognitive load, producing steps that are neither too broad nor too fine-grained.
+MIN_STEPS = 3         # Minimum number of steps for fallback analysis
+MAX_STEPS = 6         # Maximum number of steps for fallback analysis
+WORDS_PER_STEP = 40   # Number of words per estimated step
 
 # --- Decorator helper (local implementation) ---
 def handler(func):
@@ -85,6 +95,10 @@ def handler(func):
 
 class AnalysisExecutor(Executor):
     """Executor that analyzes tasks using DSPy reasoner."""
+
+    # Complexity threshold constants for _fallback_analysis
+    COMPLEX_THRESHOLD = 150
+    MODERATE_THRESHOLD = 40
 
     def __init__(
         self,
@@ -236,16 +250,16 @@ class AnalysisExecutor(Executor):
         """
         word_count = len(task.split())
         complexity = "simple"
-        if word_count > 150:
+        if word_count > self.COMPLEX_THRESHOLD:
             complexity = "complex"
-        elif word_count > 40:
+        elif word_count > self.MODERATE_THRESHOLD:
             complexity = "moderate"
 
         return {
             "complexity": complexity,
             "capabilities": ["general_reasoning"],
             "tool_requirements": [],
-            "steps": max(3, min(6, word_count // 40 + 1)),
+            "steps": max(MIN_STEPS, min(MAX_STEPS, word_count // WORDS_PER_STEP + 1)),
             "search_context": "",
             "needs_web_search": False,
             "search_query": "",
@@ -265,10 +279,10 @@ class AnalysisExecutor(Executor):
         """
         complexity = str(payload.get("complexity", "moderate") or "moderate")
         capabilities = [
-            str(cap).strip() for cap in payload.get("capabilities", []) if str(cap).strip()
+            cap_s for cap_s in (str(cap).strip() for cap in payload.get("capabilities", [])) if cap_s
         ]
         tool_requirements = [
-            str(tool).strip() for tool in payload.get("tool_requirements", []) if str(tool).strip()
+            tool_s for tool_s in (str(tool).strip() for tool in payload.get("tool_requirements", [])) if tool_s
         ]
         steps_raw = payload.get("steps", 3)
         try:
@@ -824,7 +838,7 @@ class QualityExecutor(Executor):
                     phase_status=self.context.latest_phase_status.copy(),
                     metadata=progress_msg.metadata,
                 )
-                await ctx.yield_output(final_msg)  # type: ignore[arg-type]
+                await ctx.yield_output(final_msg)
 
             except Exception as e:
                 # Intentional broad exception handling: Quality assessment is optional.
@@ -865,7 +879,7 @@ class QualityExecutor(Executor):
                     phase_status=self.context.latest_phase_status.copy(),
                     metadata={**progress_msg.metadata, "used_fallback": True},
                 )
-                await ctx.yield_output(final_msg)  # type: ignore[arg-type]
+                await ctx.yield_output(final_msg)
 
     def _to_quality_report(self, payload: dict[str, Any]) -> QualityReport:
         """Convert dictionary payload to QualityReport.

@@ -31,7 +31,21 @@ from .self_improvement import SelfImprovementEngine
 
 logger = logging.getLogger(__name__)
 
+# Scoring weights for GEPA routing decision metric
+# The weights below must sum to 1.0 (100% of the score).
+# If you change these, ensure the sum remains 1.0.
+ASSIGNMENT_WEIGHT = 0.5
+MODE_WEIGHT = 0.3
+TOOL_WEIGHT = 0.1
+LATENCY_WEIGHT = 0.1
 
+# Validate that weights sum to 1.0 (allowing for floating point error)
+assert abs(
+    ASSIGNMENT_WEIGHT + MODE_WEIGHT + TOOL_WEIGHT + LATENCY_WEIGHT - 1.0
+) < 1e-8, (
+    "GEPA scoring weights must sum to 1.0. "
+    f"Current sum: {ASSIGNMENT_WEIGHT + MODE_WEIGHT + TOOL_WEIGHT + LATENCY_WEIGHT}"
+)
 @dataclass
 class RoutingDecision:
     """Represents routing decisions for comparison and analysis."""
@@ -214,7 +228,7 @@ def _normalize_agents(value: Any) -> list[str]:
         return []
     if isinstance(value, str):
         parts = value.split(",")
-    elif isinstance(value, list | tuple | set):
+    elif isinstance(value, (list, tuple, set)):
         parts = list(value)
     else:
         parts = [str(value)]
@@ -433,10 +447,10 @@ def build_routing_feedback_metric(perfect_score: float = 1.0) -> GEPAFeedbackMet
         latency_score = 1.0 if expected_latency == predicted_latency else 0.0
 
         weighted_score = (
-            (assignment_score * 0.5)
-            + (mode_score * 0.3)
-            + (tool_score * 0.1)
-            + (latency_score * 0.1)
+            (assignment_score * ASSIGNMENT_WEIGHT)
+            + (mode_score * MODE_WEIGHT)
+            + (tool_score * TOOL_WEIGHT)
+            + (latency_score * LATENCY_WEIGHT)
         )
         final_score = max(0.0, min(perfect_score, weighted_score * perfect_score))
 

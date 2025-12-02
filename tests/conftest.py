@@ -18,7 +18,7 @@ os.environ.setdefault("DSPY_CACHEDIR", str(DSPY_CACHE))
 
 
 @pytest.fixture(autouse=True)
-def disable_cosmos(monkeypatch):
+def remove_cosmos_env_vars(monkeypatch):
     """
     Disable Cosmos side effects during tests.
 
