@@ -12,6 +12,8 @@ vi.mock("../../api/client", async (importOriginal) => {
       ...actual.api,
       createConversation: vi.fn(),
       sendMessage: vi.fn(),
+      listConversations: vi.fn(),
+      loadConversationMessages: vi.fn(),
     },
   };
 });
@@ -20,6 +22,8 @@ describe("useChat", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     (api.createConversation as Mock).mockResolvedValue({ id: "conv-123" });
+    (api.listConversations as Mock).mockResolvedValue([]);
+    (api.loadConversationMessages as Mock).mockResolvedValue([]);
   });
 
   it("handles agent events correctly", async () => {
@@ -59,6 +63,12 @@ describe("useChat", () => {
     });
 
     const { result } = renderHook(() => useChat());
+
+    // Wait for hook to finish initializing (loadConversations + createConversation)
+    await waitFor(() => {
+      expect(result.current.isInitializing).toBe(false);
+      expect(result.current.conversationId).toBe("conv-123");
+    });
 
     await act(async () => {
       await result.current.sendMessage("Hello");

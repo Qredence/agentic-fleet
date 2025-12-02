@@ -14,8 +14,8 @@ vi.mock("@/components/Sidebar", () => ({
   Sidebar: () => <div data-testid="sidebar">Sidebar</div>,
 }));
 
-vi.mock("@/components/InputBar", () => ({
-  InputBar: () => <div data-testid="input-bar">InputBar</div>,
+vi.mock("@/components/ChatInput", () => ({
+  ChatInput: () => <div data-testid="input-bar">ChatInput</div>,
 }));
 
 vi.mock("@/components/MessageBubble", () => ({
@@ -29,14 +29,17 @@ vi.mock("@/hooks/useChat", () => ({
     sendMessage: vi.fn(),
     createConversation: vi.fn(),
     isLoading: false,
+    isInitializing: false,
     currentReasoning: "",
     isReasoningStreaming: false,
     currentWorkflowPhase: "",
+    currentAgent: null,
     cancelStreaming: vi.fn(),
     conversationId: null,
     conversations: [],
     loadConversations: vi.fn(),
     selectConversation: vi.fn(),
+    isConversationsLoading: false,
   }),
 }));
 

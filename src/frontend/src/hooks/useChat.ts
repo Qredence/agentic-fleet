@@ -500,6 +500,22 @@ export const useChat = (): UseChatReturn => {
                     const lastMsgIndex = newMessages.length - 1;
                     const lastMsg = newMessages[lastMsgIndex];
 
+                    // Guard against empty messages array
+                    if (!lastMsg) {
+                      const newAgentMessage: Message = {
+                        id: generateMessageId(),
+                        role: "assistant",
+                        content: agentContent,
+                        created_at: new Date().toISOString(),
+                        author: agentLabel,
+                        agent_id: data.agent_id,
+                        groupId,
+                        isWorkflowPlaceholder: false,
+                      };
+                      newMessages.push(newAgentMessage);
+                      return newMessages;
+                    }
+
                     if (
                       lastMsg.role === "assistant" &&
                       lastMsg.isWorkflowPlaceholder &&
