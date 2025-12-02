@@ -562,8 +562,9 @@ def compile_reasoner(
                         os.remove(cache_path)
                         if os.path.exists(cache_path + ".meta"):
                             os.remove(cache_path + ".meta")
-                except Exception:
-                    pass
+                except Exception as cleanup_exc:
+                    # Failed to clean up partial cache files; ignoring as this is non-fatal
+                    logger.debug(f"Failed to clean up cache files after serialization error: {cleanup_exc}")
                 progress_callback.on_error("Failed to save cache", e)
                 logger.warning(
                     "Skipping cache metadata creation due to serialization failure; will compile fresh next run (%s)",
