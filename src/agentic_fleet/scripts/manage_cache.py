@@ -8,12 +8,12 @@ from __future__ import annotations
 import argparse
 from pathlib import Path
 
-CACHE_FILE_PATH = ".var/logs/compiled_supervisor.pkl"
+from agentic_fleet.utils.constants import DEFAULT_CACHE_PATH
 
 
 def clear_cache() -> None:
     """Clear the compiled module cache."""
-    cache_file = Path(CACHE_FILE_PATH)
+    cache_file = Path(DEFAULT_CACHE_PATH)
     if cache_file.exists():
         cache_file.unlink()
         print(f"✓ Cleared cache: {cache_file}")
@@ -23,7 +23,7 @@ def clear_cache() -> None:
 
 def show_cache_info() -> None:
     """Show information about cached module."""
-    cache_file = Path(CACHE_FILE_PATH)
+    cache_file = Path(DEFAULT_CACHE_PATH)
     if cache_file.exists():
         size = cache_file.stat().st_size
         mtime = cache_file.stat().st_mtime
