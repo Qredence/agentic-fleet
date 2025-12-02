@@ -429,6 +429,7 @@ async def _event_generator(
     session: WorkflowSession,
     session_manager: Any,
     log_reasoning: bool = False,
+    reasoning_effort: str | None = None,
 ) -> AsyncIterator[dict[str, Any]]:
     """Generate SSE events from workflow execution.
 
@@ -437,6 +438,7 @@ async def _event_generator(
         session: The workflow session metadata.
         session_manager: The session manager for status updates.
         log_reasoning: Whether to accumulate reasoning for logging.
+        reasoning_effort: Optional reasoning effort override for GPT-5 models.
 
     Yields:
         SSE-compatible dictionaries with event data.
@@ -464,8 +466,8 @@ async def _event_generator(
             message="Starting workflow execution...",
         ).to_sse_dict()
 
-        # Stream workflow events
-        async for event in workflow.run_stream(session.task):
+        # Stream workflow events with optional reasoning effort override
+        async for event in workflow.run_stream(session.task, reasoning_effort=reasoning_effort):
             stream_event, accumulated_reasoning = _map_workflow_event(event, accumulated_reasoning)
             if stream_event is not None:
                 events_to_emit = stream_event if isinstance(stream_event, list) else [stream_event]
@@ -600,9 +602,6 @@ async def chat_stream(
         reasoning_effort=request.reasoning_effort,
     )
 
-    # TODO: Apply reasoning_effort override to workflow if provided
-    # This would require passing it through to the agent factory
-
     # Check if reasoning logging is enabled (from config)
     log_reasoning = False
     if hasattr(workflow, "config") and workflow.config:
@@ -613,7 +612,9 @@ async def chat_stream(
     async def generate():
         full_response = ""
 
-        async for event_data in _event_generator(workflow, session, session_manager, log_reasoning):
+        async for event_data in _event_generator(
+            workflow, session, session_manager, log_reasoning, request.reasoning_effort
+        ):
             event_type = event_data.get("type")
 
             # Capture response content for history from various event types

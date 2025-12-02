@@ -352,11 +352,102 @@ class SupervisorWorkflow:
 
             return result_dict
 
-    async def run_stream(self, task: str) -> AsyncIterator[WorkflowEvent]:
+    def _handle_agent_run_update(
+        self, event: AgentRunUpdateEvent
+    ) -> ReasoningStreamEvent | MagenticAgentMessageEvent | None:
+        """Handle AgentRunUpdateEvent and convert to appropriate stream event.
+
+        Extracts reasoning tokens (GPT-5 models) or converts to MagenticAgentMessageEvent
+        for CLI compatibility.
+
+        Args:
+            event: The AgentRunUpdateEvent to process
+
+        Returns:
+            ReasoningStreamEvent, MagenticAgentMessageEvent, or None if no content
+        """
+        if not (hasattr(event, "run") and hasattr(event.run, "delta")):
+            return None
+
+        delta = event.run.delta
+
+        # Check for reasoning content (GPT-5 series)
+        if hasattr(delta, "type") and "reasoning" in str(getattr(delta, "type", "")):
+            reasoning_text = getattr(delta, "delta", "")
+            if reasoning_text:
+                agent_id = getattr(event.run, "agent_id", "unknown")
+                return ReasoningStreamEvent(reasoning=reasoning_text, agent_id=agent_id)
+            return None
+
+        # Extract text content for regular messages
+        text = ""
+        if hasattr(delta, "content") and delta.content:
+            if isinstance(delta.content, list):
+                text = "".join(str(part) for part in delta.content)
+            else:
+                text = str(delta.content)
+
+        if text:
+            agent_id = getattr(event.run, "agent_id", "unknown")
+            mag_msg = ChatMessage(role=Role.ASSISTANT, text=text)
+            return MagenticAgentMessageEvent(agent_id=agent_id, message=mag_msg)
+
+        return None
+
+    def _apply_reasoning_effort(self, reasoning_effort: str | None) -> None:
+        """Apply reasoning effort to all agents that support it.
+
+        Note: This method mutates shared agent state. When multiple concurrent
+        requests have different reasoning_effort values, they may overwrite each
+        other's settings. For production use with concurrent requests, consider
+        implementing request-scoped agent instances or passing reasoning_effort
+        through the workflow context instead of mutating shared state.
+
+        Args:
+            reasoning_effort: Reasoning effort level ("minimal", "medium", "maximal").
+                Must match API schema values defined in ChatRequest.
+        """
+        if not self.agents:
+            return
+
+        for agent_name, agent in self.agents.items():
+            if hasattr(agent, "chat_client"):
+                chat_client = agent.chat_client
+                try:
+                    # Try setting via extra_body (most common approach)
+                    # Type ignores needed for dynamic attribute assignment on chat clients
+                    if hasattr(chat_client, "extra_body"):
+                        existing = dict(getattr(chat_client, "extra_body", None) or {})
+                        existing["reasoning"] = {"effort": reasoning_effort}
+                        chat_client.extra_body = existing  # type: ignore[assignment]
+                    elif hasattr(chat_client, "_default_extra_body"):
+                        existing = dict(getattr(chat_client, "_default_extra_body", None) or {})
+                        existing["reasoning"] = {"effort": reasoning_effort}
+                        chat_client._default_extra_body = existing  # type: ignore[assignment]
+                    else:
+                        # Store as attribute for later use
+                        chat_client._reasoning_effort = reasoning_effort  # type: ignore[assignment]
+                    logger.debug(
+                        f"Applied reasoning_effort={reasoning_effort} to agent {agent_name}"
+                    )
+                except AttributeError as e:
+                    logger.warning(f"Agent {agent_name} chat_client doesn't support reasoning_effort: {e}")
+                except TypeError as e:
+                    logger.warning(f"Invalid type when setting reasoning_effort on {agent_name}: {e}")
+                except Exception as e:
+                    logger.error(f"Unexpected error setting reasoning_effort on {agent_name}: {e}", exc_info=True)
+
+    async def run_stream(
+        self,
+        task: str,
+        *,
+        reasoning_effort: str | None = None,
+    ) -> AsyncIterator[WorkflowEvent]:
         """Execute the workflow for a single task, streaming events.
 
         Args:
             task: The task string to execute
+            reasoning_effort: Optional reasoning effort override (minimal, medium, maximal)
 
         Yields:
             WorkflowEvent: Workflow events including status updates, agent messages,
@@ -369,6 +460,36 @@ class SupervisorWorkflow:
             workflow_id = str(uuid4())
             current_mode = self.mode
 
+            # Apply reasoning effort override if provided
+            if reasoning_effort:
+                if reasoning_effort not in ("minimal", "medium", "maximal"):
+                    logger.warning(f"Invalid reasoning_effort value: {reasoning_effort}. Expected minimal, medium, or maximal.")
+                    yield WorkflowStatusEvent(
+                        status=WorkflowRunState.FAILED,
+                        message=f"Invalid reasoning_effort: {reasoning_effort}. Must be minimal, medium, or maximal."
+                    )
+                    # Notify middlewares of termination if present
+                    if hasattr(self.context, "middlewares"):
+                        for mw in self.context.middlewares:
+                            await mw.on_end(
+                                task,
+                                {
+                                    "workflowId": workflow_id,
+                                    "mode": current_mode,
+                                    "reasoning_effort": reasoning_effort,
+                                    "end_time": datetime.now().isoformat(),
+                                    "status": "FAILED",
+                                },
+                            )
+                    # Yield a terminal event to signal end of stream
+                    yield WorkflowStatusEvent(
+                        status=WorkflowRunState.COMPLETED,
+                        message="Workflow terminated due to invalid reasoning_effort."
+                    )
+                    return
+                logger.info(f"Applying reasoning_effort={reasoning_effort} for this request")
+                self._apply_reasoning_effort(reasoning_effort)
+
             # Notify middlewares
             if hasattr(self.context, "middlewares"):
                 for mw in self.context.middlewares:
@@ -377,6 +498,7 @@ class SupervisorWorkflow:
                         {
                             "workflowId": workflow_id,
                             "mode": current_mode,
+                            "reasoning_effort": reasoning_effort,
                             "start_time": datetime.now().isoformat(),
                         },
                     )
@@ -403,48 +525,11 @@ class SupervisorWorkflow:
                     if isinstance(event, MagenticAgentMessageEvent):
                         yield event
                     elif isinstance(event, AgentRunUpdateEvent):
-                        # Check for reasoning events from GPT-5 models
-                        if hasattr(event, "run") and hasattr(event.run, "delta"):
-                            delta = event.run.delta
-                            # Check for reasoning content (GPT-5 series)
-                            if hasattr(delta, "type") and "reasoning" in str(
-                                getattr(delta, "type", "")
-                            ):
-                                reasoning_text = getattr(delta, "delta", "")
-                                if reasoning_text:
-                                    agent_id = (
-                                        getattr(event.run, "agent_id", "unknown")
-                                        if hasattr(event, "run")
-                                        else "unknown"
-                                    )
-                                    yield ReasoningStreamEvent(
-                                        reasoning=reasoning_text, agent_id=agent_id
-                                    )
+                        converted = self._handle_agent_run_update(event)
+                        if converted is not None:
+                            yield converted
+                            if isinstance(converted, ReasoningStreamEvent):
                                 continue
-
-                        # Convert AgentRunUpdateEvent to MagenticAgentMessageEvent for CLI compatibility
-                        text = ""
-                        if hasattr(event, "run") and hasattr(event.run, "delta"):
-                            delta = event.run.delta
-                            if hasattr(delta, "content") and delta.content:
-                                # Handle list of content parts or string
-                                if isinstance(delta.content, list):
-                                    text = "".join(str(part) for part in delta.content)
-                                else:
-                                    text = str(delta.content)
-
-                        if text:
-                            # Create synthetic event for CLI streaming
-                            mag_msg = ChatMessage(role=Role.ASSISTANT, text=text)
-                            agent_id = (
-                                getattr(event.run, "agent_id", "unknown")
-                                if hasattr(event, "run")
-                                else "unknown"
-                            )
-                            mag_event = MagenticAgentMessageEvent(
-                                agent_id=agent_id, message=mag_msg
-                            )
-                            yield mag_event
 
                     elif isinstance(event, RequestInfoEvent):
                         # If request contains conversation, extracting last message might be useful
@@ -487,48 +572,11 @@ class SupervisorWorkflow:
                     if isinstance(event, MagenticAgentMessageEvent | ExecutorCompletedEvent):
                         yield event
                     elif isinstance(event, AgentRunUpdateEvent):
-                        # Check for reasoning events from GPT-5 models
-                        if hasattr(event, "run") and hasattr(event.run, "delta"):
-                            delta = event.run.delta
-                            # Check for reasoning content (GPT-5 series)
-                            if hasattr(delta, "type") and "reasoning" in str(
-                                getattr(delta, "type", "")
-                            ):
-                                reasoning_text = getattr(delta, "delta", "")
-                                if reasoning_text:
-                                    agent_id = (
-                                        getattr(event.run, "agent_id", "unknown")
-                                        if hasattr(event, "run")
-                                        else "unknown"
-                                    )
-                                    yield ReasoningStreamEvent(
-                                        reasoning=reasoning_text, agent_id=agent_id
-                                    )
+                        converted = self._handle_agent_run_update(event)
+                        if converted is not None:
+                            yield converted
+                            if isinstance(converted, ReasoningStreamEvent):
                                 continue
-
-                        # Convert AgentRunUpdateEvent to MagenticAgentMessageEvent for CLI compatibility
-                        text = ""
-                        if hasattr(event, "run") and hasattr(event.run, "delta"):
-                            delta = event.run.delta
-                            if hasattr(delta, "content") and delta.content:
-                                # Handle list of content parts or string
-                                if isinstance(delta.content, list):
-                                    text = "".join(str(part) for part in delta.content)
-                                else:
-                                    text = str(delta.content)
-
-                        if text:
-                            # Create synthetic event for CLI streaming
-                            mag_msg = ChatMessage(role=Role.ASSISTANT, text=text)
-                            agent_id = (
-                                getattr(event.run, "agent_id", "unknown")
-                                if hasattr(event, "run")
-                                else "unknown"
-                            )
-                            mag_event = MagenticAgentMessageEvent(
-                                agent_id=agent_id, message=mag_msg
-                            )
-                            yield mag_event
                     elif isinstance(event, WorkflowOutputEvent):
                         if hasattr(event, "data"):
                             data = event.data

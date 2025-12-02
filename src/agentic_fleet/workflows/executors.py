@@ -58,9 +58,10 @@ logger = setup_logger(__name__)
 # - MAX_STEPS (6): Prevents over-segmentation, which can overwhelm agents and reduce efficiency.
 # - WORDS_PER_STEP (40): Based on typical agentic step complexity, 40 words per step balances
 #   granularity and cognitive load, producing steps that are neither too broad nor too fine-grained.
-MIN_STEPS = 3         # Minimum number of steps for fallback analysis
-MAX_STEPS = 6         # Maximum number of steps for fallback analysis
-WORDS_PER_STEP = 40   # Number of words per estimated step
+MIN_STEPS = 3  # Minimum number of steps for fallback analysis
+MAX_STEPS = 6  # Maximum number of steps for fallback analysis
+WORDS_PER_STEP = 40  # Number of words per estimated step
+
 
 # --- Decorator helper (local implementation) ---
 def handler(func):
@@ -279,10 +280,14 @@ class AnalysisExecutor(Executor):
         """
         complexity = str(payload.get("complexity", "moderate") or "moderate")
         capabilities = [
-            cap_s for cap_s in (str(cap).strip() for cap in payload.get("capabilities", [])) if cap_s
+            cap_s
+            for cap_s in (str(cap).strip() for cap in payload.get("capabilities", []))
+            if cap_s
         ]
         tool_requirements = [
-            tool_s for tool_s in (str(tool).strip() for tool in payload.get("tool_requirements", [])) if tool_s
+            tool_s
+            for tool_s in (str(tool).strip() for tool in payload.get("tool_requirements", []))
+            if tool_s
         ]
         steps_raw = payload.get("steps", 3)
         try:
