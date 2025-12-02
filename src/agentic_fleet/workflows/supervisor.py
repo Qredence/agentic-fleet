@@ -465,8 +465,26 @@ class SupervisorWorkflow:
                 if reasoning_effort not in ("minimal", "medium", "maximal"):
                     logger.warning(f"Invalid reasoning_effort value: {reasoning_effort}. Expected minimal, medium, or maximal.")
                     yield WorkflowStatusEvent(
-                        status=WorkflowRunState.IDLE,
+                        status=WorkflowRunState.FAILED,
                         message=f"Invalid reasoning_effort: {reasoning_effort}. Must be minimal, medium, or maximal."
+                    )
+                    # Notify middlewares of termination if present
+                    if hasattr(self.context, "middlewares"):
+                        for mw in self.context.middlewares:
+                            await mw.on_end(
+                                task,
+                                {
+                                    "workflowId": workflow_id,
+                                    "mode": current_mode,
+                                    "reasoning_effort": reasoning_effort,
+                                    "end_time": datetime.now().isoformat(),
+                                    "status": "FAILED",
+                                },
+                            )
+                    # Yield a terminal event to signal end of stream
+                    yield WorkflowStatusEvent(
+                        status=WorkflowRunState.COMPLETED,
+                        message="Workflow terminated due to invalid reasoning_effort."
                     )
                     return
                 logger.info(f"Applying reasoning_effort={reasoning_effort} for this request")
