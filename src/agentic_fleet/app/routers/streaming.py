@@ -7,10 +7,10 @@ workflow events to SSE format for real-time frontend updates.
 from __future__ import annotations
 
 import json
+import re  # For robust input sanitization
 from collections.abc import AsyncIterator
 from datetime import datetime
 from typing import TYPE_CHECKING, Any
-import re  # For robust input sanitization
 
 from agent_framework._workflows import (
     ExecutorCompletedEvent,
@@ -22,9 +22,10 @@ from agent_framework._workflows import (
 from fastapi import APIRouter, HTTPException, status
 from sse_starlette.sse import EventSourceResponse
 
-from agentic_fleet.app.dependencies import SessionManagerDep, WorkflowDep
+from agentic_fleet.app.dependencies import ConversationManagerDep, SessionManagerDep, WorkflowDep
 from agentic_fleet.app.schemas import (
     ChatRequest,
+    MessageRole,
     StreamEvent,
     StreamEventType,
     WorkflowSession,
@@ -95,9 +96,9 @@ def _log_stream_event(event: StreamEvent, workflow_id: str) -> None:
 
 
 def _map_workflow_event(
-    event: WorkflowEvent,
+    event: WorkflowEvent | dict[str, Any],
     accumulated_reasoning: str,
-) -> tuple[StreamEvent | None, str]:
+) -> tuple[StreamEvent | list[StreamEvent] | None, str]:
     """Map a workflow event to a StreamEvent for SSE.
 
     Args:
@@ -148,7 +149,8 @@ def _map_workflow_event(
         )
 
     if isinstance(event, MagenticAgentMessageEvent):
-        # Agent streaming content
+        # Agent-level message (could be streaming or final). Surface explicitly so the frontend
+        # can render per-agent thoughts/output instead of concatenated deltas.
         text = ""
         if hasattr(event, "message") and event.message:
             text = getattr(event.message, "text", "") or ""
@@ -156,21 +158,128 @@ def _map_workflow_event(
         if not text:
             return None, accumulated_reasoning
 
-        # Check for metadata to determine event kind
+        # Check for metadata to determine event kind/stage
         kind = None
         if hasattr(event, "stage"):
             kind = getattr(event, "stage", None)
 
+        # Map the internal event type to the StreamEventType
+        event_type = StreamEventType.AGENT_MESSAGE
+        if hasattr(event, "event"):
+            event_name = getattr(event, "event", None)
+            if event_name == "agent.start":
+                event_type = StreamEventType.AGENT_START
+            elif event_name == "agent.output":
+                event_type = StreamEventType.AGENT_OUTPUT
+            elif event_name == "agent.complete" or event_name == "agent.completed":
+                event_type = StreamEventType.AGENT_COMPLETE
+
+        # Get author name - prefer message.author_name, fall back to agent_id
+        author_name = None
+        if hasattr(event, "message") and hasattr(event.message, "author_name"):
+            author_name = getattr(event.message, "author_name", None)
+        if not author_name:
+            author_name = event.agent_id
+
         return (
             StreamEvent(
-                type=StreamEventType.RESPONSE_DELTA,
-                delta=text,
+                type=event_type,
+                message=text,
                 agent_id=event.agent_id,
                 kind=kind,
+                author=author_name,
+                role="assistant",
             ),
             accumulated_reasoning,
         )
 
+    # Generic chat message events (agent_framework chat_message objects)
+    if hasattr(event, "role") and hasattr(event, "contents"):
+        try:
+            # event.contents is likely a list of dicts with type/text
+            text_parts = []
+            for c in getattr(event, "contents", []):
+                if isinstance(c, dict):
+                    text_parts.append(c.get("text", ""))
+                elif hasattr(c, "text"):
+                    text_parts.append(getattr(c, "text", ""))
+            text = "\n".join(t for t in text_parts if t)
+        except Exception:
+            text = ""
+
+        if text:
+            author_name = getattr(event, "author_name", None) or getattr(event, "author", None)
+            role = getattr(event, "role", None)
+            return (
+                StreamEvent(
+                    type=StreamEventType.AGENT_MESSAGE,
+                    message=text,
+                    agent_id=getattr(event, "agent_id", None),
+                    author=author_name,
+                    role=role.value if hasattr(role, "value") else role,
+                    kind=None,
+                ),
+                accumulated_reasoning,
+            )
+
+    # ChatMessage-like objects with .text and .role (agent_framework ChatMessage)
+    if hasattr(event, "text") and hasattr(event, "role"):
+        text = getattr(event, "text", "") or ""
+        if text:
+            role = getattr(event, "role", None)
+            author_name = getattr(event, "author_name", None) or getattr(event, "author", None)
+            agent_id = getattr(event, "agent_id", None) or author_name
+            return (
+                StreamEvent(
+                    type=StreamEventType.AGENT_MESSAGE,
+                    message=text,
+                    agent_id=agent_id,
+                    author=author_name,
+                    role=role.value if hasattr(role, "value") else role,
+                    kind=None,
+                ),
+                accumulated_reasoning,
+            )
+
+    # Dict-based chat_message events (not objects)
+    if isinstance(event, dict):
+        event_dict: dict[str, Any] = event  # type: ignore
+        if event_dict.get("type") == "chat_message":
+            contents = event_dict.get("contents", [])
+            text_parts: list[str] = []
+            for c in contents:
+                if isinstance(c, dict):
+                    text_parts.append(c.get("text", ""))
+                elif isinstance(c, str):
+                    text_parts.append(c)
+            text = "\n".join(t for t in text_parts if t)
+            if text:
+                author_name = event_dict.get("author_name") or event_dict.get("author")
+                role = event_dict.get("role")
+
+                # Handle role extraction safely
+                role_value = role
+                if isinstance(role, dict):
+                    role_value = role.get("value")
+                elif hasattr(role, "value"):
+                    role_value = role.value
+
+                # Determine event type
+                event_type = StreamEventType.AGENT_MESSAGE
+                if event_dict.get("event") == "agent.output":
+                    event_type = StreamEventType.AGENT_OUTPUT
+
+                return (
+                    StreamEvent(
+                        type=event_type,
+                        message=text,
+                        agent_id=event_dict.get("agent_id") or author_name,
+                        author=author_name,
+                        role=role_value,
+                        kind=None,
+                    ),
+                    accumulated_reasoning,
+                )
     if isinstance(event, ExecutorCompletedEvent):
         # Phase completion events with typed messages
         data = getattr(event, "data", None)
@@ -245,11 +354,33 @@ def _map_workflow_event(
             accumulated_reasoning,
         )
 
+    # Generic objects with .message.text and .role (safety net)
+    if hasattr(event, "message") and hasattr(event.message, "text"):
+        text = getattr(event.message, "text", "") or ""
+        if text:
+            role = getattr(event, "role", None) or getattr(event.message, "role", None)
+            author_name = getattr(event, "author_name", None) or getattr(
+                event.message, "author_name", None
+            )
+            agent_id = getattr(event, "agent_id", None) or getattr(event.message, "author", None)
+            return (
+                StreamEvent(
+                    type=StreamEventType.AGENT_MESSAGE,
+                    message=text,
+                    agent_id=agent_id,
+                    author=author_name,
+                    role=role.value if hasattr(role, "value") else role,
+                    kind=None,
+                ),
+                accumulated_reasoning,
+            )
+
     if isinstance(event, WorkflowOutputEvent):
         # Final output event
         result_text = ""
-        if hasattr(event, "data"):
-            data = event.data
+        data = getattr(event, "data", None)
+
+        if data is not None:
             if isinstance(data, list) and data:
                 # List of ChatMessage
                 last_msg = data[-1]
@@ -259,16 +390,37 @@ def _map_workflow_event(
             else:
                 result_text = str(data)
 
-        return (
+        events: list[StreamEvent] = []
+
+        if isinstance(data, list) and data:
+            for msg in data:
+                text = getattr(msg, "text", None) or ""
+                role = getattr(msg, "role", None)
+                author = getattr(msg, "author_name", None) or getattr(msg, "author", None)
+                agent_id = getattr(msg, "author", None)
+                if text:
+                    events.append(
+                        StreamEvent(
+                            type=StreamEventType.AGENT_MESSAGE,
+                            message=text,
+                            agent_id=agent_id,
+                            author=author,
+                            role=role.value if hasattr(role, "value") else role,
+                        )
+                    )
+
+        # Always push a final completion event
+        events.append(
             StreamEvent(
                 type=StreamEventType.RESPONSE_COMPLETED,
                 message=result_text,
-            ),
-            accumulated_reasoning,
+            )
         )
 
+        return events, accumulated_reasoning
+
     # Unknown event type - skip
-    logger.debug("Unknown event type", event_type=type(event).__name__)
+    logger.debug(f"Unknown event type: {type(event).__name__}")
     return None, accumulated_reasoning
 
 
@@ -316,9 +468,10 @@ async def _event_generator(
         async for event in workflow.run_stream(session.task):
             stream_event, accumulated_reasoning = _map_workflow_event(event, accumulated_reasoning)
             if stream_event is not None:
-                # Log event in real-time for console visibility
-                _log_stream_event(stream_event, session.workflow_id)
-                yield stream_event.to_sse_dict()
+                events_to_emit = stream_event if isinstance(stream_event, list) else [stream_event]
+                for se in events_to_emit:
+                    _log_stream_event(se, session.workflow_id)
+                    yield se.to_sse_dict()
 
     except Exception as e:
         has_error = True
@@ -404,6 +557,7 @@ async def chat_stream(
     request: ChatRequest,
     workflow: WorkflowDep,
     session_manager: SessionManagerDep,
+    conversation_manager: ConversationManagerDep,
 ) -> EventSourceResponse:
     """Stream chat responses via SSE.
 
@@ -411,16 +565,18 @@ async def chat_stream(
         request: The chat request with message and options.
         workflow: Injected SupervisorWorkflow instance.
         session_manager: Injected session manager.
+        conversation_manager: Injected conversation manager.
 
     Returns:
         EventSourceResponse streaming workflow events.
     """
     msg_preview = request.message[:50] if len(request.message) > 50 else request.message
     # Remove all control chars (including \r, \n, tabs, Unicode separators) from user message before logging
-    sanitized_preview = re.sub(r'[\x00-\x1F\x7F\u2028\u2029]', '', msg_preview)
+    sanitized_preview = re.sub(r"[\x00-\x1F\x7F\u2028\u2029]", "", msg_preview)
     logger.info(
         f"Chat stream request received: message_preview={sanitized_preview}, "
-        f"stream={request.stream}, reasoning_effort={request.reasoning_effort}"
+        f"stream={request.stream}, reasoning_effort={request.reasoning_effort}, "
+        f"conversation_id={request.conversation_id}"
     )
 
     if not request.stream:
@@ -428,6 +584,14 @@ async def chat_stream(
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Non-streaming requests should use POST /api/v1/run instead.",
+        )
+
+    # Save user message if conversation_id is provided
+    if request.conversation_id:
+        conversation_manager.add_message(
+            request.conversation_id,
+            MessageRole.USER,
+            request.message,
         )
 
     # Create session (will raise 429 if limit exceeded)
@@ -447,8 +611,37 @@ async def chat_stream(
             log_reasoning = bool(config.logging.log_reasoning)
 
     async def generate():
+        full_response = ""
+
         async for event_data in _event_generator(workflow, session, session_manager, log_reasoning):
+            event_type = event_data.get("type")
+
+            # Capture response content for history from various event types
+            if event_type == StreamEventType.RESPONSE_DELTA.value:
+                full_response += event_data.get("delta", "")
+            elif event_type == StreamEventType.RESPONSE_COMPLETED.value:
+                # Final response - use this as the definitive content
+                completed_msg = event_data.get("message", "")
+                if completed_msg:
+                    full_response = completed_msg
+            elif event_type in (
+                StreamEventType.AGENT_OUTPUT.value,
+                StreamEventType.AGENT_MESSAGE.value,
+            ):
+                # Capture agent output/message as response content
+                agent_msg = event_data.get("message", "")
+                if agent_msg:
+                    full_response = agent_msg
+
             yield {"data": json.dumps(event_data)}
+
+        # Save assistant message on completion if conversation_id provided
+        if request.conversation_id and full_response:
+            conversation_manager.add_message(
+                request.conversation_id,
+                MessageRole.ASSISTANT,
+                full_response,
+            )
 
     return EventSourceResponse(generate())
 
@@ -535,5 +728,5 @@ async def cancel_session(
             WorkflowStatus.CANCELLED,
             completed_at=datetime.now(),
         )
-        sanitized_workflow_id = workflow_id.replace('\n', '').replace('\r', '')
+        sanitized_workflow_id = workflow_id.replace("\n", "").replace("\r", "")
         logger.info(f"Cancelled workflow session: workflow_id={sanitized_workflow_id}")

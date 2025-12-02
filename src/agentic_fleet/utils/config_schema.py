@@ -13,7 +13,7 @@ class DSPyOptimizationConfig(BaseModel):
     """DSPy optimization configuration."""
 
     enabled: bool = True
-    examples_path: str = "data/supervisor_examples.json"
+    examples_path: str = "src/agentic_fleet/data/supervisor_examples.json"
     metric_threshold: float = Field(default=0.8, ge=0.0, le=1.0)
     max_bootstrapped_demos: int = Field(default=4, ge=1, le=20)
     use_gepa: bool = False
@@ -21,7 +21,7 @@ class DSPyOptimizationConfig(BaseModel):
     gepa_max_full_evals: int = Field(default=50, ge=1)
     gepa_max_metric_calls: int = Field(default=150, ge=1)
     gepa_reflection_model: str | None = None
-    gepa_log_dir: str = "logs/gepa"
+    gepa_log_dir: str = "src/agentic_fleet/data/logs/gepa"
     gepa_perfect_score: float = Field(default=1.0, ge=0.0, le=10.0)
     gepa_use_history_examples: bool = False
     gepa_history_min_quality: float = Field(default=8.0, ge=0.0, le=10.0)
@@ -136,9 +136,9 @@ class LoggingConfig(BaseModel):
 
     level: str = "INFO"
     format: str = "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
-    file: str = "logs/workflow.log"
+    file: str = "src/agentic_fleet/data/logs/workflow.log"
     save_history: bool = True
-    history_file: str = "logs/execution_history.jsonl"
+    history_file: str = "src/agentic_fleet/data/logs/execution_history.jsonl"
     verbose: bool = True
     # Log verbose GPT-5 reasoning tokens to execution history (default: false)
     # Enable for debugging/evaluation; disable in production to reduce storage
@@ -172,8 +172,8 @@ class EvaluationConfig(BaseModel):
     """Evaluation framework configuration."""
 
     enabled: bool = False
-    dataset_path: str = "data/evaluation_tasks.jsonl"
-    output_dir: str = "logs/evaluation"
+    dataset_path: str = "src/agentic_fleet/data/evaluation_tasks.jsonl"
+    output_dir: str = "src/agentic_fleet/data/logs/evaluation"
     metrics: list[str] = Field(
         default_factory=lambda: [
             "quality_score",

@@ -14,6 +14,7 @@ import aiofiles
 
 from ..utils.models import RoutingDecision
 from ..workflows.exceptions import HistoryError
+from .constants import DEFAULT_HISTORY_PATH
 
 logger = logging.getLogger(__name__)
 
@@ -47,7 +48,7 @@ class HistoryManager:
         """
         self.history_format = history_format
         self.max_entries = max_entries
-        self.history_dir = Path("logs")
+        self.history_dir = Path(DEFAULT_HISTORY_PATH).parent
         self.history_dir.mkdir(parents=True, exist_ok=True)
 
         # Warn about JSON format performance implications
@@ -396,15 +397,73 @@ class HistoryManager:
         Returns:
             List of execution dictionaries
         """
-        # Load all history (this is inefficient for large files but acceptable for now)
-        executions = self.load_history(limit=None)
+        # Optimized: Load only needed entries using tail-read
+        # We need (offset + limit) entries from the end, then slice
+        needed = offset + limit
+        executions = self._load_history_tail(needed)
 
-        # Reverse to get newest first
-        executions.reverse()
+        # Already in newest-first order from _load_history_tail
+        return executions[offset : offset + limit]
 
-        start = offset
-        end = offset + limit
-        return executions[start:end]
+    def _load_history_tail(self, n: int) -> list[dict[str, Any]]:
+        """
+        Efficiently load the last N entries from history (newest first).
+
+        Uses deque for O(n) memory instead of loading entire file.
+
+        Args:
+            n: Number of entries to load from the end
+
+        Returns:
+            List of execution dictionaries, newest first
+        """
+        from collections import deque
+
+        # Try Cosmos DB first if enabled
+        try:
+            from .cosmos import is_cosmos_enabled, load_execution_history
+
+            if is_cosmos_enabled():
+                history = load_execution_history(limit=n)
+                if history:
+                    # Cosmos returns newest first
+                    return history
+        except Exception as e:
+            logger.warning(f"Failed to load history from Cosmos DB: {e}")
+
+        # Try JSONL (preferred format) with efficient tail read
+        jsonl_file = self.history_dir / "execution_history.jsonl"
+        if jsonl_file.exists():
+            try:
+                executions: deque[dict[str, Any]] = deque(maxlen=n)
+                with open(jsonl_file) as f:
+                    for line in f:
+                        if line.strip():
+                            try:
+                                executions.append(json.loads(line))
+                            except json.JSONDecodeError:
+                                continue
+                # Return newest first
+                result = list(executions)
+                result.reverse()
+                return result
+            except Exception as e:
+                logger.warning(f"Failed to load JSONL history tail: {e}")
+
+        # Fall back to JSON format
+        json_file = self.history_dir / "execution_history.json"
+        if json_file.exists():
+            try:
+                with open(json_file) as f:
+                    all_executions = json.load(f)
+                # Take last N and reverse for newest first
+                result = all_executions[-n:] if n else all_executions
+                result.reverse()
+                return result
+            except Exception as e:
+                logger.warning(f"Failed to load JSON history tail: {e}")
+
+        return []
 
     def load_history(self, limit: int | None = None) -> list[dict[str, Any]]:
         """

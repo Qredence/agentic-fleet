@@ -33,6 +33,8 @@ class TestHistoryEndpoints:
         """Test history retrieval with pagination."""
         # Mock history manager
         manager = MagicMock()
+        # Ensure get_recent doesn't exist so the router falls back to get_recent_executions
+        del manager.get_recent
         mock_workflow.history_manager = manager
 
         # Mock get_recent_executions

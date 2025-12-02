@@ -137,7 +137,7 @@ Each CLI invocation triggers the same four-phase pipeline described in
    optionally triggers refinement rounds until thresholds are met.
 
 The CLI surfaces these phases through the `--verbose` stream and also records
-timings/decisions in `logs/execution_history.jsonl` for later inspection via
+timings/decisions in `src/agentic_fleet/data/logs/execution_history.jsonl` for later inspection via
 `uv run python scripts/analyze_history.py`.
 
 ### Programmatic Usage
@@ -248,7 +248,7 @@ dspy:
   max_tokens: 2000
   optimization:
     enabled: true # Enable DSPy compilation
-    examples_path: data/supervisor_examples.json
+    examples_path: src/agentic_fleet/data/supervisor_examples.json
     metric_threshold: 0.8
     max_bootstrapped_demos: 4 # Few-shot examples per prompt
 
@@ -300,9 +300,9 @@ tools:
 logging:
   level: INFO
   format: "% (asctime)s - %(name)s - %(levelname)s - %(message)s"
-  file: logs/workflow.log
+  file: src/agentic_fleet/data/logs/workflow.log
   save_history: true
-  history_file: logs/execution_history.jsonl
+  history_file: src/agentic_fleet/data/logs/execution_history.jsonl
   verbose: true
 ```
 
@@ -543,7 +543,7 @@ agents["MyAgent"] = self._create_agent(
 
 3. **Add training examples**:
 
-Add examples to `data/supervisor_examples.json` that show when to use the new tool.
+Add examples to `src/agentic_fleet/data/supervisor_examples.json` that show when to use the new tool.
 
 ## Execution Modes
 
@@ -673,7 +673,7 @@ print(f"Improvements: {quality['improvements']}")
 
 ### Execution History
 
-All executions are automatically saved to `logs/execution_history.jsonl` (preferred) or `logs/execution_history.json` (legacy).
+All executions are automatically saved to `src/agentic_fleet/data/logs/execution_history.jsonl` (preferred) or `src/agentic_fleet/data/logs/execution_history.json` (legacy).
 
 **JSONL Format** (default):
 
@@ -809,7 +809,7 @@ uv run agentic-fleet run -m "Task" --no-compile
 
 **Better Routing Accuracy**:
 
-- Add more training examples to `data/supervisor_examples.json`
+- Add more training examples to `src/agentic_fleet/data/supervisor_examples.json`
 - Increase `max_bootstrapped_demos` in config
 - Use `gpt-4.1` instead of `gpt-5-mini` for DSPy
 
@@ -837,7 +837,7 @@ result = await workflow.run("Your task")
 Check logs at:
 
 - Console output (real-time)
-- `logs/workflow.log` (persistent file log)
+- `src/agentic_fleet/data/logs/workflow.log` (persistent file log)
 - `logs/execution_history.jsonl` (structured execution data)
 
 ## Advanced Features
