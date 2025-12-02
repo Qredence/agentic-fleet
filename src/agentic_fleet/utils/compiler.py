@@ -316,7 +316,7 @@ def _validate_example_alignment(records: list[dict[str, Any]]) -> list[str]:
 
 def compile_reasoner(
     module: Any,
-    examples_path: str = "data/supervisor_examples.json",
+    examples_path: str = "src/agentic_fleet/data/supervisor_examples.json",
     use_cache: bool = True,
     optimizer: str = "bootstrap",
     gepa_options: dict[str, Any] | None = None,
@@ -346,7 +346,7 @@ def compile_reasoner(
         progress_callback = NullProgressCallback()
 
     optimizer = optimizer or "bootstrap"
-    cache_path = "logs/compiled_supervisor.pkl"
+    cache_path = "src/agentic_fleet/data/logs/compiled_supervisor.pkl"
 
     progress_callback.on_start(f"Compiling DSPy reasoner with {optimizer} optimizer")
 
@@ -494,7 +494,7 @@ def compile_reasoner(
                 max_metric_calls=max_metric_flag,
                 reflection_model=gepa_options.get("reflection_model"),
                 perfect_score=gepa_options.get("perfect_score", 1.0),
-                log_dir=gepa_options.get("log_dir", "logs/gepa"),
+                log_dir=gepa_options.get("log_dir", "src/agentic_fleet/data/logs/gepa"),
                 progress_callback=progress_callback,
             )
 
@@ -507,7 +507,7 @@ def compile_reasoner(
                     len(valset) if valset else 0
                 } val examples. "
                 f"Edge cases captured: {edge_case_count}. Check {
-                    gepa_options.get('log_dir', 'logs/gepa')
+                    gepa_options.get('log_dir', 'src/agentic_fleet/data/logs/gepa')
                 } for detailed feedback."
             )
         else:
@@ -717,7 +717,7 @@ def load_compiled_module(filepath: str) -> Any | None:
     return None
 
 
-def clear_cache(cache_path: str = "logs/compiled_supervisor.pkl"):
+def clear_cache(cache_path: str = "src/agentic_fleet/data/logs/compiled_supervisor.pkl"):
     """Clear compiled module cache.
 
     Args:
@@ -737,7 +737,7 @@ def clear_cache(cache_path: str = "logs/compiled_supervisor.pkl"):
 
 
 def get_cache_info(
-    cache_path: str = "logs/compiled_supervisor.pkl",
+    cache_path: str = "src/agentic_fleet/data/logs/compiled_supervisor.pkl",
 ) -> dict[str, Any] | None:
     """Get information about cached module.
 
@@ -793,7 +793,7 @@ class AsyncCompiler:
     async def compile_in_background(
         self,
         module: Any,
-        examples_path: str = "data/supervisor_examples.json",
+        examples_path: str = "src/agentic_fleet/data/supervisor_examples.json",
         use_cache: bool = True,
         optimizer: str = "bootstrap",
         gepa_options: dict[str, Any] | None = None,

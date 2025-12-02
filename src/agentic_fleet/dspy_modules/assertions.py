@@ -16,9 +16,9 @@ if TYPE_CHECKING:
 else:
     Suggest = getattr(dspy, "Suggest", None)
     if Suggest is None:
-        logger.warning(
-            "dspy.Suggest is not available; routing assertions will not be enforced. "
-            "Consider upgrading DSPy to enable assertion-based validation."
+        logger.debug(
+            "dspy.Suggest is not available; runtime assertions will be skipped. "
+            "Constraints should be learned via GEPA optimization instead."
         )
 
         # Fallback or dummy if not found at runtime

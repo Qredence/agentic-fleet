@@ -46,4 +46,4 @@
 - Keep code typed; follow Ruff/ty defaults (line length 100, py312 syntax, docstrings for public APIs).
 - Avoid committing artifacts from `logs/`, `var/`, caches, or compiled DSPy outputs.
 - Prefer `make` targets over raw commands; if adding new workflows/tests, add a Make target and update this file.
-- If you change how to start, test, or observe the system, append the updated commands here and, for larger shifts, create an ExecPlan entry in `PLANS.md`.
+- If you change how to start, test, or observe the system, append the updated commands here and, for larger shifts, create an ExecPlan entry in `docs/plans/current.md`.

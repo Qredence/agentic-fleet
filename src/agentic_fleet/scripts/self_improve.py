@@ -16,6 +16,8 @@ from rich.console import Console
 from rich.panel import Panel
 from rich.table import Table
 
+from agentic_fleet.utils.constants import DEFAULT_EXAMPLES_PATH
+
 from ..utils.self_improvement import SelfImprovementEngine
 
 # Add project root to path
@@ -54,7 +56,7 @@ def main():
     parser.add_argument(
         "--examples-file",
         type=str,
-        default="data/supervisor_examples.json",
+        default=DEFAULT_EXAMPLES_PATH,
         help="Path to training examples file",
     )
     parser.add_argument(
@@ -131,7 +133,7 @@ def main():
 
         console.print(
             "\n[bold]Next steps:[/bold]\n"
-            "  1. Review new examples: [cyan]cat data/supervisor_examples.json | tail -50[/cyan]\n"
+            f"  1. Review new examples: [cyan]cat {DEFAULT_EXAMPLES_PATH} | tail -50[/cyan]\n"
             '  2. Test improved routing: [cyan]python console.py run -m "Test task"[/cyan]\n'
             "  3. Monitor quality scores in future executions"
         )
