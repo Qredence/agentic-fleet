@@ -34,3 +34,15 @@ jobs:
         uses: Factory-AI/droid-action@9f0a131f360d914ce6f8d638a237f7ffa4d2ba97 # v1
         with:
           factory_api_key: ${{ secrets.FACTORY_API_KEY }}
+          settings: |
+            {
+              "custom_models": [{
+                "model_display_name": "Claude Opus 4.5 [AzureAnthropic]",
+                "model": "claude-opus-4-5",
+                "provider": "anthropic",
+                "base_url": "https://${{ secrets.AZURE_RESOURCE_NAME }}.azure.com/anthropic",
+                "api_key": "${{ secrets.FOUNDRY_API_KEY }}",
+                "max_tokens": 32000
+              }]
+            }
+          droid_args: "-m custom:Claude-Opus-4.5-[AzureAnthropic]-0"
