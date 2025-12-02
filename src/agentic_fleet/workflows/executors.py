@@ -52,6 +52,12 @@ from .strategies import run_execution_phase_streaming
 logger = setup_logger(__name__)
 
 # Fallback analysis step calculation heuristics:
+# These values are chosen based on empirical observation of agentic workflow granularity:
+# - MIN_STEPS (3): Ensures that even simple tasks are broken down into at least a few actionable steps,
+#   preventing under-segmentation and promoting agent reasoning.
+# - MAX_STEPS (6): Prevents over-segmentation, which can overwhelm agents and reduce efficiency.
+# - WORDS_PER_STEP (40): Based on typical agentic step complexity, 40 words per step balances
+#   granularity and cognitive load, producing steps that are neither too broad nor too fine-grained.
 MIN_STEPS = 3         # Minimum number of steps for fallback analysis
 MAX_STEPS = 6         # Maximum number of steps for fallback analysis
 WORDS_PER_STEP = 40   # Number of words per estimated step
