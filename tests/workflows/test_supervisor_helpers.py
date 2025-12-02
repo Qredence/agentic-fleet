@@ -490,7 +490,7 @@ class TestHandleAgentRunUpdateIntegration:
 
         result = self._handle_agent_run_update_impl(mock_event)
 
-        # Empty list is truthy but joining results in empty string
+        # Empty list is falsy, so content check fails and returns None
         assert result is None
 
     def test_content_with_mixed_types_in_list(self):
