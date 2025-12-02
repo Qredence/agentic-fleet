@@ -397,8 +397,15 @@ class SupervisorWorkflow:
     def _apply_reasoning_effort(self, reasoning_effort: str | None) -> None:
         """Apply reasoning effort to all agents that support it.
 
+        Note: This method mutates shared agent state. When multiple concurrent
+        requests have different reasoning_effort values, they may overwrite each
+        other's settings. For production use with concurrent requests, consider
+        implementing request-scoped agent instances or passing reasoning_effort
+        through the workflow context instead of mutating shared state.
+
         Args:
-            reasoning_effort: Reasoning effort level (minimal, medium, maximal)
+            reasoning_effort: Reasoning effort level ("minimal", "medium", "maximal").
+                Must match API schema values defined in ChatRequest.
         """
         if not reasoning_effort or not self.agents:
             return
