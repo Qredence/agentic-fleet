@@ -6,6 +6,7 @@ import importlib
 import inspect
 import logging
 import warnings
+from functools import lru_cache
 from pathlib import Path
 from typing import Any
 
@@ -450,13 +451,14 @@ def validate_tool(tool: Any) -> bool:
         return False
 
 
-def get_default_agent_metadata() -> list[dict[str, Any]]:
+@lru_cache(maxsize=1)
+def get_default_agent_metadata() -> tuple[dict[str, Any], ...]:
     """Get metadata for default agents without instantiating them.
 
     Returns:
-        List of agent metadata dictionaries.
+        Tuple of agent metadata dictionaries (tuple for hashability with lru_cache).
     """
-    return [
+    return (
         {
             "name": "Researcher",
             "description": "Information gathering and web research specialist",
@@ -492,7 +494,7 @@ def get_default_agent_metadata() -> list[dict[str, Any]]:
             "status": "active",
             "model": "default (gpt-5-mini)",
         },
-    ]
+    )
 
 
 def _resolve_workflow_config_path(config_path: str | Path | None = None) -> Path:

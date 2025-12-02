@@ -6,7 +6,7 @@ export interface ChatMessage {
   id: string;
   role: MessageRole;
   content: string;
-  createdAt: number;
+  createdAt: string;
   agentId?: string;
   /** Optional reasoning content from o1/o3 models */
   reasoning?: string;
@@ -75,7 +75,7 @@ export interface ErrorEvent {
 export interface Conversation {
   id: string;
   title: string;
-  created_at: number;
+  created_at: string;
   messages?: ChatMessage[]; // Optional, for preview in sidebar
 }
 
@@ -85,7 +85,7 @@ export interface ChatState {
   currentStreamingMessage: string;
   currentAgentId?: string;
   currentStreamingMessageId?: string;
-  currentStreamingTimestamp?: number;
+  currentStreamingTimestamp?: string;
   /** Current reasoning content being accumulated from gpt-5-mini */
   currentReasoningContent?: string;
   /** Whether reasoning is currently streaming */
@@ -105,7 +105,7 @@ export interface OrchestratorMessage {
   id: string;
   message: string;
   kind?: string;
-  timestamp: number;
+  timestamp: string;
 }
 
 /** Chat store actions */
@@ -163,7 +163,7 @@ export interface ReasoningSection {
 export interface ThoughtNode {
   id: string;
   content: string;
-  timestamp: number;
+  timestamp: string;
   type: "fact" | "deduction" | "decision";
 }
 

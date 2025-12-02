@@ -76,7 +76,7 @@ A factory class (in `coordinator.py`) that creates agents from YAML configuratio
 
 - **Researcher**: Equipped with `TavilyMCPTool` and `BrowserTool`. Enforced to use search for time-sensitive queries.
 - **Analyst**: Equipped with `HostedCodeInterpreterTool` for data analysis.
-- **Writer/Reviewer/Judge**: Specialized for content generation and quality control.
+- **Writer/Reviewer**: Specialized for content generation and quality control.
 
 ---
 
@@ -107,5 +107,4 @@ A factory class (in `coordinator.py`) that creates agents from YAML configuratio
 4.  **Routing**: `DSPyReasoner.route_task` selects agents (e.g., Researcher + Writer).
 5.  **Execution**: Selected agents execute (potentially using Tools).
 6.  **Quality Check**: `DSPyReasoner.assess_quality` scores the result.
-7.  **Refinement**: If quality is low, the workflow loops back for refinement.
-8.  **Output**: Final result is returned to the user.
+7.  **Output**: Final result is returned to the user.

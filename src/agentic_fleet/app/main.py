@@ -13,7 +13,14 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from agentic_fleet.app.dependencies import lifespan
-from agentic_fleet.app.routers import agents, dspy_management, history, streaming, workflow
+from agentic_fleet.app.routers import (
+    agents,
+    conversations,
+    dspy_management,
+    history,
+    streaming,
+    workflow,
+)
 
 # =============================================================================
 # Logging Configuration
@@ -99,6 +106,8 @@ app.include_router(dspy_management.router, prefix="/api/v1", tags=["dspy"])
 # Streaming routes at /api (no version) for frontend compatibility
 # Frontend expects POST /api/chat for streaming
 app.include_router(streaming.router, prefix="/api", tags=["chat"])
+# Frontend expects POST /api/conversations
+app.include_router(conversations.router, prefix="/api", tags=["conversations"])
 
 
 @app.get("/health", tags=["health"])

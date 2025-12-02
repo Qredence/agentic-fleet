@@ -7,6 +7,7 @@ agent information, streaming events, and related data structures.
 from datetime import datetime
 from enum import StrEnum
 from typing import Any, Literal
+from uuid import uuid4
 
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -46,6 +47,7 @@ class StreamEventType(StrEnum):
     # Agent events
     AGENT_START = "agent.start"
     AGENT_MESSAGE = "agent.message"
+    AGENT_OUTPUT = "agent.output"
     AGENT_COMPLETE = "agent.complete"
 
     # Control events
@@ -53,9 +55,61 @@ class StreamEventType(StrEnum):
     DONE = "done"
 
 
+class MessageRole(StrEnum):
+    """Role of a chat message sender."""
+
+    USER = "user"
+    ASSISTANT = "assistant"
+    SYSTEM = "system"
+
+
 # =============================================================================
 # Basic Request/Response Models
 # =============================================================================
+
+
+class Message(BaseModel):
+    """A single chat message.
+
+    Attributes:
+        role: The sender's role.
+        content: The message content.
+        created_at: Creation timestamp.
+        id: Unique message ID.
+    """
+
+    role: MessageRole
+    content: str
+    created_at: datetime = Field(default_factory=datetime.now)
+    id: str = Field(default_factory=lambda: uuid4().hex)
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class Conversation(BaseModel):
+    """A chat conversation history.
+
+    Attributes:
+        id: Unique conversation ID.
+        title: Conversation title.
+        created_at: Creation timestamp.
+        updated_at: Last update timestamp.
+        messages: List of messages in the conversation.
+    """
+
+    id: str
+    title: str
+    created_at: datetime = Field(default_factory=datetime.now)
+    updated_at: datetime = Field(default_factory=datetime.now)
+    messages: list[Message] = Field(default_factory=list)
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class CreateConversationRequest(BaseModel):
+    """Request to create a new conversation."""
+
+    title: str = "New Chat"
 
 
 class RunRequest(BaseModel):
@@ -221,6 +275,10 @@ class StreamEvent(BaseModel):
     delta: str | None = Field(default=None, description="Incremental response text")
     reasoning: str | None = Field(default=None, description="Incremental reasoning text")
     agent_id: str | None = Field(default=None, description="Agent identifier")
+    author: str | None = Field(default=None, description="Human-readable agent/author name")
+    role: str | None = Field(
+        default=None, description="Role of chat message if applicable (user/assistant/system)"
+    )
     kind: str | None = Field(default=None, description="Event kind")
     error: str | None = Field(default=None, description="Error message")
     reasoning_partial: bool | None = Field(
@@ -247,6 +305,10 @@ class StreamEvent(BaseModel):
             result["reasoning"] = self.reasoning
         if self.agent_id is not None:
             result["agent_id"] = self.agent_id
+        if self.author is not None:
+            result["author"] = self.author
+        if self.role is not None:
+            result["role"] = self.role
         if self.kind is not None:
             result["kind"] = self.kind
         if self.error is not None:

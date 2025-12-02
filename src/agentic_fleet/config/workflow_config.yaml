@@ -1,6 +1,6 @@
 # DSPy Configuration
 dspy:
-  model: gpt-4o
+  model: gpt-4.1
   routing_model: gpt-5-mini # Fast model for analysis/routing phases (Plan #4)
   temperature: 1.0
   max_tokens: 16000
@@ -10,7 +10,7 @@ dspy:
   require_compiled: false
   optimization:
     enabled: true
-    examples_path: data/supervisor_examples.json
+    examples_path: src/agentic_fleet/data/supervisor_examples.json
     metric_threshold: 0.8
     max_bootstrapped_demos: 4
     use_gepa: true
@@ -26,7 +26,7 @@ dspy:
     # gepa_max_full_evals: 3  # (previous setting) commented out; full eval cycles still slow
     gepa_max_metric_calls: 5 # ultra-short optimization budget
     gepa_reflection_model:
-    gepa_log_dir: logs/gepa
+    gepa_log_dir: src/agentic_fleet/data/logs/gepa
     gepa_perfect_score: 1.0
     gepa_use_history_examples: true
     gepa_history_min_quality: 8.0
@@ -193,9 +193,9 @@ tools:
 logging:
   level: DEBUG
   format: "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
-  file: logs/workflow.log
+  file: src/agentic_fleet/data/logs/workflow.log
   save_history: true
-  history_file: logs/execution_history.jsonl
+  history_file: src/agentic_fleet/data/logs/execution_history.jsonl
   verbose: true
   # Log verbose GPT-5 reasoning tokens to execution history (default: false)
   # Enable for debugging/evaluation; disable in production to reduce storage
@@ -210,8 +210,8 @@ tracing:
 # Evaluation Framework
 evaluation:
   enabled: true # Enable to run batch evaluations (Option B activated)
-  dataset_path: data/evaluation_tasks.jsonl
-  output_dir: logs/evaluation
+  dataset_path: src/agentic_fleet/data/evaluation_tasks.jsonl
+  output_dir: src/agentic_fleet/data/logs/evaluation
   metrics:
     - quality_score
     - keyword_success

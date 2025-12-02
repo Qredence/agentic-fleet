@@ -51,7 +51,7 @@ def test_get_agents(client: TestClient, mock_workflow: MagicMock):
 
 
 def test_get_history(client: TestClient, mock_workflow: MagicMock):
-    mock_workflow.history_manager.get_recent.return_value = [
+    mock_workflow.history_manager.get_recent_executions.return_value = [
         {"workflowId": "1", "task": "task1", "result": "res1"},
         {"workflowId": "2", "task": "task2", "result": "res2"},
     ]
