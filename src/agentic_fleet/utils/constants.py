@@ -66,11 +66,11 @@ EXECUTION_MODE_PARALLEL = "parallel"
 
 # File paths
 DEFAULT_CONFIG_PATH = "config/workflow_config.yaml"
-DEFAULT_EXAMPLES_PATH = "data/supervisor_examples.json"
-DEFAULT_CACHE_PATH = "logs/compiled_supervisor.pkl"
-DEFAULT_HISTORY_PATH = "logs/execution_history.jsonl"
-DEFAULT_LOG_PATH = "logs/workflow.log"
-DEFAULT_GEPA_LOG_DIR = "logs/gepa"
+DEFAULT_EXAMPLES_PATH = "src/agentic_fleet/data/supervisor_examples.json"
+DEFAULT_CACHE_PATH = "src/agentic_fleet/data/logs/compiled_supervisor.pkl"
+DEFAULT_HISTORY_PATH = "src/agentic_fleet/data/logs/execution_history.jsonl"
+DEFAULT_LOG_PATH = "src/agentic_fleet/data/logs/workflow.log"
+DEFAULT_GEPA_LOG_DIR = "src/agentic_fleet/data/logs/gepa"
 
 # History constants
 DEFAULT_HISTORY_FORMAT = "jsonl"

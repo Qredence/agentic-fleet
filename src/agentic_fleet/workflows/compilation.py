@@ -7,7 +7,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 from ..dspy_modules.reasoner import DSPyReasoner
 from ..utils.compiler import compile_reasoner
@@ -27,7 +27,7 @@ class CompilationState:
         """Initialize compilation state."""
         self.compiled_supervisor: DSPyReasoner | None = None
         self.compilation_status: str = "pending"
-        self.compilation_task: asyncio.Task[None] | None = None
+        self.compilation_task: asyncio.Task[Any] | None = None
 
 
 async def compile_supervisor_async(

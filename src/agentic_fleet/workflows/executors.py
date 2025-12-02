@@ -530,7 +530,7 @@ class ExecutionExecutor(Executor):
                     if isinstance(event, MagenticAgentMessageEvent):
                         # Emit intermediate event
                         if hasattr(ctx, "add_event"):
-                            ctx.add_event(event)
+                            await ctx.add_event(event)
                     elif isinstance(event, WorkflowOutputEvent):
                         # Handle list[ChatMessage] format (standard)
                         if (
@@ -738,7 +738,7 @@ class QualityExecutor(Executor):
     async def handle_progress(
         self,
         progress_msg: ProgressMessage,
-        ctx: WorkflowContext[QualityMessage],
+        ctx: WorkflowContext[QualityMessage, FinalResultMessage],
     ) -> None:
         """Handle a progress message."""
         with optional_span(
@@ -785,14 +785,37 @@ class QualityExecutor(Executor):
                     "fallback" if used_fallback else "success"
                 )
 
-                quality_msg = QualityMessage(
-                    task=progress_msg.task,
+                # Build FinalResultMessage and yield as workflow output
+                # This is the terminal executor, so we must yield the final result
+                if routing is None:
+                    routing = RoutingDecision(
+                        task=progress_msg.task,
+                        assigned_to=(),
+                        mode=ExecutionMode.DELEGATED,
+                        subtasks=(progress_msg.task,),
+                        tool_requirements=(),
+                        confidence=0.0,
+                    )
+
+                execution_summary = {}
+                if self.context.dspy_supervisor:
+                    execution_summary = self.context.dspy_supervisor.get_execution_summary()
+
+                # Inject tool usage into summary for history persistence
+                if "tool_usage" in progress_msg.metadata:
+                    execution_summary["tool_usage"] = progress_msg.metadata["tool_usage"]
+
+                final_msg = FinalResultMessage(
                     result=progress_msg.result,
-                    quality=quality_report,
                     routing=routing,
+                    quality=quality_report,
+                    judge_evaluations=[],
+                    execution_summary=execution_summary,
+                    phase_timings=self.context.latest_phase_timings.copy(),
+                    phase_status=self.context.latest_phase_status.copy(),
                     metadata=progress_msg.metadata,
                 )
-                await ctx.send_message(quality_msg)
+                await ctx.yield_output(final_msg)  # type: ignore[arg-type]
 
             except Exception as e:
                 # Intentional broad exception handling: Quality assessment is optional.
@@ -803,13 +826,37 @@ class QualityExecutor(Executor):
                     score=0.0, missing="", improvements="", used_fallback=True
                 )
                 self.context.latest_phase_status["quality"] = "failed"
-                quality_msg = QualityMessage(
-                    task=progress_msg.task,
+
+                # Still need to yield output even on failure
+                routing = None
+                if "routing" in progress_msg.metadata:
+                    routing_data = progress_msg.metadata["routing"]
+                    if isinstance(routing_data, RoutingDecision):
+                        routing = routing_data
+                    elif isinstance(routing_data, dict):
+                        routing = RoutingDecision.from_mapping(routing_data)
+
+                if routing is None:
+                    routing = RoutingDecision(
+                        task=progress_msg.task,
+                        assigned_to=(),
+                        mode=ExecutionMode.DELEGATED,
+                        subtasks=(progress_msg.task,),
+                        tool_requirements=(),
+                        confidence=0.0,
+                    )
+
+                final_msg = FinalResultMessage(
                     result=progress_msg.result,
+                    routing=routing,
                     quality=quality_report,
+                    judge_evaluations=[],
+                    execution_summary={},
+                    phase_timings=self.context.latest_phase_timings.copy(),
+                    phase_status=self.context.latest_phase_status.copy(),
                     metadata={**progress_msg.metadata, "used_fallback": True},
                 )
-                await ctx.send_message(quality_msg)
+                await ctx.yield_output(final_msg)  # type: ignore[arg-type]
 
     def _to_quality_report(self, payload: dict[str, Any]) -> QualityReport:
         """Convert dictionary payload to QualityReport.

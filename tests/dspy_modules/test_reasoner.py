@@ -55,7 +55,6 @@ class TestDSPyReasonerInit:
         assert reasoner.quality_assessor is not None
         assert reasoner.progress_evaluator is not None
         assert reasoner.tool_planner is not None
-        assert reasoner.judge is not None
         assert reasoner.simple_responder is not None
         assert reasoner.tool_registry is None
         assert reasoner._execution_history == []

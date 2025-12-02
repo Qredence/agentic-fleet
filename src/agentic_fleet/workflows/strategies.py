@@ -448,6 +448,18 @@ async def execute_parallel_streaming(
             successful_results.append(error_msg)
         else:
             result_text = str(result)
+            # Yield the actual agent output with full content
+            yield create_agent_event(
+                stage="execution",
+                event="agent.output",
+                agent=agent_name,
+                text=result_text,
+                payload={
+                    "output": result_text,
+                    "agent": agent_name,
+                },
+            )
+            # Also yield completion status
             yield create_agent_event(
                 stage="execution",
                 event="agent.completed",
@@ -684,6 +696,17 @@ async def execute_sequential_streaming(
         response = await agent.run(result)
         result_text = str(response)
         artifacts.update(extract_artifacts(result_text))
+
+        yield create_agent_event(
+            stage="execution",
+            event="agent.output",
+            agent=agent_name,
+            text=result_text,
+            payload={
+                "output": result_text,
+                "artifacts": list(artifacts.keys()),
+            },
+        )
 
         yield create_agent_event(
             stage="execution",

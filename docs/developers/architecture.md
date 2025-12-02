@@ -73,7 +73,6 @@ graph TB
         EE[ExecutionExecutor<br/>extends Executor]
         PE[ProgressExecutor<br/>extends Executor]
         QE[QualityExecutor<br/>extends Executor]
-        JE[JudgeRefineExecutor<br/>extends Executor]
     end
 
     subgraph "DSPy Intelligence Layer"
@@ -210,8 +209,6 @@ D1 --> E[Quality assessment]
 D2 --> E
 D3 --> E
 E --> F[Final output]
-E --> G[Refinement loop]
-G --> F
 ```
 
 > Entry point: [`cli/console.py`](src/agentic_fleet/cli/console.py:39) provides the Typer CLI used to start workflows.
@@ -257,7 +254,7 @@ async for event in workflow_agent.run_stream(task_msg):
 - `src/workflows/` - Flattened orchestration logic
   - `supervisor.py` - Main entry point and workflow runtime
   - `builder.py` - WorkflowBuilder configuration
-  - `executors.py` - All phase executors (Analysis, Routing, Progress, Quality, Judge)
+  - `executors.py` - All phase executors (Analysis, Routing, Progress, Quality)
   - `strategies.py` - Execution strategies (delegated, sequential, parallel)
   - `handoff.py` - Handoff logic
   - `context.py` - `SupervisorContext` definition
@@ -433,9 +430,6 @@ Typical slow phases and tuning guidance:
 - External tool calls and network latency
   - Prefer lighter Reasoner model e.g. `dspy.model: gpt-5-mini`
   - Disable pre-analysis tool usage for simple tasks
-- Judge and refinement loops
-  - Set `quality.max_refinement_rounds: 1`
-  - Use `judge_reasoning_effort: minimal` to reduce reasoning tokens
 - Parallel fan-out synthesis
   - Cap `execution.max_parallel_agents` to a small number
   - Enable streaming to surface progress early

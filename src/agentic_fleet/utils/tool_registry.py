@@ -62,6 +62,9 @@ class ToolRegistry:
         """Initialize an empty tool registry."""
         self._tools: dict[str, ToolMetadata] = {}
         self._agent_tools: dict[str, list[str]] = {}
+        # Reverse indices for O(1) lookups (optimization)
+        self._alias_index: dict[str, str] = {}  # alias -> canonical tool name
+        self._capability_index: dict[str, set[str]] = {}  # capability -> set of tool names
         # Simple result cache for tool calls to avoid repeated network usage
         self._tool_result_cache: TTLCache[str, str] = TTLCache(ttl_seconds=300)
 
@@ -112,6 +115,16 @@ class ToolRegistry:
         )
 
         self._tools[name] = metadata
+
+        # Update reverse indices for O(1) lookups
+        for alias in aliases:
+            self._alias_index[alias] = name
+        for cap in inferred_capabilities:
+            cap_lower = cap.lower()
+            if cap_lower not in self._capability_index:
+                self._capability_index[cap_lower] = set()
+            self._capability_index[cap_lower].add(name)
+
         if aliases:
             logger.info(
                 "Registered tool '%s' with aliases %s (capabilities=%s)",
@@ -227,10 +240,10 @@ class ToolRegistry:
         meta = self._tools.get(name)
         if meta:
             return meta
-        # Alias resolution: scan metadata for matching alias
-        for m in self._tools.values():
-            if name in m.aliases:
-                return m
+        # O(1) alias resolution via reverse index
+        canonical_name = self._alias_index.get(name)
+        if canonical_name:
+            return self._tools.get(canonical_name)
         return None
 
     def get_agent_tools(self, agent_name: str) -> list[ToolMetadata]:
@@ -312,10 +325,12 @@ class ToolRegistry:
         Returns:
             List of ToolMetadata with the specified capability
         """
+        # O(1) lookup via capability index, then filter for availability
+        tool_names = self._capability_index.get(capability.lower(), set())
         return [
-            tool
-            for tool in self._tools.values()
-            if capability.lower() in {c.lower() for c in tool.capabilities} and tool.available
+            self._tools[name]
+            for name in tool_names
+            if name in self._tools and self._tools[name].available
         ]
 
     def can_execute_tool(self, tool_name: str) -> bool:
@@ -479,3 +494,5 @@ class ToolRegistry:
         """Clear all registered tools."""
         self._tools.clear()
         self._agent_tools.clear()
+        self._alias_index.clear()
+        self._capability_index.clear()
