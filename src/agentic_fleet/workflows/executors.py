@@ -74,8 +74,9 @@ def handler(func):
         annotations = dict(getattr(func, "__annotations__", {}))
         annotations.update(hints)
         func.__annotations__ = annotations
-    except Exception:
-        pass
+    except Exception as e:
+        # Gracefully handle type hint resolution errors; log them for visibility
+        logger.warning(f"Failed to resolve type hints for {func.__name__}: {e}")
     return _framework_handler(func)
 
 

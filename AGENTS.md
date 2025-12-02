@@ -19,7 +19,7 @@
 
 - Backend CLI: `make run` (`agentic-fleet` Typer console).
 - Dev servers: `make dev` (backend on :8000, frontend on :5173). Backend only: `make backend`. Frontend only: `make frontend-dev`. Build UI: `make build-frontend`.
-- Config: tune models/agents in `config/workflow_config.yaml`; caches live under `logs/` (compiled DSPy, history).
+- Config: tune models/agents in `config/workflow_config.yaml`; runtime data (caches, logs, history) lives under `.var/`.
 
 ## Testing & Quality
 
@@ -32,10 +32,10 @@
 
 - Stack: DSPy + Microsoft `agent-framework` (magentic-fleet pattern). Agents live under `src/agentic_fleet/agents/`; orchestration in `src/agentic_fleet/workflows/`; DSPy reasoning in `src/agentic_fleet/dspy_modules/`.
 - **5-Phase Pipeline** (v0.6.6): `analysis → routing → execution → progress → quality`. Judge phase removed for ~66% latency reduction.
-- **Offline Layer**: DSPy compilation is strictly offline (via `scripts/optimize.py`). Runtime uses cached modules (`logs/compiled_supervisor.pkl`) and never compiles on the fly.
+- **Offline Layer**: DSPy compilation is strictly offline (via `scripts/optimize.py`). Runtime uses cached modules (`.var/logs/compiled_supervisor.pkl`) and never compiles on the fly.
 - **Dynamic Prompts**: Agent instructions (e.g., Planner) are generated dynamically via DSPy signatures (`PlannerInstructionSignature`) and optimized offline.
 - **Middleware**: `ChatMiddleware` handles cross-cutting concerns. `BridgeMiddleware` captures runtime history for offline learning.
-- Routing/quality loops configured via `config/workflow_config.yaml`; history & tracing in `logs/execution_history.jsonl`.
+- Routing/quality loops configured via `config/workflow_config.yaml`; history & tracing in `.var/logs/execution_history.jsonl`.
 - **Group Chat**: Multi-agent discussions are supported via `DSPyGroupChatManager` and `GroupChatBuilder`. Workflows can participate as agents using the `workflow.as_agent()` pattern.
 - **Latency Tips**: Clear DSPy cache after changes (`make clear-cache`), use `gpt-5-mini` for routing, disable judge if not needed.
 - When adding or modifying agents/workflows, keep prompts/factories in sync and update config schema validation.
@@ -44,6 +44,6 @@
 ## Conventions & Notes
 
 - Keep code typed; follow Ruff/ty defaults (line length 100, py312 syntax, docstrings for public APIs).
-- Avoid committing artifacts from `logs/`, `var/`, caches, or compiled DSPy outputs.
+- Avoid committing artifacts from `.var/` (logs, caches, compiled DSPy outputs).
 - Prefer `make` targets over raw commands; if adding new workflows/tests, add a Make target and update this file.
 - If you change how to start, test, or observe the system, append the updated commands here and, for larger shifts, create an ExecPlan entry in `docs/plans/current.md`.

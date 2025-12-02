@@ -64,13 +64,20 @@ EXECUTION_MODE_DELEGATED = "delegated"
 EXECUTION_MODE_SEQUENTIAL = "sequential"
 EXECUTION_MODE_PARALLEL = "parallel"
 
-# File paths
+# File paths - runtime data consolidated under .var/
 DEFAULT_CONFIG_PATH = "config/workflow_config.yaml"
 DEFAULT_EXAMPLES_PATH = "src/agentic_fleet/data/supervisor_examples.json"
-DEFAULT_CACHE_PATH = "src/agentic_fleet/data/logs/compiled_supervisor.pkl"
-DEFAULT_HISTORY_PATH = "src/agentic_fleet/data/logs/execution_history.jsonl"
-DEFAULT_LOG_PATH = "src/agentic_fleet/data/logs/workflow.log"
-DEFAULT_GEPA_LOG_DIR = "src/agentic_fleet/data/logs/gepa"
+DEFAULT_VAR_DIR = ".var"
+DEFAULT_CACHE_DIR = ".var/cache"
+DEFAULT_LOGS_DIR = ".var/logs"
+DEFAULT_DATA_DIR = ".var/data"
+DEFAULT_CACHE_PATH = ".var/logs/compiled_supervisor.pkl"
+DEFAULT_HISTORY_PATH = ".var/logs/execution_history.jsonl"
+DEFAULT_LOG_PATH = ".var/logs/workflow.log"
+DEFAULT_GEPA_LOG_DIR = ".var/logs/gepa"
+DEFAULT_DSPY_CACHE_DIR = ".var/cache/dspy"
+DEFAULT_DSPY_EXAMPLES_PATH = ".var/logs/dspy_examples.jsonl"
+DEFAULT_EVALUATION_DIR = ".var/logs/evaluation"
 
 # History constants
 DEFAULT_HISTORY_FORMAT = "jsonl"
@@ -157,12 +164,17 @@ __all__ = [
     "DEFAULT_BROWSER_MAX_TEXT_LENGTH",
     "DEFAULT_BROWSER_SELECTOR_TIMEOUT_MS",
     "DEFAULT_BROWSER_TIMEOUT_MS",
+    "DEFAULT_CACHE_DIR",
     "DEFAULT_CACHE_PATH",
     "DEFAULT_CACHE_TTL",
     "DEFAULT_CONFIG_PATH",
+    "DEFAULT_DATA_DIR",
+    "DEFAULT_DSPY_CACHE_DIR",
+    "DEFAULT_DSPY_EXAMPLES_PATH",
     "DEFAULT_DSPY_MAX_TOKENS",
     "DEFAULT_DSPY_MODEL",
     "DEFAULT_DSPY_TEMPERATURE",
+    "DEFAULT_EVALUATION_DIR",
     "DEFAULT_EXAMPLES_PATH",
     "DEFAULT_GEPA_HISTORY_LIMIT",
     "DEFAULT_GEPA_HISTORY_MIN_QUALITY",
@@ -176,6 +188,7 @@ __all__ = [
     "DEFAULT_HISTORY_PATH",
     "DEFAULT_JUDGE_TEMPERATURE",
     "DEFAULT_JUDGE_THRESHOLD",
+    "DEFAULT_LOGS_DIR",
     "DEFAULT_LOG_PATH",
     "DEFAULT_MAX_BOOTSTRAPPED_DEMOS",
     "DEFAULT_MAX_HISTORY_ENTRIES",
@@ -193,6 +206,7 @@ __all__ = [
     "DEFAULT_RETRY_BACKOFF_SECONDS",
     "DEFAULT_REVIEWER_TEMPERATURE",
     "DEFAULT_TIMEOUT_SECONDS",
+    "DEFAULT_VAR_DIR",
     "DEFAULT_WORKFLOW_TIMEOUT",
     "DEFAULT_WRITER_TEMPERATURE",
     "EXECUTION_MODE_DELEGATED",

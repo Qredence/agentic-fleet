@@ -22,6 +22,7 @@ from rich.panel import Panel
 from rich.text import Text
 
 from ..utils.config_loader import get_agent_model, load_config
+from ..utils.constants import DEFAULT_GEPA_LOG_DIR, DEFAULT_HISTORY_PATH
 from ..utils.error_utils import sanitize_error_message
 from ..utils.logger import setup_logger
 from ..utils.progress import RichProgressCallback
@@ -119,7 +120,7 @@ class WorkflowRunner:
             "max_full_evals": full_evals_choice,
             "max_metric_calls": metric_calls_choice,
             "reflection_model": reflection_model_value,
-            "log_dir": opt_cfg.get("gepa_log_dir", "logs/gepa"),
+            "log_dir": opt_cfg.get("gepa_log_dir", DEFAULT_GEPA_LOG_DIR),
             "perfect_score": opt_cfg.get("gepa_perfect_score", 1.0),
             "use_history_examples": opt_cfg.get("gepa_use_history_examples", False),
             "history_min_quality": opt_cfg.get("gepa_history_min_quality", 8.0),
@@ -132,9 +133,7 @@ class WorkflowRunner:
             optimization_options.pop("reflection_model", None)
 
         # Build WorkflowConfig
-        history_file = yaml_config.get("logging", {}).get(
-            "history_file", "logs/execution_history.jsonl"
-        )
+        history_file = yaml_config.get("logging", {}).get("history_file", DEFAULT_HISTORY_PATH)
         history_format = "jsonl" if str(history_file).endswith(".jsonl") else "json"
 
         handoffs_cfg = (

@@ -55,15 +55,17 @@ env/
 htmlcov/
 .npm-cache/
 
-# Logs and runtime data
+# Logs and runtime data - consolidated under .var/
 *.log
 *.db
+.var/
+*.checkpoint
+.uv_cache/
+
+# Legacy paths (kept for transition, can be removed after migration)
 .data/
 logs/
-var/
-*.checkpoint
 .cache/
-.uv_cache/
 
 # OS
 .DS_Store
@@ -91,7 +93,6 @@ gha-creds-*.json
 src/frontend/.vite/
 src/frontend/tsconfig.tsbuildinfo
 src/agentic_fleet/ui/
-src/agentic_fleet/data/logs/
 
 # Security reports
 bandit-report.json

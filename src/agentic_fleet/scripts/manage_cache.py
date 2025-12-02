@@ -11,7 +11,7 @@ from pathlib import Path
 
 def clear_cache() -> None:
     """Clear the compiled module cache."""
-    cache_file = Path("logs/compiled_supervisor.pkl")
+    cache_file = Path(".var/logs/compiled_supervisor.pkl")
     if cache_file.exists():
         cache_file.unlink()
         print(f"✓ Cleared cache: {cache_file}")
@@ -21,7 +21,7 @@ def clear_cache() -> None:
 
 def show_cache_info() -> None:
     """Show information about cached module."""
-    cache_file = Path("logs/compiled_supervisor.pkl")
+    cache_file = Path(".var/logs/compiled_supervisor.pkl")
     if cache_file.exists():
         size = cache_file.stat().st_size
         mtime = cache_file.stat().st_mtime

@@ -22,7 +22,7 @@ class BridgeMiddleware(ChatMiddleware):
     def __init__(
         self,
         history_manager: HistoryManager,
-        dspy_examples_path: str | None = "logs/dspy_examples.jsonl",
+        dspy_examples_path: str | None = ".var/logs/dspy_examples.jsonl",
     ):
         self.history_manager = history_manager
         self.dspy_examples_path = dspy_examples_path

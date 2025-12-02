@@ -117,7 +117,7 @@ def get_default_config() -> dict[str, Any]:
                 "gepa_max_full_evals": 50,
                 "gepa_max_metric_calls": 150,
                 "gepa_reflection_model": None,
-                "gepa_log_dir": "logs/gepa",
+                "gepa_log_dir": ".var/logs/gepa",
                 "gepa_perfect_score": 1.0,
                 "gepa_use_history_examples": False,
                 "gepa_history_min_quality": 8.0,
@@ -177,9 +177,9 @@ def get_default_config() -> dict[str, Any]:
         "logging": {
             "level": "INFO",
             "format": "%(asctime)s - %(name)s - %(levelname)s - %(message)s",
-            "file": "logs/workflow.log",
+            "file": ".var/logs/workflow.log",
             "save_history": True,
-            "history_file": "logs/execution_history.jsonl",
+            "history_file": ".var/logs/execution_history.jsonl",
             "verbose": True,
         },
         "openai": {
@@ -193,7 +193,7 @@ def get_default_config() -> dict[str, Any]:
         "evaluation": {
             "enabled": False,
             "dataset_path": str(pkg / "data" / "evaluation_tasks.jsonl"),
-            "output_dir": "logs/evaluation",
+            "output_dir": ".var/logs/evaluation",
             "metrics": [
                 "quality_score",
                 "keyword_success",

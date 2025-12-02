@@ -190,7 +190,7 @@ async def initialize_workflow_context(
         # Try to load compiled artifact first (Offline Layer directive)
         from ..utils.compiler import load_compiled_module
 
-        compiled_path = "logs/compiled_supervisor.pkl"
+        compiled_path = ".var/logs/compiled_supervisor.pkl"
         loaded_supervisor = load_compiled_module(compiled_path)
 
         if loaded_supervisor and isinstance(loaded_supervisor, DSPyReasoner):

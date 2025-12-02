@@ -13,6 +13,7 @@ from rich.progress import Progress
 from ...dspy_modules.reasoner import DSPyReasoner
 from ...utils.compiler import compile_reasoner
 from ...utils.config_loader import load_config
+from ...utils.constants import DEFAULT_CACHE_PATH, DEFAULT_GEPA_LOG_DIR
 from ..utils import init_tracing, resolve_resource_path
 
 console = Console()
@@ -76,7 +77,7 @@ def gepa_optimize(
         int, typer.Option("--history-limit", help="History lookback size")
     ] = 200,
     log_dir: Annotated[Path, typer.Option("--log-dir", help="Directory for GEPA logs")] = Path(
-        "logs/gepa"
+        DEFAULT_GEPA_LOG_DIR
     ),
     seed: Annotated[int, typer.Option("--seed", help="Random seed for dataset shuffle")] = 13,
     no_cache: Annotated[
@@ -172,7 +173,7 @@ def gepa_optimize(
     console.print(
         Panel(
             "[green]GEPA optimization complete![/green]\n"
-            f"Cache: logs/compiled_supervisor.pkl\n"
+            f"Cache: {DEFAULT_CACHE_PATH}\n"
             f"Log dir: {log_dir}\n"
             f"Optimizer model: {effective_model}\n"
             f"Compiled module: {compiled_name}",

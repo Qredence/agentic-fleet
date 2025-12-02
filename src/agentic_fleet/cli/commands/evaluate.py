@@ -60,7 +60,7 @@ def evaluate(
         if metrics
         else eval_cfg.get("metrics", [])
     )
-    out_dir = eval_cfg.get("output_dir", "logs/evaluation")
+    out_dir = eval_cfg.get("output_dir", ".var/logs/evaluation")
     max_tasks_effective = max_tasks if max_tasks else int(eval_cfg.get("max_tasks", 0))
     stop = stop_on_failure or bool(eval_cfg.get("stop_on_failure", False))
 

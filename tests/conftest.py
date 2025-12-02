@@ -11,7 +11,8 @@ if str(SRC) not in sys.path:
     sys.path.insert(0, str(SRC))
 
 # Keep DSPy disk cache inside the workspace so it remains writable in sandboxed CI.
-DSPY_CACHE = ROOT / ".cache" / "dspy"
+# Consolidated under .var/cache/ following project conventions.
+DSPY_CACHE = ROOT / ".var" / "cache" / "dspy"
 DSPY_CACHE.mkdir(parents=True, exist_ok=True)
 os.environ.setdefault("DSPY_CACHEDIR", str(DSPY_CACHE))
 

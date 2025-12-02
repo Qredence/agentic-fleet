@@ -568,7 +568,7 @@ def optimize_with_gepa(
     max_metric_calls: int | None = 150,
     reflection_model: str | None = None,
     perfect_score: float = 1.0,
-    log_dir: str = "logs/gepa",
+    log_dir: str = ".var/logs/gepa",
     metric: GEPAFeedbackMetric | None = None,  # type: ignore[type-arg]
     progress_callback: ProgressCallback | None = None,
     **gepa_kwargs: Any,

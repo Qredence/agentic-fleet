@@ -1,4 +1,4 @@
- .PHONY: help install sync clean test test-config test-e2e test-frontend lint format type-check check run pre-commit-install dev backend frontend-install frontend-dev build-frontend analyze-history self-improve
+ .PHONY: help install sync clean test test-config test-e2e test-frontend lint format type-check check run pre-commit-install dev backend frontend-install frontend-dev build-frontend analyze-history self-improve init-var clear-cache
 
 # Centralized frontend directory variable to avoid repeating literal path strings.
 # Update here if the frontend root moves.
@@ -37,6 +37,8 @@ help:
 	@echo "Tools:"
 	@echo "  make pre-commit-install  Install pre-commit hooks"
 	@echo "  make clean             Remove cache and build artifacts"
+	@echo "  make init-var          Initialize .var/ directory structure"
+	@echo "  make clear-cache       Clear compiled DSPy cache"
 	@echo "  make analyze-history   Analyze workflow execution history"
 	@echo "  make self-improve      Run self-improvement analysis on execution history"
 	@echo ""
@@ -156,6 +158,19 @@ analyze-history:
 self-improve:
 	@echo "Running self-improvement analysis..."
 	uv run python -m agentic_fleet.scripts.self_improve
+
+# Initialize .var/ directory structure for runtime data
+init-var:
+	@mkdir -p .var/cache/dspy
+	@mkdir -p .var/logs/gepa
+	@mkdir -p .var/logs/evaluation
+	@mkdir -p .var/data/db
+	@echo "✓ Initialized .var/ directory structure"
+
+# Clear compiled DSPy cache
+clear-cache:
+	@rm -f .var/logs/compiled_supervisor.pkl .var/logs/compiled_supervisor.pkl.meta
+	@echo "✓ Cleared compiled DSPy cache"
 
 # Cleanup
 clean:

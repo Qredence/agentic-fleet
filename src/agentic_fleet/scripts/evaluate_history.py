@@ -64,7 +64,7 @@ def evaluate_history(limit: int = 100):
         # We need to write back to the file. HistoryManager doesn't have a bulk update method exposed easily,
         # so we'll write directly to the file for this script.
 
-        jsonl_path = Path("logs/execution_history.jsonl")
+        jsonl_path = Path(".var/logs/execution_history.jsonl")
         if jsonl_path.exists():
             # Backup first
             backup_path = jsonl_path.with_suffix(".jsonl.bak")
