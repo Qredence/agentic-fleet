@@ -56,10 +56,10 @@ export function ChatInput({
       {/* Think harder toggle */}
       <div
         className={cn(
-          "absolute -top-12 left-1/2 -translate-x-1/2 flex items-center gap-2 bg-secondary/80 backdrop-blur-sm border rounded-full px-4 py-1.5 text-sm cursor-pointer hover:bg-secondary transition-colors",
+          "absolute -top-12 left-1/2 -translate-x-1/2 flex items-center gap-2 bg-black/40 backdrop-blur-md border rounded-full px-4 py-1.5 text-sm cursor-pointer hover:bg-black/60 transition-all shadow-lg shadow-black/20",
           thinkHarder
             ? "border-yellow-500/50 text-yellow-400"
-            : "border-border text-muted-foreground",
+            : "border-white/10 text-gray-400",
           isDisabled && "opacity-50 pointer-events-none",
         )}
         role="button"
@@ -94,13 +94,13 @@ export function ChatInput({
         onSubmit={handleSubmit}
         disabled={isDisabled}
         className={cn(
-          "border-input bg-card relative z-10 w-full rounded-3xl border p-0 pt-1 shadow-lg transition-all duration-300",
-          isStreaming && "border-blue-500/50 shadow-blue-500/10",
+          "border-white/10 bg-black/40 relative z-10 w-full rounded-[24px] border p-0 pt-1 shadow-xl shadow-black/10 transition-all duration-300 backdrop-blur-sm",
+          isStreaming && "border-blue-500/30 shadow-blue-900/10",
         )}
       >
         {/* Loading indicator bar at top when streaming */}
         {isStreaming && (
-          <div className="absolute top-0 left-0 right-0 h-0.5 bg-gradient-to-r from-blue-500 via-purple-500 to-blue-500 animate-shimmer bg-[length:200%_100%]" />
+          <div className="absolute top-0 left-0 right-0 h-0.5 bg-linear-to-r from-blue-500 via-purple-500 to-blue-500 animate-shimmer bg-size-[200%_100%]" />
         )}
 
         <div className="flex flex-col">

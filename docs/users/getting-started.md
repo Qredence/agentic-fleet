@@ -18,43 +18,32 @@ git clone https://github.com/Qredence/agentic-fleet.git
 cd agentic-fleet
 ```
 
-### Step 2: Create Virtual Environment
+### Step 2: Install Dependencies
 
-#### Using uv (recommended - faster)
+Use the Makefile for streamlined setup:
 
 ```bash
-uv python -m venv venv
-source venv/bin/activate  # On Windows: venv\Scripts\activate
+# Install Python dependencies
+make install
+
+# Install frontend dependencies
+make frontend-install
+
+# Or do full dev setup (install + frontend + pre-commit)
+make dev-setup
 ```
 
-#### Using venv (standard)
+**Alternative: Manual installation**
 
 ```bash
-python3 -m venv venv
-source venv/bin/activate  # On Windows: venv\Scripts\activate
-```
-
-### Step 3: Install Dependencies
-
-#### Method 1: Using uv (recommended, from repo root)
-
-```bash
+# Using uv (recommended)
 uv sync
-```
 
-#### Method 2: Using pip (alternative)
-
-```bash
-# From PyPI (library / CLI usage)
-pip install agentic-fleet
-
-# Or from the local clone (editable)
+# Using pip
 pip install -e .
 ```
 
-**Recommended**: Use `uv` for faster dependency resolution and installation.
-
-### Step 4: Configure Environment
+### Step 3: Configure Environment
 
 Create a `.env` file in the project root:
 
@@ -71,20 +60,20 @@ TAVILY_API_KEY=tvly-your-tavily-key-here
 - **OpenAI**: https://platform.openai.com/api-keys
 - **Tavily**: https://tavily.com (free tier available)
 
-### Step 5: Verify Installation
+### Step 4: Verify Installation
 
 ```bash
-# Check CLI command
-uv run agentic-fleet --help
-
 # Run tests
-PYTHONPATH=. uv run pytest -q tests/
+make test
+
+# Start development servers
+make dev
 ```
 
 You should see:
 
-- CLI help message with commands
-- All tests passing
+- Backend running at http://localhost:8000
+- Frontend running at http://localhost:5173
 
 ## Quick Start
 

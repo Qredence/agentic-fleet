@@ -32,7 +32,6 @@ function App() {
     currentAgent,
     cancelStreaming,
     conversations,
-    loadConversations,
     selectConversation,
     conversationId,
     isConversationsLoading,
@@ -65,10 +64,10 @@ function App() {
         onSelectConversation={selectConversation}
         isConversationsLoading={isConversationsLoading}
       >
-        <div className="flex-1 flex flex-col h-full relative overflow-hidden">
-          <ChatContainerRoot className="flex-1 px-4 py-8 flex flex-col">
+        <div className="flex-1 flex flex-col h-full relative overflow-hidden bg-gray-1000">
+          <ChatContainerRoot className="flex-1 flex flex-col relative z-0">
             <ChatContainerContent
-              className="max-w-3xl mx-auto space-y-6 pb-4"
+              className="flex-1 max-w-4xl mx-auto w-full px-4 py-8 space-y-8 pb-32"
               aria-live="polite"
               aria-atomic="false"
               aria-busy={isLoading}
@@ -80,14 +79,23 @@ function App() {
                 <motion.div
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.4, ease: "easeOut" }}
-                  className="text-center text-muted-foreground mt-20"
+                  transition={{ duration: 0.6, ease: "easeOut" }}
+                  className="flex flex-col items-center justify-center h-full min-h-[60vh] text-center space-y-6"
                   role="status"
                 >
-                  <h2 className="text-2xl font-semibold mb-2">
-                    Welcome to Agentic Fleet
-                  </h2>
-                  <p>Start a conversation to begin.</p>
+                  <div className="w-24 h-24 rounded-3xl bg-gradient-to-br from-blue-500/20 to-purple-500/20 flex items-center justify-center mb-4 shadow-2xl shadow-blue-900/20 border border-white/5">
+                    <span className="text-4xl">✨</span>
+                  </div>
+                  <div className="space-y-2 max-w-md">
+                    <h2 className="text-3xl font-semibold tracking-tight text-gray-0">
+                      Agentic Fleet
+                    </h2>
+                    <p className="text-gray-400 text-lg">
+                      Your advanced AI agent orchestration platform.
+                      <br />
+                      Ready to solve complex tasks.
+                    </p>
+                  </div>
                 </motion.div>
               ) : (
                 <AnimatePresence mode="popLayout" initial={false}>
@@ -95,7 +103,7 @@ function App() {
                     variants={containerVariants}
                     initial="hidden"
                     animate="visible"
-                    className="space-y-6"
+                    className="space-y-8"
                   >
                     {messageGroups.map((group, groupIndex) => {
                       return (
@@ -113,13 +121,13 @@ function App() {
                                 initial={{ opacity: 0, scaleX: 0 }}
                                 animate={{ opacity: 1, scaleX: 1 }}
                                 transition={{ duration: 0.3 }}
-                                className="flex items-center gap-2 px-4 py-1"
+                                className="flex items-center gap-4 px-4 py-2 opacity-50"
                               >
-                                <div className="flex-1 h-px bg-muted/30" />
-                                <span className="text-[10px] uppercase tracking-wider text-muted-foreground/50">
-                                  Agent switched
+                                <div className="flex-1 h-px bg-gradient-to-r from-transparent via-gray-700 to-transparent" />
+                                <span className="text-[10px] uppercase tracking-widest text-gray-500 font-medium">
+                                  Agent Handoff
                                 </span>
-                                <div className="flex-1 h-px bg-muted/30" />
+                                <div className="flex-1 h-px bg-gradient-to-r from-transparent via-gray-700 to-transparent" />
                               </motion.div>
                             )}
 
@@ -205,27 +213,29 @@ function App() {
               )}
             </ChatContainerContent>
             <ChatContainerScrollAnchor />
-            <div className="sticky bottom-4 self-end mr-4 z-10">
+            <div className="fixed bottom-24 right-8 z-20">
               <ScrollButton />
             </div>
           </ChatContainerRoot>
 
-          {/* Input Area */}
+          {/* Input Area - Floating Glass Bar */}
           <motion.div
             initial={{ y: 20, opacity: 0 }}
             animate={{ y: 0, opacity: 1 }}
             transition={{ delay: 0.1, duration: 0.3 }}
-            className="w-full p-6 bg-background/80 backdrop-blur-sm border-t border-border"
+            className="absolute bottom-0 left-0 right-0 z-30"
           >
-            <div className="max-w-3xl mx-auto">
-              <ChatInput
-                onSendMessage={sendMessage}
-                isStreaming={isLoading}
-                onCancel={cancelStreaming}
-                workflowPhase={currentWorkflowPhase}
-              />
-              <div className="text-center mt-4 text-xs text-muted-foreground">
-                Agentic Fleet can make mistakes. Check important info.
+            <div className="glass-bar pb-6 pt-4 px-4">
+              <div className="max-w-4xl mx-auto">
+                <ChatInput
+                  onSendMessage={sendMessage}
+                  isStreaming={isLoading}
+                  onCancel={cancelStreaming}
+                  workflowPhase={currentWorkflowPhase}
+                />
+                <div className="text-center mt-3 text-[10px] uppercase tracking-wider text-gray-500">
+                  Agentic Fleet v0.5 • AI Orchestration
+                </div>
               </div>
             </div>
           </motion.div>

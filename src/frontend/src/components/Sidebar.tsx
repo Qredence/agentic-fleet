@@ -132,9 +132,16 @@ export const Sidebar: React.FC<SidebarProps> = ({
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
-            className="text-center text-gray-500 text-sm py-4"
+            className="text-center text-gray-500 text-sm py-8"
           >
-            {!isCollapsed && "No conversations yet"}
+            {!isCollapsed && (
+              <div className="space-y-2">
+                <p>No conversations</p>
+                <p className="text-xs text-gray-600">
+                  Start a new chat to begin
+                </p>
+              </div>
+            )}
           </motion.div>
         ) : (
           <AnimatePresence mode="popLayout">
@@ -152,19 +159,33 @@ export const Sidebar: React.FC<SidebarProps> = ({
                   animate="visible"
                   exit="exit"
                   layout
-                  whileHover={{ scale: 1.02 }}
-                  whileTap={{ scale: 0.98 }}
+                  whileHover={{ scale: 1.01, x: 2 }}
+                  whileTap={{ scale: 0.99 }}
                   onClick={() => onSelectConversation?.(conv.id)}
                   className={clsx(
-                    "flex items-center gap-3 w-full p-2 rounded-md transition-colors text-left group",
+                    "flex items-center gap-3 w-full p-3 rounded-xl transition-all text-left group relative overflow-hidden",
                     isCollapsed ? "justify-center" : "justify-start",
                     isActive
-                      ? "bg-gray-800 text-white"
-                      : "text-gray-400 hover:text-white hover:bg-gray-800",
+                      ? "bg-gray-800/50 text-white shadow-lg shadow-black/20 border border-white/5"
+                      : "text-gray-400 hover:text-gray-100 hover:bg-white/5 border border-transparent",
                   )}
                   title={!isCollapsed ? undefined : title}
                 >
-                  <MessageSquare size={16} className="shrink-0" />
+                  {isActive && (
+                    <motion.div
+                      layoutId="active-indicator"
+                      className="absolute left-0 top-3 bottom-3 w-1 bg-blue-500 rounded-r-full"
+                    />
+                  )}
+                  <MessageSquare
+                    size={16}
+                    className={clsx(
+                      "shrink-0",
+                      isActive
+                        ? "text-blue-400"
+                        : "text-gray-600 group-hover:text-gray-400",
+                    )}
+                  />
                   <AnimatePresence>
                     {!isCollapsed && (
                       <motion.div
@@ -173,8 +194,15 @@ export const Sidebar: React.FC<SidebarProps> = ({
                         exit={{ opacity: 0, width: 0 }}
                         className="flex-1 min-w-0 overflow-hidden"
                       >
-                        <span className="text-sm truncate block">{title}</span>
-                        <span className="text-xs text-gray-500 truncate block">
+                        <span
+                          className={clsx(
+                            "text-sm truncate block font-medium",
+                            isActive ? "text-gray-100" : "text-gray-300",
+                          )}
+                        >
+                          {title}
+                        </span>
+                        <span className="text-[10px] text-gray-600 truncate block mt-0.5 group-hover:text-gray-500 transition-colors">
                           {timeLabel}
                         </span>
                       </motion.div>

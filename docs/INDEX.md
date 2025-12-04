@@ -1,12 +1,28 @@
 # Documentation Index
 
-Welcome to the DSPy-Enhanced Agent Framework documentation. This index organizes documentation by audience to help you find what you need quickly.
+Welcome to AgenticFleet documentation. This index organizes documentation by audience to help you find what you need quickly.
+
+**Current Version:** 0.6.7
 
 ## Quick Start
 
-- **[Getting Started](users/getting-started.md)** - Installation and quick start guide
-- **[User Guide](users/user-guide.md)** - Complete user documentation
-- **[Configuration](users/configuration.md)** - Configuration options and settings
+```bash
+# Clone and setup
+git clone https://github.com/Qredence/agentic-fleet.git
+cd agentic-fleet
+make dev-setup
+
+# Configure
+cp .env.example .env
+# Add your OPENAI_API_KEY to .env
+
+# Run
+make dev
+```
+
+- **[Getting Started](users/getting-started.md)** - Full installation guide
+- **[Quick Reference](guides/quick-reference.md)** - All commands at a glance
+- **[Configuration](users/configuration.md)** - Configuration options
 
 ## For Users
 

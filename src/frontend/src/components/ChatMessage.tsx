@@ -124,8 +124,8 @@ export const ChatMessage = memo(function ChatMessage({
   // User message - simple bubble on the right
   if (isUser) {
     return (
-      <Message className="justify-end">
-        <MessageContent className="bg-primary text-primary-foreground max-w-[85%] rounded-3xl px-5 py-2.5 sm:max-w-[75%]">
+      <Message className="justify-end mb-4">
+        <MessageContent className="bg-blue-600 text-white max-w-[85%] rounded-[20px] rounded-tr-sm px-6 py-3 sm:max-w-[75%] shadow-md shadow-blue-900/20 text-[15px] leading-relaxed">
           {content}
         </MessageContent>
       </Message>

@@ -128,13 +128,36 @@ app.include_router(conversations.router, prefix="/api", tags=["conversations"])
 
 
 @app.get("/health", tags=["health"])
-async def health_check() -> dict[str, str]:
-    """Health check endpoint.
+async def health_check() -> dict[str, str | dict[str, str]]:
+    """Enhanced health check with dependency verification.
 
     Returns:
-        dict with status "ok" if the service is running.
+        dict with overall status, individual checks, and version.
     """
-    return {"status": "ok"}
+    from agentic_fleet.app.dependencies import get_conversation_manager
+
+    checks = {
+        "api": "ok",
+        "workflow": "ok" if getattr(app.state, "workflow", None) else "error",
+        "session_manager": "ok" if getattr(app.state, "session_manager", None) else "error",
+    }
+
+    # Check conversation manager
+    try:
+        conv_mgr = get_conversation_manager()
+        checks["conversations"] = "ok" if conv_mgr else "error"
+    except Exception:
+        checks["conversations"] = "error"
+
+    # Determine overall status
+    all_ok = all(v == "ok" for v in checks.values())
+    status = "ok" if all_ok else "degraded"
+
+    return {
+        "status": status,
+        "checks": checks,
+        "version": get_settings().app_version,
+    }
 
 
 @app.get("/ready", tags=["health"])

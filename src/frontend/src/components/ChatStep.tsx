@@ -105,9 +105,18 @@ export const ChatStep: React.FC<ChatStepProps> = ({ step, isLast }) => {
         string,
         unknown
       >;
+
+      const hasMode = mode !== undefined && mode !== null;
+      const hasAssignedTo =
+        assigned_to !== undefined &&
+        assigned_to !== null &&
+        Array.isArray(assigned_to);
+      const hasSubtasks =
+        subtasks !== undefined && subtasks !== null && Array.isArray(subtasks);
+
       return (
         <div className="space-y-2 text-sm">
-          {mode && (
+          {hasMode && (
             <div className="flex items-center gap-2">
               <span className="text-muted-foreground">Mode:</span>
               <span className="font-medium text-yellow-400">
@@ -115,7 +124,7 @@ export const ChatStep: React.FC<ChatStepProps> = ({ step, isLast }) => {
               </span>
             </div>
           )}
-          {assigned_to && Array.isArray(assigned_to) && (
+          {hasAssignedTo && (
             <div className="flex items-center gap-2">
               <span className="text-muted-foreground">Agents:</span>
               <span className="font-medium">
@@ -123,7 +132,7 @@ export const ChatStep: React.FC<ChatStepProps> = ({ step, isLast }) => {
               </span>
             </div>
           )}
-          {subtasks && Array.isArray(subtasks) && (
+          {hasSubtasks && (
             <details className="mt-2">
               <summary className="cursor-pointer text-muted-foreground hover:text-foreground">
                 Subtasks ({(subtasks as string[]).length})
@@ -143,9 +152,19 @@ export const ChatStep: React.FC<ChatStepProps> = ({ step, isLast }) => {
     if (step.kind === "analysis") {
       const { complexity, capabilities, estimated_steps, task_type } =
         step.data as Record<string, unknown>;
+
+      const hasComplexity = complexity !== undefined && complexity !== null;
+      const hasTaskType = task_type !== undefined && task_type !== null;
+      const hasCapabilities =
+        capabilities !== undefined &&
+        capabilities !== null &&
+        Array.isArray(capabilities);
+      const hasEstimatedSteps =
+        estimated_steps !== undefined && estimated_steps !== null;
+
       return (
         <div className="space-y-2 text-sm">
-          {complexity && (
+          {hasComplexity && (
             <div className="flex items-center gap-2">
               <span className="text-muted-foreground">Complexity:</span>
               <span
@@ -162,13 +181,13 @@ export const ChatStep: React.FC<ChatStepProps> = ({ step, isLast }) => {
               </span>
             </div>
           )}
-          {task_type && (
+          {hasTaskType && (
             <div className="flex items-center gap-2">
               <span className="text-muted-foreground">Type:</span>
               <span className="font-medium">{String(task_type)}</span>
             </div>
           )}
-          {capabilities && Array.isArray(capabilities) && (
+          {hasCapabilities && (
             <div className="flex items-center gap-2 flex-wrap">
               <span className="text-muted-foreground">Capabilities:</span>
               {(capabilities as string[]).map((cap, i) => (
@@ -181,7 +200,7 @@ export const ChatStep: React.FC<ChatStepProps> = ({ step, isLast }) => {
               ))}
             </div>
           )}
-          {estimated_steps && (
+          {hasEstimatedSteps && (
             <div className="flex items-center gap-2">
               <span className="text-muted-foreground">Est. Steps:</span>
               <span className="font-medium">{String(estimated_steps)}</span>
@@ -199,6 +218,13 @@ export const ChatStep: React.FC<ChatStepProps> = ({ step, isLast }) => {
       >;
       const numScore =
         typeof score === "number" ? score : parseFloat(String(score));
+
+      const hasFeedback = feedback !== undefined && feedback !== null;
+      const hasMissingElements =
+        missing_elements !== undefined &&
+        missing_elements !== null &&
+        Array.isArray(missing_elements);
+
       return (
         <div className="space-y-2 text-sm">
           {!isNaN(numScore) && (
@@ -224,13 +250,13 @@ export const ChatStep: React.FC<ChatStepProps> = ({ step, isLast }) => {
               )}
             </div>
           )}
-          {feedback && (
+          {hasFeedback && (
             <div>
               <span className="text-muted-foreground">Feedback:</span>
               <p className="mt-1 text-foreground">{String(feedback)}</p>
             </div>
           )}
-          {missing_elements && Array.isArray(missing_elements) && (
+          {hasMissingElements && (
             <div>
               <span className="text-muted-foreground">Missing elements:</span>
               <ul className="mt-1 ml-4 list-disc text-red-400">
@@ -250,6 +276,9 @@ export const ChatStep: React.FC<ChatStepProps> = ({ step, isLast }) => {
         string,
         unknown
       >;
+
+      const hasReason = reason !== undefined && reason !== null;
+
       return (
         <div className="space-y-2 text-sm">
           <div className="flex items-center gap-2">
@@ -261,7 +290,7 @@ export const ChatStep: React.FC<ChatStepProps> = ({ step, isLast }) => {
               {String(to_agent || "Agent")}
             </span>
           </div>
-          {reason && (
+          {hasReason && (
             <div className="text-muted-foreground italic">
               Reason: {String(reason)}
             </div>
@@ -276,9 +305,13 @@ export const ChatStep: React.FC<ChatStepProps> = ({ step, isLast }) => {
         string,
         unknown
       >;
+
+      const hasAction = action !== undefined && action !== null;
+      const hasFeedback = feedback !== undefined && feedback !== null;
+
       return (
         <div className="space-y-2 text-sm">
-          {action && (
+          {hasAction && (
             <div className="flex items-center gap-2">
               <span className="text-muted-foreground">Action:</span>
               <span className="font-medium">{String(action)}</span>
@@ -296,7 +329,7 @@ export const ChatStep: React.FC<ChatStepProps> = ({ step, isLast }) => {
               <span className="text-xs">{Number(percent)}%</span>
             </div>
           )}
-          {feedback && (
+          {hasFeedback && (
             <div className="text-muted-foreground">{String(feedback)}</div>
           )}
         </div>
@@ -310,17 +343,21 @@ export const ChatStep: React.FC<ChatStepProps> = ({ step, isLast }) => {
         arguments: args,
         result,
       } = step.data as Record<string, unknown>;
+
+      const toolNameStr =
+        typeof tool_name === "string" ? tool_name : String(tool_name || "");
+      const hasArgs = args !== undefined && args !== null;
+      const hasResult = result !== undefined && result !== null;
+
       return (
         <div className="space-y-2 text-sm">
-          {tool_name && (
+          {toolNameStr && (
             <div className="flex items-center gap-2">
               <Wrench size={12} className="text-blue-400" />
-              <span className="font-mono text-blue-400">
-                {String(tool_name)}
-              </span>
+              <span className="font-mono text-blue-400">{toolNameStr}</span>
             </div>
           )}
-          {args && (
+          {hasArgs && (
             <details className="mt-1">
               <summary className="cursor-pointer text-muted-foreground hover:text-foreground text-xs">
                 Arguments
@@ -333,7 +370,7 @@ export const ChatStep: React.FC<ChatStepProps> = ({ step, isLast }) => {
               </CodeBlock>
             </details>
           )}
-          {result && (
+          {hasResult && (
             <details className="mt-1">
               <summary className="cursor-pointer text-muted-foreground hover:text-foreground text-xs">
                 Result

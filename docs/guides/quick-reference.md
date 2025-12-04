@@ -1,5 +1,57 @@
 # Quick Reference Guide
 
+## Makefile Commands
+
+### Setup
+
+```bash
+make install           # Install Python dependencies with uv
+make frontend-install  # Install frontend npm dependencies
+make dev-setup         # Full setup (install + frontend + pre-commit)
+```
+
+### Development
+
+```bash
+make dev               # Run backend (8000) + frontend (5173) together
+make backend           # Backend only on port 8000
+make frontend-dev      # Frontend only on port 5173
+make run               # CLI application
+```
+
+### Testing
+
+```bash
+make test              # Run backend tests (fast, quiet output)
+make test-frontend     # Run frontend unit tests
+make test-all          # Run all tests (backend + frontend)
+make test-config       # Validate workflow configuration
+make test-e2e          # E2E tests (requires dev servers running)
+```
+
+### Code Quality
+
+```bash
+make check             # Quick check (lint + type-check)
+make qa                # Full QA (lint + format + type + all tests)
+make lint              # Backend linting (Ruff)
+make format            # Backend formatting (Ruff)
+make frontend-lint     # Frontend linting (ESLint)
+make frontend-format   # Frontend formatting (Prettier)
+make type-check        # Type checking (ty)
+```
+
+### Tools
+
+```bash
+make analyze-history   # Analyze workflow execution history
+make evaluate-history  # Run DSPy-based evaluation on history
+make self-improve      # Run self-improvement analysis
+make clear-cache       # Clear compiled DSPy cache
+make clean             # Remove cache and build artifacts
+make init-var          # Initialize .var/ directory structure
+```
+
 ## Running Workflows
 
 ```bash
@@ -153,20 +205,27 @@ tail -f logs/workflow.log
 
 ```
 agentic-fleet/
-├── src/agentic_fleet/cli/console.py                # Typer CLI entrypoint (exposed as `agentic-fleet`)
-├── src/agentic_fleet/scripts/analyze_history.py    # History analysis tool
+├── src/agentic_fleet/
+│   ├── cli/console.py            # Typer CLI entrypoint
+│   ├── app/                      # FastAPI backend
+│   │   ├── main.py               # App entry point
+│   │   └── routers/              # API routes
+│   ├── workflows/                # Workflow orchestration
+│   ├── dspy_modules/             # DSPy signatures and modules
+│   └── utils/                    # Utilities
+├── src/frontend/                 # React frontend
+├── scripts/
+│   └── evaluate_history.py       # DSPy evaluation script
 ├── config/
 │   └── workflow_config.yaml      # Main configuration
-├── logs/
-│   ├── workflow.log              # Detailed execution log
-│   ├── execution_history.json    # Structured history
-│   └── console_output.log        # Saved console output
-├── data/
-│   └── supervisor_examples.json  # DSPy training data
-└── src/
-    ├── agentic_fleet/workflows/  # Workflow definitions
-    ├── agentic_fleet/dspy_modules/ # DSPy signatures and modules
-    └── agentic_fleet/utils/      # Logging and compilation utilities
+├── .var/                         # Runtime data (gitignored)
+│   ├── logs/
+│   │   ├── execution_history.jsonl
+│   │   └── evaluation_results.jsonl
+│   ├── cache/dspy/               # DSPy compilation cache
+│   └── data/                     # Persistent data
+└── data/
+    └── supervisor_examples.json  # DSPy training data
 ```
 
 ## Environment Variables
@@ -182,6 +241,50 @@ DSPY_COMPILE=true               # Enable/disable DSPy compilation
 LOG_LEVEL=INFO                  # Logging level
 ```
 
+## API Endpoints
+
+### Health & Status
+
+```bash
+# Health check (enhanced in v0.6.7)
+curl http://localhost:8000/health
+# Returns: {"status": "ok", "checks": {...}, "version": "0.6.7"}
+
+# Readiness check
+curl http://localhost:8000/ready
+```
+
+### WebSocket Chat
+
+```bash
+# Connect to WebSocket
+wscat -c ws://localhost:8000/api/ws/chat
+
+# Send message
+{"message": "Hello", "conversation_id": "abc-123"}
+
+# Cancel streaming
+{"type": "cancel"}
+```
+
+### REST API
+
+```bash
+# List conversations
+curl http://localhost:8000/api/conversations
+
+# Create conversation
+curl -X POST http://localhost:8000/api/conversations \
+  -H "Content-Type: application/json" \
+  -d '{"title": "New Chat"}'
+
+# List agents
+curl http://localhost:8000/api/v1/agents
+
+# List sessions
+curl http://localhost:8000/api/sessions
+```
+
 ## Tips and Best Practices
 
 1. **Use verbose mode** during development to see all DSPy decisions
@@ -190,6 +293,7 @@ LOG_LEVEL=INFO                  # Logging level
 4. **Review quality assessments** for improvement suggestions
 5. **Keep execution history** for training and debugging
 6. **Use tee** to save console output while viewing it live
-7. **Check logs/** directory for detailed debugging information
+7. **Check .var/logs/** directory for detailed debugging information
 8. **Clear DSPy cache** after changing signatures, prompts, or training examples
-9. **Pipeline phases** (v0.6.6): analysis → routing → execution → progress → quality (~2 min for complex tasks)
+9. **Pipeline phases** (v0.6.7): analysis → routing → execution → progress → quality
+10. **Smart fast-path** (v0.6.7): Simple tasks (math, factual questions) bypass routing for <1s responses

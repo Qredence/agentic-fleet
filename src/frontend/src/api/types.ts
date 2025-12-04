@@ -51,6 +51,8 @@ export interface Message {
   isWorkflowPlaceholder?: boolean;
   /** Current workflow phase for shimmer display (e.g., "Routing...", "Executing...") */
   workflowPhase?: string;
+  qualityFlag?: string;
+  qualityScore?: number;
 }
 
 export interface Conversation {

@@ -704,7 +704,8 @@ export const useChat = (): UseChatReturn => {
         }
       };
 
-      ws.onerror = (error: Event) => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      ws.onerror = (error: any) => {
         console.error("WebSocket error:", error);
         // Mark the message as errored
         setMessages((prev) => {

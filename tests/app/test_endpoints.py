@@ -6,7 +6,13 @@ from fastapi.testclient import TestClient
 def test_health_check(client: TestClient):
     response = client.get("/health")
     assert response.status_code == 200
-    assert response.json() == {"status": "ok"}
+    data = response.json()
+    # Enhanced health check returns status, checks, and version
+    assert "status" in data
+    assert data["status"] in ("ok", "degraded")
+    assert "checks" in data
+    assert "api" in data["checks"]
+    assert "version" in data
 
 
 def test_run_workflow(client: TestClient, mock_workflow: MagicMock):

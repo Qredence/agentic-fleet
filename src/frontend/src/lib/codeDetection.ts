@@ -96,11 +96,11 @@ const GENERIC_CODE_PATTERNS: RegExp[] = [
   // Variable declarations with types or assignments
   /^(const|let|var|val|int|string|bool)\s+\w+\s*[=:]/m,
   // Control flow with braces or colons
-  /^\s*(if|else|for|while|switch|match|try|catch)\s*[\(\{:]/m,
+  /^\s*(if|else|for|while|switch|match|try|catch)\s*[({:]/m,
   // Return statements
   /^\s*return\s+/m,
   // Arrow functions
-  /=>\s*[\{\(]/,
+  /=>\s*[{(]/,
   // Object/dict literals spanning multiple lines
   /^\s*\{[\s\S]*:\s*[\s\S]*\}\s*$/m,
   // Array literals spanning multiple lines
