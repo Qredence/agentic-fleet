@@ -5,7 +5,7 @@
 
 [project]
 name = "agentic-fleet"
-version = "0.6.6"
+version = "0.6.7"
 description = "Multi-agent orchestration system built with Microsoft Agent Framework's Magentic Fleet pattern"
 authors = [{ name = "Qredence", email = "contact@qredence.ai" }]
 readme = "README.md"
@@ -46,7 +46,6 @@ dependencies = [
     "fastapi[standard]>=0.120.1,<1.0",
     "uvicorn[standard]>=0.24.0",
     "httpx>=0.24.0",
-    "sse-starlette>=2.0.0",
     "databases[asyncpg]>=0.7.0,<1.0",
     "aiofiles>=25.1.0,<26.0",
     "pydantic-settings>=2.3.2,<3.0",
@@ -86,6 +85,9 @@ dependencies = [
     "agent-framework-azurefunctions>=0.0.0a1",
     "agent-framework>=1.0.0b251120",
     "azure-search-documents>=11.6.0",
+    "azure-monitor-opentelemetry>=1.8.2",
+    "azure-monitor-opentelemetry-exporter>=1.0.0b45",
+    "opentelemetry-exporter-otlp-proto-http>=1.38.0",
 ]
 requires-python = ">=3.12,<4"
 
@@ -107,8 +109,11 @@ ui = ["agent-framework-devui", "rich>=14.2.0", "prompt-toolkit>=3.0.47,<4.0"]
 # Evaluation and testing
 evaluation = ["azure-ai-evaluation>=1.12.0,<2.0"]
 
+# Azure Monitor / AI Foundry tracing export
+tracing = ["azure-monitor-opentelemetry>=1.6.0"]
+
 # Complete installation with all features
-all = ["agentic-fleet[azure,memory,ui,evaluation]"]
+all = ["agentic-fleet[azure,memory,ui,evaluation,tracing]"]
 
 [project.scripts]
 agentic-fleet = "agentic_fleet.cli.console:app"
@@ -292,7 +297,9 @@ pythonpath = "src"
 testpaths = ["tests"]
 asyncio_mode = "auto"
 addopts = "-m 'not e2e'"
-markers = ["e2e: End-to-end tests requiring a running server (deselect with '-m \"not e2e\"')"]
+markers = [
+    "e2e: End-to-end tests requiring a running server (deselect with '-m \"not e2e\"')",
+]
 
 
 # ============================================================================

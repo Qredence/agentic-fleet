@@ -50,6 +50,11 @@ class StreamEventType(StrEnum):
     AGENT_OUTPUT = "agent.output"
     AGENT_COMPLETE = "agent.complete"
 
+    # Connection/control events
+    CONNECTED = "connected"
+    CANCELLED = "cancelled"
+    HEARTBEAT = "heartbeat"
+
     # Control events
     ERROR = "error"
     DONE = "done"
@@ -340,6 +345,13 @@ class StreamEvent(BaseModel):
     ui_hint: UIHint | None = Field(
         default=None, description="Hints for frontend UI component selection"
     )
+    workflow_id: str | None = Field(
+        default=None, description="Workflow identifier for correlating streaming events"
+    )
+    log_line: str | None = Field(
+        default=None,
+        description="Human-friendly terminal log line mirrored to the frontend",
+    )
 
     model_config = ConfigDict(extra="allow")
 
@@ -381,6 +393,10 @@ class StreamEvent(BaseModel):
             }
             if self.ui_hint.icon_hint is not None:
                 result["ui_hint"]["icon_hint"] = self.ui_hint.icon_hint
+        if self.workflow_id is not None:
+            result["workflow_id"] = self.workflow_id
+        if self.log_line is not None:
+            result["log_line"] = self.log_line
 
         result["timestamp"] = self.timestamp.isoformat()
         return result

@@ -304,6 +304,72 @@ uv run agentic-fleet evaluate \
 - LLM-judged semantic relevance, groundedness, coherence
 - Agent/tool usage analytics
 
+## DSPy-Based History Evaluation Script
+
+For quick evaluation of execution history without running the full evaluation framework, use the standalone `evaluate_history.py` script:
+
+### Quick Start
+
+```bash
+# Evaluate all records in execution_history.jsonl
+uv run python scripts/evaluate_history.py
+```
+
+### What It Does
+
+1. **Reads** `.var/logs/execution_history.jsonl` (task + result pairs)
+2. **Scores** each interaction using DSPy's `ChainOfThought` with an `AnswerQuality` signature
+3. **Outputs** results to `.var/logs/evaluation_results.jsonl`
+
+### Scoring Rubric
+
+The script uses an explicit rubric prioritizing correctness:
+
+| Score | Meaning                                      |
+| ----- | -------------------------------------------- |
+| 9-10  | Correct, complete, and well-formatted        |
+| 7-8   | Correct with minor omissions or style issues |
+| 5-6   | Partially correct or incomplete              |
+| 3-4   | Mostly incorrect but shows understanding     |
+| 1-2   | Incorrect, irrelevant, or fails to answer    |
+
+**Key principle:** For simple factual tasks (math, definitions), a correct short answer scores 9-10.
+
+### Output Format
+
+Each result includes:
+
+```json
+{
+  "workflow_id": "abc-123",
+  "task": "What is 2+2?",
+  "result": "4",
+  "dspy_score": 10.0,
+  "dspy_is_correct": "yes",
+  "dspy_is_complete": "yes",
+  "dspy_reasoning": "The answer is correct and complete.",
+  "existing_score": 10.0
+}
+```
+
+### High-Quality Dataset Export
+
+After evaluation, extract high-scoring examples for DSPy training:
+
+```bash
+# Filter examples with score >= 7 and correct answers
+# (automatically created during evaluation analysis)
+cat .var/logs/high_quality_examples.jsonl
+```
+
+### Configuration
+
+The script uses `gpt-5-nano` by default. To change the model, edit `scripts/evaluate_history.py`:
+
+```python
+lm = dspy.LM(model="openai/gpt-5-mini", api_key=api_key)  # or other model
+```
+
 ## Related Documentation
 
 - [DSPy Optimizer Guide](dspy-optimizer.md) - Using optimization with evaluation

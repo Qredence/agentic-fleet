@@ -103,7 +103,7 @@ export const WorkflowEvents: React.FC<WorkflowEventsProps> = ({
 
   return (
     <div className={cn("mb-3", className)}>
-      <Steps defaultOpen={false} className="bg-muted/10 rounded-lg p-2">
+      <Steps defaultOpen={true} className="bg-muted/10 rounded-lg p-2">
         <StepsTrigger
           leftIcon={
             isStreaming ? (

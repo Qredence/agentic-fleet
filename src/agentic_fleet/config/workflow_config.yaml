@@ -206,6 +206,11 @@ tracing:
   enabled: true # Set to false to disable all tracing
   otlp_endpoint: http://localhost:4317 # AI Toolkit / OpenTelemetry Collector endpoint (corrected port)
   capture_sensitive: false # Capture prompts & completions (set to true only for debugging - GDPR/privacy risk)
+  # Azure Monitor / AI Foundry export (optional)
+  # Set connection string to export traces to Microsoft AI Foundry
+  # Get this from: Foundry Portal > Your Project > Tracing > Manage data source > Connection string
+  # Or set APPLICATIONINSIGHTS_CONNECTION_STRING env var
+  azure_monitor_connection_string: # e.g., "InstrumentationKey=xxx;IngestionEndpoint=https://xxx.applicationinsights.azure.com/"
 
 # Evaluation Framework
 evaluation:

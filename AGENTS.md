@@ -32,6 +32,7 @@
 
 - Stack: DSPy + Microsoft `agent-framework` . Agents live under `src/agentic_fleet/agents/`; orchestration in `src/agentic_fleet/workflows/`; DSPy reasoning in `src/agentic_fleet/dspy_modules/`.
 - **5-Phase Pipeline** (v0.6.6): `analysis → routing → execution → progress → quality`. Judge phase removed for ~66% latency reduction.
+- **Smart Fast-Path** (v0.6.7): Simple tasks (factual questions, math, greetings) bypass multi-agent routing via `is_simple_task()` and get direct LLM responses in <1 second.
 - **Offline Layer**: DSPy compilation is strictly offline (via `scripts/optimize.py`). Runtime uses cached modules (`.var/logs/compiled_supervisor.pkl`) and never compiles on the fly.
 - **Dynamic Prompts**: Agent instructions (e.g., Planner) are generated dynamically via DSPy signatures (`PlannerInstructionSignature`) and optimized offline.
 - **Middleware**: `ChatMiddleware` handles cross-cutting concerns. `BridgeMiddleware` captures runtime history for offline learning.

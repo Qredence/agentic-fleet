@@ -1,4 +1,4 @@
-import { useEffect, useMemo } from "react";
+import { useMemo } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { Layout } from "./components/Layout";
 import { ChatMessage } from "./components/ChatMessage";
@@ -37,11 +37,6 @@ function App() {
     conversationId,
     isConversationsLoading,
   } = useChat();
-
-  useEffect(() => {
-    loadConversations();
-    createConversation();
-  }, [loadConversations, createConversation]);
 
   // Group messages by agent for better visual separation
   const messageGroups = useMemo(

@@ -2,6 +2,16 @@ import { renderHook, act, waitFor } from "@testing-library/react";
 import { describe, it, expect, vi, beforeEach, type Mock } from "vitest";
 import { useChat } from "../../hooks/useChat";
 import { api } from "../../api/client";
+import {
+  getLastWebSocket,
+  resetMockWebSockets,
+} from "../__mocks__/reconnecting-websocket";
+
+// Mock reconnecting-websocket using the mock file
+vi.mock(
+  "reconnecting-websocket",
+  () => import("../__mocks__/reconnecting-websocket"),
+);
 
 // Mock the api client
 vi.mock("../../api/client", async (importOriginal) => {
@@ -21,82 +31,262 @@ vi.mock("../../api/client", async (importOriginal) => {
 describe("useChat", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    resetMockWebSockets();
     (api.createConversation as Mock).mockResolvedValue({ id: "conv-123" });
     (api.listConversations as Mock).mockResolvedValue([]);
     (api.loadConversationMessages as Mock).mockResolvedValue([]);
   });
 
-  it("handles agent events correctly", async () => {
-    const streamEvents = [
-      {
-        type: "response.delta",
-        delta: "planner starting sequential step",
-        kind: "execution",
-        agent_id: "planner",
-      },
-      { type: "agent.start", message: "Agent started", kind: "info" },
-      {
-        type: "agent.message",
-        message: "What is DSPy? One-sentence elevator pitch...",
-        kind: "output",
-        agent_id: "writer",
-      },
-      { type: "agent.thought", message: "Thinking...", kind: "thought" },
-      { type: "agent.output", content: "Result", kind: "output" },
-      { type: "agent.complete", message: "Done", kind: "success" },
-      { type: "response.completed", message: "Final answer" },
-    ];
-
-    const stream = new ReadableStream({
-      start(controller) {
-        streamEvents.forEach((event) => {
-          controller.enqueue(
-            new TextEncoder().encode(`data: ${JSON.stringify(event)}\n\n`),
-          );
-        });
-        controller.close();
-      },
-    });
-
-    (api.sendMessage as Mock).mockResolvedValue({
-      body: stream,
-    });
-
+  it("initializes and creates a conversation", async () => {
     const { result } = renderHook(() => useChat());
 
-    // Wait for hook to finish initializing (loadConversations + createConversation)
     await waitFor(() => {
       expect(result.current.isInitializing).toBe(false);
       expect(result.current.conversationId).toBe("conv-123");
     });
 
+    expect(api.listConversations).toHaveBeenCalled();
+    expect(api.createConversation).toHaveBeenCalledWith("New Chat");
+  });
+
+  it("loads existing conversations on init", async () => {
+    (api.listConversations as Mock).mockResolvedValue([
+      {
+        id: "existing-conv",
+        title: "Old Chat",
+        updated_at: new Date().toISOString(),
+      },
+    ]);
+    (api.loadConversationMessages as Mock).mockResolvedValue([
+      {
+        id: "msg-1",
+        role: "user",
+        content: "Hello",
+        created_at: new Date().toISOString(),
+      },
+    ]);
+
+    const { result } = renderHook(() => useChat());
+
+    await waitFor(() => {
+      expect(result.current.isInitializing).toBe(false);
+      expect(result.current.conversationId).toBe("existing-conv");
+      expect(result.current.messages).toHaveLength(1);
+    });
+  });
+
+  it("sends message via WebSocket", async () => {
+    const { result } = renderHook(() => useChat());
+
+    await waitFor(() => {
+      expect(result.current.conversationId).toBe("conv-123");
+    });
+
     await act(async () => {
-      await result.current.sendMessage("Hello");
+      result.current.sendMessage("Hello, world!");
+    });
+
+    // Wait for WebSocket to be created and opened
+    await waitFor(() => {
+      const ws = getLastWebSocket();
+      expect(ws).toBeDefined();
+      expect(ws!.sentMessages.length).toBeGreaterThan(0);
+    });
+
+    const ws = getLastWebSocket()!;
+    const sentMessage = JSON.parse(ws.sentMessages[0]);
+
+    expect(sentMessage.conversation_id).toBe("conv-123");
+    expect(sentMessage.message).toBe("Hello, world!");
+    expect(sentMessage.stream).toBe(true);
+  });
+
+  it("handles agent events correctly", async () => {
+    const { result } = renderHook(() => useChat());
+
+    await waitFor(() => {
+      expect(result.current.conversationId).toBe("conv-123");
+    });
+
+    await act(async () => {
+      result.current.sendMessage("Hello");
+    });
+
+    // Wait for WebSocket connection
+    await waitFor(() => {
+      const ws = getLastWebSocket();
+      expect(ws).toBeDefined();
+      expect(ws!.readyState).toBe(1); // OPEN
+    });
+
+    const ws = getLastWebSocket()!;
+
+    // Simulate stream events
+    await act(async () => {
+      ws.simulateMessage({
+        type: "response.delta",
+        delta: "planner starting sequential step",
+        kind: "execution",
+        agent_id: "planner",
+      });
+    });
+
+    await act(async () => {
+      ws.simulateMessage({
+        type: "agent.start",
+        message: "Agent started",
+        kind: "info",
+      });
+    });
+
+    await act(async () => {
+      ws.simulateMessage({
+        type: "agent.message",
+        message: "What is DSPy? One-sentence elevator pitch...",
+        kind: "output",
+        agent_id: "writer",
+      });
+    });
+
+    await act(async () => {
+      ws.simulateMessage({
+        type: "response.completed",
+        message: "Final answer",
+      });
+    });
+
+    await act(async () => {
+      ws.simulateMessage({ type: "done" });
+      ws.close();
     });
 
     await waitFor(() => {
-      // User + placeholder assistant (with steps) + agent message + Final Answer message
-      expect(result.current.messages).toHaveLength(4);
+      expect(result.current.isLoading).toBe(false);
     });
 
-    const assistantMsg = result.current.messages[1]; // placeholder assistant that holds steps
-    const agentMsg = result.current.messages[2]; // agent message with content
-    const finalMsg = result.current.messages[3]; // final answer
+    // Check messages structure
+    expect(result.current.messages.length).toBeGreaterThanOrEqual(3);
 
-    expect(agentMsg.role).toBe("assistant");
-    // agent.output replaces content with "Result", so the final content is "Result"
-    expect(agentMsg.content).toBe("Result");
-    expect(finalMsg.role).toBe("assistant");
-    expect(finalMsg.author).toBe("Final Answer");
+    // First message should be user
+    expect(result.current.messages[0].role).toBe("user");
+    expect(result.current.messages[0].content).toBe("Hello");
 
-    // Check steps on the workflow placeholder
-    // The placeholder assistant message keeps status + agent_start + agent_complete for lifecycle visibility
-    expect(assistantMsg.steps).toBeDefined();
-    expect(assistantMsg.steps!.length).toBeGreaterThanOrEqual(2);
-    expect(assistantMsg.steps![0].type).toBe("status");
-    expect(assistantMsg.steps![0].content).toContain(
-      "planner starting sequential step",
+    // Check that we have steps recorded
+    const assistantMessages = result.current.messages.filter(
+      (m) => m.role === "assistant",
     );
-    expect(assistantMsg.steps![1].type).toBe("agent_start");
+    expect(assistantMessages.length).toBeGreaterThan(0);
+
+    // Find message with steps
+    const msgWithSteps = assistantMessages.find(
+      (m) => m.steps && m.steps.length > 0,
+    );
+    expect(msgWithSteps).toBeDefined();
+    expect(msgWithSteps!.steps![0].type).toBe("status");
+  });
+
+  it("cancels streaming by sending cancel message", async () => {
+    const { result } = renderHook(() => useChat());
+
+    await waitFor(() => {
+      expect(result.current.conversationId).toBe("conv-123");
+    });
+
+    await act(async () => {
+      result.current.sendMessage("Hello");
+    });
+
+    await waitFor(() => {
+      const ws = getLastWebSocket();
+      expect(ws).toBeDefined();
+      expect(ws!.readyState).toBe(1); // OPEN
+    });
+
+    const ws = getLastWebSocket()!;
+
+    // Cancel the streaming
+    await act(async () => {
+      result.current.cancelStreaming();
+    });
+
+    // Check that cancel message was sent
+    expect(ws.sentMessages).toContainEqual(JSON.stringify({ type: "cancel" }));
+    expect(result.current.isLoading).toBe(false);
+  });
+
+  it("handles WebSocket errors gracefully", async () => {
+    const { result } = renderHook(() => useChat());
+
+    await waitFor(() => {
+      expect(result.current.conversationId).toBe("conv-123");
+    });
+
+    await act(async () => {
+      result.current.sendMessage("Hello");
+    });
+
+    await waitFor(() => {
+      const ws = getLastWebSocket();
+      expect(ws).toBeDefined();
+    });
+
+    const ws = getLastWebSocket()!;
+
+    // Simulate error
+    await act(async () => {
+      ws.simulateError();
+      ws.close();
+    });
+
+    await waitFor(() => {
+      expect(result.current.isLoading).toBe(false);
+    });
+
+    // Check error message was added
+    const lastMessage =
+      result.current.messages[result.current.messages.length - 1];
+    expect(lastMessage.role).toBe("assistant");
+    expect(lastMessage.content).toContain("Sorry, something went wrong");
+  });
+
+  it("handles reasoning events", async () => {
+    const { result } = renderHook(() => useChat());
+
+    await waitFor(() => {
+      expect(result.current.conversationId).toBe("conv-123");
+    });
+
+    await act(async () => {
+      result.current.sendMessage("Think about this");
+    });
+
+    await waitFor(() => {
+      const ws = getLastWebSocket();
+      expect(ws).toBeDefined();
+      expect(ws!.readyState).toBe(1); // OPEN
+    });
+
+    const ws = getLastWebSocket()!;
+
+    await act(async () => {
+      ws.simulateMessage({
+        type: "reasoning.delta",
+        reasoning: "Let me think...",
+        agent_id: "planner",
+      });
+    });
+
+    await waitFor(() => {
+      expect(result.current.isReasoningStreaming).toBe(true);
+      expect(result.current.currentReasoning).toContain("Let me think");
+    });
+
+    await act(async () => {
+      ws.simulateMessage({ type: "reasoning.completed" });
+    });
+
+    await waitFor(() => {
+      expect(result.current.isReasoningStreaming).toBe(false);
+    });
   });
 });

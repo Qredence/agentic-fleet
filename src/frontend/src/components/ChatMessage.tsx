@@ -53,6 +53,8 @@ interface ChatMessageProps {
   isFirstInGroup?: boolean;
   /** Whether this is the last message in a group */
   isLastInGroup?: boolean;
+  qualityFlag?: string;
+  qualityScore?: number;
 }
 
 function categorizeSteps(steps: ConversationStep[]): {
@@ -91,6 +93,8 @@ export const ChatMessage = memo(function ChatMessage({
   isGrouped = false,
   isFirstInGroup = true,
   isLastInGroup = true,
+  qualityFlag,
+  qualityScore,
 }: ChatMessageProps) {
   const [copied, setCopied] = useState(false);
   const isUser = role === "user";
@@ -153,6 +157,18 @@ export const ChatMessage = memo(function ChatMessage({
             </span>
             <span>•</span>
             <span>{latency}</span>
+          </div>
+        )}
+
+        {/* Quality banner */}
+        {qualityFlag && (
+          <div className="text-[11px] text-amber-500 bg-amber-500/10 border border-amber-500/40 rounded-md px-2 py-1 inline-flex items-center gap-2">
+            <span className="font-semibold">Low confidence</span>
+            {typeof qualityScore === "number" && (
+              <span className="font-mono text-xs">
+                score {qualityScore.toFixed(2)}
+              </span>
+            )}
           </div>
         )}
 
