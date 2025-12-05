@@ -9,6 +9,7 @@ from __future__ import annotations
 import asyncio
 import contextlib
 import re  # For robust input sanitization
+import string  # For printable ASCII filtering
 import time
 from collections import OrderedDict
 from collections.abc import AsyncIterator
@@ -36,6 +37,12 @@ if TYPE_CHECKING:
     pass
 
 logger = setup_logger(__name__)
+
+def _sanitize_log_input(s: str) -> str:
+    # Remove all control and non-printable characters (keep only printable ASCII)
+    # Also, truncate excessively long input to reasonable length for logging.
+    sanitized = ''.join(ch for ch in s if ch in string.printable and ch not in '\r\n')
+    return sanitized[:256]
 
 router = APIRouter()
 
@@ -383,7 +390,7 @@ def _validate_websocket_origin(websocket: WebSocket) -> bool:
         return True
 
     logger.warning(
-        f"WebSocket connection rejected: invalid origin '{origin.replace(chr(10), '').replace(chr(13), '')}'"
+        f"WebSocket connection rejected: invalid origin '{_sanitize_log_input(origin)}'"
     )
     return False
 
