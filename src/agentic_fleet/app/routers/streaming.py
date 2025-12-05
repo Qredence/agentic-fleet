@@ -382,7 +382,7 @@ def _validate_websocket_origin(websocket: WebSocket) -> bool:
     if origin in settings.cors_allowed_origins:
         return True
 
-    logger.warning(f"WebSocket connection rejected: invalid origin '{origin}'")
+    logger.warning(f"WebSocket connection rejected: invalid origin '{origin.replace(chr(10), '').replace(chr(13), '')}'")
     return False
 
 
