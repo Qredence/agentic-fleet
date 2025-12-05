@@ -18,10 +18,12 @@ if __package__ in (None, ""):
         sys.path.insert(0, project_root_str)
     globals()["__package__"] = "agentic_fleet.cli"
 
-from ..utils.env import validate_agentic_fleet_env
-from .commands import agents, analyze, benchmark, evaluate, history, improve, optimize, run
+from ..utils.config import validate_agentic_fleet_env
 from .commands import dev as dev_module
+from .commands import eval as eval_module
 from .commands import handoff as handoff_module
+from .commands import inspect as inspect_module
+from .commands import optimize, run
 from .runner import WorkflowRunner  # noqa: F401
 
 # Suppress OpenTelemetry OTLP log export errors early (before any imports trigger setup)
@@ -53,13 +55,13 @@ app.command(name="dev")(dev_module.dev)
 # importing the submodule.
 handoff = handoff_module.handoff
 app.command(name="handoff")(handoff)
-app.command(name="analyze")(analyze.analyze)
-app.command(name="benchmark")(benchmark.benchmark)
-app.command(name="list-agents")(agents.list_agents)
-app.command(name="export-history")(history.export_history)
+app.command(name="analyze")(inspect_module.analyze)
+app.command(name="benchmark")(eval_module.benchmark)
+app.command(name="list-agents")(inspect_module.list_agents)
+app.command(name="export-history")(inspect_module.export_history)
 app.command(name="gepa-optimize")(optimize.gepa_optimize)
-app.command(name="self-improve")(improve.self_improve)
-app.command(name="evaluate")(evaluate.evaluate)
+app.command(name="self-improve")(inspect_module.self_improve)
+app.command(name="evaluate")(eval_module.evaluate)
 
 
 if __name__ == "__main__":

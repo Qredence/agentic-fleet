@@ -1,12 +1,21 @@
 """API routers."""
 
 from agentic_fleet.app.routers import (
-    agents,
+    api,
     conversations,
     dspy_management,
     history,
+    nlu,
+    sessions,
     streaming,
-    workflow,
 )
 
-__all__ = ["agents", "conversations", "dspy_management", "history", "streaming", "workflow"]
+__all__ = [
+    "api",
+    "conversations",
+    "dspy_management",
+    "history",
+    "nlu",
+    "sessions",
+    "streaming",
+]

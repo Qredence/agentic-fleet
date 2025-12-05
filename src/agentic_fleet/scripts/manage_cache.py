@@ -8,7 +8,7 @@ from __future__ import annotations
 import argparse
 from pathlib import Path
 
-from agentic_fleet.utils.constants import DEFAULT_CACHE_PATH
+from agentic_fleet.utils.config import DEFAULT_CACHE_PATH
 
 
 def clear_cache() -> None:

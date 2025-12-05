@@ -1,23 +1,5 @@
-"""Middleware definitions for the agentic fleet core."""
+"""Deprecated: ChatMiddleware moved to core.middleware."""
 
-from typing import Any
+from agentic_fleet.core.middleware import ChatMiddleware
 
-
-class ChatMiddleware:
-    """Base class for chat middlewares."""
-
-    async def on_start(self, task: str, context: dict[str, Any]) -> None:
-        """Called when a chat task starts."""
-        pass
-
-    async def on_event(self, event: Any) -> None:
-        """Called when an event occurs during execution."""
-        pass
-
-    async def on_end(self, result: Any) -> None:
-        """Called when a chat task completes successfully."""
-        pass
-
-    async def on_error(self, error: Exception) -> None:
-        """Called when a chat task fails."""
-        pass
+__all__ = ["ChatMiddleware"]

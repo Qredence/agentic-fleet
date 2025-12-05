@@ -27,7 +27,6 @@ from ..utils.resilience import async_call_with_retry
 from ..utils.telemetry import optional_span
 from .context import SupervisorContext
 from .exceptions import ToolError
-from .execution.streaming_events import MagenticAgentMessageEvent
 from .helpers import (
     build_refinement_task,
     call_judge_with_reasoning,
@@ -37,16 +36,21 @@ from .helpers import (
     parse_judge_response,
     refine_results,
 )
-from .messages import (
+from .models import (
     AnalysisMessage,
+    AnalysisResult,
     ExecutionMessage,
+    ExecutionOutcome,
     FinalResultMessage,
+    MagenticAgentMessageEvent,
     ProgressMessage,
+    ProgressReport,
     QualityMessage,
+    QualityReport,
     RoutingMessage,
+    RoutingPlan,
     TaskMessage,
 )
-from .models import AnalysisResult, ExecutionOutcome, ProgressReport, QualityReport, RoutingPlan
 from .strategies import run_execution_phase_streaming
 
 logger = setup_logger(__name__)

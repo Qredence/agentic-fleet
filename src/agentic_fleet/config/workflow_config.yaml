@@ -41,8 +41,14 @@ api:
     # By default, only show messages from orchestration agents that synthesize the final response
     included_agent_ids:
       - orchestrator
-      - critic_verifier
-      - synthesis_generator
+      - researcher
+      - analyst
+      - writer
+      - reviewer
+      - planner
+      - executor
+      - coder
+      - verifier
 
 # Workflow Configuration
 workflow:

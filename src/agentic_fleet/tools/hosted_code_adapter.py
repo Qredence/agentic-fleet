@@ -8,9 +8,8 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any, Protocol
 
+from agent_framework._serialization import SerializationMixin
 from agent_framework._tools import HostedCodeInterpreterTool
-
-from agentic_fleet.tools.serialization import SerializationMixin
 
 if TYPE_CHECKING:  # pragma: no cover - typing helper
 

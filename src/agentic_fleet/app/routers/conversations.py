@@ -1,6 +1,6 @@
 """Conversations router.
 
-Provides endpoints for creating, retrieving, and managing chat conversations.
+Provides endpoints to create and retrieve chat conversations.
 """
 
 from fastapi import APIRouter, HTTPException, status
@@ -21,15 +21,8 @@ async def create_conversation(
     request: CreateConversationRequest,
     manager: ConversationManagerDep,
 ) -> Conversation:
-    """Create a new chat conversation.
+    """Create a new chat conversation."""
 
-    Args:
-        request: The creation request.
-        manager: The conversation manager.
-
-    Returns:
-        The created Conversation.
-    """
     return manager.create_conversation(title=request.title)
 
 
@@ -38,17 +31,9 @@ async def create_conversation(
     response_model=list[Conversation],
     summary="List all conversations",
 )
-async def list_conversations(
-    manager: ConversationManagerDep,
-) -> list[Conversation]:
-    """List all available conversations.
+async def list_conversations(manager: ConversationManagerDep) -> list[Conversation]:
+    """List all available conversations."""
 
-    Args:
-        manager: The conversation manager.
-
-    Returns:
-        List of conversations sorted by last update.
-    """
     return manager.list_conversations()
 
 
@@ -61,18 +46,8 @@ async def get_conversation(
     conversation_id: str,
     manager: ConversationManagerDep,
 ) -> Conversation:
-    """Retrieve details for a specific conversation.
+    """Retrieve details for a specific conversation."""
 
-    Args:
-        conversation_id: The conversation ID.
-        manager: The conversation manager.
-
-    Returns:
-        The conversation with messages.
-
-    Raises:
-        HTTPException: If conversation not found.
-    """
     conversation = manager.get_conversation(conversation_id)
     if not conversation:
         raise HTTPException(
@@ -80,3 +55,9 @@ async def get_conversation(
             detail=f"Conversation {conversation_id} not found",
         )
     return conversation
+
+
+"""Deprecated router: merged into api.py.
+
+Kept as a thin alias for backward compatibility with legacy imports.
+"""

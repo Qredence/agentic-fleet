@@ -2,7 +2,7 @@ import logging
 import os
 from unittest.mock import patch
 
-from agentic_fleet.utils.env import env_config
+from agentic_fleet.utils.config import env_config
 from agentic_fleet.utils.logger import setup_logger
 
 

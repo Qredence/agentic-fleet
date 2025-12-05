@@ -73,6 +73,7 @@ class BaseMCPTool(MCPStreamableHTTPTool):
         description: str,
         load_tools: bool = True,
         load_prompts: bool = False,
+        headers: dict[str, str] | None = None,
     ):
         """Initialize the base MCP tool.
 
@@ -82,6 +83,7 @@ class BaseMCPTool(MCPStreamableHTTPTool):
             description: Human-readable description of the tool's purpose
             load_tools: Whether to load tools from the MCP server
             load_prompts: Whether to load prompts from the MCP server
+            headers: Optional HTTP headers to send with MCP requests (e.g., auth)
         """
         super().__init__(
             name=name,
@@ -89,11 +91,13 @@ class BaseMCPTool(MCPStreamableHTTPTool):
             description=description,
             load_tools=load_tools,
             load_prompts=load_prompts,
+            headers=headers,
         )
 
         # Ensure downstream consumers can rely on explicit attributes
         self.name = name
         self.description = description
+        self.headers = headers or {}
 
         # Internal helpers for ensuring one-time connection + cached tool name
         self._connect_lock: asyncio.Lock = asyncio.Lock()

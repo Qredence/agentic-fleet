@@ -320,14 +320,14 @@ class TestStreamingEndpointIntegration:
         assert request.message == "Hello"
 
     def test_sessions_endpoint(self):
-        """Test GET /api/sessions returns session list."""
+        """Test GET /api/v1/sessions returns session list."""
         from fastapi import FastAPI
         from fastapi.testclient import TestClient
 
-        from agentic_fleet.app.routers import streaming
+        from agentic_fleet.app.routers import sessions
 
         test_app = FastAPI()
-        test_app.include_router(streaming.router, prefix="/api")
+        test_app.include_router(sessions.router, prefix="/api/v1")
 
         with patch("agentic_fleet.app.dependencies.get_session_manager") as mock_sm:
             mock_manager = AsyncMock()
@@ -335,20 +335,20 @@ class TestStreamingEndpointIntegration:
             mock_sm.return_value = mock_manager
 
             client = TestClient(test_app)
-            response = client.get("/api/sessions")
+            response = client.get("/api/v1/sessions")
 
             assert response.status_code == status.HTTP_200_OK
             assert isinstance(response.json(), list)
 
     def test_session_not_found(self):
-        """Test GET /api/sessions/{id} with non-existent ID."""
+        """Test GET /api/v1/sessions/{id} with non-existent ID."""
         from fastapi import FastAPI
         from fastapi.testclient import TestClient
 
-        from agentic_fleet.app.routers import streaming
+        from agentic_fleet.app.routers import sessions
 
         test_app = FastAPI()
-        test_app.include_router(streaming.router, prefix="/api")
+        test_app.include_router(sessions.router, prefix="/api/v1")
 
         with patch("agentic_fleet.app.dependencies.get_session_manager") as mock_sm:
             mock_manager = AsyncMock()
@@ -356,7 +356,7 @@ class TestStreamingEndpointIntegration:
             mock_sm.return_value = mock_manager
 
             client = TestClient(test_app)
-            response = client.get("/api/sessions/wf-nonexistent")
+            response = client.get("/api/v1/sessions/wf-nonexistent")
 
             assert response.status_code == status.HTTP_404_NOT_FOUND
 

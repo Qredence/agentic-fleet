@@ -15,7 +15,7 @@ from agent_framework._agents import ChatAgent
 from agent_framework._threads import AgentThread
 from agent_framework._types import AgentRunResponse, AgentRunResponseUpdate, ChatMessage, Role
 
-from ..dspy_modules.reasoning import FleetPoT, FleetReAct
+from ..dspy_modules.signatures import FleetPoT, FleetReAct
 from ..utils.cache import TTLCache
 from ..utils.logger import setup_logger
 from ..utils.telemetry import PerformanceTracker, optional_span
@@ -259,7 +259,7 @@ class DSPyEnhancedAgent(ChatAgent):
                 response_text = ""
                 if self.reasoning_strategy == "react" and self.react_module:
                     # Use ReAct strategy
-                    result = self.react_module(question=prompt, tools=self.tools)
+                    result = self.react_module(question=prompt)
                     response_text = getattr(result, "answer", str(result))
 
                 elif self.reasoning_strategy == "program_of_thought" and self.pot_module:

@@ -12,14 +12,12 @@ from agentic_fleet.app.schemas import (
     EventCategory,
     StreamEventType,
 )
-from agentic_fleet.workflows.execution.streaming_events import (
+from agentic_fleet.workflows.models import (
+    AnalysisMessage,
+    AnalysisResult,
     MagenticAgentMessageEvent,
     ReasoningStreamEvent,
 )
-from agentic_fleet.workflows.messages import (
-    AnalysisMessage,
-)
-from agentic_fleet.workflows.models import AnalysisResult
 
 
 def test_classify_event():

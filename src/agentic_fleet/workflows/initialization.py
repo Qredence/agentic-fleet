@@ -13,15 +13,19 @@ from ..agents import AgentFactory, validate_tool
 from ..dspy_modules.reasoner import DSPyReasoner
 from ..utils.agent_framework_shims import ensure_agent_framework_shims
 from ..utils.cache import TTLCache
+from ..utils.config import validate_agentic_fleet_env
 from ..utils.dspy_manager import configure_dspy_settings
-from ..utils.env import validate_agentic_fleet_env
 from ..utils.history_manager import HistoryManager
 from ..utils.logger import setup_logger
 from ..utils.tool_registry import ToolRegistry
 from ..utils.tracing import initialize_tracing
-from .compilation import CompilationState, compile_supervisor_async, get_compiled_supervisor
 from .config import WorkflowConfig
-from .context import SupervisorContext
+from .context import (
+    CompilationState,
+    SupervisorContext,
+    compile_supervisor_async,
+    get_compiled_supervisor,
+)
 from .handoff import HandoffManager
 from .helpers import create_openai_client_with_store
 
@@ -301,7 +305,7 @@ async def initialize_workflow_context(
     )
 
     # Register middlewares
-    from ..core.bridge_middleware import BridgeMiddleware
+    from ..core.middleware import BridgeMiddleware
 
     if context.history_manager:
         context.middlewares.append(BridgeMiddleware(context.history_manager))

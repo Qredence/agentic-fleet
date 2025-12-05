@@ -8,6 +8,7 @@ Public API:
     - DSPyReasoner: Main reasoner class with DSPy integration
     - Signature classes: TaskAnalysis, TaskRouting, QualityAssessment, etc.
     - Handoff signatures: HandoffDecision, HandoffProtocol, etc.
+    - Reasoning modules: FleetReAct, FleetPoT
 """
 
 from __future__ import annotations
@@ -18,22 +19,34 @@ if TYPE_CHECKING:
     from agentic_fleet.dspy_modules.handoff_signatures import HandoffDecision, HandoffProtocol
     from agentic_fleet.dspy_modules.reasoner import DSPyReasoner
     from agentic_fleet.dspy_modules.signatures import (
+        AgentInstructionSignature,
+        EnhancedTaskRouting,
+        FleetPoT,
+        FleetReAct,
+        PlannerInstructionSignature,
         ProgressEvaluation,
         QualityAssessment,
         TaskAnalysis,
         TaskRouting,
         ToolAwareTaskAnalysis,
+        WorkflowStrategy,
     )
 
 __all__ = [
+    "AgentInstructionSignature",
     "DSPyReasoner",
+    "EnhancedTaskRouting",
+    "FleetPoT",
+    "FleetReAct",
     "HandoffDecision",
     "HandoffProtocol",
+    "PlannerInstructionSignature",
     "ProgressEvaluation",
     "QualityAssessment",
     "TaskAnalysis",
     "TaskRouting",
     "ToolAwareTaskAnalysis",
+    "WorkflowStrategy",
 ]
 
 
@@ -44,42 +57,50 @@ def __getattr__(name: str) -> object:
 
         return DSPyReasoner
 
-    if name == "DSPyReasoner":
-        # Backward compatibility
-        from agentic_fleet.dspy_modules.reasoner import DSPyReasoner
-
-        return DSPyReasoner
-
     if name in (
+        "AgentInstructionSignature",
+        "EnhancedTaskRouting",
+        "FleetPoT",
+        "FleetReAct",
+        "PlannerInstructionSignature",
+        "ProgressEvaluation",
+        "QualityAssessment",
         "TaskAnalysis",
         "TaskRouting",
         "ToolAwareTaskAnalysis",
-        "ProgressEvaluation",
-        "QualityAssessment",
+        "WorkflowStrategy",
     ):
         from agentic_fleet.dspy_modules.signatures import (
+            AgentInstructionSignature,
+            EnhancedTaskRouting,
+            FleetPoT,
+            FleetReAct,
+            PlannerInstructionSignature,
             ProgressEvaluation,
             QualityAssessment,
             TaskAnalysis,
             TaskRouting,
             ToolAwareTaskAnalysis,
+            WorkflowStrategy,
         )
 
-        if name == "TaskAnalysis":
-            return TaskAnalysis
-        if name == "TaskRouting":
-            return TaskRouting
-        if name == "ToolAwareTaskAnalysis":
-            return ToolAwareTaskAnalysis
-        if name == "ProgressEvaluation":
-            return ProgressEvaluation
-        return QualityAssessment
+        return {
+            "AgentInstructionSignature": AgentInstructionSignature,
+            "EnhancedTaskRouting": EnhancedTaskRouting,
+            "FleetPoT": FleetPoT,
+            "FleetReAct": FleetReAct,
+            "PlannerInstructionSignature": PlannerInstructionSignature,
+            "ProgressEvaluation": ProgressEvaluation,
+            "QualityAssessment": QualityAssessment,
+            "TaskAnalysis": TaskAnalysis,
+            "TaskRouting": TaskRouting,
+            "ToolAwareTaskAnalysis": ToolAwareTaskAnalysis,
+            "WorkflowStrategy": WorkflowStrategy,
+        }[name]
 
     if name in ("HandoffDecision", "HandoffProtocol"):
         from agentic_fleet.dspy_modules.handoff_signatures import HandoffDecision, HandoffProtocol
 
-        if name == "HandoffDecision":
-            return HandoffDecision
-        return HandoffProtocol
+        return HandoffDecision if name == "HandoffDecision" else HandoffProtocol
 
     raise AttributeError(f"module {__name__!r} has no attribute {name!r}")

@@ -15,13 +15,13 @@ from pythonjsonlogger import jsonlogger
 from agentic_fleet.app.dependencies import lifespan
 from agentic_fleet.app.middleware import RequestIDMiddleware
 from agentic_fleet.app.routers import (
-    agents,
+    api,
     conversations,
     dspy_management,
     history,
     nlu,
+    sessions,
     streaming,
-    workflow,
 )
 from agentic_fleet.app.settings import get_settings
 
@@ -83,6 +83,10 @@ def _configure_logging() -> None:
     logging.getLogger("azure.core.pipeline.policies.http_logging_policy").setLevel(logging.WARNING)
     logging.getLogger("azure.monitor").setLevel(logging.WARNING)
 
+    # Suppress DSPy adapter fallback warnings (expected behavior when model
+    # doesn't support structured outputs - graceful fallback to JSON mode)
+    logging.getLogger("dspy.adapters.json_adapter").setLevel(logging.ERROR)
+
 
 # Initialize logging before app creation
 _configure_logging()
@@ -120,17 +124,16 @@ app.add_middleware(
 app.add_middleware(RequestIDMiddleware)  # type: ignore[arg-type]
 
 # Versioned API routes
-app.include_router(workflow.router, prefix="/api/v1", tags=["workflow"])
-app.include_router(agents.router, prefix="/api/v1", tags=["agents"])
+app.include_router(api.api_router, prefix="/api/v1", tags=["workflow", "agents"])
 app.include_router(history.router, prefix="/api/v1", tags=["history"])
 app.include_router(dspy_management.router, prefix="/api/v1", tags=["dspy"])
 app.include_router(nlu.router, prefix="/api/v1", tags=["nlu"])
+app.include_router(conversations.router, prefix="/api/v1", tags=["conversations"])
+app.include_router(sessions.router, prefix="/api/v1", tags=["sessions"])
 
 # Streaming routes at /api (no version) for frontend compatibility
 # Frontend expects POST /api/chat for streaming
 app.include_router(streaming.router, prefix="/api", tags=["chat"])
-# Frontend expects POST /api/conversations
-app.include_router(conversations.router, prefix="/api", tags=["conversations"])
 
 
 @app.get("/health", tags=["health"])
