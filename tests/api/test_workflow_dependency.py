@@ -6,7 +6,7 @@ from fastapi.testclient import TestClient
 from agentic_fleet.app.routers.agents import router as agents_router
 
 
-def test_uninitialized_workflow_returns_503():
+def test_uninitialized_workflow_returns_503() -> None:
     """Requests depending on the workflow should fail fast when not initialized."""
 
     app = FastAPI()

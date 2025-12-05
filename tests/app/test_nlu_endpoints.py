@@ -41,7 +41,7 @@ def mock_workflow():
     app.dependency_overrides = {}
 
 
-def test_classify_intent_endpoint(mock_workflow):
+def test_classify_intent_endpoint(mock_workflow: MagicMock) -> None:
     """Test POST /api/v1/classify_intent."""
     response = client.post(
         "/api/v1/classify_intent",
@@ -71,6 +71,6 @@ def test_extract_entities_endpoint(mock_workflow: MagicMock) -> None:
     assert data["entities"][0]["text"] == "Entity"
     assert data["reasoning"] == "test reasoning"
 
-    mock_workflow.reasoner.nlu.extract_entities.assert_called_once_with(
+    mock_workflow.dspy_reasoner.nlu.extract_entities.assert_called_once_with(
         text="test text", entity_types=["Type1", "Type2"]
     )

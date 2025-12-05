@@ -6,7 +6,7 @@ This module centralizes the logic for transforming various internal workflow eve
 
 from __future__ import annotations
 
-from pathlib import Path
+from dataclasses import dataclass, field
 from typing import Any, Literal, TypedDict
 
 import yaml
@@ -23,6 +23,7 @@ from agentic_fleet.app.schemas import (
     StreamEventType,
     UIHint,
 )
+from agentic_fleet.utils.config_loader import get_config_path
 from agentic_fleet.utils.logger import setup_logger
 from agentic_fleet.workflows.execution.streaming_events import (
     MagenticAgentMessageEvent,
@@ -36,56 +37,275 @@ logger = setup_logger(__name__)
 # UI Routing Configuration Loading
 # =============================================================================
 
+# Type alias for priority literal
+PriorityType = Literal["low", "medium", "high"]
+
 
 class UIHintData(TypedDict):
     """Typed dict for validated UI hint data."""
 
     component: str
-    priority: Literal["low", "medium", "high"]
+    priority: PriorityType
     collapsible: bool
     icon_hint: str | None
 
 
-# Default fallback UI routing values (used when config is missing or invalid)
+@dataclass(frozen=True)
+class UIRoutingEntry:
+    """A single UI routing entry from workflow_config.yaml.
+
+    Represents the UI hints and category for a specific event type/kind combination.
+    """
+
+    component: str
+    priority: PriorityType
+    collapsible: bool
+    category: str
+    icon_hint: str | None = None
+
+    @classmethod
+    def from_dict(cls, data: dict[str, Any], context: str) -> UIRoutingEntry:
+        """Parse and validate a UI routing entry from raw dict.
+
+        Args:
+            data: Raw dict from YAML config.
+            context: Description of config location for error messages.
+
+        Returns:
+            Validated UIRoutingEntry instance.
+        """
+        if not isinstance(data, dict):
+            logger.warning(
+                "Invalid ui_routing entry at %s (expected dict, got %s), using defaults",
+                context,
+                type(data).__name__,
+            )
+            return cls(
+                component=_DEFAULT_COMPONENT,
+                priority=_DEFAULT_PRIORITY,
+                collapsible=_DEFAULT_COLLAPSIBLE,
+                category=_DEFAULT_CATEGORY,
+                icon_hint=None,
+            )
+
+        # Validate component (required string)
+        component = data.get("component")
+        if not (isinstance(component, str) and component):
+            logger.warning(
+                "Invalid/missing 'component' at %s, using default '%s'",
+                context,
+                _DEFAULT_COMPONENT,
+            )
+            component = _DEFAULT_COMPONENT
+
+        # Validate priority (must be low/medium/high)
+        priority = data.get("priority")
+        if priority not in _VALID_PRIORITIES:
+            if priority is not None:
+                logger.warning(
+                    "Invalid 'priority' value '%s' at %s, using default '%s'",
+                    priority,
+                    context,
+                    _DEFAULT_PRIORITY,
+                )
+            priority = _DEFAULT_PRIORITY
+
+        # Validate collapsible (must be bool)
+        collapsible = data.get("collapsible")
+        if not isinstance(collapsible, bool):
+            if collapsible is not None:
+                logger.warning(
+                    "Invalid 'collapsible' value '%s' at %s, using default %s",
+                    collapsible,
+                    context,
+                    _DEFAULT_COLLAPSIBLE,
+                )
+            collapsible = _DEFAULT_COLLAPSIBLE
+
+        # Validate category (must be valid EventCategory)
+        category_str = data.get("category", _DEFAULT_CATEGORY)
+        if not isinstance(category_str, str):
+            logger.warning(
+                "Invalid 'category' type at %s (expected str, got %s), using default '%s'",
+                context,
+                type(category_str).__name__,
+                _DEFAULT_CATEGORY,
+            )
+            category_str = _DEFAULT_CATEGORY
+        else:
+            category_str = category_str.lower()
+            if category_str not in _VALID_CATEGORIES:
+                logger.warning(
+                    "Unknown 'category' value '%s' at %s, using default '%s'",
+                    category_str,
+                    context,
+                    _DEFAULT_CATEGORY,
+                )
+                category_str = _DEFAULT_CATEGORY
+
+        # Validate icon_hint (optional string or None)
+        icon_hint = data.get("icon_hint")
+        if icon_hint is not None and not isinstance(icon_hint, str):
+            logger.warning("Invalid 'icon_hint' value '%s' at %s, using None", icon_hint, context)
+            icon_hint = None
+
+        return cls(
+            component=component,
+            priority=priority,  # type: ignore[arg-type]
+            collapsible=collapsible,
+            category=category_str,
+            icon_hint=icon_hint,
+        )
+
+    def to_ui_hint_data(self) -> UIHintData:
+        """Convert to UIHintData TypedDict."""
+        return UIHintData(
+            component=self.component,
+            priority=self.priority,
+            collapsible=self.collapsible,
+            icon_hint=self.icon_hint,
+        )
+
+    def to_event_category(self) -> EventCategory:
+        """Convert category string to EventCategory enum."""
+        return EventCategory(self.category)
+
+
+@dataclass
+class UIRoutingEventConfig:
+    """Configuration for a single event type, containing kind-specific entries."""
+
+    entries: dict[str, UIRoutingEntry] = field(default_factory=dict)
+    default_entry: UIRoutingEntry | None = None
+
+    @classmethod
+    def from_dict(cls, data: dict[str, Any], event_key: str) -> UIRoutingEventConfig:
+        """Parse event-level config containing kind-specific entries.
+
+        Args:
+            data: Raw dict mapping kind names to entry dicts.
+            event_key: The event type key for error context.
+
+        Returns:
+            UIRoutingEventConfig with parsed entries.
+        """
+        if not isinstance(data, dict):
+            logger.warning(
+                "Invalid ui_routing.%s (expected dict, got %s), skipping",
+                event_key,
+                type(data).__name__,
+            )
+            return cls()
+
+        entries: dict[str, UIRoutingEntry] = {}
+        default_entry: UIRoutingEntry | None = None
+
+        for kind_key, entry_data in data.items():
+            context = f"ui_routing.{event_key}.{kind_key}"
+            entry = UIRoutingEntry.from_dict(entry_data, context)
+
+            if kind_key == "_default":
+                default_entry = entry
+            else:
+                entries[kind_key] = entry
+
+        return cls(entries=entries, default_entry=default_entry)
+
+    def get_entry(self, kind: str | None) -> UIRoutingEntry | None:
+        """Get entry for a specific kind, falling back to _default."""
+        if kind and kind in self.entries:
+            return self.entries[kind]
+        return self.default_entry
+
+
+@dataclass
+class UIRoutingConfig:
+    """Type-safe representation of the ui_routing section from workflow_config.yaml.
+
+    Mirrors the YAML structure with validated entries.
+    """
+
+    event_configs: dict[str, UIRoutingEventConfig] = field(default_factory=dict)
+    fallback: UIRoutingEntry | None = None
+
+    @classmethod
+    def from_dict(cls, data: dict[str, Any]) -> UIRoutingConfig:
+        """Parse and validate the full ui_routing config from raw dict.
+
+        Args:
+            data: Raw ui_routing dict from YAML config.
+
+        Returns:
+            Validated UIRoutingConfig instance.
+        """
+        if not isinstance(data, dict):
+            logger.warning(
+                "ui_routing section is malformed (expected dict, got %s), using defaults",
+                type(data).__name__,
+            )
+            return cls()
+
+        event_configs: dict[str, UIRoutingEventConfig] = {}
+        fallback: UIRoutingEntry | None = None
+
+        for key, value in data.items():
+            if key == "_fallback":
+                fallback = UIRoutingEntry.from_dict(value, "ui_routing._fallback")
+            else:
+                event_configs[key] = UIRoutingEventConfig.from_dict(value, key)
+
+        logger.debug("Parsed UI routing config with %d event types", len(event_configs))
+        return cls(event_configs=event_configs, fallback=fallback)
+
+    def get_event_config(self, event_key: str) -> UIRoutingEventConfig | None:
+        """Get config for a specific event type."""
+        return self.event_configs.get(event_key)
+
+
+# Default fallback values (used when config is missing or invalid)
+_DEFAULT_COMPONENT = "ChatStep"
+_DEFAULT_PRIORITY: PriorityType = "low"
+_DEFAULT_COLLAPSIBLE = True
+_DEFAULT_CATEGORY = "status"
+
 _DEFAULT_UI_HINT: UIHintData = {
-    "component": "ChatStep",
-    "priority": "low",
-    "collapsible": True,
+    "component": _DEFAULT_COMPONENT,
+    "priority": _DEFAULT_PRIORITY,
+    "collapsible": _DEFAULT_COLLAPSIBLE,
     "icon_hint": None,
 }
-_DEFAULT_CATEGORY = "status"
 
 # Valid values for validation
 _VALID_PRIORITIES: set[str] = {"low", "medium", "high"}
 _VALID_CATEGORIES: set[str] = {cat.value for cat in EventCategory}
 
 # Module-level cache for UI routing config
-_ui_routing_config: dict[str, Any] | None = None
+_ui_routing_config: UIRoutingConfig | None = None
 
 
-def _load_ui_routing_config() -> dict[str, Any]:
+def _load_ui_routing_config() -> UIRoutingConfig:
     """Load and cache UI routing configuration from workflow_config.yaml.
 
     Returns:
-        The ui_routing section of the config, or an empty dict if loading fails.
+        UIRoutingConfig instance (may be empty if loading fails).
 
     Raises:
-        Logs errors but does not raise - returns empty dict for graceful fallback.
+        Logs errors but does not raise - returns empty UIRoutingConfig for graceful fallback.
     """
     global _ui_routing_config
 
     if _ui_routing_config is not None:
         return _ui_routing_config
 
-    # Locate the config file relative to this module
-    config_path = Path(__file__).parent.parent.parent / "config" / "workflow_config.yaml"
+    # Use centralized config path resolution (handles CWD and package locations)
+    config_path = get_config_path("workflow_config.yaml")
 
     try:
         if not config_path.exists():
             logger.warning(
                 "UI routing config not found at %s, using hardcoded defaults", config_path
             )
-            _ui_routing_config = {}
+            _ui_routing_config = UIRoutingConfig()
             return _ui_routing_config
 
         with config_path.open("r", encoding="utf-8") as f:
@@ -96,134 +316,31 @@ def _load_ui_routing_config() -> dict[str, Any]:
                 "workflow_config.yaml is malformed (expected dict, got %s), using defaults",
                 type(full_config).__name__,
             )
-            _ui_routing_config = {}
+            _ui_routing_config = UIRoutingConfig()
             return _ui_routing_config
 
-        _ui_routing_config = full_config.get("ui_routing", {})
-
-        if not isinstance(_ui_routing_config, dict):
-            logger.error(
-                "ui_routing section is malformed (expected dict, got %s), using defaults",
-                type(_ui_routing_config).__name__,
-            )
-            _ui_routing_config = {}
-
-        logger.debug("Loaded UI routing config with %d event types", len(_ui_routing_config))
+        raw_ui_routing = full_config.get("ui_routing", {})
+        _ui_routing_config = UIRoutingConfig.from_dict(raw_ui_routing)
 
     except yaml.YAMLError as e:
         logger.error("Failed to parse workflow_config.yaml: %s", e)
-        _ui_routing_config = {}
+        _ui_routing_config = UIRoutingConfig()
     except OSError as e:
         logger.error("Failed to read workflow_config.yaml: %s", e)
-        _ui_routing_config = {}
+        _ui_routing_config = UIRoutingConfig()
 
     return _ui_routing_config
 
 
-def _validate_ui_hint_entry(entry: dict[str, Any], context: str) -> UIHintData:
-    """Validate and normalize a UI hint entry from config.
-
-    Args:
-        entry: The raw config entry dict.
-        context: Description of the config location for error messages.
-
-    Returns:
-        Validated UIHintData with component, priority, collapsible, icon_hint keys.
-    """
-    if not isinstance(entry, dict):
-        logger.warning(
-            "Invalid ui_routing entry at %s (expected dict, got %s), using defaults",
-            context,
-            type(entry).__name__,
-        )
-        return UIHintData(
-            component=_DEFAULT_UI_HINT["component"],
-            priority=_DEFAULT_UI_HINT["priority"],
-            collapsible=_DEFAULT_UI_HINT["collapsible"],
-            icon_hint=_DEFAULT_UI_HINT["icon_hint"],
-        )
-
-    # Validate component (required string)
-    component = entry.get("component")
-    if not (isinstance(component, str) and component):
-        logger.warning(
-            "Invalid/missing 'component' at %s, using default '%s'",
-            context,
-            _DEFAULT_UI_HINT["component"],
-        )
-        component = _DEFAULT_UI_HINT["component"]
-
-    # Validate priority (must be low/medium/high)
-    priority = entry.get("priority")
-    if priority not in _VALID_PRIORITIES:
-        if priority is not None:
-            logger.warning(
-                "Invalid 'priority' value '%s' at %s, using default '%s'",
-                priority,
-                context,
-                _DEFAULT_UI_HINT["priority"],
-            )
-        priority = _DEFAULT_UI_HINT["priority"]
-
-    # Validate collapsible (must be bool)
-    collapsible = entry.get("collapsible")
-    if not isinstance(collapsible, bool):
-        if collapsible is not None:
-            logger.warning(
-                "Invalid 'collapsible' value '%s' at %s, using default %s",
-                collapsible,
-                context,
-                _DEFAULT_UI_HINT["collapsible"],
-            )
-        collapsible = _DEFAULT_UI_HINT["collapsible"]
-
-    # Validate icon_hint (optional string or None)
-    icon_hint = entry.get("icon_hint")
-    if icon_hint is not None and not isinstance(icon_hint, str):
-        logger.warning("Invalid 'icon_hint' value '%s' at %s, using None", icon_hint, context)
-        icon_hint = None
-
-    return UIHintData(
-        component=component,
-        priority=priority,  # type: ignore[typeddict-item]
-        collapsible=collapsible,
-        icon_hint=icon_hint,
+def _get_default_entry() -> UIRoutingEntry:
+    """Get the hardcoded default UIRoutingEntry."""
+    return UIRoutingEntry(
+        component=_DEFAULT_COMPONENT,
+        priority=_DEFAULT_PRIORITY,
+        collapsible=_DEFAULT_COLLAPSIBLE,
+        category=_DEFAULT_CATEGORY,
+        icon_hint=None,
     )
-
-
-def _get_category_from_config(entry: dict[str, Any], context: str) -> EventCategory:
-    """Extract and validate EventCategory from config entry.
-
-    Args:
-        entry: The config entry dict.
-        context: Description of the config location for error messages.
-
-    Returns:
-        EventCategory enum value.
-    """
-    category_str = entry.get("category", _DEFAULT_CATEGORY)
-
-    if not isinstance(category_str, str):
-        logger.warning(
-            "Invalid 'category' type at %s (expected str, got %s), using default '%s'",
-            context,
-            type(category_str).__name__,
-            _DEFAULT_CATEGORY,
-        )
-        category_str = _DEFAULT_CATEGORY
-
-    category_str = category_str.lower()
-
-    if category_str not in _VALID_CATEGORIES:
-        logger.warning(
-            "Unknown 'category' value '%s' at %s, using default '%s'",
-            category_str,
-            context,
-            _DEFAULT_CATEGORY,
-        )
-        category_str = _DEFAULT_CATEGORY
-
-    return EventCategory(category_str)
 
 
 def classify_event(
@@ -248,47 +365,23 @@ def classify_event(
     # Convert event type to config key (e.g., orchestrator.thought -> orchestrator_thought)
     # Dots are replaced with underscores to match YAML keys defined using underscores.
     event_key = event_type.value.lower().replace(".", "_")
-    context_base = f"ui_routing.{event_key}"
 
     # Look up event type in config
-    event_config = config.get(event_key)
+    event_config = config.get_event_config(event_key)
 
-    if event_config is None or not isinstance(event_config, dict):
+    if event_config is None:
         # Fall back to _fallback config or hardcoded defaults
-        fallback_config = config.get("_fallback", {})
-        if fallback_config and isinstance(fallback_config, dict):
-            hint_data = _validate_ui_hint_entry(fallback_config, "ui_routing._fallback")
-            category = _get_category_from_config(fallback_config, "ui_routing._fallback")
-        else:
-            hint_data = _DEFAULT_UI_HINT.copy()
-            category = EventCategory(_DEFAULT_CATEGORY)
-
-        return category, UIHint(**hint_data)
+        entry = config.fallback if config.fallback else _get_default_entry()
+        return entry.to_event_category(), UIHint(**entry.to_ui_hint_data())
 
     # Look up kind-specific config or fall back to _default
-    if kind and kind in event_config:
-        entry = event_config[kind]
-        context = f"{context_base}.{kind}"
-    elif "_default" in event_config:
-        entry = event_config["_default"]
-        context = f"{context_base}._default"
-    else:
+    entry = event_config.get_entry(kind)
+
+    if entry is None:
         # No matching kind and no _default - use fallback
-        fallback_config = config.get("_fallback", {})
-        if fallback_config and isinstance(fallback_config, dict):
-            hint_data = _validate_ui_hint_entry(fallback_config, "ui_routing._fallback")
-            category = _get_category_from_config(fallback_config, "ui_routing._fallback")
-        else:
-            hint_data = _DEFAULT_UI_HINT.copy()
-            category = EventCategory(_DEFAULT_CATEGORY)
+        entry = config.fallback if config.fallback else _get_default_entry()
 
-        return category, UIHint(**hint_data)
-
-    # Validate and construct UIHint
-    hint_data = _validate_ui_hint_entry(entry, context)
-    category = _get_category_from_config(entry, context)
-
-    return category, UIHint(**hint_data)
+    return entry.to_event_category(), UIHint(**entry.to_ui_hint_data())
 
 
 def map_workflow_event(

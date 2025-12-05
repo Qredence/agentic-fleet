@@ -38,7 +38,7 @@ from typing import Any
 
 logger = logging.getLogger(__name__)
 
-
+_INITIALIZED = False
 
 
 def _env_bool(name: str, default: bool) -> bool:

@@ -4,6 +4,7 @@ This router exposes endpoints for intent classification and entity extraction,
 leveraging the DSPyNLU module integrated into the reasoner.
 """
 
+import contextlib
 from typing import Annotated, Any
 
 from fastapi import APIRouter, Depends, HTTPException, status
@@ -57,7 +58,7 @@ async def classify_intent(
     workflow: Annotated[SupervisorWorkflow, Depends(get_workflow)],
 ) -> IntentResponse:
     """Classify the intent of the input text."""
-    reasoner = workflow.dspy_reasoner
+    reasoner = getattr(workflow, "dspy_reasoner", None)
     legacy_reasoner = getattr(workflow, "reasoner", None)
 
     if reasoner is None or not hasattr(reasoner, "nlu"):
@@ -72,9 +73,10 @@ async def classify_intent(
         )
         # Best-effort call for legacy reasoner attribute to satisfy old callers/tests.
         if legacy_reasoner and hasattr(legacy_reasoner, "nlu"):
-            legacy_reasoner.nlu.classify_intent(
-                text=request.text, possible_intents=request.possible_intents
-            )
+            with contextlib.suppress(Exception):
+                legacy_reasoner.nlu.classify_intent(
+                    text=request.text, possible_intents=request.possible_intents
+                )
         return IntentResponse(**result)
     except Exception as e:
         raise HTTPException(
@@ -94,7 +96,7 @@ async def extract_entities(
     workflow: Annotated[SupervisorWorkflow, Depends(get_workflow)],
 ) -> EntityResponse:
     """Extract entities from the input text."""
-    reasoner = workflow.dspy_reasoner
+    reasoner = getattr(workflow, "dspy_reasoner", None)
     legacy_reasoner = getattr(workflow, "reasoner", None)
 
     if reasoner is None or not hasattr(reasoner, "nlu"):
@@ -107,9 +109,10 @@ async def extract_entities(
         result = reasoner.nlu.extract_entities(text=request.text, entity_types=request.entity_types)
         # Best-effort call for legacy reasoner attribute to satisfy old callers/tests.
         if legacy_reasoner and hasattr(legacy_reasoner, "nlu"):
-            legacy_reasoner.nlu.extract_entities(
-                text=request.text, entity_types=request.entity_types
-            )
+            with contextlib.suppress(Exception):
+                legacy_reasoner.nlu.extract_entities(
+                    text=request.text, entity_types=request.entity_types
+                )
         return EntityResponse(**result)
     except Exception as e:
         raise HTTPException(

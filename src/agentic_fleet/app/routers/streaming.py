@@ -38,11 +38,13 @@ if TYPE_CHECKING:
 
 logger = setup_logger(__name__)
 
+
 def _sanitize_log_input(s: str) -> str:
     # Remove all control and non-printable characters (keep only printable ASCII)
     # Also, truncate excessively long input to reasonable length for logging.
-    sanitized = ''.join(ch for ch in s if ch in string.printable and ch not in '\r\n')
+    sanitized = "".join(ch for ch in s if ch in string.printable and ch not in "\r\n")
     return sanitized[:256]
+
 
 router = APIRouter()
 
@@ -53,15 +55,19 @@ _TTL_SECONDS = 3600  # Time-to-live: expire threads after 1 hour of inactivity
 
 # Maps conversation_id -> (AgentThread, last_access_timestamp)
 _conversation_threads: OrderedDict[str, tuple[AgentThread, float]] = OrderedDict()
+# Lock to synchronize access to _conversation_threads (prevents race conditions)
+_threads_lock: asyncio.Lock = asyncio.Lock()
 
 
-def _get_or_create_thread(conversation_id: str | None) -> AgentThread | None:
+async def _get_or_create_thread(conversation_id: str | None) -> AgentThread | None:
     """Get or create an AgentThread for a conversation.
 
     Uses a bounded, TTL-aware cache that:
     - Evicts expired entries (older than _TTL_SECONDS)
     - Evicts oldest entries when capacity (_MAX_THREADS) is exceeded
     - Updates last-access timestamp on each access
+
+    This function is thread-safe via asyncio.Lock.
 
     Args:
         conversation_id: The conversation ID, or None for no thread.
@@ -72,49 +78,50 @@ def _get_or_create_thread(conversation_id: str | None) -> AgentThread | None:
     if not conversation_id:
         return None
 
-    now = time.monotonic()
+    async with _threads_lock:
+        now = time.monotonic()
 
-    # Evict expired entries first (lazy cleanup on access)
-    expired_ids = [
-        cid
-        for cid, (_, last_access) in _conversation_threads.items()
-        if now - last_access > _TTL_SECONDS
-    ]
-    for cid in expired_ids:
-        del _conversation_threads[cid]
-        logger.debug("Evicted expired conversation thread: conversation_id=%s", cid)
+        # Evict expired entries first (lazy cleanup on access)
+        expired_ids = [
+            cid
+            for cid, (_, last_access) in _conversation_threads.items()
+            if now - last_access > _TTL_SECONDS
+        ]
+        for cid in expired_ids:
+            del _conversation_threads[cid]
+            logger.debug("Evicted expired conversation thread: conversation_id=%s", cid)
 
-    if expired_ids:
-        logger.info(
-            "Evicted %d expired conversation thread(s) due to TTL (%ds)",
-            len(expired_ids),
-            _TTL_SECONDS,
-        )
+        if expired_ids:
+            logger.info(
+                "Evicted %d expired conversation thread(s) due to TTL (%ds)",
+                len(expired_ids),
+                _TTL_SECONDS,
+            )
 
-    # Check if thread exists and update access time
-    if conversation_id in _conversation_threads:
-        thread, _ = _conversation_threads[conversation_id]
-        _conversation_threads[conversation_id] = (thread, now)
+        # Check if thread exists and update access time
+        if conversation_id in _conversation_threads:
+            thread, _ = _conversation_threads[conversation_id]
+            _conversation_threads[conversation_id] = (thread, now)
+            _conversation_threads.move_to_end(conversation_id)
+            return thread
+
+        # Create new thread
+        new_thread = AgentThread()
+        _conversation_threads[conversation_id] = (new_thread, now)
         _conversation_threads.move_to_end(conversation_id)
-        return thread
+        logger.debug("Created new conversation thread for: %s", conversation_id)
 
-    # Create new thread
-    new_thread = AgentThread()
-    _conversation_threads[conversation_id] = (new_thread, now)
-    _conversation_threads.move_to_end(conversation_id)
-    logger.debug("Created new conversation thread for: %s", conversation_id)
+        # Evict oldest entries if capacity exceeded
+        while len(_conversation_threads) > _MAX_THREADS:
+            evicted_id, (_, evicted_ts) = _conversation_threads.popitem(last=False)
+            age_seconds = int(now - evicted_ts)
+            logger.info(
+                "Evicted oldest conversation thread to cap memory: conversation_id=%s, age=%ds",
+                evicted_id,
+                age_seconds,
+            )
 
-    # Evict oldest entries if capacity exceeded
-    while len(_conversation_threads) > _MAX_THREADS:
-        evicted_id, (_, evicted_ts) = _conversation_threads.popitem(last=False)
-        age_seconds = int(now - evicted_ts)
-        logger.info(
-            "Evicted oldest conversation thread to cap memory: conversation_id=%s, age=%ds",
-            evicted_id,
-            age_seconds,
-        )
-
-    return new_thread
+        return new_thread
 
 
 # =============================================================================
@@ -389,9 +396,7 @@ def _validate_websocket_origin(websocket: WebSocket) -> bool:
     if origin in settings.cors_allowed_origins:
         return True
 
-    logger.warning(
-        f"WebSocket connection rejected: invalid origin '{_sanitize_log_input(origin)}'"
-    )
+    logger.warning(f"WebSocket connection rejected: invalid origin '{_sanitize_log_input(origin)}'")
     return False
 
 
@@ -494,7 +499,7 @@ async def websocket_chat(
             )
 
         # Get or create conversation thread for multi-turn context
-        conversation_thread = _get_or_create_thread(request.conversation_id)
+        conversation_thread = await _get_or_create_thread(request.conversation_id)
 
         # Create session (will raise 429 if limit exceeded)
         try:

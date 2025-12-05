@@ -24,7 +24,7 @@ from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from agentic_fleet.utils.cache import TTLCache
     from agentic_fleet.utils.compiler import compile_reasoner
-    from agentic_fleet.utils.config_loader import get_agent_model, load_config
+    from agentic_fleet.utils.config_loader import get_agent_model, get_config_path, load_config
     from agentic_fleet.utils.models import ExecutionMode, RoutingDecision
     from agentic_fleet.utils.tool_registry import ToolMetadata, ToolRegistry
     from agentic_fleet.utils.tracing import get_meter, get_tracer, initialize_tracing
@@ -37,6 +37,7 @@ __all__ = [
     "ToolRegistry",
     "compile_reasoner",
     "get_agent_model",
+    "get_config_path",
     "get_meter",
     "get_tracer",
     "initialize_tracing",
@@ -65,11 +66,17 @@ def __getattr__(name: str) -> object:
 
         return compile_reasoner
 
-    if name in ("load_config", "get_agent_model"):
-        from agentic_fleet.utils.config_loader import get_agent_model, load_config
+    if name in ("load_config", "get_agent_model", "get_config_path"):
+        from agentic_fleet.utils.config_loader import (
+            get_agent_model,
+            get_config_path,
+            load_config,
+        )
 
         if name == "load_config":
             return load_config
+        if name == "get_config_path":
+            return get_config_path
         return get_agent_model
 
     if name == "TTLCache":
