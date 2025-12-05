@@ -9,6 +9,7 @@ callers can't accidentally mutate in-memory state without persistence.
 from __future__ import annotations
 
 import json
+import logging
 import threading
 from collections.abc import Iterable
 from datetime import datetime
@@ -16,6 +17,8 @@ from pathlib import Path
 
 from agentic_fleet.app.schemas import Conversation
 from agentic_fleet.utils.constants import DEFAULT_DATA_DIR
+
+logger = logging.getLogger(__name__)
 
 
 class ConversationStore:
@@ -76,7 +79,8 @@ class ConversationStore:
         for item in raw if isinstance(raw, list) else []:
             try:
                 conversations[item["id"]] = Conversation.model_validate(item)
-            except Exception:
+            except Exception as e:
+                logger.warning(f"Failed to validate conversation item: {e}")
                 continue
         return conversations
 

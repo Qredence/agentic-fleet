@@ -269,7 +269,6 @@ _DEFAULT_COLLAPSIBLE = True
 _DEFAULT_CATEGORY = "status"
 
 
-
 # Valid values for validation
 _VALID_PRIORITIES: set[str] = {"low", "medium", "high"}
 _VALID_CATEGORIES: set[str] = {cat.value for cat in EventCategory}

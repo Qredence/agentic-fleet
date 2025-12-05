@@ -282,7 +282,8 @@ class WorkflowRunner:
         if not self.workflow:
             await self.initialize_workflow()
 
-        assert self.workflow is not None, "Workflow initialization failed"
+        if self.workflow is None:
+            raise RuntimeError("Workflow initialization failed")
 
         # Track execution
         start_time = datetime.now()
@@ -580,7 +581,8 @@ class WorkflowRunner:
         if not self.workflow:
             await self.initialize_workflow()
 
-        assert self.workflow is not None, "Workflow initialization failed"
+        if self.workflow is None:
+            raise RuntimeError("Workflow initialization failed")
 
         with self.console.status("[bold green]Processing..."):
             result = await self.workflow.run(message)
