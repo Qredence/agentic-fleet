@@ -12,7 +12,6 @@ export class MockReconnectingWebSocket {
   onclose: ((event: CloseEvent) => void) | null = null;
   sentMessages: string[] = [];
 
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   constructor(url: string, _protocols?: string | string[], _options?: object) {
     this.url = url;
     mockWebSocketInstances.push(this);

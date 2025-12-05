@@ -83,7 +83,7 @@ export class MessageErrorBoundary extends Component<
     this.state = { hasError: false };
   }
 
-  static getDerivedStateFromError(error: Error): MessageErrorBoundaryState {
+  static getDerivedStateFromError(_error: Error): MessageErrorBoundaryState {
     return { hasError: true };
   }
 
