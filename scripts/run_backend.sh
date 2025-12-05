@@ -1,14 +1,10 @@
 #!/bin/bash
-# Kill process on port 8000
+set -euo pipefail
+
+# Kill process on port 8000 to avoid conflicts
 echo "Killing any process on port 8000..."
 lsof -ti:8000 | xargs kill -9 2>/dev/null || true
 
-# Activate venv
-source .venv/bin/activate
-
-# Set PYTHONPATH
-export PYTHONPATH=$PYTHONPATH:$(pwd)/src
-
-# Run uvicorn
+# Run backend with uv (no manual venv activation required)
 echo "Starting backend on port 8000..."
-uv run python -m uvicorn agentic_fleet.api.main:app --reload --port 8000
+uv run uvicorn agentic_fleet.app.main:app --reload --port 8000 --log-level info

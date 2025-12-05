@@ -9,12 +9,14 @@ import asyncio
 from typing import TYPE_CHECKING, Any
 
 from agent_framework._agents import ChatAgent
+from agent_framework._threads import AgentThread
 from agent_framework._types import ChatMessage, Role
-from agent_framework._workflows import MagenticAgentMessageEvent, WorkflowOutputEvent
+from agent_framework._workflows import WorkflowOutputEvent
 
 from ..utils.logger import setup_logger
 from ..utils.models import ExecutionMode, RoutingDecision
 from .exceptions import AgentExecutionError
+from .execution.streaming_events import MagenticAgentMessageEvent
 from .group_chat_builder import GroupChatBuilder
 from .handoff import HandoffContext, HandoffManager
 from .helpers import (
@@ -156,6 +158,8 @@ async def run_execution_phase_streaming(
 
     assigned_agents: list[str] = list(routing.assigned_to)
     subtasks: list[str] = list(routing.subtasks)
+    # Get conversation thread from context for multi-turn support
+    thread = context.conversation_thread
 
     # We will accumulate usage and result to return a final outcome if needed,
     # but primarily we yield events.
@@ -165,7 +169,9 @@ async def run_execution_phase_streaming(
     # For now, let's yield events and then yield the ExecutionOutcome at the end.
 
     if routing.mode is ExecutionMode.PARALLEL:
-        async for event in execute_parallel_streaming(agents_map, assigned_agents, subtasks):
+        async for event in execute_parallel_streaming(
+            agents_map, assigned_agents, subtasks, thread=thread
+        ):
             if isinstance(event, MagenticAgentMessageEvent):
                 yield event
             elif isinstance(event, WorkflowOutputEvent):
@@ -179,6 +185,7 @@ async def run_execution_phase_streaming(
             task,
             enable_handoffs=context.enable_handoffs,
             handoff=context.handoff,
+            thread=thread,
         ):
             if isinstance(event, (MagenticAgentMessageEvent, WorkflowOutputEvent)):
                 yield event
@@ -190,6 +197,7 @@ async def run_execution_phase_streaming(
             task,
             reasoner=context.dspy_supervisor,
             progress_callback=context.progress_callback,
+            thread=thread,
         ):
             if isinstance(event, (MagenticAgentMessageEvent, WorkflowOutputEvent)):
                 yield event
@@ -198,7 +206,7 @@ async def run_execution_phase_streaming(
         delegate = assigned_agents[0] if assigned_agents else None
         if delegate is None:
             raise ExecutionPhaseError("Delegated execution requires at least one assigned agent.")
-        async for event in execute_delegated_streaming(agents_map, delegate, task):
+        async for event in execute_delegated_streaming(agents_map, delegate, task, thread=thread):
             if isinstance(event, (MagenticAgentMessageEvent, WorkflowOutputEvent)):
                 yield event
 
@@ -301,6 +309,7 @@ async def execute_delegated_streaming(
     agent_name: str,
     task: str,
     progress_callback: ProgressCallback | None = None,
+    thread: AgentThread | None = None,
 ):
     """Delegate task to single agent with streaming."""
     if agent_name not in agents:
@@ -320,7 +329,7 @@ async def execute_delegated_streaming(
         payload={"task_preview": task[:120]},
     )
 
-    response = await agents[agent_name].run(task)
+    response = await agents[agent_name].run(task, thread=thread)
 
     if progress_callback:
         progress_callback.on_progress(f"{agent_name} completed")
@@ -396,6 +405,7 @@ async def execute_parallel_streaming(
     agent_names: list[str],
     subtasks: list[str],
     progress_callback: ProgressCallback | None = None,
+    thread: AgentThread | None = None,
 ):
     """Execute subtasks in parallel with streaming."""
     tasks = []
@@ -404,7 +414,7 @@ async def execute_parallel_streaming(
     for agent_name, subtask in zip(agent_names, subtasks, strict=False):
         agent = _get_agent(agents, agent_name)
         if agent:
-            tasks.append(agent.run(subtask))
+            tasks.append(agent.run(subtask, thread=thread))
             valid_agent_names.append(agent_name)
             valid_subtasks.append(subtask)
 
@@ -646,6 +656,7 @@ async def execute_sequential_streaming(
     *,
     enable_handoffs: bool = False,
     handoff: HandoffManager | None = None,
+    thread: AgentThread | None = None,
 ):
     """Execute task sequentially through agents with streaming."""
 
@@ -693,7 +704,7 @@ async def execute_sequential_streaming(
             },
         )
 
-        response = await agent.run(result)
+        response = await agent.run(result, thread=thread)
         result_text = str(response)
         artifacts.update(extract_artifacts(result_text))
 
@@ -798,8 +809,13 @@ async def execute_discussion_streaming(
     task: str,
     reasoner: Any,  # DSPyReasoner
     progress_callback: ProgressCallback | None = None,
+    thread: AgentThread | None = None,  # Reserved for future use
 ):
-    """Execute task via group chat discussion."""
+    """Execute task via group chat discussion.
+
+    Note: thread parameter is reserved for future use. Group chat currently
+    manages its own internal conversation history.
+    """
 
     if not agent_names:
         raise AgentExecutionError(

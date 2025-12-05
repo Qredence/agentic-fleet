@@ -2,6 +2,9 @@
 
 This document tracks planned code quality improvements identified during codebase analysis.
 
+> **Note:** Filenames in this archive reflect the legacy `api/` package layout. The current
+> FastAPI app now lives under `src/agentic_fleet/app/`.
+
 ---
 
 ## 🔴 High Priority

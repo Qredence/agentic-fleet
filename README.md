@@ -73,8 +73,8 @@ asyncio.run(main())
 ### Backend API
 
 ```bash
-./scripts/start_backend.sh  # http://localhost:8000
-# Docs: http://localhost:8000/api/docs
+make backend  # http://localhost:8000
+# Docs: http://localhost:8000/docs
 ```
 
 ## Configuration

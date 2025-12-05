@@ -13,7 +13,7 @@ Replace Server-Sent Events (SSE) with WebSocket for bidirectional real-time chat
 
 - **Option A**: New WebSocket per message (chosen for simplicity)
 - **Conversation context**: Sent in JSON payload on WebSocket open
-- **Auto-reconnection**: Using `reconnecting-websocket` library with exponential backoff
+- **Auto-reconnection**: Custom `reconnectingWebSocket` helper (TypeScript) with exponential backoff
 
 ### Changes Made
 
@@ -37,9 +37,8 @@ Replace Server-Sent Events (SSE) with WebSocket for bidirectional real-time chat
 2. `src/frontend/vite.config.ts` - Proxy configuration
 3. `src/frontend/src/api/types.ts` - Type definitions
 4. `src/frontend/src/hooks/useChat.ts` - Chat hook rewrite
-5. `src/frontend/src/tests/hooks/useChat.test.tsx` - Updated tests
-6. `src/frontend/src/tests/__mocks__/reconnecting-websocket.ts` - WebSocket mock
-7. `src/frontend/AGENTS.md` - Documentation update
+5. `src/frontend/src/lib/reconnectingWebSocket.ts` - Custom reconnecting WebSocket helper
+6. `src/frontend/AGENTS.md` - Documentation update
 
 ---
 

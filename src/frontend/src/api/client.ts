@@ -1,14 +1,39 @@
 import type {
   Conversation,
-  ChatRequest,
   WorkflowSession,
   AgentInfo,
   Message,
+  IntentRequest,
+  IntentResponse,
+  EntityRequest,
+  EntityResponse,
 } from "./types";
 
 const API_PREFIX = "/api";
 
 export const api = {
+  // ... existing methods ...
+
+  async classifyIntent(request: IntentRequest): Promise<IntentResponse> {
+    const response = await fetch(`${API_PREFIX}/v1/classify_intent`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(request),
+    });
+    if (!response.ok) throw new Error("Failed to classify intent");
+    return response.json();
+  },
+
+  async extractEntities(request: EntityRequest): Promise<EntityResponse> {
+    const response = await fetch(`${API_PREFIX}/v1/extract_entities`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(request),
+    });
+    if (!response.ok) throw new Error("Failed to extract entities");
+    return response.json();
+  },
+
   async createConversation(title: string = "New Chat"): Promise<Conversation> {
     const response = await fetch(`${API_PREFIX}/conversations`, {
       method: "POST",
@@ -34,20 +59,6 @@ export const api = {
   async loadConversationMessages(id: string): Promise<Message[]> {
     const conversation = await this.getConversation(id);
     return conversation.messages || [];
-  },
-
-  async sendMessage(
-    request: ChatRequest,
-    signal?: AbortSignal,
-  ): Promise<Response> {
-    const response = await fetch(`${API_PREFIX}/chat`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(request),
-      signal,
-    });
-    if (!response.ok) throw new Error("Failed to send message");
-    return response;
   },
 
   async listSessions(): Promise<WorkflowSession[]> {

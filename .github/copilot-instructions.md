@@ -15,7 +15,7 @@ src/agentic_fleet/
 ├── app/              # FastAPI backend + SSE streaming
 ├── config/           # workflow_config.yaml - THE source of truth for all settings
 └── utils/            # Shared helpers, ToolRegistry, HistoryManager, caching
-src/frontend/         # React/Vite UI (Zustand state in stores/chatStore.ts)
+src/frontend/         # React/Vite UI (state managed in hooks/useChat.ts)
 ```
 
 **Config-Driven Architecture**: All models, agents, thresholds, and tools are declared in `src/agentic_fleet/config/workflow_config.yaml`. Never hardcode these values in Python—reference the YAML.
@@ -54,7 +54,7 @@ src/frontend/         # React/Vite UI (Zustand state in stores/chatStore.ts)
 
 ### Frontend (React/TypeScript)
 
-- **State**: Single source in `stores/chatStore.ts` (Zustand)
+- **State**: Chat state managed in `hooks/useChat.ts` (React hooks). Zustand installed for future global state needs.
 - **API calls**: Always through `lib/api/` (never direct fetch)
 - **Components**: Shared atoms in `components/ui/` (shadcn/ui)
 - **Config**: `VITE_API_URL` in `.env` (defaults to `http://localhost:8000`)

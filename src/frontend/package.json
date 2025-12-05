@@ -38,7 +38,6 @@
     "react-dom": "^19.1.1",
     "react-markdown": "^10.1.0",
     "react-syntax-highlighter": "^16.1.0",
-    "reconnecting-websocket": "^4.4.0",
     "remark-breaks": "^4.0.0",
     "remark-gfm": "^4.0.1",
     "shiki": "^3.17.0",

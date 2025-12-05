@@ -16,7 +16,10 @@ export const ChainOfThoughtItem = ({
   className,
   ...props
 }: ChainOfThoughtItemProps) => (
-  <div className={cn("text-muted-foreground text-sm", className)} {...props}>
+  <div
+    className={cn("text-muted-foreground text-sm w-full block", className)}
+    {...props}
+  >
     {children}
   </div>
 );

@@ -40,6 +40,8 @@
 - **Group Chat**: Multi-agent discussions are supported via `DSPyGroupChatManager` and `GroupChatBuilder`. Workflows can participate as agents using the `workflow.as_agent()` pattern.
 - **Latency Tips**: Clear DSPy cache after changes (`make clear-cache`), use `gpt-5-mini` for routing, disable judge if not needed.
 - When adding or modifying agents/workflows, keep prompts/factories in sync and update config schema validation.
+- **Streaming/Event surface**: Workflow events are mapped through `agentic_fleet.app.events.mapping` to UI-friendly categories (reasoning, routing, analysis, quality, agent output). Keep SSE payloads and frontend workflow renderers in sync when adding new event kinds.
+- **NLU module**: A DSPy-backed NLU stack (`dspy_modules/nlu.py`, `app/routers/nlu.py`) exposes intent classification and entity extraction endpoints. Update signatures and compiled caches together when changing NLU behaviour.
 - For multi-agent expansion with OpenAI Agents SDK, treat Codex CLI as an MCP server and mirror roles from `.github/agents/agent-framework-spec.md`; document new roles/prompts here and in `docs/` as needed.
 
 ## Conventions & Notes

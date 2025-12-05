@@ -20,6 +20,7 @@ from ..utils.logger import setup_logger
 from ..utils.telemetry import optional_span
 from ..workflows.exceptions import ToolError
 from ..workflows.helpers import is_simple_task, is_time_sensitive_task
+from .nlu import DSPyNLU, get_nlu_module
 from .signatures import (
     GroupChatSpeakerSelection,
     ProgressEvaluation,
@@ -61,6 +62,7 @@ class DSPyReasoner(dspy.Module):
         self._tool_planner: dspy.Module | None = None
         self._simple_responder: dspy.Module | None = None
         self._group_chat_selector: dspy.Module | None = None
+        self._nlu: DSPyNLU | None = None
 
     def _ensure_modules_initialized(self) -> None:
         """Lazily initialize DSPy modules on first use.
@@ -85,6 +87,7 @@ class DSPyReasoner(dspy.Module):
             "_tool_planner",
             "_simple_responder",
             "_group_chat_selector",
+            "_nlu",
         ):
             if not hasattr(self, attr):
                 setattr(self, attr, None)
@@ -98,6 +101,10 @@ class DSPyReasoner(dspy.Module):
         cache_key_prefix = "enhanced" if self.use_enhanced_signatures else "standard"
 
         # Only initialize if not already set (allows mocking in tests)
+        # NLU
+        if self._nlu is None:
+            self._nlu = get_nlu_module()
+
         # Analyzer
         if self._analyzer is None:
             analyzer_key = f"{cache_key_prefix}_analyzer"
@@ -251,6 +258,17 @@ class DSPyReasoner(dspy.Module):
     def group_chat_selector(self, value: dspy.Module) -> None:
         """Allow setting group chat selector (for compiled module loading)."""
         self._group_chat_selector = value
+
+    @property
+    def nlu(self) -> DSPyNLU:
+        """Lazily initialized NLU module."""
+        self._ensure_modules_initialized()
+        return self._nlu  # type: ignore[return-value]
+
+    @nlu.setter
+    def nlu(self, value: DSPyNLU) -> None:
+        """Allow setting NLU module."""
+        self._nlu = value
 
     def _robust_route(self, max_backtracks: int = 2, **kwargs) -> dspy.Prediction:
         """Execute routing with DSPy assertions."""
@@ -431,6 +449,35 @@ class DSPyReasoner(dspy.Module):
         """
         with optional_span("DSPyReasoner.analyze_task", attributes={"task": task}):
             logger.info(f"Analyzing task: {task[:100]}...")
+
+            # Perform NLU analysis first
+            intent_data = self.nlu.classify_intent(
+                task,
+                possible_intents=[
+                    "information_retrieval",
+                    "content_creation",
+                    "code_generation",
+                    "data_analysis",
+                    "planning",
+                    "chat",
+                ],
+            )
+            logger.info(f"NLU Intent: {intent_data['intent']} ({intent_data['confidence']})")
+
+            # Extract common entities
+            entities_data = self.nlu.extract_entities(
+                task,
+                entity_types=[
+                    "Person",
+                    "Organization",
+                    "Location",
+                    "Date",
+                    "Time",
+                    "Technology",
+                    "Quantity",
+                ],
+            )
+
             prediction = self.analyzer(task=task)
 
             # Extract fields from prediction
@@ -442,6 +489,8 @@ class DSPyReasoner(dspy.Module):
                 "reasoning": getattr(prediction, "reasoning", ""),
                 "time_sensitive": is_time_sensitive_task(task),
                 "needs_web_search": is_time_sensitive_task(task),
+                "intent": intent_data,
+                "entities": entities_data["entities"],
             }
 
     def route_task(

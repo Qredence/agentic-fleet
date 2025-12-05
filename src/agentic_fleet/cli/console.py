@@ -20,6 +20,7 @@ if __package__ in (None, ""):
 
 from ..utils.env import validate_agentic_fleet_env
 from .commands import agents, analyze, benchmark, evaluate, history, improve, optimize, run
+from .commands import dev as dev_module
 from .commands import handoff as handoff_module
 from .runner import WorkflowRunner  # noqa: F401
 
@@ -45,6 +46,7 @@ app = typer.Typer(
 )
 
 app.command(name="run")(run.run)
+app.command(name="dev")(dev_module.dev)
 
 # Backward-compatible alias so tests and external callers can use
 # `console.handoff` directly as a Typer command function rather than

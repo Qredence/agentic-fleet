@@ -14,14 +14,13 @@ import {
   MessageAction,
 } from "./prompt-kit/message";
 import { ChainOfThought } from "./prompt-kit/chain-of-thought";
-import { ThinkingBar } from "./prompt-kit/thinking-bar";
+import { Loader2 } from "lucide-react";
 import {
   Reasoning,
   ReasoningTrigger,
   ReasoningContent,
 } from "./prompt-kit/reasoning";
 import { WorkflowEvents } from "./WorkflowEvents";
-import { Loader } from "./prompt-kit/loader";
 import {
   WORKFLOW_EVENT_TYPES,
   REASONING_STEP_TYPES,
@@ -204,19 +203,23 @@ export const ChatMessage = memo(function ChatMessage({
           </Reasoning>
         )}
 
-        {/* Main content or thinking indicator */}
+        {/* Main content or loading indicator */}
         {isProcessing ? (
-          <div className="flex items-center gap-3">
-            <Loader variant="typing" size="sm" />
-            <ThinkingBar
-              text={
-                isReasoningStreaming
-                  ? "Reasoning..."
-                  : workflowPhase || "Thinking"
-              }
-              onStop={onCancelStreaming}
-              stopLabel="Stop"
-            />
+          <div className="flex items-center gap-2 text-sm text-muted-foreground">
+            <Loader2 size={14} className="animate-spin" />
+            <span>
+              {isReasoningStreaming
+                ? "Reasoning..."
+                : workflowPhase || "Processing..."}
+            </span>
+            {onCancelStreaming && (
+              <button
+                onClick={onCancelStreaming}
+                className="ml-2 text-xs hover:text-foreground border-b border-dotted border-muted-foreground/50"
+              >
+                Stop
+              </button>
+            )}
           </div>
         ) : (
           <MessageContent

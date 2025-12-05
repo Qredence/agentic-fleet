@@ -12,7 +12,6 @@ from typing import Any
 
 from agent_framework._workflows import (
     ExecutorCompletedEvent,
-    MagenticAgentMessageEvent,
     WorkflowOutputEvent,
 )
 from rich.console import Console
@@ -27,6 +26,7 @@ from ..utils.error_utils import sanitize_error_message
 from ..utils.logger import setup_logger
 from ..utils.progress import RichProgressCallback
 from ..workflows.config import WorkflowConfig
+from ..workflows.execution.streaming_events import MagenticAgentMessageEvent
 from ..workflows.messages import (
     AnalysisMessage,
     ExecutionMessage,

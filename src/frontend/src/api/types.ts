@@ -142,3 +142,28 @@ export interface AgentInfo {
   description: string;
   type: string;
 }
+
+export interface IntentRequest {
+  text: string;
+  possible_intents: string[];
+}
+
+export interface IntentResponse {
+  intent: string;
+  confidence: number;
+  reasoning: string;
+}
+
+export interface EntityRequest {
+  text: string;
+  entity_types: string[];
+}
+
+export interface EntityResponse {
+  entities: {
+    text: string;
+    type: string;
+    confidence: string;
+  }[];
+  reasoning: string;
+}

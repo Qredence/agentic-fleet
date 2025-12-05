@@ -35,6 +35,7 @@ class AppSettings:
     log_json: bool
     max_concurrent_workflows: int
     conversations_path: Path
+    ws_allow_localhost: bool
     app_version: str = "0.3.0"
     app_name: str = "AgenticFleet API"
 
@@ -52,6 +53,7 @@ def get_settings() -> AppSettings:
         log_json=_parse_bool(os.getenv("LOG_JSON"), default=True),
         max_concurrent_workflows=int(os.getenv("MAX_CONCURRENT_WORKFLOWS", "10")),
         conversations_path=Path(os.getenv("CONVERSATIONS_PATH", ".var/data/conversations.json")),
+        ws_allow_localhost=_parse_bool(os.getenv("WS_ALLOW_LOCALHOST"), default=True),
     )
 
 

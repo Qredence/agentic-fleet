@@ -35,17 +35,22 @@ User-facing documentation for using the framework:
    - Tool integration
    - Quality assessment
    - Monitoring and history
-3. **[Configuration](users/configuration.md)** - Configuration guide
+3. **[Frontend Guide](users/frontend.md)** - Web interface guide
+   - Starting the frontend
+   - Chat interface features
+   - Workflow visualization
+   - Configuration and development
+4. **[Configuration](users/configuration.md)** - Configuration guide
    - All configuration options
    - Environment variables
    - Performance tuning
    - Migration guide
-4. **[Troubleshooting](users/troubleshooting.md)** - Common issues and solutions
+5. **[Troubleshooting](users/troubleshooting.md)** - Common issues and solutions
    - Installation problems
    - Runtime issues
    - Performance tuning
    - Debugging tips
-5. **[Self-Improvement](users/self-improvement.md)** - Automatic learning from history
+6. **[Self-Improvement](users/self-improvement.md)** - Automatic learning from history
    - How self-improvement works
    - Usage and configuration
    - Best practices
@@ -81,6 +86,17 @@ Developer-facing documentation for extending and contributing:
    - Caching optimizations
    - Code organization
    - Performance improvements
+
+### Frontend Development
+
+The React/Vite frontend lives in `src/frontend/`:
+
+- **[Frontend AGENTS.md](../src/frontend/AGENTS.md)** - Frontend architecture and development guide
+  - Directory structure
+  - State management (hooks/useChat.ts)
+  - WebSocket streaming
+  - Component patterns
+  - Testing
 
 ### Internal Documentation
 

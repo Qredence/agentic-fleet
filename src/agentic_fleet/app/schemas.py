@@ -352,6 +352,14 @@ class StreamEvent(BaseModel):
         default=None,
         description="Human-friendly terminal log line mirrored to the frontend",
     )
+    quality_score: float | None = Field(
+        default=None,
+        description="Heuristic or model-derived quality score for final answers (0..1)",
+    )
+    quality_flag: str | None = Field(
+        default=None,
+        description="Optional quality flag (e.g., low_confidence, empty)",
+    )
 
     model_config = ConfigDict(extra="allow")
 
@@ -397,6 +405,10 @@ class StreamEvent(BaseModel):
             result["workflow_id"] = self.workflow_id
         if self.log_line is not None:
             result["log_line"] = self.log_line
+        if self.quality_score is not None:
+            result["quality_score"] = self.quality_score
+        if self.quality_flag is not None:
+            result["quality_flag"] = self.quality_flag
 
         result["timestamp"] = self.timestamp.isoformat()
         return result

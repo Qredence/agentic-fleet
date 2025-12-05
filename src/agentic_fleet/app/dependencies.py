@@ -350,6 +350,21 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     workflow = await create_supervisor_workflow()
     app.state.workflow = workflow
 
+    # Pre-warm the AnswerQualityModule cache (logs warning if not compiled)
+    try:
+        from agentic_fleet.dspy_modules.answer_quality import _get_answer_quality_module
+
+        aq_module = _get_answer_quality_module()
+        if aq_module is None:
+            logger.warning(
+                "AnswerQualityModule not compiled. Quality scoring will use heuristic fallback. "
+                "Run `agentic-fleet gepa-optimize` to compile for better quality scoring."
+            )
+        else:
+            logger.info("AnswerQualityModule loaded from cache")
+    except Exception as e:
+        logger.warning("Failed to pre-warm AnswerQualityModule: %s", e)
+
     # Initialize managers with settings-aware configuration
     global _session_manager, _conversation_manager
     _session_manager = WorkflowSessionManager(max_concurrent=settings.max_concurrent_workflows)

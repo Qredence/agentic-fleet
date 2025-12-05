@@ -16,7 +16,6 @@ from typing import Any
 from agent_framework._types import ChatMessage
 from agent_framework._workflows import (
     Executor,
-    MagenticAgentMessageEvent,
     WorkflowContext,
     WorkflowOutputEvent,
 )
@@ -28,6 +27,7 @@ from ..utils.resilience import async_call_with_retry
 from ..utils.telemetry import optional_span
 from .context import SupervisorContext
 from .exceptions import ToolError
+from .execution.streaming_events import MagenticAgentMessageEvent
 from .helpers import (
     build_refinement_task,
     call_judge_with_reasoning,
@@ -159,7 +159,13 @@ class AnalysisExecutor(Executor):
                         if cache is not None:
                             cache.set(cache_key, analysis_dict)
                         self.context.latest_phase_status["analysis"] = "success"
-                    metadata = {**task_msg.metadata, "simple_mode": False}
+                    # Include reasoning from DSPy analysis in metadata for frontend display
+                    metadata = {
+                        **task_msg.metadata,
+                        "simple_mode": False,
+                        "reasoning": analysis_dict.get("reasoning", ""),
+                        "intent": analysis_dict.get("intent"),
+                    }
 
                 # Convert to AnalysisResult
                 analysis_result = self._to_analysis_result(analysis_dict)

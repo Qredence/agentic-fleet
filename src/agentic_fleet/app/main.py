@@ -19,6 +19,7 @@ from agentic_fleet.app.routers import (
     conversations,
     dspy_management,
     history,
+    nlu,
     streaming,
     workflow,
 )
@@ -73,10 +74,14 @@ def _configure_logging() -> None:
     uvicorn_access = logging.getLogger("uvicorn.access")
     uvicorn_access.handlers = [handler]
 
-    # Reduce noise from some verbose libraries
+    # Reduce noise from verbose libraries
     logging.getLogger("httpcore").setLevel(logging.WARNING)
     logging.getLogger("httpx").setLevel(logging.WARNING)
     logging.getLogger("openai").setLevel(logging.WARNING)
+    logging.getLogger("azure").setLevel(logging.WARNING)
+    logging.getLogger("urllib3").setLevel(logging.WARNING)
+    logging.getLogger("azure.core.pipeline.policies.http_logging_policy").setLevel(logging.WARNING)
+    logging.getLogger("azure.monitor").setLevel(logging.WARNING)
 
 
 # Initialize logging before app creation
@@ -119,6 +124,7 @@ app.include_router(workflow.router, prefix="/api/v1", tags=["workflow"])
 app.include_router(agents.router, prefix="/api/v1", tags=["agents"])
 app.include_router(history.router, prefix="/api/v1", tags=["history"])
 app.include_router(dspy_management.router, prefix="/api/v1", tags=["dspy"])
+app.include_router(nlu.router, prefix="/api/v1", tags=["nlu"])
 
 # Streaming routes at /api (no version) for frontend compatibility
 # Frontend expects POST /api/chat for streaming

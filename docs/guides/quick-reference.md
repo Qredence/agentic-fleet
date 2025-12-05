@@ -17,6 +17,12 @@ make dev               # Run backend (8000) + frontend (5173) together
 make backend           # Backend only on port 8000
 make frontend-dev      # Frontend only on port 5173
 make run               # CLI application
+
+# Or use the CLI directly
+agentic-fleet dev                     # Start both servers
+agentic-fleet dev --backend-port 8080 # Custom backend port
+agentic-fleet dev --no-frontend       # Backend only
+agentic-fleet dev --no-backend        # Frontend only
 ```
 
 ### Testing

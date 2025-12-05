@@ -1,4 +1,4 @@
- .PHONY: help install sync clean test test-config test-e2e test-frontend test-all lint format type-check check run pre-commit-install dev backend frontend-install frontend-dev build-frontend analyze-history self-improve init-var clear-cache qa frontend-lint frontend-format evaluate-history
+ .PHONY: help install dev-setup sync clean test test-config test-e2e test-frontend test-all lint format type-check check run pre-commit-install dev backend frontend-install frontend-dev build-frontend analyze-history self-improve init-var clear-cache qa frontend-lint frontend-format evaluate-history
 
 # Centralized variables
 FRONTEND_DIR := src/frontend

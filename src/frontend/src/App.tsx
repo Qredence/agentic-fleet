@@ -64,10 +64,10 @@ function App() {
         onSelectConversation={selectConversation}
         isConversationsLoading={isConversationsLoading}
       >
-        <div className="flex-1 flex flex-col h-full relative overflow-hidden bg-gray-1000">
-          <ChatContainerRoot className="flex-1 flex flex-col relative z-0">
+        <div className="flex-1 flex flex-col h-full min-h-0 relative overflow-hidden bg-gray-1000">
+          <ChatContainerRoot className="flex-1 flex flex-col relative z-0 min-h-0">
             <ChatContainerContent
-              className="flex-1 max-w-4xl mx-auto w-full px-4 py-8 space-y-8 pb-32"
+              className="flex-1 max-w-5xl md:max-w-6xl mx-auto w-full px-4 md:px-6 py-8 space-y-8 pb-40"
               aria-live="polite"
               aria-atomic="false"
               aria-busy={isLoading}
@@ -226,7 +226,7 @@ function App() {
             className="absolute bottom-0 left-0 right-0 z-30"
           >
             <div className="glass-bar pb-6 pt-4 px-4">
-              <div className="max-w-4xl mx-auto">
+              <div className="max-w-5xl md:max-w-6xl mx-auto px-0 md:px-2">
                 <ChatInput
                   onSendMessage={sendMessage}
                   isStreaming={isLoading}

@@ -110,16 +110,7 @@ This code review assessed the AgenticFleet codebase, a hybrid DSPy + Microsoft a
 
 ### 🔵 Minor TODOs Found
 
-1. **src/agentic_fleet/api/routes/chat.py (Line ~90)**
-
-   ```python
-   # TODO: Pass conversation history if supported by SupervisorWorkflow in the future
-   ```
-
-   - **Impact:** Low
-   - **Recommendation:** Consider implementing conversation history support or document why it's deferred
-
-2. **src/agentic_fleet/workflows/supervisor.py**
+1. **src/agentic_fleet/workflows/supervisor.py**
 
    ```python
    # TODO: refactor properly to optimize fast-path and mode detection
@@ -127,12 +118,6 @@ This code review assessed the AgenticFleet codebase, a hybrid DSPy + Microsoft a
 
    - **Impact:** Medium (performance optimization)
    - **Recommendation:** Track as technical debt for future optimization
-
-### 🔵 Missing Validation Script
-
-- **Issue:** Makefile references `tools/scripts/validate_agents_docs.py` which doesn't exist
-- **Impact:** Low (documentation validation)
-- **Recommendation:** Either create the script or update Makefile to remove the reference
 
 ### 🟢 Documentation
 
@@ -144,7 +129,7 @@ This code review assessed the AgenticFleet codebase, a hybrid DSPy + Microsoft a
 
 - **Suggestions:**
   - Keep AGENTS.md in sync with agent implementations
-  - Document the missing validate_agents_docs.py script
+  - Keep documentation aligned with the current FastAPI `app/routers` layout
 
 ---
 

@@ -8,48 +8,70 @@ from __future__ import annotations
 
 import asyncio
 import contextlib
-import json
 import re  # For robust input sanitization
+from collections import OrderedDict
 from collections.abc import AsyncIterator
 from datetime import datetime
 from typing import TYPE_CHECKING, Any
 
-from agent_framework._workflows import (
-    ExecutorCompletedEvent,
-    MagenticAgentMessageEvent,
-    WorkflowOutputEvent,
-    WorkflowStartedEvent,
-    WorkflowStatusEvent,
-)
+from agent_framework._threads import AgentThread
 from fastapi import APIRouter, HTTPException, WebSocket, WebSocketDisconnect, status
 
 from agentic_fleet.app.dependencies import SessionManagerDep
+from agentic_fleet.app.events.mapping import classify_event, map_workflow_event
 from agentic_fleet.app.schemas import (
     ChatRequest,
-    EventCategory,
     MessageRole,
     StreamEvent,
     StreamEventType,
-    UIHint,
     WorkflowSession,
     WorkflowStatus,
 )
+from agentic_fleet.app.settings import get_settings
 from agentic_fleet.dspy_modules.answer_quality import score_answer_with_dspy
 from agentic_fleet.utils.logger import setup_logger
-from agentic_fleet.workflows.execution.streaming_events import ReasoningStreamEvent
-from agentic_fleet.workflows.messages import (
-    AnalysisMessage,
-    ProgressMessage,
-    QualityMessage,
-    RoutingMessage,
-)
 
 if TYPE_CHECKING:
-    from agentic_fleet.workflows.supervisor import WorkflowEvent
+    pass
 
 logger = setup_logger(__name__)
 
 router = APIRouter()
+
+# In-memory storage for conversation threads (per conversation_id)
+# This maintains conversation context across multiple messages and is capped to avoid leaks
+_MAX_CONVERSATION_THREADS = 100
+_conversation_threads: OrderedDict[str, AgentThread] = OrderedDict()
+
+
+def _get_or_create_thread(conversation_id: str | None) -> AgentThread | None:
+    """Get or create an AgentThread for a conversation.
+
+    Args:
+        conversation_id: The conversation ID, or None for no thread.
+
+    Returns:
+        The AgentThread for the conversation, or None if no conversation_id.
+    """
+    if not conversation_id:
+        return None
+
+    if conversation_id in _conversation_threads:
+        _conversation_threads.move_to_end(conversation_id)
+        return _conversation_threads[conversation_id]
+
+    _conversation_threads[conversation_id] = AgentThread()
+    _conversation_threads.move_to_end(conversation_id)
+    logger.debug(f"Created new conversation thread for: {conversation_id}")
+
+    if len(_conversation_threads) > _MAX_CONVERSATION_THREADS:
+        evicted_id, _ = _conversation_threads.popitem(last=False)
+        logger.info(
+            "Evicted stale conversation thread to cap memory: conversation_id=%s",
+            evicted_id,
+        )
+
+    return _conversation_threads[conversation_id]
 
 
 # =============================================================================
@@ -154,540 +176,6 @@ def _evaluate_final_answer(final_text: str, task: str) -> dict[str, Any]:
     return {"quality_score": round(score, 3), "quality_flag": flag}
 
 
-# =============================================================================
-# Event Classification Utilities
-# =============================================================================
-
-
-def _classify_event(
-    event_type: StreamEventType,
-    kind: str | None = None,
-) -> tuple[EventCategory, UIHint]:
-    """Rule-based event classification for UI component routing.
-
-    Maps StreamEventType and optional kind to semantic category and UI hints.
-    This enables the frontend to route events to appropriate components.
-
-    Args:
-        event_type: The stream event type.
-        kind: Optional event kind hint (routing, analysis, quality, progress).
-
-    Returns:
-        Tuple of (EventCategory, UIHint) for frontend rendering.
-    """
-    # Orchestrator thought events - categorize by kind
-    if event_type == StreamEventType.ORCHESTRATOR_THOUGHT:
-        if kind == "routing":
-            return EventCategory.PLANNING, UIHint(
-                component="ChatStep", priority="high", collapsible=True, icon_hint="routing"
-            )
-        if kind == "analysis":
-            return EventCategory.THOUGHT, UIHint(
-                component="ChatStep", priority="medium", collapsible=True, icon_hint="analysis"
-            )
-        if kind == "quality":
-            return EventCategory.OUTPUT, UIHint(
-                component="ChatStep", priority="medium", collapsible=True, icon_hint="quality"
-            )
-        if kind == "progress":
-            return EventCategory.STATUS, UIHint(
-                component="ChatStep", priority="low", collapsible=True, icon_hint="progress"
-            )
-        if kind == "handoff":
-            return EventCategory.PLANNING, UIHint(
-                component="ChatStep", priority="high", collapsible=False, icon_hint="handoff"
-            )
-        # Default thought
-        return EventCategory.THOUGHT, UIHint(
-            component="ChatStep", priority="medium", collapsible=True
-        )
-
-    # Orchestrator message events - status updates
-    if event_type == StreamEventType.ORCHESTRATOR_MESSAGE:
-        return EventCategory.STATUS, UIHint(component="ChatStep", priority="low", collapsible=True)
-
-    # Agent lifecycle events
-    if event_type == StreamEventType.AGENT_START:
-        return EventCategory.STEP, UIHint(
-            component="ChatStep", priority="low", collapsible=True, icon_hint="agent_start"
-        )
-    if event_type == StreamEventType.AGENT_COMPLETE:
-        return EventCategory.STEP, UIHint(
-            component="ChatStep", priority="low", collapsible=True, icon_hint="agent_complete"
-        )
-    if event_type == StreamEventType.AGENT_MESSAGE:
-        return EventCategory.OUTPUT, UIHint(
-            component="MessageBubble", priority="medium", collapsible=False
-        )
-    if event_type == StreamEventType.AGENT_OUTPUT:
-        return EventCategory.OUTPUT, UIHint(
-            component="MessageBubble", priority="high", collapsible=False
-        )
-
-    # Reasoning events (GPT-5 chain-of-thought)
-    if event_type == StreamEventType.REASONING_DELTA:
-        return EventCategory.REASONING, UIHint(
-            component="Reasoning", priority="medium", collapsible=True
-        )
-    if event_type == StreamEventType.REASONING_COMPLETED:
-        return EventCategory.REASONING, UIHint(
-            component="Reasoning", priority="medium", collapsible=True
-        )
-
-    # Response events
-    if event_type == StreamEventType.RESPONSE_DELTA:
-        return EventCategory.RESPONSE, UIHint(
-            component="MessageBubble", priority="high", collapsible=False
-        )
-    if event_type == StreamEventType.RESPONSE_COMPLETED:
-        return EventCategory.RESPONSE, UIHint(
-            component="MessageBubble", priority="high", collapsible=False
-        )
-
-    # Error events
-    if event_type == StreamEventType.ERROR:
-        return EventCategory.ERROR, UIHint(
-            component="ErrorStep", priority="high", collapsible=False
-        )
-
-    if event_type == StreamEventType.CANCELLED:
-        return EventCategory.STATUS, UIHint(
-            component="ChatStep", priority="medium", collapsible=False, icon_hint="cancelled"
-        )
-
-    if event_type == StreamEventType.CONNECTED:
-        return EventCategory.STATUS, UIHint(
-            component="ChatStep", priority="low", collapsible=False, icon_hint="connected"
-        )
-
-    if event_type == StreamEventType.HEARTBEAT:
-        return EventCategory.STATUS, UIHint(
-            component="ChatStep", priority="low", collapsible=True, icon_hint="heartbeat"
-        )
-
-    # Control events (done) - no UI representation needed
-    if event_type == StreamEventType.DONE:
-        return EventCategory.STATUS, UIHint(component="ChatStep", priority="low", collapsible=True)
-
-    # Fallback
-    return EventCategory.STATUS, UIHint(component="ChatStep", priority="low", collapsible=True)
-
-
-# =============================================================================
-# Event Mapping Utilities
-# =============================================================================
-
-
-def _map_workflow_event(
-    event: WorkflowEvent | dict[str, Any],
-    accumulated_reasoning: str,
-) -> tuple[StreamEvent | list[StreamEvent] | None, str]:
-    """Map a workflow event to a StreamEvent for SSE.
-
-    Args:
-        event: The workflow event to map.
-        accumulated_reasoning: Running total of reasoning text for partial error handling.
-
-    Returns:
-        Tuple of (StreamEvent or None, updated accumulated_reasoning).
-    """
-    if isinstance(event, WorkflowStartedEvent):
-        event_type = StreamEventType.ORCHESTRATOR_MESSAGE
-        category, ui_hint = _classify_event(event_type)
-        return (
-            StreamEvent(
-                type=event_type,
-                message="Workflow started",
-                category=category,
-                ui_hint=ui_hint,
-            ),
-            accumulated_reasoning,
-        )
-
-    if isinstance(event, WorkflowStatusEvent):
-        event_type = StreamEventType.ORCHESTRATOR_MESSAGE
-        category, ui_hint = _classify_event(event_type)
-        status_msg = f"Workflow status: {event.state.value}" if event.state else "Status update"
-        return (
-            StreamEvent(
-                type=event_type,
-                message=status_msg,
-                category=category,
-                ui_hint=ui_hint,
-            ),
-            accumulated_reasoning,
-        )
-
-    if isinstance(event, ReasoningStreamEvent):
-        # GPT-5 reasoning token
-        new_accumulated = accumulated_reasoning + event.reasoning
-        if event.is_complete:
-            event_type = StreamEventType.REASONING_COMPLETED
-            category, ui_hint = _classify_event(event_type)
-            return (
-                StreamEvent(
-                    type=event_type,
-                    reasoning=event.reasoning,
-                    agent_id=event.agent_id,
-                    category=category,
-                    ui_hint=ui_hint,
-                ),
-                new_accumulated,
-            )
-        event_type = StreamEventType.REASONING_DELTA
-        category, ui_hint = _classify_event(event_type)
-        return (
-            StreamEvent(
-                type=event_type,
-                reasoning=event.reasoning,
-                agent_id=event.agent_id,
-                category=category,
-                ui_hint=ui_hint,
-            ),
-            new_accumulated,
-        )
-
-    if isinstance(event, MagenticAgentMessageEvent):
-        # Agent-level message (could be streaming or final). Surface explicitly so the frontend
-        # can render per-agent thoughts/output instead of concatenated deltas.
-        text = ""
-        if hasattr(event, "message") and event.message:
-            text = getattr(event.message, "text", "") or ""
-
-        if not text:
-            return None, accumulated_reasoning
-
-        # Check for metadata to determine event kind/stage
-        kind = None
-        if hasattr(event, "stage"):
-            kind = getattr(event, "stage", None)
-
-        # Map the internal event type to the StreamEventType
-        event_type = StreamEventType.AGENT_MESSAGE
-        event_name = None
-        if hasattr(event, "event"):
-            event_name = getattr(event, "event", None)
-            if event_name == "agent.start":
-                event_type = StreamEventType.AGENT_START
-            elif event_name == "agent.output":
-                event_type = StreamEventType.AGENT_OUTPUT
-            elif event_name == "agent.complete" or event_name == "agent.completed":
-                event_type = StreamEventType.AGENT_COMPLETE
-            elif event_name == "handoff.created":
-                # Handoff events should be surfaced as orchestrator thoughts
-                event_type = StreamEventType.ORCHESTRATOR_THOUGHT
-                kind = "handoff"  # Override kind for handoff events
-
-        # Get author name - prefer message.author_name, fall back to agent_id
-        author_name = None
-        if hasattr(event, "message") and hasattr(event.message, "author_name"):
-            author_name = getattr(event.message, "author_name", None)
-        if not author_name:
-            author_name = event.agent_id
-
-        # Extract payload data for rich events (handoffs, tool calls, etc.)
-        event_data = None
-        if hasattr(event, "payload"):
-            payload = getattr(event, "payload", None)
-            if payload and isinstance(payload, dict):
-                event_data = payload
-
-        # Classify the event for UI routing
-        category, ui_hint = _classify_event(event_type, kind)
-
-        return (
-            StreamEvent(
-                type=event_type,
-                message=text,
-                agent_id=event.agent_id,
-                kind=kind,
-                author=author_name,
-                role="assistant",
-                category=category,
-                ui_hint=ui_hint,
-                data=event_data,
-            ),
-            accumulated_reasoning,
-        )
-
-    # Generic chat message events (agent_framework chat_message objects)
-    if hasattr(event, "role") and hasattr(event, "contents"):
-        try:
-            # event.contents is likely a list of dicts with type/text
-            text_parts = []
-            for c in getattr(event, "contents", []):
-                if isinstance(c, dict):
-                    text_parts.append(c.get("text", ""))
-                elif hasattr(c, "text"):
-                    text_parts.append(getattr(c, "text", ""))
-            text = "\n".join(t for t in text_parts if t)
-        except Exception:
-            text = ""
-
-        if text:
-            author_name = getattr(event, "author_name", None) or getattr(event, "author", None)
-            role = getattr(event, "role", None)
-            event_type = StreamEventType.AGENT_MESSAGE
-            category, ui_hint = _classify_event(event_type)
-            return (
-                StreamEvent(
-                    type=event_type,
-                    message=text,
-                    agent_id=getattr(event, "agent_id", None),
-                    author=author_name,
-                    role=role.value if hasattr(role, "value") else role,
-                    kind=None,
-                    category=category,
-                    ui_hint=ui_hint,
-                ),
-                accumulated_reasoning,
-            )
-
-    # ChatMessage-like objects with .text and .role (agent_framework ChatMessage)
-    if hasattr(event, "text") and hasattr(event, "role"):
-        text = getattr(event, "text", "") or ""
-        if text:
-            role = getattr(event, "role", None)
-            author_name = getattr(event, "author_name", None) or getattr(event, "author", None)
-            agent_id = getattr(event, "agent_id", None) or author_name
-            event_type = StreamEventType.AGENT_MESSAGE
-            category, ui_hint = _classify_event(event_type)
-            return (
-                StreamEvent(
-                    type=event_type,
-                    message=text,
-                    agent_id=agent_id,
-                    author=author_name,
-                    role=role.value if hasattr(role, "value") else role,
-                    kind=None,
-                    category=category,
-                    ui_hint=ui_hint,
-                ),
-                accumulated_reasoning,
-            )
-
-    # Dict-based chat_message events (not objects)
-    if isinstance(event, dict):
-        event_dict: dict[str, Any] = event  # type: ignore
-        if event_dict.get("type") == "chat_message":
-            contents = event_dict.get("contents", [])
-            text_parts: list[str] = []
-            for c in contents:
-                if isinstance(c, dict):
-                    text_parts.append(c.get("text", ""))
-                elif isinstance(c, str):
-                    text_parts.append(c)
-            text = "\n".join(t for t in text_parts if t)
-            if text:
-                author_name = event_dict.get("author_name") or event_dict.get("author")
-                role = event_dict.get("role")
-
-                # Handle role extraction safely
-                role_value = role
-                if isinstance(role, dict):
-                    role_value = role.get("value")
-                elif hasattr(role, "value"):
-                    role_value = role.value
-
-                # Determine event type
-                event_type = StreamEventType.AGENT_MESSAGE
-                if event_dict.get("event") == "agent.output":
-                    event_type = StreamEventType.AGENT_OUTPUT
-
-                category, ui_hint = _classify_event(event_type)
-                return (
-                    StreamEvent(
-                        type=event_type,
-                        message=text,
-                        agent_id=event_dict.get("agent_id") or author_name,
-                        author=author_name,
-                        role=role_value,
-                        kind=None,
-                        category=category,
-                        ui_hint=ui_hint,
-                    ),
-                    accumulated_reasoning,
-                )
-    if isinstance(event, ExecutorCompletedEvent):
-        # Phase completion events with typed messages
-        data = getattr(event, "data", None)
-        if data is None:
-            return None, accumulated_reasoning
-
-        # Map different phase message types to thoughts
-        if isinstance(data, AnalysisMessage):
-            event_type = StreamEventType.ORCHESTRATOR_THOUGHT
-            kind = "analysis"
-            category, ui_hint = _classify_event(event_type, kind)
-            return (
-                StreamEvent(
-                    type=event_type,
-                    message=f"Analysis complete: {data.complexity} complexity",
-                    kind=kind,
-                    data={
-                        "complexity": data.complexity,
-                        "capabilities": list(data.capabilities) if data.capabilities else [],
-                        "steps": list(data.steps) if data.steps else [],
-                    },
-                    category=category,
-                    ui_hint=ui_hint,
-                ),
-                accumulated_reasoning,
-            )
-
-        if isinstance(data, RoutingMessage):
-            event_type = StreamEventType.ORCHESTRATOR_THOUGHT
-            kind = "routing"
-            category, ui_hint = _classify_event(event_type, kind)
-            agents = list(data.decision.assigned_to) if data.decision.assigned_to else []
-            return (
-                StreamEvent(
-                    type=event_type,
-                    message=f"Routing decision: {data.decision.mode.value} mode with {agents}",
-                    kind=kind,
-                    data={
-                        "mode": data.decision.mode.value,
-                        "assigned_to": agents,
-                        "subtasks": list(data.decision.subtasks) if data.decision.subtasks else [],
-                    },
-                    category=category,
-                    ui_hint=ui_hint,
-                ),
-                accumulated_reasoning,
-            )
-
-        if isinstance(data, QualityMessage):
-            event_type = StreamEventType.ORCHESTRATOR_THOUGHT
-            kind = "quality"
-            category, ui_hint = _classify_event(event_type, kind)
-            return (
-                StreamEvent(
-                    type=event_type,
-                    message=f"Quality assessment: score {data.score:.1f}/10",
-                    kind=kind,
-                    data={
-                        "score": data.score,
-                        "missing": list(data.missing) if data.missing else [],
-                        "improvements": list(data.improvements) if data.improvements else [],
-                    },
-                    category=category,
-                    ui_hint=ui_hint,
-                ),
-                accumulated_reasoning,
-            )
-
-        if isinstance(data, ProgressMessage):
-            event_type = StreamEventType.ORCHESTRATOR_MESSAGE
-            kind = "progress"
-            category, ui_hint = _classify_event(event_type, kind)
-            return (
-                StreamEvent(
-                    type=event_type,
-                    message=f"Progress: {data.action}",
-                    kind=kind,
-                    data={"action": data.action, "feedback": data.feedback},
-                    category=category,
-                    ui_hint=ui_hint,
-                ),
-                accumulated_reasoning,
-            )
-
-        # Generic phase completion
-        event_type = StreamEventType.ORCHESTRATOR_MESSAGE
-        category, ui_hint = _classify_event(event_type)
-        return (
-            StreamEvent(
-                type=event_type,
-                message="Phase completed",
-                data={"phase_data": str(data)[:200]},
-                category=category,
-                ui_hint=ui_hint,
-            ),
-            accumulated_reasoning,
-        )
-
-    # Generic objects with .message.text and .role (safety net)
-    if hasattr(event, "message") and hasattr(event.message, "text"):
-        text = getattr(event.message, "text", "") or ""
-        if text:
-            role = getattr(event, "role", None) or getattr(event.message, "role", None)
-            author_name = getattr(event, "author_name", None) or getattr(
-                event.message, "author_name", None
-            )
-            agent_id = getattr(event, "agent_id", None) or getattr(event.message, "author", None)
-            event_type = StreamEventType.AGENT_MESSAGE
-            category, ui_hint = _classify_event(event_type)
-            return (
-                StreamEvent(
-                    type=event_type,
-                    message=text,
-                    agent_id=agent_id,
-                    author=author_name,
-                    role=role.value if hasattr(role, "value") else role,
-                    kind=None,
-                    category=category,
-                    ui_hint=ui_hint,
-                ),
-                accumulated_reasoning,
-            )
-
-    if isinstance(event, WorkflowOutputEvent):
-        # Final output event
-        result_text = ""
-        data = getattr(event, "data", None)
-
-        if data is not None:
-            if isinstance(data, list) and data:
-                # List of ChatMessage
-                last_msg = data[-1]
-                result_text = getattr(last_msg, "text", str(last_msg))
-            elif hasattr(data, "result"):
-                result_text = str(data.result)
-            else:
-                result_text = str(data)
-
-        events: list[StreamEvent] = []
-
-        if isinstance(data, list) and data:
-            for msg in data:
-                text = getattr(msg, "text", None) or ""
-                role = getattr(msg, "role", None)
-                author = getattr(msg, "author_name", None) or getattr(msg, "author", None)
-                agent_id = getattr(msg, "author", None)
-                if text:
-                    msg_event_type = StreamEventType.AGENT_MESSAGE
-                    msg_category, msg_ui_hint = _classify_event(msg_event_type)
-                    events.append(
-                        StreamEvent(
-                            type=msg_event_type,
-                            message=text,
-                            agent_id=agent_id,
-                            author=author,
-                            role=role.value if hasattr(role, "value") else role,
-                            category=msg_category,
-                            ui_hint=msg_ui_hint,
-                        )
-                    )
-
-        # Always push a final completion event
-        final_event_type = StreamEventType.RESPONSE_COMPLETED
-        final_category, final_ui_hint = _classify_event(final_event_type)
-        events.append(
-            StreamEvent(
-                type=final_event_type,
-                message=result_text,
-                category=final_category,
-                ui_hint=final_ui_hint,
-            )
-        )
-
-        return events, accumulated_reasoning
-
-    # Unknown event type - skip
-    logger.debug(f"Unknown event type: {type(event).__name__}")
-    return None, accumulated_reasoning
-
-
 async def _event_generator(
     workflow: Any,
     session: WorkflowSession,
@@ -695,6 +183,7 @@ async def _event_generator(
     log_reasoning: bool = False,
     reasoning_effort: str | None = None,
     cancel_event: asyncio.Event | None = None,
+    thread: AgentThread | None = None,
 ) -> AsyncIterator[dict[str, Any]]:
     """Generate streaming events from workflow execution.
 
@@ -705,6 +194,7 @@ async def _event_generator(
         log_reasoning: Whether to accumulate reasoning for logging.
         reasoning_effort: Optional reasoning effort override for GPT-5 models.
         cancel_event: Optional asyncio.Event to signal cancellation.
+        thread: Optional AgentThread for multi-turn conversation context.
 
     Yields:
         Dictionaries with event data suitable for JSON serialization.
@@ -728,7 +218,7 @@ async def _event_generator(
 
         # Yield initial orchestrator message
         init_event_type = StreamEventType.ORCHESTRATOR_MESSAGE
-        init_category, init_ui_hint = _classify_event(init_event_type)
+        init_category, init_ui_hint = classify_event(init_event_type)
         init_event = StreamEvent(
             type=init_event_type,
             message="Starting workflow execution...",
@@ -739,14 +229,16 @@ async def _event_generator(
         init_event.log_line = _log_stream_event(init_event, session.workflow_id)
         yield init_event.to_sse_dict()
 
-        # Stream workflow events with optional reasoning effort override
-        async for event in workflow.run_stream(session.task, reasoning_effort=reasoning_effort):
+        # Stream workflow events with optional reasoning effort override and conversation thread
+        async for event in workflow.run_stream(
+            session.task, reasoning_effort=reasoning_effort, thread=thread
+        ):
             # Check for cancellation
             if cancel_event is not None and cancel_event.is_set():
                 logger.info(f"Workflow cancelled: workflow_id={session.workflow_id}")
                 break
 
-            stream_event, accumulated_reasoning = _map_workflow_event(event, accumulated_reasoning)
+            stream_event, accumulated_reasoning = map_workflow_event(event, accumulated_reasoning)
             if stream_event is not None:
                 events_to_emit = stream_event if isinstance(stream_event, list) else [stream_event]
                 for se in events_to_emit:
@@ -766,7 +258,7 @@ async def _event_generator(
 
         # Yield error event with partial reasoning flag if applicable
         error_event_type = StreamEventType.ERROR
-        error_category, error_ui_hint = _classify_event(error_event_type)
+        error_category, error_ui_hint = classify_event(error_event_type)
         error_event = StreamEvent(
             type=error_event_type,
             error=error_message,
@@ -796,7 +288,7 @@ async def _event_generator(
 
         # Yield done event
         done_event_type = StreamEventType.DONE
-        done_category, done_ui_hint = _classify_event(done_event_type)
+        done_category, done_ui_hint = classify_event(done_event_type)
         done_event = StreamEvent(
             type=done_event_type,
             category=done_category,
@@ -810,6 +302,52 @@ async def _event_generator(
             f"Workflow stream completed: workflow_id={session.workflow_id}, "
             f"status={final_status.value}, had_error={has_error}"
         )
+
+
+# =============================================================================
+# WebSocket Origin Validation
+# =============================================================================
+
+
+def _validate_websocket_origin(websocket: WebSocket) -> bool:
+    """Validate WebSocket connection origin against allowed CORS origins.
+
+    Checks the Origin header against configured allowed origins.
+    Localhost connections are permitted when WS_ALLOW_LOCALHOST=true (default).
+
+    Args:
+        websocket: The WebSocket connection.
+
+    Returns:
+        True if origin is allowed, False otherwise.
+    """
+    settings = get_settings()
+    origin = websocket.headers.get("origin", "")
+
+    # Allow connections without origin header (same-origin, CLI tools, etc.)
+    if not origin:
+        return True
+
+    # Allow localhost in development mode
+    if settings.ws_allow_localhost:
+        localhost_patterns = (
+            "http://localhost:",
+            "http://127.0.0.1:",
+            "https://localhost:",
+            "https://127.0.0.1:",
+        )
+        if any(origin.startswith(p) for p in localhost_patterns):
+            return True
+
+    # Check against CORS allowed origins
+    if "*" in settings.cors_allowed_origins:
+        return True
+
+    if origin in settings.cors_allowed_origins:
+        return True
+
+    logger.warning(f"WebSocket connection rejected: invalid origin '{origin}'")
+    return False
 
 
 # =============================================================================
@@ -833,6 +371,11 @@ async def websocket_chat(
     Args:
         websocket: The WebSocket connection.
     """
+    # Validate origin before accepting connection
+    if not _validate_websocket_origin(websocket):
+        await websocket.close(code=status.WS_1008_POLICY_VIOLATION)
+        return
+
     await websocket.accept()
 
     # Get dependencies from app state
@@ -905,6 +448,9 @@ async def websocket_chat(
                 author="User",
             )
 
+        # Get or create conversation thread for multi-turn context
+        conversation_thread = _get_or_create_thread(request.conversation_id)
+
         # Create session (will raise 429 if limit exceeded)
         try:
             session = session_manager.create_session(
@@ -913,7 +459,7 @@ async def websocket_chat(
             )
         except HTTPException as e:
             error_type = StreamEventType.ERROR
-            error_category, error_ui_hint = _classify_event(error_type)
+            error_category, error_ui_hint = classify_event(error_type)
             error_event = StreamEvent(
                 type=error_type,
                 error=e.detail,
@@ -929,7 +475,7 @@ async def websocket_chat(
 
         # Send a connection acknowledgement immediately after session creation
         connected_type = StreamEventType.CONNECTED
-        connected_category, connected_ui_hint = _classify_event(connected_type)
+        connected_category, connected_ui_hint = classify_event(connected_type)
         connected_event = StreamEvent(
             type=connected_type,
             message="Connected",
@@ -1001,11 +547,12 @@ async def websocket_chat(
                 log_reasoning,
                 request.reasoning_effort,
                 cancel_event,
+                thread=conversation_thread,
             ):
                 # Idle timeout safeguard
                 if (datetime.now() - last_event_ts).total_seconds() > 60:
                     timeout_type = StreamEventType.ERROR
-                    timeout_category, timeout_ui_hint = _classify_event(timeout_type)
+                    timeout_category, timeout_ui_hint = classify_event(timeout_type)
                     timeout_event = StreamEvent(
                         type=timeout_type,
                         error="Stream idle timeout",
@@ -1021,7 +568,7 @@ async def websocket_chat(
                 # Max runtime safeguard
                 if (datetime.now() - stream_start_ts).total_seconds() > max_runtime_seconds:
                     timeout_type = StreamEventType.ERROR
-                    timeout_category, timeout_ui_hint = _classify_event(timeout_type)
+                    timeout_category, timeout_ui_hint = classify_event(timeout_type)
                     timeout_event = StreamEvent(
                         type=timeout_type,
                         error="Stream max runtime exceeded",
@@ -1037,7 +584,7 @@ async def websocket_chat(
                 if cancel_event.is_set():
                     # Send cancelled event before breaking
                     cancelled_type = StreamEventType.CANCELLED
-                    cancelled_category, cancelled_ui_hint = _classify_event(cancelled_type)
+                    cancelled_category, cancelled_ui_hint = classify_event(cancelled_type)
                     cancelled_event = StreamEvent(
                         type=cancelled_type,
                         message="Streaming cancelled by client",
@@ -1050,7 +597,7 @@ async def websocket_chat(
                     )
                     await websocket.send_json(cancelled_event.to_sse_dict())
                     # Also emit DONE so clients stop cleanly
-                    done_category, done_ui_hint = _classify_event(StreamEventType.DONE)
+                    done_category, done_ui_hint = classify_event(StreamEventType.DONE)
                     done_event = StreamEvent(
                         type=StreamEventType.DONE,
                         category=done_category,
@@ -1106,13 +653,15 @@ async def websocket_chat(
             )
             quality = score_answer_with_dspy(request.message, final_text)
             completed_type = StreamEventType.RESPONSE_COMPLETED
-            comp_category, comp_ui = _classify_event(completed_type)
+            comp_category, comp_ui = classify_event(completed_type)
             completed_event = StreamEvent(
                 type=completed_type,
                 message=final_text,
                 author=last_author,
                 agent_id=last_agent_id,
                 data=quality,
+                quality_score=quality.get("quality_score"),
+                quality_flag=quality.get("quality_flag"),
                 category=comp_category,
                 ui_hint=comp_ui,
                 workflow_id=session.workflow_id,
@@ -1121,25 +670,28 @@ async def websocket_chat(
             await websocket.send_json(completed_event.to_sse_dict())
         else:
             # If we already sent response.completed but lacked quality, attach a scored echo
+            # Note: We skip logging this event to avoid duplicate "Response:" log entries
             if full_response.strip():
                 quality = score_answer_with_dspy(request.message, full_response)
                 completed_type = StreamEventType.RESPONSE_COMPLETED
-                comp_category, comp_ui = _classify_event(completed_type)
+                comp_category, comp_ui = classify_event(completed_type)
                 quality_event = StreamEvent(
                     type=completed_type,
                     message=full_response,
                     author=last_author,
                     agent_id=last_agent_id,
                     data=quality,
+                    quality_score=quality.get("quality_score"),
+                    quality_flag=quality.get("quality_flag"),
                     category=comp_category,
                     ui_hint=comp_ui,
                     workflow_id=session.workflow_id,
                 )
-                quality_event.log_line = _log_stream_event(quality_event, session.workflow_id)
+                # Skip logging to avoid duplicate "Response:" entries - original was already logged
                 await websocket.send_json(quality_event.to_sse_dict())
 
         if not saw_done:
-            done_category, done_ui_hint = _classify_event(StreamEventType.DONE)
+            done_category, done_ui_hint = classify_event(StreamEventType.DONE)
             done_event = StreamEvent(
                 type=StreamEventType.DONE,
                 category=done_category,
@@ -1160,26 +712,11 @@ async def websocket_chat(
 
     except WebSocketDisconnect:
         logger.info("WebSocket client disconnected")
-    except json.JSONDecodeError as e:
-        logger.error(f"Invalid JSON received: {e}")
-        with contextlib.suppress(Exception):
-            error_type = StreamEventType.ERROR
-            error_category, error_ui_hint = _classify_event(error_type)
-            error_event = StreamEvent(
-                type=error_type,
-                error=f"Invalid JSON: {e}",
-                category=error_category,
-                ui_hint=error_ui_hint,
-                workflow_id=session.workflow_id if session else None,
-            )
-            if session:
-                error_event.log_line = _log_stream_event(error_event, session.workflow_id)
-            await websocket.send_json(error_event.to_sse_dict())
     except Exception as e:
         logger.error(f"WebSocket error: {e}", exc_info=True)
         with contextlib.suppress(Exception):
             error_type = StreamEventType.ERROR
-            error_category, error_ui_hint = _classify_event(error_type)
+            error_category, error_ui_hint = classify_event(error_type)
             error_event = StreamEvent(
                 type=error_type,
                 error=str(e),

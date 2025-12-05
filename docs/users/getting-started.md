@@ -66,7 +66,10 @@ TAVILY_API_KEY=tvly-your-tavily-key-here
 # Run tests
 make test
 
-# Start development servers
+# Start development servers (using CLI)
+agentic-fleet dev
+
+# Or using Make
 make dev
 ```
 
@@ -75,7 +78,26 @@ You should see:
 - Backend running at http://localhost:8000
 - Frontend running at http://localhost:5173
 
+Open http://localhost:5173 in your browser to access the chat interface.
+
 ## Quick Start
+
+### Using the Web Interface
+
+The easiest way to interact with AgenticFleet is through the web chat interface:
+
+```bash
+# Start both backend and frontend
+agentic-fleet dev
+
+# Or with custom ports
+agentic-fleet dev --backend-port 8080 --frontend-port 3000
+
+# Backend only (API access)
+agentic-fleet dev --no-frontend
+```
+
+Then open http://localhost:5173 in your browser.
 
 ### Using the CLI
 
@@ -83,13 +105,13 @@ The command-line interface for interacting with the framework:
 
 ```bash
 # Basic usage
-uv run agentic-fleet run -m "Your question here"
+agentic-fleet run -m "Your question here"
 
 # With verbose logging (see all DSPy decisions)
-uv run agentic-fleet run -m "Your question here" --verbose
+agentic-fleet run -m "Your question here" --verbose
 
 # Save output to file
-uv run agentic-fleet run -m "Your question here" --verbose 2>&1 | tee logs/output.log
+agentic-fleet run -m "Your question here" --verbose 2>&1 | tee logs/output.log
 ```
 
 ### Programmatic Usage

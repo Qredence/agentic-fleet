@@ -1,5 +1,5 @@
 import { useState, useRef, useCallback, useEffect } from "react";
-import ReconnectingWebSocket from "reconnecting-websocket";
+import { ReconnectingWebSocket } from "../lib/reconnectingWebSocket";
 import { api } from "../api/client";
 import type {
   Message,
@@ -41,6 +41,20 @@ interface UseChatReturn {
   isConversationsLoading: boolean;
 }
 
+// Check if a step already exists (for deduplication)
+function isDuplicateStep(
+  existingSteps: ConversationStep[],
+  newStep: { content: string; type: string; kind?: string },
+): boolean {
+  // Check for duplicate based on content and type
+  return existingSteps.some(
+    (s) =>
+      s.content === newStep.content &&
+      s.type === newStep.type &&
+      s.kind === newStep.kind,
+  );
+}
+
 // Workflow phase mapping based on event types and kinds
 function getWorkflowPhase(event: StreamEvent): string {
   if (event.type === "connected") return "Connected";
@@ -52,6 +66,8 @@ function getWorkflowPhase(event: StreamEvent): string {
   if (event.type === "agent.start")
     return `Starting ${event.author || event.agent_id || "agent"}...`;
   if (event.type === "agent.complete") return "Completing...";
+  if (event.type === "agent.message") return "Agent replying...";
+  if (event.type === "agent.output") return "Agent outputting...";
   if (event.type === "reasoning.delta") return "Reasoning...";
   return "Processing...";
 }
@@ -71,6 +87,7 @@ export const useChat = (): UseChatReturn => {
   const currentGroupIdRef = useRef<string>("");
   const accumulatedContentRef = useRef<string>("");
   const isInitializedRef = useRef(false);
+  const requestSentRef = useRef(false); // Track if request was sent to prevent re-sending on reconnect
 
   const cancelStreaming = useCallback(() => {
     if (wsRef.current) {
@@ -154,8 +171,7 @@ export const useChat = (): UseChatReturn => {
     return () => {
       cancelled = true;
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [loadConversations, selectConversation, createConversation]);
 
   const handleStreamEvent = useCallback(
     (data: StreamEvent, groupId: string) => {
@@ -202,6 +218,10 @@ export const useChat = (): UseChatReturn => {
             }
             if (placeholderIdx >= 0) {
               const currentSteps = newMessages[placeholderIdx].steps || [];
+              // Skip duplicate steps
+              if (isDuplicateStep(currentSteps, statusStep)) {
+                return prev;
+              }
               newMessages[placeholderIdx] = {
                 ...newMessages[placeholderIdx],
                 steps: [...currentSteps, statusStep],
@@ -228,35 +248,6 @@ export const useChat = (): UseChatReturn => {
             return newMessages;
           });
         }
-      } else if (data.type === "connected") {
-        const connectStep: ConversationStep = {
-          id: generateStepId(),
-          type: "status",
-          content: "Connected",
-          timestamp: new Date().toISOString(),
-          kind: "status",
-          category: data.category as ConversationStep["category"],
-        };
-
-        setMessages((prev) => {
-          const newMessages = [...prev];
-          let placeholderIdx = -1;
-          for (let i = newMessages.length - 1; i >= 0; i--) {
-            if (newMessages[i].role === "assistant") {
-              placeholderIdx = i;
-              break;
-            }
-          }
-          if (placeholderIdx >= 0) {
-            const currentSteps = newMessages[placeholderIdx].steps || [];
-            newMessages[placeholderIdx] = {
-              ...newMessages[placeholderIdx],
-              steps: [...currentSteps, connectStep],
-              workflowPhase: "Connected",
-            };
-          }
-          return newMessages;
-        });
       } else if (
         data.type === "orchestrator.message" ||
         data.type === "orchestrator.thought"
@@ -290,6 +281,10 @@ export const useChat = (): UseChatReturn => {
           }
           if (placeholderIdx >= 0) {
             const currentSteps = newMessages[placeholderIdx].steps || [];
+            // Skip duplicate steps
+            if (isDuplicateStep(currentSteps, newStep)) {
+              return prev;
+            }
             newMessages[placeholderIdx] = {
               ...newMessages[placeholderIdx],
               steps: [...currentSteps, newStep],
@@ -320,12 +315,22 @@ export const useChat = (): UseChatReturn => {
         if (
           data.type === "agent.start" ||
           data.type === "agent.complete" ||
-          data.type === "agent.thought"
+          data.type === "agent.thought" ||
+          data.type === "agent.output" ||
+          data.type === "agent.message" // Both output and message events should update content
         ) {
+          // All agent-related events (start, complete, thought, output, message)
+          // should update the steps array of the *latest* assistant message.
+          // Agent thoughts are often less direct, so they always go into steps.
+          // Agent outputs/messages are primary content, so they also update the main content field.
+          // For agent.output/agent.message events, use a short status label in steps (full content goes to message.content)
+          // For other events, show the message/content in the step
           const stepContent =
             data.type === "agent.thought"
               ? `${agentLabel}: ${data.message || data.content || "Thinking..."}`
-              : `${agentLabel}: ${data.message || data.content || (data.type === "agent.start" ? "Starting..." : "Completed")}`;
+              : data.type === "agent.output" || data.type === "agent.message"
+                ? `${agentLabel}: Produced output`
+                : `${agentLabel}: ${data.message || data.content || (data.type === "agent.start" ? "Starting..." : "Completed")}`;
 
           const newStep: ConversationStep = {
             id: generateStepId(),
@@ -337,6 +342,11 @@ export const useChat = (): UseChatReturn => {
               ...data.data,
               agent_id: data.agent_id,
               author: data.author,
+              // Store actual output content for agent.output/agent.message events (for rendering in AgentGroup)
+              ...((data.type === "agent.output" ||
+                data.type === "agent.message") && {
+                output: data.message || data.content,
+              }),
             },
             category: data.category as ConversationStep["category"],
             uiHint: data.ui_hint
@@ -354,119 +364,37 @@ export const useChat = (): UseChatReturn => {
             for (let i = newMessages.length - 1; i >= 0; i--) {
               if (newMessages[i].role === "assistant") {
                 const currentSteps = newMessages[i].steps || [];
+                // Skip duplicate steps
+                if (isDuplicateStep(currentSteps, newStep)) {
+                  return prev;
+                }
                 newMessages[i] = {
                   ...newMessages[i],
                   steps: [...currentSteps, newStep],
                   workflowPhase: phase,
                 };
-                break;
-              }
-            }
-            return newMessages;
-          });
-        }
 
-        if (
-          (data.type === "agent.message" || data.type === "agent.output") &&
-          (data.message || data.content)
-        ) {
-          const agentContent = data.message || data.content || "";
-          const isCompleteOutput = data.type === "agent.output";
-          const reasoningStep: ConversationStep = {
-            id: generateStepId(),
-            type: "reasoning",
-            content: agentContent,
-            timestamp: new Date().toISOString(),
-            data: { agent_id: data.agent_id, author: data.author },
-            category: data.category as ConversationStep["category"],
-            uiHint: data.ui_hint
-              ? {
-                  component: data.ui_hint.component,
-                  priority: data.ui_hint.priority,
-                  collapsible: data.ui_hint.collapsible,
-                  iconHint: data.ui_hint.icon_hint,
-                }
-              : undefined,
-          };
-
-          setMessages((prev) => {
-            const newMessages = [...prev];
-            const lastMsgIndex = newMessages.length - 1;
-            const lastMsg = newMessages[lastMsgIndex];
-
-            if (!lastMsg) {
-              const newAgentMessage: Message = {
-                id: generateMessageId(),
-                role: "assistant",
-                content: agentContent,
-                created_at: new Date().toISOString(),
-                author: agentLabel,
-                agent_id: data.agent_id,
-                groupId,
-                isWorkflowPlaceholder: false,
-              };
-              newMessages.push(newAgentMessage);
-              // Attach reasoning step to the same assistant entry we just added
-              newMessages[newMessages.length - 1].steps = [reasoningStep];
-              return newMessages;
-            }
-
-            if (
-              lastMsg.role === "assistant" &&
-              lastMsg.isWorkflowPlaceholder &&
-              !lastMsg.content
-            ) {
-              newMessages[lastMsgIndex] = {
-                ...lastMsg,
-                content: agentContent,
-                author: agentLabel,
-                agent_id: data.agent_id ?? lastMsg.agent_id,
-                isWorkflowPlaceholder: false,
-                workflowPhase: undefined,
-              };
-            } else if (
-              lastMsg.role === "assistant" &&
-              lastMsg.author !== agentLabel
-            ) {
-              const newAgentMessage: Message = {
-                id: generateMessageId(),
-                role: "assistant",
-                content: agentContent,
-                created_at: new Date().toISOString(),
-                author: agentLabel,
-                agent_id: data.agent_id,
-                groupId,
-                isWorkflowPlaceholder: false,
-              };
-              newMessages.push(newAgentMessage);
-            } else {
-              for (let i = newMessages.length - 1; i >= 0; i--) {
-                if (newMessages[i].role === "assistant") {
+                // For agent.message and agent.output, also update the main content
+                if (
+                  (data.type === "agent.message" ||
+                    data.type === "agent.output") &&
+                  (data.message || data.content)
+                ) {
+                  const agentContent = data.message || data.content || "";
                   const existingContent = newMessages[i].content || "";
-                  const newContent = isCompleteOutput
-                    ? agentContent
-                    : existingContent
-                      ? `${existingContent}\n\n${agentContent}`
-                      : agentContent;
+                  const updatedContent = existingContent
+                    ? `${existingContent}\n\n${agentContent}`
+                    : agentContent;
+
                   newMessages[i] = {
                     ...newMessages[i],
-                    content: newContent,
+                    content: updatedContent,
                     author: agentLabel,
                     agent_id: data.agent_id ?? newMessages[i].agent_id,
                     isWorkflowPlaceholder: false,
+                    workflowPhase: undefined, // Clear phase to show content
                   };
-                  break;
                 }
-              }
-            }
-            // Append reasoning step to the assistant message we updated/created
-            for (let i = newMessages.length - 1; i >= 0; i--) {
-              if (newMessages[i].role === "assistant") {
-                const currentSteps = newMessages[i].steps || [];
-                newMessages[i] = {
-                  ...newMessages[i],
-                  steps: [...currentSteps, reasoningStep],
-                };
                 break;
               }
             }
@@ -616,6 +544,11 @@ export const useChat = (): UseChatReturn => {
         setCurrentWorkflowPhase("");
         setCurrentAgent(null);
         setIsLoading(false);
+        // Close WebSocket to prevent reconnection attempts after completion
+        if (wsRef.current) {
+          wsRef.current.close();
+          wsRef.current = null;
+        }
       }
     },
     [],
@@ -665,6 +598,7 @@ export const useChat = (): UseChatReturn => {
       setIsLoading(true);
       setCurrentWorkflowPhase("Starting...");
       accumulatedContentRef.current = "";
+      requestSentRef.current = false; // Reset for new request
 
       // Close any existing WebSocket
       if (wsRef.current) {
@@ -685,6 +619,15 @@ export const useChat = (): UseChatReturn => {
       wsRef.current = ws;
 
       ws.onopen = () => {
+        // Prevent re-sending request on WebSocket reconnection
+        if (requestSentRef.current) {
+          console.warn(
+            "WebSocket reconnected but request already sent, skipping re-send",
+          );
+          return;
+        }
+        requestSentRef.current = true;
+
         // Send chat request as first message
         const request: ChatRequest = {
           conversation_id: currentConvId!,
