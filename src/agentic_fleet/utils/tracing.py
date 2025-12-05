@@ -38,7 +38,8 @@ from typing import Any
 
 logger = logging.getLogger(__name__)
 
-
+# Module-level initialization flag
+_INITIALIZED: bool = False
 
 
 def _env_bool(name: str, default: bool) -> bool:

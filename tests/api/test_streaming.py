@@ -31,8 +31,14 @@ def client():
 
 @pytest.fixture
 def session_manager():
-    """Create a fresh session manager."""
+    """Create a fresh session manager with default concurrency limit (2)."""
     return WorkflowSessionManager(max_concurrent=2)
+
+
+@pytest.fixture
+def session_manager_concurrent():
+    """Create a session manager with higher concurrency limit for concurrency tests."""
+    return WorkflowSessionManager(max_concurrent=10)
 
 
 class TestStreamEventSchema:
@@ -183,11 +189,11 @@ class TestWorkflowSessionManager:
         assert cleaned == 1
         assert await session_manager.get_session(s1.workflow_id) is None
 
-    async def test_concurrent_creation_and_updates(self, session_manager):
+    async def test_concurrent_creation_and_updates(self, session_manager_concurrent):
         """Ensure concurrent operations maintain consistent counts and state."""
 
         async def _create(task: str):
-            return await session_manager.create_session(task=task)
+            return await session_manager_concurrent.create_session(task=task)
 
         sessions = await asyncio.gather(
             _create("Task A"),
@@ -196,18 +202,18 @@ class TestWorkflowSessionManager:
         )
 
         assert len(sessions) == 3
-        assert await session_manager.count_active() == 3
+        assert await session_manager_concurrent.count_active() == 3
 
         await asyncio.gather(
             *(
-                session_manager.update_status(session.workflow_id, WorkflowStatus.RUNNING)
+                session_manager_concurrent.update_status(session.workflow_id, WorkflowStatus.RUNNING)
                 for session in sessions
             )
         )
 
-        stored_sessions = await session_manager.list_sessions()
+        stored_sessions = await session_manager_concurrent.list_sessions()
         assert all(s.status == WorkflowStatus.RUNNING for s in stored_sessions)
-        assert await session_manager.count_active() == 3
+        assert await session_manager_concurrent.count_active() == 3
 
     async def test_concurrent_status_progression(self, session_manager):
         """Concurrent status changes should settle on the latest update."""
