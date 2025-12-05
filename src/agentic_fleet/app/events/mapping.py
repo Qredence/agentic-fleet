@@ -268,12 +268,7 @@ _DEFAULT_PRIORITY: PriorityType = "low"
 _DEFAULT_COLLAPSIBLE = True
 _DEFAULT_CATEGORY = "status"
 
-_DEFAULT_UI_HINT: UIHintData = {
-    "component": _DEFAULT_COMPONENT,
-    "priority": _DEFAULT_PRIORITY,
-    "collapsible": _DEFAULT_COLLAPSIBLE,
-    "icon_hint": None,
-}
+
 
 # Valid values for validation
 _VALID_PRIORITIES: set[str] = {"low", "medium", "high"}
