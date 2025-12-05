@@ -38,7 +38,7 @@ from typing import Any
 
 logger = logging.getLogger(__name__)
 
-_INITIALIZED = False
+
 
 
 def _env_bool(name: str, default: bool) -> bool:
@@ -223,7 +223,7 @@ def initialize_tracing(config: dict[str, Any] | None = None) -> bool:
                 "Tracing initialized with manual OpenTelemetry fallback → %s",
                 ", ".join(exporters_added),
             )
-            _INITIALIZED = True
+
             return True
         else:
             logger.warning("No OTLP exporters available")
