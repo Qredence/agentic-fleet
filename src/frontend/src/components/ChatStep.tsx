@@ -391,10 +391,26 @@ export const ChatStep: React.FC<ChatStepProps> = ({ step, isLast }) => {
   // Use rich content if available, otherwise fall back to standard display
   const hasRichContent = richContent !== null;
 
+  // Check if this is an output type that should render markdown
+  const isOutputType =
+    step.type === "agent_output" || step.type === "agent_message";
+
+  // For output types, render content with markdown; for status events, use plain text
+  const renderStepContent = () => {
+    if (isOutputType && step.content) {
+      return (
+        <div className="prose prose-sm dark:prose-invert max-w-none [&>*:first-child]:mt-0 [&>*:last-child]:mb-0">
+          <Markdown>{step.content}</Markdown>
+        </div>
+      );
+    }
+    return step.content;
+  };
+
   return (
-    <ChainOfThoughtStep isLast={isLast} defaultOpen={false}>
+    <ChainOfThoughtStep isLast={isLast} defaultOpen={isOutputType}>
       <ChainOfThoughtTrigger leftIcon={getIcon()} className={getToneClass()}>
-        {step.content}
+        {renderStepContent()}
       </ChainOfThoughtTrigger>
       {(hasRichContent || hasDetails) && (
         <ChainOfThoughtContent>

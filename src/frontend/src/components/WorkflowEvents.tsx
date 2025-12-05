@@ -23,6 +23,7 @@ import {
   StepsItem,
 } from "./prompt-kit/steps";
 import { TextShimmer } from "./prompt-kit/text-shimmer";
+import { Markdown } from "./prompt-kit/markdown";
 import { cn } from "@/lib/utils";
 import { WORKFLOW_EVENT_TYPES, type WorkflowEventType } from "../lib/constants";
 import {
@@ -145,6 +146,8 @@ const FlatWorkflowView: React.FC<{
           {steps.map((step, index) => {
             const isLatest = index === steps.length - 1;
             const showShimmer = isStreaming && isLatest;
+            const isOutputType =
+              step.type === "agent_output" || step.type === "agent_message";
 
             return (
               <StepsItem
@@ -160,6 +163,10 @@ const FlatWorkflowView: React.FC<{
                     <TextShimmer duration={2.5} spread={25}>
                       {formatEventContent(step.content)}
                     </TextShimmer>
+                  ) : isOutputType ? (
+                    <div className="prose prose-sm dark:prose-invert max-w-none [&>*:first-child]:mt-0 [&>*:last-child]:mb-0">
+                      <Markdown>{step.content}</Markdown>
+                    </div>
                   ) : (
                     formatEventContent(step.content)
                   )}
