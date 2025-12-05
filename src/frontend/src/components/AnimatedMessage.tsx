@@ -53,7 +53,7 @@ export const AnimatedMessage = memo(function AnimatedMessage({
 
 interface AnimatedMessageListProps {
   /** Array of message IDs for tracking */
-  messageIds: string[];
+  messageIds?: string[];
   /** Render function for each message */
   children: React.ReactNode;
   className?: string;
@@ -107,21 +107,21 @@ export function TypingIndicator({
           initial="initial"
           animate="animate"
           className="w-1.5 h-1.5 rounded-full bg-muted-foreground"
-          style={{ animationDelay: "0ms" }}
+          transition={{ delay: 0 }}
         />
         <motion.span
           variants={typingDotVariants}
           initial="initial"
           animate="animate"
           className="w-1.5 h-1.5 rounded-full bg-muted-foreground"
-          style={{ animationDelay: "150ms" }}
+          transition={{ delay: 0.15 }}
         />
         <motion.span
           variants={typingDotVariants}
           initial="initial"
           animate="animate"
           className="w-1.5 h-1.5 rounded-full bg-muted-foreground"
-          style={{ animationDelay: "300ms" }}
+          transition={{ delay: 0.3 }}
         />
       </div>
     </motion.div>

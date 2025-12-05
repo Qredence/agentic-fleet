@@ -9,6 +9,7 @@ from __future__ import annotations
 import asyncio
 import contextlib
 import re  # For robust input sanitization
+import time
 from collections import OrderedDict
 from collections.abc import AsyncIterator
 from datetime import datetime
@@ -39,13 +40,21 @@ logger = setup_logger(__name__)
 router = APIRouter()
 
 # In-memory storage for conversation threads (per conversation_id)
-# This maintains conversation context across multiple messages and is capped to avoid leaks
-_MAX_CONVERSATION_THREADS = 100
-_conversation_threads: OrderedDict[str, AgentThread] = OrderedDict()
+# Uses a bounded, TTL-aware cache to prevent memory leaks
+_MAX_THREADS = 100  # Maximum number of conversation threads to keep
+_TTL_SECONDS = 3600  # Time-to-live: expire threads after 1 hour of inactivity
+
+# Maps conversation_id -> (AgentThread, last_access_timestamp)
+_conversation_threads: OrderedDict[str, tuple[AgentThread, float]] = OrderedDict()
 
 
 def _get_or_create_thread(conversation_id: str | None) -> AgentThread | None:
     """Get or create an AgentThread for a conversation.
+
+    Uses a bounded, TTL-aware cache that:
+    - Evicts expired entries (older than _TTL_SECONDS)
+    - Evicts oldest entries when capacity (_MAX_THREADS) is exceeded
+    - Updates last-access timestamp on each access
 
     Args:
         conversation_id: The conversation ID, or None for no thread.
@@ -56,22 +65,49 @@ def _get_or_create_thread(conversation_id: str | None) -> AgentThread | None:
     if not conversation_id:
         return None
 
-    if conversation_id in _conversation_threads:
-        _conversation_threads.move_to_end(conversation_id)
-        return _conversation_threads[conversation_id]
+    now = time.monotonic()
 
-    _conversation_threads[conversation_id] = AgentThread()
-    _conversation_threads.move_to_end(conversation_id)
-    logger.debug(f"Created new conversation thread for: {conversation_id}")
+    # Evict expired entries first (lazy cleanup on access)
+    expired_ids = [
+        cid
+        for cid, (_, last_access) in _conversation_threads.items()
+        if now - last_access > _TTL_SECONDS
+    ]
+    for cid in expired_ids:
+        del _conversation_threads[cid]
+        logger.debug("Evicted expired conversation thread: conversation_id=%s", cid)
 
-    if len(_conversation_threads) > _MAX_CONVERSATION_THREADS:
-        evicted_id, _ = _conversation_threads.popitem(last=False)
+    if expired_ids:
         logger.info(
-            "Evicted stale conversation thread to cap memory: conversation_id=%s",
-            evicted_id,
+            "Evicted %d expired conversation thread(s) due to TTL (%ds)",
+            len(expired_ids),
+            _TTL_SECONDS,
         )
 
-    return _conversation_threads[conversation_id]
+    # Check if thread exists and update access time
+    if conversation_id in _conversation_threads:
+        thread, _ = _conversation_threads[conversation_id]
+        _conversation_threads[conversation_id] = (thread, now)
+        _conversation_threads.move_to_end(conversation_id)
+        return thread
+
+    # Create new thread
+    new_thread = AgentThread()
+    _conversation_threads[conversation_id] = (new_thread, now)
+    _conversation_threads.move_to_end(conversation_id)
+    logger.debug("Created new conversation thread for: %s", conversation_id)
+
+    # Evict oldest entries if capacity exceeded
+    while len(_conversation_threads) > _MAX_THREADS:
+        evicted_id, (_, evicted_ts) = _conversation_threads.popitem(last=False)
+        age_seconds = int(now - evicted_ts)
+        logger.info(
+            "Evicted oldest conversation thread to cap memory: conversation_id=%s, age=%ds",
+            evicted_id,
+            age_seconds,
+        )
+
+    return new_thread
 
 
 # =============================================================================

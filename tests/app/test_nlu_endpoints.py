@@ -59,7 +59,7 @@ def test_classify_intent_endpoint(mock_workflow):
     )
 
 
-def test_extract_entities_endpoint(mock_workflow):
+def test_extract_entities_endpoint(mock_workflow: MagicMock) -> None:
     """Test POST /api/v1/extract_entities."""
     response = client.post(
         "/api/v1/extract_entities", json={"text": "test text", "entity_types": ["Type1", "Type2"]}
@@ -71,6 +71,6 @@ def test_extract_entities_endpoint(mock_workflow):
     assert data["entities"][0]["text"] == "Entity"
     assert data["reasoning"] == "test reasoning"
 
-    mock_workflow.dspy_reasoner.nlu.extract_entities.assert_called_once_with(
+    mock_workflow.reasoner.nlu.extract_entities.assert_called_once_with(
         text="test text", entity_types=["Type1", "Type2"]
     )

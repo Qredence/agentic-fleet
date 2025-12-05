@@ -1,5 +1,211 @@
 # Changelog
 
+## v0.6.8 (2025-12-05) – Dev CLI, NLU Module & Frontend UX Overhaul
+
+### Highlights
+
+#### New `agentic-fleet dev` CLI Command
+
+- **One-command development server** – Start both FastAPI backend and Vite frontend with `agentic-fleet dev`.
+- **Flexible options** – Custom ports (`--backend-port`, `--frontend-port`), backend-only (`--no-frontend`), or frontend-only (`--no-backend`).
+- **Graceful shutdown** – Both processes terminate cleanly on Ctrl+C.
+- **Three script aliases** – `agentic-fleet`, `agenticfleet`, and `fleet` all work identically.
+
+#### DSPy NLU Module
+
+- **Intent Classification** – New `DSPyNLU` module with `classify_intent()` for routing user intents.
+- **Entity Extraction** – `extract_entities()` identifies people, organizations, dates, and other entity types.
+- **API Endpoints** – REST endpoints at `/api/v1/classify_intent` and `/api/v1/extract_entities`.
+- **Offline Compilation** – NLU module follows the offline-only compilation pattern with cache at `.var/logs/compiled_nlu.pkl`.
+
+#### Event Mapping Refactor
+
+- **Dedicated events module** – Extracted event mapping logic into `src/agentic_fleet/app/events/mapping.py`.
+- **UI hints and categories** – Events now include `category` and `ui_hint` fields for frontend component routing.
+- **Rule-based classification** – `classify_event()` maps event types to semantic categories (STEP, THOUGHT, REASONING, PLANNING, OUTPUT, etc.).
+
+#### Frontend UX Improvements
+
+- **Native reconnecting WebSocket** – Replaced unmaintained `reconnecting-websocket` package with native implementation featuring exponential backoff.
+- **Workflow visualization components** – New `OrchestratorPanel`, `AgentGroup`, `SmartWorkflowDisplay`, and `WorkflowRenderer` components.
+- **Enhanced useChat hook** – Better deduplication, workflow phase tracking, and agent activity display.
+- **Design tokens system** – New CSS custom properties for consistent theming (`variables-primitive.css`, `variables-semantic.css`, `variables-components.css`).
+- **Error boundaries** – Added `ErrorBoundary` component for graceful error handling.
+- **Improved animations** – Shared animation library in `lib/animations.ts`.
+- **Code block enhancements** – Header with language label, copy button, and dark theme support.
+- **Persistent conversations** – Sidebar now displays conversation history with click-to-load.
+
+#### Documentation
+
+- **New Frontend Guide** – `docs/users/frontend.md` with comprehensive coverage of web interface features.
+- **Updated Getting Started** – Added web interface section with `agentic-fleet dev` instructions.
+- **Quick Reference updates** – CLI development commands documented.
+
+### Changes
+
+#### Backend
+
+- **`src/agentic_fleet/cli/commands/dev.py`** (NEW):
+  - `dev()` command launches uvicorn + npm concurrently.
+  - Signal handling for graceful process termination.
+  - Rich console output with status messages.
+
+- **`src/agentic_fleet/cli/console.py`**:
+  - Registered `dev` command in Typer app.
+
+- **`src/agentic_fleet/app/events/mapping.py`** (NEW):
+  - `classify_event()` for rule-based UI component routing.
+  - `map_workflow_event()` converts internal events to `StreamEvent`.
+  - Handles reasoning, agent messages, phase completions, and workflow output.
+
+- **`src/agentic_fleet/app/routers/nlu.py`** (NEW):
+  - `/classify_intent` endpoint for intent classification.
+  - `/extract_entities` endpoint for entity extraction.
+  - Uses workflow's `dspy_reasoner.nlu` module.
+
+- **`src/agentic_fleet/dspy_modules/nlu.py`** (NEW):
+  - `DSPyNLU` class with lazy-loaded ChainOfThought modules.
+  - `get_nlu_module()` factory with compiled cache loading.
+
+- **`src/agentic_fleet/dspy_modules/nlu_signatures.py`** (NEW):
+  - `IntentClassification` signature for intent detection.
+  - `EntityExtraction` signature for named entity recognition.
+
+- **`src/agentic_fleet/dspy_modules/reasoner.py`**:
+  - Added `nlu` property for lazy-loaded NLU module.
+  - `analyze_task()` now performs NLU analysis first.
+
+- **`src/agentic_fleet/app/routers/streaming.py`**:
+  - Refactored to use `map_workflow_event()` from events module.
+  - Reduced from ~700 lines to ~450 lines.
+
+- **`src/agentic_fleet/app/conversation_store.py`** (NEW):
+  - In-memory conversation persistence with JSON file backup.
+
+- **`src/agentic_fleet/app/middleware.py`** (NEW):
+  - Request logging middleware for debugging.
+
+- **`src/agentic_fleet/utils/tracing.py`**:
+  - Enhanced OpenTelemetry configuration.
+
+- **`pyproject.toml`**:
+  - Added `agenticfleet` script alias.
+
+#### Frontend
+
+- **`src/frontend/src/lib/reconnectingWebSocket.ts`** (NEW):
+  - Native WebSocket wrapper with exponential backoff.
+  - Configurable max retries and reconnection delays.
+  - Same API as native WebSocket for drop-in replacement.
+
+- **`src/frontend/src/components/workflow/`** (NEW):
+  - `OrchestratorPanel.tsx` - Displays orchestrator routing/analysis/quality steps.
+  - `AgentGroup.tsx` - Groups and displays agent activity.
+  - `SmartWorkflowDisplay.tsx` - Smart display with collapsible sections.
+  - `WorkflowRenderer.tsx` - Top-level workflow visualization.
+  - `utils.ts` - Event grouping and categorization utilities.
+  - `types.ts` - TypeScript interfaces for workflow visualization.
+
+- **`src/frontend/src/components/ErrorBoundary.tsx`** (NEW):
+  - React error boundary for graceful error handling.
+
+- **`src/frontend/src/components/AnimatedMessage.tsx`** (NEW):
+  - Animated message transitions.
+
+- **`src/frontend/src/components/MessageSkeleton.tsx`** (NEW):
+  - Loading skeleton for messages.
+
+- **`src/frontend/src/lib/animations.ts`** (NEW):
+  - Shared animation definitions (fade, slide, scale).
+
+- **`src/frontend/src/lib/codeDetection.ts`** (NEW):
+  - Utilities for detecting code blocks in messages.
+
+- **`src/frontend/src/styles/`** (NEW):
+  - `variables-primitive.css` - Base design tokens (colors, spacing, typography).
+  - `variables-semantic.css` - Semantic variables (surfaces, text, borders).
+  - `variables-components.css` - Component-specific variables.
+  - `base.css`, `globals.css`, `utilities.css` - Organized CSS architecture.
+
+- **`src/frontend/src/hooks/useChat.ts`**:
+  - Replaced `reconnecting-websocket` with native implementation.
+  - Added `requestSentRef` to prevent duplicate requests on reconnection.
+  - Enhanced step deduplication with `isDuplicateStep()`.
+  - Added workflow phase tracking for shimmer display.
+
+- **`src/frontend/src/hooks/useStreamingBatcher.ts`** (NEW):
+  - Batches rapid streaming updates for performance.
+
+- **`src/frontend/src/components/prompt-kit/code-block.tsx`**:
+  - Added header with language label.
+  - Added copy-to-clipboard button.
+  - Dark theme support.
+
+- **`src/frontend/src/api/client.ts`**:
+  - Added `classifyIntent()` and `extractEntities()` methods.
+
+- **`src/frontend/src/api/types.ts`**:
+  - Added `IntentRequest`, `IntentResponse`, `EntityRequest`, `EntityResponse` types.
+
+- **`src/frontend/package.json`**:
+  - Removed `reconnecting-websocket` dependency.
+
+#### Documentation
+
+- **`docs/users/frontend.md`** (NEW):
+  - Quick start with `agentic-fleet dev`.
+  - Chat interface and workflow visualization features.
+  - Development workflow (testing, linting, building).
+  - WebSocket protocol overview.
+  - Troubleshooting section.
+
+- **`docs/users/getting-started.md`**:
+  - Added "Using the Web Interface" section.
+  - Updated CLI examples to use `agentic-fleet` directly.
+
+- **`docs/guides/quick-reference.md`**:
+  - Added `agentic-fleet dev` commands.
+
+- **`docs/INDEX.md`**:
+  - Added Frontend Guide to user documentation.
+  - Added Frontend Development section for developers.
+
+#### Tests
+
+- **`tests/app/events/test_mapping.py`** (NEW):
+  - Tests for `classify_event()` and `map_workflow_event()`.
+  - Coverage for reasoning, agent messages, and phase completions.
+
+- **`tests/app/test_nlu_endpoints.py`** (NEW):
+  - Tests for NLU API endpoints with mocked workflow.
+
+- **`tests/dspy_modules/test_nlu.py`** (NEW):
+  - Unit tests for `DSPyNLU` module.
+
+- **`tests/app/test_conversation_store.py`** (NEW):
+  - Tests for conversation persistence.
+
+- **`tests/app/test_logging_json.py`** (NEW):
+  - Tests for JSON logging configuration.
+
+- **`tests/utils/test_tracing.py`** (NEW):
+  - Tests for OpenTelemetry tracing utilities.
+
+### Bug Fixes
+
+- **Fixed attribute name mismatch** – NLU router now uses `workflow.dspy_reasoner` instead of non-existent `workflow.reasoner`.
+- **Fixed import path** – `MagenticAgentMessageEvent` imported from local module instead of `agent_framework._workflows`.
+- **Fixed duplicate WebSocket requests** – Added guard to prevent re-sending on reconnection.
+- **Fixed frontend lint errors** – Resolved ESLint warnings across components.
+
+### Migration Notes
+
+- **New CLI command**: Use `agentic-fleet dev` instead of `make dev` for unified development server.
+- **Script aliases**: All three work identically: `agentic-fleet`, `agenticfleet`, `fleet`.
+- **WebSocket package**: The `reconnecting-websocket` npm package has been removed in favor of a native implementation.
+
+---
+
 ## v0.6.7 (2025-12-04) – Simple Task Routing & Evaluation Framework
 
 ### Highlights

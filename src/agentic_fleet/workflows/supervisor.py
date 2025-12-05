@@ -21,6 +21,11 @@ from agent_framework._workflows import (
     WorkflowStatusEvent,
 )
 
+from agentic_fleet.workflows.execution.streaming_events import (
+    MagenticAgentMessageEvent,
+    ReasoningStreamEvent,
+)
+
 from ..utils.history_manager import HistoryManager
 from ..utils.logger import setup_logger
 from ..utils.models import ExecutionMode, RoutingDecision, ensure_routing_decision
@@ -29,7 +34,6 @@ from ..utils.tool_registry import ToolRegistry
 from .builder import build_fleet_workflow
 from .config import WorkflowConfig
 from .context import SupervisorContext
-from .execution.streaming_events import MagenticAgentMessageEvent, ReasoningStreamEvent
 from .handoff import HandoffManager
 from .helpers import is_simple_task
 from .initialization import initialize_workflow_context
@@ -161,8 +165,9 @@ class SupervisorWorkflow:
             if decision.get("mode") == "fast_path":
                 return True
 
-        # Check simple task heuristic
-        return is_simple_task(task)
+        # Check simple task heuristic using configured max_words threshold
+        simple_task_max_words = getattr(self.config, "simple_task_max_words", 40)
+        return is_simple_task(task, max_words=simple_task_max_words)
 
     async def _handle_fast_path(
         self,

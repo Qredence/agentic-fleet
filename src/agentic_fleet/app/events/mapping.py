@@ -6,8 +6,10 @@ This module centralizes the logic for transforming various internal workflow eve
 
 from __future__ import annotations
 
-from typing import Any
+from pathlib import Path
+from typing import Any, Literal, TypedDict
 
+import yaml
 from agent_framework._workflows import (
     ExecutorCompletedEvent,
     WorkflowOutputEvent,
@@ -30,6 +32,200 @@ from agentic_fleet.workflows.execution.streaming_events import (
 logger = setup_logger(__name__)
 
 
+# =============================================================================
+# UI Routing Configuration Loading
+# =============================================================================
+
+
+class UIHintData(TypedDict):
+    """Typed dict for validated UI hint data."""
+
+    component: str
+    priority: Literal["low", "medium", "high"]
+    collapsible: bool
+    icon_hint: str | None
+
+
+# Default fallback UI routing values (used when config is missing or invalid)
+_DEFAULT_UI_HINT: UIHintData = {
+    "component": "ChatStep",
+    "priority": "low",
+    "collapsible": True,
+    "icon_hint": None,
+}
+_DEFAULT_CATEGORY = "status"
+
+# Valid values for validation
+_VALID_PRIORITIES: set[str] = {"low", "medium", "high"}
+_VALID_CATEGORIES: set[str] = {cat.value for cat in EventCategory}
+
+# Module-level cache for UI routing config
+_ui_routing_config: dict[str, Any] | None = None
+
+
+def _load_ui_routing_config() -> dict[str, Any]:
+    """Load and cache UI routing configuration from workflow_config.yaml.
+
+    Returns:
+        The ui_routing section of the config, or an empty dict if loading fails.
+
+    Raises:
+        Logs errors but does not raise - returns empty dict for graceful fallback.
+    """
+    global _ui_routing_config
+
+    if _ui_routing_config is not None:
+        return _ui_routing_config
+
+    # Locate the config file relative to this module
+    config_path = Path(__file__).parent.parent.parent / "config" / "workflow_config.yaml"
+
+    try:
+        if not config_path.exists():
+            logger.warning(
+                "UI routing config not found at %s, using hardcoded defaults", config_path
+            )
+            _ui_routing_config = {}
+            return _ui_routing_config
+
+        with config_path.open("r", encoding="utf-8") as f:
+            full_config = yaml.safe_load(f)
+
+        if not isinstance(full_config, dict):
+            logger.error(
+                "workflow_config.yaml is malformed (expected dict, got %s), using defaults",
+                type(full_config).__name__,
+            )
+            _ui_routing_config = {}
+            return _ui_routing_config
+
+        _ui_routing_config = full_config.get("ui_routing", {})
+
+        if not isinstance(_ui_routing_config, dict):
+            logger.error(
+                "ui_routing section is malformed (expected dict, got %s), using defaults",
+                type(_ui_routing_config).__name__,
+            )
+            _ui_routing_config = {}
+
+        logger.debug("Loaded UI routing config with %d event types", len(_ui_routing_config))
+
+    except yaml.YAMLError as e:
+        logger.error("Failed to parse workflow_config.yaml: %s", e)
+        _ui_routing_config = {}
+    except OSError as e:
+        logger.error("Failed to read workflow_config.yaml: %s", e)
+        _ui_routing_config = {}
+
+    return _ui_routing_config
+
+
+def _validate_ui_hint_entry(entry: dict[str, Any], context: str) -> UIHintData:
+    """Validate and normalize a UI hint entry from config.
+
+    Args:
+        entry: The raw config entry dict.
+        context: Description of the config location for error messages.
+
+    Returns:
+        Validated UIHintData with component, priority, collapsible, icon_hint keys.
+    """
+    if not isinstance(entry, dict):
+        logger.warning(
+            "Invalid ui_routing entry at %s (expected dict, got %s), using defaults",
+            context,
+            type(entry).__name__,
+        )
+        return UIHintData(
+            component=_DEFAULT_UI_HINT["component"],
+            priority=_DEFAULT_UI_HINT["priority"],
+            collapsible=_DEFAULT_UI_HINT["collapsible"],
+            icon_hint=_DEFAULT_UI_HINT["icon_hint"],
+        )
+
+    # Validate component (required string)
+    component = entry.get("component")
+    if not (isinstance(component, str) and component):
+        logger.warning(
+            "Invalid/missing 'component' at %s, using default '%s'",
+            context,
+            _DEFAULT_UI_HINT["component"],
+        )
+        component = _DEFAULT_UI_HINT["component"]
+
+    # Validate priority (must be low/medium/high)
+    priority = entry.get("priority")
+    if priority not in _VALID_PRIORITIES:
+        if priority is not None:
+            logger.warning(
+                "Invalid 'priority' value '%s' at %s, using default '%s'",
+                priority,
+                context,
+                _DEFAULT_UI_HINT["priority"],
+            )
+        priority = _DEFAULT_UI_HINT["priority"]
+
+    # Validate collapsible (must be bool)
+    collapsible = entry.get("collapsible")
+    if not isinstance(collapsible, bool):
+        if collapsible is not None:
+            logger.warning(
+                "Invalid 'collapsible' value '%s' at %s, using default %s",
+                collapsible,
+                context,
+                _DEFAULT_UI_HINT["collapsible"],
+            )
+        collapsible = _DEFAULT_UI_HINT["collapsible"]
+
+    # Validate icon_hint (optional string or None)
+    icon_hint = entry.get("icon_hint")
+    if icon_hint is not None and not isinstance(icon_hint, str):
+        logger.warning("Invalid 'icon_hint' value '%s' at %s, using None", icon_hint, context)
+        icon_hint = None
+
+    return UIHintData(
+        component=component,
+        priority=priority,  # type: ignore[typeddict-item]
+        collapsible=collapsible,
+        icon_hint=icon_hint,
+    )
+
+
+def _get_category_from_config(entry: dict[str, Any], context: str) -> EventCategory:
+    """Extract and validate EventCategory from config entry.
+
+    Args:
+        entry: The config entry dict.
+        context: Description of the config location for error messages.
+
+    Returns:
+        EventCategory enum value.
+    """
+    category_str = entry.get("category", _DEFAULT_CATEGORY)
+
+    if not isinstance(category_str, str):
+        logger.warning(
+            "Invalid 'category' type at %s (expected str, got %s), using default '%s'",
+            context,
+            type(category_str).__name__,
+            _DEFAULT_CATEGORY,
+        )
+        category_str = _DEFAULT_CATEGORY
+
+    category_str = category_str.lower()
+
+    if category_str not in _VALID_CATEGORIES:
+        logger.warning(
+            "Unknown 'category' value '%s' at %s, using default '%s'",
+            category_str,
+            context,
+            _DEFAULT_CATEGORY,
+        )
+        category_str = _DEFAULT_CATEGORY
+
+    return EventCategory(category_str)
+
+
 def classify_event(
     event_type: StreamEventType,
     kind: str | None = None,
@@ -37,7 +233,8 @@ def classify_event(
     """Rule-based event classification for UI component routing.
 
     Maps StreamEventType and optional kind to semantic category and UI hints.
-    This enables the frontend to route events to appropriate components.
+    Configuration is loaded from workflow_config.yaml under the ui_routing key.
+    Falls back to sensible defaults if config is missing or invalid.
 
     Args:
         event_type: The stream event type.
@@ -46,102 +243,51 @@ def classify_event(
     Returns:
         Tuple of (EventCategory, UIHint) for frontend rendering.
     """
-    # Orchestrator thought events - categorize by kind
-    if event_type == StreamEventType.ORCHESTRATOR_THOUGHT:
-        if kind == "routing":
-            return EventCategory.PLANNING, UIHint(
-                component="ChatStep", priority="high", collapsible=True, icon_hint="routing"
-            )
-        if kind == "analysis":
-            return EventCategory.THOUGHT, UIHint(
-                component="ChatStep", priority="medium", collapsible=True, icon_hint="analysis"
-            )
-        if kind == "quality":
-            return EventCategory.OUTPUT, UIHint(
-                component="ChatStep", priority="medium", collapsible=True, icon_hint="quality"
-            )
-        if kind == "progress":
-            return EventCategory.STATUS, UIHint(
-                component="ChatStep", priority="low", collapsible=True, icon_hint="progress"
-            )
-        if kind == "handoff":
-            return EventCategory.PLANNING, UIHint(
-                component="ChatStep", priority="high", collapsible=False, icon_hint="handoff"
-            )
-        # Default thought
-        return EventCategory.THOUGHT, UIHint(
-            component="ChatStep", priority="medium", collapsible=True
-        )
+    config = _load_ui_routing_config()
 
-    # Orchestrator message events - status updates
-    if event_type == StreamEventType.ORCHESTRATOR_MESSAGE:
-        return EventCategory.STATUS, UIHint(component="ChatStep", priority="low", collapsible=True)
+    # Convert event type to config key (e.g., ORCHESTRATOR_THOUGHT -> orchestrator_thought)
+    event_key = event_type.value.lower()
+    context_base = f"ui_routing.{event_key}"
 
-    # Agent lifecycle events
-    if event_type == StreamEventType.AGENT_START:
-        return EventCategory.STEP, UIHint(
-            component="ChatStep", priority="low", collapsible=True, icon_hint="agent_start"
-        )
-    if event_type == StreamEventType.AGENT_COMPLETE:
-        return EventCategory.STEP, UIHint(
-            component="ChatStep", priority="low", collapsible=True, icon_hint="agent_complete"
-        )
-    if event_type == StreamEventType.AGENT_MESSAGE:
-        return EventCategory.OUTPUT, UIHint(
-            component="MessageBubble", priority="medium", collapsible=False
-        )
-    if event_type == StreamEventType.AGENT_OUTPUT:
-        return EventCategory.OUTPUT, UIHint(
-            component="MessageBubble", priority="high", collapsible=False
-        )
+    # Look up event type in config
+    event_config = config.get(event_key)
 
-    # Reasoning events (GPT-5 chain-of-thought)
-    if event_type == StreamEventType.REASONING_DELTA:
-        return EventCategory.REASONING, UIHint(
-            component="Reasoning", priority="medium", collapsible=True
-        )
-    if event_type == StreamEventType.REASONING_COMPLETED:
-        return EventCategory.REASONING, UIHint(
-            component="Reasoning", priority="medium", collapsible=True
-        )
+    if event_config is None or not isinstance(event_config, dict):
+        # Fall back to _fallback config or hardcoded defaults
+        fallback_config = config.get("_fallback", {})
+        if fallback_config and isinstance(fallback_config, dict):
+            hint_data = _validate_ui_hint_entry(fallback_config, "ui_routing._fallback")
+            category = _get_category_from_config(fallback_config, "ui_routing._fallback")
+        else:
+            hint_data = _DEFAULT_UI_HINT.copy()
+            category = EventCategory(_DEFAULT_CATEGORY)
 
-    # Response events
-    if event_type == StreamEventType.RESPONSE_DELTA:
-        return EventCategory.RESPONSE, UIHint(
-            component="MessageBubble", priority="high", collapsible=False
-        )
-    if event_type == StreamEventType.RESPONSE_COMPLETED:
-        return EventCategory.RESPONSE, UIHint(
-            component="MessageBubble", priority="high", collapsible=False
-        )
+        return category, UIHint(**hint_data)
 
-    # Error events
-    if event_type == StreamEventType.ERROR:
-        return EventCategory.ERROR, UIHint(
-            component="ErrorStep", priority="high", collapsible=False
-        )
+    # Look up kind-specific config or fall back to _default
+    if kind and kind in event_config:
+        entry = event_config[kind]
+        context = f"{context_base}.{kind}"
+    elif "_default" in event_config:
+        entry = event_config["_default"]
+        context = f"{context_base}._default"
+    else:
+        # No matching kind and no _default - use fallback
+        fallback_config = config.get("_fallback", {})
+        if fallback_config and isinstance(fallback_config, dict):
+            hint_data = _validate_ui_hint_entry(fallback_config, "ui_routing._fallback")
+            category = _get_category_from_config(fallback_config, "ui_routing._fallback")
+        else:
+            hint_data = _DEFAULT_UI_HINT.copy()
+            category = EventCategory(_DEFAULT_CATEGORY)
 
-    if event_type == StreamEventType.CANCELLED:
-        return EventCategory.STATUS, UIHint(
-            component="ChatStep", priority="medium", collapsible=False, icon_hint="cancelled"
-        )
+        return category, UIHint(**hint_data)
 
-    if event_type == StreamEventType.CONNECTED:
-        return EventCategory.STATUS, UIHint(
-            component="ChatStep", priority="low", collapsible=False, icon_hint="connected"
-        )
+    # Validate and construct UIHint
+    hint_data = _validate_ui_hint_entry(entry, context)
+    category = _get_category_from_config(entry, context)
 
-    if event_type == StreamEventType.HEARTBEAT:
-        return EventCategory.STATUS, UIHint(
-            component="ChatStep", priority="low", collapsible=True, icon_hint="heartbeat"
-        )
-
-    # Control events (done) - no UI representation needed
-    if event_type == StreamEventType.DONE:
-        return EventCategory.STATUS, UIHint(component="ChatStep", priority="low", collapsible=True)
-
-    # Fallback
-    return EventCategory.STATUS, UIHint(component="ChatStep", priority="low", collapsible=True)
+    return category, UIHint(**hint_data)
 
 
 def map_workflow_event(
@@ -268,50 +414,85 @@ def map_workflow_event(
                 elif hasattr(c, "text"):
                     text_parts.append(getattr(c, "text", ""))
             text = "\n".join(t for t in text_parts if t)
-        except Exception:
+        except (KeyError, IndexError, TypeError, ValueError, AttributeError) as exc:
+            logger.warning(
+                "Failed to extract text from chat message contents: %s", exc, exc_info=True
+            )
             text = ""
 
         if text:
             author_name = getattr(event, "author_name", None) or getattr(event, "author", None)
             role = getattr(event, "role", None)
+            role_value = role.value if hasattr(role, "value") else role
+            events: list[StreamEvent] = []
+
             event_type = StreamEventType.AGENT_MESSAGE
             category, ui_hint = classify_event(event_type)
-            return (
+            events.append(
                 StreamEvent(
                     type=event_type,
                     message=text,
                     agent_id=getattr(event, "agent_id", None),
                     author=author_name,
-                    role=role.value if hasattr(role, "value") else role,
+                    role=role_value,
                     kind=None,
                     category=category,
                     ui_hint=ui_hint,
-                ),
-                accumulated_reasoning,
+                )
             )
+
+            if role_value == "assistant":
+                final_type = StreamEventType.RESPONSE_COMPLETED
+                final_category, final_ui_hint = classify_event(final_type)
+                events.append(
+                    StreamEvent(
+                        type=final_type,
+                        message=text,
+                        category=final_category,
+                        ui_hint=final_ui_hint,
+                    )
+                )
+
+            return (events if len(events) > 1 else events[0], accumulated_reasoning)
 
     # ChatMessage-like objects with .text and .role (agent_framework ChatMessage)
     if hasattr(event, "text") and hasattr(event, "role"):
         text = getattr(event, "text", "") or ""
         if text:
             role = getattr(event, "role", None)
+            role_value = role.value if hasattr(role, "value") else role
             author_name = getattr(event, "author_name", None) or getattr(event, "author", None)
             agent_id = getattr(event, "agent_id", None) or author_name
-            event_type = StreamEventType.AGENT_MESSAGE
-            category, ui_hint = classify_event(event_type)
-            return (
+
+            events: list[StreamEvent] = []
+            msg_type = StreamEventType.AGENT_MESSAGE
+            msg_category, msg_ui_hint = classify_event(msg_type)
+            events.append(
                 StreamEvent(
-                    type=event_type,
+                    type=msg_type,
                     message=text,
                     agent_id=agent_id,
                     author=author_name,
-                    role=role.value if hasattr(role, "value") else role,
+                    role=role_value,
                     kind=None,
-                    category=category,
-                    ui_hint=ui_hint,
-                ),
-                accumulated_reasoning,
+                    category=msg_category,
+                    ui_hint=msg_ui_hint,
+                )
             )
+
+            if role_value == "assistant":
+                final_type = StreamEventType.RESPONSE_COMPLETED
+                final_category, final_ui_hint = classify_event(final_type)
+                events.append(
+                    StreamEvent(
+                        type=final_type,
+                        message=text,
+                        category=final_category,
+                        ui_hint=final_ui_hint,
+                    )
+                )
+
+            return (events if len(events) > 1 else events[0], accumulated_reasoning)
 
     # Dict-based chat_message events (not objects)
     if isinstance(event, dict):
@@ -336,13 +517,15 @@ def map_workflow_event(
                 elif hasattr(role, "value"):
                     role_value = role.value
 
+                events: list[StreamEvent] = []
+
                 # Determine event type
                 event_type = StreamEventType.AGENT_MESSAGE
                 if event_dict.get("event") == "agent.output":
                     event_type = StreamEventType.AGENT_OUTPUT
 
                 category, ui_hint = classify_event(event_type)
-                return (
+                events.append(
                     StreamEvent(
                         type=event_type,
                         message=text,
@@ -352,9 +535,22 @@ def map_workflow_event(
                         kind=None,
                         category=category,
                         ui_hint=ui_hint,
-                    ),
-                    accumulated_reasoning,
+                    )
                 )
+
+                if role_value == "assistant":
+                    final_type = StreamEventType.RESPONSE_COMPLETED
+                    final_category, final_ui_hint = classify_event(final_type)
+                    events.append(
+                        StreamEvent(
+                            type=final_type,
+                            message=text,
+                            category=final_category,
+                            ui_hint=final_ui_hint,
+                        )
+                    )
+
+                return (events if len(events) > 1 else events[0], accumulated_reasoning)
 
     if isinstance(event, ExecutorCompletedEvent):
         # Phase completion events with typed messages

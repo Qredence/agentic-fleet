@@ -480,15 +480,29 @@ class DSPyReasoner(dspy.Module):
 
             prediction = self.analyzer(task=task)
 
-            # Extract fields from prediction
-            # Typed signatures provide these directly as attributes
+            # Extract fields from prediction and align with AnalysisResult schema
+            predicted_needs_web = getattr(prediction, "needs_web_search", None)
+            time_sensitive = is_time_sensitive_task(task)
+            needs_web_search = (
+                bool(predicted_needs_web) if predicted_needs_web is not None else time_sensitive
+            )
+
+            capabilities = getattr(prediction, "required_capabilities", [])
+            estimated_steps = getattr(prediction, "estimated_steps", 1)
+
             return {
                 "complexity": getattr(prediction, "complexity", "medium"),
-                "required_capabilities": getattr(prediction, "required_capabilities", []),
-                "estimated_steps": getattr(prediction, "estimated_steps", 1),
+                "capabilities": capabilities,
+                "required_capabilities": capabilities,
+                "tool_requirements": getattr(prediction, "preferred_tools", []),
+                "steps": estimated_steps,
+                "estimated_steps": estimated_steps,
+                "search_context": getattr(prediction, "search_context", ""),
+                "needs_web_search": needs_web_search,
+                "search_query": getattr(prediction, "search_query", ""),
+                "urgency": getattr(prediction, "urgency", "medium"),
                 "reasoning": getattr(prediction, "reasoning", ""),
-                "time_sensitive": is_time_sensitive_task(task),
-                "needs_web_search": is_time_sensitive_task(task),
+                "time_sensitive": time_sensitive,
                 "intent": intent_data,
                 "entities": entities_data["entities"],
             }

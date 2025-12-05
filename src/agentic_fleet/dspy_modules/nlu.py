@@ -90,6 +90,9 @@ class DSPyNLU(dspy.Module):
         Returns:
             Dictionary with intent, confidence, and reasoning
         """
+        if getattr(getattr(dspy, "settings", None), "lm", None) is None:
+            return {"intent": "unknown", "confidence": 0.0, "reasoning": "no lm"}
+
         intents_str = ", ".join(possible_intents)
         prediction = self.intent_classifier(text=text, possible_intents=intents_str)
 
@@ -109,6 +112,9 @@ class DSPyNLU(dspy.Module):
         Returns:
             Dictionary with entities list and reasoning
         """
+        if getattr(getattr(dspy, "settings", None), "lm", None) is None:
+            return {"entities": [], "reasoning": "no lm"}
+
         types_str = ", ".join(entity_types)
         prediction = self.entity_extractor(text=text, entity_types=types_str)
 

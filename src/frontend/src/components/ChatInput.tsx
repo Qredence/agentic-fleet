@@ -116,7 +116,7 @@ export function ChatInput({
             placeholder={
               isStreaming ? "Waiting for response..." : "Ask anything..."
             }
-            className="min-h-[44px] pt-3 pl-4 text-base leading-[1.3] sm:text-base md:text-base"
+            className="min-h-11 pt-3 pl-4 text-base leading-[1.3] sm:text-base md:text-base"
           />
 
           <PromptInputActions className="mt-3 flex w-full items-center justify-between gap-2 p-2">

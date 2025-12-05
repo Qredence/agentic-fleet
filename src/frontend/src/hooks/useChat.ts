@@ -173,89 +173,25 @@ export const useChat = (): UseChatReturn => {
     };
   }, [loadConversations, selectConversation, createConversation]);
 
-  const handleStreamEvent = useCallback(
-    (data: StreamEvent, groupId: string) => {
-      if (data.type === "heartbeat") {
-        return;
-      }
-      // Update workflow phase for shimmer display
-      const phase = getWorkflowPhase(data);
-      setCurrentWorkflowPhase(phase);
+  const handleStreamEvent = useCallback((data: StreamEvent) => {
+    if (data.type === "heartbeat") {
+      return;
+    }
+    // Update workflow phase for shimmer display
+    const phase = getWorkflowPhase(data);
+    setCurrentWorkflowPhase(phase);
 
-      // Track current agent for typing indicator
-      if (data.agent_id || data.author) {
-        setCurrentAgent(data.author || data.agent_id || null);
-      }
+    // Track current agent for typing indicator
+    if (data.agent_id || data.author) {
+      setCurrentAgent(data.author || data.agent_id || null);
+    }
 
-      if (data.type === "response.delta" && data.delta) {
-        if (data.kind || data.agent_id) {
-          const statusStep: ConversationStep = {
-            id: generateStepId(),
-            type: "status",
-            content: `${data.agent_id ? `${data.agent_id}: ` : ""}${data.delta}`,
-            timestamp: new Date().toISOString(),
-            kind: data.kind,
-            data: data.data,
-            category: data.category as ConversationStep["category"],
-            uiHint: data.ui_hint
-              ? {
-                  component: data.ui_hint.component,
-                  priority: data.ui_hint.priority,
-                  collapsible: data.ui_hint.collapsible,
-                  iconHint: data.ui_hint.icon_hint,
-                }
-              : undefined,
-          };
-
-          setMessages((prev) => {
-            const newMessages = [...prev];
-            let placeholderIdx = -1;
-            for (let i = newMessages.length - 1; i >= 0; i--) {
-              if (newMessages[i].role === "assistant") {
-                placeholderIdx = i;
-                break;
-              }
-            }
-            if (placeholderIdx >= 0) {
-              const currentSteps = newMessages[placeholderIdx].steps || [];
-              // Skip duplicate steps
-              if (isDuplicateStep(currentSteps, statusStep)) {
-                return prev;
-              }
-              newMessages[placeholderIdx] = {
-                ...newMessages[placeholderIdx],
-                steps: [...currentSteps, statusStep],
-                workflowPhase: phase,
-              };
-            }
-            return newMessages;
-          });
-        } else {
-          // Direct, unbatched text update for minimal latency
-          const delta = data.delta;
-          accumulatedContentRef.current += delta;
-          const contentSnapshot = accumulatedContentRef.current;
-          setMessages((prev) => {
-            const newMessages = [...prev];
-            const lastMsgIndex = newMessages.length - 1;
-            if (newMessages[lastMsgIndex]?.role === "assistant") {
-              newMessages[lastMsgIndex] = {
-                ...newMessages[lastMsgIndex],
-                content: contentSnapshot,
-                isWorkflowPlaceholder: false,
-              };
-            }
-            return newMessages;
-          });
-        }
-      } else if (
-        data.type === "orchestrator.message" ||
-        data.type === "orchestrator.thought"
-      ) {
-        const newStep: ConversationStep = {
+    if (data.type === "response.delta" && data.delta) {
+      if (data.kind || data.agent_id) {
+        const statusStep: ConversationStep = {
           id: generateStepId(),
-          type: data.type === "orchestrator.thought" ? "thought" : "status",
-          content: data.message || "",
+          type: "status",
+          content: `${data.agent_id ? `${data.agent_id}: ` : ""}${data.delta}`,
           timestamp: new Date().toISOString(),
           kind: data.kind,
           data: data.data,
@@ -282,277 +218,316 @@ export const useChat = (): UseChatReturn => {
           if (placeholderIdx >= 0) {
             const currentSteps = newMessages[placeholderIdx].steps || [];
             // Skip duplicate steps
-            if (isDuplicateStep(currentSteps, newStep)) {
+            if (isDuplicateStep(currentSteps, statusStep)) {
               return prev;
             }
             newMessages[placeholderIdx] = {
               ...newMessages[placeholderIdx],
-              steps: [...currentSteps, newStep],
+              steps: [...currentSteps, statusStep],
               workflowPhase: phase,
             };
           }
           return newMessages;
         });
-      } else if (
+      } else {
+        // Direct, unbatched text update for minimal latency
+        const delta = data.delta;
+        accumulatedContentRef.current += delta;
+        const contentSnapshot = accumulatedContentRef.current;
+        setMessages((prev) => {
+          const newMessages = [...prev];
+          const lastMsgIndex = newMessages.length - 1;
+          if (newMessages[lastMsgIndex]?.role === "assistant") {
+            newMessages[lastMsgIndex] = {
+              ...newMessages[lastMsgIndex],
+              content: contentSnapshot,
+              isWorkflowPlaceholder: false,
+            };
+          }
+          return newMessages;
+        });
+      }
+    } else if (
+      data.type === "orchestrator.message" ||
+      data.type === "orchestrator.thought"
+    ) {
+      const newStep: ConversationStep = {
+        id: generateStepId(),
+        type: data.type === "orchestrator.thought" ? "thought" : "status",
+        content: data.message || "",
+        timestamp: new Date().toISOString(),
+        kind: data.kind,
+        data: data.data,
+        category: data.category as ConversationStep["category"],
+        uiHint: data.ui_hint
+          ? {
+              component: data.ui_hint.component,
+              priority: data.ui_hint.priority,
+              collapsible: data.ui_hint.collapsible,
+              iconHint: data.ui_hint.icon_hint,
+            }
+          : undefined,
+      };
+
+      setMessages((prev) => {
+        const newMessages = [...prev];
+        let placeholderIdx = -1;
+        for (let i = newMessages.length - 1; i >= 0; i--) {
+          if (newMessages[i].role === "assistant") {
+            placeholderIdx = i;
+            break;
+          }
+        }
+        if (placeholderIdx >= 0) {
+          const currentSteps = newMessages[placeholderIdx].steps || [];
+          // Skip duplicate steps
+          if (isDuplicateStep(currentSteps, newStep)) {
+            return prev;
+          }
+          newMessages[placeholderIdx] = {
+            ...newMessages[placeholderIdx],
+            steps: [...currentSteps, newStep],
+            workflowPhase: phase,
+          };
+        }
+        return newMessages;
+      });
+    } else if (
+      data.type === "agent.start" ||
+      data.type === "agent.complete" ||
+      data.type === "agent.output" ||
+      data.type === "agent.thought" ||
+      data.type === "agent.message"
+    ) {
+      const agentLabel = data.author || data.agent_id || "agent";
+      const mappedAgentType: ConversationStep["type"] =
+        data.type === "agent.start"
+          ? "agent_start"
+          : data.type === "agent.complete"
+            ? "agent_complete"
+            : data.type === "agent.output"
+              ? "agent_output"
+              : data.type === "agent.message"
+                ? "agent_output"
+                : "agent_thought";
+
+      if (
         data.type === "agent.start" ||
         data.type === "agent.complete" ||
-        data.type === "agent.output" ||
         data.type === "agent.thought" ||
-        data.type === "agent.message"
+        data.type === "agent.output" ||
+        data.type === "agent.message" // Both output and message events should update content
       ) {
-        const agentLabel = data.author || data.agent_id || "agent";
-        const mappedAgentType: ConversationStep["type"] =
-          data.type === "agent.start"
-            ? "agent_start"
-            : data.type === "agent.complete"
-              ? "agent_complete"
-              : data.type === "agent.output"
-                ? "agent_output"
-                : data.type === "agent.message"
-                  ? "agent_output"
-                  : "agent_thought";
+        // All agent-related events (start, complete, thought, output, message)
+        // should update the steps array of the *latest* assistant message.
+        // Agent thoughts are often less direct, so they always go into steps.
+        // Agent outputs/messages are primary content, so they also update the main content field.
+        // For agent.output/agent.message events, use a short status label in steps (full content goes to message.content)
+        // For other events, show the message/content in the step
+        const stepContent =
+          data.type === "agent.thought"
+            ? `${agentLabel}: ${data.message || data.content || "Thinking..."}`
+            : data.type === "agent.output" || data.type === "agent.message"
+              ? `${agentLabel}: Produced output`
+              : `${agentLabel}: ${data.message || data.content || (data.type === "agent.start" ? "Starting..." : "Completed")}`;
 
-        if (
-          data.type === "agent.start" ||
-          data.type === "agent.complete" ||
-          data.type === "agent.thought" ||
-          data.type === "agent.output" ||
-          data.type === "agent.message" // Both output and message events should update content
-        ) {
-          // All agent-related events (start, complete, thought, output, message)
-          // should update the steps array of the *latest* assistant message.
-          // Agent thoughts are often less direct, so they always go into steps.
-          // Agent outputs/messages are primary content, so they also update the main content field.
-          // For agent.output/agent.message events, use a short status label in steps (full content goes to message.content)
-          // For other events, show the message/content in the step
-          const stepContent =
-            data.type === "agent.thought"
-              ? `${agentLabel}: ${data.message || data.content || "Thinking..."}`
-              : data.type === "agent.output" || data.type === "agent.message"
-                ? `${agentLabel}: Produced output`
-                : `${agentLabel}: ${data.message || data.content || (data.type === "agent.start" ? "Starting..." : "Completed")}`;
+        const newStep: ConversationStep = {
+          id: generateStepId(),
+          type: mappedAgentType,
+          content: stepContent,
+          timestamp: new Date().toISOString(),
+          kind: data.kind,
+          data: {
+            ...data.data,
+            agent_id: data.agent_id,
+            author: data.author,
+            // Store actual output content for agent.output/agent.message events (for rendering in AgentGroup)
+            ...((data.type === "agent.output" ||
+              data.type === "agent.message") && {
+              output: data.message || data.content,
+            }),
+          },
+          category: data.category as ConversationStep["category"],
+          uiHint: data.ui_hint
+            ? {
+                component: data.ui_hint.component,
+                priority: data.ui_hint.priority,
+                collapsible: data.ui_hint.collapsible,
+                iconHint: data.ui_hint.icon_hint,
+              }
+            : undefined,
+        };
 
-          const newStep: ConversationStep = {
-            id: generateStepId(),
-            type: mappedAgentType,
-            content: stepContent,
-            timestamp: new Date().toISOString(),
-            kind: data.kind,
-            data: {
-              ...data.data,
-              agent_id: data.agent_id,
-              author: data.author,
-              // Store actual output content for agent.output/agent.message events (for rendering in AgentGroup)
-              ...((data.type === "agent.output" ||
-                data.type === "agent.message") && {
-                output: data.message || data.content,
-              }),
-            },
-            category: data.category as ConversationStep["category"],
-            uiHint: data.ui_hint
-              ? {
-                  component: data.ui_hint.component,
-                  priority: data.ui_hint.priority,
-                  collapsible: data.ui_hint.collapsible,
-                  iconHint: data.ui_hint.icon_hint,
-                }
-              : undefined,
-          };
+        setMessages((prev) => {
+          const newMessages = [...prev];
+          for (let i = newMessages.length - 1; i >= 0; i--) {
+            if (newMessages[i].role === "assistant") {
+              const currentSteps = newMessages[i].steps || [];
+              // Skip duplicate steps
+              if (isDuplicateStep(currentSteps, newStep)) {
+                return prev;
+              }
+              newMessages[i] = {
+                ...newMessages[i],
+                steps: [...currentSteps, newStep],
+                workflowPhase: phase,
+              };
 
-          setMessages((prev) => {
-            const newMessages = [...prev];
-            for (let i = newMessages.length - 1; i >= 0; i--) {
-              if (newMessages[i].role === "assistant") {
-                const currentSteps = newMessages[i].steps || [];
-                // Skip duplicate steps
-                if (isDuplicateStep(currentSteps, newStep)) {
-                  return prev;
-                }
+              // For agent.message and agent.output, also update the main content
+              if (
+                (data.type === "agent.message" ||
+                  data.type === "agent.output") &&
+                (data.message || data.content)
+              ) {
+                const agentContent = data.message || data.content || "";
+                const existingContent = newMessages[i].content || "";
+                const updatedContent = existingContent
+                  ? `${existingContent}\n\n${agentContent}`
+                  : agentContent;
+
                 newMessages[i] = {
                   ...newMessages[i],
-                  steps: [...currentSteps, newStep],
-                  workflowPhase: phase,
-                };
-
-                // For agent.message and agent.output, also update the main content
-                if (
-                  (data.type === "agent.message" ||
-                    data.type === "agent.output") &&
-                  (data.message || data.content)
-                ) {
-                  const agentContent = data.message || data.content || "";
-                  const existingContent = newMessages[i].content || "";
-                  const updatedContent = existingContent
-                    ? `${existingContent}\n\n${agentContent}`
-                    : agentContent;
-
-                  newMessages[i] = {
-                    ...newMessages[i],
-                    content: updatedContent,
-                    author: agentLabel,
-                    agent_id: data.agent_id ?? newMessages[i].agent_id,
-                    isWorkflowPlaceholder: false,
-                    workflowPhase: undefined, // Clear phase to show content
-                  };
-                }
-                break;
-              }
-            }
-            return newMessages;
-          });
-        }
-      } else if (data.type === "response.completed") {
-        if (data.message && data.message.trim().length > 0) {
-          const finalContent = data.message;
-          const finalTrim = finalContent.trim();
-
-          setMessages((prev) => {
-            const newMessages = [...prev];
-            let lastAssistantIdx = -1;
-            for (let i = newMessages.length - 1; i >= 0; i--) {
-              if (newMessages[i].role === "assistant") {
-                lastAssistantIdx = i;
-                break;
-              }
-            }
-
-            if (lastAssistantIdx >= 0) {
-              const lastMsg = newMessages[lastAssistantIdx];
-              const lastTrim = (lastMsg.content || "").trim();
-
-              if (
-                !lastMsg.content ||
-                lastTrim.length === 0 ||
-                lastMsg.isWorkflowPlaceholder
-              ) {
-                newMessages[lastAssistantIdx] = {
-                  ...lastMsg,
-                  content: finalContent,
-                  author: "Final Answer",
+                  content: updatedContent,
+                  author: agentLabel,
+                  agent_id: data.agent_id ?? newMessages[i].agent_id,
                   isWorkflowPlaceholder: false,
-                  workflowPhase: undefined,
-                  qualityFlag: data.quality_flag,
-                  qualityScore: data.quality_score,
+                  workflowPhase: undefined, // Clear phase to show content
                 };
-              } else if (lastTrim !== finalTrim) {
-                const finalAnswerMessage: Message = {
-                  id: generateMessageId(),
-                  role: "assistant",
-                  content: finalContent,
-                  created_at: new Date().toISOString(),
-                  author: "Final Answer",
-                  groupId,
-                  isWorkflowPlaceholder: false,
-                  qualityFlag: data.quality_flag,
-                  qualityScore: data.quality_score,
-                };
-                newMessages.push(finalAnswerMessage);
               }
-            }
-            return newMessages;
-          });
-        }
-        setCurrentWorkflowPhase("");
-        setCurrentAgent(null);
-      } else if (data.type === "error") {
-        console.error("Stream error event:", data.error);
-        const errorStep: ConversationStep = {
-          id: generateStepId(),
-          type: "error",
-          content: data.error || "Unknown error",
-          timestamp: new Date().toISOString(),
-          data: data.reasoning_partial
-            ? { reasoning_partial: true }
-            : undefined,
-          category: data.category as ConversationStep["category"],
-          uiHint: data.ui_hint
-            ? {
-                component: data.ui_hint.component,
-                priority: data.ui_hint.priority,
-                collapsible: data.ui_hint.collapsible,
-                iconHint: data.ui_hint.icon_hint,
-              }
-            : undefined,
-        };
-        setMessages((prev) => {
-          const newMessages = [...prev];
-          let placeholderIdx = -1;
-          for (let i = newMessages.length - 1; i >= 0; i--) {
-            if (newMessages[i].role === "assistant") {
-              placeholderIdx = i;
               break;
             }
           }
-          if (placeholderIdx >= 0) {
-            const currentSteps = newMessages[placeholderIdx].steps || [];
-            newMessages[placeholderIdx] = {
-              ...newMessages[placeholderIdx],
-              steps: [...currentSteps, errorStep],
-            };
-          }
           return newMessages;
         });
-
-        setIsLoading(false);
-
-        if (data.reasoning_partial) {
-          setIsReasoningStreaming(false);
-        }
-      } else if (data.type === "reasoning.delta" && data.reasoning) {
-        setIsReasoningStreaming(true);
-        setCurrentReasoning((prev) => prev + data.reasoning);
-        const reasoningStep: ConversationStep = {
-          id: generateStepId(),
-          type: "reasoning",
-          content: data.reasoning || "",
-          timestamp: new Date().toISOString(),
-          data: { agent_id: data.agent_id },
-          category: data.category as ConversationStep["category"],
-          uiHint: data.ui_hint
-            ? {
-                component: data.ui_hint.component,
-                priority: data.ui_hint.priority,
-                collapsible: data.ui_hint.collapsible,
-                iconHint: data.ui_hint.icon_hint,
-              }
-            : undefined,
-        };
-        setMessages((prev) => {
-          const newMessages = [...prev];
-          let placeholderIdx = -1;
-          for (let i = newMessages.length - 1; i >= 0; i--) {
-            if (newMessages[i].role === "assistant") {
-              placeholderIdx = i;
-              break;
-            }
-          }
-          if (placeholderIdx >= 0) {
-            const currentSteps = newMessages[placeholderIdx].steps || [];
-            newMessages[placeholderIdx] = {
-              ...newMessages[placeholderIdx],
-              steps: [...currentSteps, reasoningStep],
-              workflowPhase: "Reasoning...",
-            };
-          }
-          return newMessages;
-        });
-      } else if (data.type === "reasoning.completed") {
-        setIsReasoningStreaming(false);
-      } else if (data.type === "done" || data.type === "cancelled") {
-        setIsReasoningStreaming(false);
-        setCurrentReasoning("");
-        setCurrentWorkflowPhase("");
-        setCurrentAgent(null);
-        setIsLoading(false);
-        // Close WebSocket to prevent reconnection attempts after completion
-        if (wsRef.current) {
-          wsRef.current.close();
-          wsRef.current = null;
-        }
       }
-    },
-    [],
-  );
+    } else if (data.type === "response.completed") {
+      // Always process response.completed to ensure final state is set
+      const finalContent = data.message || "";
+
+      setMessages((prev) => {
+        const newMessages = [...prev];
+        let lastAssistantIdx = -1;
+        for (let i = newMessages.length - 1; i >= 0; i--) {
+          if (newMessages[i].role === "assistant") {
+            lastAssistantIdx = i;
+            break;
+          }
+        }
+
+        if (lastAssistantIdx >= 0) {
+          // Always update the last assistant message with final content and quality metadata
+          newMessages[lastAssistantIdx] = {
+            ...newMessages[lastAssistantIdx],
+            content: finalContent || newMessages[lastAssistantIdx].content,
+            author: finalContent
+              ? "Final Answer"
+              : newMessages[lastAssistantIdx].author,
+            isWorkflowPlaceholder: false,
+            workflowPhase: undefined,
+            qualityFlag: data.quality_flag,
+            qualityScore: data.quality_score,
+          };
+        }
+        return newMessages;
+      });
+
+      setCurrentWorkflowPhase("");
+      setCurrentAgent(null);
+    } else if (data.type === "error") {
+      console.error("Stream error event:", data.error);
+      const errorStep: ConversationStep = {
+        id: generateStepId(),
+        type: "error",
+        content: data.error || "Unknown error",
+        timestamp: new Date().toISOString(),
+        data: data.reasoning_partial ? { reasoning_partial: true } : undefined,
+        category: data.category as ConversationStep["category"],
+        uiHint: data.ui_hint
+          ? {
+              component: data.ui_hint.component,
+              priority: data.ui_hint.priority,
+              collapsible: data.ui_hint.collapsible,
+              iconHint: data.ui_hint.icon_hint,
+            }
+          : undefined,
+      };
+      setMessages((prev) => {
+        const newMessages = [...prev];
+        let placeholderIdx = -1;
+        for (let i = newMessages.length - 1; i >= 0; i--) {
+          if (newMessages[i].role === "assistant") {
+            placeholderIdx = i;
+            break;
+          }
+        }
+        if (placeholderIdx >= 0) {
+          const currentSteps = newMessages[placeholderIdx].steps || [];
+          newMessages[placeholderIdx] = {
+            ...newMessages[placeholderIdx],
+            steps: [...currentSteps, errorStep],
+          };
+        }
+        return newMessages;
+      });
+
+      setIsLoading(false);
+
+      if (data.reasoning_partial) {
+        setIsReasoningStreaming(false);
+      }
+    } else if (data.type === "reasoning.delta" && data.reasoning) {
+      setIsReasoningStreaming(true);
+      setCurrentReasoning((prev) => prev + data.reasoning);
+      const reasoningStep: ConversationStep = {
+        id: generateStepId(),
+        type: "reasoning",
+        content: data.reasoning || "",
+        timestamp: new Date().toISOString(),
+        data: { agent_id: data.agent_id },
+        category: data.category as ConversationStep["category"],
+        uiHint: data.ui_hint
+          ? {
+              component: data.ui_hint.component,
+              priority: data.ui_hint.priority,
+              collapsible: data.ui_hint.collapsible,
+              iconHint: data.ui_hint.icon_hint,
+            }
+          : undefined,
+      };
+      setMessages((prev) => {
+        const newMessages = [...prev];
+        let placeholderIdx = -1;
+        for (let i = newMessages.length - 1; i >= 0; i--) {
+          if (newMessages[i].role === "assistant") {
+            placeholderIdx = i;
+            break;
+          }
+        }
+        if (placeholderIdx >= 0) {
+          const currentSteps = newMessages[placeholderIdx].steps || [];
+          newMessages[placeholderIdx] = {
+            ...newMessages[placeholderIdx],
+            steps: [...currentSteps, reasoningStep],
+            workflowPhase: "Reasoning...",
+          };
+        }
+        return newMessages;
+      });
+    } else if (data.type === "reasoning.completed") {
+      setIsReasoningStreaming(false);
+    } else if (data.type === "done" || data.type === "cancelled") {
+      setIsReasoningStreaming(false);
+      setCurrentReasoning("");
+      setCurrentWorkflowPhase("");
+      setCurrentAgent(null);
+      setIsLoading(false);
+      // Close WebSocket to prevent reconnection attempts after completion
+      if (wsRef.current) {
+        wsRef.current.close();
+        wsRef.current = null;
+      }
+    }
+  }, []);
 
   const sendMessage = useCallback(
     async (content: string, options?: SendMessageOptions) => {
@@ -641,7 +616,7 @@ export const useChat = (): UseChatReturn => {
       ws.onmessage = (event: MessageEvent) => {
         try {
           const data: StreamEvent = JSON.parse(event.data as string);
-          handleStreamEvent(data, groupId);
+          handleStreamEvent(data);
         } catch (e) {
           console.error("Error parsing WebSocket message:", e);
         }

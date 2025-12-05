@@ -83,7 +83,7 @@ function App() {
                   className="flex flex-col items-center justify-center h-full min-h-[60vh] text-center space-y-6"
                   role="status"
                 >
-                  <div className="w-24 h-24 rounded-3xl bg-gradient-to-br from-blue-500/20 to-purple-500/20 flex items-center justify-center mb-4 shadow-2xl shadow-blue-900/20 border border-white/5">
+                  <div className="w-24 h-24 rounded-3xl bg-linear-to-br from-blue-500/20 to-purple-500/20 flex items-center justify-center mb-4 shadow-2xl shadow-blue-900/20 border border-white/5">
                     <span className="text-4xl">✨</span>
                   </div>
                   <div className="space-y-2 max-w-md">
@@ -123,11 +123,11 @@ function App() {
                                 transition={{ duration: 0.3 }}
                                 className="flex items-center gap-4 px-4 py-2 opacity-50"
                               >
-                                <div className="flex-1 h-px bg-gradient-to-r from-transparent via-gray-700 to-transparent" />
+                                <div className="flex-1 h-px bg-linear-to-r from-transparent via-gray-700 to-transparent" />
                                 <span className="text-[10px] uppercase tracking-widest text-gray-500 font-medium">
                                   Agent Handoff
                                 </span>
-                                <div className="flex-1 h-px bg-gradient-to-r from-transparent via-gray-700 to-transparent" />
+                                <div className="flex-1 h-px bg-linear-to-r from-transparent via-gray-700 to-transparent" />
                               </motion.div>
                             )}
 

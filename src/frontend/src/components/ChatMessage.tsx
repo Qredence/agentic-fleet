@@ -1,31 +1,30 @@
 "use client";
 
-import { useState, useMemo, memo } from "react";
-import { Copy, Check, ThumbsUp, ThumbsDown } from "lucide-react";
+import { memo, useMemo, useState } from "react";
+import { Check, Copy, Loader2, ThumbsDown, ThumbsUp } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { ChatStep } from "./ChatStep";
-import type { Message as MessageType, ConversationStep } from "../api/types";
+import type { ConversationStep, Message as MessageType } from "../api/types";
 import {
   Message,
+  MessageAction,
+  MessageActions,
   MessageAvatar,
   MessageContent,
-  MessageActions,
-  MessageAction,
 } from "./prompt-kit/message";
 import { ChainOfThought } from "./prompt-kit/chain-of-thought";
-import { Loader2 } from "lucide-react";
 import {
   Reasoning,
-  ReasoningTrigger,
   ReasoningContent,
+  ReasoningTrigger,
 } from "./prompt-kit/reasoning";
 import { WorkflowEvents } from "./WorkflowEvents";
 import {
-  WORKFLOW_EVENT_TYPES,
   REASONING_STEP_TYPES,
-  type WorkflowEventType,
+  WORKFLOW_EVENT_TYPES,
   type ReasoningStepType,
+  type WorkflowEventType,
 } from "../lib/constants";
 
 interface ChatMessageProps {
@@ -137,7 +136,7 @@ export const ChatMessage = memo(function ChatMessage({
       {showAvatar ? (
         <MessageAvatar src="" fallback={avatarFallback} alt={displayName} />
       ) : (
-        <div className="w-8" /> // Spacer for alignment when avatar is hidden
+        <div className="w-8" />
       )}
       <div className="flex-1 min-w-0 space-y-2">
         {/* Agent name header */}
@@ -213,12 +212,15 @@ export const ChatMessage = memo(function ChatMessage({
                 : workflowPhase || "Processing..."}
             </span>
             {onCancelStreaming && (
-              <button
+              <Button
+                variant="ghost"
+                size="sm"
                 onClick={onCancelStreaming}
-                className="ml-2 text-xs hover:text-foreground border-b border-dotted border-muted-foreground/50"
+                className="ml-2 h-auto px-2 py-0 text-xs border-b border-dotted border-muted-foreground/50 hover:border-foreground"
+                aria-label="Stop streaming response"
               >
                 Stop
-              </button>
+              </Button>
             )}
           </div>
         ) : (

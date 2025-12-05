@@ -91,3 +91,37 @@ Migrate from Server-Sent Events (SSE) to WebSocket-based bidirectional communica
 
 - Misrouted light-mode on complex asks → confidence threshold + fallback to full pipeline.
 - Cache staleness → short TTL, include source timestamp, bypass on explicit “fresh” flag.
+
+---
+
+# Plan: DSPy Signature & Routing Optimization (v0.1)
+
+**Status**: In progress (2025-12-05) \
+**Branch**: feat/uxui
+
+## Goal
+
+Use richer DSPy signatures to cut misroutes, align tool plans, and reduce redundant calls without increasing p95 latency.
+
+### Scope
+
+- Analysis signature emits freshness/tool/urgency hints to replace heuristics.
+- Routing reuses DSPy tool plans end-to-end (no extra tool-plan LLM call).
+- Metadata surfaced to execution/agents for better tool adherence.
+
+### Work Packages
+
+1. **Analysis V2**: TaskAnalysis outputs preferred_tools, needs_web_search, search_query, urgency; map to `AnalysisResult` and metadata.
+2. **Routing Tool Plan Propagation**: Preserve DSPy `tool_plan`/`tool_goals`/`latency_budget` in routing metadata; execution consumes it and skips redundant planning calls.
+3. **Latency Guardrails**: Keep call count flat; prefer Predict/COT only where already used; fallback to cached analysis when available.
+
+### Expected Outcomes
+
+- +5–10% route/tool adherence from better hints, with **≤0% net increase** in p95 (one redundant tool-plan call removed).
+- Fewer heuristic divergences on freshness-sensitive tasks; clearer intent metadata for downstream.
+- Fast-path guardrails: short creative/generative asks (e.g., "write user stories") no longer bypass full routing.
+
+### Risks & Mitigations
+
+- Signature/schema drift → keep `AnalysisResult` mapping explicit and covered by tests.
+- Tool plan misuse by agents → include goals/budget in metadata; default to existing behavior if missing.

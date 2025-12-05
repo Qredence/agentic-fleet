@@ -23,7 +23,7 @@ logger = setup_logger(__name__)
 # --- Task Classification Helpers ---
 
 
-def is_simple_task(task: str) -> bool:
+def is_simple_task(task: str, max_words: int | None = None) -> bool:
     """Identify simple tasks that can be answered directly without multi-agent routing.
 
     This function detects tasks that should bypass the full orchestration pipeline:
@@ -34,10 +34,15 @@ def is_simple_task(task: str) -> bool:
 
     Args:
         task: The task string to classify
+        max_words: Maximum word count for simple tasks. If None, uses the default
+            from WorkflowConfig.simple_task_max_words (40).
 
     Returns:
         True if the task is simple enough to bypass routing, False otherwise
     """
+    # Use config default if not specified
+    simple_task_max_words = max_words if max_words is not None else 40
+
     task_lower = task.strip().lower()
     word_count = len(task.split())
 
@@ -124,6 +129,27 @@ def is_simple_task(task: str) -> bool:
     # Check for time-sensitive content (years like 2024, 2025)
     is_time_sensitive = bool(re.search(r"20[2-9][0-9]", task))
 
+    # Creation / planning verbs that should force full workflows even when short
+    generation_keywords = [
+        "write",
+        "draft",
+        "design",
+        "generate",
+        "implement",
+        "build",
+        "create",
+        "compose",
+        "develop",
+        "produce",
+        "craft",
+        "architect",
+        "plan",
+        "summarize",
+        "outline",
+        "story",
+        "stories",
+    ]
+
     # Check complex patterns first
     has_complex_keyword = any(
         re.search(r"\b" + re.escape(k) + r"\b", task_lower) for k in complex_keywords
@@ -151,13 +177,16 @@ def is_simple_task(task: str) -> bool:
         re.search(r"^" + re.escape(k) + r"\b", task_lower) for k in simple_keywords
     )
 
-    # Short tasks (under 15 words) starting with simple keywords are simple
-    # unless they're time-sensitive
-    if has_simple_keyword and word_count <= 15 and not is_time_sensitive:
-        return True
+    # Short generative/creative requests should not be treated as simple even if short
+    if any(re.search(r"\b" + re.escape(k) + r"\b", task_lower) for k in generation_keywords):
+        return False
 
-    # Very short tasks (under 8 words) without complex keywords are likely simple
-    return word_count <= 8 and not is_time_sensitive
+    # Short tasks (under max_words) starting with simple keywords are simple
+    # unless they're time-sensitive. Otherwise require a simple keyword to avoid
+    # misclassifying short creative asks.
+    return bool(
+        has_simple_keyword and word_count <= simple_task_max_words and not is_time_sensitive
+    )
 
 
 # --- Workflow Utility Functions ---

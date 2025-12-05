@@ -14,6 +14,7 @@ import {
   ChainOfThoughtContent,
   ChainOfThoughtItem,
 } from "../prompt-kit/chain-of-thought";
+import { Markdown } from "../prompt-kit/markdown";
 import { cn } from "@/lib/utils";
 import { Brain, GitBranch, Search, ShieldCheck, Sparkles } from "lucide-react";
 
@@ -25,6 +26,41 @@ interface SmartWorkflowDisplayProps {
 }
 
 type StepData = Record<string, unknown>;
+
+const MAX_TRIGGER_LENGTH = 220;
+const MAX_TRIGGER_LINES = 3;
+
+function normalizeContent(content: string): string {
+  return content.trim();
+}
+
+function splitContentForTrigger(content: string): {
+  triggerText: string;
+  detailText?: string;
+} {
+  const normalized = normalizeContent(content);
+  if (!normalized) return { triggerText: "" };
+
+  const lines = normalized.split("\n").filter((line) => line.trim().length > 0);
+  const isTooLong =
+    normalized.length > MAX_TRIGGER_LENGTH || lines.length > MAX_TRIGGER_LINES;
+
+  if (!isTooLong) {
+    return { triggerText: normalized };
+  }
+
+  // Use the first non-empty line (or the first MAX_TRIGGER_LINES joined) as the trigger label
+  const previewSource = lines.length > 0 ? lines[0] : normalized;
+  const triggerText =
+    previewSource.length > MAX_TRIGGER_LENGTH
+      ? `${previewSource.slice(0, 160).trim()}…`
+      : previewSource;
+
+  return {
+    triggerText,
+    detailText: normalized,
+  };
+}
 
 const getStepIcon = (kind: string | undefined) => {
   switch (kind) {
@@ -102,7 +138,10 @@ export const SmartWorkflowDisplay: React.FC<SmartWorkflowDisplayProps> = ({
         {thoughtSteps.map((step, index) => {
           const data = step.data as StepData | undefined;
           const stepReasoning = data?.reasoning as string | undefined;
-          const hasExpandableContent = Boolean(stepReasoning);
+          const { triggerText, detailText } = splitContentForTrigger(
+            step.content,
+          );
+          const hasExpandableContent = Boolean(stepReasoning || detailText);
 
           return (
             <ChainOfThoughtStep
@@ -113,7 +152,7 @@ export const SmartWorkflowDisplay: React.FC<SmartWorkflowDisplayProps> = ({
                 leftIcon={getStepIcon(step.kind)}
                 swapIconOnHover={hasExpandableContent}
               >
-                <span className="text-sm">{step.content}</span>
+                <span className="text-sm">{triggerText || step.content}</span>
               </ChainOfThoughtTrigger>
 
               {hasExpandableContent && (
@@ -122,6 +161,13 @@ export const SmartWorkflowDisplay: React.FC<SmartWorkflowDisplayProps> = ({
                   {stepReasoning && (
                     <ChainOfThoughtItem className="text-muted-foreground/80 italic">
                       {stepReasoning}
+                    </ChainOfThoughtItem>
+                  )}
+
+                  {/* Long-form content is parsed as markdown in the detail area */}
+                  {detailText && (
+                    <ChainOfThoughtItem className="prose prose-sm dark:prose-invert max-w-none text-muted-foreground">
+                      <Markdown>{detailText}</Markdown>
                     </ChainOfThoughtItem>
                   )}
 
