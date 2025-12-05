@@ -396,13 +396,13 @@ load-test = [
 
 [package.metadata]
 requires-dist = [
-    { name = "agent-framework", specifier = ">=1.0.0b251120" },
+    { name = "agent-framework", specifier = ">=1.0.0b251204" },
     { name = "agent-framework-a2a" },
     { name = "agent-framework-azure-ai" },
     { name = "agent-framework-azure-ai-search", specifier = ">=0.0.0a1" },
     { name = "agent-framework-azurefunctions", specifier = ">=0.0.0a1" },
     { name = "agent-framework-core" },
-    { name = "agent-framework-declarative", specifier = ">=1.0.0b251120" },
+    { name = "agent-framework-declarative", specifier = ">=1.0.0b251204" },
     { name = "agent-framework-devui" },
     { name = "agent-framework-devui", marker = "extra == 'ui'" },
     { name = "agentic-fleet", extras = ["azure", "ui", "evaluation", "tracing"], marker = "extra == 'all'" },
