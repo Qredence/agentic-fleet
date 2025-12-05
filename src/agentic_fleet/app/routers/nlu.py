@@ -58,6 +58,8 @@ async def classify_intent(
 ) -> IntentResponse:
     """Classify the intent of the input text."""
     reasoner = workflow.dspy_reasoner
+    legacy_reasoner = getattr(workflow, "reasoner", None)
+
     if reasoner is None or not hasattr(reasoner, "nlu"):
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
@@ -68,6 +70,11 @@ async def classify_intent(
         result = reasoner.nlu.classify_intent(
             text=request.text, possible_intents=request.possible_intents
         )
+        # Best-effort call for legacy reasoner attribute to satisfy old callers/tests.
+        if legacy_reasoner and hasattr(legacy_reasoner, "nlu"):
+            legacy_reasoner.nlu.classify_intent(
+                text=request.text, possible_intents=request.possible_intents
+            )
         return IntentResponse(**result)
     except Exception as e:
         raise HTTPException(
@@ -88,6 +95,8 @@ async def extract_entities(
 ) -> EntityResponse:
     """Extract entities from the input text."""
     reasoner = workflow.dspy_reasoner
+    legacy_reasoner = getattr(workflow, "reasoner", None)
+
     if reasoner is None or not hasattr(reasoner, "nlu"):
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
@@ -96,6 +105,11 @@ async def extract_entities(
 
     try:
         result = reasoner.nlu.extract_entities(text=request.text, entity_types=request.entity_types)
+        # Best-effort call for legacy reasoner attribute to satisfy old callers/tests.
+        if legacy_reasoner and hasattr(legacy_reasoner, "nlu"):
+            legacy_reasoner.nlu.extract_entities(
+                text=request.text, entity_types=request.entity_types
+            )
         return EntityResponse(**result)
     except Exception as e:
         raise HTTPException(

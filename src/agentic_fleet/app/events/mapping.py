@@ -245,8 +245,9 @@ def classify_event(
     """
     config = _load_ui_routing_config()
 
-    # Convert event type to config key (e.g., ORCHESTRATOR_THOUGHT -> orchestrator_thought)
-    event_key = event_type.value.lower()
+    # Convert event type to config key (e.g., orchestrator.thought -> orchestrator_thought)
+    # Dots are replaced with underscores to match YAML keys defined using underscores.
+    event_key = event_type.value.lower().replace(".", "_")
     context_base = f"ui_routing.{event_key}"
 
     # Look up event type in config
