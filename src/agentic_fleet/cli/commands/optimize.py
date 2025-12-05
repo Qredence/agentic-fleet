@@ -11,9 +11,14 @@ from rich.panel import Panel
 from rich.progress import Progress
 
 from ...dspy_modules.reasoner import DSPyReasoner
-from ...utils.compiler import compile_reasoner
+from ...utils.compiler import compile_answer_quality, compile_nlu, compile_reasoner
 from ...utils.config_loader import load_config
-from ...utils.constants import DEFAULT_CACHE_PATH, DEFAULT_GEPA_LOG_DIR
+from ...utils.constants import (
+    DEFAULT_ANSWER_QUALITY_CACHE_PATH,
+    DEFAULT_CACHE_PATH,
+    DEFAULT_GEPA_LOG_DIR,
+    DEFAULT_NLU_CACHE_PATH,
+)
 from ..utils import init_tracing, resolve_resource_path
 
 console = Console()
@@ -168,12 +173,33 @@ def gepa_optimize(
         )
 
         progress.update(task_id, completed=100)
+
+    # Also compile AnswerQualityModule for offline quality scoring
+    with Progress() as progress:
+        task_id = progress.add_task("[cyan]Compiling AnswerQualityModule...", start=False)
+        progress.start_task(task_id)
+
+        compile_answer_quality(use_cache=not no_cache)
+
+        progress.update(task_id, completed=100)
+
+    # Compile DSPyNLU module
+    with Progress() as progress:
+        task_id = progress.add_task("[cyan]Compiling DSPyNLU...", start=False)
+        progress.start_task(task_id)
+
+        compile_nlu(use_cache=not no_cache)
+
+        progress.update(task_id, completed=100)
+
     compiled_name = compiled.__class__.__name__ if compiled else "DSPyReasoner"
 
     console.print(
         Panel(
             "[green]GEPA optimization complete![/green]\n"
-            f"Cache: {DEFAULT_CACHE_PATH}\n"
+            f"Supervisor cache: {DEFAULT_CACHE_PATH}\n"
+            f"AnswerQuality cache: {DEFAULT_ANSWER_QUALITY_CACHE_PATH}\n"
+            f"NLU cache: {DEFAULT_NLU_CACHE_PATH}\n"
             f"Log dir: {log_dir}\n"
             f"Optimizer model: {effective_model}\n"
             f"Compiled module: {compiled_name}",

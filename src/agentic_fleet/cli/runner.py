@@ -12,7 +12,6 @@ from typing import Any
 
 from agent_framework._workflows import (
     ExecutorCompletedEvent,
-    MagenticAgentMessageEvent,
     WorkflowOutputEvent,
 )
 from rich.console import Console
@@ -27,6 +26,7 @@ from ..utils.error_utils import sanitize_error_message
 from ..utils.logger import setup_logger
 from ..utils.progress import RichProgressCallback
 from ..workflows.config import WorkflowConfig
+from ..workflows.execution.streaming_events import MagenticAgentMessageEvent
 from ..workflows.messages import (
     AnalysisMessage,
     ExecutionMessage,
@@ -282,7 +282,8 @@ class WorkflowRunner:
         if not self.workflow:
             await self.initialize_workflow()
 
-        assert self.workflow is not None, "Workflow initialization failed"
+        if self.workflow is None:
+            raise RuntimeError("Workflow initialization failed")
 
         # Track execution
         start_time = datetime.now()
@@ -580,7 +581,8 @@ class WorkflowRunner:
         if not self.workflow:
             await self.initialize_workflow()
 
-        assert self.workflow is not None, "Workflow initialization failed"
+        if self.workflow is None:
+            raise RuntimeError("Workflow initialization failed")
 
         with self.console.status("[bold green]Processing..."):
             result = await self.workflow.run(message)

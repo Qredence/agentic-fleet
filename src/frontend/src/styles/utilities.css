@@ -1,0 +1,418 @@
+/* =============================================
+  Utility Classes (adapted from OpenAI apps-sdk-ui)
+============================================= */
+
+/* =============================================
+  Heading Utilities
+============================================= */
+.heading-5xl {
+  font-size: var(--font-heading-5xl-size);
+  font-weight: var(--font-heading-5xl-weight);
+  letter-spacing: var(--font-tracking-tight);
+  line-height: var(--font-heading-5xl-line-height);
+}
+
+.heading-4xl {
+  font-size: var(--font-heading-4xl-size);
+  font-weight: var(--font-heading-4xl-weight);
+  letter-spacing: var(--font-tracking-tight);
+  line-height: var(--font-heading-4xl-line-height);
+}
+
+.heading-3xl {
+  font-size: var(--font-heading-3xl-size);
+  font-weight: var(--font-heading-3xl-weight);
+  letter-spacing: var(--font-tracking-tight);
+  line-height: var(--font-heading-3xl-line-height);
+}
+
+.heading-2xl {
+  font-size: var(--font-heading-2xl-size);
+  font-weight: var(--font-heading-2xl-weight);
+  letter-spacing: var(--font-tracking-tight);
+  line-height: var(--font-heading-2xl-line-height);
+}
+
+.heading-xl {
+  font-size: var(--font-heading-xl-size);
+  font-weight: var(--font-heading-xl-weight);
+  letter-spacing: var(--font-tracking-tight);
+  line-height: var(--font-heading-xl-line-height);
+}
+
+.heading-lg {
+  font-size: var(--font-heading-lg-size);
+  font-weight: var(--font-heading-lg-weight);
+  letter-spacing: var(--font-tracking-normal);
+  line-height: var(--font-heading-lg-line-height);
+}
+
+.heading-md {
+  font-size: var(--font-heading-md-size);
+  font-weight: var(--font-heading-md-weight);
+  letter-spacing: var(--font-tracking-normal);
+  line-height: var(--font-heading-md-line-height);
+}
+
+.heading-sm {
+  font-size: var(--font-heading-sm-size);
+  font-weight: var(--font-heading-sm-weight);
+  letter-spacing: var(--font-tracking-normal);
+  line-height: var(--font-heading-sm-line-height);
+}
+
+.heading-xs {
+  font-size: var(--font-heading-xs-size);
+  font-weight: var(--font-heading-xs-weight);
+  letter-spacing: var(--font-tracking-normal);
+  line-height: var(--font-heading-xs-line-height);
+}
+
+/* =============================================
+  Text Color Utilities
+============================================= */
+.text-default {
+  color: var(--color-text);
+}
+
+.text-secondary {
+  color: var(--color-text-secondary);
+}
+
+.text-tertiary {
+  color: var(--color-text-tertiary);
+}
+
+.text-inverse {
+  color: var(--color-text-inverse);
+}
+
+/* =============================================
+  Surface Utilities
+============================================= */
+.bg-surface {
+  background-color: var(--color-surface);
+}
+
+.bg-surface-secondary {
+  background-color: var(--color-surface-secondary);
+}
+
+.bg-surface-tertiary {
+  background-color: var(--color-surface-tertiary);
+}
+
+.bg-surface-elevated {
+  background-color: var(--color-surface-elevated);
+}
+
+.bg-surface-elevated-secondary {
+  background-color: var(--color-surface-elevated-secondary);
+}
+
+/* =============================================
+  Border Utilities
+============================================= */
+.border-default {
+  border-color: var(--color-border);
+}
+
+.border-subtle {
+  border-color: var(--color-border-subtle);
+}
+
+.border-strong {
+  border-color: var(--color-border-strong);
+}
+
+/* =============================================
+  Semantic Status Utilities
+============================================= */
+
+/* Info */
+.text-info {
+  color: var(--color-text-info);
+}
+.bg-info-soft {
+  background-color: var(--color-background-info-soft);
+}
+.bg-info-solid {
+  background-color: var(--color-background-info-solid);
+}
+.text-info-soft {
+  color: var(--color-text-info-soft);
+}
+.text-info-solid {
+  color: var(--color-text-info-solid);
+}
+.bg-info-surface {
+  background-color: var(--color-background-info-surface);
+}
+.border-info-surface {
+  border-color: var(--color-border-info-surface);
+}
+.text-info-surface {
+  color: var(--color-text-info-surface);
+}
+
+/* Warning */
+.text-warning {
+  color: var(--color-text-warning);
+}
+.bg-warning-soft {
+  background-color: var(--color-background-warning-soft);
+}
+.bg-warning-solid {
+  background-color: var(--color-background-warning-solid);
+}
+.text-warning-soft {
+  color: var(--color-text-warning-soft);
+}
+.text-warning-solid {
+  color: var(--color-text-warning-solid);
+}
+.bg-warning-surface {
+  background-color: var(--color-background-warning-surface);
+}
+.border-warning-surface {
+  border-color: var(--color-border-warning-surface);
+}
+.text-warning-surface {
+  color: var(--color-text-warning-surface);
+}
+
+/* Danger */
+.text-danger {
+  color: var(--color-text-danger);
+}
+.bg-danger-soft {
+  background-color: var(--color-background-danger-soft);
+}
+.bg-danger-solid {
+  background-color: var(--color-background-danger-solid);
+}
+.text-danger-soft {
+  color: var(--color-text-danger-soft);
+}
+.text-danger-solid {
+  color: var(--color-text-danger-solid);
+}
+.bg-danger-surface {
+  background-color: var(--color-background-danger-surface);
+}
+.border-danger-surface {
+  border-color: var(--color-border-danger-surface);
+}
+.text-danger-surface {
+  color: var(--color-text-danger-surface);
+}
+
+/* Success */
+.text-success {
+  color: var(--color-text-success);
+}
+.bg-success-soft {
+  background-color: var(--color-background-success-soft);
+}
+.bg-success-solid {
+  background-color: var(--color-background-success-solid);
+}
+.text-success-soft {
+  color: var(--color-text-success-soft);
+}
+.text-success-solid {
+  color: var(--color-text-success-solid);
+}
+.bg-success-surface {
+  background-color: var(--color-background-success-surface);
+}
+.border-success-surface {
+  border-color: var(--color-border-success-surface);
+}
+.text-success-surface {
+  color: var(--color-text-success-surface);
+}
+
+/* Discovery */
+.text-discovery {
+  color: var(--color-text-discovery);
+}
+.bg-discovery-soft {
+  background-color: var(--color-background-discovery-soft);
+}
+.bg-discovery-solid {
+  background-color: var(--color-background-discovery-solid);
+}
+.text-discovery-soft {
+  color: var(--color-text-discovery-soft);
+}
+.text-discovery-solid {
+  color: var(--color-text-discovery-solid);
+}
+.bg-discovery-surface {
+  background-color: var(--color-background-discovery-surface);
+}
+.border-discovery-surface {
+  border-color: var(--color-border-discovery-surface);
+}
+.text-discovery-surface {
+  color: var(--color-text-discovery-surface);
+}
+
+/* Disabled */
+.bg-disabled {
+  background-color: var(--color-background-disabled);
+}
+.border-disabled {
+  border-color: var(--color-border-disabled);
+}
+.text-disabled {
+  color: var(--color-text-disabled);
+}
+
+/* =============================================
+  Primary Button Utilities
+============================================= */
+.bg-primary-soft {
+  background-color: var(--color-background-primary-soft);
+}
+.bg-primary-soft-alpha {
+  background-color: var(--color-background-primary-soft-alpha);
+}
+.bg-primary-solid {
+  background-color: var(--color-background-primary-solid);
+}
+.text-primary-soft {
+  color: var(--color-text-primary-soft);
+}
+.text-primary-solid {
+  color: var(--color-text-primary-solid);
+}
+.bg-primary-ghost-hover {
+  background-color: var(--color-background-primary-ghost-hover);
+}
+.border-primary-outline {
+  border-color: var(--color-border-primary-outline);
+}
+
+/* =============================================
+  Secondary Button Utilities
+============================================= */
+.bg-secondary-soft {
+  background-color: var(--color-background-secondary-soft);
+}
+.bg-secondary-soft-alpha {
+  background-color: var(--color-background-secondary-soft-alpha);
+}
+.bg-secondary-solid {
+  background-color: var(--color-background-secondary-solid);
+}
+.text-secondary-soft {
+  color: var(--color-text-secondary-soft);
+}
+.text-secondary-solid {
+  color: var(--color-text-secondary-solid);
+}
+.bg-secondary-ghost-hover {
+  background-color: var(--color-background-secondary-ghost-hover);
+}
+.border-secondary-outline {
+  border-color: var(--color-border-secondary-outline);
+}
+
+/* =============================================
+  Icon Size Utilities
+============================================= */
+.icon-xs {
+  width: var(--control-icon-size-xs);
+  height: var(--control-icon-size-xs);
+}
+
+.icon-sm {
+  width: var(--control-icon-size-sm);
+  height: var(--control-icon-size-sm);
+}
+
+.icon-md {
+  width: var(--control-icon-size-md);
+  height: var(--control-icon-size-md);
+}
+
+.icon-lg {
+  width: var(--control-icon-size-lg);
+  height: var(--control-icon-size-lg);
+}
+
+.icon-xl {
+  width: var(--control-icon-size-xl);
+  height: var(--control-icon-size-xl);
+}
+
+.icon-2xl {
+  width: var(--control-icon-size-2xl);
+  height: var(--control-icon-size-2xl);
+}
+
+/* =============================================
+  Transition Utilities
+============================================= */
+.transition-smooth {
+  transition: all var(--transition-duration-basic) var(--transition-ease-basic);
+}
+
+.transition-enter {
+  transition-timing-function: var(--cubic-enter);
+}
+
+.transition-exit {
+  transition-timing-function: var(--cubic-exit);
+}
+
+.transition-move {
+  transition-timing-function: var(--cubic-move);
+}
+
+/* =============================================
+  Fill Utilities
+============================================= */
+.fill-default {
+  fill: var(--color-text);
+}
+
+.fill-secondary {
+  fill: var(--color-text-secondary);
+}
+
+.fill-tertiary {
+  fill: var(--color-text-tertiary);
+}
+
+/* =============================================
+  Glassmorphism Utilities
+============================================= */
+.glass-panel {
+  background-color: rgba(24, 24, 24, 0.7);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.glass-bar {
+  background-color: rgba(13, 13, 13, 0.8);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.glass-button {
+  background-color: rgba(255, 255, 255, 0.05);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  transition: all 0.2s ease;
+}
+
+.glass-button:hover {
+  background-color: rgba(255, 255, 255, 0.1);
+  border-color: rgba(255, 255, 255, 0.1);
+}

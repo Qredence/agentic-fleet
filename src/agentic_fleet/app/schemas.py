@@ -50,6 +50,11 @@ class StreamEventType(StrEnum):
     AGENT_OUTPUT = "agent.output"
     AGENT_COMPLETE = "agent.complete"
 
+    # Connection/control events
+    CONNECTED = "connected"
+    CANCELLED = "cancelled"
+    HEARTBEAT = "heartbeat"
+
     # Control events
     ERROR = "error"
     DONE = "done"
@@ -61,6 +66,50 @@ class MessageRole(StrEnum):
     USER = "user"
     ASSISTANT = "assistant"
     SYSTEM = "system"
+
+
+class EventCategory(StrEnum):
+    """Semantic category for UI component routing.
+
+    Maps workflow events to appropriate frontend components:
+    - STEP -> WorkflowEvents/StepsItem (agent lifecycle)
+    - THOUGHT -> ChainOfThought/ChatStep (internal reasoning)
+    - REASONING -> Reasoning component (GPT-5 chain-of-thought)
+    - PLANNING -> ChatStep with routing icon (routing decisions)
+    - OUTPUT -> MessageBubble (agent outputs)
+    - RESPONSE -> MessageBubble (final user-facing response)
+    - STATUS -> WorkflowEvents status line
+    - ERROR -> Error toast/step
+    """
+
+    STEP = "step"
+    THOUGHT = "thought"
+    REASONING = "reasoning"
+    PLANNING = "planning"
+    OUTPUT = "output"
+    RESPONSE = "response"
+    STATUS = "status"
+    ERROR = "error"
+
+
+class UIHint(BaseModel):
+    """Hints for frontend UI component selection and rendering.
+
+    Attributes:
+        component: Suggested React component name.
+        priority: Display priority (high items shown prominently).
+        collapsible: Whether the item should be collapsible by default.
+        icon_hint: Icon hint for the component (routing, analysis, quality, progress).
+    """
+
+    component: str = Field(..., description="Suggested UI component name")
+    priority: Literal["low", "medium", "high"] = Field(
+        default="medium", description="Display priority"
+    )
+    collapsible: bool = Field(default=True, description="Whether to show collapsed by default")
+    icon_hint: str | None = Field(
+        default=None, description="Icon hint (routing, analysis, quality, progress)"
+    )
 
 
 # =============================================================================
@@ -75,12 +124,16 @@ class Message(BaseModel):
         role: The sender's role.
         content: The message content.
         created_at: Creation timestamp.
+        author: Optional human-readable author or agent name.
+        agent_id: Agent identifier if applicable.
         id: Unique message ID.
     """
 
     role: MessageRole
     content: str
     created_at: datetime = Field(default_factory=datetime.now)
+    author: str | None = Field(default=None, description="Author or agent display name")
+    agent_id: str | None = Field(default=None, description="Agent identifier if applicable")
     id: str = Field(default_factory=lambda: uuid4().hex)
 
     model_config = ConfigDict(from_attributes=True)
@@ -286,6 +339,27 @@ class StreamEvent(BaseModel):
     )
     data: dict[str, Any] | None = Field(default=None, description="Additional data")
     timestamp: datetime = Field(default_factory=datetime.now)
+    category: EventCategory | None = Field(
+        default=None, description="Semantic category for UI component routing"
+    )
+    ui_hint: UIHint | None = Field(
+        default=None, description="Hints for frontend UI component selection"
+    )
+    workflow_id: str | None = Field(
+        default=None, description="Workflow identifier for correlating streaming events"
+    )
+    log_line: str | None = Field(
+        default=None,
+        description="Human-friendly terminal log line mirrored to the frontend",
+    )
+    quality_score: float | None = Field(
+        default=None,
+        description="Heuristic or model-derived quality score for final answers (0..1)",
+    )
+    quality_flag: str | None = Field(
+        default=None,
+        description="Optional quality flag (e.g., low_confidence, empty)",
+    )
 
     model_config = ConfigDict(extra="allow")
 
@@ -317,6 +391,24 @@ class StreamEvent(BaseModel):
             result["reasoning_partial"] = self.reasoning_partial
         if self.data is not None:
             result["data"] = self.data
+        if self.category is not None:
+            result["category"] = self.category.value
+        if self.ui_hint is not None:
+            result["ui_hint"] = {
+                "component": self.ui_hint.component,
+                "priority": self.ui_hint.priority,
+                "collapsible": self.ui_hint.collapsible,
+            }
+            if self.ui_hint.icon_hint is not None:
+                result["ui_hint"]["icon_hint"] = self.ui_hint.icon_hint
+        if self.workflow_id is not None:
+            result["workflow_id"] = self.workflow_id
+        if self.log_line is not None:
+            result["log_line"] = self.log_line
+        if self.quality_score is not None:
+            result["quality_score"] = self.quality_score
+        if self.quality_flag is not None:
+            result["quality_flag"] = self.quality_flag
 
         result["timestamp"] = self.timestamp.isoformat()
         return result

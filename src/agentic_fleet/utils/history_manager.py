@@ -367,7 +367,7 @@ class HistoryManager:
                     with open(jsonl_file, "w") as f:
                         f.writelines(lines)
             except Exception as e:
-                logger.warning(f"Failed to delete from JSONL history: {e}")
+                logger.warning(f"Failed to delete from JSONL history: {e}")  # nosec B608
 
         # Handle JSON
         json_file = self.history_dir / "execution_history.json"
@@ -382,7 +382,7 @@ class HistoryManager:
                     with open(json_file, "w") as f:
                         json.dump(new_entries, f, indent=2, cls=FleetJSONEncoder)
             except Exception as e:
-                logger.warning(f"Failed to delete from JSON history: {e}")
+                logger.warning(f"Failed to delete from JSON history: {e}")  # nosec B608
 
         return deleted
 

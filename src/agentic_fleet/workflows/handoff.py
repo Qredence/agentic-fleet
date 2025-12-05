@@ -136,9 +136,9 @@ class HandoffManager:
                 sup = self._get_compiled_supervisor()
                 if sup is not None:
                     return sup
-            except Exception:
+            except Exception as e:
                 # Fall back to base supervisor on any error
-                pass
+                logger.warning(f"Error getting compiled supervisor, falling back to base: {e}")
         return self.supervisor
 
     async def evaluate_handoff(

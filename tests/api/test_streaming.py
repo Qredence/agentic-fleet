@@ -10,8 +10,9 @@ Tests cover:
 - Error handling with reasoning_partial flag
 """
 
+import asyncio
 from datetime import datetime
-from unittest.mock import MagicMock, patch
+from unittest.mock import AsyncMock, patch
 
 import pytest
 from fastapi import status
@@ -30,8 +31,14 @@ def client():
 
 @pytest.fixture
 def session_manager():
-    """Create a fresh session manager."""
+    """Create a fresh session manager with default concurrency limit (2)."""
     return WorkflowSessionManager(max_concurrent=2)
+
+
+@pytest.fixture
+def session_manager_concurrent():
+    """Create a session manager with higher concurrency limit for concurrency tests."""
+    return WorkflowSessionManager(max_concurrent=10)
 
 
 class TestStreamEventSchema:
@@ -89,12 +96,13 @@ class TestStreamEventSchema:
         assert result["reasoning_partial"] is True
 
 
+@pytest.mark.asyncio
 class TestWorkflowSessionManager:
     """Tests for session manager functionality."""
 
-    def test_create_session(self, session_manager):
+    async def test_create_session(self, session_manager):
         """Test session creation."""
-        session = session_manager.create_session(
+        session = await session_manager.create_session(
             task="Test task",
             reasoning_effort="medium",
         )
@@ -105,81 +113,131 @@ class TestWorkflowSessionManager:
         assert session.reasoning_effort == "medium"
         assert isinstance(session.created_at, datetime)
 
-    def test_get_session(self, session_manager):
+    async def test_get_session(self, session_manager):
         """Test retrieving a session."""
-        created = session_manager.create_session(task="Test")
-        retrieved = session_manager.get_session(created.workflow_id)
+        created = await session_manager.create_session(task="Test")
+        retrieved = await session_manager.get_session(created.workflow_id)
 
         assert retrieved is not None
         assert retrieved.workflow_id == created.workflow_id
 
-    def test_get_session_not_found(self, session_manager):
+    async def test_get_session_not_found(self, session_manager):
         """Test retrieving non-existent session."""
-        result = session_manager.get_session("wf-nonexistent")
+        result = await session_manager.get_session("wf-nonexistent")
         assert result is None
 
-    def test_update_status(self, session_manager):
+    async def test_update_status(self, session_manager):
         """Test status update."""
-        session = session_manager.create_session(task="Test")
+        session = await session_manager.create_session(task="Test")
         now = datetime.now()
 
-        session_manager.update_status(
+        await session_manager.update_status(
             session.workflow_id,
             WorkflowStatus.RUNNING,
             started_at=now,
         )
 
-        updated = session_manager.get_session(session.workflow_id)
+        updated = await session_manager.get_session(session.workflow_id)
         assert updated is not None
         assert updated.status == WorkflowStatus.RUNNING
         assert updated.started_at == now
 
-    def test_count_active(self, session_manager):
+    async def test_count_active(self, session_manager):
         """Test counting active workflows."""
-        assert session_manager.count_active() == 0
+        assert await session_manager.count_active() == 0
 
-        s1 = session_manager.create_session(task="Task 1")
-        assert session_manager.count_active() == 1
+        s1 = await session_manager.create_session(task="Task 1")
+        assert await session_manager.count_active() == 1
 
-        session_manager.create_session(task="Task 2")  # s2 not needed
-        assert session_manager.count_active() == 2
+        await session_manager.create_session(task="Task 2")  # s2 not needed
+        assert await session_manager.count_active() == 2
 
-        session_manager.update_status(s1.workflow_id, WorkflowStatus.COMPLETED)
-        assert session_manager.count_active() == 1
+        await session_manager.update_status(s1.workflow_id, WorkflowStatus.COMPLETED)
+        assert await session_manager.count_active() == 1
 
-    def test_concurrent_limit_enforced(self, session_manager):
+    async def test_concurrent_limit_enforced(self, session_manager):
         """Test that concurrent limit raises 429."""
         from fastapi import HTTPException
 
         # Create max sessions
-        session_manager.create_session(task="Task 1")
-        session_manager.create_session(task="Task 2")
+        await session_manager.create_session(task="Task 1")
+        await session_manager.create_session(task="Task 2")
 
         # Third should fail
         with pytest.raises(HTTPException, match="Maximum concurrent"):
-            session_manager.create_session(task="Task 3")
+            await session_manager.create_session(task="Task 3")
 
-    def test_list_sessions(self, session_manager):
+    async def test_list_sessions(self, session_manager):
         """Test listing all sessions."""
-        session_manager.create_session(task="Task 1")
-        session_manager.create_session(task="Task 2")
+        await session_manager.create_session(task="Task 1")
+        await session_manager.create_session(task="Task 2")
 
-        sessions = session_manager.list_sessions()
+        sessions = await session_manager.list_sessions()
         assert len(sessions) == 2
 
-    def test_cleanup_completed(self, session_manager):
+    async def test_cleanup_completed(self, session_manager):
         """Test cleanup of old completed sessions."""
-        s1 = session_manager.create_session(task="Task 1")
-        session_manager.update_status(s1.workflow_id, WorkflowStatus.COMPLETED)
+        s1 = await session_manager.create_session(task="Task 1")
+        await session_manager.update_status(s1.workflow_id, WorkflowStatus.COMPLETED)
 
         # Mock old timestamp
-        session = session_manager.get_session(s1.workflow_id)
+        session = await session_manager.get_session(s1.workflow_id)
         if session:
             session.created_at = datetime(2020, 1, 1)  # Very old
 
-        cleaned = session_manager.cleanup_completed(max_age_seconds=60)
+        cleaned = await session_manager.cleanup_completed(max_age_seconds=60)
         assert cleaned == 1
-        assert session_manager.get_session(s1.workflow_id) is None
+        assert await session_manager.get_session(s1.workflow_id) is None
+
+    async def test_concurrent_creation_and_updates(self, session_manager_concurrent):
+        """Ensure concurrent operations maintain consistent counts and state."""
+
+        async def _create(task: str):
+            return await session_manager_concurrent.create_session(task=task)
+
+        sessions = await asyncio.gather(
+            _create("Task A"),
+            _create("Task B"),
+        )
+
+        assert len(sessions) == 2
+        assert await session_manager_concurrent.count_active() == 2
+
+        await asyncio.gather(
+            *(
+                session_manager_concurrent.update_status(
+                    session.workflow_id, WorkflowStatus.RUNNING
+                )
+                for session in sessions
+            )
+        )
+
+        stored_sessions = await session_manager_concurrent.list_sessions()
+        assert all(s.status == WorkflowStatus.RUNNING for s in stored_sessions)
+        assert await session_manager_concurrent.count_active() == 2
+
+    async def test_concurrent_status_progression(self, session_manager):
+        """Concurrent status changes should settle on the latest update."""
+        session = await session_manager.create_session(task="Progress task")
+
+        start_time = datetime.now()
+        end_time = datetime.now()
+
+        await asyncio.gather(
+            session_manager.update_status(
+                session.workflow_id, WorkflowStatus.RUNNING, started_at=start_time
+            ),
+            session_manager.update_status(
+                session.workflow_id, WorkflowStatus.COMPLETED, completed_at=end_time
+            ),
+        )
+
+        stored = await session_manager.get_session(session.workflow_id)
+        assert stored is not None
+        assert stored.status == WorkflowStatus.COMPLETED
+        assert stored.completed_at == end_time
+        # started_at may or may not be set depending on race outcome
+        # If we need deterministic behavior, use sequential updates instead
 
 
 class TestChatRequest:
@@ -272,7 +330,7 @@ class TestStreamingEndpointIntegration:
         test_app.include_router(streaming.router, prefix="/api")
 
         with patch("agentic_fleet.app.dependencies.get_session_manager") as mock_sm:
-            mock_manager = MagicMock()
+            mock_manager = AsyncMock()
             mock_manager.list_sessions.return_value = []
             mock_sm.return_value = mock_manager
 
@@ -293,7 +351,7 @@ class TestStreamingEndpointIntegration:
         test_app.include_router(streaming.router, prefix="/api")
 
         with patch("agentic_fleet.app.dependencies.get_session_manager") as mock_sm:
-            mock_manager = MagicMock()
+            mock_manager = AsyncMock()
             mock_manager.get_session.return_value = None
             mock_sm.return_value = mock_manager
 

@@ -20,6 +20,7 @@ from ..utils.logger import setup_logger
 from ..utils.telemetry import optional_span
 from ..workflows.exceptions import ToolError
 from ..workflows.helpers import is_simple_task, is_time_sensitive_task
+from .nlu import DSPyNLU, get_nlu_module
 from .signatures import (
     GroupChatSpeakerSelection,
     ProgressEvaluation,
@@ -61,6 +62,7 @@ class DSPyReasoner(dspy.Module):
         self._tool_planner: dspy.Module | None = None
         self._simple_responder: dspy.Module | None = None
         self._group_chat_selector: dspy.Module | None = None
+        self._nlu: DSPyNLU | None = None
 
     def _ensure_modules_initialized(self) -> None:
         """Lazily initialize DSPy modules on first use.
@@ -68,6 +70,28 @@ class DSPyReasoner(dspy.Module):
         Only initializes modules that haven't been manually set (e.g., via setters
         for testing or loading compiled modules).
         """
+        # Backward compatibility: compiled supervisors pickled before these fields
+        # existed won't have them set on load.
+        if not hasattr(self, "_modules_initialized"):
+            self._modules_initialized = False
+        if not hasattr(self, "_execution_history"):
+            self._execution_history = []
+
+        # Ensure lazy module placeholders exist for deserialized objects
+        for attr in (
+            "_analyzer",
+            "_router",
+            "_strategy_selector",
+            "_quality_assessor",
+            "_progress_evaluator",
+            "_tool_planner",
+            "_simple_responder",
+            "_group_chat_selector",
+            "_nlu",
+        ):
+            if not hasattr(self, attr):
+                setattr(self, attr, None)
+
         if self._modules_initialized:
             return
 
@@ -77,6 +101,10 @@ class DSPyReasoner(dspy.Module):
         cache_key_prefix = "enhanced" if self.use_enhanced_signatures else "standard"
 
         # Only initialize if not already set (allows mocking in tests)
+        # NLU
+        if self._nlu is None:
+            self._nlu = get_nlu_module()
+
         # Analyzer
         if self._analyzer is None:
             analyzer_key = f"{cache_key_prefix}_analyzer"
@@ -230,6 +258,17 @@ class DSPyReasoner(dspy.Module):
     def group_chat_selector(self, value: dspy.Module) -> None:
         """Allow setting group chat selector (for compiled module loading)."""
         self._group_chat_selector = value
+
+    @property
+    def nlu(self) -> DSPyNLU:
+        """Lazily initialized NLU module."""
+        self._ensure_modules_initialized()
+        return self._nlu  # type: ignore[return-value]
+
+    @nlu.setter
+    def nlu(self, value: DSPyNLU) -> None:
+        """Allow setting NLU module."""
+        self._nlu = value
 
     def _robust_route(self, max_backtracks: int = 2, **kwargs) -> dspy.Prediction:
         """Execute routing with DSPy assertions."""
@@ -410,17 +449,62 @@ class DSPyReasoner(dspy.Module):
         """
         with optional_span("DSPyReasoner.analyze_task", attributes={"task": task}):
             logger.info(f"Analyzing task: {task[:100]}...")
+
+            # Perform NLU analysis first
+            intent_data = self.nlu.classify_intent(
+                task,
+                possible_intents=[
+                    "information_retrieval",
+                    "content_creation",
+                    "code_generation",
+                    "data_analysis",
+                    "planning",
+                    "chat",
+                ],
+            )
+            logger.info(f"NLU Intent: {intent_data['intent']} ({intent_data['confidence']})")
+
+            # Extract common entities
+            entities_data = self.nlu.extract_entities(
+                task,
+                entity_types=[
+                    "Person",
+                    "Organization",
+                    "Location",
+                    "Date",
+                    "Time",
+                    "Technology",
+                    "Quantity",
+                ],
+            )
+
             prediction = self.analyzer(task=task)
 
-            # Extract fields from prediction
-            # Typed signatures provide these directly as attributes
+            # Extract fields from prediction and align with AnalysisResult schema
+            predicted_needs_web = getattr(prediction, "needs_web_search", None)
+            time_sensitive = is_time_sensitive_task(task)
+            needs_web_search = (
+                bool(predicted_needs_web) if predicted_needs_web is not None else time_sensitive
+            )
+
+            capabilities = getattr(prediction, "required_capabilities", [])
+            estimated_steps = getattr(prediction, "estimated_steps", 1)
+
             return {
                 "complexity": getattr(prediction, "complexity", "medium"),
-                "required_capabilities": getattr(prediction, "required_capabilities", []),
-                "estimated_steps": getattr(prediction, "estimated_steps", 1),
+                "capabilities": capabilities,
+                "required_capabilities": capabilities,
+                "tool_requirements": getattr(prediction, "preferred_tools", []),
+                "steps": estimated_steps,
+                "estimated_steps": estimated_steps,
+                "search_context": getattr(prediction, "search_context", ""),
+                "needs_web_search": needs_web_search,
+                "search_query": getattr(prediction, "search_query", ""),
+                "urgency": getattr(prediction, "urgency", "medium"),
                 "reasoning": getattr(prediction, "reasoning", ""),
-                "time_sensitive": is_time_sensitive_task(task),
-                "needs_web_search": is_time_sensitive_task(task),
+                "time_sensitive": time_sensitive,
+                "intent": intent_data,
+                "entities": entities_data["entities"],
             }
 
     def route_task(

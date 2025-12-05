@@ -6,7 +6,13 @@ from fastapi.testclient import TestClient
 def test_health_check(client: TestClient):
     response = client.get("/health")
     assert response.status_code == 200
-    assert response.json() == {"status": "ok"}
+    data = response.json()
+    # Enhanced health check returns status, checks, and version
+    assert "status" in data
+    assert data["status"] in ("ok", "degraded")
+    assert "checks" in data
+    assert "api" in data["checks"]
+    assert "version" in data
 
 
 def test_run_workflow(client: TestClient, mock_workflow: MagicMock):
@@ -48,6 +54,14 @@ def test_get_agents(client: TestClient, mock_workflow: MagicMock):
     assert len(data) == 2
     assert data[0]["name"] == "agent1"
     assert data[1]["name"] == "agent2"
+
+
+def test_request_id_header(client: TestClient):
+    response = client.get("/health")
+    assert response.status_code == 200
+    assert "X-Request-ID" in response.headers
+    # header should be non-empty
+    assert response.headers["X-Request-ID"].strip()
 
 
 def test_get_history(client: TestClient, mock_workflow: MagicMock):

@@ -16,7 +16,10 @@ export const ChainOfThoughtItem = ({
   className,
   ...props
 }: ChainOfThoughtItemProps) => (
-  <div className={cn("text-muted-foreground text-sm", className)} {...props}>
+  <div
+    className={cn("text-muted-foreground text-sm w-full block", className)}
+    {...props}
+  >
     {children}
   </div>
 );
@@ -37,14 +40,14 @@ export const ChainOfThoughtTrigger = ({
 }: ChainOfThoughtTriggerProps) => (
   <CollapsibleTrigger
     className={cn(
-      "group text-muted-foreground hover:text-foreground flex cursor-pointer items-center justify-start gap-1 text-left text-sm transition-colors",
+      "group text-muted-foreground hover:text-foreground flex cursor-pointer items-start justify-start gap-1 text-left text-sm transition-colors w-full",
       className,
     )}
     {...props}
   >
-    <div className={cn("flex items-center gap-2", className)}>
+    <div className="flex items-start gap-2 flex-1 min-w-0">
       {leftIcon ? (
-        <span className="relative inline-flex size-4 items-center justify-center">
+        <span className="relative inline-flex size-4 items-center justify-center shrink-0 mt-0.5">
           <span
             className={cn(
               "transition-opacity",
@@ -58,14 +61,14 @@ export const ChainOfThoughtTrigger = ({
           )}
         </span>
       ) : (
-        <span className="relative inline-flex size-4 items-center justify-center">
+        <span className="relative inline-flex size-4 items-center justify-center shrink-0 mt-0.5">
           <Circle className="size-2 fill-current" />
         </span>
       )}
-      <span>{children}</span>
+      <div className="flex-1 min-w-0">{children}</div>
     </div>
     {!leftIcon && (
-      <ChevronDown className="size-4 transition-transform group-data-[state=open]:rotate-180" />
+      <ChevronDown className="size-4 shrink-0 transition-transform group-data-[state=open]:rotate-180" />
     )}
   </CollapsibleTrigger>
 );

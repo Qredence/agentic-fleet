@@ -19,6 +19,7 @@ from .handoff import HandoffManager
 
 if TYPE_CHECKING:
     from agent_framework._agents import ChatAgent
+    from agent_framework._threads import AgentThread
     from agent_framework._workflows import Workflow
 
 
@@ -51,3 +52,6 @@ class SupervisorContext:
     compilation_task: asyncio.Task[Any] | None = None
     compilation_lock: asyncio.Lock | None = None
     compilation_state: CompilationState | None = None
+
+    # Conversation thread for multi-turn context (agent-framework AgentThread)
+    conversation_thread: AgentThread | None = None

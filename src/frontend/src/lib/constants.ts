@@ -8,6 +8,12 @@ export const WORKFLOW_EVENT_TYPES = [
   "thought",
   "agent_thought",
   "agent_output",
+  "routing", // NEW: routing decisions
+  "analysis", // NEW: task analysis
+  "quality", // NEW: quality assessment
+  "handoff", // NEW: agent handoffs
+  "tool_call", // NEW: tool invocations
+  "progress", // NEW: progress updates
 ] as const;
 
 export type WorkflowEventType = (typeof WORKFLOW_EVENT_TYPES)[number];

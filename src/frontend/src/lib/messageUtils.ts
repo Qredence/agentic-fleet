@@ -20,7 +20,9 @@ export function groupMessagesByAgent(messages: Message[]): {
 
   for (const message of messages) {
     const messageAuthor =
-      message.author || (message.role === "user" ? "user" : "AI");
+      message.author ||
+      message.agent_id ||
+      (message.role === "user" ? "user" : "AI");
     const isNewGroup =
       currentRole !== message.role ||
       (message.role === "assistant" && currentAuthor !== messageAuthor) ||

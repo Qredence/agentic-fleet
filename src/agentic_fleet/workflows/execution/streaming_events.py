@@ -7,9 +7,49 @@ from dataclasses import dataclass, field
 from typing import Any
 
 from agent_framework._types import ChatMessage, Role
-from agent_framework._workflows import MagenticAgentMessageEvent
+from agent_framework._workflows import WorkflowEvent
 
 StreamPayload = Mapping[str, Any]
+
+
+class MagenticAgentMessageEvent(WorkflowEvent):
+    """Event wrapper for agent messages.
+
+    Inherits from WorkflowEvent to ensure events added via ctx.add_event()
+    are properly surfaced through the workflow's run_stream() output.
+    """
+
+    def __init__(
+        self,
+        agent_id: str,
+        message: ChatMessage,
+        stage: str | None = None,
+        event: str | None = None,
+        payload: dict[str, Any] | None = None,
+    ) -> None:
+        """Initialize the agent message event.
+
+        Args:
+            agent_id: The ID of the agent that produced this message.
+            message: The ChatMessage content.
+            stage: The workflow stage (e.g., 'execution').
+            event: The event type (e.g., 'agent.start', 'agent.output').
+            payload: Additional event metadata.
+        """
+        # Initialize parent with data for serialization
+        super().__init__(data={"agent_id": agent_id})
+        self.agent_id = agent_id
+        self.message = message
+        self.stage = stage
+        self.event = event
+        self.payload = payload or {}
+
+    def __repr__(self) -> str:
+        """Return a string representation of the event."""
+        return (
+            f"MagenticAgentMessageEvent(agent_id={self.agent_id!r}, "
+            f"event={self.event!r}, stage={self.stage!r})"
+        )
 
 
 @dataclass(slots=True)

@@ -19,6 +19,29 @@ def _package_root() -> Path:
     return Path(__file__).resolve().parent.parent
 
 
+def get_config_path(filename: str = "workflow_config.yaml") -> Path:
+    """Resolve the path to a config file within the package.
+
+    Uses a robust lookup strategy:
+    1. Check CWD-relative config/ directory first (for development/overrides)
+    2. Fall back to the installed package's config/ directory
+
+    Args:
+        filename: Name of the config file (default: workflow_config.yaml)
+
+    Returns:
+        Path to the config file. The file may not exist; caller should check.
+    """
+    # Prefer CWD-relative if present (allows local overrides during development)
+    cwd_path = Path.cwd() / "config" / filename
+    if cwd_path.exists():
+        return cwd_path
+
+    # Fall back to packaged config within the installed package
+    pkg_path = _package_root() / "config" / filename
+    return pkg_path
+
+
 def load_config(config_path: str | None = None, validate: bool = True) -> dict[str, Any]:
     """
     Load and validate configuration from YAML file.

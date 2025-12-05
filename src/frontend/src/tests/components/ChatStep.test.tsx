@@ -26,9 +26,11 @@ describe("ChatStep", () => {
 
     render(<ChatStep step={step} />);
     expect(screen.getByText("Agent started")).toBeInTheDocument();
-    // Check for yellow color class
-    const container = screen.getByText("Agent started").parentElement;
-    expect(container).toHaveClass("text-yellow-400");
+    // Check for yellow color class on the trigger element (ancestor)
+    const trigger = screen
+      .getByText("Agent started")
+      .closest(".text-yellow-400");
+    expect(trigger).toBeTruthy();
   });
 
   it("renders agent_complete step correctly", () => {
@@ -41,8 +43,10 @@ describe("ChatStep", () => {
 
     render(<ChatStep step={step} />);
     expect(screen.getByText("Agent finished")).toBeInTheDocument();
-    const container = screen.getByText("Agent finished").parentElement;
-    expect(container).toHaveClass("text-green-400");
+    const trigger = screen
+      .getByText("Agent finished")
+      .closest(".text-green-400");
+    expect(trigger).toBeTruthy();
   });
 
   it("renders agent_output step correctly", () => {
@@ -54,9 +58,11 @@ describe("ChatStep", () => {
     };
 
     render(<ChatStep step={step} />);
-    expect(screen.getByText("Here is the result")).toBeInTheDocument();
-    const container = screen.getByText("Here is the result").parentElement;
-    expect(container).toHaveClass("text-purple-400");
+    // agent_output renders content with markdown, so find the text within the prose container
+    const contentElement = screen.getByText("Here is the result");
+    expect(contentElement).toBeInTheDocument();
+    const trigger = contentElement.closest(".text-purple-400");
+    expect(trigger).toBeTruthy();
   });
 
   it("expands details when clicked", () => {

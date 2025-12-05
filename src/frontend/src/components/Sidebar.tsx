@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { motion, AnimatePresence } from "framer-motion";
 import {
   PanelLeftClose,
   PanelLeftOpen,
@@ -10,12 +11,14 @@ import {
 } from "lucide-react";
 import { clsx } from "clsx";
 import type { Conversation } from "../api/types";
+import { ConversationListSkeleton } from "./MessageSkeleton";
 
 interface SidebarProps {
   onNewChat?: () => void;
   conversations?: Conversation[];
   currentConversationId?: string | null;
   onSelectConversation?: (id: string) => void;
+  isLoading?: boolean;
 }
 
 function formatRelativeTime(dateString: string): string {
@@ -55,15 +58,37 @@ export const Sidebar: React.FC<SidebarProps> = ({
   conversations = [],
   currentConversationId,
   onSelectConversation,
+  isLoading = false,
 }) => {
   const [isCollapsed, setIsCollapsed] = useState(false);
 
+  // Animation variants for sidebar
+  const sidebarVariants = {
+    expanded: { width: 260 },
+    collapsed: { width: 64 },
+  };
+
+  // Animation variants for conversation items
+  const itemVariants = {
+    hidden: { opacity: 0, x: -10 },
+    visible: (i: number) => ({
+      opacity: 1,
+      x: 0,
+      transition: {
+        delay: i * 0.03,
+        duration: 0.2,
+      },
+    }),
+    exit: { opacity: 0, x: -10, transition: { duration: 0.15 } },
+  };
+
   return (
-    <div
-      className={clsx(
-        "h-screen bg-gray-1000 border-r border-gray-800 flex flex-col transition-all duration-300 ease-in-out",
-        isCollapsed ? "w-16" : "w-[260px]",
-      )}
+    <motion.div
+      initial={false}
+      animate={isCollapsed ? "collapsed" : "expanded"}
+      variants={sidebarVariants}
+      transition={{ type: "spring", stiffness: 300, damping: 30 }}
+      className="h-screen bg-gray-1000 border-r border-gray-800 flex flex-col overflow-hidden"
     >
       <div className="p-3 flex items-center justify-between">
         <button
@@ -101,64 +126,141 @@ export const Sidebar: React.FC<SidebarProps> = ({
       </div>
 
       <div className="flex-1 overflow-y-auto py-2 px-3 space-y-1">
-        {conversations.length === 0 ? (
-          <div className="text-center text-gray-500 text-sm py-4">
-            {!isCollapsed && "No conversations yet"}
-          </div>
+        {isLoading ? (
+          <ConversationListSkeleton count={5} />
+        ) : conversations.length === 0 ? (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            className="text-center text-gray-500 text-sm py-8"
+          >
+            {!isCollapsed && (
+              <div className="space-y-2">
+                <p>No conversations</p>
+                <p className="text-xs text-gray-600">
+                  Start a new chat to begin
+                </p>
+              </div>
+            )}
+          </motion.div>
         ) : (
-          conversations.map((conv) => {
-            const isActive = conv.id === currentConversationId;
-            const title = getConversationTitle(conv);
-            const timeLabel = formatRelativeTime(conv.updated_at);
+          <AnimatePresence mode="popLayout">
+            {conversations.map((conv, index) => {
+              const isActive = conv.id === currentConversationId;
+              const title = getConversationTitle(conv);
+              const timeLabel = formatRelativeTime(conv.updated_at);
 
-            return (
-              <button
-                key={conv.id}
-                onClick={() => onSelectConversation?.(conv.id)}
-                className={clsx(
-                  "flex items-center gap-3 w-full p-2 rounded-md transition-colors text-left group",
-                  isCollapsed ? "justify-center" : "justify-start",
-                  isActive
-                    ? "bg-gray-800 text-white"
-                    : "text-gray-400 hover:text-white hover:bg-gray-800",
-                )}
-                title={!isCollapsed ? undefined : title}
-              >
-                <MessageSquare size={16} className="shrink-0" />
-                {!isCollapsed && (
-                  <div className="flex-1 min-w-0">
-                    <span className="text-sm truncate block">{title}</span>
-                    <span className="text-xs text-gray-500 truncate block">
-                      {timeLabel}
-                    </span>
-                  </div>
-                )}
-              </button>
-            );
-          })
+              return (
+                <motion.button
+                  key={conv.id}
+                  custom={index}
+                  variants={itemVariants}
+                  initial="hidden"
+                  animate="visible"
+                  exit="exit"
+                  layout
+                  whileHover={{ scale: 1.01, x: 2 }}
+                  whileTap={{ scale: 0.99 }}
+                  onClick={() => onSelectConversation?.(conv.id)}
+                  className={clsx(
+                    "flex items-center gap-3 w-full p-3 rounded-xl transition-all text-left group relative overflow-hidden",
+                    isCollapsed ? "justify-center" : "justify-start",
+                    isActive
+                      ? "bg-gray-800/50 text-white shadow-lg shadow-black/20 border border-white/5"
+                      : "text-gray-400 hover:text-gray-100 hover:bg-white/5 border border-transparent",
+                  )}
+                  title={!isCollapsed ? undefined : title}
+                >
+                  {isActive && (
+                    <motion.div
+                      layoutId="active-indicator"
+                      className="absolute left-0 top-3 bottom-3 w-1 bg-blue-500 rounded-r-full"
+                    />
+                  )}
+                  <MessageSquare
+                    size={16}
+                    className={clsx(
+                      "shrink-0",
+                      isActive
+                        ? "text-blue-400"
+                        : "text-gray-600 group-hover:text-gray-400",
+                    )}
+                  />
+                  <AnimatePresence>
+                    {!isCollapsed && (
+                      <motion.div
+                        initial={{ opacity: 0, width: 0 }}
+                        animate={{ opacity: 1, width: "auto" }}
+                        exit={{ opacity: 0, width: 0 }}
+                        className="flex-1 min-w-0 overflow-hidden"
+                      >
+                        <span
+                          className={clsx(
+                            "text-sm truncate block font-medium",
+                            isActive ? "text-gray-100" : "text-gray-300",
+                          )}
+                        >
+                          {title}
+                        </span>
+                        <span className="text-[10px] text-gray-600 truncate block mt-0.5 group-hover:text-gray-500 transition-colors">
+                          {timeLabel}
+                        </span>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+                </motion.button>
+              );
+            })}
+          </AnimatePresence>
         )}
       </div>
 
       <div className="p-3 border-t border-gray-800 space-y-1">
-        <button
+        <motion.button
+          whileHover={{ scale: 1.02 }}
+          whileTap={{ scale: 0.98 }}
           className={clsx(
             "flex items-center gap-3 w-full p-2 text-gray-400 hover:text-white hover:bg-gray-800 rounded-md transition-colors",
             isCollapsed ? "justify-center" : "justify-start",
           )}
         >
           <Grid size={18} />
-          {!isCollapsed && <span className="text-sm">Apps</span>}
-        </button>
-        <button
+          <AnimatePresence>
+            {!isCollapsed && (
+              <motion.span
+                initial={{ opacity: 0, width: 0 }}
+                animate={{ opacity: 1, width: "auto" }}
+                exit={{ opacity: 0, width: 0 }}
+                className="text-sm"
+              >
+                Apps
+              </motion.span>
+            )}
+          </AnimatePresence>
+        </motion.button>
+        <motion.button
+          whileHover={{ scale: 1.02 }}
+          whileTap={{ scale: 0.98 }}
           className={clsx(
             "flex items-center gap-3 w-full p-2 text-gray-400 hover:text-white hover:bg-gray-800 rounded-md transition-colors",
             isCollapsed ? "justify-center" : "justify-start",
           )}
         >
           <Settings size={18} />
-          {!isCollapsed && <span className="text-sm">Settings</span>}
-        </button>
+          <AnimatePresence>
+            {!isCollapsed && (
+              <motion.span
+                initial={{ opacity: 0, width: 0 }}
+                animate={{ opacity: 1, width: "auto" }}
+                exit={{ opacity: 0, width: 0 }}
+                className="text-sm"
+              >
+                Settings
+              </motion.span>
+            )}
+          </AnimatePresence>
+        </motion.button>
       </div>
-    </div>
+    </motion.div>
   );
 };

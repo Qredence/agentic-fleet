@@ -23,21 +23,30 @@ logger = setup_logger(__name__)
 # --- Task Classification Helpers ---
 
 
-def is_simple_task(task: str) -> bool:
-    """Identify trivial heartbeat/greeting tasks that don't need routing.
+def is_simple_task(task: str, max_words: int | None = None) -> bool:
+    """Identify simple tasks that can be answered directly without multi-agent routing.
 
-    This function detects simple tasks like greetings or trivial calculations
-    that can be answered directly without involving the full routing pipeline.
+    This function detects tasks that should bypass the full orchestration pipeline:
+    - Greetings and heartbeats
+    - Simple factual questions
+    - Math/calculations
+    - Direct knowledge questions
 
     Args:
         task: The task string to classify
+        max_words: Maximum word count for simple tasks. If None, uses the default
+            from WorkflowConfig.simple_task_max_words (40).
 
     Returns:
         True if the task is simple enough to bypass routing, False otherwise
     """
-    task_lower = task.strip().lower()
+    # Use config default if not specified
+    simple_task_max_words = max_words if max_words is not None else 40
 
-    # Keywords that imply real-time or specific entity knowledge
+    task_lower = task.strip().lower()
+    word_count = len(task.split())
+
+    # Keywords that imply real-time data or complex research needs
     complex_keywords = [
         "news",
         "latest",
@@ -46,15 +55,29 @@ def is_simple_task(task: str) -> bool:
         "price",
         "stock",
         "weather",
-        "who is",
         "who won",
-        "who are",
         "mayor",
         "governor",
         "president",
+        "compare and contrast",
+        "analyze in detail",
+        "create a plan",
+        "step by step guide",
+        "comprehensive",
+        "research",
+        "investigate",
     ]
 
-    # Heartbeat / greeting style tasks that should be answered directly
+    # Patterns that require multi-step workflows
+    complex_patterns = [
+        r"create\s+(a\s+)?(detailed|full|comprehensive)",
+        r"write\s+(a\s+)?(report|essay|article|document)",
+        r"plan\s+(a\s+|my\s+)?(trip|project|event|wedding)",
+        r"help\s+me\s+(plan|design|build|create)",
+        r"include\s+.*(activities|restaurants|hotels|examples)",
+    ]
+
+    # Heartbeat / greeting style tasks
     trivial_keywords = [
         "ping",
         "hello",
@@ -64,27 +87,106 @@ def is_simple_task(task: str) -> bool:
         "are you there",
         "you there",
         "you awake",
+        "good morning",
+        "good evening",
+        "thanks",
+        "thank you",
     ]
 
-    # Keywords that imply a simple deterministic response
-    simple_keywords = ["define", "calculate", "solve", "2+", "meaning of"]
+    # Keywords/patterns that imply a simple direct response
+    simple_keywords = [
+        "define",
+        "calculate",
+        "solve",
+        "meaning of",
+        "what is",
+        "what are",
+        "who is",
+        "who are",
+        "how many",
+        "how much",
+        "when was",
+        "when did",
+        "where is",
+        "where are",
+        "why is",
+        "why do",
+        "explain",
+        "describe",
+        "list",
+        "name",
+    ]
 
+    # Math patterns (arithmetic expressions)
+    math_patterns = [
+        r"^\d+\s*[\+\-\*\/\^]\s*\d+",  # "7+7", "2*3", etc.
+        r"^\d+\s*\+\s*\d+",  # Addition
+        r"what\s+is\s+\d+\s*[\+\-\*\/]",  # "what is 2+2"
+        r"calculate\s+\d+",
+        r"solve\s+\d+",
+    ]
+
+    # Check for time-sensitive content (years like 2024, 2025)
     is_time_sensitive = bool(re.search(r"20[2-9][0-9]", task))
+
+    # Creation / planning verbs that should force full workflows even when short
+    generation_keywords = [
+        "write",
+        "draft",
+        "design",
+        "generate",
+        "implement",
+        "build",
+        "create",
+        "compose",
+        "develop",
+        "produce",
+        "craft",
+        "architect",
+        "plan",
+        "summarize",
+        "outline",
+        "story",
+        "stories",
+    ]
+
+    # Check complex patterns first
     has_complex_keyword = any(
         re.search(r"\b" + re.escape(k) + r"\b", task_lower) for k in complex_keywords
     )
+    has_complex_pattern = any(re.search(p, task_lower) for p in complex_patterns)
+
+    # If complex indicators found, not simple
+    if has_complex_keyword or has_complex_pattern:
+        return False
+
+    # Check for trivial/greeting tasks
     has_trivial_keyword = any(
         re.search(r"\b" + re.escape(k) + r"\b", task_lower) for k in trivial_keywords
     )
+    if has_trivial_keyword:
+        return True
+
+    # Check for math expressions
+    has_math_pattern = any(re.search(p, task_lower) for p in math_patterns)
+    if has_math_pattern:
+        return True
+
+    # Check for simple question patterns
     has_simple_keyword = any(
-        re.search(r"\b" + re.escape(k) + r"\b", task_lower) for k in simple_keywords
+        re.search(r"^" + re.escape(k) + r"\b", task_lower) for k in simple_keywords
     )
 
-    # Consider very short, punctuation-free tasks as simple if not time-sensitive
-    if is_time_sensitive or has_complex_keyword:
+    # Short generative/creative requests should not be treated as simple even if short
+    if any(re.search(r"\b" + re.escape(k) + r"\b", task_lower) for k in generation_keywords):
         return False
 
-    return has_trivial_keyword or has_simple_keyword
+    # Short tasks (under max_words) starting with simple keywords are simple
+    # unless they're time-sensitive. Otherwise require a simple keyword to avoid
+    # misclassifying short creative asks.
+    return bool(
+        has_simple_keyword and word_count <= simple_task_max_words and not is_time_sensitive
+    )
 
 
 # --- Workflow Utility Functions ---

@@ -1,5 +1,47 @@
 # Implementation Plans
 
+## WebSocket Migration for Chat UI
+
+**Status**: Completed
+**Date**: 2025-12-19
+
+### Goal
+
+Replace Server-Sent Events (SSE) with WebSocket for bidirectional real-time chat communication.
+
+### Design Decisions
+
+- **Option A**: New WebSocket per message (chosen for simplicity)
+- **Conversation context**: Sent in JSON payload on WebSocket open
+- **Auto-reconnection**: Custom `reconnectingWebSocket` helper (TypeScript) with exponential backoff
+
+### Changes Made
+
+#### Backend (`src/agentic_fleet/app/routers/streaming.py`)
+
+- Replaced SSE endpoint with WebSocket endpoint at `/ws/chat`
+- Added `cancel_event` parameter for graceful cancellation
+- Client sends `ChatRequest` JSON on connection, receives `StreamEvent` JSON messages
+- Supports `{type: "cancel"}` message from client
+
+#### Frontend
+
+- **Vite config**: Added `/ws` proxy rule for WebSocket
+- **Types**: Extended `StreamEvent` with "connected" | "cancelled", added `WebSocketClientMessage`
+- **useChat hook**: Complete rewrite to use `ReconnectingWebSocket`
+- **Tests**: Updated to mock WebSocket instead of fetch/SSE
+
+### Files Modified
+
+1. `src/agentic_fleet/app/routers/streaming.py` - WebSocket endpoint
+2. `src/frontend/vite.config.ts` - Proxy configuration
+3. `src/frontend/src/api/types.ts` - Type definitions
+4. `src/frontend/src/hooks/useChat.ts` - Chat hook rewrite
+5. `src/frontend/src/lib/reconnectingWebSocket.ts` - Custom reconnecting WebSocket helper
+6. `src/frontend/AGENTS.md` - Documentation update
+
+---
+
 ## Wire Frontend to Backend API
 
 **Status**: Completed

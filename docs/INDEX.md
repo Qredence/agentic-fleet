@@ -1,12 +1,28 @@
 # Documentation Index
 
-Welcome to the DSPy-Enhanced Agent Framework documentation. This index organizes documentation by audience to help you find what you need quickly.
+Welcome to AgenticFleet documentation. This index organizes documentation by audience to help you find what you need quickly.
+
+**Current Version:** 0.6.7
 
 ## Quick Start
 
-- **[Getting Started](users/getting-started.md)** - Installation and quick start guide
-- **[User Guide](users/user-guide.md)** - Complete user documentation
-- **[Configuration](users/configuration.md)** - Configuration options and settings
+```bash
+# Clone and setup
+git clone https://github.com/Qredence/agentic-fleet.git
+cd agentic-fleet
+make dev-setup
+
+# Configure
+cp .env.example .env
+# Add your OPENAI_API_KEY to .env
+
+# Run
+make dev
+```
+
+- **[Getting Started](users/getting-started.md)** - Full installation guide
+- **[Quick Reference](guides/quick-reference.md)** - All commands at a glance
+- **[Configuration](users/configuration.md)** - Configuration options
 
 ## For Users
 
@@ -19,17 +35,22 @@ User-facing documentation for using the framework:
    - Tool integration
    - Quality assessment
    - Monitoring and history
-3. **[Configuration](users/configuration.md)** - Configuration guide
+3. **[Frontend Guide](users/frontend.md)** - Web interface guide
+   - Starting the frontend
+   - Chat interface features
+   - Workflow visualization
+   - Configuration and development
+4. **[Configuration](users/configuration.md)** - Configuration guide
    - All configuration options
    - Environment variables
    - Performance tuning
    - Migration guide
-4. **[Troubleshooting](users/troubleshooting.md)** - Common issues and solutions
+5. **[Troubleshooting](users/troubleshooting.md)** - Common issues and solutions
    - Installation problems
    - Runtime issues
    - Performance tuning
    - Debugging tips
-5. **[Self-Improvement](users/self-improvement.md)** - Automatic learning from history
+6. **[Self-Improvement](users/self-improvement.md)** - Automatic learning from history
    - How self-improvement works
    - Usage and configuration
    - Best practices
@@ -65,6 +86,17 @@ Developer-facing documentation for extending and contributing:
    - Caching optimizations
    - Code organization
    - Performance improvements
+
+### Frontend Development
+
+The React/Vite frontend lives in `src/frontend/`:
+
+- **[Frontend AGENTS.md](../src/frontend/AGENTS.md)** - Frontend architecture and development guide
+  - Directory structure
+  - State management (hooks/useChat.ts)
+  - WebSocket streaming
+  - Component patterns
+  - Testing
 
 ### Internal Documentation
 

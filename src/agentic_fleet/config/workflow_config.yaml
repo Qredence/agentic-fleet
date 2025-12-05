@@ -201,11 +201,165 @@ logging:
   # Enable for debugging/evaluation; disable in production to reduce storage
   log_reasoning: false
 
+# UI Routing Configuration
+# Maps StreamEventType (and optional kind) to EventCategory and UIHint for frontend rendering
+ui_routing:
+  # Orchestrator thought events - categorized by kind
+  orchestrator_thought:
+    routing:
+      category: planning
+      component: ChatStep
+      priority: high
+      collapsible: true
+      icon_hint: routing
+    analysis:
+      category: thought
+      component: ChatStep
+      priority: medium
+      collapsible: true
+      icon_hint: analysis
+    quality:
+      category: output
+      component: ChatStep
+      priority: medium
+      collapsible: true
+      icon_hint: quality
+    progress:
+      category: status
+      component: ChatStep
+      priority: low
+      collapsible: true
+      icon_hint: progress
+    handoff:
+      category: planning
+      component: ChatStep
+      priority: high
+      collapsible: false
+      icon_hint: handoff
+    _default:
+      category: thought
+      component: ChatStep
+      priority: medium
+      collapsible: true
+
+  # Orchestrator message events
+  orchestrator_message:
+    _default:
+      category: status
+      component: ChatStep
+      priority: low
+      collapsible: true
+
+  # Agent lifecycle events
+  agent_start:
+    _default:
+      category: step
+      component: ChatStep
+      priority: low
+      collapsible: true
+      icon_hint: agent_start
+  agent_complete:
+    _default:
+      category: step
+      component: ChatStep
+      priority: low
+      collapsible: true
+      icon_hint: agent_complete
+  agent_message:
+    _default:
+      category: output
+      component: MessageBubble
+      priority: medium
+      collapsible: false
+  agent_output:
+    _default:
+      category: output
+      component: MessageBubble
+      priority: high
+      collapsible: false
+
+  # Reasoning events (GPT-5 chain-of-thought)
+  reasoning_delta:
+    _default:
+      category: reasoning
+      component: Reasoning
+      priority: medium
+      collapsible: true
+  reasoning_completed:
+    _default:
+      category: reasoning
+      component: Reasoning
+      priority: medium
+      collapsible: true
+
+  # Response events
+  response_delta:
+    _default:
+      category: response
+      component: MessageBubble
+      priority: high
+      collapsible: false
+  response_completed:
+    _default:
+      category: response
+      component: MessageBubble
+      priority: high
+      collapsible: false
+
+  # Error events
+  error:
+    _default:
+      category: error
+      component: ErrorStep
+      priority: high
+      collapsible: false
+
+  # Status events
+  cancelled:
+    _default:
+      category: status
+      component: ChatStep
+      priority: medium
+      collapsible: false
+      icon_hint: cancelled
+  connected:
+    _default:
+      category: status
+      component: ChatStep
+      priority: low
+      collapsible: false
+      icon_hint: connected
+  heartbeat:
+    _default:
+      category: status
+      component: ChatStep
+      priority: low
+      collapsible: true
+      icon_hint: heartbeat
+  done:
+    _default:
+      category: status
+      component: ChatStep
+      priority: low
+      collapsible: true
+
+  # Fallback for unknown event types
+  _fallback:
+    category: status
+    component: ChatStep
+    priority: low
+    collapsible: true
+
 # Tracing / Observability
 tracing:
   enabled: true # Set to false to disable all tracing
   otlp_endpoint: http://localhost:4317 # AI Toolkit / OpenTelemetry Collector endpoint (corrected port)
   capture_sensitive: false # Capture prompts & completions (set to true only for debugging - GDPR/privacy risk)
+  # Azure Monitor / AI Foundry export (optional)
+  # Set connection string to export traces to Microsoft AI Foundry
+  # Get this from: Foundry Portal > Your Project > Tracing > Manage data source > Connection string
+  # Or set APPLICATIONINSIGHTS_CONNECTION_STRING env var
+  azure_monitor_connection_string: # e.g., "InstrumentationKey=xxx;IngestionEndpoint=https://xxx.applicationinsights.azure.com/"
 
 # Evaluation Framework
 evaluation:

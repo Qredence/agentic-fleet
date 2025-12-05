@@ -474,6 +474,19 @@ workflow:
 - Use for Azure OpenAI or custom deployments
 - Example: `https://your-resource.openai.azure.com/`
 
+**CORS_ALLOWED_ORIGINS**
+
+- Comma-separated list of allowed origins for CORS and WebSocket connections
+- Default: `http://localhost:5173,http://localhost:3000` (development)
+- Production example: `https://yourdomain.com,https://api.yourdomain.com`
+- **Important**: Always set explicitly in production to prevent unauthorized access
+
+**WS_ALLOW_LOCALHOST**
+
+- Allow WebSocket connections from localhost origins (default: `true`)
+- Set to `false` in production if localhost access is not needed
+- When `true`, connections from `http://localhost:*` and `http://127.0.0.1:*` are always permitted
+
 ## Training Examples
 
 Training examples teach DSPy optimal routing patterns. Format:

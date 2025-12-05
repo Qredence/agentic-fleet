@@ -42,6 +42,7 @@ def _compute_signature_hash() -> str:
     """
     try:
         from ..dspy_modules import (
+            answer_quality,
             handoff_signatures,  # type: ignore
             signatures,
         )
@@ -56,6 +57,18 @@ def _compute_signature_hash() -> str:
 
         # Get signatures from handoff_signatures.py
         for name, obj in inspect.getmembers(handoff_signatures):
+            if inspect.isclass(obj) and issubclass(obj, dspy.Signature) and obj != dspy.Signature:
+                signature_classes.append((name, inspect.getsource(obj)))
+
+        # Get signatures from answer_quality.py
+        for name, obj in inspect.getmembers(answer_quality):
+            if inspect.isclass(obj) and issubclass(obj, dspy.Signature) and obj != dspy.Signature:
+                signature_classes.append((name, inspect.getsource(obj)))
+
+        # Get signatures from nlu_signatures.py
+        from ..dspy_modules import nlu_signatures
+
+        for name, obj in inspect.getmembers(nlu_signatures):
             if inspect.isclass(obj) and issubclass(obj, dspy.Signature) and obj != dspy.Signature:
                 signature_classes.append((name, inspect.getsource(obj)))
 
@@ -727,6 +740,9 @@ def clear_cache(cache_path: str = ".var/logs/compiled_supervisor.pkl"):
     Args:
         cache_path: Path to cache file to clear
     """
+    from .constants import DEFAULT_ANSWER_QUALITY_CACHE_PATH
+
+    # Clear the specified cache
     try:
         if os.path.exists(cache_path):
             os.remove(cache_path)
@@ -738,6 +754,20 @@ def clear_cache(cache_path: str = ".var/logs/compiled_supervisor.pkl"):
             logger.info(f"Cache metadata removed: {metadata_path}")
     except Exception as e:
         logger.error(f"Failed to clear cache: {e}")
+
+    # Also clear AnswerQualityModule cache
+    aq_cache = DEFAULT_ANSWER_QUALITY_CACHE_PATH
+    try:
+        if os.path.exists(aq_cache):
+            os.remove(aq_cache)
+            logger.info(f"AnswerQuality cache file removed: {aq_cache}")
+
+        aq_meta = aq_cache + ".meta"
+        if os.path.exists(aq_meta):
+            os.remove(aq_meta)
+            logger.info(f"AnswerQuality cache metadata removed: {aq_meta}")
+    except Exception as e:
+        logger.error(f"Failed to clear AnswerQuality cache: {e}")
 
 
 def get_cache_info(
@@ -910,3 +940,284 @@ class AsyncCompiler:
             True if compiled module is available
         """
         return self._compiled_module is not None and self._compilation_error is None
+
+
+def compile_answer_quality(
+    use_cache: bool = True,
+    progress_callback: ProgressCallback | None = None,
+) -> Any:
+    """Compile AnswerQualityModule for offline use.
+
+    This function compiles the AnswerQualityModule using BootstrapFewShot
+    with quality scoring examples. The compiled module is cached to
+    DEFAULT_ANSWER_QUALITY_CACHE_PATH.
+
+    Args:
+        use_cache: Whether to use cached module if available
+        progress_callback: Optional progress callback
+
+    Returns:
+        Compiled AnswerQualityModule
+    """
+    from .constants import DEFAULT_ANSWER_QUALITY_CACHE_PATH
+
+    if progress_callback is None:
+        progress_callback = NullProgressCallback()
+
+    cache_path = DEFAULT_ANSWER_QUALITY_CACHE_PATH
+    progress_callback.on_start("Compiling AnswerQualityModule")
+
+    # Check cache
+    if use_cache and os.path.exists(cache_path):
+        try:
+            cached = load_compiled_module(cache_path)
+            if cached is not None:
+                progress_callback.on_complete("Using cached AnswerQualityModule")
+                logger.info("✓ Using cached AnswerQualityModule from %s", cache_path)
+                return cached
+        except Exception as e:
+            logger.warning("Failed to load cached AnswerQualityModule: %s", e)
+
+    # Import module
+    try:
+        from ..dspy_modules.answer_quality import get_uncompiled_module
+
+        module = get_uncompiled_module()
+        if module is None:
+            progress_callback.on_error("DSPy not available for AnswerQualityModule", None)
+            logger.warning("DSPy not available, cannot compile AnswerQualityModule")
+            return None
+    except Exception as e:
+        progress_callback.on_error("Failed to import AnswerQualityModule", e)
+        logger.error("Failed to import AnswerQualityModule: %s", e)
+        return None
+
+    # Create synthetic training examples for quality scoring
+    # These examples demonstrate the expected scoring behavior
+    progress_callback.on_progress("Creating training examples...")
+    training_examples = [
+        dspy.Example(
+            question="What is the capital of France?",
+            answer="Paris is the capital of France. It is located in north-central France.",
+            groundness="0.95",
+            relevance="1.0",
+            coherence="0.9",
+        ).with_inputs("question", "answer"),
+        dspy.Example(
+            question="Explain quantum computing",
+            answer="Quantum computing uses quantum mechanics principles like superposition and entanglement to process information. Unlike classical bits, qubits can exist in multiple states simultaneously.",
+            groundness="0.9",
+            relevance="0.95",
+            coherence="0.85",
+        ).with_inputs("question", "answer"),
+        dspy.Example(
+            question="How do I bake a cake?",
+            answer="I don't know how to help with that.",
+            groundness="0.1",
+            relevance="0.1",
+            coherence="0.5",
+        ).with_inputs("question", "answer"),
+        dspy.Example(
+            question="What is Python used for?",
+            answer="Python is a versatile programming language used for web development, data science, machine learning, automation, and scripting. Its readable syntax makes it popular for beginners.",
+            groundness="0.85",
+            relevance="0.9",
+            coherence="0.9",
+        ).with_inputs("question", "answer"),
+        dspy.Example(
+            question="Summarize the meeting notes",
+            answer="",
+            groundness="0.0",
+            relevance="0.0",
+            coherence="0.0",
+        ).with_inputs("question", "answer"),
+    ]
+
+    def quality_metric(example, prediction, trace=None):
+        """Metric for answer quality scoring accuracy."""
+        try:
+            # Compare predicted scores to expected scores
+            pred_g = float(prediction.groundness)
+            pred_r = float(prediction.relevance)
+            pred_c = float(prediction.coherence)
+
+            exp_g = float(example.groundness)
+            exp_r = float(example.relevance)
+            exp_c = float(example.coherence)
+
+            # Score based on how close predictions are to expected values
+            g_score = 1.0 - min(abs(pred_g - exp_g), 1.0)
+            r_score = 1.0 - min(abs(pred_r - exp_r), 1.0)
+            c_score = 1.0 - min(abs(pred_c - exp_c), 1.0)
+
+            return (g_score + r_score + c_score) / 3
+        except Exception:
+            return 0.0
+
+    progress_callback.on_progress("Running BootstrapFewShot optimization...")
+    try:
+        from dspy.teleprompt import BootstrapFewShot
+
+        optimizer = BootstrapFewShot(
+            metric=quality_metric,
+            max_bootstrapped_demos=3,
+            max_labeled_demos=3,
+        )
+        compiled = optimizer.compile(module, trainset=training_examples)
+        progress_callback.on_complete("AnswerQualityModule compilation complete")
+        logger.info("✓ AnswerQualityModule compiled with %d examples", len(training_examples))
+    except Exception as e:
+        progress_callback.on_error("Compilation failed", e)
+        logger.error("Failed to compile AnswerQualityModule: %s", e)
+        return module
+
+    # Save to cache
+    if use_cache:
+        progress_callback.on_progress("Saving to cache...")
+        try:
+            serializer_used = save_compiled_module(compiled, cache_path)
+            _save_cache_metadata(
+                cache_path,
+                examples_path="synthetic",
+                version=CACHE_VERSION,
+                optimizer="bootstrap",
+                serializer=serializer_used,
+            )
+            logger.info("AnswerQualityModule cached to %s", cache_path)
+        except Exception as e:
+            logger.warning("Failed to cache AnswerQualityModule: %s", e)
+
+    return compiled
+
+
+def compile_nlu(
+    use_cache: bool = True,
+    progress_callback: ProgressCallback | None = None,
+) -> Any:
+    """Compile DSPyNLU module for offline use.
+
+    Args:
+        use_cache: Whether to use cached module if available
+        progress_callback: Optional progress callback
+
+    Returns:
+        Compiled DSPyNLU module
+    """
+    from .constants import DEFAULT_NLU_CACHE_PATH
+
+    if progress_callback is None:
+        progress_callback = NullProgressCallback()
+
+    cache_path = DEFAULT_NLU_CACHE_PATH
+    progress_callback.on_start("Compiling DSPyNLU")
+
+    # Check cache
+    if use_cache and os.path.exists(cache_path):
+        try:
+            cached = load_compiled_module(cache_path)
+            if cached is not None:
+                progress_callback.on_complete("Using cached DSPyNLU")
+                logger.info("✓ Using cached DSPyNLU from %s", cache_path)
+                return cached
+        except Exception as e:
+            logger.warning("Failed to load cached DSPyNLU: %s", e)
+
+    # Import module
+    try:
+        from ..dspy_modules.nlu import DSPyNLU
+
+        module = DSPyNLU()
+        # Ensure predictors are initialized
+        module._ensure_modules_initialized()
+    except Exception as e:
+        progress_callback.on_error("Failed to import DSPyNLU", e)
+        logger.error("Failed to import DSPyNLU: %s", e)
+        return None
+
+    # Synthetic training examples
+    progress_callback.on_progress("Creating training examples for NLU...")
+
+    # Intent Classification examples
+    ic_examples = [
+        dspy.Example(
+            text="I need to book a flight to London.",
+            possible_intents="book_flight, cancel_flight, check_status",
+            intent="book_flight",
+            confidence=0.95,
+        ).with_inputs("text", "possible_intents"),
+        dspy.Example(
+            text="What is the weather like today?",
+            possible_intents="get_weather, set_alarm, play_music",
+            intent="get_weather",
+            confidence=0.98,
+        ).with_inputs("text", "possible_intents"),
+    ]
+
+    # Entity Extraction examples
+    ee_examples = [
+        dspy.Example(
+            text="Meeting with John at 5 PM in Room A.",
+            entity_types="Person, Time, Location",
+            entities=[
+                {"text": "John", "type": "Person", "confidence": "0.9"},
+                {"text": "5 PM", "type": "Time", "confidence": "0.95"},
+                {"text": "Room A", "type": "Location", "confidence": "0.8"},
+            ],
+        ).with_inputs("text", "entity_types"),
+    ]
+
+    from dspy.teleprompt import BootstrapFewShot
+
+    # 1. Compile Intent Classifier
+    def ic_metric(example, prediction, trace=None):
+        return float(example.intent == prediction.intent)
+
+    try:
+        progress_callback.on_progress("Compiling Intent Classifier...")
+        ic_optimizer = BootstrapFewShot(
+            metric=ic_metric, max_bootstrapped_demos=2, max_labeled_demos=2
+        )
+        compiled_ic = ic_optimizer.compile(module.intent_classifier, trainset=ic_examples)
+        module.intent_classifier = compiled_ic
+    except Exception as e:
+        logger.warning(f"Failed to compile Intent Classifier: {e}")
+
+    # 2. Compile Entity Extractor
+    def ee_metric(example, prediction, trace=None):
+        # Simple overlap metric
+        pred_texts = {e["text"] for e in prediction.entities}
+        exp_texts = {e["text"] for e in example.entities}
+        if not exp_texts:
+            return 1.0 if not pred_texts else 0.0
+        return len(pred_texts & exp_texts) / len(exp_texts)
+
+    try:
+        progress_callback.on_progress("Compiling Entity Extractor...")
+        ee_optimizer = BootstrapFewShot(
+            metric=ee_metric, max_bootstrapped_demos=1, max_labeled_demos=1
+        )
+        compiled_ee = ee_optimizer.compile(module.entity_extractor, trainset=ee_examples)
+        module.entity_extractor = compiled_ee
+    except Exception as e:
+        logger.warning(f"Failed to compile Entity Extractor: {e}")
+
+    progress_callback.on_complete("DSPyNLU compilation complete")
+    logger.info("✓ DSPyNLU compiled")
+
+    # Save to cache
+    if use_cache:
+        progress_callback.on_progress("Saving to cache...")
+        try:
+            serializer_used = save_compiled_module(module, cache_path)
+            _save_cache_metadata(
+                cache_path,
+                examples_path="synthetic",
+                version=CACHE_VERSION,
+                optimizer="bootstrap-multi",
+                serializer=serializer_used,
+            )
+            logger.info("DSPyNLU cached to %s", cache_path)
+        except Exception as e:
+            logger.warning("Failed to cache DSPyNLU: %s", e)
+
+    return module

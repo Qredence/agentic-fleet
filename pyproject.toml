@@ -5,7 +5,7 @@
 
 [project]
 name = "agentic-fleet"
-version = "0.6.6"
+version = "0.6.7"
 description = "Multi-agent orchestration system built with Microsoft Agent Framework's Magentic Fleet pattern"
 authors = [{ name = "Qredence", email = "contact@qredence.ai" }]
 readme = "README.md"
@@ -35,24 +35,21 @@ dependencies = [
     "agent-framework-core",
     "agent-framework-a2a",
     "agent-framework-azure-ai",
-    "agent-framework-mem0",
     "agent-framework-devui",
-    "mem0ai==1.0.0",                             # Pinned for stable memory API
     "rich>=14.2.0",
     "prompt-toolkit>=3.0.47,<4.0",
     "ipykernel>=7.0.1,<8.0",
-    "openai>=2.5.1",                             # Updated from requirements.txt
+    "openai>=2.5.1",                                  # Updated from requirements.txt
     "azure-ai-evaluation>=1.12.0,<2.0",
     "fastapi[standard]>=0.120.1,<1.0",
     "uvicorn[standard]>=0.24.0",
     "httpx>=0.24.0",
-    "sse-starlette>=2.0.0",
     "databases[asyncpg]>=0.7.0,<1.0",
     "aiofiles>=25.1.0,<26.0",
     "pydantic-settings>=2.3.2,<3.0",
     "websockets>=10.4",
     "typer>=0.20.0,<0.21.0",
-    "textual>=6.5.0",                            # Added from requirements.txt for TUI
+    "textual>=6.5.0",                                 # Added from requirements.txt for TUI
     "aiohttp>=3.9.0",
     "aiosqlite>=0.20.0",
     "prometheus-client>=0.16.0",
@@ -68,8 +65,8 @@ dependencies = [
     "plotly>=5.10.0",
     "pytz>=2024.1",
     "setuptools>=80.9.0",
-    "dspy>=3.0.3",                               # Updated from requirements.txt (was pinned to 3.0.4)
-    "tavily-python>=0.7.12",                     # Added version constraint from requirements.txt
+    "dspy>=3.0.3",                                    # Updated from requirements.txt (was pinned to 3.0.4)
+    "tavily-python>=0.7.12",                          # Added version constraint from requirements.txt
     "dill>=0.3.8",
     "playwright>=1.40.0",
     "mcp>=1.21.0",
@@ -81,11 +78,14 @@ dependencies = [
     "tenacity>=8.2.3",
     "prometheus-fastapi-instrumentator>=6.1.0",
     "python-json-logger>=2.0.7",
-    "agent-framework-declarative>=1.0.0b251120",
+    "agent-framework-declarative>=1.0.0b251204",
     "agent-framework-azure-ai-search>=0.0.0a1",
     "agent-framework-azurefunctions>=0.0.0a1",
-    "agent-framework>=1.0.0b251120",
+    "agent-framework>=1.0.0b251204",
     "azure-search-documents>=11.6.0",
+    "azure-monitor-opentelemetry>=1.8.2",
+    "azure-monitor-opentelemetry-exporter>=1.0.0b45",
+    "opentelemetry-exporter-otlp-proto-http>=1.38.0",
 ]
 requires-python = ">=3.12,<4"
 
@@ -98,20 +98,21 @@ requires-python = ">=3.12,<4"
 # Core Azure integration
 azure = ["azure-ai-agents>=1.2.0b5,<2.0", "azure-identity>=1.25.1,<2.0"]
 
-# Memory and persistence features
-memory = ["agent-framework-mem0", "mem0ai==1.0.0"]
-
 # UI and interactive features
 ui = ["agent-framework-devui", "rich>=14.2.0", "prompt-toolkit>=3.0.47,<4.0"]
 
 # Evaluation and testing
 evaluation = ["azure-ai-evaluation>=1.12.0,<2.0"]
 
+# Azure Monitor / AI Foundry tracing export
+tracing = ["azure-monitor-opentelemetry>=1.6.0"]
+
 # Complete installation with all features
-all = ["agentic-fleet[azure,memory,ui,evaluation]"]
+all = ["agentic-fleet[azure,ui,evaluation,tracing]"]
 
 [project.scripts]
 agentic-fleet = "agentic_fleet.cli.console:app"
+agenticfleet = "agentic_fleet.cli.console:app"
 fleet = "agentic_fleet.cli.console:app"
 
 
@@ -264,10 +265,7 @@ ignore = [
 [tool.ruff.lint.per-file-ignores]
 "__init__.py" = ["F401"]
 "notebooks/*.ipynb" = ["A002", "E402"]
-"src/agentic_fleet/console.py" = ["B008"]
-"src/agentic_fleet/api/routes/chat.py" = ["B008"]
-"src/agentic_fleet/api/error_handlers.py" = ["ARG001"]
-"src/agentic_fleet/api/main.py" = ["ARG001"]
+"src/agentic_fleet/cli/console.py" = ["B008"]
 "src/agentic_fleet/dspy_modules/*" = ["ARG002"]
 "src/agentic_fleet/tools/*" = ["ARG002"]
 "src/agentic_fleet/utils/*" = ["ARG001"]
@@ -280,7 +278,7 @@ ignore = [
 "scripts/*" = ["D"] # Ignore docstring rules in scripts
 
 [tool.ruff.lint.isort]
-known-first-party = ["agentic_fleet", "agenticfleet"]
+known-first-party = ["agentic_fleet"]
 
 # ============================================================================
 # Pytest Configuration
@@ -292,7 +290,9 @@ pythonpath = "src"
 testpaths = ["tests"]
 asyncio_mode = "auto"
 addopts = "-m 'not e2e'"
-markers = ["e2e: End-to-end tests requiring a running server (deselect with '-m \"not e2e\"')"]
+markers = [
+    "e2e: End-to-end tests requiring a running server (deselect with '-m \"not e2e\"')",
+]
 
 
 # ============================================================================
@@ -301,7 +301,7 @@ markers = ["e2e: End-to-end tests requiring a running server (deselect with '-m 
 # ============================================================================
 
 [tool.coverage.run]
-source = ["src/agentic_fleet", "src/agenticfleet"]
+source = ["src/agentic_fleet"]
 omit = ["*/tests/*", "*/__pycache__/*", "*/.venv/*"]
 
 [tool.coverage.report]

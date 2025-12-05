@@ -16,7 +16,6 @@ from typing import Any
 from agent_framework._types import ChatMessage
 from agent_framework._workflows import (
     Executor,
-    MagenticAgentMessageEvent,
     WorkflowContext,
     WorkflowOutputEvent,
 )
@@ -28,6 +27,7 @@ from ..utils.resilience import async_call_with_retry
 from ..utils.telemetry import optional_span
 from .context import SupervisorContext
 from .exceptions import ToolError
+from .execution.streaming_events import MagenticAgentMessageEvent
 from .helpers import (
     build_refinement_task,
     call_judge_with_reasoning,
@@ -159,7 +159,13 @@ class AnalysisExecutor(Executor):
                         if cache is not None:
                             cache.set(cache_key, analysis_dict)
                         self.context.latest_phase_status["analysis"] = "success"
-                    metadata = {**task_msg.metadata, "simple_mode": False}
+                    # Include reasoning from DSPy analysis in metadata for frontend display
+                    metadata = {
+                        **task_msg.metadata,
+                        "simple_mode": False,
+                        "reasoning": analysis_dict.get("reasoning", ""),
+                        "intent": analysis_dict.get("intent"),
+                    }
 
                 # Convert to AnalysisResult
                 analysis_result = self._to_analysis_result(analysis_dict)
@@ -360,7 +366,7 @@ class RoutingExecutor(Executor):
             logger.info(f"Routing task: {analysis_msg.task[:100]}...")
             start_t = perf_counter()
 
-            metadata = analysis_msg.metadata or {}
+            metadata = dict(analysis_msg.metadata or {})
             simple_mode = bool(metadata.get("simple_mode"))
             cfg = self.context.config
             pipeline_profile = getattr(cfg, "pipeline_profile", "full")
@@ -394,6 +400,19 @@ class RoutingExecutor(Executor):
                         attempts=retry_attempts,
                         backoff_seconds=retry_backoff,
                     )
+
+                    if isinstance(raw_routing, dict):
+                        tool_plan = raw_routing.get("tool_plan")
+                        tool_goals = raw_routing.get("tool_goals")
+                        latency_budget = raw_routing.get("latency_budget")
+                        routing_reasoning = raw_routing.get("reasoning")
+                        if tool_plan or tool_goals or latency_budget or routing_reasoning:
+                            metadata["routing_tool_plan"] = {
+                                "tool_plan": tool_plan or [],
+                                "tool_goals": tool_goals or "",
+                                "latency_budget": latency_budget or "",
+                                "reasoning": routing_reasoning or "",
+                            }
 
                     routing_decision = ensure_routing_decision(raw_routing)
                     routing_decision = normalize_routing_decision(
@@ -433,7 +452,7 @@ class RoutingExecutor(Executor):
                 routing_msg = RoutingMessage(
                     task=analysis_msg.task,
                     routing=routing_plan,
-                    metadata=analysis_msg.metadata,
+                    metadata=metadata,
                 )
 
                 logger.info(
@@ -464,7 +483,7 @@ class RoutingExecutor(Executor):
                 routing_msg = RoutingMessage(
                     task=analysis_msg.task,
                     routing=routing_plan,
-                    metadata={**analysis_msg.metadata, "used_fallback": True},
+                    metadata={**metadata, "used_fallback": True},
                 )
                 await ctx.send_message(routing_msg)
 
@@ -533,18 +552,21 @@ class ExecutionExecutor(Executor):
             try:
                 # Tool planning hint (optional)
                 tool_plan_info = None
-                try:
-                    dspy_supervisor = getattr(self.context, "dspy_supervisor", None)
-                    if dspy_supervisor:
-                        team = {
-                            name: getattr(agent, "description", "")
-                            for name, agent in (self.context.agents or {}).items()
-                        }
-                        tool_plan_info = dspy_supervisor.decide_tools(task, team, "")
-                except Exception:
-                    # Silently ignore DSPy tool planning errors - workflow can continue
-                    # without tool planning information
-                    pass
+                routing_metadata = routing_msg.metadata or {}
+                tool_plan_info = routing_metadata.get("routing_tool_plan")
+                if tool_plan_info is None:
+                    try:
+                        dspy_supervisor = getattr(self.context, "dspy_supervisor", None)
+                        if dspy_supervisor:
+                            team = {
+                                name: getattr(agent, "description", "")
+                                for name, agent in (self.context.agents or {}).items()
+                            }
+                            tool_plan_info = dspy_supervisor.decide_tools(task, team, "")
+                    except Exception:
+                        # Silently ignore DSPy tool planning errors - workflow can continue
+                        # without tool planning information
+                        tool_plan_info = None
 
                 # Streaming execution
                 final_result = None
@@ -597,7 +619,7 @@ class ExecutionExecutor(Executor):
                 self.context.latest_phase_timings["execution"] = duration
                 self.context.latest_phase_status["execution"] = "success"
 
-                metadata = routing_msg.metadata.copy()
+                metadata = dict(routing_msg.metadata or {})
                 metadata["routing"] = routing_decision
                 if tool_plan_info:
                     metadata["tool_plan"] = tool_plan_info

@@ -72,6 +72,8 @@ DEFAULT_CACHE_DIR = ".var/cache"
 DEFAULT_LOGS_DIR = ".var/logs"
 DEFAULT_DATA_DIR = ".var/data"
 DEFAULT_CACHE_PATH = ".var/logs/compiled_supervisor.pkl"
+DEFAULT_ANSWER_QUALITY_CACHE_PATH = ".var/logs/compiled_answer_quality.pkl"
+DEFAULT_NLU_CACHE_PATH = ".var/logs/compiled_nlu.pkl"
 DEFAULT_HISTORY_PATH = ".var/logs/execution_history.jsonl"
 DEFAULT_LOG_PATH = ".var/logs/workflow.log"
 DEFAULT_GEPA_LOG_DIR = ".var/logs/gepa"
@@ -161,6 +163,7 @@ __all__ = [
     "DEFAULT_AGENT_MODEL",
     "DEFAULT_AGENT_TIMEOUT",
     "DEFAULT_ANALYST_TEMPERATURE",
+    "DEFAULT_ANSWER_QUALITY_CACHE_PATH",
     "DEFAULT_BROWSER_MAX_TEXT_LENGTH",
     "DEFAULT_BROWSER_SELECTOR_TIMEOUT_MS",
     "DEFAULT_BROWSER_TIMEOUT_MS",

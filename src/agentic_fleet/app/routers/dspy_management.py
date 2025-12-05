@@ -3,12 +3,15 @@
 Provides endpoints for inspecting and managing DSPy modules.
 """
 
+import logging
 from typing import Any
 
 import dspy
 from fastapi import APIRouter, HTTPException, status
 
 from agentic_fleet.app.dependencies import WorkflowDep
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter()
 
@@ -99,9 +102,9 @@ async def get_dspy_prompts(
                 try:
                     for k, v in demo.items():
                         demo_dict[k] = str(v)
-                except Exception:
+                except Exception as e:
                     # Demo objects may have various formats; skip malformed demos gracefully.
-                    pass
+                    logger.warning(f"Malformed demo skipped: {e}")
                 demos.append(demo_dict)
 
         prompts[name] = {

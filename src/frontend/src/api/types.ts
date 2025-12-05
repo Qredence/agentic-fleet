@@ -8,12 +8,33 @@ export interface ConversationStep {
     | "agent_start"
     | "agent_complete"
     | "agent_output"
-    | "agent_thought";
+    | "agent_thought"
+    | "routing"
+    | "analysis"
+    | "quality"
+    | "handoff"
+    | "tool_call"
+    | "progress";
   content: string;
   timestamp: string;
   kind?: string; // e.g., 'routing', 'analysis', 'quality'
   data?: Record<string, unknown>;
   isExpanded?: boolean;
+  category?:
+    | "step"
+    | "thought"
+    | "reasoning"
+    | "planning"
+    | "output"
+    | "response"
+    | "status"
+    | "error";
+  uiHint?: {
+    component: string;
+    priority: "low" | "medium" | "high";
+    collapsible: boolean;
+    iconHint?: string;
+  };
 }
 
 export interface Message {
@@ -30,6 +51,8 @@ export interface Message {
   isWorkflowPlaceholder?: boolean;
   /** Current workflow phase for shimmer display (e.g., "Routing...", "Executing...") */
   workflowPhase?: string;
+  qualityFlag?: string;
+  qualityScore?: number;
 }
 
 export interface Conversation {
@@ -66,7 +89,10 @@ export interface StreamEvent {
     | "agent.complete"
     | "agent.output"
     | "agent.thought"
-    | "agent.message";
+    | "agent.message"
+    | "connected"
+    | "cancelled"
+    | "heartbeat";
   delta?: string;
   agent_id?: string;
   author?: string;
@@ -80,7 +106,26 @@ export interface StreamEvent {
   timestamp?: string;
   /** True if reasoning was interrupted mid-stream (on error events) */
   reasoning_partial?: boolean;
+  /** Heuristic quality score/flag from backend for final answers */
+  quality_score?: number;
+  quality_flag?: string;
+  /** Category of the event for UI grouping */
+  category?: string;
+  /** UI rendering hints from the backend */
+  ui_hint?: {
+    component: string;
+    priority: "low" | "medium" | "high";
+    collapsible: boolean;
+    icon_hint?: string;
+  };
+  /** Optional workflow identifier for correlating logs */
+  workflow_id?: string;
+  /** Terminal-friendly log line mirrored from the backend logger */
+  log_line?: string;
 }
+
+/** Messages sent from client to server over WebSocket */
+export type WebSocketClientMessage = ChatRequest | { type: "cancel" };
 
 export interface WorkflowSession {
   workflow_id: string;
@@ -96,4 +141,29 @@ export interface AgentInfo {
   name: string;
   description: string;
   type: string;
+}
+
+export interface IntentRequest {
+  text: string;
+  possible_intents: string[];
+}
+
+export interface IntentResponse {
+  intent: string;
+  confidence: number;
+  reasoning: string;
+}
+
+export interface EntityRequest {
+  text: string;
+  entity_types: string[];
+}
+
+export interface EntityResponse {
+  entities: {
+    text: string;
+    type: string;
+    confidence: string;
+  }[];
+  reasoning: string;
 }

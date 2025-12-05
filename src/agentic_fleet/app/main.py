@@ -6,21 +6,24 @@ and streaming chat.
 """
 
 import logging
-import os
 import sys
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from pythonjsonlogger import jsonlogger
 
 from agentic_fleet.app.dependencies import lifespan
+from agentic_fleet.app.middleware import RequestIDMiddleware
 from agentic_fleet.app.routers import (
     agents,
     conversations,
     dspy_management,
     history,
+    nlu,
     streaming,
     workflow,
 )
+from agentic_fleet.app.settings import get_settings
 
 # =============================================================================
 # Logging Configuration
@@ -33,16 +36,29 @@ def _configure_logging() -> None:
     Sets up structured logging with timestamps that flush immediately
     to stdout for real-time visibility.
     """
-    log_level = os.getenv("LOG_LEVEL", "INFO").upper()
-    log_format = os.getenv(
-        "LOG_FORMAT",
-        "%(asctime)s | %(levelname)-8s | %(name)s | %(message)s",
-    )
+    settings = get_settings()
+    log_level = settings.log_level
+    structured = settings.log_json
+    log_format = settings.log_format
 
     # Create a handler that writes to stdout with immediate flushing
     handler = logging.StreamHandler(sys.stdout)
     handler.setLevel(getattr(logging, log_level, logging.INFO))
-    handler.setFormatter(logging.Formatter(log_format, datefmt="%H:%M:%S"))
+
+    if structured:
+        # Emit JSON logs for easier ingestion (e.g., Datadog, Loki)
+        formatter = jsonlogger.JsonFormatter(
+            "%(asctime)s %(levelname)s %(name)s %(message)s %(module)s %(lineno)d",
+            rename_fields={
+                "asctime": "timestamp",
+                "levelname": "level",
+                "message": "msg",
+            },
+        )
+    else:
+        formatter = logging.Formatter(log_format, datefmt="%H:%M:%S")
+
+    handler.setFormatter(formatter)
 
     # Configure root logger
     root_logger = logging.getLogger()
@@ -58,10 +74,14 @@ def _configure_logging() -> None:
     uvicorn_access = logging.getLogger("uvicorn.access")
     uvicorn_access.handlers = [handler]
 
-    # Reduce noise from some verbose libraries
+    # Reduce noise from verbose libraries
     logging.getLogger("httpcore").setLevel(logging.WARNING)
     logging.getLogger("httpx").setLevel(logging.WARNING)
     logging.getLogger("openai").setLevel(logging.WARNING)
+    logging.getLogger("azure").setLevel(logging.WARNING)
+    logging.getLogger("urllib3").setLevel(logging.WARNING)
+    logging.getLogger("azure.core.pipeline.policies.http_logging_policy").setLevel(logging.WARNING)
+    logging.getLogger("azure.monitor").setLevel(logging.WARNING)
 
 
 # Initialize logging before app creation
@@ -75,14 +95,13 @@ def _get_allowed_origins() -> list[str]:
     Returns:
         List of allowed origin URLs.
     """
-    origins = os.getenv("CORS_ALLOWED_ORIGINS", "http://localhost:5173,http://localhost:3000")
-    return [o.strip() for o in origins.split(",") if o.strip()]
+    return get_settings().cors_allowed_origins
 
 
 app = FastAPI(
-    title="AgenticFleet API",
+    title=get_settings().app_name,
     description="API for AgenticFleet Supervisor Workflow with streaming support",
-    version="0.3.0",
+    version=get_settings().app_version,
     lifespan=lifespan,
     docs_url="/docs",
     redoc_url="/redoc",
@@ -97,11 +116,15 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# Attach request IDs for traceability
+app.add_middleware(RequestIDMiddleware)  # type: ignore[arg-type]
+
 # Versioned API routes
 app.include_router(workflow.router, prefix="/api/v1", tags=["workflow"])
 app.include_router(agents.router, prefix="/api/v1", tags=["agents"])
 app.include_router(history.router, prefix="/api/v1", tags=["history"])
 app.include_router(dspy_management.router, prefix="/api/v1", tags=["dspy"])
+app.include_router(nlu.router, prefix="/api/v1", tags=["nlu"])
 
 # Streaming routes at /api (no version) for frontend compatibility
 # Frontend expects POST /api/chat for streaming
@@ -111,13 +134,36 @@ app.include_router(conversations.router, prefix="/api", tags=["conversations"])
 
 
 @app.get("/health", tags=["health"])
-async def health_check() -> dict[str, str]:
-    """Health check endpoint.
+async def health_check() -> dict[str, str | dict[str, str]]:
+    """Enhanced health check with dependency verification.
 
     Returns:
-        dict with status "ok" if the service is running.
+        dict with overall status, individual checks, and version.
     """
-    return {"status": "ok"}
+    from agentic_fleet.app.dependencies import get_conversation_manager
+
+    checks = {
+        "api": "ok",
+        "workflow": "ok" if getattr(app.state, "workflow", None) else "error",
+        "session_manager": "ok" if getattr(app.state, "session_manager", None) else "error",
+    }
+
+    # Check conversation manager
+    try:
+        conv_mgr = get_conversation_manager()
+        checks["conversations"] = "ok" if conv_mgr else "error"
+    except Exception:
+        checks["conversations"] = "error"
+
+    # Determine overall status
+    all_ok = all(v == "ok" for v in checks.values())
+    status = "ok" if all_ok else "degraded"
+
+    return {
+        "status": status,
+        "checks": checks,
+        "version": get_settings().app_version,
+    }
 
 
 @app.get("/ready", tags=["health"])

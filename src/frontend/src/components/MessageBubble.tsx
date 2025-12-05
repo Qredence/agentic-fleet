@@ -10,7 +10,7 @@ import {
   MessageAction,
 } from "./prompt-kit/message";
 import { ChainOfThought } from "./prompt-kit/chain-of-thought";
-import { ThinkingBar } from "./prompt-kit/thinking-bar";
+import { Loader2 } from "lucide-react";
 import {
   Reasoning,
   ReasoningTrigger,
@@ -178,15 +178,22 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({
         )}
 
         {isProcessing ? (
-          <ThinkingBar
-            text={
-              isReasoningStreaming
+          <div className="flex items-center gap-2 text-sm text-muted-foreground">
+            <Loader2 size={14} className="animate-spin" />
+            <span>
+              {isReasoningStreaming
                 ? "Reasoning..."
-                : workflowPhase || "Thinking"
-            }
-            onStop={onCancelStreaming}
-            stopLabel="Stop generating"
-          />
+                : workflowPhase || "Processing..."}
+            </span>
+            {onCancelStreaming && (
+              <button
+                onClick={onCancelStreaming}
+                className="ml-2 text-xs hover:text-foreground border-b border-dotted border-muted-foreground/50"
+              >
+                Stop
+              </button>
+            )}
+          </div>
         ) : (
           <MessageContent markdown id={id}>
             {content}

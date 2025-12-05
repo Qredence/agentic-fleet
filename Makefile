@@ -1,8 +1,10 @@
- .PHONY: help install sync clean test test-config test-e2e test-frontend lint format type-check check run pre-commit-install dev backend frontend-install frontend-dev build-frontend analyze-history self-improve init-var clear-cache
+ .PHONY: help install dev-setup sync clean test test-config test-e2e test-frontend test-all lint format type-check check run pre-commit-install dev backend frontend-install frontend-dev build-frontend analyze-history self-improve init-var clear-cache qa frontend-lint frontend-format evaluate-history
 
-# Centralized frontend directory variable to avoid repeating literal path strings.
-# Update here if the frontend root moves.
+# Centralized variables
 FRONTEND_DIR := src/frontend
+PYTHON := uv run python
+PYTEST := uv run pytest
+PYTEST_OPTS := -q --tb=short
 
 # Default target
 help:
@@ -21,10 +23,13 @@ help:
 	@echo "  make backend           Run backend only (port 8000)"
 	@echo "  make frontend-dev      Run frontend only (port 5173)"
 	@echo "  make build-frontend    Build frontend for production (outputs to backend/ui)"
-	@echo "  make test              Run all tests"
-	@echo "  make test-config       Run configuration validation"
-	@echo "  make test-e2e          Run end-to-end frontend tests (requires dev running)"
+	@echo ""
+	@echo "Testing:"
+	@echo "  make test              Run backend tests (fast)"
 	@echo "  make test-frontend     Run frontend unit tests"
+	@echo "  make test-all          Run all tests (backend + frontend)"
+	@echo "  make test-config       Run configuration validation"
+	@echo "  make test-e2e          Run end-to-end tests (requires dev running)"
 	@echo ""
 	@echo "Code Quality:"
 	@echo "  make lint              Run Ruff linter (backend)"
@@ -32,7 +37,8 @@ help:
 	@echo "  make frontend-lint     Run ESLint (frontend)"
 	@echo "  make frontend-format   Format code with Prettier (frontend)"
 	@echo "  make type-check        Run ty type checker"
-	@echo "  make check             Run all quality checks (lint + format + type)"
+	@echo "  make check             Quick quality check (lint + type-check)"
+	@echo "  make qa                Full QA suite (lint + format + type + all tests)"
 	@echo ""
 	@echo "Tools:"
 	@echo "  make pre-commit-install  Install pre-commit hooks"
@@ -40,7 +46,8 @@ help:
 	@echo "  make init-var          Initialize .var/ directory structure"
 	@echo "  make clear-cache       Clear compiled DSPy cache"
 	@echo "  make analyze-history   Analyze workflow execution history"
-	@echo "  make self-improve      Run self-improvement analysis on execution history"
+	@echo "  make evaluate-history  Run DSPy-based evaluation on execution history"
+	@echo "  make self-improve      Run self-improvement analysis"
 	@echo ""
 
 # Setup commands
@@ -105,18 +112,21 @@ build-frontend:
 
 # Testing
 test:
-	uv run pytest -v
-
-test-config:
-	uv run python -c "from agentic_fleet.utils.factory import WorkflowFactory; factory = WorkflowFactory(); print(f'✓ Loaded {len(factory.list_available_workflows())} workflows from config')"
-
-test-e2e:
-	@echo "Running E2E tests (requires backend + frontend running)..."
-	cd $(FRONTEND_DIR) && npx playwright test
+	$(PYTEST) $(PYTEST_OPTS) tests/
 
 test-frontend:
 	@echo "Running frontend unit tests..."
 	cd $(FRONTEND_DIR) && npm run test:run
+
+test-all: test test-frontend
+	@echo "✓ All tests passed (backend + frontend)"
+
+test-config:
+	$(PYTHON) -c "from agentic_fleet.utils.factory import WorkflowFactory; factory = WorkflowFactory(); print(f'✓ Loaded {len(factory.list_available_workflows())} workflows from config')"
+
+test-e2e:
+	@echo "Running E2E tests (requires backend + frontend running)..."
+	cd $(FRONTEND_DIR) && npx playwright test
 
 # Code quality
 lint:
@@ -137,13 +147,13 @@ frontend-format:
 type-check:
 	uv run ty check src
 
-# Run all checks
+# Quick quality check (fast, no tests)
 check: lint type-check
-	@echo "✓ All quality checks passed!"
+	@echo "✓ Quick quality checks passed!"
 
-# Run comprehensive QA (backend + frontend)
-qa: lint format type-check test test-frontend frontend-lint
-	@echo "✓ QA complete: All checks passed!"
+# Full QA suite (comprehensive)
+qa: lint format type-check frontend-lint test-all
+	@echo "✓ Full QA complete: All checks passed!"
 
 # Pre-commit
 pre-commit-install:
@@ -153,11 +163,15 @@ pre-commit-install:
 # Analysis tools
 analyze-history:
 	@echo "Analyzing workflow execution history..."
-	uv run python -m agentic_fleet.scripts.analyze_history
+	$(PYTHON) -m agentic_fleet.scripts.analyze_history
+
+evaluate-history:
+	@echo "Running DSPy-based evaluation on execution history..."
+	$(PYTHON) scripts/evaluate_history.py
 
 self-improve:
 	@echo "Running self-improvement analysis..."
-	uv run python -m agentic_fleet.scripts.self_improve
+	$(PYTHON) -m agentic_fleet.scripts.self_improve
 
 # Initialize .var/ directory structure for runtime data
 init-var:

@@ -61,6 +61,8 @@ htmlcov/
 .var/
 *.checkpoint
 .uv_cache/
+backend_pid.txt
+debug_status.txt
 
 # Legacy paths (kept for transition, can be removed after migration)
 .data/

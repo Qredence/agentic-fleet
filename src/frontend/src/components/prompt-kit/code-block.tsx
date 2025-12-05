@@ -1,7 +1,8 @@
 "use client";
 
 import { cn } from "@/lib/utils";
-import React, { useEffect, useState } from "react";
+import { Check, Copy } from "lucide-react";
+import React, { useEffect, useState, useCallback } from "react";
 import { codeToHtml } from "shiki";
 
 export type CodeBlockProps = {
@@ -24,6 +25,65 @@ function CodeBlock({ children, className, ...props }: CodeBlockProps) {
   );
 }
 
+export type CodeBlockHeaderProps = {
+  language?: string;
+  code?: string;
+  className?: string;
+} & React.HTMLProps<HTMLDivElement>;
+
+function CodeBlockHeader({
+  language,
+  code,
+  className,
+  ...props
+}: CodeBlockHeaderProps) {
+  const [copied, setCopied] = useState(false);
+
+  const handleCopy = useCallback(async () => {
+    if (!code) return;
+    try {
+      await navigator.clipboard.writeText(code);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch (err) {
+      console.error("Failed to copy code:", err);
+    }
+  }, [code]);
+
+  return (
+    <div
+      className={cn(
+        "flex items-center justify-between px-4 py-2 border-b border-border bg-muted/30",
+        className,
+      )}
+      {...props}
+    >
+      <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
+        {language || "code"}
+      </span>
+      {code && (
+        <button
+          onClick={handleCopy}
+          className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors"
+          aria-label={copied ? "Copied!" : "Copy code"}
+        >
+          {copied ? (
+            <>
+              <Check size={14} className="text-green-500" />
+              <span>Copied!</span>
+            </>
+          ) : (
+            <>
+              <Copy size={14} />
+              <span>Copy</span>
+            </>
+          )}
+        </button>
+      )}
+    </div>
+  );
+}
+
 export type CodeBlockCodeProps = {
   code: string;
   language?: string;
@@ -34,7 +94,7 @@ export type CodeBlockCodeProps = {
 function CodeBlockCode({
   code,
   language = "tsx",
-  theme = "github-light",
+  theme = "github-dark",
   className,
   ...props
 }: CodeBlockCodeProps) {
@@ -97,4 +157,4 @@ function CodeBlockGroup({
   );
 }
 
-export { CodeBlockGroup, CodeBlockCode, CodeBlock };
+export { CodeBlockGroup, CodeBlockCode, CodeBlockHeader, CodeBlock };

@@ -128,10 +128,7 @@ class TestHandleAgentRunUpdateUnit:
         content = "Hello, how can I help you?"
 
         # Simulate text extraction
-        if isinstance(content, list):
-            text = "".join(str(part) for part in content)
-        else:
-            text = str(content)
+        text = "".join(str(part) for part in content) if isinstance(content, list) else str(content)
 
         assert text == "Hello, how can I help you?"
 
@@ -140,10 +137,7 @@ class TestHandleAgentRunUpdateUnit:
         content = ["Part 1", "Part 2", "Part 3"]
 
         # Simulate text extraction
-        if isinstance(content, list):
-            text = "".join(str(part) for part in content)
-        else:
-            text = str(content)
+        text = "".join(str(part) for part in content) if isinstance(content, list) else str(content)
 
         assert text == "Part 1Part 2Part 3"
 
@@ -152,10 +146,7 @@ class TestHandleAgentRunUpdateUnit:
         content = ""
 
         # Simulate text extraction
-        if isinstance(content, list):
-            text = "".join(str(part) for part in content)
-        else:
-            text = str(content)
+        text = "".join(str(part) for part in content) if isinstance(content, list) else str(content)
 
         assert text == ""
 

@@ -1,38 +1,14 @@
-import os
-import sys
-import time
+"""Deprecated debug starter.
 
+This script previously attempted to run the backend from the old
+``agentic_fleet.api`` package. The app now lives under
+``agentic_fleet.app.main`` and the supported entrypoints are:
 
-def log(msg):
-    with open("debug_status.txt", "a") as f:
-        f.write(f"{time.ctime()}: {msg}\n")
+- ``make backend`` (backend only, reload)
+- ``make dev`` (full stack)
+- ``uv run uvicorn agentic_fleet.app.main:app --reload --port 8000``
 
+Keeping this stub prevents accidental use of the outdated import path.
+"""
 
-try:
-    log("Script started")
-
-    # Add src to sys.path
-    cwd = os.getcwd()
-    src_path = os.path.join(cwd, "src")
-    sys.path.append(src_path)
-    log(f"Added {src_path} to sys.path")
-
-    log("Attempting to import uvicorn")
-    import uvicorn
-
-    log("Imported uvicorn")
-
-    log("Attempting to import app")
-    from agentic_fleet.api.app import app
-
-    log("Imported app")
-
-    log("Starting uvicorn run on port 8003")
-    uvicorn.run(app, host="127.0.0.1", port=8003, log_level="debug")
-    log("Uvicorn run finished (unexpected if server is running)")
-
-except Exception as e:
-    log(f"ERROR: {e}")
-    import traceback
-
-    log(traceback.format_exc())
+raise SystemExit("scripts/debug_start.py is deprecated. Use `make backend` or `make dev` instead.")

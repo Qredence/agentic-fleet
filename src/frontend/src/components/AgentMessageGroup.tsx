@@ -2,7 +2,7 @@
 
 import React from "react";
 import type { Message as MessageType } from "../api/types";
-import { MessageBubble } from "./MessageBubble";
+import { MessageBubble } from "./ChatMessage";
 import { cn } from "@/lib/utils";
 
 interface AgentMessageGroupProps {
@@ -63,7 +63,6 @@ export const AgentMessageGroup: React.FC<AgentMessageGroupProps> = ({
               onCancelStreaming={isLast ? onCancelStreaming : undefined}
               isStreaming={isLast ? isStreaming : false}
               workflowPhase={message.workflowPhase}
-              isWorkflowPlaceholder={message.isWorkflowPlaceholder}
               showAvatar={showHeader}
               isGrouped={isMultipleMessages}
               isFirstInGroup={isFirst}

@@ -7,6 +7,7 @@ interface LayoutProps {
   conversations?: Conversation[];
   currentConversationId?: string | null;
   onSelectConversation?: (id: string) => void;
+  isConversationsLoading?: boolean;
 }
 
 export const Layout: React.FC<LayoutProps> = ({
@@ -15,6 +16,7 @@ export const Layout: React.FC<LayoutProps> = ({
   conversations,
   currentConversationId,
   onSelectConversation,
+  isConversationsLoading,
 }) => {
   return (
     <div className="flex h-screen bg-gray-1000 text-gray-100 overflow-hidden font-sans">
@@ -23,6 +25,7 @@ export const Layout: React.FC<LayoutProps> = ({
         conversations={conversations}
         currentConversationId={currentConversationId}
         onSelectConversation={onSelectConversation}
+        isLoading={isConversationsLoading}
       />
       <main className="flex-1 flex flex-col min-w-0 bg-gray-1000">
         {children}

@@ -17,6 +17,8 @@ this directory as the source of truth for workflow behaviour—adjust configurat
 | `agents/`                                 | **Canonical agent layer**: Specialist configuration modules, `coordinator.AgentFactory`, and consolidated prompts (`prompts.py`).                                  |
 | `agents/base.py`                          | `DSPyEnhancedAgent` mixin that decorates agent-framework threads with caching, tool awareness, and telemetry hooks.                                                |
 | `api/`                                    | **Service Layer**: FastAPI backend, `settings.py` (config), `error_handlers.py`, and database models (`api/db/`).                                                  |
+| `app/events/`                             | Event classification + mapping (`app.events.mapping`) that converts workflow events to structured SSE payloads for UI/CLI surfaces.                                |
+| `app/routers/nlu.py`                      | FastAPI router exposing intent classification and entity extraction endpoints backed by DSPy NLU modules.                                                          |
 | `workflows/`                              | **Orchestration Layer**: Flattened module structure for workflow management.                                                                                       |
 | `workflows/supervisor.py`                 | Main entry point for `DSPyReasoner`, orchestrating analysis, routing, and execution.                                                                               |
 | `workflows/builder.py`                    | `WorkflowBuilder` configuration and setup.                                                                                                                         |
@@ -33,6 +35,8 @@ this directory as the source of truth for workflow behaviour—adjust configurat
 | `workflows/messages.py`                   | Message synthesis and artifact extraction utilities.                                                                                                               |
 | `workflows/exceptions.py`                 | Workflow-specific exception hierarchy with context-aware error reporting.                                                                                          |
 | `dspy_modules/`                           | DSPy signatures and reasoner implementation.                                                                                                                       |
+| `dspy_modules/nlu.py`                     | DSPy-backed NLU module with lazy-loaded predictors for intent classification and entity extraction.                                                                |
+| `dspy_modules/nlu_signatures.py`          | DSPy signatures for intent classification and entity extraction used by the NLU module and compile pipeline.                                                       |
 | `dspy_modules/handoff_signatures.py`      | Enhanced DSPy signatures for agent-framework integration.                                                                                                          |
 | `dspy_modules/signatures.py`              | Core DSPy signatures: `TaskAnalysis`, `TaskRouting`, `QualityAssessment`, `ProgressEvaluation`.                                                                    |
 | `tools/`                                  | Tool adapters (Hosted Code Interpreter, Tavily search, browser automation, MCP bridge) resolved by the tool registry.                                              |
@@ -161,6 +165,19 @@ Slow-phase detection: per-phase timing is recorded in `phase_timings` (analysis/
 - OpenTelemetry tracing hooks live in `utils/tracing.py` and align with AI Toolkit collectors.
 - History capture and analytics live in `utils/history_manager.py` and the `scripts/` helpers.
 - Cosmos mirrors are handled by `utils/cosmos.py`: set `AGENTICFLEET_USE_COSMOS=1` plus `AZURE_COSMOS_ENDPOINT` and either `AZURE_COSMOS_KEY` or `AZURE_COSMOS_USE_MANAGED_IDENTITY=1` to enable best-effort writes to `workflowRuns`, `agentMemory`, `dspyExamples`, `dspyOptimizationRuns`, and `cache`. Partition keys follow best practices (`/workflowId`, `/userId`, `/cacheKey`), and the helper never blocks if the account is unreachable.
+
+## Event Streaming Surface
+
+- `app.events.mapping` classifies workflow events (routing, analysis, quality, handoff, reasoning deltas, agent outputs) into `StreamEvent` payloads consumed by the CLI/UI. Keep any new event kinds paired with UI rendering hints (`EventCategory`, `UIHint`).
+- `workflows.execution.streaming_events` emits structured events for executor phases; the mapper filters generic workflow lifecycle events to reduce noise for the frontend.
+- When adding workflow events, update the mapper tests under `tests/app/events/test_mapping.py` to pin UI behaviour and regression-proof SSE payloads.
+
+## DSPy NLU Stack
+
+- `dspy_modules/nlu.py` provides lazy-loaded DSPy predictors for intent classification and entity extraction, with optional compiled-module loading from `DEFAULT_NLU_CACHE_PATH`.
+- Signatures live in `dspy_modules/nlu_signatures.py`; align any schema changes with compiled artifacts and tests.
+- Public API endpoints are exposed via `app/routers/nlu.py`; they guard against missing NLU in the reasoner and surface HTTP 503/500 on misconfiguration or runtime failures.
+- Tests cover both the DSPy module and endpoints (`tests/dspy_modules/test_nlu.py`, `tests/app/test_nlu_endpoints.py`); update them when modifying predictor inputs/outputs or error handling.
 
 ## Code Quality & Architecture Improvements
 

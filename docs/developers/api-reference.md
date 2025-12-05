@@ -540,11 +540,48 @@ from src.agentic_fleet.utils.compiler import CACHE_VERSION
 
 The Agentic Fleet exposes a FastAPI-based REST API for interacting with the system.
 
-### Base URL
+### Health & Status Endpoints
 
-`/api/v1/workflow`
+#### `GET /health`
 
-### Endpoints
+Enhanced health check with dependency verification (v0.6.7+).
+
+**Response**:
+
+```json
+{
+  "status": "ok",
+  "checks": {
+    "api": "ok",
+    "workflow": "ok",
+    "session_manager": "ok",
+    "conversations": "ok"
+  },
+  "version": "0.6.7"
+}
+```
+
+**Status Values**:
+
+- `ok`: All dependencies healthy
+- `degraded`: Some dependencies unavailable
+
+#### `GET /ready`
+
+Readiness check for load balancers.
+
+**Response**:
+
+```json
+{
+  "status": "ready",
+  "workflow": true
+}
+```
+
+### Workflow Endpoints
+
+Base URL: `/api/v1`
 
 #### `POST /run`
 

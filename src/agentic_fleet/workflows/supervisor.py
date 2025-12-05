@@ -14,12 +14,16 @@ from agent_framework._types import ChatMessage, Role
 from agent_framework._workflows import (
     AgentRunUpdateEvent,
     ExecutorCompletedEvent,
-    MagenticAgentMessageEvent,
     RequestInfoEvent,
     WorkflowOutputEvent,
     WorkflowRunState,
     WorkflowStartedEvent,
     WorkflowStatusEvent,
+)
+
+from agentic_fleet.workflows.execution.streaming_events import (
+    MagenticAgentMessageEvent,
+    ReasoningStreamEvent,
 )
 
 from ..utils.history_manager import HistoryManager
@@ -30,7 +34,6 @@ from ..utils.tool_registry import ToolRegistry
 from .builder import build_fleet_workflow
 from .config import WorkflowConfig
 from .context import SupervisorContext
-from .execution.streaming_events import ReasoningStreamEvent
 from .handoff import HandoffManager
 from .helpers import is_simple_task
 from .initialization import initialize_workflow_context
@@ -39,6 +42,7 @@ from .models import QualityReport
 
 if TYPE_CHECKING:
     from agent_framework._agents import ChatAgent
+    from agent_framework._threads import AgentThread
     from agent_framework._workflows import Workflow
 
     from ..dspy_modules.reasoner import DSPyReasoner
@@ -161,8 +165,9 @@ class SupervisorWorkflow:
             if decision.get("mode") == "fast_path":
                 return True
 
-        # Check simple task heuristic
-        return is_simple_task(task)
+        # Check simple task heuristic using configured max_words threshold
+        simple_task_max_words = getattr(self.config, "simple_task_max_words", 40)
+        return is_simple_task(task, max_words=simple_task_max_words)
 
     async def _handle_fast_path(
         self,
@@ -431,23 +436,32 @@ class SupervisorWorkflow:
                         f"Applied reasoning_effort={reasoning_effort} to agent {agent_name}"
                     )
                 except AttributeError as e:
-                    logger.warning(f"Agent {agent_name} chat_client doesn't support reasoning_effort: {e}")
+                    logger.warning(
+                        f"Agent {agent_name} chat_client doesn't support reasoning_effort: {e}"
+                    )
                 except TypeError as e:
-                    logger.warning(f"Invalid type when setting reasoning_effort on {agent_name}: {e}")
+                    logger.warning(
+                        f"Invalid type when setting reasoning_effort on {agent_name}: {e}"
+                    )
                 except Exception as e:
-                    logger.error(f"Unexpected error setting reasoning_effort on {agent_name}: {e}", exc_info=True)
+                    logger.error(
+                        f"Unexpected error setting reasoning_effort on {agent_name}: {e}",
+                        exc_info=True,
+                    )
 
     async def run_stream(
         self,
         task: str,
         *,
         reasoning_effort: str | None = None,
+        thread: AgentThread | None = None,
     ) -> AsyncIterator[WorkflowEvent]:
         """Execute the workflow for a single task, streaming events.
 
         Args:
             task: The task string to execute
             reasoning_effort: Optional reasoning effort override (minimal, medium, maximal)
+            thread: Optional AgentThread for multi-turn conversation context
 
         Yields:
             WorkflowEvent: Workflow events including status updates, agent messages,
@@ -457,16 +471,23 @@ class SupervisorWorkflow:
             "SupervisorWorkflow.run_stream", attributes={"task": task, "mode": self.mode}
         ):
             logger.info(f"Running fleet workflow (streaming) for task: {task[:50]}...")
+
+            # Store thread in context for strategies to use
+            self.context.conversation_thread = thread
             workflow_id = str(uuid4())
             current_mode = self.mode
 
             # Apply reasoning effort override if provided
             if reasoning_effort:
                 if reasoning_effort not in ("minimal", "medium", "maximal"):
-                    logger.warning(f"Invalid reasoning_effort value: {reasoning_effort}. Expected minimal, medium, or maximal.")
+                    logger.warning(
+                        f"Invalid reasoning_effort value: {reasoning_effort}. Expected minimal, medium, or maximal."
+                    )
                     yield WorkflowStatusEvent(
-                        status=WorkflowRunState.FAILED,
-                        message=f"Invalid reasoning_effort: {reasoning_effort}. Must be minimal, medium, or maximal."
+                        state=WorkflowRunState.FAILED,
+                        data={
+                            "message": f"Invalid reasoning_effort: {reasoning_effort}. Must be minimal, medium, or maximal."
+                        },
                     )
                     # Notify middlewares of termination if present
                     if hasattr(self.context, "middlewares"):
@@ -483,8 +504,8 @@ class SupervisorWorkflow:
                             )
                     # Yield a terminal event to signal end of stream
                     yield WorkflowStatusEvent(
-                        status=WorkflowRunState.COMPLETED,
-                        message="Workflow terminated due to invalid reasoning_effort."
+                        state=WorkflowRunState.IDLE,
+                        data={"message": "Workflow terminated due to invalid reasoning_effort."},
                     )
                     return
                 logger.info(f"Applying reasoning_effort={reasoning_effort} for this request")
@@ -522,6 +543,7 @@ class SupervisorWorkflow:
             if current_mode in ("group_chat", "handoff"):
                 msg = ChatMessage(role=Role.USER, text=task)
                 async for event in self.workflow.run_stream(msg):
+                    # Surface MagenticAgentMessageEvent from executors (agent.start, agent.output, etc.)
                     if isinstance(event, MagenticAgentMessageEvent):
                         yield event
                     elif isinstance(event, AgentRunUpdateEvent):
@@ -569,7 +591,9 @@ class SupervisorWorkflow:
             else:
                 task_msg = TaskMessage(task=task)
                 async for event in self.workflow.run_stream(task_msg):
-                    if isinstance(event, MagenticAgentMessageEvent | ExecutorCompletedEvent):
+                    # Surface MagenticAgentMessageEvent from executors (agent.start, agent.output, etc.)
+                    # and ExecutorCompletedEvent for phase completions
+                    if isinstance(event, (MagenticAgentMessageEvent, ExecutorCompletedEvent)):
                         yield event
                     elif isinstance(event, AgentRunUpdateEvent):
                         converted = self._handle_agent_run_update(event)
@@ -643,8 +667,8 @@ class SupervisorWorkflow:
         assert self.dspy_reasoner is not None
 
         logger.info(f"Fast Path triggered for task: {task[:50]}...")
-        yield WorkflowStartedEvent(data=None)
-        yield WorkflowStatusEvent(state=WorkflowRunState.IN_PROGRESS, data=None)
+        # Skip generic status events for fast_path - they add no value to the UI
+        # Only yield the actual response
         result_text = self.dspy_reasoner.generate_simple_response(task)
 
         final_msg = FinalResultMessage(
@@ -665,7 +689,6 @@ class SupervisorWorkflow:
         yield WorkflowOutputEvent(
             data=self._create_output_event_data(final_msg), source_executor_id="fastpath"
         )
-        yield WorkflowStatusEvent(state=WorkflowRunState.IDLE, data=None)
 
     def _create_output_event_data(self, final_msg: FinalResultMessage) -> list[ChatMessage]:
         """Create output event data in list[ChatMessage] format."""

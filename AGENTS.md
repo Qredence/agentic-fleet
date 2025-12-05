@@ -32,6 +32,7 @@
 
 - Stack: DSPy + Microsoft `agent-framework` . Agents live under `src/agentic_fleet/agents/`; orchestration in `src/agentic_fleet/workflows/`; DSPy reasoning in `src/agentic_fleet/dspy_modules/`.
 - **5-Phase Pipeline** (v0.6.6): `analysis → routing → execution → progress → quality`. Judge phase removed for ~66% latency reduction.
+- **Smart Fast-Path** (v0.6.7): Simple tasks (factual questions, math, greetings) bypass multi-agent routing via `is_simple_task()` and get direct LLM responses in <1 second.
 - **Offline Layer**: DSPy compilation is strictly offline (via `scripts/optimize.py`). Runtime uses cached modules (`.var/logs/compiled_supervisor.pkl`) and never compiles on the fly.
 - **Dynamic Prompts**: Agent instructions (e.g., Planner) are generated dynamically via DSPy signatures (`PlannerInstructionSignature`) and optimized offline.
 - **Middleware**: `ChatMiddleware` handles cross-cutting concerns. `BridgeMiddleware` captures runtime history for offline learning.
@@ -39,6 +40,8 @@
 - **Group Chat**: Multi-agent discussions are supported via `DSPyGroupChatManager` and `GroupChatBuilder`. Workflows can participate as agents using the `workflow.as_agent()` pattern.
 - **Latency Tips**: Clear DSPy cache after changes (`make clear-cache`), use `gpt-5-mini` for routing, disable judge if not needed.
 - When adding or modifying agents/workflows, keep prompts/factories in sync and update config schema validation.
+- **Streaming/Event surface**: Workflow events are mapped through `agentic_fleet.app.events.mapping` to UI-friendly categories (reasoning, routing, analysis, quality, agent output). Keep SSE payloads and frontend workflow renderers in sync when adding new event kinds.
+- **NLU module**: A DSPy-backed NLU stack (`dspy_modules/nlu.py`, `app/routers/nlu.py`) exposes intent classification and entity extraction endpoints. Update signatures and compiled caches together when changing NLU behaviour.
 - For multi-agent expansion with OpenAI Agents SDK, treat Codex CLI as an MCP server and mirror roles from `.github/agents/agent-framework-spec.md`; document new roles/prompts here and in `docs/` as needed.
 
 ## Conventions & Notes
@@ -46,4 +49,6 @@
 - Keep code typed; follow Ruff/ty defaults (line length 100, py312 syntax, docstrings for public APIs).
 - Avoid committing artifacts from `.var/` (logs, caches, compiled DSPy outputs).
 - Prefer `make` targets over raw commands; if adding new workflows/tests, add a Make target and update this file.
+- Chat conversations persist to `.var/data/conversations.json` by default (override with `CONVERSATIONS_PATH`); delete the file to reset local chat history.
+- Structured logging: JSON logs are **on by default**. Set `LOG_JSON=0` to use human-readable logs instead.
 - If you change how to start, test, or observe the system, append the updated commands here and, for larger shifts, create an ExecPlan entry in `docs/plans/current.md`.

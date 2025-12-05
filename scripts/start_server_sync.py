@@ -1,15 +1,13 @@
-import os
-import sys
+"""Deprecated: synchronous starter for old agentic_fleet.api app.
 
-import uvicorn
+The application now lives at ``agentic_fleet.app.main:app``. Please use the
+standard entrypoints instead of this legacy script:
 
-# Add src to sys.path
-sys.path.append(os.path.join(os.getcwd(), "src"))
+- ``make backend``
+- ``make dev``
+- ``uv run uvicorn agentic_fleet.app.main:app --reload --port 8000``
+"""
 
-if __name__ == "__main__":
-    try:
-        print("Starting server...")
-        # Run on port 8002 to avoid conflicts
-        uvicorn.run("agentic_fleet.api.app:app", host="127.0.0.1", port=8002, reload=False)
-    except Exception as e:
-        print(f"Failed to start server: {e}")
+raise SystemExit(
+    "scripts/start_server_sync.py is deprecated. Use `make backend` or `make dev` instead."
+)

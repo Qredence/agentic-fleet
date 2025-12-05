@@ -21,6 +21,18 @@ class TaskAnalysis(dspy.Signature):
         desc="List of required capabilities (e.g., research, coding)"
     )
     estimated_steps: int = dspy.OutputField(desc="Estimated number of steps")
+    preferred_tools: list[str] = dspy.OutputField(
+        desc="Ordered list of tools to prioritize if needed (use tool names)"
+    )
+    needs_web_search: bool = dspy.OutputField(
+        desc="True if the task requires fresh or online information"
+    )
+    search_query: str = dspy.OutputField(
+        desc="Suggested search query (empty string if web search is not needed)"
+    )
+    urgency: Literal["low", "medium", "high"] = dspy.OutputField(
+        desc="Time sensitivity / freshness requirement"
+    )
     reasoning: str = dspy.OutputField(desc="Reasoning behind the analysis")
 
 
