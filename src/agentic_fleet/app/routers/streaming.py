@@ -40,9 +40,11 @@ logger = setup_logger(__name__)
 
 
 def _sanitize_log_input(s: str) -> str:
-    # Remove all control and non-printable characters (keep only printable ASCII)
-    # Also, truncate excessively long input to reasonable length for logging.
-    sanitized = "".join(ch for ch in s if ch in string.printable and ch not in "\r\n")
+    # Remove all control and non-printable characters (keep only safe, printable ASCII).
+    # Truncate excessively long input for logging.
+    if not isinstance(s, str):
+        s = str(s)
+    sanitized = "".join(ch for ch in s if 32 <= ord(ch) <= 126)
     return sanitized[:256]
 
 
