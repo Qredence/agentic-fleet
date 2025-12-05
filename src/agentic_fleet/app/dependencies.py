@@ -4,6 +4,7 @@ This module provides dependency injection utilities and application
 lifecycle management for the AgenticFleet API.
 """
 
+import asyncio
 import logging
 from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
@@ -147,8 +148,9 @@ class WorkflowSessionManager:
         """
         self._sessions: dict[str, WorkflowSession] = {}
         self._max_concurrent = max_concurrent
+        self._lock = asyncio.Lock()
 
-    def create_session(
+    async def create_session(
         self,
         task: str,
         reasoning_effort: str | None = None,
@@ -165,25 +167,26 @@ class WorkflowSessionManager:
         Raises:
             HTTPException: If concurrent workflow limit is reached.
         """
-        active_count = self.count_active()
-        if active_count >= self._max_concurrent:
-            logger.warning(
-                f"Concurrent workflow limit reached: active={active_count}, max={self._max_concurrent}"
-            )
-            raise HTTPException(
-                status_code=status.HTTP_429_TOO_MANY_REQUESTS,
-                detail=f"Maximum concurrent workflows ({self._max_concurrent}) reached. Try again later.",
-            )
+        async with self._lock:
+            active_count = self._count_active_locked()
+            if active_count >= self._max_concurrent:
+                logger.warning(
+                    f"Concurrent workflow limit reached: active={active_count}, max={self._max_concurrent}"
+                )
+                raise HTTPException(
+                    status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+                    detail=f"Maximum concurrent workflows ({self._max_concurrent}) reached. Try again later.",
+                )
 
-        workflow_id = f"wf-{uuid4().hex[:12]}"
-        session = WorkflowSession(
-            workflow_id=workflow_id,
-            task=task,
-            status=WorkflowStatus.CREATED,
-            created_at=datetime.now(),
-            reasoning_effort=reasoning_effort,
-        )
-        self._sessions[workflow_id] = session
+            workflow_id = f"wf-{uuid4().hex[:12]}"
+            session = WorkflowSession(
+                workflow_id=workflow_id,
+                task=task,
+                status=WorkflowStatus.CREATED,
+                created_at=datetime.now(),
+                reasoning_effort=reasoning_effort,
+            )
+            self._sessions[workflow_id] = session
 
         task_preview = task[:50] if len(task) > 50 else task
         logger.info(
@@ -191,7 +194,7 @@ class WorkflowSessionManager:
         )
         return session
 
-    def get_session(self, workflow_id: str) -> WorkflowSession | None:
+    async def get_session(self, workflow_id: str) -> WorkflowSession | None:
         """Get a workflow session by ID.
 
         Args:
@@ -200,9 +203,10 @@ class WorkflowSessionManager:
         Returns:
             The session if found, None otherwise.
         """
-        return self._sessions.get(workflow_id)
+        async with self._lock:
+            return self._sessions.get(workflow_id)
 
-    def update_status(
+    async def update_status(
         self,
         workflow_id: str,
         status: WorkflowStatus,
@@ -218,31 +222,29 @@ class WorkflowSessionManager:
             started_at: Optional started timestamp.
             completed_at: Optional completed timestamp.
         """
-        session = self._sessions.get(workflow_id)
-        if session:
-            session.status = status
-            if started_at:
-                session.started_at = started_at
-            if completed_at:
-                session.completed_at = completed_at
+        async with self._lock:
+            session = self._sessions.get(workflow_id)
+            if session:
+                session.status = status
+                if started_at:
+                    session.started_at = started_at
+                if completed_at:
+                    session.completed_at = completed_at
 
-            logger.debug(
-                f"Updated workflow status: workflow_id={workflow_id}, status={status.value}"
-            )
+                logger.debug(
+                    f"Updated workflow status: workflow_id={workflow_id}, status={status.value}"
+                )
 
-    def count_active(self) -> int:
+    async def count_active(self) -> int:
         """Count currently active (running) workflows.
 
         Returns:
             Number of workflows in RUNNING status.
         """
-        return sum(
-            1
-            for s in self._sessions.values()
-            if s.status in (WorkflowStatus.CREATED, WorkflowStatus.RUNNING)
-        )
+        async with self._lock:
+            return self._count_active_locked()
 
-    def cleanup_completed(self, max_age_seconds: int = 3600) -> int:
+    async def cleanup_completed(self, max_age_seconds: int = 3600) -> int:
         """Remove old completed/failed sessions.
 
         Args:
@@ -251,30 +253,39 @@ class WorkflowSessionManager:
         Returns:
             Number of sessions cleaned up.
         """
-        now = datetime.now()
-        to_remove = []
+        async with self._lock:
+            now = datetime.now()
+            to_remove = []
 
-        for wid, session in self._sessions.items():
-            if session.status in (WorkflowStatus.COMPLETED, WorkflowStatus.FAILED):
-                age = (now - session.created_at).total_seconds()
-                if age > max_age_seconds:
-                    to_remove.append(wid)
+            for wid, session in self._sessions.items():
+                if session.status in (WorkflowStatus.COMPLETED, WorkflowStatus.FAILED):
+                    age = (now - session.created_at).total_seconds()
+                    if age > max_age_seconds:
+                        to_remove.append(wid)
 
-        for wid in to_remove:
-            del self._sessions[wid]
+            for wid in to_remove:
+                del self._sessions[wid]
 
         if to_remove:
             logger.info(f"Cleaned up old sessions: count={len(to_remove)}")
 
         return len(to_remove)
 
-    def list_sessions(self) -> list[WorkflowSession]:
+    async def list_sessions(self) -> list[WorkflowSession]:
         """List all sessions.
 
         Returns:
             List of all workflow sessions.
         """
-        return list(self._sessions.values())
+        async with self._lock:
+            return list(self._sessions.values())
+
+    def _count_active_locked(self) -> int:
+        return sum(
+            1
+            for s in self._sessions.values()
+            if s.status in (WorkflowStatus.CREATED, WorkflowStatus.RUNNING)
+        )
 
 
 # Global session manager instance
@@ -304,7 +315,17 @@ def _get_workflow(request: Request) -> SupervisorWorkflow:
     Returns:
         The SupervisorWorkflow instance stored in app state.
     """
-    return request.app.state.workflow
+    workflow = getattr(request.app.state, "workflow", None)
+    if workflow is None:
+        logger.warning(
+            "Workflow requested before initialization; returning 503 Service Unavailable"
+        )
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Workflow not initialized. Service unavailable.",
+        )
+
+    return workflow
 
 
 # Annotated dependency for cleaner injection in route handlers

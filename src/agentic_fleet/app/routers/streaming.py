@@ -241,7 +241,7 @@ async def _event_generator(
 
     try:
         # Update session to running
-        session_manager.update_status(
+        await session_manager.update_status(
             session.workflow_id,
             WorkflowStatus.RUNNING,
             started_at=datetime.now(),
@@ -309,7 +309,7 @@ async def _event_generator(
     finally:
         # Update session status
         final_status = WorkflowStatus.FAILED if has_error else WorkflowStatus.COMPLETED
-        session_manager.update_status(
+        await session_manager.update_status(
             session.workflow_id,
             final_status,
             completed_at=datetime.now(),
@@ -382,7 +382,9 @@ def _validate_websocket_origin(websocket: WebSocket) -> bool:
     if origin in settings.cors_allowed_origins:
         return True
 
-    logger.warning(f"WebSocket connection rejected: invalid origin '{origin.replace(chr(10), '').replace(chr(13), '')}'")
+    logger.warning(
+        f"WebSocket connection rejected: invalid origin '{origin.replace(chr(10), '').replace(chr(13), '')}'"
+    )
     return False
 
 
@@ -489,7 +491,7 @@ async def websocket_chat(
 
         # Create session (will raise 429 if limit exceeded)
         try:
-            session = session_manager.create_session(
+            session = await session_manager.create_session(
                 task=request.message,
                 reasoning_effort=request.reasoning_effort,
             )
@@ -766,7 +768,7 @@ async def websocket_chat(
     finally:
         # Update session status if cancelled
         if session and cancel_event.is_set():
-            session_manager.update_status(
+            await session_manager.update_status(
                 session.workflow_id,
                 WorkflowStatus.CANCELLED,
                 completed_at=datetime.now(),
@@ -793,7 +795,7 @@ async def list_sessions(
     Returns:
         List of workflow sessions.
     """
-    return session_manager.list_sessions()
+    return await session_manager.list_sessions()
 
 
 @router.get(
@@ -817,7 +819,7 @@ async def get_session(
     Raises:
         HTTPException: If session not found.
     """
-    session = session_manager.get_session(workflow_id)
+    session = await session_manager.get_session(workflow_id)
     if session is None:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -845,7 +847,7 @@ async def cancel_session(
     Raises:
         HTTPException: If session not found.
     """
-    session = session_manager.get_session(workflow_id)
+    session = await session_manager.get_session(workflow_id)
     if session is None:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -854,7 +856,7 @@ async def cancel_session(
 
     # Only cancel if running
     if session.status in (WorkflowStatus.CREATED, WorkflowStatus.RUNNING):
-        session_manager.update_status(
+        await session_manager.update_status(
             workflow_id,
             WorkflowStatus.CANCELLED,
             completed_at=datetime.now(),
