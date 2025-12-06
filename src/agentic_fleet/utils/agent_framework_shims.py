@@ -197,12 +197,14 @@ def ensure_agent_framework_shims() -> None:
                         out.append(tool.to_dict())
                         continue
                     except Exception:
+                        # Ignore tools that cannot be serialized to dict.
                         pass
                 if hasattr(tool, "schema"):
                     try:
                         out.append(tool.schema)
                         continue
                     except Exception:
+                        # Ignore tools whose `schema` attribute cannot be accessed.
                         pass
             return out
 
