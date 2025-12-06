@@ -4,7 +4,6 @@ These tests verify that TavilyMCPTool uses secure authentication via
 Authorization header (Bearer token) rather than URL query parameters.
 """
 
-import asyncio
 import importlib.util
 import os
 import sys
