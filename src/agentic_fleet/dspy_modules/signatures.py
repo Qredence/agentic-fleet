@@ -233,16 +233,17 @@ class FleetReAct(dspy.Module):
         )
         self.max_iters = max_iters
 
-    def forward(self, question: str) -> dspy.Prediction:
+    def forward(self, question: str, tools: list[Any] | None = None) -> dspy.Prediction:
         """Execute ReAct loop.
 
         Args:
             question: The question/task to solve
+            tools: Optional list of tools to make available (typically set in constructor)
 
         Returns:
             Prediction with answer and reasoning
         """
-        return self.react(question=question)
+        return self.react(question=question, tools=tools)
 
 
 class FleetPoT(dspy.Module):
