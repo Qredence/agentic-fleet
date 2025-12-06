@@ -32,6 +32,20 @@ class TavilyMCPTool(BaseMCPTool):
     This tool connects to Tavily's MCP server and automatically loads
     available tools from the server. It provides better integration
     with agent-framework's ChatAgent compared to direct API integration.
+
+    Authentication:
+        The API key is passed via HTTP Authorization header (Bearer token)
+        rather than URL query parameters. This is the preferred authentication
+        method as it prevents credentials from appearing in logs or URL history.
+
+        Both methods are supported by the Tavily MCP server:
+        - Authorization header (used here): ``Authorization: Bearer <api_key>``
+        - URL query parameter (legacy): ``?tavilyApiKey=<api_key>``
+
+    Note:
+        If migrating from an older implementation that used URL query parameters,
+        no client-side changes are required. The Authorization header method is
+        fully compatible with the Tavily MCP server.
     """
 
     def __init__(self, api_key: str | None = None):
