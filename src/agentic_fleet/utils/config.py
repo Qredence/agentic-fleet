@@ -509,7 +509,41 @@ class OpenAIConfig(BaseModel):
 
 
 class TracingConfig(BaseModel):
-    """Tracing / observability configuration."""
+    """Tracing / observability configuration.
+
+    This configuration controls OpenTelemetry-based tracing for workflow observability.
+
+    Attributes:
+        enabled: Enable/disable tracing. Defaults to False.
+        otlp_endpoint: OpenTelemetry collector endpoint. Defaults to localhost:4317.
+        capture_sensitive: Whether to capture sensitive data (API keys, user inputs, etc.)
+            in trace spans. Defaults to False for security.
+
+    Security Note:
+        The `capture_sensitive` field defaults to False following the principle of
+        secure-by-default. When False, sensitive data such as API keys, user inputs,
+        and potentially identifying information will be redacted from trace spans.
+
+        Set to True only in development/debugging scenarios where:
+        - You need full request/response visibility for troubleshooting
+        - Your tracing backend has appropriate access controls
+        - You understand the privacy implications
+
+    Migration Note:
+        Users who previously relied on full trace data visibility for debugging
+        should explicitly set `capture_sensitive: true` in their configuration
+        if they need this behavior. Production environments should keep this False.
+
+    Example:
+        In workflow_config.yaml:
+
+        .. code-block:: yaml
+
+            tracing:
+              enabled: true
+              otlp_endpoint: "http://localhost:4317"
+              capture_sensitive: false  # Keep false in production
+    """
 
     enabled: bool = False
     otlp_endpoint: str = "http://localhost:4317"
