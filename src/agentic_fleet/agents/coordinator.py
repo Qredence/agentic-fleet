@@ -17,8 +17,8 @@ from agent_framework.openai import OpenAIResponsesClient
 from dotenv import load_dotenv
 
 from agentic_fleet.agents.base import DSPyEnhancedAgent
-from agentic_fleet.dspy_modules.agent_signatures import PlannerInstructionSignature
-from agentic_fleet.utils.env import env_config
+from agentic_fleet.dspy_modules.signatures import PlannerInstructionSignature
+from agentic_fleet.utils.config import env_config
 from agentic_fleet.utils.telemetry import optional_span
 from agentic_fleet.utils.tool_registry import ToolRegistry
 

@@ -24,7 +24,13 @@ from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from agentic_fleet.utils.cache import TTLCache
     from agentic_fleet.utils.compiler import compile_reasoner
-    from agentic_fleet.utils.config_loader import get_agent_model, get_config_path, load_config
+    from agentic_fleet.utils.config import (
+        env_config,
+        get_agent_model,
+        get_config_path,
+        load_config,
+        validate_agentic_fleet_env,
+    )
     from agentic_fleet.utils.models import ExecutionMode, RoutingDecision
     from agentic_fleet.utils.tool_registry import ToolMetadata, ToolRegistry
     from agentic_fleet.utils.tracing import get_meter, get_tracer, initialize_tracing
@@ -36,12 +42,14 @@ __all__ = [
     "ToolMetadata",
     "ToolRegistry",
     "compile_reasoner",
+    "env_config",
     "get_agent_model",
     "get_config_path",
     "get_meter",
     "get_tracer",
     "initialize_tracing",
     "load_config",
+    "validate_agentic_fleet_env",
 ]
 
 
@@ -66,18 +74,28 @@ def __getattr__(name: str) -> object:
 
         return compile_reasoner
 
-    if name in ("load_config", "get_agent_model", "get_config_path"):
-        from agentic_fleet.utils.config_loader import (
+    if name in (
+        "load_config",
+        "get_agent_model",
+        "get_config_path",
+        "env_config",
+        "validate_agentic_fleet_env",
+    ):
+        from agentic_fleet.utils.config import (
+            env_config,
             get_agent_model,
             get_config_path,
             load_config,
+            validate_agentic_fleet_env,
         )
 
-        if name == "load_config":
-            return load_config
-        if name == "get_config_path":
-            return get_config_path
-        return get_agent_model
+        return {
+            "load_config": load_config,
+            "get_config_path": get_config_path,
+            "get_agent_model": get_agent_model,
+            "env_config": env_config,
+            "validate_agentic_fleet_env": validate_agentic_fleet_env,
+        }[name]
 
     if name == "TTLCache":
         from agentic_fleet.utils.cache import TTLCache

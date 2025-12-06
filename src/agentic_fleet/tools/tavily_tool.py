@@ -12,10 +12,10 @@ from __future__ import annotations
 import asyncio
 from typing import TYPE_CHECKING, Any, TypedDict
 
+from agent_framework._serialization import SerializationMixin
 from agent_framework._tools import ToolProtocol
 
-from agentic_fleet.tools.serialization import SerializationMixin
-from agentic_fleet.utils.env import env_config
+from agentic_fleet.utils.config import env_config
 from agentic_fleet.utils.resilience import external_api_retry
 
 try:  # Optional dependency — keep import non-fatal at module load time

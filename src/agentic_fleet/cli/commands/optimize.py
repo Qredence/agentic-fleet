@@ -12,12 +12,12 @@ from rich.progress import Progress
 
 from ...dspy_modules.reasoner import DSPyReasoner
 from ...utils.compiler import compile_answer_quality, compile_nlu, compile_reasoner
-from ...utils.config_loader import load_config
-from ...utils.constants import (
+from ...utils.config import (
     DEFAULT_ANSWER_QUALITY_CACHE_PATH,
     DEFAULT_CACHE_PATH,
     DEFAULT_GEPA_LOG_DIR,
     DEFAULT_NLU_CACHE_PATH,
+    load_config,
 )
 from ..utils import init_tracing, resolve_resource_path
 

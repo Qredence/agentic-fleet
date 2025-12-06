@@ -20,16 +20,20 @@ from rich.markdown import Markdown
 from rich.panel import Panel
 from rich.text import Text
 
-from ..utils.config_loader import get_agent_model, load_config
-from ..utils.constants import DEFAULT_GEPA_LOG_DIR, DEFAULT_HISTORY_PATH
+from ..utils.config import (
+    DEFAULT_GEPA_LOG_DIR,
+    DEFAULT_HISTORY_PATH,
+    get_agent_model,
+    load_config,
+)
 from ..utils.error_utils import sanitize_error_message
 from ..utils.logger import setup_logger
 from ..utils.progress import RichProgressCallback
 from ..workflows.config import WorkflowConfig
-from ..workflows.execution.streaming_events import MagenticAgentMessageEvent
-from ..workflows.messages import (
+from ..workflows.models import (
     AnalysisMessage,
     ExecutionMessage,
+    MagenticAgentMessageEvent,
     ProgressMessage,
     QualityMessage,
     RoutingMessage,

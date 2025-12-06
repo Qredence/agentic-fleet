@@ -19,7 +19,7 @@ import logging
 import os
 from typing import Any
 
-from ..utils.constants import DEFAULT_ANSWER_QUALITY_CACHE_PATH
+from ..utils.config import DEFAULT_ANSWER_QUALITY_CACHE_PATH
 
 logger = logging.getLogger(__name__)
 

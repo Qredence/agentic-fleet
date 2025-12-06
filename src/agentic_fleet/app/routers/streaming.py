@@ -18,7 +18,6 @@ from typing import TYPE_CHECKING, Any
 from agent_framework._threads import AgentThread
 from fastapi import APIRouter, HTTPException, WebSocket, WebSocketDisconnect, status
 
-from agentic_fleet.app.dependencies import SessionManagerDep
 from agentic_fleet.app.events.mapping import classify_event, map_workflow_event
 from agentic_fleet.app.schemas import (
     ChatRequest,
@@ -790,89 +789,3 @@ async def websocket_chat(
             await websocket.close()
         if heartbeat_task:
             heartbeat_task.cancel()
-
-
-@router.get(
-    "/sessions",
-    summary="List active workflow sessions",
-    description="Returns a list of all workflow sessions (active and recent).",
-)
-async def list_sessions(
-    session_manager: SessionManagerDep,
-) -> list[WorkflowSession]:
-    """List all workflow sessions.
-
-    Args:
-        session_manager: Injected session manager.
-
-    Returns:
-        List of workflow sessions.
-    """
-    return await session_manager.list_sessions()
-
-
-@router.get(
-    "/sessions/{workflow_id}",
-    summary="Get workflow session details",
-    description="Returns details for a specific workflow session.",
-)
-async def get_session(
-    workflow_id: str,
-    session_manager: SessionManagerDep,
-) -> WorkflowSession:
-    """Get a specific workflow session.
-
-    Args:
-        workflow_id: The workflow ID.
-        session_manager: Injected session manager.
-
-    Returns:
-        The workflow session.
-
-    Raises:
-        HTTPException: If session not found.
-    """
-    session = await session_manager.get_session(workflow_id)
-    if session is None:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"Workflow session '{workflow_id}' not found.",
-        )
-    return session
-
-
-@router.delete(
-    "/sessions/{workflow_id}",
-    summary="Cancel a workflow session",
-    description="Cancels a running workflow session. Has no effect on completed sessions.",
-    status_code=status.HTTP_204_NO_CONTENT,
-)
-async def cancel_session(
-    workflow_id: str,
-    session_manager: SessionManagerDep,
-) -> None:
-    """Cancel a running workflow session.
-
-    Args:
-        workflow_id: The workflow ID to cancel.
-        session_manager: Injected session manager.
-
-    Raises:
-        HTTPException: If session not found.
-    """
-    session = await session_manager.get_session(workflow_id)
-    if session is None:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"Workflow session '{workflow_id}' not found.",
-        )
-
-    # Only cancel if running
-    if session.status in (WorkflowStatus.CREATED, WorkflowStatus.RUNNING):
-        await session_manager.update_status(
-            workflow_id,
-            WorkflowStatus.CANCELLED,
-            completed_at=datetime.now(),
-        )
-        sanitized_workflow_id = workflow_id.replace("\n", "").replace("\r", "")
-        logger.info(f"Cancelled workflow session: workflow_id={sanitized_workflow_id}")

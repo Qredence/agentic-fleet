@@ -740,7 +740,7 @@ def clear_cache(cache_path: str = ".var/logs/compiled_supervisor.pkl"):
     Args:
         cache_path: Path to cache file to clear
     """
-    from .constants import DEFAULT_ANSWER_QUALITY_CACHE_PATH
+    from .config import DEFAULT_ANSWER_QUALITY_CACHE_PATH
 
     # Clear the specified cache
     try:
@@ -959,7 +959,7 @@ def compile_answer_quality(
     Returns:
         Compiled AnswerQualityModule
     """
-    from .constants import DEFAULT_ANSWER_QUALITY_CACHE_PATH
+    from .config import DEFAULT_ANSWER_QUALITY_CACHE_PATH
 
     if progress_callback is None:
         progress_callback = NullProgressCallback()
@@ -1103,7 +1103,7 @@ def compile_nlu(
     Returns:
         Compiled DSPyNLU module
     """
-    from .constants import DEFAULT_NLU_CACHE_PATH
+    from .config import DEFAULT_NLU_CACHE_PATH
 
     if progress_callback is None:
         progress_callback = NullProgressCallback()

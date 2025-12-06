@@ -172,6 +172,44 @@ def ensure_agent_framework_shims() -> None:
 
         root.HostedCodeInterpreterTool = HostedCodeInterpreterTool  # type: ignore[attr-defined]
 
+    # -- Serialization + tools helpers (used by tool registry and adapters) --
+
+    serialization = cast(Any, _ensure_submodule("agent_framework._serialization"))
+    if not hasattr(serialization, "SerializationMixin"):
+
+        class SerializationMixin:  # pragma: no cover - shim
+            def to_dict(self, **_: Any) -> dict[str, Any]:
+                return {}
+
+        serialization.SerializationMixin = SerializationMixin
+
+    tools_mod = cast(Any, _ensure_submodule("agent_framework._tools"))
+    if not hasattr(tools_mod, "_tools_to_dict"):
+
+        def _tools_to_dict(tools: Any):  # pragma: no cover - shim
+            items = tools if isinstance(tools, list | tuple) else [tools]
+            out = []
+            for tool in items:
+                if tool is None:
+                    continue
+                if hasattr(tool, "to_dict"):
+                    try:
+                        out.append(tool.to_dict())
+                        continue
+                    except Exception:
+                        # Ignore tools that cannot be serialized to dict.
+                        pass
+                if hasattr(tool, "schema"):
+                    try:
+                        out.append(tool.schema)
+                        continue
+                    except Exception:
+                        # Ignore tools whose `schema` attribute cannot be accessed.
+                        pass
+            return out
+
+        tools_mod._tools_to_dict = _tools_to_dict
+
     if not hasattr(root, "ChatAgent"):
 
         class ChatAgent:  # pragma: no cover - shim

@@ -21,7 +21,7 @@ from agent_framework._workflows import (
     WorkflowStatusEvent,
 )
 
-from agentic_fleet.workflows.execution.streaming_events import (
+from agentic_fleet.workflows.models import (
     MagenticAgentMessageEvent,
     ReasoningStreamEvent,
 )
@@ -37,8 +37,7 @@ from .context import SupervisorContext
 from .handoff import HandoffManager
 from .helpers import is_simple_task
 from .initialization import initialize_workflow_context
-from .messages import FinalResultMessage, TaskMessage
-from .models import QualityReport
+from .models import FinalResultMessage, QualityReport, TaskMessage
 
 if TYPE_CHECKING:
     from agent_framework._agents import ChatAgent

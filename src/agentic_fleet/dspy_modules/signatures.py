@@ -2,13 +2,22 @@
 
 This module defines the input/output signatures used by the DSPyReasoner
 to perform cognitive tasks.
+
+Consolidated from:
+- signatures.py (core signatures)
+- agent_signatures.py (agent instruction generation)
+- workflow_signatures.py (enhanced routing and workflow strategy)
 """
 
 from __future__ import annotations
 
-from typing import Literal
+from typing import Any, Literal
 
 import dspy
+
+# =============================================================================
+# Core Task Signatures
+# =============================================================================
 
 
 class TaskAnalysis(dspy.Signature):
@@ -117,3 +126,147 @@ class GroupChatSpeakerSelection(dspy.Signature):
 
     next_speaker: str = dspy.OutputField(desc="The name of the next speaker, or 'TERMINATE' to end")
     reasoning: str = dspy.OutputField(desc="Reasoning for the selection")
+
+
+# =============================================================================
+# Agent Instruction Signatures (from agent_signatures.py)
+# =============================================================================
+
+
+class AgentInstructionSignature(dspy.Signature):
+    """Generate instructions for an agent based on its role and context."""
+
+    role: str = dspy.InputField(desc="The role of the agent (e.g., 'coder', 'researcher')")
+    description: str = dspy.InputField(desc="Description of the agent's responsibilities")
+    task_context: str = dspy.InputField(desc="Context of the current task or workflow")
+
+    agent_instructions: str = dspy.OutputField(desc="Detailed system instructions for the agent")
+
+
+class PlannerInstructionSignature(dspy.Signature):
+    """Generate specialized instructions for the Planner/Orchestrator agent."""
+
+    available_agents: str = dspy.InputField(desc="List of available agents and their descriptions")
+    workflow_goal: str = dspy.InputField(desc="The goal of the current workflow")
+
+    agent_instructions: str = dspy.OutputField(desc="Detailed instructions for the Planner agent")
+
+
+# =============================================================================
+# Workflow-specific Signatures (from workflow_signatures.py)
+# =============================================================================
+
+
+class EnhancedTaskRouting(dspy.Signature):
+    """Advanced task routing with efficiency and tool-planning awareness.
+
+    Optimizes for latency and token usage by pre-planning tool usage
+    and setting execution constraints.
+    """
+
+    task: str = dspy.InputField(desc="Task to be routed")
+    team_capabilities: str = dspy.InputField(desc="Capabilities of available agents")
+    available_tools: str = dspy.InputField(desc="List of available tools")
+    current_context: str = dspy.InputField(desc="Execution context")
+    handoff_history: str = dspy.InputField(desc="History of agent handoffs")
+    workflow_state: str = dspy.InputField(desc="Current state of the workflow")
+
+    assigned_to: list[str] = dspy.OutputField(desc="Agents assigned to the task")
+    execution_mode: Literal["delegated", "sequential", "parallel"] = dspy.OutputField(
+        desc="Execution mode"
+    )
+    subtasks: list[str] = dspy.OutputField(desc="Breakdown of subtasks")
+
+    handoff_strategy: str = dspy.OutputField(desc="Strategy for agent handoffs")
+    workflow_gates: str = dspy.OutputField(desc="Quality gates and checkpoints")
+
+    # Efficiency and Tool Planning Fields
+    tool_plan: list[str] = dspy.OutputField(desc="Ordered list of tools to use")
+    tool_goals: str = dspy.OutputField(desc="Specific goals for tool usage")
+    latency_budget: str = dspy.OutputField(desc="Estimated time/latency budget")
+    reasoning: str = dspy.OutputField(desc="Reasoning for the routing decision")
+
+
+class WorkflowStrategy(dspy.Signature):
+    """Decides the high-level workflow architecture for a task.
+
+    Selects between:
+    - 'handoff': For simple, linear, or real-time tasks (Low latency).
+    - 'standard': For complex, multi-step, or quality-critical tasks (High robustness).
+    - 'fast_path': For trivial queries (Instant).
+    """
+
+    task: str = dspy.InputField(desc="The user's request or task")
+    complexity_analysis: str = dspy.InputField(desc="Analysis of task complexity")
+
+    workflow_mode: Literal["handoff", "standard", "fast_path"] = dspy.OutputField(
+        desc="The optimal workflow architecture"
+    )
+    reasoning: str = dspy.OutputField(desc="Why this architecture was chosen")
+
+
+# =============================================================================
+# Advanced Reasoning Modules (from reasoning.py)
+# =============================================================================
+
+
+class FleetReAct(dspy.Module):
+    """ReAct (Reason + Act) module for autonomous tool usage.
+
+    Configures ReAct with appropriate max_iters to balance between
+    thoroughness and latency/cost. Default max_iters=5 provides good
+    coverage while preventing infinite loops.
+
+    Args:
+        signature: DSPy signature defining input/output format
+        tools: List of tools available for the ReAct agent to use
+        max_iters: Maximum number of ReAct iterations to prevent infinite loops.
+                   Default is 5 to balance thoroughness with latency/cost.
+    """
+
+    def __init__(
+        self, signature: Any = None, tools: list[Any] | None = None, max_iters: int = 5
+    ) -> None:
+        super().__init__()
+        self.react = dspy.ReAct(
+            signature or "question -> answer", tools=tools or [], max_iters=max_iters
+        )
+        self.max_iters = max_iters
+
+    def forward(self, question: str, tools: list[Any] | None = None) -> dspy.Prediction:
+        """Execute ReAct loop.
+
+        Args:
+            question: The question/task to solve
+            tools: Optional list of tools to make available (typically set in constructor)
+
+        Returns:
+            Prediction with answer and reasoning
+        """
+        return self.react(question=question, tools=tools)
+
+
+class FleetPoT(dspy.Module):
+    """Program of Thought module for code-based reasoning."""
+
+    def __init__(self, signature: Any = None) -> None:
+        super().__init__()
+        self.pot = dspy.ProgramOfThought(signature or "question -> answer")
+        self.last_error: str | None = None
+
+    def forward(self, question: str) -> dspy.Prediction:
+        """Execute Program of Thought.
+
+        Args:
+            question: The question/task to solve
+
+        Returns:
+            Prediction with answer and reasoning (code)
+        """
+        self.last_error = None
+        try:
+            result = self.pot(question=question)
+        except RuntimeError as exc:
+            self.last_error = str(exc)
+            raise
+        return result

@@ -23,9 +23,9 @@ from agentic_fleet.app.schemas import (
     StreamEventType,
     UIHint,
 )
-from agentic_fleet.utils.config_loader import get_config_path
+from agentic_fleet.utils.config import get_config_path
 from agentic_fleet.utils.logger import setup_logger
-from agentic_fleet.workflows.execution.streaming_events import (
+from agentic_fleet.workflows.models import (
     MagenticAgentMessageEvent,
     ReasoningStreamEvent,
 )
@@ -655,7 +655,7 @@ def map_workflow_event(
 
         # Map different phase message types to thoughts
         # Local imports to avoid circular dependency
-        from agentic_fleet.workflows.messages import (
+        from agentic_fleet.workflows.models import (
             AnalysisMessage,
             ProgressMessage,
             QualityMessage,

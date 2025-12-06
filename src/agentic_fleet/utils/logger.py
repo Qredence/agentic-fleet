@@ -10,7 +10,7 @@ from pathlib import Path
 
 from pythonjsonlogger import jsonlogger
 
-from .env import env_config
+from .config import env_config
 
 
 class _EnsureRequestIdFilter(logging.Filter):
@@ -45,6 +45,10 @@ def setup_logger(
 
     logger = logging.getLogger(name)
     logger.setLevel(getattr(logging, level.upper()))
+
+    # Suppress DSPy adapter fallback warnings (expected behavior when model
+    # doesn't support structured outputs - graceful fallback to JSON mode)
+    logging.getLogger("dspy.adapters.json_adapter").setLevel(logging.ERROR)
 
     # Prevent propagation to root logger to avoid duplicate output
     logger.propagate = False

@@ -5,8 +5,7 @@ import pytest
 from agentic_fleet.core.middlewares import ChatMiddleware
 from agentic_fleet.utils.models import ExecutionMode, RoutingDecision
 from agentic_fleet.workflows.context import SupervisorContext
-from agentic_fleet.workflows.messages import FinalResultMessage
-from agentic_fleet.workflows.models import QualityReport
+from agentic_fleet.workflows.models import FinalResultMessage, QualityReport
 from agentic_fleet.workflows.supervisor import SupervisorWorkflow
 
 

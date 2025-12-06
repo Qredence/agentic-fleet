@@ -16,8 +16,7 @@ from agent_framework._workflows import WorkflowOutputEvent
 from ..utils.logger import setup_logger
 from ..utils.models import ExecutionMode, RoutingDecision
 from .exceptions import AgentExecutionError
-from .execution.streaming_events import MagenticAgentMessageEvent
-from .group_chat_builder import GroupChatBuilder
+from .group_chat_adapter import GroupChatBuilder
 from .handoff import HandoffContext, HandoffManager
 from .helpers import (
     derive_objectives,
@@ -25,7 +24,7 @@ from .helpers import (
     extract_artifacts,
     synthesize_results,
 )
-from .models import ExecutionOutcome
+from .models import ExecutionOutcome, MagenticAgentMessageEvent
 
 if TYPE_CHECKING:
     from ..utils.progress import ProgressCallback

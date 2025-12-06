@@ -14,7 +14,7 @@ import aiofiles
 
 from ..utils.models import RoutingDecision
 from ..workflows.exceptions import HistoryError
-from .constants import DEFAULT_HISTORY_PATH
+from .config import DEFAULT_HISTORY_PATH
 
 logger = logging.getLogger(__name__)
 

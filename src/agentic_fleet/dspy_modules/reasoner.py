@@ -22,6 +22,7 @@ from ..workflows.exceptions import ToolError
 from ..workflows.helpers import is_simple_task, is_time_sensitive_task
 from .nlu import DSPyNLU, get_nlu_module
 from .signatures import (
+    EnhancedTaskRouting,
     GroupChatSpeakerSelection,
     ProgressEvaluation,
     QualityAssessment,
@@ -29,6 +30,7 @@ from .signatures import (
     TaskAnalysis,
     TaskRouting,
     ToolPlan,
+    WorkflowStrategy,
 )
 
 logger = setup_logger(__name__)
@@ -115,8 +117,6 @@ class DSPyReasoner(dspy.Module):
         # Router and strategy selector
         if self._router is None:
             if self.use_enhanced_signatures:
-                from .workflow_signatures import EnhancedTaskRouting, WorkflowStrategy
-
                 router_key = f"{cache_key_prefix}_router"
                 if router_key not in _MODULE_CACHE:
                     _MODULE_CACHE[router_key] = dspy.Predict(EnhancedTaskRouting)

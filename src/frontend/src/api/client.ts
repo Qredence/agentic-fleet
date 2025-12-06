@@ -9,13 +9,13 @@ import type {
   EntityResponse,
 } from "./types";
 
-const API_PREFIX = "/api";
+const API_PREFIX = "/api/v1";
 
 export const api = {
   // ... existing methods ...
 
   async classifyIntent(request: IntentRequest): Promise<IntentResponse> {
-    const response = await fetch(`${API_PREFIX}/v1/classify_intent`, {
+    const response = await fetch(`${API_PREFIX}/classify_intent`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(request),
@@ -25,7 +25,7 @@ export const api = {
   },
 
   async extractEntities(request: EntityRequest): Promise<EntityResponse> {
-    const response = await fetch(`${API_PREFIX}/v1/extract_entities`, {
+    const response = await fetch(`${API_PREFIX}/extract_entities`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(request),
@@ -81,7 +81,7 @@ export const api = {
   },
 
   async listAgents(): Promise<AgentInfo[]> {
-    const response = await fetch(`${API_PREFIX}/v1/agents`);
+    const response = await fetch(`${API_PREFIX}/agents`);
     if (!response.ok) throw new Error("Failed to list agents");
     return response.json();
   },
