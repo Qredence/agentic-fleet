@@ -515,7 +515,7 @@ class TracingConfig(BaseModel):
 
     Attributes:
         enabled: Enable/disable tracing. Defaults to False.
-        otlp_endpoint: OpenTelemetry collector endpoint. Defaults to localhost:4317.
+        otlp_endpoint: OpenTelemetry collector endpoint. Defaults to http://localhost:4317.
         capture_sensitive: Whether to capture sensitive data (API keys, user inputs, etc.)
             in trace spans. Defaults to False for security.
 
