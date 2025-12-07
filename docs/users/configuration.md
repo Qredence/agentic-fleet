@@ -49,6 +49,10 @@ dspy:
     gepa_history_limit: 200
     gepa_val_split: 0.2
     gepa_seed: 13
+    # Typed Signatures & Assertions (v0.6.9+)
+    use_typed_signatures: true # Use Pydantic output models
+    enable_routing_cache: true # Cache routing decisions
+    cache_ttl_seconds: 300 # Cache TTL (5 minutes)
 
 # Workflow Configuration
 workflow:
@@ -186,6 +190,12 @@ Controls DSPy reasoner behavior and optimization.
 - `optimization.gepa_history_limit` (`int`, default: `200`): lookback window when harvesting history.
 - `optimization.gepa_val_split` (`float`, default: `0.2`): fraction of routing examples held out for validation.
 - `optimization.gepa_seed` (`int`, default: `13`): RNG seed for deterministic shuffles.
+
+**Typed Signatures & Assertions (v0.6.9+)**
+
+- `optimization.use_typed_signatures` (`bool`, default: `true`): Use Pydantic-based output models for DSPy signatures. Provides JSON schema compliance, automatic validation, and better error handling.
+- `optimization.enable_routing_cache` (`bool`, default: `true`): Cache routing decisions to avoid redundant LLM calls for similar tasks.
+- `optimization.cache_ttl_seconds` (`int`, default: `300`): Time-to-live for cached routing decisions (5 minutes default).
 
 ### Workflow Configuration
 

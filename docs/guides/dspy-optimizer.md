@@ -598,6 +598,148 @@ print('GEPA avg quality:', g['metrics']['quality_score']['mean'])
 "
 ```
 
+## Typed Signatures & Assertions (v0.6.9+)
+
+### Typed Pydantic Output Models
+
+DSPy 3.x supports Pydantic models as output field types, providing:
+
+- JSON schema enforcement
+- Automatic validation and type coercion
+- Better error messages on parse failures
+
+**Enable typed signatures** (default: enabled):
+
+```yaml
+dspy:
+  optimization:
+    use_typed_signatures: true # Use Pydantic output models
+```
+
+**Available typed signatures:**
+
+| Signature                 | Output Model               | Purpose                                 |
+| ------------------------- | -------------------------- | --------------------------------------- |
+| `TypedTaskAnalysis`       | `TaskAnalysisOutput`       | Task complexity and capability analysis |
+| `TypedTaskRouting`        | `RoutingDecisionOutput`    | Agent assignment and execution mode     |
+| `TypedEnhancedRouting`    | `RoutingDecisionOutput`    | Advanced routing with tool planning     |
+| `TypedQualityAssessment`  | `QualityAssessmentOutput`  | Result quality scoring                  |
+| `TypedProgressEvaluation` | `ProgressEvaluationOutput` | Progress evaluation with action         |
+| `TypedToolPlan`           | `ToolPlanOutput`           | Tool execution ordering                 |
+| `TypedWorkflowStrategy`   | `WorkflowStrategyOutput`   | Workflow mode selection                 |
+
+**Output model example:**
+
+```python
+from agentic_fleet.dspy_modules.typed_models import RoutingDecisionOutput
+
+# Models validate and normalize automatically
+decision = RoutingDecisionOutput(
+    assigned_to="Writer, Researcher",  # Auto-coerced to list
+    execution_mode="DELEGATED",        # Auto-normalized to lowercase
+    reasoning="Simple writing task",
+)
+
+assert decision.assigned_to == ["Writer", "Researcher"]
+assert decision.execution_mode == "delegated"
+```
+
+### DSPy Assertions for Routing Validation
+
+Assertions enable automatic retries with refined prompts when outputs don't meet constraints.
+
+**Hard assertions** (will retry on failure):
+
+```python
+from agentic_fleet.dspy_modules.assertions import (
+    assert_valid_agents,
+    assert_valid_tools,
+    assert_mode_agent_consistency,
+)
+
+# Validate agents exist in team
+assert_valid_agents(["Writer"], ["Writer", "Researcher"])  # OK
+assert_valid_agents(["Unknown"], ["Writer", "Researcher"])  # Fails
+
+# Validate tools are available
+assert_valid_tools(["TavilySearchTool"], ["TavilySearchTool", "Browser"])  # OK
+
+# Validate mode matches agent count
+from agentic_fleet.utils.models import ExecutionMode
+assert_mode_agent_consistency(ExecutionMode.DELEGATED, 1)  # OK (delegated = 1 agent)
+assert_mode_agent_consistency(ExecutionMode.DELEGATED, 2)  # Fails
+```
+
+**Soft suggestions** (hints for optimization):
+
+```python
+from agentic_fleet.dspy_modules.assertions import (
+    suggest_valid_agents,
+    suggest_task_type_routing,
+)
+
+# Suggest valid agents (won't fail, just logs)
+suggest_valid_agents(["Writer"], ["Writer", "Researcher"])
+
+# Suggest task-type specific routing
+suggest_task_type_routing(
+    task="Research AI trends",
+    assigned_agents=["Researcher"],
+    tool_requirements=["TavilySearchTool"],
+)
+```
+
+**Task type detection:**
+
+```python
+from agentic_fleet.dspy_modules.assertions import detect_task_type
+
+detect_task_type("Research quantum computing")  # "research"
+detect_task_type("Write a Python function")     # "coding"
+detect_task_type("Analyze the sales data")      # "analysis"
+detect_task_type("Write a blog post")           # "writing"
+detect_task_type("Hello, how are you?")         # "general"
+```
+
+**Assertions decorator:**
+
+```python
+from agentic_fleet.dspy_modules.assertions import with_routing_assertions
+
+@with_routing_assertions(_max_backtracks=3)
+def route_task(task: str) -> dict:
+    # If routing fails assertions, DSPy will retry up to 3 times
+    return {"assigned_to": ["Writer"], "mode": "delegated"}
+```
+
+### Routing Cache
+
+Cache routing decisions to avoid redundant LLM calls:
+
+```yaml
+dspy:
+  optimization:
+    enable_routing_cache: true # Enable caching
+    cache_ttl_seconds: 300 # 5 minute TTL
+```
+
+**Programmatic cache management:**
+
+```python
+from agentic_fleet.dspy_modules.reasoner import DSPyReasoner
+
+reasoner = DSPyReasoner(enable_routing_cache=True, cache_ttl_seconds=300)
+
+# First call: LLM invocation
+result1 = reasoner.route_task("Research AI", team={"Researcher": "..."})
+
+# Second call (same task/team): cached result
+result2 = reasoner.route_task("Research AI", team={"Researcher": "..."})
+
+# Clear cache when needed
+reasoner.clear_routing_cache()
+```
+
 ## Related Documentation
 
 - [Configuration](../users/configuration.md) - Full config reference

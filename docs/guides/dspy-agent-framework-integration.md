@@ -275,6 +275,33 @@ DSPy continuously improves through:
 - Automatic refinement when needed
 - Few-shot learning from execution history
 
+### 5. Typed Signatures & Assertions (v0.6.9+)
+
+DSPy now uses Pydantic models for structured outputs:
+
+- **Typed output models** – `RoutingDecisionOutput`, `TaskAnalysisOutput`, etc.
+- **Automatic validation** – Field coercion and constraint enforcement
+- **DSPy assertions** – Hard constraints trigger retries; soft suggestions guide optimization
+- **Task type detection** – Automatic classification (research/coding/analysis/writing)
+- **Routing cache** – TTL-based caching to reduce LLM calls
+
+```python
+from agentic_fleet.dspy_modules.typed_models import RoutingDecisionOutput
+from agentic_fleet.dspy_modules.assertions import detect_task_type
+
+# Typed output with validation
+decision = RoutingDecisionOutput(
+    assigned_to="Writer, Researcher",  # Auto-coerced to list
+    execution_mode="DELEGATED",        # Normalized to lowercase
+    reasoning="Task requires writing",
+)
+
+# Task type detection
+task_type = detect_task_type("Research AI trends")  # "research"
+```
+
+See [DSPy Optimizer Guide](./dspy-optimizer.md#typed-signatures--assertions-v069) for full details.
+
 ## Usage Examples
 
 ### Basic Usage
