@@ -502,6 +502,7 @@ async def websocket_chat(
         conversation_thread = await _get_or_create_thread(request.conversation_id)
 
         # Create session (will raise 429 if limit exceeded)
+        session: WorkflowSession | None = None
         try:
             session = await session_manager.create_session(
                 task=request.message,
@@ -522,6 +523,9 @@ async def websocket_chat(
             await websocket.send_json(error_event.to_sse_dict())
             await websocket.close()
             return
+
+        # At this point session is guaranteed to be non-None
+        assert session is not None, "Session should be created at this point"
 
         # Send a connection acknowledgement immediately after session creation
         connected_type = StreamEventType.CONNECTED

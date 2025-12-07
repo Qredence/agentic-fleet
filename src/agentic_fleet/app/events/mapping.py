@@ -511,7 +511,7 @@ def map_workflow_event(
         if text:
             author_name = getattr(event, "author_name", None) or getattr(event, "author", None)
             role = getattr(event, "role", None)
-            role_value = role.value if hasattr(role, "value") else role
+            role_value = role.value if role is not None and hasattr(role, "value") else role
             events: list[StreamEvent] = []
 
             event_type = StreamEventType.AGENT_MESSAGE
@@ -548,7 +548,7 @@ def map_workflow_event(
         text = getattr(event, "text", "") or ""
         if text:
             role = getattr(event, "role", None)
-            role_value = role.value if hasattr(role, "value") else role
+            role_value = role.value if role is not None and hasattr(role, "value") else role
             author_name = getattr(event, "author_name", None) or getattr(event, "author", None)
             agent_id = getattr(event, "agent_id", None) or author_name
 
@@ -602,7 +602,7 @@ def map_workflow_event(
                 role_value = role
                 if isinstance(role, dict):
                     role_value = role.get("value")
-                elif hasattr(role, "value"):
+                elif role is not None and hasattr(role, "value"):
                     role_value = role.value
 
                 events: list[StreamEvent] = []
@@ -814,8 +814,8 @@ def map_workflow_event(
             if messages:
                 last_msg = messages[-1]
                 result_text = getattr(last_msg, "text", str(last_msg)) or str(last_msg)
-            elif hasattr(data, "result"):
-                result_text = str(data.result)
+            elif not isinstance(data, list) and hasattr(data, "result"):
+                result_text = str(getattr(data, "result", ""))
             else:
                 result_text = str(data)
 
@@ -836,7 +836,9 @@ def map_workflow_event(
                             message=text,
                             agent_id=agent_id,
                             author=author,
-                            role=role.value if hasattr(role, "value") else role,
+                            role=role.value
+                            if role is not None and hasattr(role, "value")
+                            else role,
                             category=msg_category,
                             ui_hint=msg_ui_hint,
                         )

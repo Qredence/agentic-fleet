@@ -47,7 +47,7 @@ def _configure_logging() -> None:
 
     if structured:
         # Emit JSON logs for easier ingestion (e.g., Datadog, Loki)
-        formatter = jsonlogger.JsonFormatter(
+        formatter = jsonlogger.JsonFormatter(  # type: ignore[attr-defined]
             "%(asctime)s %(levelname)s %(name)s %(message)s %(module)s %(lineno)d",
             rename_fields={
                 "asctime": "timestamp",

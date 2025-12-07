@@ -95,7 +95,8 @@ async def get_dspy_prompts(
         # Get demos (few-shot examples)
         demos = []
         if hasattr(predictor, "demos"):
-            for demo in predictor.demos:
+            demos_list = getattr(predictor, "demos", None) or []
+            for demo in demos_list:
                 # Convert demo to dict
                 demo_dict = {}
                 # demo is usually a dspy.Example which acts like a dict
