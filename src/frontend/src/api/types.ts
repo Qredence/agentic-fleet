@@ -9,6 +9,7 @@ export interface ConversationStep {
     | "agent_complete"
     | "agent_output"
     | "agent_thought"
+    | "agent_message"
     | "routing"
     | "analysis"
     | "quality"
