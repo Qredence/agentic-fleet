@@ -34,7 +34,9 @@ class TestRoutingExecutor:
             "agents": ["researcher", "analyst", "writer"],
             "tools": ["TavilyMCPTool", "BrowserTool"],
         }
-        return RoutingExecutor(reasoner=mock_reasoner, config=config)
+        executor = RoutingExecutor(config=config)
+        executor.reasoner = mock_reasoner
+        return executor
 
     async def test_routing_executor_basic_routing(self, executor, mock_reasoner):
         """Test basic task routing."""
