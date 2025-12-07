@@ -1,3 +1,5 @@
+from typing import Any, cast
+
 import pytest
 
 from agentic_fleet.workflows.exceptions import AgentExecutionError
@@ -12,11 +14,11 @@ from agentic_fleet.workflows.strategies import (
 class StubAgent:
     """Minimal async agent stub."""
 
-    def __init__(self, name: str, responses):
+    def __init__(self, name: str, responses: list[Any]) -> None:
         self.name = name
         self._responses = iter(responses)
 
-    async def run(self, task: str):
+    async def run(self, task: str) -> Any:
         value = next(self._responses)
         if isinstance(value, Exception):
             raise value
@@ -24,7 +26,7 @@ class StubAgent:
 
 
 class ErrorAgent:
-    async def run(self, task: str):
+    async def run(self, task: str) -> str:
         raise RuntimeError("boom")
 
 
@@ -36,11 +38,13 @@ async def test_execute_delegated_raises_for_missing_agent():
 
 @pytest.mark.asyncio
 async def test_execute_parallel_collects_results_and_skips_missing():
-    agents = {
+    agents: dict[str, Any] = {
         "one": StubAgent("one", ["result-1"]),
         "two": StubAgent("two", ["result-2"]),
     }
-    result, usage = await execute_parallel(agents, ["one", "two", "ghost"], ["t1", "t2", "t3"])
+    result, usage = await execute_parallel(
+        cast(Any, agents), ["one", "two", "ghost"], ["t1", "t2", "t3"]
+    )
 
     assert result == "result-1\n\nresult-2"
     assert usage == []
@@ -48,11 +52,11 @@ async def test_execute_parallel_collects_results_and_skips_missing():
 
 @pytest.mark.asyncio
 async def test_execute_parallel_handles_exceptions_without_crashing():
-    agents = {
+    agents: dict[str, Any] = {
         "ok": StubAgent("ok", ["fine"]),
         "bad": ErrorAgent(),
     }
-    result, _ = await execute_parallel(agents, ["ok", "bad"], ["x", "y"])
+    result, _ = await execute_parallel(cast(Any, agents), ["ok", "bad"], ["x", "y"])
 
     assert "fine" in result
     assert "[bad failed:" in result
@@ -60,11 +64,11 @@ async def test_execute_parallel_handles_exceptions_without_crashing():
 
 @pytest.mark.asyncio
 async def test_execute_sequential_skips_unknown_agents_and_returns_last_result():
-    agents = {
+    agents: dict[str, Any] = {
         "known": StubAgent("known", ["after-known"]),
     }
     result, usage = await execute_sequential(
-        agents,
+        cast(Any, agents),
         ["unknown", "known"],
         task="start",
         enable_handoffs=False,

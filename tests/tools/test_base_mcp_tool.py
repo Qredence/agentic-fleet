@@ -54,7 +54,9 @@ def _import_base_mcp_tool():
         Path(__file__).parent.parent.parent / "src" / "agentic_fleet" / "tools" / "base_mcp_tool.py"
     )
     spec = importlib.util.spec_from_file_location("base_mcp_tool", module_path)
+    assert spec is not None, "Failed to load module spec"
     module = importlib.util.module_from_spec(spec)
+    assert spec.loader is not None, "Spec has no loader"
     spec.loader.exec_module(module)
     return module.BaseMCPTool
 

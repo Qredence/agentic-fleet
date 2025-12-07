@@ -14,14 +14,14 @@ from agentic_fleet.utils.resilience import (
 class TestLogRetryAttempt:
     """Tests for log_retry_attempt callback."""
 
-    def test_logs_warning_on_failed_attempt(self, caplog):
+    def test_logs_warning_on_failed_attempt(self, caplog: pytest.LogCaptureFixture) -> None:
         """Verify warning is logged when retry state indicates failure."""
 
         # Create a minimal mock retry state
         class MockOutcome:
             failed = True
 
-            def exception(self):
+            def exception(self) -> Exception:
                 return ValueError("test error")
 
         class MockRetryState:
@@ -31,19 +31,19 @@ class TestLogRetryAttempt:
             fn.__name__ = "test_function"
 
         with caplog.at_level("WARNING"):
-            log_retry_attempt(MockRetryState())
+            log_retry_attempt(MockRetryState())  # type: ignore[arg-type]
 
         assert "Retrying test_function" in caplog.text
         assert "ValueError" in caplog.text
         assert "Attempt 2" in caplog.text
 
-    def test_handles_missing_function_name(self, caplog):
+    def test_handles_missing_function_name(self, caplog: pytest.LogCaptureFixture) -> None:
         """Verify graceful handling when function has no __name__."""
 
         class MockOutcome:
             failed = True
 
-            def exception(self):
+            def exception(self) -> Exception:
                 return RuntimeError("no name fn")
 
         class MockRetryState:
@@ -52,11 +52,11 @@ class TestLogRetryAttempt:
             fn = None
 
         with caplog.at_level("WARNING"):
-            log_retry_attempt(MockRetryState())
+            log_retry_attempt(MockRetryState())  # type: ignore[arg-type]
 
         assert "unknown_function" in caplog.text
 
-    def test_no_log_on_success(self, caplog):
+    def test_no_log_on_success(self, caplog: pytest.LogCaptureFixture) -> None:
         """Verify no logging when outcome is not failed."""
 
         class MockOutcome:
@@ -68,7 +68,7 @@ class TestLogRetryAttempt:
             fn = None
 
         with caplog.at_level("WARNING"):
-            log_retry_attempt(MockRetryState())
+            log_retry_attempt(MockRetryState())  # type: ignore[arg-type]
 
         assert caplog.text == ""
 
