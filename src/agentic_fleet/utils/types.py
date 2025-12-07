@@ -8,6 +8,16 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any, Protocol, runtime_checkable
 
+from .models import (
+    AgentMessage,
+    AgentRole,
+    ExecutionMode,
+    TaskResult,
+    TaskStatus,
+    ToolResult,
+    WorkflowState,
+)
+
 if TYPE_CHECKING:
     from collections.abc import AsyncIterator
     from typing import TypeVar
@@ -141,10 +151,10 @@ class HistoryManagerProtocol(Protocol):
     def save(self) -> None:
         """
         Persist the manager's recorded history to durable storage.
-        
+
         This flushes the in-memory execution history so it is retained outside the running process.
         """
-        ...
+        pass
 
 
 # Azure Cosmos DB Protocol
@@ -159,10 +169,10 @@ class CosmosClientProtocol(Protocol):
     def get_database_client(self, database: str) -> Any:
         """
         Obtain a client for the named Cosmos DB database.
-        
+
         Parameters:
             database (str): The name of the database to retrieve a client for.
-        
+
         Returns:
             Any: A database client instance connected to the specified database.
         """
@@ -183,7 +193,7 @@ class MessageLike(Protocol):
     def role(self) -> Any:
         """
         The role of the message sender.
-        
+
         Returns:
             The sender's role (for example, 'user' or 'assistant').
         """
@@ -193,7 +203,7 @@ class MessageLike(Protocol):
     def content(self) -> Any:
         """
         Expose the message's content.
-        
+
         Returns:
             The message's content value (e.g., text, structured data, or media metadata).
         """
@@ -211,6 +221,8 @@ if TYPE_CHECKING:
     JudgeResult = dict[str, Any]
 
 __all__ = [
+    "AgentMessage",
+    "AgentRole",
     "CacheProtocol",
     "ChatClient",
     "ChatClientWithExtraBody",
@@ -218,8 +230,13 @@ __all__ = [
     "DSPyModule",
     "DSPySettings",
     "DSPySignature",
+    "ExecutionMode",
     "HistoryManagerProtocol",
     "MessageLike",
     "ProgressCallback",
+    "TaskResult",
+    "TaskStatus",
     "ToolProtocol",
+    "ToolResult",
+    "WorkflowState",
 ]

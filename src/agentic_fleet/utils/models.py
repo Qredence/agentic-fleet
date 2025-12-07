@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from collections.abc import Iterable, Mapping, MutableMapping, Sequence
 from dataclasses import dataclass, field, replace
+from datetime import datetime
 from enum import Enum
 from typing import Any
 
@@ -16,6 +17,8 @@ class ExecutionMode(str, Enum):
     DELEGATED = "delegated"
     GROUP_CHAT = "group_chat"
     DISCUSSION = "discussion"
+    AUTO = "auto"
+    HANDOFF = "handoff"
 
     @classmethod
     def from_raw(cls, value: Any) -> ExecutionMode:
@@ -32,6 +35,74 @@ class ExecutionMode(str, Enum):
 
         # Fallback to delegated (safest option if value is unknown)
         return cls.DELEGATED
+
+
+class TaskStatus(str, Enum):
+    """Status of a task execution."""
+
+    PENDING = "pending"
+    IN_PROGRESS = "in_progress"
+    COMPLETED = "completed"
+    FAILED = "failed"
+    CANCELLED = "cancelled"
+
+
+class AgentRole(str, Enum):
+    """Role of an agent in the fleet."""
+
+    RESEARCHER = "researcher"
+    ANALYST = "analyst"
+    WRITER = "writer"
+    REVIEWER = "reviewer"
+    CODER = "coder"
+    PLANNER = "planner"
+
+
+@dataclass
+class ToolResult:
+    """Result of a tool execution."""
+
+    tool_name: str
+    success: bool
+    output: Any
+    error: str | None = None
+    metadata: dict[str, Any] = field(default_factory=dict)
+
+
+@dataclass
+class TaskResult:
+    """Result of a task execution."""
+
+    task_id: str
+    status: TaskStatus
+    result: Any
+    agent_used: str
+    execution_time: float
+    metadata: dict[str, Any] = field(default_factory=dict)
+
+
+@dataclass
+class AgentMessage:
+    """Message exchanged between agents."""
+
+    role: str
+    content: str
+    agent_name: str | None = None
+    timestamp: datetime | None = None
+    metadata: dict[str, Any] = field(default_factory=dict)
+
+
+@dataclass
+class WorkflowState:
+    """State of the workflow."""
+
+    task: str
+    execution_mode: ExecutionMode
+    current_agent: str | None
+    iteration: int
+    status: TaskStatus
+    results: list[TaskResult] = field(default_factory=list)
+    metadata: dict[str, Any] = field(default_factory=dict)
 
 
 @dataclass(frozen=True)

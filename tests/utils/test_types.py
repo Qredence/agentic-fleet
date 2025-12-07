@@ -1,15 +1,16 @@
 """Comprehensive tests for utils/types.py."""
 
-import pytest
 from datetime import datetime
 
+import pytest
+
 from agentic_fleet.utils.types import (
-    ExecutionMode,
-    TaskStatus,
-    AgentRole,
-    ToolResult,
-    TaskResult,
     AgentMessage,
+    AgentRole,
+    ExecutionMode,
+    TaskResult,
+    TaskStatus,
+    ToolResult,
     WorkflowState,
 )
 
@@ -25,6 +26,7 @@ class TestExecutionMode:
         assert ExecutionMode.PARALLEL.value == "parallel"
         assert ExecutionMode.HANDOFF.value == "handoff"
         assert ExecutionMode.DISCUSSION.value == "discussion"
+        assert ExecutionMode.GROUP_CHAT.value == "group_chat"
 
     def test_execution_mode_from_string(self):
         """Test creating ExecutionMode from string."""
@@ -34,7 +36,7 @@ class TestExecutionMode:
 
     def test_execution_mode_invalid_value(self):
         """Test ExecutionMode with invalid value."""
-        with pytest.raises(ValueError):
+        with pytest.raises(ValueError, match="invalid_mode"):
             ExecutionMode("invalid_mode")
 
     def test_execution_mode_membership(self):
@@ -45,8 +47,9 @@ class TestExecutionMode:
     def test_execution_mode_iteration(self):
         """Test iterating over ExecutionMode."""
         modes = list(ExecutionMode)
-        assert len(modes) == 6
+        assert len(modes) == 7
         assert ExecutionMode.AUTO in modes
+        assert ExecutionMode.GROUP_CHAT in modes
 
 
 class TestTaskStatus:
@@ -273,7 +276,7 @@ class TestAgentMessage:
         msg1 = AgentMessage("user", "First", None, datetime(2025, 1, 1, 10, 0), {})
         msg2 = AgentMessage("assistant", "Second", "agent1", datetime(2025, 1, 1, 10, 1), {})
 
-        messages = sorted([msg2, msg1], key=lambda m: m.timestamp)
+        messages = sorted([msg2, msg1], key=lambda m: m.timestamp or datetime.min)
 
         assert messages[0] == msg1
         assert messages[1] == msg2

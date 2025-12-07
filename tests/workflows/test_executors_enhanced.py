@@ -1,406 +1,265 @@
-"""Enhanced comprehensive tests for workflows/executors.py - Routing and Execution."""
+"""Enhanced comprehensive tests for workflows/executors.py."""
+
+from unittest.mock import AsyncMock, MagicMock
 
 import pytest
-from unittest.mock import Mock, patch, AsyncMock
+
+from agentic_fleet.utils.models import ExecutionMode
 from agentic_fleet.workflows.executors import (
-    RoutingExecutor,
     AnalysisExecutor,
-    QualityExecutor,
     ProgressExecutor,
+    QualityExecutor,
+    RoutingExecutor,
+)
+from agentic_fleet.workflows.models import (
+    AnalysisMessage,
+    AnalysisResult,
+    ExecutionMessage,
+    ExecutionOutcome,
+    ProgressMessage,
+    ProgressReport,
+    RoutingMessage,
+    TaskMessage,
 )
 
 
-class TestRoutingExecutor:
-    """Test suite for RoutingExecutor class."""
-
-    @pytest.fixture
-    def mock_reasoner(self):
-        """Create a mock DSPy reasoner."""
-        reasoner = Mock()
-        reasoner.route_task = AsyncMock(
-            return_value={
-                "agent": "researcher",
-                "execution_mode": "delegated",
-                "reasoning": "Research task detected",
-            }
-        )
-        return reasoner
-
-    @pytest.fixture
-    def executor(self, mock_reasoner):
-        """Create a RoutingExecutor instance."""
-        mock_context = Mock()
-        executor = RoutingExecutor(
-            executor_id="routing_test",
-            supervisor=mock_reasoner,
-            context=mock_context
-        )
-        return executor
-
-    async def test_routing_executor_basic_routing(self, executor, mock_reasoner):
-        """Test basic task routing."""
-        task = "Research the latest AI developments"
-        context = {}
-
-        result = await executor.route(task, context)
-
-        assert result is not None
-        assert "agent" in result
-        assert result["agent"] == "researcher"
-        mock_reasoner.route_task.assert_called_once()
-
-    async def test_routing_executor_with_task_type_detection(self, executor):
-        """Test routing with automatic task type detection."""
-        research_task = "Search for information about quantum computing"
-
-        with patch("agentic_fleet.workflows.executors.detect_task_type") as mock_detect:
-            mock_detect.return_value = "research"
-
-            result = await executor.route(research_task, {})
-
-            mock_detect.assert_called_once_with(research_task)
-            assert result is not None
-
-    async def test_routing_executor_validation(self, executor):
-        """Test routing decision validation."""
-        task = "Analyze sales data"
-        context = {}
-
-        with patch(
-            "agentic_fleet.workflows.executors.validate_full_routing"
-        ) as mock_validate:
-            mock_validate.return_value = True
-
-            result = await executor.route(task, context)
-
-            # Validation should be called with routing decision
-            assert mock_validate.called or result is not None
-
-    async def test_routing_executor_cache_hit(self, executor, mock_reasoner):
-        """Test routing cache hit."""
-        task = "Same task"
-        context = {}
-
-        # Enable caching in executor
-        with patch.object(executor, "_get_cached_routing", return_value={"agent": "cached"}):
-            result = await executor.route(task, context)
-
-            # Should return cached result without calling reasoner
-            assert result["agent"] == "cached"
-            mock_reasoner.route_task.assert_not_called()
-
-    async def test_routing_executor_fallback_on_invalid(self, executor, mock_reasoner):
-        """Test fallback routing on invalid decision."""
-        mock_reasoner.route_task = AsyncMock(
-            return_value={
-                "agent": "nonexistent_agent",  # Invalid
-                "execution_mode": "invalid",
-            }
-        )
-
-        task = "Task"
-        context = {}
-
-        with patch("agentic_fleet.workflows.executors.validate_full_routing") as mock_validate:
-            mock_validate.return_value = False
-
-            result = await executor.route(task, context)
-
-            # Should use fallback routing
-            assert result is not None
-
-
 class TestAnalysisExecutor:
-    """Test suite for AnalysisExecutor class."""
+    """Test suite for AnalysisExecutor."""
 
     @pytest.fixture
-    def mock_reasoner(self):
-        """Create a mock DSPy reasoner."""
-        reasoner = Mock()
-        reasoner.analyze_task = AsyncMock(
+    def mock_supervisor(self):
+        supervisor = MagicMock()
+        supervisor.analyze_task = AsyncMock(
             return_value={
-                "complexity": "medium",
-                "requires_tools": True,
-                "suggested_agents": ["analyst"],
+                "complexity": "moderate",
+                "capabilities": ["reasoning"],
+                "steps": 3,
+                "needs_web_search": False,
             }
         )
-        return reasoner
+        return supervisor
 
     @pytest.fixture
-    def executor(self, mock_reasoner):
-        """Create an AnalysisExecutor instance."""
-        mock_context = Mock()
-        return AnalysisExecutor(
-            executor_id="analysis_test",
-            supervisor=mock_reasoner,
-            context=mock_context
-        )
-
-    async def test_analysis_executor_basic_analysis(self, executor, mock_reasoner):
-        """Test basic task analysis."""
-        task = "Analyze quarterly revenue trends"
-
-        result = await executor.analyze(task)
-
-        assert result is not None
-        assert "complexity" in result
-        mock_reasoner.analyze_task.assert_called_once()
-
-    async def test_analysis_executor_with_context(self, executor):
-        """Test analysis with additional context."""
-        task = "Complex analysis task"
-        context = {"previous_results": ["result1"], "user_preferences": {}}
-
-        result = await executor.analyze(task, context)
-
-        assert result is not None
-
-    async def test_analysis_executor_extracts_metadata(self, executor):
-        """Test that analysis extracts useful metadata."""
-        task = "Task requiring web search and data processing"
-
-        result = await executor.analyze(task)
-
-        # Should identify tool requirements
-        assert "requires_tools" in result or "tools" in result
-
-
-class TestQualityExecutor:
-    """Test suite for QualityExecutor class."""
+    def mock_context(self):
+        context = MagicMock()
+        context.config = MagicMock()
+        context.config.pipeline_profile = "full"
+        context.config.simple_task_max_words = 40
+        context.config.dspy_retry_attempts = 1
+        context.config.dspy_retry_backoff_seconds = 0.0
+        context.analysis_cache = MagicMock()
+        context.analysis_cache.get.return_value = None
+        context.latest_phase_status = {}
+        context.latest_phase_timings = {}
+        return context
 
     @pytest.fixture
-    def mock_evaluator(self):
-        """Create a mock quality evaluator."""
-        evaluator = Mock()
-        evaluator.evaluate = AsyncMock(
+    def executor(self, mock_supervisor, mock_context):
+        return AnalysisExecutor("analysis", mock_supervisor, mock_context)
+
+    async def test_handle_task_success(self, executor, mock_supervisor):
+        task_msg = TaskMessage(task="Analyze this", metadata={})
+        ctx = MagicMock()
+        ctx.send_message = AsyncMock()
+
+        await executor.handle_task(task_msg, ctx)
+
+        mock_supervisor.analyze_task.assert_called_once()
+        ctx.send_message.assert_called_once()
+        call_args = ctx.send_message.call_args[0][0]
+        assert isinstance(call_args, AnalysisMessage)
+        assert call_args.task == "Analyze this"
+        assert call_args.analysis.complexity == "moderate"
+
+    async def test_handle_task_fallback(self, executor, mock_supervisor):
+        mock_supervisor.analyze_task.side_effect = Exception("DSPy error")
+        task_msg = TaskMessage(task="Analyze this", metadata={})
+        ctx = MagicMock()
+        ctx.send_message = AsyncMock()
+
+        await executor.handle_task(task_msg, ctx)
+
+        ctx.send_message.assert_called_once()
+        call_args = ctx.send_message.call_args[0][0]
+        assert isinstance(call_args, AnalysisMessage)
+        assert call_args.metadata["used_fallback"] is True
+
+
+class TestRoutingExecutor:
+    """Test suite for RoutingExecutor."""
+
+    @pytest.fixture
+    def mock_supervisor(self):
+        supervisor = MagicMock()
+        supervisor.route_task = AsyncMock(
             return_value={
-                "score": 0.85,
-                "meets_threshold": True,
-                "feedback": "Good quality",
+                "assigned_to": ["Researcher"],
+                "mode": "delegated",
+                "subtasks": ["subtask1"],
+                "confidence": 0.9,
             }
         )
-        return evaluator
+        return supervisor
 
     @pytest.fixture
-    def executor(self, mock_evaluator):
-        """Create a QualityExecutor instance."""
-        mock_context = Mock()
-        return QualityExecutor(
-            executor_id="quality_test",
-            supervisor=mock_evaluator,
-            context=mock_context
+    def mock_context(self):
+        context = MagicMock()
+        context.config = MagicMock()
+        context.config.pipeline_profile = "full"
+        context.config.dspy_retry_attempts = 1
+        context.config.dspy_retry_backoff_seconds = 0.0
+        context.agents = {"Researcher": MagicMock()}
+        context.latest_phase_status = {}
+        context.latest_phase_timings = {}
+        return context
+
+    @pytest.fixture
+    def executor(self, mock_supervisor, mock_context):
+        return RoutingExecutor("routing", mock_supervisor, mock_context)
+
+    async def test_handle_analysis_success(self, executor, mock_supervisor):
+        analysis_msg = AnalysisMessage(
+            task="Route this",
+            analysis=AnalysisResult(
+                complexity="moderate",
+                capabilities=[],
+                tool_requirements=[],
+                steps=1,
+                search_context="",
+                needs_web_search=False,
+                search_query="",
+            ),
+            metadata={},
         )
+        ctx = MagicMock()
+        ctx.send_message = AsyncMock()
 
-    async def test_quality_executor_evaluate_result(self, executor, mock_evaluator):
-        """Test quality evaluation of result."""
-        task = "Research task"
-        result = {"content": "Research findings..."}
+        await executor.handle_analysis(analysis_msg, ctx)
 
-        quality = await executor.evaluate(task, result)
+        mock_supervisor.route_task.assert_called_once()
+        ctx.send_message.assert_called_once()
+        call_args = ctx.send_message.call_args[0][0]
+        assert isinstance(call_args, RoutingMessage)
+        assert call_args.routing.decision.assigned_to == ("Researcher",)
 
-        assert quality is not None
-        assert "score" in quality
-        assert quality["score"] == 0.85
-        mock_evaluator.evaluate.assert_called_once()
-
-    async def test_quality_executor_meets_threshold(self, executor):
-        """Test quality threshold checking."""
-        task = "Task"
-        high_quality_result = {"content": "Excellent result"}
-
-        quality = await executor.evaluate(task, high_quality_result)
-
-        assert quality["meets_threshold"] is True
-
-    async def test_quality_executor_below_threshold(self, executor, mock_evaluator):
-        """Test handling results below quality threshold."""
-        mock_evaluator.evaluate = AsyncMock(
-            return_value={"score": 0.5, "meets_threshold": False, "feedback": "Needs improvement"}
+    async def test_handle_analysis_fallback(self, executor, mock_supervisor):
+        mock_supervisor.route_task.side_effect = Exception("Routing error")
+        analysis_msg = AnalysisMessage(
+            task="Route this",
+            analysis=AnalysisResult(
+                complexity="moderate",
+                capabilities=[],
+                tool_requirements=[],
+                steps=1,
+                search_context="",
+                needs_web_search=False,
+                search_query="",
+            ),
+            metadata={},
         )
+        ctx = MagicMock()
+        ctx.send_message = AsyncMock()
 
-        task = "Task"
-        poor_result = {"content": "Incomplete"}
+        await executor.handle_analysis(analysis_msg, ctx)
 
-        quality = await executor.evaluate(task, poor_result)
-
-        assert quality["meets_threshold"] is False
-        assert quality["score"] < 0.8
+        ctx.send_message.assert_called_once()
+        call_args = ctx.send_message.call_args[0][0]
+        assert isinstance(call_args, RoutingMessage)
+        assert call_args.routing.used_fallback is True
 
 
 class TestProgressExecutor:
-    """Test suite for ProgressExecutor class."""
+    """Test suite for ProgressExecutor."""
 
     @pytest.fixture
-    def executor(self):
-        """Create a ProgressExecutor instance."""
-        mock_supervisor = Mock()
-        mock_context = Mock()
-        return ProgressExecutor(
-            executor_id="progress_test",
-            supervisor=mock_supervisor,
-            context=mock_context
+    def mock_supervisor(self):
+        supervisor = MagicMock()
+        supervisor.evaluate_progress = AsyncMock(
+            return_value={"action": "continue", "feedback": "Keep going"}
         )
-
-    async def test_progress_executor_track_progress(self, executor):
-        """Test progress tracking."""
-        task = "Multi-step task"
-        current_state = {"iteration": 3, "results": ["step1", "step2"]}
-
-        progress = await executor.track_progress(task, current_state)
-
-        assert progress is not None
-        assert "iteration" in progress or "current_state" in progress
-
-    async def test_progress_executor_completion_detection(self, executor):
-        """Test detecting task completion."""
-        task = "Task"
-        completed_state = {
-            "iteration": 5,
-            "status": "completed",
-            "results": ["final"],
-        }
-
-        progress = await executor.track_progress(task, completed_state)
-
-        # Should recognize completion
-        assert progress.get("status") == "completed" or progress is not None
-
-    async def test_progress_executor_iteration_limit(self, executor):
-        """Test handling iteration limit."""
-        task = "Long task"
-        max_iterations_state = {"iteration": 100, "status": "in_progress"}
-
-        progress = await executor.track_progress(task, max_iterations_state)
-
-        # Should flag if exceeding limits
-        assert progress is not None
-
-
-class TestExecutorIntegration:
-    """Integration tests for executors working together."""
+        return supervisor
 
     @pytest.fixture
-    def all_executors(self):
-        """Create all executors for integration testing."""
-        mock_reasoner = Mock()
-        mock_reasoner.analyze_task = AsyncMock(return_value={"complexity": "high"})
-        mock_reasoner.route_task = AsyncMock(return_value={"agent": "researcher"})
+    def mock_context(self):
+        context = MagicMock()
+        context.config = MagicMock()
+        context.config.pipeline_profile = "full"
+        context.config.enable_progress_eval = True
+        context.config.dspy_retry_attempts = 1
+        context.config.dspy_retry_backoff_seconds = 0.0
+        context.latest_phase_status = {}
+        context.latest_phase_timings = {}
+        return context
 
-        mock_evaluator = Mock()
-        mock_evaluator.evaluate = AsyncMock(return_value={"score": 0.9})
-        
-        mock_context = Mock()
+    @pytest.fixture
+    def executor(self, mock_supervisor, mock_context):
+        return ProgressExecutor("progress", mock_supervisor, mock_context)
 
-        return {
-            "analysis": AnalysisExecutor(
-                executor_id="analysis_int",
-                supervisor=mock_reasoner,
-                context=mock_context
+    async def test_handle_execution_success(self, executor, mock_supervisor):
+        execution_msg = ExecutionMessage(
+            task="Execute this",
+            outcome=ExecutionOutcome(
+                result="Done",
+                mode=ExecutionMode.DELEGATED,
+                assigned_agents=["Researcher"],
+                subtasks=[],
+                status="success",
+                artifacts={},
             ),
-            "routing": RoutingExecutor(
-                executor_id="routing_int",
-                supervisor=mock_reasoner,
-                context=mock_context
-            ),
-            "quality": QualityExecutor(
-                executor_id="quality_int",
-                supervisor=mock_evaluator,
-                context=mock_context
-            ),
-            "progress": ProgressExecutor(
-                executor_id="progress_int",
-                supervisor=mock_reasoner,
-                context=mock_context
-            ),
-        }
-
-    async def test_full_execution_pipeline(self, all_executors):
-        """Test complete execution pipeline: analysis -> routing -> execution -> quality -> progress."""
-        task = "Research and analyze market trends"
-
-        # Analysis
-        analysis = await all_executors["analysis"].analyze(task)
-        assert analysis is not None
-
-        # Routing based on analysis
-        routing = await all_executors["routing"].route(task, {"analysis": analysis})
-        assert routing is not None
-
-        # Quality check (assume we have a result)
-        mock_result = {"content": "Market analysis complete"}
-        quality = await all_executors["quality"].evaluate(task, mock_result)
-        assert quality["score"] > 0
-
-        # Progress tracking
-        state = {"iteration": 1, "status": "completed"}
-        progress = await all_executors["progress"].track_progress(task, state)
-        assert progress is not None
-
-    async def test_executor_error_propagation(self, all_executors):
-        """Test error propagation through executor pipeline."""
-        all_executors["analysis"].reasoner.analyze_task = AsyncMock(
-            side_effect=Exception("Analysis failed")
+            metadata={},
         )
+        ctx = MagicMock()
+        ctx.send_message = AsyncMock()
 
-        task = "Task"
+        await executor.handle_execution(execution_msg, ctx)
 
-        with pytest.raises(Exception, match="Analysis failed"):
-            await all_executors["analysis"].analyze(task)
+        mock_supervisor.evaluate_progress.assert_called_once()
+        ctx.send_message.assert_called_once()
+        call_args = ctx.send_message.call_args[0][0]
+        assert isinstance(call_args, ProgressMessage)
+        assert call_args.progress.action == "continue"
 
 
-class TestExecutorEdgeCases:
-    """Test edge cases and boundary conditions."""
+class TestQualityExecutor:
+    """Test suite for QualityExecutor."""
 
-    async def test_routing_with_empty_task(self):
-        """Test routing with empty task."""
-        mock_reasoner = Mock()
-        mock_reasoner.route_task = AsyncMock(return_value={"agent": "planner"})
-        mock_context = Mock()
-
-        executor = RoutingExecutor(
-            executor_id="routing_empty",
-            supervisor=mock_reasoner,
-            context=mock_context
+    @pytest.fixture
+    def mock_supervisor(self):
+        supervisor = MagicMock()
+        supervisor.assess_quality = AsyncMock(
+            return_value={"score": 9.0, "missing": "", "improvements": ""}
         )
+        return supervisor
 
-        result = await executor.route("", {})
+    @pytest.fixture
+    def mock_context(self):
+        context = MagicMock()
+        context.config = MagicMock()
+        context.config.pipeline_profile = "full"
+        context.config.enable_quality_eval = True
+        context.config.dspy_retry_attempts = 1
+        context.config.dspy_retry_backoff_seconds = 0.0
+        context.latest_phase_status = {}
+        context.latest_phase_timings = {}
+        context.dspy_supervisor = MagicMock()
+        context.dspy_supervisor.get_execution_summary.return_value = {}
+        return context
 
-        # Should handle empty task gracefully
-        assert result is not None
+    @pytest.fixture
+    def executor(self, mock_supervisor, mock_context):
+        return QualityExecutor("quality", mock_supervisor, mock_context)
 
-    async def test_analysis_with_very_long_task(self):
-        """Test analysis with very long task description."""
-        mock_reasoner = Mock()
-        mock_reasoner.analyze_task = AsyncMock(return_value={"complexity": "high"})
-        mock_context = Mock()
-
-        executor = AnalysisExecutor(
-            executor_id="analysis_long",
-            supervisor=mock_reasoner,
-            context=mock_context
+    async def test_handle_progress_success(self, executor, mock_supervisor):
+        progress_msg = ProgressMessage(
+            task="Check quality",
+            result="Good result",
+            progress=ProgressReport(action="complete", feedback="", used_fallback=False),
+            metadata={},
         )
+        ctx = MagicMock()
+        ctx.yield_output = AsyncMock()
 
-        long_task = "Task " * 10000  # Very long task
+        await executor.handle_progress(progress_msg, ctx)
 
-        result = await executor.analyze(long_task)
-
-        assert result is not None
-
-    async def test_quality_evaluation_with_missing_fields(self):
-        """Test quality evaluation with incomplete result."""
-        mock_evaluator = Mock()
-        mock_evaluator.evaluate = AsyncMock(return_value={"score": 0.7})
-        mock_context = Mock()
-
-        executor = QualityExecutor(
-            executor_id="quality_missing",
-            supervisor=mock_evaluator,
-            context=mock_context
-        )
-
-        incomplete_result = {}  # Missing expected fields
-
-        quality = await executor.evaluate("task", incomplete_result)
-
-        # Should handle gracefully
-        assert quality is not None
+        mock_supervisor.assess_quality.assert_called_once()
+        ctx.yield_output.assert_called_once()

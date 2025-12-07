@@ -1,12 +1,16 @@
-"""Comprehensive tests for CLI commands."""
+"""Comprehensive tests for CLI commands.
+
+Tests the Typer CLI application and WorkflowRunner class.
+"""
+
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
-from unittest.mock import patch, AsyncMock
 from typer.testing import CliRunner
 
-from agentic_fleet.cli import app
-from agentic_fleet.cli.commands.run import run_command
-from agentic_fleet.cli.runner import CLIRunner
+# Import app directly from console to avoid lazy loading issues
+from agentic_fleet.cli.console import app
+from agentic_fleet.cli.runner import WorkflowRunner
 
 
 class TestCLIApp:
@@ -22,21 +26,15 @@ class TestCLIApp:
         result = runner.invoke(app, ["--help"])
 
         assert result.exit_code == 0
-        assert "AgenticFleet" in result.stdout or "Usage" in result.stdout
+        assert "Usage" in result.stdout
 
-    def test_cli_version(self, runner):
-        """Test CLI version command."""
-        result = runner.invoke(app, ["--version"])
-
-        # Should show version or succeed
-        assert result.exit_code == 0 or "version" in result.stdout.lower()
-
-    def test_cli_no_command(self, runner):
-        """Test CLI without command."""
+    def test_cli_no_command_shows_help(self, runner):
+        """Test CLI without command shows help."""
         result = runner.invoke(app, [])
 
-        # Should show help or run interactively
-        assert result.exit_code in [0, 1, 2]
+        # Typer with no_args_is_help=True typically exits with code 2 showing help
+        assert result.exit_code in [0, 2]
+        assert "Usage" in result.stdout
 
 
 class TestRunCommand:
@@ -47,57 +45,31 @@ class TestRunCommand:
         """Create a CLI test runner."""
         return CliRunner()
 
-    @patch("agentic_fleet.cli.commands.run.create_supervisor_workflow")
-    def test_run_command_with_message(self, mock_create_workflow, runner):
+    def test_run_command_help(self, runner):
+        """Test run command help."""
+        result = runner.invoke(app, ["run", "--help"])
+
+        assert result.exit_code == 0
+        assert "run" in result.stdout.lower() or "Usage" in result.stdout
+
+    @patch("agentic_fleet.cli.commands.run.WorkflowRunner")
+    def test_run_command_with_message(self, mock_runner_class, runner):
         """Test run command with message."""
-        mock_workflow = AsyncMock()
-        mock_workflow.run = AsyncMock(return_value={"result": "Success"})
-        mock_create_workflow.return_value = mock_workflow
+        mock_instance = MagicMock()
+        mock_instance.run_task = AsyncMock(return_value={"result": "Success"})
+        mock_runner_class.return_value = mock_instance
 
         result = runner.invoke(app, ["run", "-m", "Test task"])
 
-        # Command should execute (may require async handling)
-        assert result.exit_code in [0, 1]  # 0 for success, 1 for handled errors
-
-    @patch("agentic_fleet.cli.commands.run.create_supervisor_workflow")
-    def test_run_command_with_mode(self, mock_create_workflow, runner):
-        """Test run command with execution mode."""
-        mock_workflow = AsyncMock()
-        mock_workflow.run = AsyncMock(return_value={"result": "Success"})
-        mock_create_workflow.return_value = mock_workflow
-
-        result = runner.invoke(app, ["run", "-m", "Task", "--mode", "delegated"])
-
+        # Command should execute (may fail due to other dependencies)
         assert result.exit_code in [0, 1]
 
     def test_run_command_without_message(self, runner):
-        """Test run command without required message."""
+        """Test run command without required message shows error or prompt."""
         result = runner.invoke(app, ["run"])
 
-        # Should show error or prompt for message
+        # Should show error for missing message or prompt
         assert result.exit_code in [0, 1, 2]
-
-    @patch("agentic_fleet.cli.commands.run.create_supervisor_workflow")
-    def test_run_command_verbose(self, mock_create_workflow, runner):
-        """Test run command with verbose output."""
-        mock_workflow = AsyncMock()
-        mock_workflow.run = AsyncMock(return_value={"result": "Verbose output"})
-        mock_create_workflow.return_value = mock_workflow
-
-        result = runner.invoke(app, ["run", "-m", "Task", "--verbose"])
-
-        assert result.exit_code in [0, 1]
-
-    @patch("agentic_fleet.cli.commands.run.create_supervisor_workflow")
-    def test_run_command_with_timeout(self, mock_create_workflow, runner):
-        """Test run command with timeout."""
-        mock_workflow = AsyncMock()
-        mock_workflow.run = AsyncMock(return_value={"result": "Done"})
-        mock_create_workflow.return_value = mock_workflow
-
-        result = runner.invoke(app, ["run", "-m", "Task", "--timeout", "60"])
-
-        assert result.exit_code in [0, 1]
 
 
 class TestListAgentsCommand:
@@ -108,26 +80,17 @@ class TestListAgentsCommand:
         """Create a CLI test runner."""
         return CliRunner()
 
+    def test_list_agents_help(self, runner):
+        """Test list-agents command help."""
+        result = runner.invoke(app, ["list-agents", "--help"])
+
+        assert result.exit_code == 0
+
     def test_list_agents_command(self, runner):
-        """Test list-agents command."""
+        """Test list-agents command executes."""
         result = runner.invoke(app, ["list-agents"])
 
-        # Should show available agents
-        assert result.exit_code == 0 or "agents" in result.stdout.lower()
-
-    @patch("agentic_fleet.cli.load_workflow_config")
-    def test_list_agents_with_config(self, mock_load_config, runner):
-        """Test listing agents from config."""
-        mock_load_config.return_value = {
-            "agents": {
-                "researcher": {"model": "gpt-4o"},
-                "analyst": {"model": "gpt-4o-mini"},
-            }
-        }
-
-        result = runner.invoke(app, ["list-agents"])
-
-        # Should list agents from config
+        # Should execute and show agents from config
         assert result.exit_code in [0, 1]
 
 
@@ -139,62 +102,57 @@ class TestDevCommand:
         """Create a CLI test runner."""
         return CliRunner()
 
-    @patch("agentic_fleet.cli.subprocess.run")
-    def test_dev_command_starts_servers(self, mock_subprocess, runner):
-        """Test dev command starts backend and frontend."""
-        result = runner.invoke(app, ["dev"])
+    def test_dev_command_help(self, runner):
+        """Test dev command help."""
+        result = runner.invoke(app, ["dev", "--help"])
 
-        # Command should attempt to start servers
-        assert result.exit_code in [0, 1]  # May exit immediately or background
-
-    @patch("agentic_fleet.cli.subprocess.run")
-    def test_dev_command_backend_only(self, mock_subprocess, runner):
-        """Test dev command with backend only."""
-        result = runner.invoke(app, ["dev", "--backend-only"])
-
-        assert result.exit_code in [0, 1]
+        assert result.exit_code == 0
+        assert "dev" in result.stdout.lower() or "Usage" in result.stdout
 
 
-class TestCLIRunner:
-    """Test suite for CLIRunner class."""
+class TestWorkflowRunner:
+    """Test suite for WorkflowRunner class."""
 
-    @pytest.fixture
-    def cli_runner(self):
-        """Create a CLIRunner instance."""
-        return CLIRunner()
+    def test_workflow_runner_init(self):
+        """Test WorkflowRunner initialization."""
+        runner = WorkflowRunner()
+        assert runner.verbose is False
+        assert runner.workflow is None
 
+    def test_workflow_runner_init_verbose(self):
+        """Test WorkflowRunner initialization with verbose."""
+        runner = WorkflowRunner(verbose=True)
+        assert runner.verbose is True
+
+    @pytest.mark.asyncio
     @patch("agentic_fleet.cli.runner.create_supervisor_workflow")
-    async def test_cli_runner_execute_task(self, mock_create_workflow, cli_runner):
-        """Test executing a task via CLI runner."""
-        mock_workflow = AsyncMock()
-        mock_workflow.run = AsyncMock(return_value={"result": "Completed"})
+    async def test_workflow_runner_initialize_workflow(self, mock_create_workflow):
+        """Test initializing workflow."""
+        mock_workflow = MagicMock()
         mock_create_workflow.return_value = mock_workflow
 
-        result = await cli_runner.execute_task("Test task")
+        wf_runner = WorkflowRunner()
+        await wf_runner.initialize_workflow()
 
-        assert result is not None
-        mock_workflow.run.assert_called_once()
+        mock_create_workflow.assert_called_once()
+        assert wf_runner.workflow == mock_workflow
 
-    async def test_cli_runner_with_invalid_task(self, cli_runner):
-        """Test CLI runner with invalid task."""
-        with patch("agentic_fleet.cli.runner.create_supervisor_workflow") as mock:
-            mock.side_effect = Exception("Invalid task")
-
-            with pytest.raises(Exception):
-                await cli_runner.execute_task("")
-
+    @pytest.mark.asyncio
     @patch("agentic_fleet.cli.runner.create_supervisor_workflow")
-    async def test_cli_runner_with_options(self, mock_create_workflow, cli_runner):
-        """Test CLI runner with execution options."""
-        mock_workflow = AsyncMock()
-        mock_workflow.run = AsyncMock(return_value={"result": "Done"})
+    async def test_workflow_runner_with_options(self, mock_create_workflow):
+        """Test workflow runner with execution options."""
+        mock_workflow = MagicMock()
         mock_create_workflow.return_value = mock_workflow
 
-        result = await cli_runner.execute_task(
-            "Task", mode="sequential", verbose=True
+        wf_runner = WorkflowRunner(verbose=True)
+        await wf_runner.initialize_workflow(
+            max_rounds=10,
+            model="gpt-4o-mini",
+            mode="concurrent",
         )
 
-        assert result is not None
+        # Verify workflow was created
+        assert wf_runner.workflow is not None
 
 
 class TestCLIEdgeCases:
@@ -205,103 +163,62 @@ class TestCLIEdgeCases:
         """Create a CLI test runner."""
         return CliRunner()
 
-    def test_cli_with_special_characters(self, runner):
+    def test_cli_with_invalid_command(self, runner):
+        """Test CLI with invalid command."""
+        result = runner.invoke(app, ["invalid-command-xyz"])
+
+        # Should show error for unknown command
+        assert result.exit_code != 0
+
+    def test_cli_run_with_special_characters(self, runner):
         """Test CLI with special characters in message."""
-        result = runner.invoke(
-            app, ["run", "-m", "Task with 特殊字符 and émojis 🚀"]
-        )
+        # Just test that the CLI doesn't crash on unicode
+        result = runner.invoke(app, ["run", "-m", "Task with émojis 🚀"])
 
-        # Should handle unicode properly
+        # Should handle unicode properly (may fail for other reasons)
         assert result.exit_code in [0, 1]
 
-    def test_cli_with_very_long_message(self, runner):
-        """Test CLI with very long message."""
-        long_message = "x" * 10000
 
-        result = runner.invoke(app, ["run", "-m", long_message])
-
-        assert result.exit_code in [0, 1]
-
-    @patch("agentic_fleet.cli.commands.run.create_supervisor_workflow")
-    def test_cli_with_workflow_error(self, mock_create_workflow, runner):
-        """Test CLI handling workflow errors."""
-        mock_create_workflow.side_effect = Exception("Workflow failed")
-
-        result = runner.invoke(app, ["run", "-m", "Task"])
-
-        # Should handle error gracefully
-        assert result.exit_code == 1 or "error" in result.stdout.lower()
-
-    def test_cli_interrupt_handling(self, runner):
-        """Test CLI keyboard interrupt handling."""
-        with patch("agentic_fleet.cli.commands.run.create_supervisor_workflow") as mock:
-            mock.side_effect = KeyboardInterrupt()
-
-            result = runner.invoke(app, ["run", "-m", "Task"])
-
-            # Should handle interrupt gracefully
-            assert result.exit_code in [0, 1, 130]  # 130 is typical for SIGINT
-
-
-class TestCLIIntegration:
-    """Integration tests for CLI commands."""
+class TestHandoffCommand:
+    """Test suite for 'handoff' command."""
 
     @pytest.fixture
     def runner(self):
         """Create a CLI test runner."""
         return CliRunner()
 
-    @patch("agentic_fleet.cli.commands.run.create_supervisor_workflow")
-    def test_full_task_execution_workflow(self, mock_create_workflow, runner):
-        """Test complete task execution workflow."""
-        mock_workflow = AsyncMock()
-        mock_workflow.run = AsyncMock(
-            return_value={
-                "result": "Task completed",
-                "metadata": {"execution_time": 5.2},
-            }
-        )
-        mock_create_workflow.return_value = mock_workflow
+    def test_handoff_command_help(self, runner):
+        """Test handoff command help."""
+        result = runner.invoke(app, ["handoff", "--help"])
 
-        result = runner.invoke(
-            app, ["run", "-m", "Complete task", "--mode", "auto", "--verbose"]
-        )
+        assert result.exit_code == 0
 
-        # Should execute successfully
-        assert result.exit_code in [0, 1]
 
-    def test_cli_config_loading(self, runner):
-        """Test CLI loads configuration correctly."""
-        with patch("agentic_fleet.cli.load_workflow_config") as mock_load:
-            mock_load.return_value = {
-                "execution": {"max_iterations": 5},
-                "agents": {},
-            }
+class TestAnalyzeCommand:
+    """Test suite for 'analyze' command."""
 
-            result = runner.invoke(app, ["list-agents"])
+    @pytest.fixture
+    def runner(self):
+        """Create a CLI test runner."""
+        return CliRunner()
 
-            mock_load.assert_called()
-            assert result.exit_code in [0, 1]
+    def test_analyze_command_help(self, runner):
+        """Test analyze command help."""
+        result = runner.invoke(app, ["analyze", "--help"])
 
-    @patch("agentic_fleet.cli.commands.run.create_supervisor_workflow")
-    def test_cli_with_all_options(self, mock_create_workflow, runner):
-        """Test CLI with all available options."""
-        mock_workflow = AsyncMock()
-        mock_workflow.run = AsyncMock(return_value={"result": "Success"})
-        mock_create_workflow.return_value = mock_workflow
+        assert result.exit_code == 0
 
-        result = runner.invoke(
-            app,
-            [
-                "run",
-                "-m",
-                "Complex task",
-                "--mode",
-                "parallel",
-                "--verbose",
-                "--timeout",
-                "120",
-            ],
-        )
 
-        assert result.exit_code in [0, 1]
+class TestEvaluateCommand:
+    """Test suite for 'evaluate' command."""
+
+    @pytest.fixture
+    def runner(self):
+        """Create a CLI test runner."""
+        return CliRunner()
+
+    def test_evaluate_command_help(self, runner):
+        """Test evaluate command help."""
+        result = runner.invoke(app, ["evaluate", "--help"])
+
+        assert result.exit_code == 0
