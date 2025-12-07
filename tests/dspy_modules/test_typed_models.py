@@ -81,7 +81,11 @@ class TestRoutingDecisionOutput:
         assert decision.assigned_to == ["Writer", "Researcher", "Analyst"]
 
     def test_comma_separated_tools_coerced(self):
-        """Verify comma-separated tool string is coerced to list (via tool_plan)."""
+        """
+        Ensure `tool_requirements` is stored as a list, accepting comma-separated tool strings.
+        
+        Asserts that the specified tools appear in `tool_requirements`.
+        """
         decision = RoutingDecisionOutput(
             assigned_to=["Researcher"],
             execution_mode="delegated",

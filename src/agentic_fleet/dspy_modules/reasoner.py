@@ -73,13 +73,14 @@ class DSPyReasoner(dspy.Module):
         enable_routing_cache: bool = True,
         cache_ttl_seconds: int = 300,
     ) -> None:
-        """Initialize the DSPy reasoner.
-
-        Args:
-            use_enhanced_signatures: Use enhanced routing with tool planning (default: True)
-            use_typed_signatures: Use Pydantic-typed signatures for structured outputs (default: True)
-            enable_routing_cache: Cache routing decisions to avoid redundant LLM calls (default: True)
-            cache_ttl_seconds: TTL for routing cache entries in seconds (default: 300)
+        """
+        Initialize the DSPyReasoner with configuration for signature mode and routing cache.
+        
+        Parameters:
+            use_enhanced_signatures (bool): Enable enhanced routing that includes tool planning and richer outputs.
+            use_typed_signatures (bool): Use Pydantic-typed signatures for structured/typed module outputs.
+            enable_routing_cache (bool): Enable in-memory caching of routing decisions to reduce repeated model calls.
+            cache_ttl_seconds (int): Time-to-live for cached routing entries in seconds.
         """
         super().__init__()
         self.use_enhanced_signatures = use_enhanced_signatures
@@ -106,13 +107,15 @@ class DSPyReasoner(dspy.Module):
         self._nlu: DSPyNLU | None = None
 
     def _ensure_modules_initialized(self) -> None:
-        """Lazily initialize DSPy modules on first use.
-
-        Only initializes modules that haven't been manually set (e.g., via setters
-        for testing or loading compiled modules).
-
-        When use_typed_signatures=True, uses Pydantic-based signatures for
-        structured outputs that provide better parsing reliability.
+        """
+        Lazily initialize DSPy modules and related runtime defaults on first use.
+        
+        Ensures module placeholders and backward-compatible defaults (execution history,
+        typed-signature flag, routing cache settings and TTL) exist, then initializes any
+        DSPy modules that have not been manually provided. Honors the instance's
+        use_enhanced_signatures and use_typed_signatures configuration when selecting
+        which signature variants to create. After this returns, the reasoner has all
+        predictor/chain placeholders populated or left as explicitly overridden for testing.
         """
         # Backward compatibility: compiled supervisors pickled before these fields
         # existed won't have them set on load.
@@ -245,7 +248,12 @@ class DSPyReasoner(dspy.Module):
 
     @property
     def analyzer(self) -> dspy.Module:
-        """Lazily initialized task analyzer."""
+        """
+        Provide lazy access to the task analyzer module.
+        
+        Returns:
+            dspy.Module: The analyzer module used for task analysis; initialized on first access.
+        """
         self._ensure_modules_initialized()
         return self._analyzer  # type: ignore[return-value]
 
@@ -590,20 +598,36 @@ class DSPyReasoner(dspy.Module):
         max_backtracks: int = 2,
         skip_cache: bool = False,
     ) -> dict[str, Any]:
-        """Route a task to the most appropriate agent(s).
-
-        Args:
-            task: The task to route
-            team: Dictionary mapping agent names to their descriptions
-            context: Optional context string
-            handoff_history: Optional history of agent handoffs
-            current_date: Optional current date string (YYYY-MM-DD)
-            required_capabilities: Optional list of required capabilities to focus selection
-            max_backtracks: Maximum number of DSPy assertion retries (default: 2)
-            skip_cache: Skip cache lookup and force fresh routing (default: False)
-
+        """
+        Decide and return an orchestrated routing for a task, including assigned agents, execution mode, subtasks, and tool plan.
+        
+        Parameters:
+            task (str): The task description to route.
+            team (dict[str, str]): Mapping of agent names to their descriptions.
+            context (str, optional): Current contextual information to inform routing.
+            handoff_history (list[dict[str, Any]] | None, optional): Chronological handoff records to include in routing context.
+            current_date (str | None, optional): Current date in YYYY-MM-DD format; used when time/context sensitivity matters.
+            required_capabilities (list[str] | None, optional): Capabilities to prioritize when selecting agents.
+            max_backtracks (int, optional): Maximum number of router assertion retries.
+            skip_cache (bool, optional): If true, bypasses the routing cache and forces a fresh routing decision.
+        
         Returns:
-            Dictionary containing routing decision (assigned_to, mode, subtasks)
+            dict[str, Any]: A routing decision containing at least:
+                - "task": original task string.
+                - "assigned_to": list of agent names selected for the task.
+                - "mode": execution mode (e.g., "delegated", "parallel").
+                - "subtasks": list of subtasks or the original task if none were produced.
+                - "tool_plan" / "tool_requirements": ordered tools planned for execution (may be empty).
+                - "tool_goals": goals for tool usage when available.
+                - "latency_budget": latency expectation (e.g., "low", "medium").
+                - "handoff_strategy": handoff guidance when present.
+                - "workflow_gates": workflow gate information when present.
+                - "reasoning": textual reasoning for the decision.
+        
+        Notes:
+            - Simple/heartbeat tasks are routed directly to the "Writer" agent when present.
+            - Time-sensitive tasks prefer the configured web-search tool (e.g., Tavily); when used, the "Researcher" role is prioritized and the tool is inserted into the tool plan.
+            - When routing cache is enabled, results may be returned from or stored in the cache unless `skip_cache` is true.
         """
         with optional_span("DSPyReasoner.route_task", attributes={"task": task}):
             from datetime import datetime
@@ -936,7 +960,15 @@ class DSPyReasoner(dspy.Module):
         return str(result)
 
     def get_execution_summary(self) -> dict[str, Any]:
-        """Return a summary of the execution history."""
+        """
+        Provide a brief summary of the reasoner's execution state.
+        
+        Returns:
+            summary (dict): A dictionary with keys:
+                history_count (int): Number of recorded execution events.
+                routing_cache_size (int): Number of entries currently stored in the routing cache.
+                use_typed_signatures (bool): Whether typed (Pydantic) signatures are enabled.
+        """
         return {
             "history_count": len(self._execution_history),
             "routing_cache_size": len(self._routing_cache),
@@ -946,26 +978,28 @@ class DSPyReasoner(dspy.Module):
     # --- Cache management ---
 
     def _get_cache_key(self, task: str, team_key: str) -> str:
-        """Generate a cache key for routing decisions.
-
-        Args:
-            task: The task description
-            team_key: A string representing the team configuration
-
+        """
+        Create a stable 16-hex-character cache key derived from `task` and `team_key`.
+        
+        Parameters:
+            task (str): The task description used to derive the key.
+            team_key (str): String representing the team configuration or capabilities.
+        
         Returns:
-            A hash-based cache key
+            cache_key (str): 16-character hex MD5 digest of the combined `task` and `team_key`.
         """
         combined = f"{task}|{team_key}"
         return hashlib.md5(combined.encode()).hexdigest()[:16]
 
     def _get_cached_routing(self, cache_key: str) -> dict[str, Any] | None:
-        """Retrieve a cached routing decision if valid.
-
-        Args:
-            cache_key: The cache key to look up
-
+        """
+        Return a previously stored routing decision for `cache_key` if routing cache is enabled and the entry exists and is not expired.
+        
+        Parameters:
+            cache_key (str): Key identifying the cached routing decision.
+        
         Returns:
-            Cached routing decision or None if not found/expired
+            dict[str, Any] | None: The cached routing decision if present and fresh; `None` if caching is disabled, the key is absent, or the entry has expired.
         """
         if not self.enable_routing_cache:
             return None
@@ -983,11 +1017,14 @@ class DSPyReasoner(dspy.Module):
         return cached["result"]
 
     def _cache_routing(self, cache_key: str, result: dict[str, Any]) -> None:
-        """Store a routing decision in the cache.
-
-        Args:
-            cache_key: The cache key
-            result: The routing decision to cache
+        """
+        Store a routing decision in the routing cache with a timestamp.
+        
+        If routing cache is disabled, this is a no-op.
+        
+        Parameters:
+            cache_key (str): Key under which to store the routing decision.
+            result (dict[str, Any]): Routing decision data to cache.
         """
         if not self.enable_routing_cache:
             return
@@ -1003,16 +1040,26 @@ class DSPyReasoner(dspy.Module):
         logger.debug("Routing cache cleared")
 
     def _extract_typed_routing_decision(self, prediction: Any) -> dict[str, Any]:
-        """Extract routing fields from a typed signature prediction.
-
-        Typed signatures return a nested Pydantic model in the 'decision' field.
-        This method extracts the fields and converts them to a standard dict.
-
-        Args:
-            prediction: DSPy prediction with typed output
-
+        """
+        Extract a plain dict of routing decision fields from a DSPy prediction that may use typed (Pydantic) signatures.
+        
+        If the prediction contains a typed `decision` (Pydantic model), this function returns that model serialized to a dict (supports Pydantic v2 `model_dump()` and v1 `dict()`), or falls back to reading common decision attributes. If there is no typed `decision`, the function extracts routing fields directly from the top-level prediction object.
+        
+        Parameters:
+            prediction (Any): DSPy prediction object which may contain a typed `decision` attribute or top-level routing fields.
+        
         Returns:
-            Dictionary with routing decision fields
+            dict[str, Any]: A dictionary with these routing fields:
+                - assigned_to: list of assignees
+                - execution_mode: execution mode string (default "delegated")
+                - subtasks: list of subtasks
+                - tool_requirements: list of tool requirement descriptors
+                - tool_plan: list describing planned tool usage
+                - tool_goals: tool goals string
+                - latency_budget: latency preference (default "medium")
+                - handoff_strategy: handoff strategy string
+                - workflow_gates: workflow gate information
+                - reasoning: human-readable reasoning or explanation
         """
         # Check if we have a typed 'decision' field (Pydantic model)
         decision = getattr(prediction, "decision", None)

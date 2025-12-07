@@ -31,10 +31,10 @@ from agentic_fleet.app.settings import get_settings
 
 
 def _configure_logging() -> None:
-    """Configure real-time console logging for the API.
-
-    Sets up structured logging with timestamps that flush immediately
-    to stdout for real-time visibility.
+    """
+    Configure and apply console logging for the application, using JSON formatting when enabled.
+    
+    Reads logging options from settings (level, JSON toggle, and format), attaches a stdout handler that flushes immediately, sets the root and uvicorn.access loggers, and reduces verbosity for several noisy third-party libraries.
     """
     settings = get_settings()
     log_level = settings.log_level

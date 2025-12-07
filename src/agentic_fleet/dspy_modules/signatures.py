@@ -241,20 +241,29 @@ class FleetReAct(dspy.Module):
     def __init__(
         self, signature: Any = None, tools: list[Any] | None = None, max_iters: int = 5
     ) -> None:
+        """
+        Initialize a FleetReAct reasoning module that runs a ReAct loop with the given signature, tools, and iteration limit.
+        
+        Parameters:
+            signature (Any): Signature or signature string describing the expected input→output mapping for the ReAct instance (e.g., "question -> answer").
+            tools (list[Any] | None): Optional list of tool objects available to the ReAct loop.
+            max_iters (int): Maximum number of ReAct iterations to execute.
+        """
         super().__init__()
         sig_arg = signature or "question -> answer"
         self.react = dspy.ReAct(sig_arg, tools=tools or [], max_iters=max_iters)  # type: ignore[arg-type]
         self.max_iters = max_iters
 
     def forward(self, question: str, tools: list[Any] | None = None) -> dspy.Prediction:
-        """Execute ReAct loop.
-
-        Args:
-            question: The question/task to solve
-            tools: Optional list of tools to make available (typically set in constructor)
-
+        """
+        Run the ReAct reasoning loop for a given question.
+        
+        Parameters:
+            question (str): The question or task to solve.
+            tools (list[Any] | None): Optional tools to expose to the ReAct loop; if omitted, the instance's configured tools are used.
+        
         Returns:
-            Prediction with answer and reasoning
+            dspy.Prediction: Prediction containing the final answer and reasoning trace.
         """
         return self.react(question=question, tools=tools)
 
@@ -268,13 +277,16 @@ class FleetPoT(dspy.Module):
         self.last_error: str | None = None
 
     def forward(self, question: str) -> dspy.Prediction:
-        """Execute Program of Thought.
-
-        Args:
-            question: The question/task to solve
-
+        """
+        Run the Program of Thought on a question and return the resulting prediction.
+        
+        Clears `last_error` before execution. If a `RuntimeError` occurs, stores its message in `last_error` and re-raises the exception.
+        
+        Parameters:
+            question (str): The question or task to solve.
+        
         Returns:
-            Prediction with answer and reasoning (code)
+            dspy.Prediction: Prediction containing the answer and reasoning (code).
         """
         self.last_error = None
         try:

@@ -454,6 +454,12 @@ class TestWithRoutingAssertionsDecorator:
 
         @with_routing_assertions()
         def dummy_route(task: str) -> dict:
+            """
+            Create a simple routing response containing the original task and assigned agents.
+            
+            Returns:
+                routing (dict): Dictionary with keys "task" (the provided task string) and "assigned_to" (list of agent names assigned to the task).
+            """
             return {"task": task, "assigned_to": ["Writer"]}
 
         result = dummy_route("Test task")
@@ -466,6 +472,12 @@ class TestWithRoutingAssertionsDecorator:
 
         @with_routing_assertions(_max_backtracks=5)
         def dummy_route(task: str) -> dict:
+            """
+            Produce a simple routing decision assigning the task to a default writer.
+            
+            Returns:
+                dict: A routing decision containing the key "assigned_to" whose value is a list of agent names (e.g., ["Writer"]).
+            """
             return {"assigned_to": ["Writer"]}
 
         result = dummy_route("Test")

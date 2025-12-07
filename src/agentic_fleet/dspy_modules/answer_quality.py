@@ -55,18 +55,24 @@ if dspy:
         """
 
         def __init__(self) -> None:
+            """
+            Initialize the AnswerQualityModule and attach a DSPy predictor for the AnswerQualitySignature.
+            
+            Sets the `predictor` attribute to an object that performs predictions for the signature.
+            """
             super().__init__()
             self.predictor: Any = dspy.Predict(AnswerQualitySignature)  # type: ignore[arg-type]
 
         def forward(self, question: str, answer: str) -> dspy.Prediction:  # type: ignore[name-defined]
-            """Score an answer's quality dimensions.
-
-            Args:
-                question: Original user question/task
-                answer: Assistant's final answer
-
+            """
+            Score an assistant answer along the dimensions of groundness, relevance, and coherence.
+            
+            Parameters:
+                question (str): The original user question or task.
+                answer (str): The assistant's final answer to be scored.
+            
             Returns:
-                DSPy Prediction with groundness, relevance, coherence fields
+                dspy.Prediction: A prediction object containing `groundness`, `relevance`, and `coherence` scores, each expected to be in the range 0.0 to 1.0.
             """
             return self.predictor(question=question, answer=answer)
 

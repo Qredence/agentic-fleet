@@ -30,9 +30,28 @@ logger = logging.getLogger(__name__)
 if TYPE_CHECKING:
     # Mock for type checking if dspy stubs are missing Suggest/Assert
     def Suggest(condition: bool, message: str) -> None:  # noqa: N802, D103
+        """
+        Register a soft routing suggestion associated with a boolean condition and a human-readable message.
+        
+        Parameters:
+            condition (bool): The condition to evaluate for the suggestion; the suggestion is associated with this condition.
+            message (str): A descriptive message explaining the suggestion or guidance to prefer.
+        """
         pass
 
     def Assert(condition: bool, message: str) -> None:  # noqa: N802, D103
+        """
+        Enforces a hard routing constraint by asserting that a condition holds.
+        
+        Raises an AssertionError with the provided message if `condition` is False; does nothing when `condition` is True.
+        
+        Parameters:
+            condition (bool): The condition that must be true.
+            message (str): The message to include in the AssertionError when the condition is false.
+        
+        Raises:
+            AssertionError: If `condition` is False.
+        """
         pass
 
 else:
@@ -46,6 +65,13 @@ else:
         )
 
         def Suggest(condition: bool, message: str) -> None:  # noqa: N802, D103
+            """
+            Record a soft suggestion that a routing condition should hold to guide decision making without enforcing failure.
+            
+            Parameters:
+                condition (bool): The boolean condition being suggested to hold.
+                message (str): Human-readable explanation or guidance applied if the suggestion is not met.
+            """
             pass
 
     if Assert is None:
@@ -55,6 +81,11 @@ else:
         )
 
         def Assert(condition: bool, message: str) -> None:  # noqa: N802, D103
+            """
+            No-op placeholder for DSPy-style hard assertions used when the real `Assert` is unavailable.
+            
+            This function accepts an assertion `condition` and a `message` describing the failure; in a full DSPy runtime the assertion would raise or trigger backtracking with `message`, but this shim performs no action so it never raises.
+            """
             pass
 
 
@@ -65,14 +96,15 @@ def validate_agent_exists(
     assigned_agents: list[str] | tuple[str, ...],
     available_agents: list[str] | tuple[str, ...],
 ) -> bool:
-    """Validate that all assigned agents exist in the available team.
-
-    Args:
-        assigned_agents: List of agent names assigned to the task
-        available_agents: List of agent names available in the team
-
+    """
+    Check whether every assigned agent name appears in the available agents (case-insensitive).
+    
+    Parameters:
+        assigned_agents (list[str] | tuple[str, ...]): Agent names assigned to the task.
+        available_agents (list[str] | tuple[str, ...]): Agent names available in the team.
+    
     Returns:
-        True if all assigned agents exist, False otherwise
+        bool: `True` if every name in `assigned_agents` matches an entry in `available_agents` when compared case-insensitively, `False` otherwise.
     """
     available_set = {a.lower() for a in available_agents}
     return all(agent.lower() in available_set for agent in assigned_agents)
@@ -82,10 +114,12 @@ def assert_valid_agents(
     assigned_agents: list[str] | tuple[str, ...],
     available_agents: list[str] | tuple[str, ...],
 ) -> None:
-    """Assert that all assigned agents exist (hard constraint).
-
-    This should be used during routing to ensure agents are valid.
-    Triggers backtracking if assertion fails.
+    """
+    Enforces that every agent in `assigned_agents` exists among `available_agents` using case-insensitive name comparison.
+    
+    Parameters:
+        assigned_agents (list[str] | tuple[str, ...]): Agent names assigned to the routing decision.
+        available_agents (list[str] | tuple[str, ...]): Agent names available in the team; comparison is case-insensitive.
     """
     Assert(
         validate_agent_exists(assigned_agents, available_agents),
@@ -98,9 +132,10 @@ def suggest_valid_agents(
     assigned_agents: list[str] | tuple[str, ...],
     available_agents: list[str] | tuple[str, ...],
 ) -> None:
-    """Suggest that all assigned agents should exist (soft constraint).
-
-    Use this when you want to guide optimization without hard failures.
+    """
+    Emit a soft routing suggestion that all assigned agents are present in the available agent list.
+    
+    When the check fails, a Suggest is issued with a message listing the provided available agents.
     """
     Suggest(
         validate_agent_exists(assigned_agents, available_agents),
@@ -115,14 +150,15 @@ def validate_tool_assignment(
     assigned_tools: list[str] | tuple[str, ...],
     available_tools: list[str] | tuple[str, ...],
 ) -> bool:
-    """Validate that all assigned tools exist in available tools.
-
-    Args:
-        assigned_tools: List of tool names assigned to the task
-        available_tools: List of tool names available
-
+    """
+    Check whether every assigned tool is present in the available tool set (case-insensitive).
+    
+    Parameters:
+        assigned_tools (list[str] | tuple[str, ...]): Tool names assigned to the task.
+        available_tools (list[str] | tuple[str, ...]): Tool names that are available.
+    
     Returns:
-        True if all assigned tools exist, False otherwise
+        True if all assigned tools are present in available_tools, False otherwise.
     """
     available_set = {t.lower() for t in available_tools}
     return all(tool.lower() in available_set for tool in assigned_tools)
@@ -132,7 +168,13 @@ def assert_valid_tools(
     assigned_tools: list[str] | tuple[str, ...],
     available_tools: list[str] | tuple[str, ...],
 ) -> None:
-    """Assert that all assigned tools exist (hard constraint)."""
+    """
+    Enforce that every assigned tool is present in the available tools (comparison is case-insensitive); triggers a hard assertion if any assigned tool is missing.
+    
+    Parameters:
+        assigned_tools (list[str] | tuple[str, ...]): Tools requested in the routing decision.
+        available_tools (list[str] | tuple[str, ...]): Tools available to assign; compared case-insensitively against `assigned_tools`.
+    """
     Assert(
         validate_tool_assignment(assigned_tools, available_tools),
         f"All assigned tools must exist. "
@@ -144,7 +186,17 @@ def suggest_valid_tools(
     assigned_tools: list[str] | tuple[str, ...],
     available_tools: list[str] | tuple[str, ...],
 ) -> None:
-    """Suggest that all assigned tools should exist (soft constraint)."""
+    """
+    Suggest that each assigned tool is present in the available tools list.
+    
+    Emits a soft routing suggestion that favors assignments where every name in `assigned_tools`
+    (case-sensitive) appears in `available_tools`. The suggestion message includes the
+    provided `available_tools` for context.
+    
+    Parameters:
+        assigned_tools (list[str] | tuple[str, ...]): Tools proposed for assignment.
+        available_tools (list[str] | tuple[str, ...]): Tools actually available to route to.
+    """
     Suggest(
         validate_tool_assignment(assigned_tools, available_tools),
         f"Assigned tools should exist. Available tools: {list(available_tools)}",
@@ -158,19 +210,15 @@ def validate_mode_agent_match(
     mode: ExecutionMode | str,
     agent_count: int,
 ) -> bool:
-    """Validate that execution mode matches agent count.
-
-    Rules:
-    - DELEGATED: requires exactly 1 agent
-    - SEQUENTIAL/PARALLEL: requires 1+ agents (allows single agent for efficiency)
-    - GROUP_CHAT/DISCUSSION: requires 2+ agents
-
-    Args:
-        mode: The execution mode
-        agent_count: Number of assigned agents
-
+    """
+    Check whether an execution mode is compatible with the number of assigned agents.
+    
+    Parameters:
+        mode (ExecutionMode | str): Execution mode or its raw string representation.
+        agent_count (int): Number of assigned agents.
+    
     Returns:
-        True if mode matches agent count, False otherwise
+        bool: `true` if the mode is compatible with agent_count, `false` otherwise.
     """
     if isinstance(mode, str):
         mode = ExecutionMode.from_raw(mode)
@@ -188,7 +236,18 @@ def assert_mode_agent_consistency(
     mode: ExecutionMode | str,
     agent_count: int,
 ) -> None:
-    """Assert that execution mode is consistent with agent count (hard constraint)."""
+    """
+    Ensure the execution mode is compatible with the number of assigned agents.
+    
+    Parameters:
+        mode (ExecutionMode | str): Execution mode to validate; may be an ExecutionMode enum or its string form.
+        agent_count (int): Number of agents assigned to the task.
+    
+    Notes:
+        - DELEGATED requires exactly 1 agent.
+        - GROUP_CHAT and DISCUSSION require at least 2 agents.
+        - Violations trigger a hard routing assertion.
+    """
     mode_enum = ExecutionMode.from_raw(mode) if isinstance(mode, str) else mode
 
     if mode_enum == ExecutionMode.DELEGATED:
@@ -207,7 +266,15 @@ def suggest_mode_agent_consistency(
     mode: ExecutionMode | str,
     agent_count: int,
 ) -> None:
-    """Suggest that execution mode should match agent count (soft constraint)."""
+    """
+    Suggest a soft constraint that the execution mode aligns with the number of assigned agents.
+    
+    Emits a suggestion if the provided mode is inconsistent with the agent count (for example, DELEGATED requires exactly 1 agent, GROUP_CHAT/DISCUSSION require at least 2).
+    
+    Parameters:
+        mode (ExecutionMode | str): The execution mode to validate; may be an ExecutionMode enum or its string name.
+        agent_count (int): The number of agents assigned to the task.
+    """
     Suggest(
         validate_mode_agent_match(mode, agent_count),
         f"Execution mode should match agent count. Mode: {mode}, Agent count: {agent_count}",
@@ -297,13 +364,14 @@ WRITING_KEYWORDS = frozenset(
 
 
 def detect_task_type(task: str) -> str:
-    """Detect the primary task type from task description.
-
-    Args:
-        task: The task description
-
+    """
+    Classify a task description into a primary task type.
+    
+    Parameters:
+        task (str): Task description text to classify.
+    
     Returns:
-        Task type: "research", "coding", "analysis", "writing", or "general"
+        str: One of "research", "coding", "analysis", "writing", or "general" indicating the detected task type.
     """
     task_lower = task.lower()
 
@@ -323,12 +391,17 @@ def suggest_task_type_routing(
     assigned_agents: list[str] | tuple[str, ...],
     tool_requirements: list[str] | tuple[str, ...],
 ) -> None:
-    """Apply task-type specific routing suggestions.
-
-    Args:
-        task: The task description
-        assigned_agents: List of assigned agent names
-        tool_requirements: List of required tool names
+    """
+    Suggest routing adjustments based on the detected task type.
+    
+    Emits soft suggestions about recommended tools and agent roles for tasks classified as
+    research, coding, analysis, or writing (for example, recommending a search tool and a
+    Researcher for research tasks, or a code execution tool and a Coder for coding tasks).
+    
+    Parameters:
+    	task (str): The task description to classify.
+    	assigned_agents (list[str] | tuple[str, ...]): Agent names currently assigned to the task.
+    	tool_requirements (list[str] | tuple[str, ...]): Tool names currently required or planned for the task.
     """
     task_type = detect_task_type(task)
     agents_lower = [a.lower() for a in assigned_agents]
@@ -394,13 +467,14 @@ def suggest_task_type_routing(
 
 
 def validate_routing_decision(decision: RoutingDecision, task: str) -> None:
-    """Apply DSPy assertions to validate and refine routing decisions.
-
-    This is the main validation function that applies all relevant constraints.
-
-    Args:
-        decision: The routing decision to validate.
-        task: The original task description.
+    """
+    Validate and refine a routing decision by applying hard assertions and soft suggestions.
+    
+    Applies a hard Assert that at least one agent is assigned, suggests consistency between execution mode and agent count, and adds task-type and legacy suggestions about required tools and preferred modes (e.g., search tool for research tasks, code interpreter for calculation tasks, multi-agent tasks not delegated, single-agent tasks preferably delegated).
+    
+    Parameters:
+        decision (RoutingDecision): The routing decision to validate and refine.
+        task (str): The original task description used to infer task type and tool requirements.
     """
     # Hard constraint: At least one agent must be assigned
     Assert(
@@ -456,16 +530,16 @@ def validate_full_routing(
     available_agents: list[str] | None = None,
     available_tools: list[str] | None = None,
 ) -> None:
-    """Comprehensive routing validation with all available context.
-
-    This function applies both hard assertions and soft suggestions based on
-    the full routing context including available agents and tools.
-
-    Args:
-        decision: The routing decision (RoutingDecision or dict)
-        task: The original task description
-        available_agents: Optional list of available agent names
-        available_tools: Optional list of available tool names
+    """
+    Run comprehensive routing validation and suggestions using full context.
+    
+    Performs hard assertions and soft suggestions for a routing decision and task; if a dict is provided, it is converted to a RoutingDecision before validation. When available_agents or available_tools are provided, additional soft suggestions are applied to guide agent and tool selection.
+    
+    Parameters:
+        decision (RoutingDecision | dict[str, Any]): RoutingDecision instance or a mapping convertible via RoutingDecision.from_mapping.
+        task (str): The original task description used for task-type based checks.
+        available_agents (list[str] | None): Optional list of available agent names to validate against; when supplied, agent existence suggestions are emitted.
+        available_tools (list[str] | None): Optional list of available tool names to validate against; when supplied and the decision includes tool requirements, tool existence suggestions are emitted.
     """
     # Convert dict to RoutingDecision if needed
     routing_decision: RoutingDecision
@@ -491,23 +565,32 @@ def validate_full_routing(
 
 
 def with_routing_assertions(_max_backtracks: int = 2):
-    """Decorator to wrap a DSPy module with routing assertions.
-
-    Usage:
-        @with_routing_assertions(max_backtracks=3)
-        def route_task(...):
-            ...
-
-    Args:
-        _max_backtracks: Maximum number of assertion retries (reserved for future use)
-
+    """
+    Wraps a DSPy routing module with runtime assertions that enforce routing constraints when possible.
+    
+    When DSPy's `assert_transform_module` is available this decorator applies the transform so assertions and suggestions
+    defined in the module run during execution; if the transform is unavailable the original function is executed directly.
+    The `_max_backtracks` parameter is reserved for future use and currently has no effect.
+    
+    Parameters:
+        _max_backtracks (int): Reserved maximum number of assertion retries; currently unused.
+    
     Returns:
-        Decorator function
+        function: A decorator that wraps the target function with DSPy assertion behavior when available.
     """
 
     # Note: _max_backtracks is reserved for future use when dspy.assert_transform_module
     # supports configurable backtracking limits
     def decorator(func):
+        """
+        Create a decorator that applies DSPy's assertion transform to a function at call time when available.
+        
+        Parameters:
+            func (callable): The function to decorate.
+        
+        Returns:
+            callable: A wrapper that, when called, invokes `func` wrapped with `dspy.assert_transform_module` if present; otherwise invokes `func` directly.
+        """
         def wrapper(*args, **kwargs):
             # Import here to avoid circular imports
             import dspy
