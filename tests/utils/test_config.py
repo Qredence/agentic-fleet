@@ -3,8 +3,7 @@
 import pytest
 import os
 import yaml
-from pathlib import Path
-from unittest.mock import Mock, patch, mock_open
+from unittest.mock import mock_open
 from agentic_fleet.utils.config import (
     load_workflow_config,
     get_config_value,
@@ -298,6 +297,7 @@ class TestConfigEdgeCases:
             value = get_config_value(config, "agents.agent1.models")
             assert value == ["model1", "model2"]
         except (KeyError, TypeError):
+            # Expected: some implementations may not support list/index access in dot notation
             pass
 
     def test_merge_configs_with_none_values(self):

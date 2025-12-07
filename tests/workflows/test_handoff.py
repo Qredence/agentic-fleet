@@ -1,7 +1,7 @@
 """Comprehensive tests for workflows/handoff.py."""
 
 import pytest
-from unittest.mock import Mock, patch, AsyncMock, MagicMock
+from unittest.mock import Mock, patch, AsyncMock
 from agentic_fleet.workflows.handoff import (
     HandoffDecision,
     HandoffManager,
@@ -81,7 +81,10 @@ class TestHandoffManager:
     @pytest.fixture
     def manager(self, mock_agents):
         """Create a HandoffManager instance."""
-        return HandoffManager(mock_agents)
+        mock_supervisor = Mock()
+        manager = HandoffManager(dspy_supervisor=mock_supervisor)
+        manager.agents = mock_agents  # Set agents directly for testing
+        return manager
 
     def test_manager_initialization(self, manager, mock_agents):
         """Test HandoffManager initialization."""
@@ -92,7 +95,9 @@ class TestHandoffManager:
 
     def test_manager_with_empty_agents(self):
         """Test manager with empty agents dict."""
-        manager = HandoffManager({})
+        mock_supervisor = Mock()
+        manager = HandoffManager(dspy_supervisor=mock_supervisor)
+        manager.agents = {}  # Set empty agents for testing
         assert manager.agents == {}
 
     async def test_evaluate_handoff_need_true(self, manager):
@@ -290,7 +295,9 @@ class TestHandoffManagerEdgeCases:
             "agent1": Mock(spec=Agent),
             "agent2": Mock(spec=Agent),
         }
-        manager = HandoffManager(agents=agents)
+        mock_supervisor = Mock()
+        manager = HandoffManager(dspy_supervisor=mock_supervisor)
+        manager.agents = agents  # Set agents for testing
 
         # Simulate concurrent handoff evaluations
         tasks = [
@@ -306,7 +313,9 @@ class TestHandoffManagerEdgeCases:
     async def test_circular_handoff_prevention(self):
         """Test prevention of circular handoffs."""
         agents = {"agent1": Mock(spec=Agent), "agent2": Mock(spec=Agent)}
-        manager = HandoffManager(agents=agents)
+        mock_supervisor = Mock()
+        manager = HandoffManager(dspy_supervisor=mock_supervisor)
+        manager.agents = agents  # Set agents for testing
 
         context = {"handoff_chain": ["agent1", "agent2", "agent1"]}
 
@@ -319,7 +328,9 @@ class TestHandoffManagerEdgeCases:
     def test_handoff_with_corrupted_context(self):
         """Test handoff handling with corrupted context."""
         agents = {"agent1": Mock(spec=Agent)}
-        manager = HandoffManager(agents=agents)
+        mock_supervisor = Mock()
+        _ = HandoffManager(dspy_supervisor=mock_supervisor)
+        # Note: manager variable intentionally unused in original test implementation
 
         corrupted_contexts = [
             {"history": "not a list"},
@@ -352,7 +363,10 @@ class TestHandoffManagerIntegration:
     @pytest.fixture
     def full_manager(self, full_agent_system):
         """Create a manager with full agent system."""
-        return HandoffManager(agents=full_agent_system)
+        mock_supervisor = Mock()
+        manager = HandoffManager(dspy_supervisor=mock_supervisor)
+        manager.agents = full_agent_system  # Set agents for testing
+        return manager
 
     async def test_multi_step_handoff_chain(self, full_manager):
         """Test a multi-step handoff chain."""

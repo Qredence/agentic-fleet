@@ -1,7 +1,7 @@
 """Comprehensive tests for utils/cosmos.py."""
 
 import pytest
-from unittest.mock import Mock, patch, AsyncMock, MagicMock
+from unittest.mock import Mock, patch, AsyncMock
 from datetime import datetime
 from azure.cosmos import exceptions as cosmos_exceptions
 

@@ -1,14 +1,13 @@
 """Enhanced comprehensive tests for workflows/executors.py - Routing and Execution."""
 
 import pytest
-from unittest.mock import Mock, patch, AsyncMock, MagicMock
+from unittest.mock import Mock, patch, AsyncMock
 from agentic_fleet.workflows.executors import (
     RoutingExecutor,
     AnalysisExecutor,
     QualityExecutor,
     ProgressExecutor,
 )
-from agentic_fleet.dspy_modules.assertions import detect_task_type, validate_full_routing
 
 
 class TestRoutingExecutor:
@@ -30,12 +29,12 @@ class TestRoutingExecutor:
     @pytest.fixture
     def executor(self, mock_reasoner):
         """Create a RoutingExecutor instance."""
-        config = {
-            "agents": ["researcher", "analyst", "writer"],
-            "tools": ["TavilyMCPTool", "BrowserTool"],
-        }
-        executor = RoutingExecutor(config=config)
-        executor.reasoner = mock_reasoner
+        mock_context = Mock()
+        executor = RoutingExecutor(
+            executor_id="routing_test",
+            supervisor=mock_reasoner,
+            context=mock_context
+        )
         return executor
 
     async def test_routing_executor_basic_routing(self, executor, mock_reasoner):
@@ -130,7 +129,12 @@ class TestAnalysisExecutor:
     @pytest.fixture
     def executor(self, mock_reasoner):
         """Create an AnalysisExecutor instance."""
-        return AnalysisExecutor(reasoner=mock_reasoner)
+        mock_context = Mock()
+        return AnalysisExecutor(
+            executor_id="analysis_test",
+            supervisor=mock_reasoner,
+            context=mock_context
+        )
 
     async def test_analysis_executor_basic_analysis(self, executor, mock_reasoner):
         """Test basic task analysis."""
@@ -180,8 +184,12 @@ class TestQualityExecutor:
     @pytest.fixture
     def executor(self, mock_evaluator):
         """Create a QualityExecutor instance."""
-        config = {"quality_threshold": 0.8}
-        return QualityExecutor(evaluator=mock_evaluator, config=config)
+        mock_context = Mock()
+        return QualityExecutor(
+            executor_id="quality_test",
+            supervisor=mock_evaluator,
+            context=mock_context
+        )
 
     async def test_quality_executor_evaluate_result(self, executor, mock_evaluator):
         """Test quality evaluation of result."""
@@ -225,7 +233,13 @@ class TestProgressExecutor:
     @pytest.fixture
     def executor(self):
         """Create a ProgressExecutor instance."""
-        return ProgressExecutor()
+        mock_supervisor = Mock()
+        mock_context = Mock()
+        return ProgressExecutor(
+            executor_id="progress_test",
+            supervisor=mock_supervisor,
+            context=mock_context
+        )
 
     async def test_progress_executor_track_progress(self, executor):
         """Test progress tracking."""
@@ -274,12 +288,30 @@ class TestExecutorIntegration:
 
         mock_evaluator = Mock()
         mock_evaluator.evaluate = AsyncMock(return_value={"score": 0.9})
+        
+        mock_context = Mock()
 
         return {
-            "analysis": AnalysisExecutor(reasoner=mock_reasoner),
-            "routing": RoutingExecutor(reasoner=mock_reasoner, config={}),
-            "quality": QualityExecutor(evaluator=mock_evaluator, config={}),
-            "progress": ProgressExecutor(),
+            "analysis": AnalysisExecutor(
+                executor_id="analysis_int",
+                supervisor=mock_reasoner,
+                context=mock_context
+            ),
+            "routing": RoutingExecutor(
+                executor_id="routing_int",
+                supervisor=mock_reasoner,
+                context=mock_context
+            ),
+            "quality": QualityExecutor(
+                executor_id="quality_int",
+                supervisor=mock_evaluator,
+                context=mock_context
+            ),
+            "progress": ProgressExecutor(
+                executor_id="progress_int",
+                supervisor=mock_reasoner,
+                context=mock_context
+            ),
         }
 
     async def test_full_execution_pipeline(self, all_executors):
@@ -323,8 +355,13 @@ class TestExecutorEdgeCases:
         """Test routing with empty task."""
         mock_reasoner = Mock()
         mock_reasoner.route_task = AsyncMock(return_value={"agent": "planner"})
+        mock_context = Mock()
 
-        executor = RoutingExecutor(reasoner=mock_reasoner, config={})
+        executor = RoutingExecutor(
+            executor_id="routing_empty",
+            supervisor=mock_reasoner,
+            context=mock_context
+        )
 
         result = await executor.route("", {})
 
@@ -335,8 +372,13 @@ class TestExecutorEdgeCases:
         """Test analysis with very long task description."""
         mock_reasoner = Mock()
         mock_reasoner.analyze_task = AsyncMock(return_value={"complexity": "high"})
+        mock_context = Mock()
 
-        executor = AnalysisExecutor(reasoner=mock_reasoner)
+        executor = AnalysisExecutor(
+            executor_id="analysis_long",
+            supervisor=mock_reasoner,
+            context=mock_context
+        )
 
         long_task = "Task " * 10000  # Very long task
 
@@ -348,8 +390,13 @@ class TestExecutorEdgeCases:
         """Test quality evaluation with incomplete result."""
         mock_evaluator = Mock()
         mock_evaluator.evaluate = AsyncMock(return_value={"score": 0.7})
+        mock_context = Mock()
 
-        executor = QualityExecutor(evaluator=mock_evaluator, config={})
+        executor = QualityExecutor(
+            executor_id="quality_missing",
+            supervisor=mock_evaluator,
+            context=mock_context
+        )
 
         incomplete_result = {}  # Missing expected fields
 

@@ -1,7 +1,7 @@
 """Comprehensive tests for workflows/builder.py."""
 
 import pytest
-from unittest.mock import Mock, patch, AsyncMock, MagicMock
+from unittest.mock import Mock, patch, AsyncMock
 from agentic_fleet.workflows.builder import (
     WorkflowBuilder,
     build_workflow_from_config,
@@ -122,7 +122,7 @@ class TestWorkflowBuilder:
     def test_validate_config_with_invalid_structure(self):
         """Test validation with invalid config structure."""
         invalid_config = {"invalid_key": "value"}
-        builder = WorkflowBuilder(invalid_config)
+        _ = WorkflowBuilder(invalid_config)
         # Should handle gracefully or raise appropriate error
         # (Depends on implementation - adjust based on actual behavior)
 
