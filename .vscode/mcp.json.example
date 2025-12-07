@@ -1,0 +1,11 @@
+{
+  "servers": {
+    "package-search": {
+      "type": "http",
+      "url": "https://mcp.trychroma.com/package-search/v1",
+      "headers": {
+        "x-chroma-token": "YOUR_CHROMA_TOKEN_HERE"
+      }
+    }
+  }
+}

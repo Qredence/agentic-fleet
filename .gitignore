@@ -29,12 +29,14 @@ ENV/
 env/
 
 # IDE
-.vscode/
 .idea/
 .cursor/
 *.swp
 *.swo
 *~
+
+# VS Code - track folder but ignore secrets
+.vscode/mcp.json
 
 # AI/Agent tools
 .serena/

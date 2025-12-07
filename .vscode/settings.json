@@ -1,0 +1,150 @@
+{
+  "editor.formatOnSave": true,
+  // ---------- Python: Ruff + Black + Pylance ----------
+  // Use Pylance as the language server
+  "python.languageServer": "Pylance",
+  // Pylance: balanced strictness
+  "python.analysis.typeCheckingMode": "basic",
+  "python.analysis.diagnosticMode": "workspace",
+  "python.analysis.autoImportCompletions": true,
+  "python.analysis.inlayHints.functionReturnTypes": true,
+  "python.analysis.inlayHints.variableTypes": true,
+  // Let Ruff handle linting (via the Ruff extension)
+  // (If you use older-style Python linting, keep other linters off.)
+  "python.linting.enabled": false,
+  // Ruff extension integration (names may vary slightly by version; tweak as needed)
+  "ruff.importStrategy": "fromEnvironment",
+  "ruff.logLevel": "error",
+  "[python]": {
+    // Match the repo’s formatting: Black
+    "editor.defaultFormatter": "charliermarsh.ruff",
+    "editor.formatOnSave": true,
+    "editor.codeActionsOnSave": {
+      // Let Ruff fix things when you explicitly ask it to
+      // (change to "always" if you want on every save)
+      "source.fixAll.ruff": "explicit",
+      "source.organizeImports": "explicit"
+    }
+  },
+  // ---------- Frontend: JS/TS/React ----------
+  "[javascript]": {
+    "editor.defaultFormatter": "esbenp.prettier-vscode",
+    "editor.formatOnSave": true
+  },
+  "[typescript]": {
+    "editor.defaultFormatter": "vscode.typescript-language-features",
+    "editor.formatOnSave": true
+  },
+  "[typescriptreact]": {
+    "editor.defaultFormatter": "vscode.typescript-language-features",
+    "editor.formatOnSave": true
+  },
+  // ---------- Testing helpers ----------
+  // Let VS Code know you use pytest (even though you mainly run `make test`)
+  "python.testing.pytestEnabled": true,
+  "python.testing.unittestEnabled": false,
+  // ---------- Misc ergonomics ----------
+  "files.trimTrailingWhitespace": true,
+  "files.insertFinalNewline": true,
+  "editor.tabSize": 4,
+  "editor.renderWhitespace": "selection",
+  "editor.rulers": [100], // Matches pyproject.toml/Ruff line-length
+  // Treat notebooks correctly
+  "files.associations": {
+    "*.ipynb": "jupyter-notebook"
+  },
+  "python-envs.defaultEnvManager": "ms-python.python:venv",
+  "python-envs.defaultPackageManager": "ms-python.python:pip",
+  "python-envs.pythonProjects": [],
+  "[jsonc]": {
+    "editor.defaultFormatter": "esbenp.prettier-vscode"
+  },
+  "[json]": {
+    "editor.defaultFormatter": "vscode.json-language-features"
+  },
+  "[css]": {
+    "editor.defaultFormatter": "esbenp.prettier-vscode"
+  },
+  // ---------- MCP Server Sampling ----------
+  // NOTE: allowedModels lists are duplicated below because VS Code settings.json
+  // does not support variables or imports. When updating the model list, edit ALL
+  // three entries (package-search, shadcn, prompt-kit) to keep them in sync.
+  "chat.mcp.serverSampling": {
+    "AgenticFleet/.vscode/mcp.json: package-search": {
+      "allowedModels": [
+        "copilot/gpt-4.1",
+        "copilot/auto",
+        "copilot/claude-haiku-4.5",
+        "copilot/claude-opus-41",
+        "copilot/claude-opus-4.5",
+        "copilot/claude-sonnet-4",
+        "copilot/claude-sonnet-4.5",
+        "copilot/qredence/foundry_claude/claude-opus-4.5",
+        "copilot/qredence/foundry_claude/claude-sonnet-4.5",
+        "copilot/gemini-2.5-pro",
+        "copilot/gemini-3-pro-preview",
+        "copilot/gpt-4o",
+        "copilot/gpt-5",
+        "copilot/gpt-5-mini",
+        "copilot/gpt-5-codex",
+        "copilot/gpt-5.1",
+        "copilot/gpt-5.1-codex",
+        "copilot/gpt-5.1-codex-mini",
+        "copilot/grok-code-fast-1",
+        "copilot/qredence/fleetw7ot/model-router"
+      ]
+    },
+    "AgenticFleet/.vscode/mcp.json: shadcn": {
+      "allowedModels": [
+        "copilot/gpt-4.1",
+        "copilot/auto",
+        "copilot/claude-haiku-4.5",
+        "copilot/claude-opus-41",
+        "copilot/claude-opus-4.5",
+        "copilot/claude-sonnet-4",
+        "copilot/claude-sonnet-4.5",
+        "copilot/qredence/foundry_claude/claude-opus-4.5",
+        "copilot/qredence/foundry_claude/claude-sonnet-4.5",
+        "copilot/gemini-2.5-pro",
+        "copilot/gemini-3-pro-preview",
+        "copilot/gpt-4o",
+        "copilot/gpt-5",
+        "copilot/gpt-5-mini",
+        "copilot/gpt-5-codex",
+        "copilot/gpt-5.1",
+        "copilot/gpt-5.1-codex",
+        "copilot/gpt-5.1-codex-mini",
+        "copilot/grok-code-fast-1",
+        "copilot/qredence/fleetw7ot/model-router"
+      ]
+    },
+    "AgenticFleet/.vscode/mcp.json: prompt-kit": {
+      "allowedModels": [
+        "copilot/auto",
+        "copilot/claude-haiku-4.5",
+        "copilot/claude-opus-41",
+        "copilot/claude-opus-4.5",
+        "copilot/claude-sonnet-4",
+        "copilot/claude-sonnet-4.5",
+        "copilot/qredence/foundry_claude/claude-opus-4.5",
+        "copilot/qredence/foundry_claude/claude-sonnet-4.5",
+        "copilot/gemini-2.5-pro",
+        "copilot/gemini-3-pro-preview",
+        "copilot/gpt-4.1",
+        "copilot/gpt-4o",
+        "copilot/gpt-5",
+        "copilot/gpt-5-mini",
+        "copilot/gpt-5-codex",
+        "copilot/gpt-5.1",
+        "copilot/gpt-5.1-codex",
+        "copilot/gpt-5.1-codex-mini",
+        "copilot/grok-code-fast-1",
+        "copilot/qredence/fleetw7ot/model-router"
+      ]
+    }
+  },
+  "workbench.editorAssociations": {
+    "*.copilotmd": "vscode.markdown.preview.editor",
+    "file:/**/*.jsonl": "jupyter-data-wrangler"
+  }
+}
