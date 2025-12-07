@@ -423,7 +423,8 @@ class WorkflowRunner:
                             # We assume the last message contains the result and metadata
                             last_msg = event.data[-1]
                             if hasattr(last_msg, "text"):
-                                final_data = getattr(last_msg, "additional_properties", {}) or {}
+                                props = getattr(last_msg, "additional_properties", None) or {}
+                                final_data = dict(props)
                                 final_data["result"] = last_msg.text
 
                         if final_data:

@@ -13,12 +13,15 @@ from agentic_fleet.cli.display import display_result, show_help, show_status
 from agentic_fleet.cli.runner import WorkflowRunner
 
 if TYPE_CHECKING:  # pragma: no cover - helps IDEs without eager import
-    from agentic_fleet.cli.console import app as _app
+    from typer import Typer
 
 __all__ = ["WorkflowRunner", "app", "display_result", "show_help", "show_status"]
 
+# Satisfy type checker - actual app is loaded lazily via __getattr__
+app: Typer | None = None
 
-def __getattr__(name: str):
+
+def __getattr__(name: str) -> Typer:
     """Lazily import the Typer app to avoid runpy double-load warnings."""
     if name == "app":
         from agentic_fleet.cli import console as _console
