@@ -9,6 +9,7 @@ implemented, providing just enough surface area for imports to succeed.
 from __future__ import annotations
 
 import importlib
+import logging
 import sys
 import types
 from dataclasses import dataclass
@@ -196,16 +197,14 @@ def ensure_agent_framework_shims() -> None:
                     try:
                         out.append(tool.to_dict())
                         continue
-                    except Exception:
-                        # Ignore tools that cannot be serialized to dict.
-                        pass
+                    except Exception as e:
+                        logging.warning("Serialization to dict failed for a tool: %s", e)
                 if hasattr(tool, "schema"):
                     try:
                         out.append(tool.schema)
                         continue
-                    except Exception:
-                        # Ignore tools whose `schema` attribute cannot be accessed.
-                        pass
+                    except Exception as e:
+                        logging.warning("Accessing 'schema' attribute failed for a tool: %s", e)
             return out
 
         tools_mod._tools_to_dict = _tools_to_dict
