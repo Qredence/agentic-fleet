@@ -42,6 +42,8 @@
 - When adding or modifying agents/workflows, keep prompts/factories in sync and update config schema validation.
 - **Streaming/Event surface**: Workflow events are mapped through `agentic_fleet.app.events.mapping` to UI-friendly categories (reasoning, routing, analysis, quality, agent output). Keep SSE payloads and frontend workflow renderers in sync when adding new event kinds.
 - **NLU module**: A DSPy-backed NLU stack (`dspy_modules/nlu.py`, `app/routers/nlu.py`) exposes intent classification and entity extraction endpoints. Update signatures and compiled caches together when changing NLU behaviour.
+- **Typed Signatures & Assertions** (v0.6.9): All DSPy outputs now use Pydantic models (`dspy_modules/typed_models.py`) for strict validation. Routing decisions are guarded by `dspy.Assert` and `dspy.Suggest` in `dspy_modules/assertions.py`.
+- **Routing Cache**: Routing decisions are cached (TTL 5m) to reduce latency and cost. Configure via `enable_routing_cache` in `workflow_config.yaml`.
 - For multi-agent expansion with OpenAI Agents SDK, treat Codex CLI as an MCP server and mirror roles from `.github/agents/agent-framework-spec.md`; document new roles/prompts here and in `docs/` as needed.
 
 ## Conventions & Notes

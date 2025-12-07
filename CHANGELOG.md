@@ -1,6 +1,6 @@
 # Changelog
 
-## v0.6.9 (2025-12-06) – DSPy Typed Signatures & Assertions
+## v0.6.9 (2025-12-07) – DSPy Typed Signatures, Workflow Refactor & Docs
 
 ### Highlights
 
@@ -24,6 +24,18 @@
 - **7 typed signatures** – `TypedTaskAnalysis`, `TypedTaskRouting`, `TypedEnhancedRouting`, `TypedQualityAssessment`, `TypedProgressEvaluation`, `TypedToolPlan`, `TypedWorkflowStrategy`.
 - **Pydantic output fields** – Signatures use Pydantic models as `dspy.OutputField()` types for JSON schema compliance.
 - **DSPy 3.x compatibility** – Leverages DSPy's native Pydantic support for structured outputs.
+
+#### Workflow Refactor & Message Consolidation
+
+- **Consolidated Message Models** – Merged message-related classes from `messages.py` into `models.py` for better organization.
+- **Streamlined Group Chat** – Introduced `GroupChatBuilder` in `group_chat_adapter.py` and removed redundant builder files.
+- **API Versioning** – Adjusted API versioning in frontend client and tests to align with new endpoint structure.
+
+#### Documentation Updates
+
+- **Project Overview** – Updated `GEMINI.md` with comprehensive project overview, structure, and development conventions.
+- **Tracing Configuration** – Added comprehensive documentation for `TracingConfig` `capture_sensitive` field with security notes.
+- **Tavily MCP Tool** – Added tests and documentation for Bearer token authentication.
 
 #### Performance Optimization
 
@@ -65,10 +77,28 @@
   - Integrated `detect_task_type` and `validate_full_routing` in `RoutingExecutor`.
   - Added routing validation after DSPy routing decisions.
 
+- **`src/agentic_fleet/workflows/models.py`**:
+  - Consolidated message dataclasses and streaming events.
+  - Merged content from `messages.py`.
+
+- **`src/agentic_fleet/workflows/group_chat_adapter.py`**:
+  - Introduced `GroupChatBuilder` for streamlined management.
+
+- **`src/agentic_fleet/tools/tavily_mcp_tool.py`**:
+  - Added Bearer token authentication support.
+
 - **`src/agentic_fleet/config/workflow_config.yaml`**:
   - Added `use_typed_signatures: true` setting.
   - Added `enable_routing_cache: true` setting.
   - Added `cache_ttl_seconds: 300` setting.
+
+#### Documentation
+
+- **`GEMINI.md`**:
+  - Comprehensive update of project overview and conventions.
+
+- **`docs/consolidation_analysis_report.md`**:
+  - Added consolidation analysis report.
 
 #### Tests
 
