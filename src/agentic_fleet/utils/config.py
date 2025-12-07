@@ -393,9 +393,14 @@ class DSPyConfig(BaseModel):
     """DSPy configuration."""
 
     model: str = "gpt-5-mini"
+    routing_model: str | None = None  # Optional fast model for routing/analysis
     temperature: float = Field(default=0.7, ge=0.0, le=2.0)
     max_tokens: int = Field(default=2000, ge=1, le=32000)
     require_compiled: bool = False
+    # DSPy 3.x TypedPredictor settings for structured outputs
+    use_typed_signatures: bool = True  # Enable Pydantic-based typed signatures
+    enable_routing_cache: bool = True  # Cache routing decisions
+    routing_cache_ttl_seconds: int = Field(default=300, ge=0)  # Cache TTL in seconds
     optimization: DSPyOptimizationConfig = DSPyOptimizationConfig()
 
 

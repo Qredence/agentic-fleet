@@ -8,7 +8,7 @@ import logging
 import sys
 from pathlib import Path
 
-from pythonjsonlogger import jsonlogger
+from pythonjsonlogger import jsonlogger  # type: ignore[import]
 
 from .config import env_config
 
@@ -62,7 +62,7 @@ def setup_logger(
 
     # Create formatter
     if json_format:
-        formatter = jsonlogger.JsonFormatter(
+        formatter = jsonlogger.JsonFormatter(  # type: ignore[attr-defined]
             "%(asctime)s %(name)s %(levelname)s %(message)s %(request_id)s",
             timestamp=True,
         )

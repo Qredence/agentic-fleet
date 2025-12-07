@@ -143,6 +143,41 @@ class HistoryManagerProtocol(Protocol):
         ...
 
 
+# Azure Cosmos DB Protocol
+@runtime_checkable
+class CosmosClientProtocol(Protocol):
+    """Protocol for Azure Cosmos DB client.
+
+    This protocol defines the minimal interface needed for CosmosClient
+    usage within AgenticFleet, enabling type-safe optional Cosmos integration.
+    """
+
+    def get_database_client(self, database: str) -> Any:
+        """Get a database client by name."""
+        ...
+
+
+# Message Protocol for chat/agent messages
+@runtime_checkable
+class MessageLike(Protocol):
+    """Protocol for message-like objects.
+
+    This protocol defines the minimal interface for message objects used
+    in chat/agent workflows. Compatible with ChatMessage, ThreadMessage,
+    and similar message types that expose role and content attributes.
+    """
+
+    @property
+    def role(self) -> Any:
+        """The role of the message sender (e.g., user, assistant)."""
+        ...
+
+    @property
+    def content(self) -> Any:
+        """The content of the message."""
+        ...
+
+
 # Type aliases for common patterns
 if TYPE_CHECKING:
     from agent_framework._agents import ChatAgent
@@ -157,10 +192,12 @@ __all__ = [
     "CacheProtocol",
     "ChatClient",
     "ChatClientWithExtraBody",
+    "CosmosClientProtocol",
     "DSPyModule",
     "DSPySettings",
     "DSPySignature",
     "HistoryManagerProtocol",
+    "MessageLike",
     "ProgressCallback",
     "ToolProtocol",
 ]

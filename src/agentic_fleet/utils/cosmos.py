@@ -24,7 +24,10 @@ import uuid
 from collections.abc import Iterable
 from datetime import UTC, datetime
 from enum import Enum
-from typing import Any
+from typing import TYPE_CHECKING, Any
+
+if TYPE_CHECKING:
+    from .types import CosmosClientProtocol
 
 try:
     from azure.cosmos import CosmosClient, exceptions  # type: ignore[import]
@@ -33,16 +36,16 @@ try:
     _HAS_COSMOS_SDK = True
 except ImportError:
     _HAS_COSMOS_SDK = False
-    CosmosClient = None  # type: ignore
-    exceptions = None  # type: ignore
-    DefaultAzureCredential = None  # type: ignore
+    CosmosClient = None  # type: ignore[misc,assignment]
+    exceptions = None  # type: ignore[misc,assignment]
+    DefaultAzureCredential = None  # type: ignore[misc,assignment]
 
 from .logger import setup_logger
 
 logger = setup_logger(__name__)
 
 # Cached singleton client to avoid re-creating connections.
-_COSMOS_CLIENT: CosmosClient | None = None
+_COSMOS_CLIENT: CosmosClientProtocol | None = None
 _MISSING_USER_ID_WARNING_EMITTED = False
 
 
@@ -65,7 +68,7 @@ def is_cosmos_enabled() -> bool:
     return _bool_env("AGENTICFLEET_USE_COSMOS")
 
 
-def _get_cosmos_client() -> CosmosClient | None:
+def _get_cosmos_client() -> CosmosClientProtocol | None:
     """Create (or return cached) CosmosClient if configuration is valid.
 
     Returns ``None`` if Cosmos integration is disabled or misconfigured.
@@ -91,7 +94,13 @@ def _get_cosmos_client() -> CosmosClient | None:
 
     try:
         if use_managed_identity:
+            if DefaultAzureCredential is None:
+                logger.error("DefaultAzureCredential not available - azure-identity not installed")
+                return None
             credential = DefaultAzureCredential()
+            if CosmosClient is None:
+                logger.error("CosmosClient not available - azure-cosmos not installed")
+                return None
             client = CosmosClient(endpoint, credential=credential)
             logger.info("CosmosClient created using managed identity.")
         else:
@@ -101,6 +110,9 @@ def _get_cosmos_client() -> CosmosClient | None:
                     "Cosmos integration enabled but AZURE_COSMOS_KEY is not set "
                     "and managed identity is disabled; skipping Cosmos client.",
                 )
+                return None
+            if CosmosClient is None:
+                logger.error("CosmosClient not available - azure-cosmos not installed")
                 return None
             client = CosmosClient(endpoint, credential=key)
             logger.info("CosmosClient created using key-based credentials.")
