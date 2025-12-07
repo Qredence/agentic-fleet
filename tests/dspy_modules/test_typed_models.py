@@ -83,7 +83,7 @@ class TestRoutingDecisionOutput:
     def test_comma_separated_tools_coerced(self):
         """
         Ensure `tool_requirements` is stored as a list, accepting comma-separated tool strings.
-        
+
         Asserts that the specified tools appear in `tool_requirements`.
         """
         decision = RoutingDecisionOutput(

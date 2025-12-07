@@ -117,6 +117,5 @@ All caches, logs, and history live under `.var/` (gitignored). Key locations:
 4. `AGENTS.md` (root) — Toolchain defaults and working agreements
 
 - Use "uv" for the project, always make sure that @CLAUDE.md is up to date
-- When making changes in the project, always remember to add it to @CHANGELOG.md
 - Remember the goal/purpose of the project and the synergy between agent-framework and dspy
 - make sure to get the official documentation of DSPy and Agent-Framework when needed

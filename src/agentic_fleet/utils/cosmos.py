@@ -62,7 +62,7 @@ def _bool_env(name: str) -> bool:
 def is_cosmos_enabled() -> bool:
     """
     Indicates if Cosmos integration is enabled via the AGENTICFLEET_USE_COSMOS environment variable.
-    
+
     Returns:
         true if the environment variable represents a truthy value (1, "true", "yes", "on"), false otherwise.
     """

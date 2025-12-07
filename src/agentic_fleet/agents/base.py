@@ -346,15 +346,15 @@ class DSPyEnhancedAgent(ChatAgent):
     ) -> AgentRunResponse:
         """
         Invoke the base ChatAgent as a fallback and attach a Program of Thought (PoT) failure note to the response.
-        
+
         Parameters:
-        	messages (Any): Original input messages passed to the fallback run.
-        	thread (AgentThread | None): Optional thread context to pass to the fallback run.
-        	agent_kwargs (dict[str, Any]): Additional keyword arguments forwarded to the base agent's run method.
-        	error (Exception): The PoT failure that triggered the fallback; used to build the user-facing note.
-        
+            messages (Any): Original input messages passed to the fallback run.
+            thread (AgentThread | None): Optional thread context to pass to the fallback run.
+            agent_kwargs (dict[str, Any]): Additional keyword arguments forwarded to the base agent's run method.
+            error (Exception): The PoT failure that triggered the fallback; used to build the user-facing note.
+
         Returns:
-        	AgentRunResponse: The fallback response with the PoT note prepended to the first message text (or to the response text if no messages), and with `additional_properties` extended to include `strategy` and `pot_error`.
+            AgentRunResponse: The fallback response with the PoT note prepended to the first message text (or to the response text if no messages), and with `additional_properties` extended to include `strategy` and `pot_error`.
         """
 
         note = self._build_pot_error_note(error)

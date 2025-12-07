@@ -22,17 +22,17 @@ async def get_dspy_prompts(
 ) -> dict[str, Any]:
     """
     Retrieve DSPy predictors' prompts, signatures, fields, and demos.
-    
+
     Builds a mapping from predictor name to a detail dictionary containing:
     - "instructions": predictor signature instructions (string)
     - "inputs": list of input field descriptors, each with keys `name`, `desc`, and `prefix`
     - "outputs": list of output field descriptors (same shape as inputs)
     - "demos_count": number of demos included
     - "demos": list of demo examples as dictionaries with stringified values
-    
+
     Returns:
         prompts (dict[str, Any]): Mapping of predictor/module names to their prompt details.
-    
+
     Raises:
         HTTPException: If the workflow has no DSPy reasoner (HTTP 404).
     """

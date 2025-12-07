@@ -384,20 +384,20 @@ def map_workflow_event(
 ) -> tuple[StreamEvent | list[StreamEvent] | None, str]:
     """
     Convert an internal workflow event into one or more StreamEvent objects for SSE streaming.
-    
+
     This function maps a variety of internal event shapes (reasoning deltas/completions, agent messages/outputs,
     executor phase messages, and final workflow output) to standardized StreamEvent instances used by the UI.
     It may return a single StreamEvent, a list of StreamEvent objects when multiple UI events are appropriate,
     or None when the input event should not produce any UI emission. It also returns an updated accumulated
     reasoning string used to aggregate reasoning stream content across events.
-    
+
     Parameters:
         event: The workflow event to map. Supported inputs include framework event objects, dict-based events,
             and executor/message wrapper objects; the mapper performs safe extraction and duck-typing to
             recognize different event payloads.
         accumulated_reasoning: Running concatenation of reasoning text used to accumulate partial reasoning
             across ReasoningStreamEvent occurrences.
-    
+
     Returns:
         A tuple where the first element is either a StreamEvent, a list of StreamEvent, or None if no event
         should be emitted, and the second element is the updated accumulated_reasoning string.

@@ -447,7 +447,7 @@ class TestTypedSignatures:
     def typed_reasoner(self):
         """
         Create a DSPyReasoner configured for typed signatures and an enabled routing cache.
-        
+
         Returns:
             reasoner (DSPyReasoner): A DSPyReasoner instance with use_enhanced_signatures=True, use_typed_signatures=True, enable_routing_cache=True, and cache_ttl_seconds=300.
         """
@@ -462,7 +462,7 @@ class TestTypedSignatures:
     def untyped_reasoner(self):
         """
         Create a DSPyReasoner configured to use enhanced signatures with typed signatures and the routing cache disabled.
-        
+
         Returns:
             DSPyReasoner: An instance with enhanced signatures enabled, typed signatures disabled, and routing cache disabled.
         """
@@ -498,7 +498,7 @@ class TestRoutingCache:
     def cached_reasoner(self):
         """
         Create a DSPyReasoner configured with routing cache enabled.
-        
+
         Returns:
             DSPyReasoner: A reasoner with enhanced signatures enabled, typed signatures disabled, routing cache enabled, and a 60-second cache TTL.
         """
@@ -587,7 +587,7 @@ class TestTypedRoutingExtraction:
     def reasoner(self):
         """
         Create a DSPyReasoner configured with enhanced and typed signatures for extraction tests.
-        
+
         Returns:
             DSPyReasoner: A reasoner instance with `use_enhanced_signatures=True` and `use_typed_signatures=True`.
         """
@@ -625,7 +625,7 @@ class TestTypedRoutingExtraction:
             def model_dump(self):
                 """
                 Return a serialized routing decision as a plain dictionary.
-                
+
                 Returns:
                     dict: A routing decision mapping with the following keys:
                         - assigned_to (list[str]): Roles or assignees selected for the task.

@@ -24,7 +24,7 @@ class TestLogRetryAttempt:
             def exception(self) -> Exception:
                 """
                 Return a ValueError instance representing a test error.
-                
+
                 Returns:
                     Exception: A `ValueError` instance with the message "test error".
                 """
@@ -46,7 +46,7 @@ class TestLogRetryAttempt:
     def test_handles_missing_function_name(self, caplog: pytest.LogCaptureFixture) -> None:
         """
         Log a warning using an "unknown_function" placeholder when the retry state has no function name.
-        
+
         """
 
         class MockOutcome:
@@ -55,7 +55,7 @@ class TestLogRetryAttempt:
             def exception(self) -> Exception:
                 """
                 Return a RuntimeError indicating the function name is missing.
-                
+
                 Returns:
                     Exception: A RuntimeError with the message "no name fn".
                 """

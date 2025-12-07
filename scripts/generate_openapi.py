@@ -6,7 +6,7 @@ from agentic_fleet.app.main import app
 def generate_openapi():
     """
     Write the application's OpenAPI schema to openapi.json.
-    
+
     Retrieves the FastAPI app's OpenAPI schema and writes it as formatted JSON to a file named "openapi.json" in the current working directory. Prints a confirmation message after the file is written.
     """
     openapi_data = app.openapi()

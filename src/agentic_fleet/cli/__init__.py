@@ -24,13 +24,13 @@ app: Typer | None = None
 def __getattr__(name: str) -> Typer:
     """
     Lazily load and return the package's Typer application when accessed as an attribute.
-    
+
     Parameters:
         name (str): Attribute name being accessed; only the value "app" is supported.
-    
+
     Returns:
         Typer: The Typer application provided by agentic_fleet.cli.console.app.
-    
+
     Raises:
         AttributeError: If `name` is not "app".
     """

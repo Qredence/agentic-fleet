@@ -31,10 +31,10 @@ except ImportError:
         def __init__(self, *args: Any, **kwargs: Any) -> None:
             """
             Constructor stub that always raises a RuntimeError indicating the GroupChatBuilder feature is unavailable.
-            
+
             This initializer does not construct an instance; it exists as a fallback when the required
             agent-framework implementation is not present.
-            
+
             Raises:
                 RuntimeError: Indicates GroupChatBuilder is not available in the current agent-framework
                 version and suggests upgrading or using the 'standard' workflow mode.
@@ -52,13 +52,13 @@ except ImportError:
         def __init__(self, *args: Any, **kwargs: Any) -> None:
             """
             Initializer for the stubbed HandoffBuilder that always raises when instantiated.
-            
+
             This constructor accepts any positional and keyword arguments for signature compatibility but does not use them and will raise a RuntimeError indicating the real HandoffBuilder is unavailable in the installed agent-framework.
-            
+
             Parameters:
                 *args: Ignored positional arguments for compatibility.
                 **kwargs: Ignored keyword arguments for compatibility.
-            
+
             Raises:
                 RuntimeError: Indicates HandoffBuilder is not available in this agent-framework version and suggests upgrading or using the 'standard' workflow mode.
             """
@@ -99,12 +99,12 @@ def build_fleet_workflow(
 ) -> WorkflowBuilder | Any:
     """
     Constructs and returns a workflow builder configured for the fleet according to the selected mode.
-    
+
     Parameters:
         supervisor (DSPyReasoner): The reasoner/coordinator used to create executors and agents.
         context (SupervisorContext): Runtime context providing agents, configuration, and optional clients.
         mode (WorkflowMode): Workflow mode to build; one of "standard", "group_chat", "concurrent", or "handoff".
-    
+
     Returns:
         WorkflowBuilder or Any: A WorkflowBuilder (or a mode-specific builder/stub) configured for the chosen mode. The concrete return may be a stub type when required agent-framework features are unavailable.
     """
@@ -154,7 +154,7 @@ def _build_group_chat_workflow(
 ) -> Any:
     """
     Construct and configure a Group Chat workflow builder using the supervisor context.
-    
+
     Parameters:
         context (SupervisorContext): Supervisor context whose `agents`, `openai_client`, and `config`
             are used to set participants, create a chat client, and configure the prompt-based manager.
@@ -162,10 +162,10 @@ def _build_group_chat_workflow(
             - If `openai_client` and model configuration are present in `config` (or `config.dspy.model`),
               an OpenAIResponsesClient will be created and passed to the builder's prompt-based manager
               when supported.
-    
+
     Returns:
         Any: A configured GroupChatBuilder (or a compatible stub) ready for use.
-    
+
     Raises:
         ValueError: If `context.config` is missing when an OpenAI client is expected and a model cannot be resolved.
     """
@@ -227,16 +227,16 @@ def _build_handoff_workflow(
 ) -> Any:
     """
     Constructs and returns a Handoff workflow builder configured with a triage coordinator and full-mesh handoffs.
-    
+
     The builder will include a created "Triage" coordinator agent (using the OpenAI client and model selected from context.config.model when available), all agents from context as participants, full-mesh handoff edges between specialists and the triage agent, and a termination condition that ends the conversation when the Triage agent posts a message containing "FINAL RESULT:".
-    
+
     Parameters:
         supervisor (DSPyReasoner): Reasoner/service used by executors (passed through to executors; not inspected here).
         context (SupervisorContext): Supervisor context that must provide `agents` (mapping of agent name to agent descriptor) and an `openai_client` used to create the Triage agent. `context.config.model` is used to override the default model if present.
-    
+
     Returns:
         HandoffBuilder | Any: A configured HandoffBuilder (or compatible builder object) ready to be used to run the handoff workflow.
-    
+
     Raises:
         RuntimeError: If no agents are available on the context.
         RuntimeError: If an OpenAI client is required but not present on the context.

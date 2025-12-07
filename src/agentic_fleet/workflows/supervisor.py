@@ -218,11 +218,11 @@ class SupervisorWorkflow:
     async def run(self, task: str) -> dict[str, Any]:
         """
         Run the supervisor workflow for a single textual task and return the final result and associated metadata.
-        
+
         Returns:
             dict: A result dictionary containing the final `result` (text), `routing` decision, `quality` scores,
             `judge_evaluations`, and additional `metadata` and execution details like timing and phase information.
-        
+
         Raises:
             RuntimeError: If the workflow runner is not initialized.
             RuntimeError: If the workflow produces no outputs.
@@ -371,12 +371,12 @@ class SupervisorWorkflow:
     ) -> ReasoningStreamEvent | MagenticAgentMessageEvent | None:
         """
         Convert an AgentRunUpdateEvent into a streaming event representing either reasoning deltas or an agent message.
-        
+
         Processes the event's `run.delta` safely: if the delta's type indicates reasoning and contains text, returns a `ReasoningStreamEvent` with that reasoning and the agent id; if the delta contains textual content, returns a `MagenticAgentMessageEvent` wrapping a `ChatMessage` with role `Role.ASSISTANT` (joining list content when present); returns `None` when no usable delta or content is available.
-        
+
         Parameters:
             event (AgentRunUpdateEvent): The agent run update event to convert.
-        
+
         Returns:
             ReasoningStreamEvent | MagenticAgentMessageEvent | None: `ReasoningStreamEvent` when a reasoning delta is present, `MagenticAgentMessageEvent` when textual content is present, or `None` if no convertible content exists.
         """
@@ -470,17 +470,17 @@ class SupervisorWorkflow:
     ) -> AsyncIterator[WorkflowEvent]:
         """
         Execute the workflow for a single task and stream WorkflowEvent objects representing progress and results.
-        
+
         This coroutine yields status updates, intermediate agent messages, reasoning deltas, and a final output event. It updates internal execution state, notifies configured middlewares on start and end, and supports an optional reasoning effort override and conversation thread context. If a fast-path responder is applicable, it yields fast-path events and returns early.
-        
+
         Parameters:
             task (str): The task prompt to execute.
             reasoning_effort (str | None): Optional override; must be one of "minimal", "medium", or "maximal". An invalid value yields a FAILED status and terminates the stream.
             thread (AgentThread | None): Optional multi-turn conversation context to store in the workflow context.
-        
+
         Yields:
             WorkflowEvent: Events emitted during execution, including WorkflowStatusEvent, MagenticAgentMessageEvent, ReasoningStreamEvent, ExecutorCompletedEvent, RequestInfoEvent, and WorkflowOutputEvent containing the final result.
-        
+
         Raises:
             RuntimeError: If the workflow runner is not initialized.
         """

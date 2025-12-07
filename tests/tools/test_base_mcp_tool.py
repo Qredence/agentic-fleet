@@ -19,9 +19,9 @@ import pytest
 def _import_base_mcp_tool():
     """
     Load and return the BaseMCPTool class by importing its module directly from the source file.
-    
+
     This helper ensures a minimal mock of agent_framework._mcp is available in sys.modules (so imports that expect MCPStreamableHTTPTool succeed), then loads the base_mcp_tool module from its file path and returns its BaseMCPTool class. The function may add a mock module to sys.modules as a side effect and will raise an AssertionError if the module spec or loader cannot be created.
-    
+
     Returns:
         type: The BaseMCPTool class object from the loaded module.
     """

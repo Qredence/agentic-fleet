@@ -17,7 +17,7 @@ class StubAgent:
     def __init__(self, name: str, responses: list[Any]) -> None:
         """
         Create a StubAgent with a name and a sequence of predefined responses.
-        
+
         Parameters:
             name (str): Human-readable identifier for the agent used in tests.
             responses (list[Any]): Ordered list of values to return (or exceptions to raise) by the agent's `run` method; values are consumed in sequence.
@@ -28,13 +28,13 @@ class StubAgent:
     async def run(self, task: str) -> Any:
         """
         Return the next predefined response or raise it if it is an Exception.
-        
+
         Parameters:
             task (str): The task input (ignored by this stub implementation).
-        
+
         Returns:
             Any: The next value from the agent's predefined responses.
-        
+
         Raises:
             Exception: Re-raises the next response if it is an Exception instance.
         """
@@ -48,7 +48,7 @@ class ErrorAgent:
     async def run(self, task: str) -> str:
         """
         Always raises a RuntimeError with the message "boom".
-        
+
         Raises:
             RuntimeError: Always raised with message "boom".
         """

@@ -14,7 +14,7 @@ from agentic_fleet.api.db.session import engine  # type: ignore[import]
 async def create_tables():
     """
     Create database tables defined on Base.metadata in the database bound to `engine`.
-    
+
     Any tables described by the SQLAlchemy declarative metadata that are missing from the target database will be created.
     """
     async with engine.begin() as conn:

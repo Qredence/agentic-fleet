@@ -166,17 +166,17 @@ async def initialize_workflow_context(
 ) -> SupervisorContext:
     """
     Initialize and return a SupervisorContext populated with agents, tools, a DSPy reasoner, and shared runtime components.
-    
+
     This prepares the runtime by validating the environment, creating a shared OpenAI client and tool registry, loading or constructing a DSPyReasoner (with an optional compiled-artifact fallback), loading agent definitions from workflow_config.yaml, registering agent tools, attaching the tool registry to the reasoner, and assembling handoff, history, and analysis cache components into a SupervisorContext. Compilation is marked as skipped for offline/runtime compilation according to configuration.
-    
+
     Parameters:
         config: Workflow configuration object (defaults to a new WorkflowConfig instance when omitted).
         compile_dspy: Whether to attempt runtime DSPy compilation (Offline Layer setups mark compilation as skipped).
         dspy_supervisor: Optional pre-initialized DSPyReasoner to reuse instead of loading or creating one.
-    
+
     Returns:
         SupervisorContext populated with configuration, agents, the DSPyReasoner, tool registry, handoff manager, history manager, optional analysis cache, and compilation metadata.
-    
+
     Raises:
         RuntimeError: If a compiled DSPy artifact is required by configuration but not found.
         FileNotFoundError: If the workflow configuration file cannot be found.

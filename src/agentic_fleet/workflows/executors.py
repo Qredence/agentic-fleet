@@ -8,10 +8,10 @@ from __future__ import annotations
 import asyncio
 import contextlib
 import re
-from collections.abc import Callable
+from collections.abc import Callable, Iterable
 from dataclasses import replace
 from time import perf_counter
-from typing import Any
+from typing import Any, cast
 
 from agent_framework._types import ChatMessage
 from agent_framework._workflows import (
@@ -369,9 +369,9 @@ class RoutingExecutor(Executor):
     ) -> None:
         """
         Determine and emit a routing plan for the given analysis, then send a RoutingMessage.
-        
+
         Uses DSPy-based routing when available and appropriate; for light-profile or on any routing failure, falls back to a heuristic routing decision. Updates workflow phase timings and status, may add metadata keys such as `routing_tool_plan`, `task_type`, and `used_fallback`, and detects routing edge cases and automatic promotion to parallel execution when applicable. On success or fallback, sends a RoutingMessage containing a RoutingPlan with `decision`, `edge_cases`, and `used_fallback`.
-        
+
         Parameters:
             analysis_msg (AnalysisMessage): Incoming analysis containing the task text and analysis details.
             ctx (WorkflowContext[RoutingMessage]): Workflow context used to send the resulting RoutingMessage and access workflow state.
@@ -399,10 +399,54 @@ class RoutingExecutor(Executor):
                     used_fallback = True
                 else:
                     agents = self.context.agents or {}
-                    team_descriptions = {
-                        name: getattr(agent, "description", "") or getattr(agent, "name", "")
-                        for name, agent in agents.items()
-                    }
+                    agents = self.context.agents or {}
+
+                    team_descriptions = {}
+                    for name, agent in agents.items():
+                        desc = getattr(agent, "description", "") or getattr(agent, "name", "")
+
+                        # Inspect for rich metadata (Tools)
+                        tools_info: list[str] = []
+                        tool_names_obj = getattr(agent, "tool_names", None)
+                        tools_obj = getattr(agent, "tools", None)
+                        if tool_names_obj:
+                            # Foundry Agents might store names directly
+                            if isinstance(tool_names_obj, str):
+                                tools_info = [tool_names_obj]
+                            elif isinstance(tool_names_obj, Iterable):
+                                tools_info = [
+                                    str(name) for name in cast(Iterable[Any], tool_names_obj)
+                                ]
+                        elif tools_obj:
+                            # Local agents have tool objects
+                            if isinstance(tools_obj, str):
+                                tools_info = [tools_obj]
+                            elif isinstance(tools_obj, Iterable):
+                                tools_info = [
+                                    getattr(t, "name", str(t))
+                                    for t in cast(Iterable[Any], tools_obj)
+                                ]
+
+                        # Inspect for Capabilities
+                        caps_info: list[str] = []
+                        caps_obj = getattr(agent, "capabilities", None)
+                        if caps_obj:
+                            if isinstance(caps_obj, str):
+                                caps_info = [caps_obj]
+                            elif isinstance(caps_obj, Iterable):
+                                caps_info = [str(cap) for cap in cast(Iterable[Any], caps_obj)]
+
+                        # Construct rich description
+                        extras = []
+                        if tools_info:
+                            extras.append(f"Tools: [{', '.join(tools_info)}]")
+                        if caps_info:
+                            extras.append(f"Capabilities: [{', '.join(caps_info)}]")
+
+                        if extras:
+                            desc += " " + " ".join(extras)
+
+                        team_descriptions[name] = desc
 
                     retry_attempts = max(1, int(cfg.dspy_retry_attempts))
                     retry_backoff = max(0.0, float(cfg.dspy_retry_backoff_seconds))
@@ -717,11 +761,11 @@ class ProgressExecutor(Executor):
     ) -> None:
         """
         Evaluate the task's progress after execution and emit a ProgressMessage containing the progress assessment and routing metadata.
-        
+
         Parameters:
             execution_msg (ExecutionMessage): The execution result to evaluate; its outcome.result is used as the completed work to assess.
             ctx (WorkflowContext[ProgressMessage]): Workflow context used to send the resulting ProgressMessage.
-        
+
         Behavior:
             - Uses configured DSPy progress evaluation when enabled and not in the "light" pipeline profile; otherwise produces a fallback completion report.
             - Attaches any available routing decision to the emitted message's metadata.

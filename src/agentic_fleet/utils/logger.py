@@ -31,14 +31,14 @@ def setup_logger(
 ) -> logging.Logger:
     """
     Configure and return a logger with console output and optional file output, supporting plain-text or JSON log formats.
-    
+
     Parameters:
         name (str): Logger name.
         level (str): Logging level name (e.g., "INFO", "DEBUG").
         log_file (str | None): Path to a file to also write logs to; when None, file logging is disabled.
         format_string (str | None): Text-format string for log messages; ignored when `json_format` is True.
         json_format (bool): If True, use JSON-formatted logs. If the environment config `env_config.log_format` equals "json", JSON formatting is forced regardless of this argument.
-    
+
     Returns:
         logging.Logger: A logger configured with a console handler (and optional file handler), an appropriate formatter (JSON or text), an added request_id filter to ensure `request_id` exists on records, cleared duplicate handlers, and propagation disabled.
     """

@@ -243,7 +243,7 @@ class FleetReAct(dspy.Module):
     ) -> None:
         """
         Initialize a FleetReAct reasoning module that runs a ReAct loop with the given signature, tools, and iteration limit.
-        
+
         Parameters:
             signature (Any): Signature or signature string describing the expected input→output mapping for the ReAct instance (e.g., "question -> answer").
             tools (list[Any] | None): Optional list of tool objects available to the ReAct loop.
@@ -257,11 +257,11 @@ class FleetReAct(dspy.Module):
     def forward(self, question: str, tools: list[Any] | None = None) -> dspy.Prediction:
         """
         Run the ReAct reasoning loop for a given question.
-        
+
         Parameters:
             question (str): The question or task to solve.
             tools (list[Any] | None): Optional tools to expose to the ReAct loop; if omitted, the instance's configured tools are used.
-        
+
         Returns:
             dspy.Prediction: Prediction containing the final answer and reasoning trace.
         """
@@ -279,12 +279,12 @@ class FleetPoT(dspy.Module):
     def forward(self, question: str) -> dspy.Prediction:
         """
         Run the Program of Thought on a question and return the resulting prediction.
-        
+
         Clears `last_error` before execution. If a `RuntimeError` occurs, stores its message in `last_error` and re-raises the exception.
-        
+
         Parameters:
             question (str): The question or task to solve.
-        
+
         Returns:
             dspy.Prediction: Prediction containing the answer and reasoning (code).
         """
