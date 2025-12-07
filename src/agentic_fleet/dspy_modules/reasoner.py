@@ -7,11 +7,20 @@ programming capabilities to perform high-level cognitive tasks:
 - Quality Assessment: Evaluating results against criteria
 - Progress Tracking: Monitoring execution state
 - Tool Planning: Deciding which tools to use
+
+DSPy 3.x Note:
+When `use_typed_signatures=True`, the reasoner uses Pydantic-based typed
+signatures for structured outputs. This provides:
+- Better output parsing reliability
+- Automatic validation and type coercion
+- Clear error messages on parse failures
 """
 
 from __future__ import annotations
 
 import asyncio
+import hashlib
+import time
 from typing import Any
 
 import dspy
@@ -30,6 +39,13 @@ from .signatures import (
     TaskAnalysis,
     TaskRouting,
     ToolPlan,
+    # Typed signatures (DSPy 3.x with Pydantic)
+    TypedEnhancedRouting,
+    TypedProgressEvaluation,
+    TypedQualityAssessment,
+    TypedTaskAnalysis,
+    TypedToolPlan,
+    TypedWorkflowStrategy,
     WorkflowStrategy,
 )
 
@@ -41,19 +57,42 @@ _MODULE_CACHE: dict[str, dspy.Module] = {}
 
 
 class DSPyReasoner(dspy.Module):
-    """Reasoner that uses DSPy modules for orchestration decisions."""
+    """Reasoner that uses DSPy modules for orchestration decisions.
 
-    def __init__(self, use_enhanced_signatures: bool = True) -> None:
+    Supports two signature modes:
+    - Standard: Original DSPy signatures with individual output fields
+    - Typed: Pydantic-based signatures for structured outputs (DSPy 3.x)
+
+    The typed mode provides better output parsing reliability and validation.
+    """
+
+    def __init__(
+        self,
+        use_enhanced_signatures: bool = True,
+        use_typed_signatures: bool = True,
+        enable_routing_cache: bool = True,
+        cache_ttl_seconds: int = 300,
+    ) -> None:
         """Initialize the DSPy reasoner.
 
         Args:
-            use_enhanced_signatures: Whether to use the new typed signatures (default: True)
+            use_enhanced_signatures: Use enhanced routing with tool planning (default: True)
+            use_typed_signatures: Use Pydantic-typed signatures for structured outputs (default: True)
+            enable_routing_cache: Cache routing decisions to avoid redundant LLM calls (default: True)
+            cache_ttl_seconds: TTL for routing cache entries in seconds (default: 300)
         """
         super().__init__()
         self.use_enhanced_signatures = use_enhanced_signatures
+        self.use_typed_signatures = use_typed_signatures
+        self.enable_routing_cache = enable_routing_cache
+        self.cache_ttl_seconds = cache_ttl_seconds
+
         self._execution_history: list[dict[str, Any]] = []
         self._modules_initialized = False
         self.tool_registry: Any | None = None
+
+        # Routing cache for performance optimization
+        self._routing_cache: dict[str, dict[str, Any]] = {}
 
         # Placeholders for lazy-initialized modules
         self._analyzer: dspy.Module | None = None
@@ -71,6 +110,9 @@ class DSPyReasoner(dspy.Module):
 
         Only initializes modules that haven't been manually set (e.g., via setters
         for testing or loading compiled modules).
+
+        When use_typed_signatures=True, uses Pydantic-based signatures for
+        structured outputs that provide better parsing reliability.
         """
         # Backward compatibility: compiled supervisors pickled before these fields
         # existed won't have them set on load.
@@ -78,6 +120,14 @@ class DSPyReasoner(dspy.Module):
             self._modules_initialized = False
         if not hasattr(self, "_execution_history"):
             self._execution_history = []
+        if not hasattr(self, "use_typed_signatures"):
+            self.use_typed_signatures = False
+        if not hasattr(self, "enable_routing_cache"):
+            self.enable_routing_cache = True
+        if not hasattr(self, "cache_ttl_seconds"):
+            self.cache_ttl_seconds = 300
+        if not hasattr(self, "_routing_cache"):
+            self._routing_cache = {}
 
         # Ensure lazy module placeholders exist for deserialized objects
         for attr in (
@@ -99,33 +149,45 @@ class DSPyReasoner(dspy.Module):
 
         global _MODULE_CACHE
 
-        # Use cached modules if available (DSPy modules are stateless)
-        cache_key_prefix = "enhanced" if self.use_enhanced_signatures else "standard"
+        # Build cache key prefix based on configuration
+        typed_suffix = "_typed" if self.use_typed_signatures else ""
+        cache_key_prefix = (
+            f"enhanced{typed_suffix}" if self.use_enhanced_signatures else f"standard{typed_suffix}"
+        )
 
         # Only initialize if not already set (allows mocking in tests)
         # NLU
         if self._nlu is None:
             self._nlu = get_nlu_module()
 
-        # Analyzer
+        # Analyzer - use typed signature if enabled
         if self._analyzer is None:
             analyzer_key = f"{cache_key_prefix}_analyzer"
             if analyzer_key not in _MODULE_CACHE:
-                _MODULE_CACHE[analyzer_key] = dspy.ChainOfThought(TaskAnalysis)
+                if self.use_typed_signatures:
+                    _MODULE_CACHE[analyzer_key] = dspy.ChainOfThought(TypedTaskAnalysis)
+                else:
+                    _MODULE_CACHE[analyzer_key] = dspy.ChainOfThought(TaskAnalysis)
             self._analyzer = _MODULE_CACHE[analyzer_key]
 
-        # Router and strategy selector
+        # Router and strategy selector - use typed signatures if enabled
         if self._router is None:
             if self.use_enhanced_signatures:
                 router_key = f"{cache_key_prefix}_router"
                 if router_key not in _MODULE_CACHE:
-                    _MODULE_CACHE[router_key] = dspy.Predict(EnhancedTaskRouting)
+                    if self.use_typed_signatures:
+                        _MODULE_CACHE[router_key] = dspy.Predict(TypedEnhancedRouting)
+                    else:
+                        _MODULE_CACHE[router_key] = dspy.Predict(EnhancedTaskRouting)
                 self._router = _MODULE_CACHE[router_key]
 
                 if self._strategy_selector is None:
                     strategy_key = f"{cache_key_prefix}_strategy"
                     if strategy_key not in _MODULE_CACHE:
-                        _MODULE_CACHE[strategy_key] = dspy.ChainOfThought(WorkflowStrategy)
+                        if self.use_typed_signatures:
+                            _MODULE_CACHE[strategy_key] = dspy.ChainOfThought(TypedWorkflowStrategy)
+                        else:
+                            _MODULE_CACHE[strategy_key] = dspy.ChainOfThought(WorkflowStrategy)
                     self._strategy_selector = _MODULE_CACHE[strategy_key]
             else:
                 router_key = f"{cache_key_prefix}_router"
@@ -133,25 +195,34 @@ class DSPyReasoner(dspy.Module):
                     _MODULE_CACHE[router_key] = dspy.Predict(TaskRouting)
                 self._router = _MODULE_CACHE[router_key]
 
-        # Quality assessor
+        # Quality assessor - use typed signature if enabled
         if self._quality_assessor is None:
-            qa_key = "quality_assessor"
+            qa_key = f"quality_assessor{typed_suffix}"
             if qa_key not in _MODULE_CACHE:
-                _MODULE_CACHE[qa_key] = dspy.ChainOfThought(QualityAssessment)
+                if self.use_typed_signatures:
+                    _MODULE_CACHE[qa_key] = dspy.ChainOfThought(TypedQualityAssessment)
+                else:
+                    _MODULE_CACHE[qa_key] = dspy.ChainOfThought(QualityAssessment)
             self._quality_assessor = _MODULE_CACHE[qa_key]
 
-        # Progress evaluator
+        # Progress evaluator - use typed signature if enabled
         if self._progress_evaluator is None:
-            pe_key = "progress_evaluator"
+            pe_key = f"progress_evaluator{typed_suffix}"
             if pe_key not in _MODULE_CACHE:
-                _MODULE_CACHE[pe_key] = dspy.ChainOfThought(ProgressEvaluation)
+                if self.use_typed_signatures:
+                    _MODULE_CACHE[pe_key] = dspy.ChainOfThought(TypedProgressEvaluation)
+                else:
+                    _MODULE_CACHE[pe_key] = dspy.ChainOfThought(ProgressEvaluation)
             self._progress_evaluator = _MODULE_CACHE[pe_key]
 
-        # Tool planner
+        # Tool planner - use typed signature if enabled
         if self._tool_planner is None:
-            tp_key = "tool_planner"
+            tp_key = f"tool_planner{typed_suffix}"
             if tp_key not in _MODULE_CACHE:
-                _MODULE_CACHE[tp_key] = dspy.ChainOfThought(ToolPlan)
+                if self.use_typed_signatures:
+                    _MODULE_CACHE[tp_key] = dspy.ChainOfThought(TypedToolPlan)
+                else:
+                    _MODULE_CACHE[tp_key] = dspy.ChainOfThought(ToolPlan)
             self._tool_planner = _MODULE_CACHE[tp_key]
 
         # Simple responder - use Predict for faster response (no CoT needed)
@@ -169,7 +240,8 @@ class DSPyReasoner(dspy.Module):
             self._group_chat_selector = _MODULE_CACHE[gc_key]
 
         self._modules_initialized = True
-        logger.debug("DSPy modules initialized (lazy)")
+        mode_str = "typed" if self.use_typed_signatures else "standard"
+        logger.debug(f"DSPy modules initialized (lazy, mode={mode_str})")
 
     @property
     def analyzer(self) -> dspy.Module:
@@ -516,6 +588,7 @@ class DSPyReasoner(dspy.Module):
         current_date: str | None = None,
         required_capabilities: list[str] | None = None,
         max_backtracks: int = 2,
+        skip_cache: bool = False,
     ) -> dict[str, Any]:
         """Route a task to the most appropriate agent(s).
 
@@ -527,6 +600,7 @@ class DSPyReasoner(dspy.Module):
             current_date: Optional current date string (YYYY-MM-DD)
             required_capabilities: Optional list of required capabilities to focus selection
             max_backtracks: Maximum number of DSPy assertion retries (default: 2)
+            skip_cache: Skip cache lookup and force fresh routing (default: False)
 
         Returns:
             Dictionary containing routing decision (assigned_to, mode, subtasks)
@@ -535,6 +609,14 @@ class DSPyReasoner(dspy.Module):
             from datetime import datetime
 
             logger.info(f"Routing task: {task[:100]}...")
+
+            # Check cache first (unless skipped or simple task)
+            if not skip_cache and self.enable_routing_cache:
+                team_key = str(sorted(team.keys()))
+                cache_key = self._get_cache_key(task, team_key)
+                cached_result = self._get_cached_routing(cache_key)
+                if cached_result is not None:
+                    return cached_result
 
             if is_simple_task(task):
                 if "Writer" in team:
@@ -615,11 +697,13 @@ class DSPyReasoner(dspy.Module):
                     workflow_state="Active",  # Default state
                 )
 
-                tool_plan = getattr(prediction, "tool_plan", [])
+                # Extract routing decision - handles both typed and standard signatures
+                decision_data = self._extract_typed_routing_decision(prediction)
 
-                assigned_to = list(getattr(prediction, "assigned_to", []))
-                execution_mode = getattr(prediction, "execution_mode", "delegated")
-                subtasks = getattr(prediction, "subtasks", [task])
+                tool_plan = list(decision_data.get("tool_plan", []))
+                assigned_to = list(decision_data.get("assigned_to", []))
+                execution_mode = decision_data.get("execution_mode", "delegated")
+                subtasks = list(decision_data.get("subtasks", [task])) or [task]
 
                 # Enforce web search for time-sensitive tasks when available
                 if time_sensitive and preferred_web_tool:
@@ -639,23 +723,31 @@ class DSPyReasoner(dspy.Module):
                 else:
                     reasoning_note = ""
 
-                reasoning_text = getattr(prediction, "reasoning", "")
+                reasoning_text = decision_data.get("reasoning", "")
                 if reasoning_note:
-                    reasoning_text = (reasoning_text + "\n" + reasoning_note).strip()
+                    reasoning_text = (str(reasoning_text) + "\n" + reasoning_note).strip()
 
-                return {
+                result = {
                     "task": task,
                     "assigned_to": assigned_to,
                     "mode": execution_mode,
                     "subtasks": subtasks,
                     "tool_plan": tool_plan,
                     "tool_requirements": tool_plan,  # Map for backward compatibility
-                    "tool_goals": getattr(prediction, "tool_goals", ""),
-                    "latency_budget": getattr(prediction, "latency_budget", "medium"),
-                    "handoff_strategy": getattr(prediction, "handoff_strategy", ""),
-                    "workflow_gates": getattr(prediction, "workflow_gates", ""),
+                    "tool_goals": decision_data.get("tool_goals", ""),
+                    "latency_budget": decision_data.get("latency_budget", "medium"),
+                    "handoff_strategy": decision_data.get("handoff_strategy", ""),
+                    "workflow_gates": decision_data.get("workflow_gates", ""),
                     "reasoning": reasoning_text,
                 }
+
+                # Cache the result
+                if self.enable_routing_cache and not skip_cache:
+                    team_key = str(sorted(team.keys()))
+                    cache_key = self._get_cache_key(task, team_key)
+                    self._cache_routing(cache_key, result)
+
+                return result
 
             else:
                 prediction = self._robust_route(
@@ -847,7 +939,116 @@ class DSPyReasoner(dspy.Module):
         """Return a summary of the execution history."""
         return {
             "history_count": len(self._execution_history),
-            # Add more summary stats if needed
+            "routing_cache_size": len(self._routing_cache),
+            "use_typed_signatures": self.use_typed_signatures,
+        }
+
+    # --- Cache management ---
+
+    def _get_cache_key(self, task: str, team_key: str) -> str:
+        """Generate a cache key for routing decisions.
+
+        Args:
+            task: The task description
+            team_key: A string representing the team configuration
+
+        Returns:
+            A hash-based cache key
+        """
+        combined = f"{task}|{team_key}"
+        return hashlib.md5(combined.encode()).hexdigest()[:16]
+
+    def _get_cached_routing(self, cache_key: str) -> dict[str, Any] | None:
+        """Retrieve a cached routing decision if valid.
+
+        Args:
+            cache_key: The cache key to look up
+
+        Returns:
+            Cached routing decision or None if not found/expired
+        """
+        if not self.enable_routing_cache:
+            return None
+
+        if cache_key not in self._routing_cache:
+            return None
+
+        cached = self._routing_cache[cache_key]
+        if time.time() - cached["timestamp"] > self.cache_ttl_seconds:
+            # Expired - remove from cache
+            del self._routing_cache[cache_key]
+            return None
+
+        logger.debug(f"Cache hit for routing key {cache_key[:8]}...")
+        return cached["result"]
+
+    def _cache_routing(self, cache_key: str, result: dict[str, Any]) -> None:
+        """Store a routing decision in the cache.
+
+        Args:
+            cache_key: The cache key
+            result: The routing decision to cache
+        """
+        if not self.enable_routing_cache:
+            return
+
+        self._routing_cache[cache_key] = {
+            "result": result,
+            "timestamp": time.time(),
+        }
+
+    def clear_routing_cache(self) -> None:
+        """Clear the routing cache."""
+        self._routing_cache.clear()
+        logger.debug("Routing cache cleared")
+
+    def _extract_typed_routing_decision(self, prediction: Any) -> dict[str, Any]:
+        """Extract routing fields from a typed signature prediction.
+
+        Typed signatures return a nested Pydantic model in the 'decision' field.
+        This method extracts the fields and converts them to a standard dict.
+
+        Args:
+            prediction: DSPy prediction with typed output
+
+        Returns:
+            Dictionary with routing decision fields
+        """
+        # Check if we have a typed 'decision' field (Pydantic model)
+        decision = getattr(prediction, "decision", None)
+        if decision is not None:
+            # It's a Pydantic model - extract fields
+            if hasattr(decision, "model_dump"):
+                return decision.model_dump()
+            elif hasattr(decision, "dict"):
+                return decision.dict()
+            else:
+                # Fallback: try to get attributes
+                return {
+                    "assigned_to": getattr(decision, "assigned_to", []),
+                    "execution_mode": getattr(decision, "execution_mode", "delegated"),
+                    "subtasks": getattr(decision, "subtasks", []),
+                    "tool_requirements": getattr(decision, "tool_requirements", []),
+                    "tool_plan": getattr(decision, "tool_plan", []),
+                    "tool_goals": getattr(decision, "tool_goals", ""),
+                    "latency_budget": getattr(decision, "latency_budget", "medium"),
+                    "handoff_strategy": getattr(decision, "handoff_strategy", ""),
+                    "workflow_gates": getattr(decision, "workflow_gates", ""),
+                    "reasoning": getattr(decision, "reasoning", ""),
+                }
+
+        # Not a typed signature - extract fields directly from prediction
+        return {
+            "assigned_to": list(getattr(prediction, "assigned_to", [])),
+            "execution_mode": getattr(prediction, "execution_mode", "delegated"),
+            "subtasks": list(getattr(prediction, "subtasks", [])),
+            "tool_requirements": list(getattr(prediction, "tool_requirements", [])),
+            "tool_plan": list(getattr(prediction, "tool_plan", [])),
+            "tool_goals": getattr(prediction, "tool_goals", ""),
+            "latency_budget": getattr(prediction, "latency_budget", "medium"),
+            "handoff_strategy": getattr(prediction, "handoff_strategy", ""),
+            "workflow_gates": getattr(prediction, "workflow_gates", ""),
+            "reasoning": getattr(prediction, "reasoning", ""),
         }
 
     # --- Internal helpers ---

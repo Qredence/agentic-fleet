@@ -56,9 +56,9 @@ if dspy:
 
         def __init__(self) -> None:
             super().__init__()
-            self.predictor = dspy.Predict(AnswerQualitySignature)
+            self.predictor: Any = dspy.Predict(AnswerQualitySignature)  # type: ignore[arg-type]
 
-        def forward(self, question: str, answer: str) -> dspy.Prediction:
+        def forward(self, question: str, answer: str) -> dspy.Prediction:  # type: ignore[name-defined]
             """Score an answer's quality dimensions.
 
             Args:

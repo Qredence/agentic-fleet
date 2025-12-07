@@ -7,6 +7,11 @@ Consolidated from:
 - signatures.py (core signatures)
 - agent_signatures.py (agent instruction generation)
 - workflow_signatures.py (enhanced routing and workflow strategy)
+
+DSPy 3.x Note:
+Signatures now support Pydantic models as output field types for structured
+outputs. Typed signatures (prefixed with 'Typed') use Pydantic models to
+enforce JSON schema compliance and enable automatic validation/retry.
 """
 
 from __future__ import annotations
@@ -14,6 +19,15 @@ from __future__ import annotations
 from typing import Any, Literal
 
 import dspy
+
+from .typed_models import (
+    ProgressEvaluationOutput,
+    QualityAssessmentOutput,
+    RoutingDecisionOutput,
+    TaskAnalysisOutput,
+    ToolPlanOutput,
+    WorkflowStrategyOutput,
+)
 
 # =============================================================================
 # Core Task Signatures
@@ -228,9 +242,8 @@ class FleetReAct(dspy.Module):
         self, signature: Any = None, tools: list[Any] | None = None, max_iters: int = 5
     ) -> None:
         super().__init__()
-        self.react = dspy.ReAct(
-            signature or "question -> answer", tools=tools or [], max_iters=max_iters
-        )
+        sig_arg = signature or "question -> answer"
+        self.react = dspy.ReAct(sig_arg, tools=tools or [], max_iters=max_iters)  # type: ignore[arg-type]
         self.max_iters = max_iters
 
     def forward(self, question: str, tools: list[Any] | None = None) -> dspy.Prediction:
@@ -270,3 +283,152 @@ class FleetPoT(dspy.Module):
             self.last_error = str(exc)
             raise
         return result
+
+
+# =============================================================================
+# Typed Signatures (DSPy 3.x with Pydantic models)
+# =============================================================================
+# These signatures use Pydantic models for structured outputs, providing:
+# - JSON schema compliance enforcement
+# - Automatic validation and type coercion
+# - Better error messages on parse failures
+# - Field-level constraints (min/max, enums, etc.)
+
+
+class TypedTaskAnalysis(dspy.Signature):
+    """Analyze a task with structured output.
+
+    Returns a validated TaskAnalysisOutput with type-safe fields.
+    """
+
+    task: str = dspy.InputField(desc="The user's task description")
+    analysis: TaskAnalysisOutput = dspy.OutputField(
+        desc="Structured analysis of the task including complexity, capabilities, and tool needs"
+    )
+
+
+class TypedTaskRouting(dspy.Signature):
+    """Route a task to agents with structured output.
+
+    CRITICAL: Assign the minimum necessary agents to complete the task efficiently.
+    Do not over-assign. For simple tasks, a single agent is preferred.
+
+    Returns a validated RoutingDecisionOutput with type-safe fields.
+    """
+
+    task: str = dspy.InputField(desc="The task to route")
+    team: str = dspy.InputField(desc="Description of available agents")
+    context: str = dspy.InputField(desc="Optional execution context")
+    current_date: str = dspy.InputField(desc="Current date for time-sensitive decisions")
+
+    decision: RoutingDecisionOutput = dspy.OutputField(
+        desc="Structured routing decision with agents, mode, subtasks, and tools"
+    )
+
+
+class TypedEnhancedRouting(dspy.Signature):
+    """Advanced task routing with structured output.
+
+    Optimizes for latency and token usage by pre-planning tool usage
+    and setting execution constraints.
+
+    Returns a validated RoutingDecisionOutput with all routing fields.
+    """
+
+    task: str = dspy.InputField(desc="Task to be routed")
+    team_capabilities: str = dspy.InputField(desc="Capabilities of available agents")
+    available_tools: str = dspy.InputField(desc="List of available tools")
+    current_context: str = dspy.InputField(desc="Execution context")
+    handoff_history: str = dspy.InputField(desc="History of agent handoffs")
+    workflow_state: str = dspy.InputField(desc="Current state of the workflow")
+
+    decision: RoutingDecisionOutput = dspy.OutputField(
+        desc="Complete routing decision with agents, mode, tools, and strategy"
+    )
+
+
+class TypedQualityAssessment(dspy.Signature):
+    """Assess result quality with structured output.
+
+    Returns a validated QualityAssessmentOutput with score and feedback.
+    """
+
+    task: str = dspy.InputField(desc="The original task")
+    result: str = dspy.InputField(desc="The result produced by the agent")
+
+    assessment: QualityAssessmentOutput = dspy.OutputField(
+        desc="Quality assessment with score (0-10), missing elements, and improvements"
+    )
+
+
+class TypedProgressEvaluation(dspy.Signature):
+    """Evaluate progress with structured output.
+
+    Returns a validated ProgressEvaluationOutput with action and feedback.
+    """
+
+    task: str = dspy.InputField(desc="The original task")
+    result: str = dspy.InputField(desc="The current result")
+
+    evaluation: ProgressEvaluationOutput = dspy.OutputField(
+        desc="Progress evaluation with action (complete/refine/continue) and feedback"
+    )
+
+
+class TypedToolPlan(dspy.Signature):
+    """Generate tool plan with structured output.
+
+    Returns a validated ToolPlanOutput with ordered tool list.
+    """
+
+    task: str = dspy.InputField(desc="The task to execute")
+    available_tools: str = dspy.InputField(desc="List of available tools")
+
+    plan: ToolPlanOutput = dspy.OutputField(
+        desc="Tool plan with ordered list of tools and reasoning"
+    )
+
+
+class TypedWorkflowStrategy(dspy.Signature):
+    """Select workflow strategy with structured output.
+
+    Selects between:
+    - 'handoff': For simple, linear, or real-time tasks (Low latency).
+    - 'standard': For complex, multi-step, or quality-critical tasks (High robustness).
+    - 'fast_path': For trivial queries (Instant).
+
+    Returns a validated WorkflowStrategyOutput.
+    """
+
+    task: str = dspy.InputField(desc="The user's request or task")
+    complexity_analysis: str = dspy.InputField(desc="Analysis of task complexity")
+
+    strategy: WorkflowStrategyOutput = dspy.OutputField(
+        desc="Workflow strategy with mode (handoff/standard/fast_path) and reasoning"
+    )
+
+
+# Export signatures (sorted alphabetically per ruff RUF022)
+__all__ = [
+    "AgentInstructionSignature",
+    "EnhancedTaskRouting",
+    "FleetPoT",
+    "FleetReAct",
+    "GroupChatSpeakerSelection",
+    "PlannerInstructionSignature",
+    "ProgressEvaluation",
+    "QualityAssessment",
+    "SimpleResponse",
+    "TaskAnalysis",
+    "TaskRouting",
+    "ToolAwareTaskAnalysis",
+    "ToolPlan",
+    "TypedEnhancedRouting",
+    "TypedProgressEvaluation",
+    "TypedQualityAssessment",
+    "TypedTaskAnalysis",
+    "TypedTaskRouting",
+    "TypedToolPlan",
+    "TypedWorkflowStrategy",
+    "WorkflowStrategy",
+]
