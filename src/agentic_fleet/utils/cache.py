@@ -248,4 +248,5 @@ def _generate_cache_key(task: str, agent_name: str) -> str:
         MD5 hash as cache key
     """
     content = f"{task}:{agent_name}"
-    return hashlib.md5(content.encode()).hexdigest()
+    # MD5 used for cache key generation, not security
+    return hashlib.md5(content.encode(), usedforsecurity=False).hexdigest()

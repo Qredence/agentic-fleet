@@ -989,7 +989,8 @@ class DSPyReasoner(dspy.Module):
             cache_key (str): 16-character hex MD5 digest of the combined `task` and `team_key`.
         """
         combined = f"{task}|{team_key}"
-        return hashlib.md5(combined.encode()).hexdigest()[:16]
+        # MD5 used for cache key generation, not security
+        return hashlib.md5(combined.encode(), usedforsecurity=False).hexdigest()[:16]
 
     def _get_cached_routing(self, cache_key: str) -> dict[str, Any] | None:
         """

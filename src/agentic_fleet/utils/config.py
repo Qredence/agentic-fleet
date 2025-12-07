@@ -306,7 +306,8 @@ class EnvConfig:
 
     @property
     def host(self) -> str:
-        return self._get_cached("host", lambda: get_env_var("HOST", "0.0.0.0"))
+        # Binding to 0.0.0.0 is intentional for container/server deployments
+        return self._get_cached("host", lambda: get_env_var("HOST", "0.0.0.0"))  # nosec B104
 
     @property
     def port(self) -> int:

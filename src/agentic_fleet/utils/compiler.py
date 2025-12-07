@@ -702,19 +702,22 @@ def load_compiled_module(filepath: str) -> Any | None:
         import pickle
 
         with open(filepath, "rb") as f:
-            return pickle.load(f)
+            # Loading internally-generated DSPy compiled modules (trusted source)
+            return pickle.load(f)  # nosec B301
 
     def _dill_loader():
         import dill  # type: ignore
 
         with open(filepath, "rb") as f:
-            return dill.load(f)  # type: ignore
+            # Loading internally-generated DSPy compiled modules (trusted source)
+            return dill.load(f)  # type: ignore  # nosec B301
 
     def _cloudpickle_loader():
         import cloudpickle  # type: ignore
 
         with open(filepath, "rb") as f:
-            return cloudpickle.load(f)  # type: ignore
+            # Loading internally-generated DSPy compiled modules (trusted source)
+            return cloudpickle.load(f)  # type: ignore  # nosec B301
 
     strategies: dict[str, Callable[[], Any]] = {
         "pickle": _pickle_loader,
