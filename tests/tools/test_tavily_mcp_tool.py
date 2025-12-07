@@ -15,7 +15,17 @@ import pytest
 
 
 def _import_base_mcp_tool():
-    """Import BaseMCPTool directly from module file to avoid __init__.py imports."""
+    """
+    Load the BaseMCPTool class directly from its source file while providing test-time fallbacks for agent_framework modules.
+
+    Ensures a lightweight MockMCPStreamableHTTPTool is available as agent_framework._mcp and that agent_framework.exceptions exposes ToolException and ToolExecutionException, then imports base_mcp_tool.py from the repository path and returns its BaseMCPTool class.
+
+    Returns:
+        BaseMCPTool: The BaseMCPTool class loaded from the source file.
+
+    Raises:
+        AssertionError: If the module spec or its loader cannot be created or loaded.
+    """
     # First, ensure we have a fallback MCPStreamableHTTPTool
     if "agent_framework._mcp" not in sys.modules:
         mock_mcp = MagicMock()
@@ -60,7 +70,9 @@ def _import_base_mcp_tool():
         Path(__file__).parent.parent.parent / "src" / "agentic_fleet" / "tools" / "base_mcp_tool.py"
     )
     spec = importlib.util.spec_from_file_location("base_mcp_tool", module_path)
+    assert spec is not None, "Failed to load module spec"
     module = importlib.util.module_from_spec(spec)
+    assert spec.loader is not None, "Spec has no loader"
     spec.loader.exec_module(module)
     return module.BaseMCPTool
 
@@ -162,10 +174,8 @@ class TestTavilyMCPToolAuthentication:
             # Remove the env var if it exists
             os.environ.pop("TAVILY_API_KEY", None)
 
-            with pytest.raises(ValueError) as exc_info:
+            with pytest.raises(ValueError, match="TAVILY_API_KEY"):
                 TavilyMCPTool()
-
-            assert "TAVILY_API_KEY" in str(exc_info.value)
 
     def test_tool_name_is_tavily_search(self):
         """Verify the tool is named correctly."""

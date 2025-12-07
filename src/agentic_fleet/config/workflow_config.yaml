@@ -1,13 +1,17 @@
 # DSPy Configuration
 dspy:
-  model: gpt-4.1
-  routing_model: gpt-5-mini # Fast model for analysis/routing phases (Plan #4)
+  model: gpt-4.1-mini # High-capacity model for DSPy tasks
+  routing_model: gpt-5-nano # Fast model for analysis/routing phases (Plan #4)
   temperature: 1.0
   max_tokens: 16000
   # When true, raise an error if no compiled DSPy artifact is found.
   # Recommended for production environments to prevent degraded performance
   # from zero-shot fallback. Run 'agentic-fleet optimize' before enabling.
   require_compiled: false
+  # DSPy 3.x TypedPredictor settings
+  use_typed_signatures: true # Enable Pydantic-based typed signatures for structured outputs
+  enable_routing_cache: true # Cache routing decisions to avoid redundant LLM calls
+  routing_cache_ttl_seconds: 300 # TTL for routing cache entries (5 minutes)
   optimization:
     enabled: true
     examples_path: src/agentic_fleet/data/supervisor_examples.json
@@ -24,8 +28,9 @@ dspy:
     # gepa_auto: light  # DISABLED for speed
     # Switched from full eval cap (still expensive) to metric call cap for ultra-fast run.
     # gepa_max_full_evals: 3  # (previous setting) commented out; full eval cycles still slow
-    gepa_max_metric_calls: 5 # ultra-short optimization budget
-    gepa_reflection_model:
+    gepa_max_metric_calls: 10 # Increased from 5 for better optimization with typed signatures
+    gepa_reflection_model: gpt-5-mini # Use fast model for reflection to reduce latency
+    gepa_reflection_minibatch_size: 2 # Smaller batches for faster reflection cycles
     gepa_log_dir: .var/logs/gepa
     gepa_perfect_score: 1.0
     gepa_use_history_examples: true
@@ -33,6 +38,9 @@ dspy:
     gepa_history_limit: 200
     gepa_val_split: 0.2
     gepa_seed: 13
+    # Optimizer fallback chain: gepa -> bootstrap -> zero-shot
+    fallback_to_bootstrap: true # Fall back to BootstrapFewShot if GEPA fails
+    validate_examples: true # Validate training examples before optimization
 
 # API Configuration
 api:
@@ -94,7 +102,7 @@ workflow:
 # Agent Configuration
 agents:
   researcher:
-    model: gpt-4.1
+    model: gpt-4.1-mini
     tools:
       - TavilySearchTool # Requires TAVILY_API_KEY environment variable
     temperature: 0.5

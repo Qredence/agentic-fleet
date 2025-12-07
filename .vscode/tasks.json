@@ -1,0 +1,37 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "Backend: Format",
+      "type": "shell",
+      "command": "make format",
+      "isBackground": false,
+      "problemMatcher": [],
+      "group": "build"
+    },
+    {
+      "label": "Backend: Test",
+      "type": "shell",
+      "command": "make test",
+      "isBackground": false,
+      "problemMatcher": [],
+      "group": "test"
+    },
+    {
+      "label": "Backend: Check (lint+types)",
+      "type": "shell",
+      "command": "make check",
+      "isBackground": false,
+      "problemMatcher": [],
+      "group": "build"
+    },
+    {
+      "label": "Frontend: Test",
+      "type": "shell",
+      "command": "cd src/frontend && npm test",
+      "isBackground": false,
+      "problemMatcher": [],
+      "group": "test"
+    }
+  ]
+}

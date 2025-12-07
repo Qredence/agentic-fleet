@@ -1,5 +1,115 @@
 # Changelog
 
+## v0.6.9 (2025-12-06) – DSPy Typed Signatures & Assertions
+
+### Highlights
+
+#### Typed Pydantic Models for Structured Outputs
+
+- **Pydantic-based output models** – New `typed_models.py` module provides validated, type-safe outputs from DSPy predictions.
+- **Automatic coercion** – Comma-separated strings automatically convert to lists; scores clamp to valid ranges.
+- **8 typed output models** – `RoutingDecisionOutput`, `TaskAnalysisOutput`, `QualityAssessmentOutput`, `ProgressEvaluationOutput`, `ToolPlanOutput`, `WorkflowStrategyOutput`, `HandoffDecisionOutput`, `CapabilityMatchOutput`.
+- **Field validators** – Normalize execution modes to lowercase, validate literal values, and enforce constraints.
+
+#### DSPy Assertions for Routing Validation
+
+- **Expanded assertions module** – Comprehensive validation functions for routing decisions.
+- **Hard constraints** – `assert_valid_agents()`, `assert_valid_tools()`, `assert_mode_agent_consistency()` for critical validations.
+- **Soft suggestions** – `suggest_valid_agents()`, `suggest_valid_tools()`, `suggest_mode_agent_consistency()` for optimization hints.
+- **Task type detection** – `detect_task_type()` classifies tasks as research/coding/analysis/writing/general with keyword sets.
+- **Routing assertions decorator** – `@with_routing_assertions()` for assertion-driven backtracking.
+
+#### Typed Signatures for DSPy 3.x
+
+- **7 typed signatures** – `TypedTaskAnalysis`, `TypedTaskRouting`, `TypedEnhancedRouting`, `TypedQualityAssessment`, `TypedProgressEvaluation`, `TypedToolPlan`, `TypedWorkflowStrategy`.
+- **Pydantic output fields** – Signatures use Pydantic models as `dspy.OutputField()` types for JSON schema compliance.
+- **DSPy 3.x compatibility** – Leverages DSPy's native Pydantic support for structured outputs.
+
+#### Performance Optimization
+
+- **Routing cache** – TTL-based caching for routing decisions to avoid redundant LLM calls.
+- **Cache configuration** – `enable_routing_cache`, `cache_ttl_seconds` settings in workflow config.
+- **Lazy module initialization** – Typed predictors initialized on first use.
+
+### Changes
+
+#### Backend
+
+- **`src/agentic_fleet/dspy_modules/typed_models.py`** (NEW):
+  - Pydantic models for all DSPy outputs.
+  - Field validators for normalization and coercion.
+  - `coerce_list()` helper for comma-separated string → list conversion.
+  - Score clamping for `QualityAssessmentOutput` and `CapabilityMatchOutput`.
+
+- **`src/agentic_fleet/dspy_modules/signatures.py`**:
+  - Added 7 typed signature classes using Pydantic output models.
+  - Sorted `__all__` alphabetically per ruff RUF022.
+
+- **`src/agentic_fleet/dspy_modules/reasoner.py`**:
+  - Added `use_typed_signatures` parameter (default: `True`).
+  - Added `enable_routing_cache` and `cache_ttl_seconds` parameters.
+  - Added routing cache with `_get_cache_key()`, `_get_cached_routing()`, `_cache_routing()`, `clear_routing_cache()`.
+  - Added `_extract_typed_routing_decision()` for Pydantic model → dict conversion.
+
+- **`src/agentic_fleet/dspy_modules/assertions.py`**:
+  - Added `validate_agent_exists()`, `validate_tool_assignment()`, `validate_mode_agent_match()`.
+  - Added `detect_task_type()` with keyword frozensets.
+  - Added `validate_routing_decision()`, `validate_full_routing()`.
+  - Added assertion wrappers: `assert_valid_agents()`, `assert_valid_tools()`, `assert_mode_agent_consistency()`.
+  - Added suggestion wrappers: `suggest_valid_agents()`, `suggest_valid_tools()`, `suggest_mode_agent_consistency()`.
+  - Added `suggest_task_type_routing()` for task-type specific routing suggestions.
+  - Added `with_routing_assertions()` decorator.
+  - Exported keyword sets: `RESEARCH_KEYWORDS`, `CODING_KEYWORDS`, `ANALYSIS_KEYWORDS`, `WRITING_KEYWORDS`.
+
+- **`src/agentic_fleet/workflows/executors.py`**:
+  - Integrated `detect_task_type` and `validate_full_routing` in `RoutingExecutor`.
+  - Added routing validation after DSPy routing decisions.
+
+- **`src/agentic_fleet/config/workflow_config.yaml`**:
+  - Added `use_typed_signatures: true` setting.
+  - Added `enable_routing_cache: true` setting.
+  - Added `cache_ttl_seconds: 300` setting.
+
+#### Tests
+
+- **`tests/dspy_modules/test_typed_models.py`** (NEW):
+  - 44 tests covering all Pydantic models.
+  - Tests for field coercion, normalization, clamping, and validation.
+  - Tests for model serialization/deserialization.
+
+- **`tests/dspy_modules/test_assertions.py`** (NEW):
+  - 39 tests for assertion functions.
+  - Tests for agent validation, tool validation, mode/agent matching.
+  - Tests for task type detection with keyword coverage.
+  - Tests for assertion and suggestion wrappers.
+
+- **`tests/dspy_modules/test_reasoner.py`**:
+  - Added `TestTypedSignatures` class (6 tests).
+  - Added `TestRoutingCache` class (6 tests).
+  - Added `TestTypedRoutingExtraction` class (4 tests).
+  - Added `TestBackwardCompatibility` class (4 tests).
+
+### Configuration
+
+New settings in `workflow_config.yaml`:
+
+```yaml
+dspy:
+  optimization:
+    use_typed_signatures: true # Use Pydantic output models
+    enable_routing_cache: true # Cache routing decisions
+    cache_ttl_seconds: 300 # Cache TTL (5 minutes)
+```
+
+### Migration Notes
+
+- **No breaking changes** – Existing workflows continue to work.
+- **Typed signatures enabled by default** – Set `use_typed_signatures: false` to disable.
+- **Routing cache enabled by default** – Set `enable_routing_cache: false` to disable.
+- **Field name consistency** – `RoutingDecisionOutput` uses `execution_mode` (not `mode`).
+
+---
+
 ## v0.6.8 (2025-12-05) – Dev CLI, NLU Module & Frontend UX Overhaul
 
 ### Highlights

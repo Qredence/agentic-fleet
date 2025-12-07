@@ -278,10 +278,16 @@ class WorkflowRunner:
         return workflow
 
     async def run_with_streaming(self, message: str) -> None:
-        """Run workflow with streaming display.
+        """
+        Run the configured workflow for the given task message and stream live UI updates to the console.
 
-        Args:
-            message: Task message to process
+        This method drives the live execution UI by consuming events from the workflow's stream and rendering analysis, routing, progress, quality assessments, and per-agent streaming outputs. It collects final workflow output and judge evaluations, prints reasoning steps and quality assessments when available, and prints a final result summary with execution time.
+
+        Parameters:
+            message (str): Task message to process.
+
+        Raises:
+            RuntimeError: If workflow initialization fails.
         """
         if not self.workflow:
             await self.initialize_workflow()
@@ -423,7 +429,8 @@ class WorkflowRunner:
                             # We assume the last message contains the result and metadata
                             last_msg = event.data[-1]
                             if hasattr(last_msg, "text"):
-                                final_data = getattr(last_msg, "additional_properties", {}) or {}
+                                props = getattr(last_msg, "additional_properties", None) or {}
+                                final_data = dict(props)
                                 final_data["result"] = last_msg.text
 
                         if final_data:

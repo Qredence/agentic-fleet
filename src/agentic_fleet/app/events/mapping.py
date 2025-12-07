@@ -382,14 +382,25 @@ def map_workflow_event(
     event: Any,
     accumulated_reasoning: str,
 ) -> tuple[StreamEvent | list[StreamEvent] | None, str]:
-    """Map a workflow event to a StreamEvent for SSE.
+    """
+    Convert an internal workflow event into one or more StreamEvent objects for SSE streaming.
 
-    Args:
-        event: The workflow event to map.
-        accumulated_reasoning: Running total of reasoning text for partial error handling.
+    This function maps a variety of internal event shapes (reasoning deltas/completions, agent messages/outputs,
+    executor phase messages, and final workflow output) to standardized StreamEvent instances used by the UI.
+    It may return a single StreamEvent, a list of StreamEvent objects when multiple UI events are appropriate,
+    or None when the input event should not produce any UI emission. It also returns an updated accumulated
+    reasoning string used to aggregate reasoning stream content across events.
+
+    Parameters:
+        event: The workflow event to map. Supported inputs include framework event objects, dict-based events,
+            and executor/message wrapper objects; the mapper performs safe extraction and duck-typing to
+            recognize different event payloads.
+        accumulated_reasoning: Running concatenation of reasoning text used to accumulate partial reasoning
+            across ReasoningStreamEvent occurrences.
 
     Returns:
-        Tuple of (StreamEvent or None, updated accumulated_reasoning).
+        A tuple where the first element is either a StreamEvent, a list of StreamEvent, or None if no event
+        should be emitted, and the second element is the updated accumulated_reasoning string.
     """
     # Skip generic WorkflowStartedEvent and WorkflowStatusEvent - they provide no useful info
     # The frontend will show "Processing..." shimmer during streaming instead
@@ -511,7 +522,7 @@ def map_workflow_event(
         if text:
             author_name = getattr(event, "author_name", None) or getattr(event, "author", None)
             role = getattr(event, "role", None)
-            role_value = role.value if hasattr(role, "value") else role
+            role_value = role.value if role is not None and hasattr(role, "value") else role
             events: list[StreamEvent] = []
 
             event_type = StreamEventType.AGENT_MESSAGE
@@ -548,7 +559,7 @@ def map_workflow_event(
         text = getattr(event, "text", "") or ""
         if text:
             role = getattr(event, "role", None)
-            role_value = role.value if hasattr(role, "value") else role
+            role_value = role.value if role is not None and hasattr(role, "value") else role
             author_name = getattr(event, "author_name", None) or getattr(event, "author", None)
             agent_id = getattr(event, "agent_id", None) or author_name
 
@@ -602,7 +613,7 @@ def map_workflow_event(
                 role_value = role
                 if isinstance(role, dict):
                     role_value = role.get("value")
-                elif hasattr(role, "value"):
+                elif role is not None and hasattr(role, "value"):
                     role_value = role.value
 
                 events: list[StreamEvent] = []
@@ -814,8 +825,8 @@ def map_workflow_event(
             if messages:
                 last_msg = messages[-1]
                 result_text = getattr(last_msg, "text", str(last_msg)) or str(last_msg)
-            elif hasattr(data, "result"):
-                result_text = str(data.result)
+            elif not isinstance(data, list) and hasattr(data, "result"):
+                result_text = str(getattr(data, "result", ""))
             else:
                 result_text = str(data)
 
@@ -836,7 +847,9 @@ def map_workflow_event(
                             message=text,
                             agent_id=agent_id,
                             author=author,
-                            role=role.value if hasattr(role, "value") else role,
+                            role=role.value
+                            if role is not None and hasattr(role, "value")
+                            else role,
                             category=msg_category,
                             ui_hint=msg_ui_hint,
                         )

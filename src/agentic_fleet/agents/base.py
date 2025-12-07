@@ -7,6 +7,7 @@ including the DSPy-enhanced agent that integrates with the Agent Framework.
 from __future__ import annotations
 
 import asyncio
+import contextlib
 import time
 from collections.abc import AsyncIterable
 from typing import TYPE_CHECKING, Any, cast
@@ -343,7 +344,18 @@ class DSPyEnhancedAgent(ChatAgent):
         agent_kwargs: dict[str, Any],
         error: Exception,
     ) -> AgentRunResponse:
-        """Run fallback ChatAgent when Program of Thought fails."""
+        """
+        Invoke the base ChatAgent as a fallback and attach a Program of Thought (PoT) failure note to the response.
+
+        Parameters:
+            messages (Any): Original input messages passed to the fallback run.
+            thread (AgentThread | None): Optional thread context to pass to the fallback run.
+            agent_kwargs (dict[str, Any]): Additional keyword arguments forwarded to the base agent's run method.
+            error (Exception): The PoT failure that triggered the fallback; used to build the user-facing note.
+
+        Returns:
+            AgentRunResponse: The fallback response with the PoT note prepended to the first message text (or to the response text if no messages), and with `additional_properties` extended to include `strategy` and `pot_error`.
+        """
 
         note = self._build_pot_error_note(error)
         logger.warning("Program of Thought failed for %s: %s", self.name, note)
@@ -353,10 +365,13 @@ class DSPyEnhancedAgent(ChatAgent):
         first_msg = None
         if fallback_response.messages:
             first_msg = fallback_response.messages[0]
-            first_msg.text = self._apply_note_to_text(first_msg.text, note)
+            # Use contextlib.suppress since text property may be read-only
+            with contextlib.suppress(AttributeError):
+                first_msg.text = self._apply_note_to_text(first_msg.text, note)  # type: ignore[misc]
         else:
             fallback_response_text = getattr(fallback_response, "text", "")
-            fallback_response.text = self._apply_note_to_text(fallback_response_text, note)  # type: ignore[attr-defined]
+            with contextlib.suppress(AttributeError):
+                fallback_response.text = self._apply_note_to_text(fallback_response_text, note)  # type: ignore[attr-defined]
 
         existing_props = dict(fallback_response.additional_properties or {})
         existing_props.update(

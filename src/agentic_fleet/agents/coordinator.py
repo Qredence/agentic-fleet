@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import importlib
+import importlib.util
 import inspect
 import logging
 import warnings
@@ -30,6 +31,10 @@ except ImportError:
     from agent_framework.openai import OpenAIChatClient as _PreferredOpenAIClient  # type: ignore
 
     _RESPONSES_CLIENT_AVAILABLE = False
+
+_FOUNDRY_AVAILABLE = bool(
+    importlib.util.find_spec("azure.ai.projects.aio") and importlib.util.find_spec("azure.identity")
+)
 
 load_dotenv(override=True)
 
@@ -119,6 +124,13 @@ class AgentFactory:
             workflow_ref = agent_config.get("workflow")
             if workflow_ref:
                 return self._create_workflow_agent(name, workflow_ref, agent_config)
+
+            agent_type = agent_config.get("type", "local")
+            if agent_type == "foundry":
+                if not _FOUNDRY_AVAILABLE:
+                    raise ImportError("azure-ai-projects package is required for Foundry agents")
+
+                return self._create_foundry_agent(name, agent_config, span)
 
             model_id = agent_config.get("model")
             if not model_id:
@@ -267,6 +279,65 @@ class AgentFactory:
         except Exception as e:
             logger.error(f"Failed to create workflow agent {name}: {e}")
             raise
+
+    def _create_foundry_agent(
+        self,
+        name: str,
+        agent_config: dict[str, Any],
+        span: Any | None = None,
+    ) -> ChatAgent:
+        """Create a Foundry Agent instance."""
+        import os
+
+        # Ensure imports are available locally if top-level failed or for safety
+        from azure.ai.projects.aio import AIProjectClient
+        from azure.identity import DefaultAzureCredential
+
+        from agentic_fleet.agents.foundry import FoundryAgentAdapter
+
+        agent_id = agent_config.get("agent_id")
+        if not agent_id:
+            raise ValueError(f"Foundry agent {name} requires 'agent_id'")
+
+        if span is not None:
+            span.set_attribute("agent.type", "foundry")
+            span.set_attribute("agent.foundry_id", agent_id)
+
+        conn_str = agent_config.get("connection_string") or os.environ.get(
+            "PROJECT_CONNECTION_STRING"
+        )
+        if not conn_str:
+            raise ValueError(f"Connection string required for Foundry agent {name}")
+
+        # Create the client (synchronous creation of async client object)
+        project_client = AIProjectClient.from_connection_string(  # type: ignore[attr-defined]
+            credential=DefaultAzureCredential(),
+            conn_str=conn_str,
+        )
+
+        description = agent_config.get("description", "")
+        instructions = agent_config.get("instructions", "")
+
+        # Extract metadata (defaulting list of tools/capabilities)
+        # Note: 'tools' in config might be names (remote) or local definitions. For Foundry, we assume names.
+        tool_names = agent_config.get("tools", [])
+        if tool_names and isinstance(tool_names[0], dict):
+            # If defined as dicts, extract names
+            tool_names = [t.get("name", str(t)) for t in tool_names]
+
+        capabilities = agent_config.get("capabilities", [])
+
+        agent = FoundryAgentAdapter(
+            name=name,
+            project_client=project_client,
+            agent_id=agent_id,
+            description=description,
+            instructions=instructions,
+            tool_names=tool_names,
+            capabilities=capabilities,
+        )
+        logger.debug(f"Created Foundry agent '{name}' (ID: {agent_id})")
+        return agent
 
     def _resolve_context_providers(self, provider_names: list[str]) -> list[Any]:
         """Resolve context provider names to instances.

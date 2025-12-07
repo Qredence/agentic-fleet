@@ -149,17 +149,19 @@ class HandoffManager:
         available_agents: dict[str, str],
         agent_states: dict[str, str] | None = None,
     ) -> str | None:
-        """Use DSPy to determine if handoff is needed.
+        """
+        Determine whether the task should be handed off to another agent using the DSPy supervisor.
 
-        Args:
-            current_agent: Name of agent currently handling task
-            work_completed: Summary of work done so far
-            remaining_work: Description of what's left to do
-            available_agents: Dict of agent_name -> capability_description
-            agent_states: Optional dict of agent_name -> current_state
+        Parameters:
+            current_agent (str): Name of the agent currently handling the task.
+            work_completed (str): Brief summary of work already performed.
+            remaining_work (str): Description of remaining tasks or objectives.
+            available_agents (dict[str, str]): Mapping of agent name to capability/description.
+            agent_states (dict[str, str] | None): Optional mapping of agent name to
+                current state; if omitted, agents are treated as "available".
 
         Returns:
-            Name of next agent if handoff recommended, None otherwise
+            str | None: Name of the agent to receive the handoff if a handoff is recommended, `None` otherwise.
         """
         if not available_agents:
             logger.debug("No agents available for handoff")
@@ -203,12 +205,13 @@ class HandoffManager:
                 )
 
             # Parse decision
-            should_handoff = decision.should_handoff.lower().strip() in ("yes", "true", "1", "y")
+            should_handoff_str = str(getattr(decision, "should_handoff", "")).lower().strip()
+            should_handoff = should_handoff_str in ("yes", "true", "1", "y")
 
-            if should_handoff and decision.next_agent:
-                next_agent = decision.next_agent.strip()
+            if should_handoff and getattr(decision, "next_agent", None):
+                next_agent = str(getattr(decision, "next_agent", "")).strip()
                 logger.info(f"Handoff recommended: {current_agent} → {next_agent}")
-                logger.info(f"Reason: {decision.handoff_reason}")
+                logger.info(f"Reason: {getattr(decision, 'handoff_reason', '')}")
                 return next_agent
 
             logger.debug(f"No handoff needed, {current_agent} should continue")
@@ -228,19 +231,35 @@ class HandoffManager:
         task: str | None = None,
         handoff_reason: str = "",
     ) -> HandoffContext:
-        """Create structured handoff package using DSPy.
+        """
+        Builds a HandoffContext that packages work, artifacts, objectives, and a
+        DSPy-generated protocol for transferring responsibility between agents.
 
-        Args:
-            from_agent: Agent initiating handoff
-            to_agent: Agent receiving handoff
-            work_completed: Summary of completed work
-            artifacts: Data/files/results produced
-            remaining_objectives: What next agent should accomplish
-            task: Optional original task description
-            handoff_reason: Why this handoff is happening
+        This method derives measurable success criteria from the remaining objectives,
+        identifies tools the receiving agent may need, and requests a structured handoff
+        protocol (including an estimated effort and a quality checklist) from the
+        supervisor/ChainOfThought when available. The resulting HandoffContext is appended
+        to the manager's history before being returned. On error, a minimal fallback
+        HandoffContext with conservative defaults is returned.
+
+        Parameters:
+            from_agent (str): Agent initiating the handoff.
+            to_agent (str): Agent intended to receive and continue the work.
+            work_completed (str): Human-readable summary of what the initiating agent
+                completed.
+            artifacts (dict[str, Any]): Collected outputs, files, or data produced so far
+                (serializable).
+            remaining_objectives (list[str]): List of tasks or objectives the receiving
+                agent should accomplish next.
+            task (str | None): Optional original or overarching task description; if
+                omitted, work_completed is used.
+            handoff_reason (str): Short description of why the handoff is occurring.
 
         Returns:
-            HandoffContext with complete handoff information
+            HandoffContext: A fully populated handoff package including derived success
+                criteria, required tools, estimated effort, quality checklist (from the
+                protocol when available), metadata containing the protocol package, and
+                the original fields provided.
         """
         # Derive success criteria from objectives
         success_criteria = self._derive_success_criteria(remaining_objectives)
@@ -276,7 +295,7 @@ class HandoffManager:
                 )
 
             # Parse quality checklist
-            checklist = self._parse_checklist(protocol.quality_checklist)
+            checklist = self._parse_checklist(str(getattr(protocol, "quality_checklist", "")))
 
             # Create handoff context
             handoff_context = HandoffContext(
@@ -288,9 +307,9 @@ class HandoffManager:
                 remaining_objectives=remaining_objectives,
                 success_criteria=success_criteria,
                 tool_requirements=tool_requirements,
-                estimated_effort=protocol.estimated_effort.lower(),
+                estimated_effort=str(getattr(protocol, "estimated_effort", "moderate")).lower(),
                 quality_checklist=checklist,
-                metadata={"protocol_package": protocol.handoff_package},
+                metadata={"protocol_package": getattr(protocol, "handoff_package", "")},
                 handoff_reason=handoff_reason,
             )
 
@@ -326,14 +345,23 @@ class HandoffManager:
         handoff_context: HandoffContext,
         work_after_handoff: str,
     ) -> dict[str, Any]:
-        """Assess quality of a completed handoff.
+        """
+        Evaluate the quality of a completed handoff between agents.
 
-        Args:
-            handoff_context: The handoff that occurred
-            work_after_handoff: Work completed by receiving agent
+        Parameters:
+            handoff_context (HandoffContext): The structured context describing the handoff that occurred.
+            work_after_handoff (str): Description of the work performed by the receiving agent after the handoff.
 
         Returns:
-            Dictionary with quality assessment results
+            dict[str, Any]: Assessment result containing:
+                - quality_score (float): Parsed numeric quality score (higher is better;
+                    defaults to 5.0 on parse failure).
+                - context_complete (bool): `True` if the assessment indicates the handoff
+                    context was complete, `False` otherwise.
+                - success_factors (Any): Key factors that contributed to successful handoff
+                    (string or structured data).
+                - improvements (Any): Suggested improvement areas for future handoffs
+                    (string or structured data).
         """
         try:
             sup = self._sup()
@@ -356,10 +384,13 @@ class HandoffManager:
                 )
 
             return {
-                "quality_score": self._parse_score(assessment.handoff_quality_score),
-                "context_complete": assessment.context_completeness.lower() in ("yes", "true", "1"),
-                "success_factors": assessment.success_factors,
-                "improvements": assessment.improvement_areas,
+                "quality_score": self._parse_score(
+                    getattr(assessment, "handoff_quality_score", "5.0")
+                ),
+                "context_complete": str(getattr(assessment, "context_completeness", "")).lower()
+                in ("yes", "true", "1"),
+                "success_factors": getattr(assessment, "success_factors", "Unknown"),
+                "improvements": getattr(assessment, "improvement_areas", "Unable to assess"),
             }
 
         except Exception as e:

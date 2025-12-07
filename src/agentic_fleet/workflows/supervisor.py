@@ -216,7 +216,17 @@ class SupervisorWorkflow:
         }
 
     async def run(self, task: str) -> dict[str, Any]:
-        """Execute the workflow for a single task."""
+        """
+        Run the supervisor workflow for a single textual task and return the final result and associated metadata.
+
+        Returns:
+            dict: A result dictionary containing the final `result` (text), `routing` decision, `quality` scores,
+            `judge_evaluations`, and additional `metadata` and execution details like timing and phase information.
+
+        Raises:
+            RuntimeError: If the workflow runner is not initialized.
+            RuntimeError: If the workflow produces no outputs.
+        """
         with optional_span("SupervisorWorkflow.run", attributes={"task": task, "mode": self.mode}):
             start_time = datetime.now()
             workflow_id = str(uuid4())
@@ -296,7 +306,7 @@ class SupervisorWorkflow:
                     # Find the last message
                     if result:
                         last_msg = result[-1]
-                        result_text = last_msg.text
+                        result_text = getattr(last_msg, "text", str(last_msg))
                 elif hasattr(result, "content"):
                     result_text = str(result.content)
                 else:
@@ -359,27 +369,30 @@ class SupervisorWorkflow:
     def _handle_agent_run_update(
         self, event: AgentRunUpdateEvent
     ) -> ReasoningStreamEvent | MagenticAgentMessageEvent | None:
-        """Handle AgentRunUpdateEvent and convert to appropriate stream event.
+        """
+        Convert an AgentRunUpdateEvent into a streaming event representing either reasoning deltas or an agent message.
 
-        Extracts reasoning tokens (GPT-5 models) or converts to MagenticAgentMessageEvent
-        for CLI compatibility.
+        Processes the event's `run.delta` safely: if the delta's type indicates reasoning and contains text, returns a `ReasoningStreamEvent` with that reasoning and the agent id; if the delta contains textual content, returns a `MagenticAgentMessageEvent` wrapping a `ChatMessage` with role `Role.ASSISTANT` (joining list content when present); returns `None` when no usable delta or content is available.
 
-        Args:
-            event: The AgentRunUpdateEvent to process
+        Parameters:
+            event (AgentRunUpdateEvent): The agent run update event to convert.
 
         Returns:
-            ReasoningStreamEvent, MagenticAgentMessageEvent, or None if no content
+            ReasoningStreamEvent | MagenticAgentMessageEvent | None: `ReasoningStreamEvent` when a reasoning delta is present, `MagenticAgentMessageEvent` when textual content is present, or `None` if no convertible content exists.
         """
-        if not (hasattr(event, "run") and hasattr(event.run, "delta")):
+        run_obj = getattr(event, "run", None)
+        if not (run_obj and hasattr(run_obj, "delta")):
             return None
 
-        delta = event.run.delta
+        delta = getattr(run_obj, "delta", None)
+        if delta is None:
+            return None
 
         # Check for reasoning content (GPT-5 series)
         if hasattr(delta, "type") and "reasoning" in str(getattr(delta, "type", "")):
             reasoning_text = getattr(delta, "delta", "")
             if reasoning_text:
-                agent_id = getattr(event.run, "agent_id", "unknown")
+                agent_id = getattr(run_obj, "agent_id", "unknown")
                 return ReasoningStreamEvent(reasoning=reasoning_text, agent_id=agent_id)
             return None
 
@@ -392,7 +405,7 @@ class SupervisorWorkflow:
                 text = str(delta.content)
 
         if text:
-            agent_id = getattr(event.run, "agent_id", "unknown")
+            agent_id = getattr(run_obj, "agent_id", "unknown")
             mag_msg = ChatMessage(role=Role.ASSISTANT, text=text)
             return MagenticAgentMessageEvent(agent_id=agent_id, message=mag_msg)
 
@@ -455,16 +468,21 @@ class SupervisorWorkflow:
         reasoning_effort: str | None = None,
         thread: AgentThread | None = None,
     ) -> AsyncIterator[WorkflowEvent]:
-        """Execute the workflow for a single task, streaming events.
+        """
+        Execute the workflow for a single task and stream WorkflowEvent objects representing progress and results.
 
-        Args:
-            task: The task string to execute
-            reasoning_effort: Optional reasoning effort override (minimal, medium, maximal)
-            thread: Optional AgentThread for multi-turn conversation context
+        This coroutine yields status updates, intermediate agent messages, reasoning deltas, and a final output event. It updates internal execution state, notifies configured middlewares on start and end, and supports an optional reasoning effort override and conversation thread context. If a fast-path responder is applicable, it yields fast-path events and returns early.
+
+        Parameters:
+            task (str): The task prompt to execute.
+            reasoning_effort (str | None): Optional override; must be one of "minimal", "medium", or "maximal". An invalid value yields a FAILED status and terminates the stream.
+            thread (AgentThread | None): Optional multi-turn conversation context to store in the workflow context.
 
         Yields:
-            WorkflowEvent: Workflow events including status updates, agent messages,
-                and the final output event containing the result.
+            WorkflowEvent: Events emitted during execution, including WorkflowStatusEvent, MagenticAgentMessageEvent, ReasoningStreamEvent, ExecutorCompletedEvent, RequestInfoEvent, and WorkflowOutputEvent containing the final result.
+
+        Raises:
+            RuntimeError: If the workflow runner is not initialized.
         """
         with optional_span(
             "SupervisorWorkflow.run_stream", attributes={"task": task, "mode": self.mode}
@@ -554,12 +572,15 @@ class SupervisorWorkflow:
 
                     elif isinstance(event, RequestInfoEvent):
                         # If request contains conversation, extracting last message might be useful
-                        if hasattr(event.data, "conversation") and event.data.conversation:
-                            last_msg = event.data.conversation[-1]
-                            # Log or capture partial result
-                            logger.info(
-                                f"RequestInfoEvent: Last message from {last_msg.author_name}: {last_msg.text[:50]}..."
-                            )
+                        event_data = getattr(event, "data", None)
+                        if event_data and hasattr(event_data, "conversation"):
+                            conversation = getattr(event_data, "conversation", None)
+                            if conversation:
+                                last_msg = conversation[-1]
+                                # Log or capture partial result
+                                logger.info(
+                                    f"RequestInfoEvent: Last message from {getattr(last_msg, 'author_name', 'unknown')}: {getattr(last_msg, 'text', '')[:50]}..."
+                                )
 
                     elif isinstance(event, WorkflowOutputEvent) and (
                         isinstance(event.data, list)

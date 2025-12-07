@@ -8,7 +8,7 @@ import logging
 import sys
 from pathlib import Path
 
-from pythonjsonlogger import jsonlogger
+from pythonjsonlogger import jsonlogger  # type: ignore[import]
 
 from .config import env_config
 
@@ -30,14 +30,17 @@ def setup_logger(
     json_format: bool = False,
 ) -> logging.Logger:
     """
-    Setup logger with console and optional file output.
+    Configure and return a logger with console output and optional file output, supporting plain-text or JSON log formats.
 
-    Args:
-        name: Logger name
-        level: Logging level
-        log_file: Optional path to log file
-        format_string: Optional format string for text logs
-        json_format: Whether to use JSON formatting (overrides format_string)
+    Parameters:
+        name (str): Logger name.
+        level (str): Logging level name (e.g., "INFO", "DEBUG").
+        log_file (str | None): Path to a file to also write logs to; when None, file logging is disabled.
+        format_string (str | None): Text-format string for log messages; ignored when `json_format` is True.
+        json_format (bool): If True, use JSON-formatted logs. If the environment config `env_config.log_format` equals "json", JSON formatting is forced regardless of this argument.
+
+    Returns:
+        logging.Logger: A logger configured with a console handler (and optional file handler), an appropriate formatter (JSON or text), an added request_id filter to ensure `request_id` exists on records, cleared duplicate handlers, and propagation disabled.
     """
     # Check env var for global JSON logging override
     if env_config.log_format == "json":
@@ -62,7 +65,7 @@ def setup_logger(
 
     # Create formatter
     if json_format:
-        formatter = jsonlogger.JsonFormatter(
+        formatter = jsonlogger.JsonFormatter(  # type: ignore[attr-defined]
             "%(asctime)s %(name)s %(levelname)s %(message)s %(request_id)s",
             timestamp=True,
         )

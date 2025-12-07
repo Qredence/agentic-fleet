@@ -1,9 +1,14 @@
 import json
 
-from agentic_fleet.api.main import app
+from agentic_fleet.app.main import app
 
 
-def generate_openapi():
+def generate_openapi() -> None:
+    """
+    Write the application's OpenAPI schema to openapi.json.
+
+    Retrieves the FastAPI app's OpenAPI schema and writes it as formatted JSON to a file named "openapi.json" in the current working directory. Prints a confirmation message after the file is written.
+    """
     openapi_data = app.openapi()
     # Enforce 3.0.0 version if needed by strict requirement, though FastAPI emits 3.0.2 or 3.1.0 usually.
     # The user requested "version 3.0.0" in the prompt context of "url /api version 3.0.0".

@@ -71,12 +71,14 @@ class TestApplyReasoningEffortUnit:
 
     def test_apply_reasoning_effort_preserves_existing_values(self):
         """Test that existing extra_body values are preserved when applying reasoning_effort."""
+        from typing import Any
+
         # Test the logic without importing SupervisorWorkflow
-        existing = {"existing_key": "existing_value"}
+        existing: dict[str, Any] = {"existing_key": "existing_value"}
         reasoning_effort = "medium"
 
         # Simulate what _apply_reasoning_effort does
-        result = dict(existing or {})
+        result: dict[str, Any] = dict(existing or {})
         result["reasoning"] = {"effort": reasoning_effort}
 
         expected = {

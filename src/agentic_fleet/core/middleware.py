@@ -6,13 +6,14 @@ import asyncio
 import json
 import os
 from datetime import datetime
-from typing import Any
+from typing import Any, cast
 
 import dspy
 from agent_framework._types import ChatMessage, Role
 
 from agentic_fleet.utils.history_manager import HistoryManager
 from agentic_fleet.utils.logger import setup_logger
+from agentic_fleet.utils.types import MessageLike
 
 logger = setup_logger(__name__)
 
@@ -20,7 +21,10 @@ logger = setup_logger(__name__)
 try:  # pragma: no cover - optional dependency
     from azure.ai.agents.models import ThreadMessage
 except ImportError:  # pragma: no cover - optional dependency
-    ThreadMessage = object  # type: ignore[misc,assignment]
+    ThreadMessage = None  # type: ignore[misc,assignment]
+
+# Type alias for message types - union of known message types
+type _MessageType = ChatMessage | MessageLike | dict[str, Any]
 
 
 class ChatMiddleware:
@@ -43,15 +47,24 @@ class BridgeConverter:
     """Converts Microsoft Agent Framework objects to DSPy objects."""
 
     @staticmethod
-    def message_to_dict(message: ChatMessage | ThreadMessage | Any) -> dict[str, Any]:
-        """Convert a message object to a standardized dictionary."""
+    def message_to_dict(message: _MessageType) -> dict[str, Any]:
+        """
+        Normalize a variety of message-like inputs into a dictionary with keys "role" and "content".
+
+        Returns:
+            dict[str, Any]: A mapping with "role" set to the message role as a string and "content" set to the message text content. If the input is a dict it is returned as-is; unknown types produce {"role": "unknown", "content": str(message)}.
+        """
+        # Handle dict first (before hasattr checks)
+        if isinstance(message, dict):
+            return cast(dict[str, Any], message)
+
         if isinstance(message, ChatMessage):
             return {
                 "role": message.role.value if hasattr(message.role, "value") else str(message.role),
                 "content": message.text,
             }
 
-        # Handle Azure ThreadMessage
+        # Handle MessageLike (Azure ThreadMessage and similar)
         if hasattr(message, "role") and hasattr(message, "content"):
             content_str: str = ""
             if isinstance(message.content, list):
@@ -68,19 +81,28 @@ class BridgeConverter:
                 "content": content_str,
             }
 
-        if isinstance(message, dict):
-            return message
-
         return {"role": "unknown", "content": str(message)}
 
     @classmethod
     def thread_to_example(
         cls,
-        messages: list[ChatMessage | ThreadMessage | Any],
+        messages: list[_MessageType],
         task_override: str | None = None,
         labels: dict[str, Any] | None = None,
     ) -> dspy.Example:
-        """Flatten a conversation thread into a DSPy training example."""
+        """
+        Create a DSPy Example from a conversation thread.
+
+        Determines the example task (uses task_override when provided; otherwise the most recent message with role "user" or "human"; defaults to "Unknown task" if none found), builds a context string from preceding messages as "role: content" lines, and returns a dspy.Example with inputs "task", "context", and "current_context".
+
+        Parameters:
+            messages (list[_MessageType]): Sequence of messages to convert; each message will be normalized to a dict with "role" and "content".
+            task_override (str | None): If set, use this value as the example task instead of inferring from messages.
+            labels (dict[str, Any] | None): Optional label fields to include on the returned example.
+
+        Returns:
+            dspy.Example: An example containing the constructed inputs ("task", "context", "current_context"); if `labels` is provided, those label fields are included on the example.
+        """
         history = [cls.message_to_dict(m) for m in messages]
 
         task = task_override

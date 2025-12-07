@@ -5,19 +5,40 @@ Consolidated from fleet/builder.py and fleet/flexible_builder.py.
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Literal
+from typing import TYPE_CHECKING, Any, Literal
 
 try:
-    from agent_framework._workflows import GroupChatBuilder, HandoffBuilder, WorkflowBuilder
+    from agent_framework._workflows import (
+        GroupChatBuilder as _GroupChatBuilder,
+    )
+    from agent_framework._workflows import (
+        HandoffBuilder as _HandoffBuilder,
+    )
+    from agent_framework._workflows import (
+        WorkflowBuilder,
+    )
+
+    GroupChatBuilder: type[Any] = _GroupChatBuilder
+    HandoffBuilder: type[Any] = _HandoffBuilder
 except ImportError:
     # Fallback for environments where these are missing (e.g. older agent_framework)
     from agent_framework._workflows import WorkflowBuilder
 
     # Create minimal stub implementations that raise clear errors if used
-    class GroupChatBuilder:
+    class _GroupChatBuilderStub:
         """Stub for GroupChatBuilder when agent_framework is missing."""
 
-        def __init__(self, *args, **kwargs):
+        def __init__(self, *args: Any, **kwargs: Any) -> None:
+            """
+            Constructor stub that always raises a RuntimeError indicating the GroupChatBuilder feature is unavailable.
+
+            This initializer does not construct an instance; it exists as a fallback when the required
+            agent-framework implementation is not present.
+
+            Raises:
+                RuntimeError: Indicates GroupChatBuilder is not available in the current agent-framework
+                version and suggests upgrading or using the 'standard' workflow mode.
+            """
             _ = args
             _ = kwargs
             raise RuntimeError(
@@ -25,16 +46,31 @@ except ImportError:
                 "Please upgrade agent-framework or use 'standard' workflow mode."
             )
 
-    class HandoffBuilder:
+    class _HandoffBuilderStub:
         """Stub for HandoffBuilder when agent_framework is missing."""
 
-        def __init__(self, *args, **kwargs):
+        def __init__(self, *args: Any, **kwargs: Any) -> None:
+            """
+            Initializer for the stubbed HandoffBuilder that always raises when instantiated.
+
+            This constructor accepts any positional and keyword arguments for signature compatibility but does not use them and will raise a RuntimeError indicating the real HandoffBuilder is unavailable in the installed agent-framework.
+
+            Parameters:
+                *args: Ignored positional arguments for compatibility.
+                **kwargs: Ignored keyword arguments for compatibility.
+
+            Raises:
+                RuntimeError: Indicates HandoffBuilder is not available in this agent-framework version and suggests upgrading or using the 'standard' workflow mode.
+            """
             _ = args
             _ = kwargs
             raise RuntimeError(
                 "HandoffBuilder is not available in this agent-framework version. "
                 "Please upgrade agent-framework or use 'standard' workflow mode."
             )
+
+    GroupChatBuilder: type[Any] = _GroupChatBuilderStub  # type: ignore[no-redef]
+    HandoffBuilder: type[Any] = _HandoffBuilderStub  # type: ignore[no-redef]
 
 
 from ..utils.logger import setup_logger
@@ -60,8 +96,18 @@ def build_fleet_workflow(
     supervisor: DSPyReasoner,
     context: SupervisorContext,
     mode: WorkflowMode = "standard",
-) -> WorkflowBuilder | GroupChatBuilder:
-    """Build the fleet workflow based on the specified mode."""
+) -> WorkflowBuilder | Any:
+    """
+    Constructs and returns a workflow builder configured for the fleet according to the selected mode.
+
+    Parameters:
+        supervisor (DSPyReasoner): The reasoner/coordinator used to create executors and agents.
+        context (SupervisorContext): Runtime context providing agents, configuration, and optional clients.
+        mode (WorkflowMode): Workflow mode to build; one of "standard", "group_chat", "concurrent", or "handoff".
+
+    Returns:
+        WorkflowBuilder or Any: A WorkflowBuilder (or a mode-specific builder/stub) configured for the chosen mode. The concrete return may be a stub type when required agent-framework features are unavailable.
+    """
     with optional_span("build_fleet_workflow", attributes={"mode": mode}):
         logger.info(f"Building fleet workflow in '{mode}' mode...")
 
@@ -105,8 +151,24 @@ def _build_standard_workflow(
 def _build_group_chat_workflow(
     supervisor: DSPyReasoner,
     context: SupervisorContext,
-) -> GroupChatBuilder:
-    """Build a Group Chat workflow."""
+) -> Any:
+    """
+    Construct and configure a Group Chat workflow builder using the supervisor context.
+
+    Parameters:
+        context (SupervisorContext): Supervisor context whose `agents`, `openai_client`, and `config`
+            are used to set participants, create a chat client, and configure the prompt-based manager.
+            - If `agents` is present, they will be added as participants when the builder supports it.
+            - If `openai_client` and model configuration are present in `config` (or `config.dspy.model`),
+              an OpenAIResponsesClient will be created and passed to the builder's prompt-based manager
+              when supported.
+
+    Returns:
+        Any: A configured GroupChatBuilder (or a compatible stub) ready for use.
+
+    Raises:
+        ValueError: If `context.config` is missing when an OpenAI client is expected and a model cannot be resolved.
+    """
     with optional_span("build_group_chat_workflow"):
         logger.info("Constructing Group Chat workflow...")
 
@@ -124,10 +186,15 @@ def _build_group_chat_workflow(
 
             model_id = "gpt-4o"
             if context.config:
-                if hasattr(context.config, "model"):
-                    model_id = str(context.config.model)
-                elif hasattr(context.config, "dspy") and hasattr(context.config.dspy, "model"):
-                    model_id = str(context.config.dspy.model)
+                cfg_model = getattr(context.config, "model", None)
+                if cfg_model:
+                    model_id = str(cfg_model)
+                else:
+                    dspy_cfg = getattr(context.config, "dspy", None)
+                    if dspy_cfg:
+                        dspy_model = getattr(dspy_cfg, "model", None)
+                        if dspy_model:
+                            model_id = str(dspy_model)
             else:
                 raise ValueError("Model configuration not found in context.")
 
@@ -157,8 +224,23 @@ def _build_group_chat_workflow(
 def _build_handoff_workflow(
     supervisor: DSPyReasoner,
     context: SupervisorContext,
-):
-    """Build a Handoff-based workflow."""
+) -> Any:
+    """
+    Constructs and returns a Handoff workflow builder configured with a triage coordinator and full-mesh handoffs.
+
+    The builder will include a created "Triage" coordinator agent (using the OpenAI client and model selected from context.config.model when available), all agents from context as participants, full-mesh handoff edges between specialists and the triage agent, and a termination condition that ends the conversation when the Triage agent posts a message containing "FINAL RESULT:".
+
+    Parameters:
+        supervisor (DSPyReasoner): Reasoner/service used by executors (passed through to executors; not inspected here).
+        context (SupervisorContext): Supervisor context that must provide `agents` (mapping of agent name to agent descriptor) and an `openai_client` used to create the Triage agent. `context.config.model` is used to override the default model if present.
+
+    Returns:
+        HandoffBuilder | Any: A configured HandoffBuilder (or compatible builder object) ready to be used to run the handoff workflow.
+
+    Raises:
+        RuntimeError: If no agents are available on the context.
+        RuntimeError: If an OpenAI client is required but not present on the context.
+    """
     with optional_span("build_handoff_workflow"):
         logger.info("Constructing Handoff Fleet workflow...")
 
@@ -169,8 +251,10 @@ def _build_handoff_workflow(
         from agent_framework.openai import OpenAIResponsesClient
 
         model_id = "gpt-4o"
-        if context.config and hasattr(context.config, "model"):
-            model_id = str(context.config.model)
+        if context.config:
+            cfg_model = getattr(context.config, "model", None)
+            if cfg_model:
+                model_id = str(cfg_model)
 
         # Ensure we have a client - use OpenAIResponsesClient for consistency
         if context.openai_client:

@@ -119,14 +119,20 @@ class TavilySearchTool(ToolProtocol, SerializationMixin):
 
     @external_api_retry
     async def run(self, query: str, **kwargs: Any) -> str:
-        """Execute the search query.
+        """Perform a web search via Tavily and return a formatted text summary.
 
-        Args:
-            query: The search query string
-            **kwargs: Additional arguments (ignored)
+        Parameters:
+            query (str): Search query string.
+            **kwargs: Optional search modifiers:
+                search_depth (str): "basic" or "advanced"; defaults to "advanced".
+                topic (str): "general" or "news"; defaults to "general".
+                include_domains (list[str] | None): List of domains to restrict
+                    results to; if omitted no domain filter is applied.
 
         Returns:
-            Formatted search results string
+            str: A human-readable string containing a summary (if provided)
+                followed by numbered search results with title, source URL, and
+                content; or an error/no-results message.
         """
         try:
             search_depth = kwargs.get("search_depth", "advanced")
@@ -139,14 +145,18 @@ class TavilySearchTool(ToolProtocol, SerializationMixin):
             # Perform search on a worker thread. Response is expected to be a mapping with optional
             # 'results' list and 'answer' summary. Use loose typing to remain
             # compatible if the API adds fields.
+            search_kwargs: dict[str, Any] = {
+                "query": query,
+                "search_depth": normalized_depth,
+                "max_results": self.max_results,
+                "include_answer": True,
+                "topic": normalized_topic,
+            }
+            if include_domains is not None:
+                search_kwargs["include_domains"] = include_domains
             response: dict[str, Any] = await asyncio.to_thread(
                 self.client.search,  # type: ignore[attr-defined]
-                query=query,
-                search_depth=normalized_depth,  # type: ignore[arg-type]
-                max_results=self.max_results,
-                include_answer=True,
-                topic=normalized_topic,
-                include_domains=include_domains,
+                **search_kwargs,
             )
 
             # Format results

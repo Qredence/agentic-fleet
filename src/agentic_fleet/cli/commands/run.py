@@ -7,6 +7,7 @@ import logging
 import os
 
 import typer
+from dotenv import load_dotenv
 from rich.console import Console
 from rich.panel import Panel
 
@@ -16,6 +17,7 @@ from ..display import display_result, show_help, show_status
 from ..runner import WorkflowRunner
 from ..utils import init_tracing
 
+load_dotenv(dotenv_path=".env")  # Load .env file if present
 console = Console()
 logger = logging.getLogger(__name__)
 

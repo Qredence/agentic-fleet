@@ -70,6 +70,17 @@ class WorkflowConfig:
     require_compiled_dspy: bool = False
 
     # ------------------------------------------------------------------
+    # DSPy 3.x TypedPredictor Settings
+    # ------------------------------------------------------------------
+    # Enable Pydantic-based typed signatures for structured outputs.
+    # This improves output parsing reliability and validation.
+    use_typed_signatures: bool = True
+    # Cache routing decisions to avoid redundant LLM calls
+    enable_routing_cache: bool = True
+    # TTL for routing cache entries (in seconds)
+    routing_cache_ttl_seconds: int = 300
+
+    # ------------------------------------------------------------------
     # Backward-compatibility: some tests expect a ``config`` attribute
     # exposing dict-like access to underlying settings.
     # ------------------------------------------------------------------

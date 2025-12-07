@@ -17,7 +17,14 @@ import pytest
 # We need to import BaseMCPTool without triggering the tools __init__.py
 # which has import issues with agent_framework
 def _import_base_mcp_tool():
-    """Import BaseMCPTool directly from module file to avoid __init__.py imports."""
+    """
+    Load and return the BaseMCPTool class by importing its module directly from the source file.
+
+    This helper ensures a minimal mock of agent_framework._mcp is available in sys.modules (so imports that expect MCPStreamableHTTPTool succeed), then loads the base_mcp_tool module from its file path and returns its BaseMCPTool class. The function may add a mock module to sys.modules as a side effect and will raise an AssertionError if the module spec or loader cannot be created.
+
+    Returns:
+        type: The BaseMCPTool class object from the loaded module.
+    """
     # First, ensure we have a fallback MCPStreamableHTTPTool
     if "agent_framework._mcp" not in sys.modules:
         mock_mcp = MagicMock()
@@ -54,7 +61,9 @@ def _import_base_mcp_tool():
         Path(__file__).parent.parent.parent / "src" / "agentic_fleet" / "tools" / "base_mcp_tool.py"
     )
     spec = importlib.util.spec_from_file_location("base_mcp_tool", module_path)
+    assert spec is not None, "Failed to load module spec"
     module = importlib.util.module_from_spec(spec)
+    assert spec.loader is not None, "Spec has no loader"
     spec.loader.exec_module(module)
     return module.BaseMCPTool
 

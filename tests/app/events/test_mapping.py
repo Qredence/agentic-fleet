@@ -54,6 +54,8 @@ def test_map_agent_message():
     event = MagenticAgentMessageEvent(agent_id="TestAgent", message=msg)
 
     mapped, _ = map_workflow_event(event, "")
+    assert mapped is not None
+    assert not isinstance(mapped, list)
     assert mapped.type == StreamEventType.AGENT_MESSAGE
     assert mapped.message == "Hello world"
     assert mapped.agent_id == "TestAgent"
@@ -65,6 +67,8 @@ def test_map_reasoning_event():
     event = ReasoningStreamEvent(reasoning="Thinking...", agent_id="GPT-5")
     mapped, acc = map_workflow_event(event, "Previous")
 
+    assert mapped is not None
+    assert not isinstance(mapped, list)
     assert mapped.type == StreamEventType.REASONING_DELTA
     assert mapped.reasoning == "Thinking..."
     assert acc == "PreviousThinking..."
@@ -87,9 +91,12 @@ def test_map_analysis_completion():
     event = ExecutorCompletedEvent(executor_id="analysis", data=msg)
 
     mapped, _ = map_workflow_event(event, "")
+    assert mapped is not None
+    assert not isinstance(mapped, list)
     assert mapped.type == StreamEventType.ORCHESTRATOR_THOUGHT
     assert mapped.kind == "analysis"
     assert mapped.category == EventCategory.THOUGHT
+    assert mapped.data is not None
     assert mapped.data["complexity"] == "medium"
 
 
