@@ -34,7 +34,7 @@ class TestRoutingExecutor:
             "agents": ["researcher", "analyst", "writer"],
             "tools": ["TavilyMCPTool", "BrowserTool"],
         }
-        executor = RoutingExecutor(config=config)
+        executor = RoutingExecutor(config)
         executor.reasoner = mock_reasoner
         return executor
 
