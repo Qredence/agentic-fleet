@@ -80,7 +80,10 @@ class RoutingDecisionOutput(BaseModel):
         """
         Normalize various textual representations of an execution mode to canonical values.
 
-        Converts common synonyms (e.g., "delegate" or "single" -> "delegated"; "sequence" or "serial" -> "sequential"; "concurrent" -> "parallel") and trims/lowers the input string. If the value is not a recognized synonym, the input (lowercased and stripped) is returned unchanged.
+        Converts common synonyms (e.g., "delegate" or "single" -> "delegated";
+        "sequence" or "serial" -> "sequential"; "concurrent" -> "parallel") and
+        trims/lowers the input string. If the value is not a recognized synonym,
+        the input (lowercased and stripped) is returned unchanged.
 
         Parameters:
             v (str): Candidate execution mode string.

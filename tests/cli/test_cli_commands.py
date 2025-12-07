@@ -172,11 +172,11 @@ class TestCLIEdgeCases:
 
     def test_cli_run_with_special_characters(self, runner):
         """Test CLI with special characters in message."""
-        # Just test that the CLI doesn't crash on unicode
         result = runner.invoke(app, ["run", "-m", "Task with émojis 🚀"])
 
-        # Should handle unicode properly (may fail for other reasons)
-        assert result.exit_code in [0, 1]
+        # CLI should handle Unicode input without crashing
+        # (may fail due to missing config, but not due to Unicode itself)
+        assert "UnicodeError" not in str(result.exception) if result.exception else True
 
 
 class TestHandoffCommand:

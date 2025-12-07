@@ -119,18 +119,20 @@ class TavilySearchTool(ToolProtocol, SerializationMixin):
 
     @external_api_retry
     async def run(self, query: str, **kwargs: Any) -> str:
-        """
-        Perform a web search using the configured Tavily client and return a formatted text summary of the results.
+        """Perform a web search via Tavily and return a formatted text summary.
 
         Parameters:
             query (str): Search query string.
             **kwargs: Optional search modifiers:
                 search_depth (str): "basic" or "advanced"; defaults to "advanced".
                 topic (str): "general" or "news"; defaults to "general".
-                include_domains (list[str] | None): List of domains to restrict results to; if omitted no domain filter is applied.
+                include_domains (list[str] | None): List of domains to restrict
+                    results to; if omitted no domain filter is applied.
 
         Returns:
-            str: A human-readable string containing a summary (if provided) followed by numbered search results with title, source URL, and content; or an error message or a "No results found" message.
+            str: A human-readable string containing a summary (if provided)
+                followed by numbered search results with title, source URL, and
+                content; or an error/no-results message.
         """
         try:
             search_depth = kwargs.get("search_depth", "advanced")

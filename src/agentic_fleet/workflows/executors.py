@@ -399,7 +399,6 @@ class RoutingExecutor(Executor):
                     used_fallback = True
                 else:
                     agents = self.context.agents or {}
-                    agents = self.context.agents or {}
 
                     team_descriptions = {}
                     for name, agent in agents.items():
@@ -1392,7 +1391,7 @@ class DSPyExecutor(Executor):
                 retry_attempts = max(1, int(self.context.config.dspy_retry_attempts))
                 retry_backoff = max(0.0, float(self.context.config.dspy_retry_backoff_seconds))
 
-                async def _run_module():
+                def _run_module():
                     # DSPy modules are callable
                     return self.module(**kwargs)
 

@@ -116,7 +116,8 @@
         "copilot/gpt-5.1-codex",
         "copilot/gpt-5.1-codex-mini",
         "copilot/grok-code-fast-1",
-        "copilot/qredence/fleetw7ot/model-router"
+        "copilot/qredence/fleetw7ot/model-router",
+        "copilot/gpt-5.1-codex-max"
       ]
     },
     "AgenticFleet/.vscode/mcp.json: prompt-kit": {
@@ -140,7 +141,8 @@
         "copilot/gpt-5.1-codex",
         "copilot/gpt-5.1-codex-mini",
         "copilot/grok-code-fast-1",
-        "copilot/qredence/fleetw7ot/model-router"
+        "copilot/qredence/fleetw7ot/model-router",
+        "copilot/gpt-5.1-codex-max"
       ]
     }
   },

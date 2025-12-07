@@ -50,10 +50,15 @@ class TestIsCosmosEnabled:
 
     def test_cosmos_disabled_with_false_env_var(self):
         """Test that Cosmos is disabled when env var is false."""
-        with patch.dict(os.environ, {"COSMOS_ENABLED": "false"}):
+        with patch.dict(
+            os.environ,
+            {"COSMOS_ENABLED": "false", "AGENTICFLEET_USE_COSMOS": "false"},
+            clear=True,
+        ):
             result = is_cosmos_enabled()
             # Should return False when explicitly disabled
-            assert result is False or isinstance(result, bool)
+            assert result is False
+            assert isinstance(result, bool)
 
 
 # =============================================================================

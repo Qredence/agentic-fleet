@@ -72,7 +72,9 @@ if dspy:
                 answer (str): The assistant's final answer to be scored.
 
             Returns:
-                dspy.Prediction: A prediction object containing `groundness`, `relevance`, and `coherence` scores, each expected to be in the range 0.0 to 1.0.
+                dspy.Prediction: A prediction object containing quality
+                    dimension scores (`groundness`, `relevance`,
+                    `coherence`), each in the range 0.0 to 1.0.
             """
             return self.predictor(question=question, answer=answer)
 

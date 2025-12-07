@@ -157,7 +157,8 @@ class HandoffManager:
             work_completed (str): Brief summary of work already performed.
             remaining_work (str): Description of remaining tasks or objectives.
             available_agents (dict[str, str]): Mapping of agent name to capability/description.
-            agent_states (dict[str, str] | None): Optional mapping of agent name to current state; if omitted, agents are treated as "available".
+            agent_states (dict[str, str] | None): Optional mapping of agent name to
+                current state; if omitted, agents are treated as "available".
 
         Returns:
             str | None: Name of the agent to receive the handoff if a handoff is recommended, `None` otherwise.
@@ -231,21 +232,34 @@ class HandoffManager:
         handoff_reason: str = "",
     ) -> HandoffContext:
         """
-        Builds a HandoffContext that packages work, artifacts, objectives, and a DSPy-generated protocol for transferring responsibility between agents.
+        Builds a HandoffContext that packages work, artifacts, objectives, and a
+        DSPy-generated protocol for transferring responsibility between agents.
 
-        This method derives measurable success criteria from the remaining objectives, identifies tools the receiving agent may need, and requests a structured handoff protocol (including an estimated effort and a quality checklist) from the supervisor/ChainOfThought when available. The resulting HandoffContext is appended to the manager's history before being returned. On error, a minimal fallback HandoffContext with conservative defaults is returned.
+        This method derives measurable success criteria from the remaining objectives,
+        identifies tools the receiving agent may need, and requests a structured handoff
+        protocol (including an estimated effort and a quality checklist) from the
+        supervisor/ChainOfThought when available. The resulting HandoffContext is appended
+        to the manager's history before being returned. On error, a minimal fallback
+        HandoffContext with conservative defaults is returned.
 
         Parameters:
             from_agent (str): Agent initiating the handoff.
             to_agent (str): Agent intended to receive and continue the work.
-            work_completed (str): Human-readable summary of what the initiating agent completed.
-            artifacts (dict[str, Any]): Collected outputs, files, or data produced so far (serializable).
-            remaining_objectives (list[str]): List of tasks or objectives the receiving agent should accomplish next.
-            task (str | None): Optional original or overarching task description; if omitted, work_completed is used.
+            work_completed (str): Human-readable summary of what the initiating agent
+                completed.
+            artifacts (dict[str, Any]): Collected outputs, files, or data produced so far
+                (serializable).
+            remaining_objectives (list[str]): List of tasks or objectives the receiving
+                agent should accomplish next.
+            task (str | None): Optional original or overarching task description; if
+                omitted, work_completed is used.
             handoff_reason (str): Short description of why the handoff is occurring.
 
         Returns:
-            HandoffContext: A fully populated handoff package including derived success criteria, required tools, estimated effort, quality checklist (from the protocol when available), metadata containing the protocol package, and the original fields provided.
+            HandoffContext: A fully populated handoff package including derived success
+                criteria, required tools, estimated effort, quality checklist (from the
+                protocol when available), metadata containing the protocol package, and
+                the original fields provided.
         """
         # Derive success criteria from objectives
         success_criteria = self._derive_success_criteria(remaining_objectives)
@@ -340,10 +354,14 @@ class HandoffManager:
 
         Returns:
             dict[str, Any]: Assessment result containing:
-                - quality_score (float): Parsed numeric quality score (higher is better; defaults to 5.0 on parse failure).
-                - context_complete (bool): `True` if the assessment indicates the handoff context was complete, `False` otherwise.
-                - success_factors (Any): Key factors that contributed to successful handoff (string or structured data).
-                - improvements (Any): Suggested improvement areas for future handoffs (string or structured data).
+                - quality_score (float): Parsed numeric quality score (higher is better;
+                    defaults to 5.0 on parse failure).
+                - context_complete (bool): `True` if the assessment indicates the handoff
+                    context was complete, `False` otherwise.
+                - success_factors (Any): Key factors that contributed to successful handoff
+                    (string or structured data).
+                - improvements (Any): Suggested improvement areas for future handoffs
+                    (string or structured data).
         """
         try:
             sup = self._sup()

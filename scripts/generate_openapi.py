@@ -3,7 +3,7 @@ import json
 from agentic_fleet.app.main import app
 
 
-def generate_openapi():
+def generate_openapi() -> None:
     """
     Write the application's OpenAPI schema to openapi.json.
 

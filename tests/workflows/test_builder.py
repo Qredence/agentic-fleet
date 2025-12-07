@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
 from unittest.mock import MagicMock
 
 import pytest
@@ -13,10 +12,6 @@ from agentic_fleet.workflows.builder import (
     WorkflowBuilder,
     build_fleet_workflow,
 )
-
-if TYPE_CHECKING:
-    pass
-
 
 # =============================================================================
 # Fixtures

@@ -22,6 +22,8 @@ if TYPE_CHECKING:
     from collections.abc import AsyncIterator
     from typing import TypeVar
 
+    from azure.cosmos import DatabaseProxy
+
     T = TypeVar("T")
 
 
@@ -154,7 +156,7 @@ class HistoryManagerProtocol(Protocol):
 
         This flushes the in-memory execution history so it is retained outside the running process.
         """
-        pass
+        ...
 
 
 # Azure Cosmos DB Protocol
@@ -166,7 +168,7 @@ class CosmosClientProtocol(Protocol):
     usage within AgenticFleet, enabling type-safe optional Cosmos integration.
     """
 
-    def get_database_client(self, database: str) -> Any:
+    def get_database_client(self, database: str) -> DatabaseProxy:
         """
         Obtain a client for the named Cosmos DB database.
 
@@ -174,7 +176,7 @@ class CosmosClientProtocol(Protocol):
             database (str): The name of the database to retrieve a client for.
 
         Returns:
-            Any: A database client instance connected to the specified database.
+            DatabaseProxy: A database client instance connected to the specified database.
         """
         ...
 
