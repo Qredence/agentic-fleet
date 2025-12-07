@@ -212,7 +212,16 @@ async def initialize_workflow_context(
                 "No compiled supervisor found, using zero-shot reasoner. "
                 "Performance may be degraded. Run 'agentic-fleet optimize' for offline compilation."
             )
-            dspy_supervisor = DSPyReasoner(use_enhanced_signatures=True)
+            # Read typed signature settings from config (DSPy 3.x Pydantic support)
+            use_typed = getattr(config, "use_typed_signatures", True)
+            enable_cache = getattr(config, "enable_routing_cache", True)
+            cache_ttl = getattr(config, "routing_cache_ttl_seconds", 300)
+            dspy_supervisor = DSPyReasoner(
+                use_enhanced_signatures=True,
+                use_typed_signatures=use_typed,
+                enable_routing_cache=enable_cache,
+                cache_ttl_seconds=cache_ttl,
+            )
     elif not getattr(dspy_supervisor, "use_enhanced_signatures", False):
         logger.warning(
             "Provided dspy_supervisor does not have use_enhanced_signatures=True. "

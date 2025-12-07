@@ -20,6 +20,10 @@ from agent_framework._workflows import (
     WorkflowOutputEvent,
 )
 
+from ..dspy_modules.assertions import (
+    detect_task_type,
+    validate_full_routing,
+)
 from ..dspy_modules.reasoner import DSPyReasoner
 from ..utils.logger import setup_logger
 from ..utils.models import ExecutionMode, RoutingDecision, ensure_routing_decision
@@ -423,6 +427,30 @@ class RoutingExecutor(Executor):
                         routing_decision, analysis_msg.task
                     )
 
+                    # Validate routing decision with DSPy assertions
+                    # This enables soft suggestions for routing improvements during optimization
+                    available_agent_names = list(agents.keys())
+                    tool_registry = getattr(self.supervisor, "tool_registry", None)
+                    available_tool_names = (
+                        [t.name for t in tool_registry.get_all_tools()]
+                        if tool_registry and hasattr(tool_registry, "get_all_tools")
+                        else []
+                    )
+                    try:
+                        validate_full_routing(
+                            routing_decision,
+                            analysis_msg.task,
+                            available_agents=available_agent_names,
+                            available_tools=available_tool_names if available_tool_names else None,
+                        )
+                    except Exception as validation_err:
+                        # Log but don't fail - assertions are for optimization guidance
+                        logger.debug(f"Routing validation note: {validation_err}")
+
+                    # Add task type to metadata for downstream components
+                    task_type = detect_task_type(analysis_msg.task)
+                    metadata["task_type"] = task_type
+
                     # Auto-parallelization check
                     parallel_threshold = getattr(cfg, "parallel_threshold", 2)
                     if (
@@ -711,8 +739,9 @@ class ProgressExecutor(Executor):
                     used_fallback = False
 
                 routing = None
-                if hasattr(execution_msg.outcome, "routing"):
-                    routing = execution_msg.outcome.routing
+                outcome = execution_msg.outcome
+                if hasattr(outcome, "routing"):
+                    routing = getattr(outcome, "routing", None)
                 elif "routing" in execution_msg.metadata:
                     routing_data = execution_msg.metadata["routing"]
                     if isinstance(routing_data, RoutingDecision):

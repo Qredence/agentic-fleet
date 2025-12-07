@@ -5,19 +5,30 @@ Consolidated from fleet/builder.py and fleet/flexible_builder.py.
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Literal
+from typing import TYPE_CHECKING, Any, Literal
 
 try:
-    from agent_framework._workflows import GroupChatBuilder, HandoffBuilder, WorkflowBuilder
+    from agent_framework._workflows import (
+        GroupChatBuilder as _GroupChatBuilder,
+    )
+    from agent_framework._workflows import (
+        HandoffBuilder as _HandoffBuilder,
+    )
+    from agent_framework._workflows import (
+        WorkflowBuilder,
+    )
+
+    GroupChatBuilder: type[Any] = _GroupChatBuilder
+    HandoffBuilder: type[Any] = _HandoffBuilder
 except ImportError:
     # Fallback for environments where these are missing (e.g. older agent_framework)
     from agent_framework._workflows import WorkflowBuilder
 
     # Create minimal stub implementations that raise clear errors if used
-    class GroupChatBuilder:
+    class _GroupChatBuilderStub:
         """Stub for GroupChatBuilder when agent_framework is missing."""
 
-        def __init__(self, *args, **kwargs):
+        def __init__(self, *args: Any, **kwargs: Any) -> None:
             _ = args
             _ = kwargs
             raise RuntimeError(
@@ -25,16 +36,19 @@ except ImportError:
                 "Please upgrade agent-framework or use 'standard' workflow mode."
             )
 
-    class HandoffBuilder:
+    class _HandoffBuilderStub:
         """Stub for HandoffBuilder when agent_framework is missing."""
 
-        def __init__(self, *args, **kwargs):
+        def __init__(self, *args: Any, **kwargs: Any) -> None:
             _ = args
             _ = kwargs
             raise RuntimeError(
                 "HandoffBuilder is not available in this agent-framework version. "
                 "Please upgrade agent-framework or use 'standard' workflow mode."
             )
+
+    GroupChatBuilder: type[Any] = _GroupChatBuilderStub  # type: ignore[no-redef]
+    HandoffBuilder: type[Any] = _HandoffBuilderStub  # type: ignore[no-redef]
 
 
 from ..utils.logger import setup_logger
@@ -60,7 +74,7 @@ def build_fleet_workflow(
     supervisor: DSPyReasoner,
     context: SupervisorContext,
     mode: WorkflowMode = "standard",
-) -> WorkflowBuilder | GroupChatBuilder:
+) -> WorkflowBuilder | Any:
     """Build the fleet workflow based on the specified mode."""
     with optional_span("build_fleet_workflow", attributes={"mode": mode}):
         logger.info(f"Building fleet workflow in '{mode}' mode...")
@@ -105,7 +119,7 @@ def _build_standard_workflow(
 def _build_group_chat_workflow(
     supervisor: DSPyReasoner,
     context: SupervisorContext,
-) -> GroupChatBuilder:
+) -> Any:
     """Build a Group Chat workflow."""
     with optional_span("build_group_chat_workflow"):
         logger.info("Constructing Group Chat workflow...")
@@ -124,10 +138,15 @@ def _build_group_chat_workflow(
 
             model_id = "gpt-4o"
             if context.config:
-                if hasattr(context.config, "model"):
-                    model_id = str(context.config.model)
-                elif hasattr(context.config, "dspy") and hasattr(context.config.dspy, "model"):
-                    model_id = str(context.config.dspy.model)
+                cfg_model = getattr(context.config, "model", None)
+                if cfg_model:
+                    model_id = str(cfg_model)
+                else:
+                    dspy_cfg = getattr(context.config, "dspy", None)
+                    if dspy_cfg:
+                        dspy_model = getattr(dspy_cfg, "model", None)
+                        if dspy_model:
+                            model_id = str(dspy_model)
             else:
                 raise ValueError("Model configuration not found in context.")
 
@@ -157,7 +176,7 @@ def _build_group_chat_workflow(
 def _build_handoff_workflow(
     supervisor: DSPyReasoner,
     context: SupervisorContext,
-):
+) -> Any:
     """Build a Handoff-based workflow."""
     with optional_span("build_handoff_workflow"):
         logger.info("Constructing Handoff Fleet workflow...")
@@ -169,8 +188,10 @@ def _build_handoff_workflow(
         from agent_framework.openai import OpenAIResponsesClient
 
         model_id = "gpt-4o"
-        if context.config and hasattr(context.config, "model"):
-            model_id = str(context.config.model)
+        if context.config:
+            cfg_model = getattr(context.config, "model", None)
+            if cfg_model:
+                model_id = str(cfg_model)
 
         # Ensure we have a client - use OpenAIResponsesClient for consistency
         if context.openai_client:

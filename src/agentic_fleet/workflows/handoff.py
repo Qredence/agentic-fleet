@@ -203,12 +203,13 @@ class HandoffManager:
                 )
 
             # Parse decision
-            should_handoff = decision.should_handoff.lower().strip() in ("yes", "true", "1", "y")
+            should_handoff_str = str(getattr(decision, "should_handoff", "")).lower().strip()
+            should_handoff = should_handoff_str in ("yes", "true", "1", "y")
 
-            if should_handoff and decision.next_agent:
-                next_agent = decision.next_agent.strip()
+            if should_handoff and getattr(decision, "next_agent", None):
+                next_agent = str(getattr(decision, "next_agent", "")).strip()
                 logger.info(f"Handoff recommended: {current_agent} → {next_agent}")
-                logger.info(f"Reason: {decision.handoff_reason}")
+                logger.info(f"Reason: {getattr(decision, 'handoff_reason', '')}")
                 return next_agent
 
             logger.debug(f"No handoff needed, {current_agent} should continue")
@@ -276,7 +277,7 @@ class HandoffManager:
                 )
 
             # Parse quality checklist
-            checklist = self._parse_checklist(protocol.quality_checklist)
+            checklist = self._parse_checklist(str(getattr(protocol, "quality_checklist", "")))
 
             # Create handoff context
             handoff_context = HandoffContext(
@@ -288,9 +289,9 @@ class HandoffManager:
                 remaining_objectives=remaining_objectives,
                 success_criteria=success_criteria,
                 tool_requirements=tool_requirements,
-                estimated_effort=protocol.estimated_effort.lower(),
+                estimated_effort=str(getattr(protocol, "estimated_effort", "moderate")).lower(),
                 quality_checklist=checklist,
-                metadata={"protocol_package": protocol.handoff_package},
+                metadata={"protocol_package": getattr(protocol, "handoff_package", "")},
                 handoff_reason=handoff_reason,
             )
 
@@ -356,10 +357,13 @@ class HandoffManager:
                 )
 
             return {
-                "quality_score": self._parse_score(assessment.handoff_quality_score),
-                "context_complete": assessment.context_completeness.lower() in ("yes", "true", "1"),
-                "success_factors": assessment.success_factors,
-                "improvements": assessment.improvement_areas,
+                "quality_score": self._parse_score(
+                    getattr(assessment, "handoff_quality_score", "5.0")
+                ),
+                "context_complete": str(getattr(assessment, "context_completeness", "")).lower()
+                in ("yes", "true", "1"),
+                "success_factors": getattr(assessment, "success_factors", "Unknown"),
+                "improvements": getattr(assessment, "improvement_areas", "Unable to assess"),
             }
 
         except Exception as e:

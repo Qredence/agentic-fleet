@@ -296,7 +296,7 @@ class SupervisorWorkflow:
                     # Find the last message
                     if result:
                         last_msg = result[-1]
-                        result_text = last_msg.text
+                        result_text = getattr(last_msg, "text", str(last_msg))
                 elif hasattr(result, "content"):
                     result_text = str(result.content)
                 else:
@@ -370,16 +370,19 @@ class SupervisorWorkflow:
         Returns:
             ReasoningStreamEvent, MagenticAgentMessageEvent, or None if no content
         """
-        if not (hasattr(event, "run") and hasattr(event.run, "delta")):
+        run_obj = getattr(event, "run", None)
+        if not (run_obj and hasattr(run_obj, "delta")):
             return None
 
-        delta = event.run.delta
+        delta = getattr(run_obj, "delta", None)
+        if delta is None:
+            return None
 
         # Check for reasoning content (GPT-5 series)
         if hasattr(delta, "type") and "reasoning" in str(getattr(delta, "type", "")):
             reasoning_text = getattr(delta, "delta", "")
             if reasoning_text:
-                agent_id = getattr(event.run, "agent_id", "unknown")
+                agent_id = getattr(run_obj, "agent_id", "unknown")
                 return ReasoningStreamEvent(reasoning=reasoning_text, agent_id=agent_id)
             return None
 
@@ -392,7 +395,7 @@ class SupervisorWorkflow:
                 text = str(delta.content)
 
         if text:
-            agent_id = getattr(event.run, "agent_id", "unknown")
+            agent_id = getattr(run_obj, "agent_id", "unknown")
             mag_msg = ChatMessage(role=Role.ASSISTANT, text=text)
             return MagenticAgentMessageEvent(agent_id=agent_id, message=mag_msg)
 
@@ -554,12 +557,15 @@ class SupervisorWorkflow:
 
                     elif isinstance(event, RequestInfoEvent):
                         # If request contains conversation, extracting last message might be useful
-                        if hasattr(event.data, "conversation") and event.data.conversation:
-                            last_msg = event.data.conversation[-1]
-                            # Log or capture partial result
-                            logger.info(
-                                f"RequestInfoEvent: Last message from {last_msg.author_name}: {last_msg.text[:50]}..."
-                            )
+                        event_data = getattr(event, "data", None)
+                        if event_data and hasattr(event_data, "conversation"):
+                            conversation = getattr(event_data, "conversation", None)
+                            if conversation:
+                                last_msg = conversation[-1]
+                                # Log or capture partial result
+                                logger.info(
+                                    f"RequestInfoEvent: Last message from {getattr(last_msg, 'author_name', 'unknown')}: {getattr(last_msg, 'text', '')[:50]}..."
+                                )
 
                     elif isinstance(event, WorkflowOutputEvent) and (
                         isinstance(event.data, list)
