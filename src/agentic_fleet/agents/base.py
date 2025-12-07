@@ -7,6 +7,7 @@ including the DSPy-enhanced agent that integrates with the Agent Framework.
 from __future__ import annotations
 
 import asyncio
+import contextlib
 import time
 from collections.abc import AsyncIterable
 from typing import TYPE_CHECKING, Any, cast
@@ -353,10 +354,13 @@ class DSPyEnhancedAgent(ChatAgent):
         first_msg = None
         if fallback_response.messages:
             first_msg = fallback_response.messages[0]
-            first_msg.text = self._apply_note_to_text(first_msg.text, note)
+            # Use contextlib.suppress since text property may be read-only
+            with contextlib.suppress(AttributeError):
+                first_msg.text = self._apply_note_to_text(first_msg.text, note)  # type: ignore[misc]
         else:
             fallback_response_text = getattr(fallback_response, "text", "")
-            fallback_response.text = self._apply_note_to_text(fallback_response_text, note)  # type: ignore[attr-defined]
+            with contextlib.suppress(AttributeError):
+                fallback_response.text = self._apply_note_to_text(fallback_response_text, note)  # type: ignore[attr-defined]
 
         existing_props = dict(fallback_response.additional_properties or {})
         existing_props.update(
