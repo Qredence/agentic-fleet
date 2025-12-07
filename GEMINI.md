@@ -1,56 +1,59 @@
 # AgenticFleet
 
-## Project Overview
+AgenticFleet is a production-ready multi-agent orchestration system that automatically routes tasks to specialized AI agents and orchestrates their execution through a self-optimizing pipeline. It combines **DSPy** for intelligent task routing and **Microsoft Agent Framework** for robust agent execution.
 
-AgenticFleet is a self-optimizing multi-agent orchestration system. It combines **DSPy** for intelligent task routing and optimization with the **Microsoft agent-framework** for robust agent execution. The system features a Python-based backend (FastAPI) and a React-based frontend, allowing users to orchestrate complex workflows involving multiple AI agents (Researcher, Analyst, Coder, etc.).
+## Project Structure
 
-**Key Technologies:**
+- **Backend (`src/agentic_fleet`)**: Python-based orchestration engine.
+  - `agents/`: Agent definitions and factory.
+  - `workflows/`: Workflow orchestration (Supervisor, Executors).
+  - `dspy_modules/`: DSPy signatures, modules, and optimization logic.
+  - `app/`: FastAPI backend for the web interface.
+  - `cli/`: Command-line interface (`typer`).
+  - `config/`: Configuration handling (`workflow_config.yaml`).
+- **Frontend (`src/frontend`)**: React/Vite web interface for monitoring and interacting with agents.
+- **Documentation (`docs/`)**: Comprehensive guides for users and developers.
+- **Tests (`tests/`)**: Backend tests (`pytest`). Frontend tests are in `src/frontend/src/tests`.
 
-- **Backend:** Python 3.12+, DSPy, Microsoft Agent Framework, Azure AI Agents, FastAPI, Uvicorn.
-- **Frontend:** React, Vite, Tailwind CSS, TypeScript, Zustand.
-- **Package Manager:** `uv` (Python), `npm` (Node.js).
-- **Orchestration:** Magentic Fleet pattern with DSPy optimizers.
+## Key Technologies
 
-## Architecture & Directory Structure
+- **Language:** Python 3.12+ (Backend), TypeScript (Frontend).
+- **Package Management:** `uv` (Python), `npm` (Frontend).
+- **Core Frameworks:** Microsoft Agent Framework, DSPy, FastAPI, React, Vite, Tailwind CSS.
+- **Tools:** Tavily (Search), OpenTelemetry (Tracing), Azure AI Evaluation.
 
-- **`src/agentic_fleet/`**: Core backend logic.
-  - `agents/`: Agent definitions and implementations.
-  - `workflows/`: Orchestration logic (Supervisor, distinct execution modes).
-  - `dspy_modules/`: DSPy signatures, modules, and reasoners.
-  - `app/`: FastAPI application (API routes, server setup).
-  - `cli/`: Typer-based CLI entry point.
-  - `tools/`: Tools available to agents (Tavily, browser, code interpreter).
-- **`src/frontend/`**: React application source code.
-- **`scripts/`**: Utility scripts for benchmarking, evaluation, and server management.
-- **`tests/`**: Backend tests using Pytest.
-- **`.var/`**: Runtime directory for logs, caches, and local databases (ignored by git).
-- **`Makefile`**: Central control for build, test, and dev commands.
+## Building and Running
 
-## Setup & Installation
+The project uses a `Makefile` to simplify common development tasks.
 
-The project uses `uv` for Python dependency management and `npm` for the frontend.
+### Setup
 
-1.  **Install Backend Dependencies:**
+1.  **Install Dependencies:**
     ```bash
-    make install
+    make dev-setup  # Installs python dependencies (via uv), frontend dependencies (npm), and pre-commit hooks
     ```
-2.  **Install Frontend Dependencies:**
-    ```bash
-    make frontend-install
-    ```
-3.  **Environment Setup:**
+2.  **Configuration:**
     - Copy `.env.example` to `.env`.
-    - Set `OPENAI_API_KEY` (required) and `TAVILY_API_KEY` (optional).
+    - Set `OPENAI_API_KEY` (required).
+    - Optionally set `TAVILY_API_KEY` for web search capabilities.
 
-## Development Workflow
+### Development
 
-### Running the Application
-
-- **Full Stack Development (Recommended):**
-  Runs backend (port 8000) and frontend (port 5173) simultaneously.
+- **Full Stack (Backend + Frontend):**
 
   ```bash
   make dev
+  ```
+
+  - Backend: http://localhost:8000
+  - Frontend: http://localhost:5173
+
+- **CLI Usage:**
+
+  ```bash
+  make run  # Starts the interactive CLI
+  # Or directly:
+  uv run agentic-fleet run -m "Your task"
   ```
 
 - **Backend Only:**
@@ -60,17 +63,8 @@ The project uses `uv` for Python dependency management and `npm` for the fronten
   ```
 
 - **Frontend Only:**
-
   ```bash
   make frontend-dev
-  ```
-
-- **CLI Usage:**
-  Execute tasks directly from the terminal.
-  ```bash
-  uv run python -m agentic_fleet
-  # Or specific task:
-  agentic-fleet run -m "Research AI agents"
   ```
 
 ### Testing
@@ -83,48 +77,32 @@ The project uses `uv` for Python dependency management and `npm` for the fronten
   ```bash
   make test-frontend
   ```
-- **Run All Tests:**
+- **All Tests:**
   ```bash
   make test-all
   ```
-- **End-to-End Tests:**
-  Requires the dev server to be running.
-  ```bash
-  make test-e2e
-  ```
 
-### Code Quality
+## Development Conventions
 
-- **Linting:**
-  ```bash
-  make lint          # Backend (Ruff)
-  make frontend-lint # Frontend (ESLint)
-  ```
-- **Formatting:**
-  ```bash
-  make format          # Backend (Ruff)
-  make frontend-format # Frontend (Prettier)
-  ```
-- **Type Checking:**
-  ```bash
-  make type-check    # Backend (Ty)
-  ```
-- **Full QA Check:**
-  Runs all linters, type checkers, and tests.
-  ```bash
-  make qa
-  ```
+### Python (Backend)
 
-## Key Configuration Files
+- **Dependency Management:** strictly use `uv`.
+  - Sync: `make sync`
+- **Linting & Formatting:** `ruff`.
+  - Check: `make lint`
+  - Fix: `make format`
+- **Type Checking:** `ty` (or `pyright`/`mypy` via `ty`).
+  - Check: `make type-check`
 
-- **`pyproject.toml`**: Python dependencies, build config, and tool settings (Ruff, Pytest, Ty).
-- **`Makefile`**: Shortcut commands for all development tasks.
-- **`src/frontend/package.json`**: Frontend dependencies and scripts.
-- **`src/agentic_fleet/config/workflow_config.yaml`**: (If present) Runtime configuration for agents and workflows.
+### TypeScript (Frontend)
 
-## Conventions
+- **Linting:** `eslint`.
+  - Check: `make frontend-lint`
+- **Formatting:** `prettier`.
+  - Format: `make frontend-format`
 
-- **Python:** Follows PEP 8 guidelines enforced by `ruff`. Type hints are mandatory and checked by `ty`.
-- **Frontend:** React functional components with Hooks. Styling via Tailwind CSS.
-- **Commits:** Use clear, descriptive commit messages.
-- **Testing:** New features should include accompanying unit tests.
+### Architecture Notes
+
+- **DSPy Integration:** DSPy is used for high-level reasoning (routing, analysis). Modules are compiled offline.
+- **Agent Framework:** Microsoft's framework handles the low-level agent execution loop and event stream.
+- **Configuration:** All runtime settings are in `src/agentic_fleet/config/workflow_config.yaml`.
