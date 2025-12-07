@@ -1,7 +1,14 @@
+"""DEPRECATED: This script references modules that have been removed.
+
+The db module (agentic_fleet.api.db) no longer exists in the current codebase.
+This script is kept for reference but will not function.
+Consider using the cosmos.py utilities or removing this script entirely.
+"""
+
 import asyncio
 
-from agentic_fleet.api.db.base_class import Base
-from agentic_fleet.api.db.session import engine
+from agentic_fleet.api.db.base_class import Base  # type: ignore[import]
+from agentic_fleet.api.db.session import engine  # type: ignore[import]
 
 
 async def create_tables():
