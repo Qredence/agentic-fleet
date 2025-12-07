@@ -15,7 +15,17 @@ import pytest
 
 
 def _import_base_mcp_tool():
-    """Import BaseMCPTool directly from module file to avoid __init__.py imports."""
+    """
+    Load the BaseMCPTool class directly from its source file while providing test-time fallbacks for agent_framework modules.
+    
+    Ensures a lightweight MockMCPStreamableHTTPTool is available as agent_framework._mcp and that agent_framework.exceptions exposes ToolException and ToolExecutionException, then imports base_mcp_tool.py from the repository path and returns its BaseMCPTool class.
+    
+    Returns:
+        BaseMCPTool: The BaseMCPTool class loaded from the source file.
+    
+    Raises:
+        AssertionError: If the module spec or its loader cannot be created or loaded.
+    """
     # First, ensure we have a fallback MCPStreamableHTTPTool
     if "agent_framework._mcp" not in sys.modules:
         mock_mcp = MagicMock()

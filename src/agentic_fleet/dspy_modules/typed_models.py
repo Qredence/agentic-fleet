@@ -61,7 +61,15 @@ class RoutingDecisionOutput(BaseModel):
     @field_validator("assigned_to", mode="before")
     @classmethod
     def ensure_list(cls, v: str | list[str]) -> list[str]:
-        """Convert comma-separated string to list if needed."""
+        """
+        Normalize a comma-separated string into a list of trimmed, non-empty items.
+        
+        Parameters:
+            v (str | list[str]): A comma-separated string of items or an already-parsed list of strings.
+        
+        Returns:
+            list[str]: A list of trimmed, non-empty strings. If `v` is already a list, it is returned unchanged.
+        """
         if isinstance(v, str):
             return [agent.strip() for agent in v.split(",") if agent.strip()]
         return v
@@ -69,7 +77,17 @@ class RoutingDecisionOutput(BaseModel):
     @field_validator("execution_mode", mode="before")
     @classmethod
     def normalize_mode(cls, v: str) -> str:
-        """Normalize execution mode to valid values."""
+        """
+        Normalize various textual representations of an execution mode to canonical values.
+        
+        Converts common synonyms (e.g., "delegate" or "single" -> "delegated"; "sequence" or "serial" -> "sequential"; "concurrent" -> "parallel") and trims/lowers the input string. If the value is not a recognized synonym, the input (lowercased and stripped) is returned unchanged.
+        
+        Parameters:
+            v (str): Candidate execution mode string.
+        
+        Returns:
+            str: Canonicalized execution mode string.
+        """
         if isinstance(v, str):
             v = v.strip().lower()
             # Handle common variations
@@ -120,7 +138,17 @@ class TaskAnalysisOutput(BaseModel):
     @field_validator("required_capabilities", mode="before")
     @classmethod
     def ensure_capabilities_list(cls, v: str | list[str]) -> list[str]:
-        """Convert comma-separated string to list if needed."""
+        """
+        Normalize capability input to a list of capability names.
+        
+        Accepts a comma-separated string or a list of strings. When given a string, splits on commas, strips surrounding whitespace from each item, and discards empty items.
+        
+        Parameters:
+            v (str | list[str]): Capability input to normalize.
+        
+        Returns:
+            list[str]: List of capability names with whitespace removed; returns the original list unchanged if `v` is already a list.
+        """
         if isinstance(v, str):
             return [cap.strip() for cap in v.split(",") if cap.strip()]
         return v
@@ -172,7 +200,18 @@ class ProgressEvaluationOutput(BaseModel):
     @field_validator("action", mode="before")
     @classmethod
     def normalize_action(cls, v: str) -> str:
-        """Normalize action to valid values."""
+        """
+        Normalize common progress/action strings to canonical action names.
+        
+        Parameters:
+            v (str | any): Input action value; common string variations like "done", "finished",
+                "improve", "iterate", "proceed", and "next" are mapped to "complete", "refine",
+                and "continue" respectively. Non-string inputs are returned unchanged.
+        
+        Returns:
+            str | any: Canonical action string ("complete", "refine", or "continue") when a
+            known variation is provided, otherwise returns the original value.
+        """
         if isinstance(v, str):
             v = v.strip().lower()
             # Handle common variations
@@ -201,7 +240,17 @@ class ToolPlanOutput(BaseModel):
     @field_validator("tool_plan", mode="before")
     @classmethod
     def ensure_tool_list(cls, v: str | list[str]) -> list[str]:
-        """Convert comma-separated string to list if needed."""
+        """
+        Normalize a tool-plan value into a list of tool names.
+        
+        Converts a comma-separated string into a list by trimming whitespace and removing empty entries; if `v` is already a list of strings, returns it unchanged.
+        
+        Parameters:
+            v (str | list[str]): A comma-separated string of tool names or an existing list of tool names.
+        
+        Returns:
+            list[str]: A list of trimmed tool names with empty items removed.
+        """
         if isinstance(v, str):
             return [tool.strip() for tool in v.split(",") if tool.strip()]
         return v
@@ -220,7 +269,17 @@ class WorkflowStrategyOutput(BaseModel):
     @field_validator("workflow_mode", mode="before")
     @classmethod
     def normalize_workflow_mode(cls, v: str) -> str:
-        """Normalize workflow mode to valid values."""
+        """
+        Normalize workflow_mode variations to canonical values.
+        
+        Converts common alternative spellings or synonyms to the canonical workflow modes expected by the model.
+        
+        Parameters:
+            v (str): Input workflow mode string to normalize.
+        
+        Returns:
+            str: Canonical workflow mode (for example, "handoff", "standard", or "fast_path"), or the original value if no normalization rule applies.
+        """
         if isinstance(v, str):
             v = v.strip().lower()
             # Handle common variations
@@ -278,7 +337,17 @@ class HandoffDecisionOutput(BaseModel):
     @field_validator("should_handoff", mode="before")
     @classmethod
     def normalize_bool(cls, v: str | bool) -> bool:
-        """Normalize string to boolean."""
+        """
+        Convert a string or boolean-like value to a canonical boolean.
+        
+        Recognizes the case-insensitive string values "yes", "true", "1", and "y" as True; any other string yields False. If a boolean is provided, its boolean value is returned.
+        
+        Parameters:
+            v (str | bool): Input value to normalize; may be a boolean or a string representation.
+        
+        Returns:
+            bool: `True` if the input represents a truthy value, `False` otherwise.
+        """
         if isinstance(v, str):
             return v.strip().lower() in ("yes", "true", "1", "y")
         return bool(v)
@@ -307,7 +376,17 @@ class CapabilityMatchOutput(BaseModel):
     @field_validator("fallback_agents", mode="before")
     @classmethod
     def ensure_fallback_list(cls, v: str | list[str]) -> list[str]:
-        """Convert comma-separated string to list if needed."""
+        """
+        Normalize a fallback-agents value into a list of agent names.
+        
+        Converts a comma-separated string into a list of trimmed, non-empty agent names; returns a list input unchanged.
+        
+        Parameters:
+            v (str | list[str]): A comma-separated string of agent names or an already-parsed list.
+        
+        Returns:
+            list[str]: List of agent names with surrounding whitespace removed and empty entries omitted.
+        """
         if isinstance(v, str):
             return [agent.strip() for agent in v.split(",") if agent.strip()]
         return v
@@ -315,7 +394,15 @@ class CapabilityMatchOutput(BaseModel):
     @field_validator("confidence", mode="before")
     @classmethod
     def clamp_confidence(cls, v: float | str) -> float:
-        """Ensure confidence is within valid range."""
+        """
+        Normalize and clamp a confidence value to the range 0.0–10.0.
+        
+        Parameters:
+            v (float | str): Confidence value as a float or numeric string. If a string cannot be parsed as a float, a default value is used.
+        
+        Returns:
+            float: Confidence value converted to a float and clamped to the interval [0.0, 10.0]. If parsing a non-numeric string, returns 5.0.
+        """
         if isinstance(v, str):
             try:
                 v = float(v)

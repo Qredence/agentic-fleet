@@ -367,7 +367,15 @@ class RoutingExecutor(Executor):
         analysis_msg: AnalysisMessage,
         ctx: WorkflowContext[RoutingMessage],
     ) -> None:
-        """Handle an analysis message."""
+        """
+        Determine and emit a routing plan for the given analysis, then send a RoutingMessage.
+        
+        Uses DSPy-based routing when available and appropriate; for light-profile or on any routing failure, falls back to a heuristic routing decision. Updates workflow phase timings and status, may add metadata keys such as `routing_tool_plan`, `task_type`, and `used_fallback`, and detects routing edge cases and automatic promotion to parallel execution when applicable. On success or fallback, sends a RoutingMessage containing a RoutingPlan with `decision`, `edge_cases`, and `used_fallback`.
+        
+        Parameters:
+            analysis_msg (AnalysisMessage): Incoming analysis containing the task text and analysis details.
+            ctx (WorkflowContext[RoutingMessage]): Workflow context used to send the resulting RoutingMessage and access workflow state.
+        """
         with optional_span(
             "RoutingExecutor.handle_analysis", attributes={"task": analysis_msg.task}
         ):
@@ -707,7 +715,18 @@ class ProgressExecutor(Executor):
         execution_msg: ExecutionMessage,
         ctx: WorkflowContext[ProgressMessage],
     ) -> None:
-        """Handle an execution message."""
+        """
+        Evaluate the task's progress after execution and emit a ProgressMessage containing the progress assessment and routing metadata.
+        
+        Parameters:
+            execution_msg (ExecutionMessage): The execution result to evaluate; its outcome.result is used as the completed work to assess.
+            ctx (WorkflowContext[ProgressMessage]): Workflow context used to send the resulting ProgressMessage.
+        
+        Behavior:
+            - Uses configured DSPy progress evaluation when enabled and not in the "light" pipeline profile; otherwise produces a fallback completion report.
+            - Attaches any available routing decision to the emitted message's metadata.
+            - On errors, records a `"continue"` progress action with `used_fallback=True` and still emits a ProgressMessage so the workflow can proceed.
+        """
         with optional_span(
             "ProgressExecutor.handle_execution", attributes={"task": execution_msg.task}
         ):

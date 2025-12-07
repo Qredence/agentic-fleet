@@ -445,7 +445,12 @@ class TestTypedSignatures:
 
     @pytest.fixture
     def typed_reasoner(self):
-        """Create a DSPyReasoner instance with typed signatures enabled."""
+        """
+        Create a DSPyReasoner configured for typed signatures and an enabled routing cache.
+        
+        Returns:
+            reasoner (DSPyReasoner): A DSPyReasoner instance with use_enhanced_signatures=True, use_typed_signatures=True, enable_routing_cache=True, and cache_ttl_seconds=300.
+        """
         return DSPyReasoner(
             use_enhanced_signatures=True,
             use_typed_signatures=True,
@@ -455,7 +460,12 @@ class TestTypedSignatures:
 
     @pytest.fixture
     def untyped_reasoner(self):
-        """Create a DSPyReasoner instance with typed signatures disabled."""
+        """
+        Create a DSPyReasoner configured to use enhanced signatures with typed signatures and the routing cache disabled.
+        
+        Returns:
+            DSPyReasoner: An instance with enhanced signatures enabled, typed signatures disabled, and routing cache disabled.
+        """
         return DSPyReasoner(
             use_enhanced_signatures=True,
             use_typed_signatures=False,
@@ -486,7 +496,12 @@ class TestRoutingCache:
 
     @pytest.fixture
     def cached_reasoner(self):
-        """Create a DSPyReasoner instance with caching enabled."""
+        """
+        Create a DSPyReasoner configured with routing cache enabled.
+        
+        Returns:
+            DSPyReasoner: A reasoner with enhanced signatures enabled, typed signatures disabled, routing cache enabled, and a 60-second cache TTL.
+        """
         r = DSPyReasoner(
             use_enhanced_signatures=True,
             use_typed_signatures=False,
@@ -570,7 +585,12 @@ class TestTypedRoutingExtraction:
 
     @pytest.fixture
     def reasoner(self):
-        """Create a DSPyReasoner for extraction tests."""
+        """
+        Create a DSPyReasoner configured with enhanced and typed signatures for extraction tests.
+        
+        Returns:
+            DSPyReasoner: A reasoner instance with `use_enhanced_signatures=True` and `use_typed_signatures=True`.
+        """
         return DSPyReasoner(
             use_enhanced_signatures=True,
             use_typed_signatures=True,
@@ -603,6 +623,17 @@ class TestTypedRoutingExtraction:
         # Create a mock object with model_dump method to simulate Pydantic
         class MockDecision:
             def model_dump(self):
+                """
+                Return a serialized routing decision as a plain dictionary.
+                
+                Returns:
+                    dict: A routing decision mapping with the following keys:
+                        - assigned_to (list[str]): Roles or assignees selected for the task.
+                        - execution_mode (str): Execution mode for the task (e.g., "delegated").
+                        - subtasks (list): List of subtasks, empty if none.
+                        - tool_requirements (list): Tool requirement descriptors, empty if none.
+                        - reasoning (str): Human-readable explanation of the routing decision.
+                """
                 return {
                     "assigned_to": ["Analyst"],
                     "execution_mode": "delegated",

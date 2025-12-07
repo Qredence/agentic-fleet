@@ -139,7 +139,11 @@ class HistoryManagerProtocol(Protocol):
         ...
 
     def save(self) -> None:
-        """Save history to disk."""
+        """
+        Persist the manager's recorded history to durable storage.
+        
+        This flushes the in-memory execution history so it is retained outside the running process.
+        """
         ...
 
 
@@ -153,7 +157,15 @@ class CosmosClientProtocol(Protocol):
     """
 
     def get_database_client(self, database: str) -> Any:
-        """Get a database client by name."""
+        """
+        Obtain a client for the named Cosmos DB database.
+        
+        Parameters:
+            database (str): The name of the database to retrieve a client for.
+        
+        Returns:
+            Any: A database client instance connected to the specified database.
+        """
         ...
 
 
@@ -169,12 +181,22 @@ class MessageLike(Protocol):
 
     @property
     def role(self) -> Any:
-        """The role of the message sender (e.g., user, assistant)."""
+        """
+        The role of the message sender.
+        
+        Returns:
+            The sender's role (for example, 'user' or 'assistant').
+        """
         ...
 
     @property
     def content(self) -> Any:
-        """The content of the message."""
+        """
+        Expose the message's content.
+        
+        Returns:
+            The message's content value (e.g., text, structured data, or media metadata).
+        """
         ...
 
 
