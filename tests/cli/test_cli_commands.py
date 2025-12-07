@@ -1,9 +1,8 @@
 """Comprehensive tests for CLI commands."""
 
 import pytest
-from unittest.mock import Mock, patch, AsyncMock, MagicMock
+from unittest.mock import patch, AsyncMock
 from typer.testing import CliRunner
-from click.testing import CliRunner as ClickRunner
 
 from agentic_fleet.cli import app
 from agentic_fleet.cli.commands.run import run_command

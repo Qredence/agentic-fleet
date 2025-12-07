@@ -1,7 +1,7 @@
 """Comprehensive tests for core/middleware.py."""
 
 import pytest
-from unittest.mock import Mock, patch, AsyncMock, MagicMock
+from unittest.mock import Mock, AsyncMock
 from datetime import datetime
 from agentic_fleet.core.middleware import (
     ChatMiddleware,
@@ -76,7 +76,8 @@ class TestBridgeMiddleware:
     @pytest.fixture
     def middleware(self):
         """Create a BridgeMiddleware instance."""
-        return BridgeMiddleware()
+        mock_history_manager = Mock()
+        return BridgeMiddleware(history_manager=mock_history_manager)
 
     async def test_bridge_middleware_transform(self, middleware):
         """Test transforming message format."""
@@ -202,7 +203,8 @@ class TestMiddlewareChain:
 
         chain = MiddlewareChain([mock_middleware_1, mock_middleware_2])
 
-        result = await chain.process({"content": "Test"})
+        _ = await chain.process({"content": "Test"})
+        # Note: result variable intentionally unused as test focuses on middleware call behavior
 
         # If None is returned, chain might stop
         mock_middleware_1.process_message.assert_called_once()
@@ -259,7 +261,8 @@ class TestMiddlewareEdgeCases:
 
     async def test_bridge_middleware_with_nested_data(self):
         """Test transforming message with deeply nested data."""
-        middleware = BridgeMiddleware()
+        mock_history_manager = Mock()
+        middleware = BridgeMiddleware(history_manager=mock_history_manager)
 
         nested_message = {
             "role": "user",
@@ -314,7 +317,8 @@ class TestMiddlewareIntegration:
         """Test complete message processing pipeline."""
         # Create full pipeline: Chat -> Bridge -> Custom
         chat_middleware = ChatMiddleware()
-        bridge_middleware = BridgeMiddleware()
+        mock_history_manager = Mock()
+        bridge_middleware = BridgeMiddleware(history_manager=mock_history_manager)
 
         custom_middleware = Mock()
         custom_middleware.process_message = AsyncMock(
