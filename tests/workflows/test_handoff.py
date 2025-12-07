@@ -81,7 +81,7 @@ class TestHandoffManager:
     @pytest.fixture
     def manager(self, mock_agents):
         """Create a HandoffManager instance."""
-        return HandoffManager(agents=mock_agents)
+        return HandoffManager(mock_agents)
 
     def test_manager_initialization(self, manager, mock_agents):
         """Test HandoffManager initialization."""
@@ -92,7 +92,7 @@ class TestHandoffManager:
 
     def test_manager_with_empty_agents(self):
         """Test manager with empty agents dict."""
-        manager = HandoffManager(agents={})
+        manager = HandoffManager({})
         assert manager.agents == {}
 
     async def test_evaluate_handoff_need_true(self, manager):
