@@ -6,13 +6,14 @@ import asyncio
 import json
 import os
 from datetime import datetime
-from typing import Any
+from typing import Any, cast
 
 import dspy
 from agent_framework._types import ChatMessage, Role
 
 from agentic_fleet.utils.history_manager import HistoryManager
 from agentic_fleet.utils.logger import setup_logger
+from agentic_fleet.utils.types import MessageLike
 
 logger = setup_logger(__name__)
 
@@ -20,7 +21,10 @@ logger = setup_logger(__name__)
 try:  # pragma: no cover - optional dependency
     from azure.ai.agents.models import ThreadMessage
 except ImportError:  # pragma: no cover - optional dependency
-    ThreadMessage = object  # type: ignore[misc,assignment]
+    ThreadMessage = None  # type: ignore[misc,assignment]
+
+# Type alias for message types - union of known message types
+type _MessageType = ChatMessage | MessageLike | dict[str, Any]
 
 
 class ChatMiddleware:
@@ -43,15 +47,19 @@ class BridgeConverter:
     """Converts Microsoft Agent Framework objects to DSPy objects."""
 
     @staticmethod
-    def message_to_dict(message: ChatMessage | ThreadMessage | Any) -> dict[str, Any]:
+    def message_to_dict(message: _MessageType) -> dict[str, Any]:
         """Convert a message object to a standardized dictionary."""
+        # Handle dict first (before hasattr checks)
+        if isinstance(message, dict):
+            return cast(dict[str, Any], message)
+
         if isinstance(message, ChatMessage):
             return {
                 "role": message.role.value if hasattr(message.role, "value") else str(message.role),
                 "content": message.text,
             }
 
-        # Handle Azure ThreadMessage
+        # Handle MessageLike (Azure ThreadMessage and similar)
         if hasattr(message, "role") and hasattr(message, "content"):
             content_str: str = ""
             if isinstance(message.content, list):
@@ -68,15 +76,12 @@ class BridgeConverter:
                 "content": content_str,
             }
 
-        if isinstance(message, dict):
-            return message
-
         return {"role": "unknown", "content": str(message)}
 
     @classmethod
     def thread_to_example(
         cls,
-        messages: list[ChatMessage | ThreadMessage | Any],
+        messages: list[_MessageType],
         task_override: str | None = None,
         labels: dict[str, Any] | None = None,
     ) -> dspy.Example:
