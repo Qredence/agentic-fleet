@@ -1,26 +1,29 @@
-"""FastAPI dependency injection and lifespan management.
+"""AgenticFleet API dependencies.
 
-DEPRECATED: This module is maintained for backward compatibility only.
-All dependencies have been reorganized into the dependencies/ directory.
-
-New code should import directly from agentic_fleet.app.dependencies instead.
+Re-exports all dependency injection functions and managers for backward compatibility.
 """
 
-# Re-export all dependencies from the new dependencies/ directory for backward compatibility
-from agentic_fleet.app.dependencies import (
-    ConversationManager,
+# Lifespan management
+# Re-export create_supervisor_workflow for backward compatibility with tests
+from agentic_fleet.workflows.supervisor import create_supervisor_workflow
+
+# Dependency injectors
+from .injectors import (
     ConversationManagerDep,
     SessionManagerDep,
     SettingsDep,
     WorkflowDep,
-    WorkflowSessionManager,
     _get_workflow,  # For test compatibility
-    create_supervisor_workflow,
+    get_workflow,
+)
+from .lifespan import (
     get_conversation_manager,
     get_session_manager,
-    get_workflow,
     lifespan,
 )
+
+# Manager classes
+from .managers import ConversationManager, WorkflowSessionManager
 
 __all__ = [
     # Managers
