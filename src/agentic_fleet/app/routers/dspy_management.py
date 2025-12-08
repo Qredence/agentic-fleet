@@ -44,7 +44,7 @@ async def get_dspy_prompts(
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=str(e),
-        )
+        ) from e
 
 
 @router.get("/dspy/config", response_model=dict[str, Any])
@@ -137,7 +137,7 @@ async def clear_routing_cache_endpoint(workflow: WorkflowDep) -> None:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=str(e),
-        )
+        ) from e
 
 
 @router.get("/dspy/signatures", response_model=dict[str, Any])

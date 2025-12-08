@@ -14,6 +14,7 @@ from agentic_fleet.app.dependencies import (
     SettingsDep,
     WorkflowDep,
     WorkflowSessionManager,
+    create_supervisor_workflow,
     get_conversation_manager,
     get_session_manager,
     get_workflow,
@@ -21,17 +22,18 @@ from agentic_fleet.app.dependencies import (
 )
 
 __all__ = [
-    # Lifespan
-    "lifespan",
-    "get_conversation_manager",
-    "get_session_manager",
     # Managers
     "ConversationManager",
-    "WorkflowSessionManager",
+    "ConversationManagerDep",
+    "SessionManagerDep",
+    "SettingsDep",
     # Injectors
     "WorkflowDep",
-    "SessionManagerDep",
-    "ConversationManagerDep",
-    "SettingsDep",
+    "WorkflowSessionManager",
+    "create_supervisor_workflow",  # For test compatibility
+    "get_conversation_manager",
+    "get_session_manager",
     "get_workflow",
+    # Lifespan
+    "lifespan",
 ]
