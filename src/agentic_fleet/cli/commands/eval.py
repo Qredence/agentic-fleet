@@ -138,6 +138,7 @@ def evaluate(
     ] = False,
 ) -> None:
     """Run batch evaluation over a dataset using configured metrics."""
+    init_tracing()
     cfg = load_config()
     eval_cfg = cfg.get("evaluation", {})
     if not eval_cfg.get("enabled", True):
