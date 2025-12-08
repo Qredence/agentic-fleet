@@ -24,6 +24,7 @@ from agentic_fleet.app.routers import (
     streaming,
 )
 from agentic_fleet.app.settings import get_settings
+from agentic_fleet.utils.tracing import initialize_tracing
 
 # =============================================================================
 # Logging Configuration
@@ -40,6 +41,9 @@ def _configure_logging() -> None:
     log_level = settings.log_level
     structured = settings.log_json
     log_format = settings.log_format
+
+    # Initialize tracing early
+    initialize_tracing()
 
     # Create a handler that writes to stdout with immediate flushing
     handler = logging.StreamHandler(sys.stdout)
