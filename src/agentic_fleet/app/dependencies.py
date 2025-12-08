@@ -14,6 +14,7 @@ from agentic_fleet.app.dependencies import (
     SettingsDep,
     WorkflowDep,
     WorkflowSessionManager,
+    _get_workflow,  # For test compatibility
     create_supervisor_workflow,
     get_conversation_manager,
     get_session_manager,
@@ -30,6 +31,7 @@ __all__ = [
     # Injectors
     "WorkflowDep",
     "WorkflowSessionManager",
+    "_get_workflow",  # For test compatibility
     "create_supervisor_workflow",  # For test compatibility
     "get_conversation_manager",
     "get_session_manager",

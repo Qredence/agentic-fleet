@@ -13,6 +13,7 @@ from .injectors import (
     SessionManagerDep,
     SettingsDep,
     WorkflowDep,
+    _get_workflow,  # For test compatibility
     get_workflow,
 )
 from .lifespan import (
@@ -33,6 +34,7 @@ __all__ = [
     # Injectors
     "WorkflowDep",
     "WorkflowSessionManager",
+    "_get_workflow",  # For test compatibility
     "create_supervisor_workflow",  # For test compatibility
     "get_conversation_manager",
     "get_session_manager",

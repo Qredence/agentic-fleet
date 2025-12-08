@@ -4,6 +4,7 @@ Contains common enumerations used across the API.
 """
 
 from enum import StrEnum
+from typing import Literal
 
 from pydantic import BaseModel, Field
 
@@ -95,7 +96,9 @@ class UIHint(BaseModel):
     """
 
     component: str = Field(..., description="Suggested UI component name")
-    priority: str = Field(default="medium", description="Display priority")
+    priority: Literal["low", "medium", "high"] = Field(
+        default="medium", description="Display priority"
+    )
     collapsible: bool = Field(default=True, description="Whether to show collapsed by default")
     icon_hint: str | None = Field(
         default=None, description="Icon hint (routing, analysis, quality, progress)"

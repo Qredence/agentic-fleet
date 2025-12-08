@@ -3,7 +3,7 @@
 Defines request schemas for various API endpoints.
 """
 
-from typing import Any
+from typing import Any, Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -56,7 +56,7 @@ class ChatRequest(BaseModel):
     message: str = Field(..., min_length=1, description="User message or task")
     conversation_id: str | None = Field(default=None, description="Conversation ID")
     stream: bool = Field(default=True, description="Enable streaming")
-    reasoning_effort: str | None = Field(
+    reasoning_effort: Literal["minimal", "medium", "maximal"] | None = Field(
         default=None, description="Reasoning effort for GPT-5 models (overrides config)"
     )
 
