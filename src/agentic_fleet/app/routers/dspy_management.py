@@ -6,10 +6,11 @@ Provides endpoints for inspecting and managing DSPy modules.
 import logging
 from typing import Any
 
-import dspy
 from fastapi import APIRouter, HTTPException, status
 
 from agentic_fleet.app.dependencies import WorkflowDep
+from agentic_fleet.app.models.dspy import CacheInfo, ReasonerSummary
+from agentic_fleet.app.services.dspy_service import DSPyService
 
 logger = logging.getLogger(__name__)
 
@@ -36,140 +37,118 @@ async def get_dspy_prompts(
     Raises:
         HTTPException: If the workflow has no DSPy reasoner (HTTP 404).
     """
-    if not workflow.dspy_reasoner:
+    service = DSPyService(workflow)
+    try:
+        return service.get_predictor_prompts()
+    except ValueError as e:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail="DSPy reasoner not available",
+            detail=str(e),
         )
-
-    prompts = {}
-
-    # Check if named_predictors is available
-    if not hasattr(workflow.dspy_reasoner, "named_predictors"):
-        return {"error": "DSPy reasoner does not support introspection"}
-
-    for name, predictor in workflow.dspy_reasoner.named_predictors():
-        # Extract signature details
-        signature = getattr(predictor, "signature", None)
-        if not signature:
-            continue
-
-        # Get instructions
-        instructions = getattr(signature, "instructions", "")
-
-        # Get fields
-        inputs = []
-        outputs = []
-
-        # Handle fields (DSPy 2.5+ uses model_fields or fields)
-        fields = getattr(signature, "fields", {})
-        # If fields is empty, try to inspect annotations (older DSPy or Pydantic based)
-        if not fields and hasattr(signature, "__annotations__"):
-            fields = signature.__annotations__
-
-        for field_name, field in fields.items():
-            # Extract description and prefix
-            desc = ""
-            prefix = ""
-
-            # Try json_schema_extra (Pydantic v2)
-            if hasattr(field, "json_schema_extra"):
-                extra = field.json_schema_extra or {}
-                if isinstance(extra, dict):
-                    desc = extra.get("desc", "") or extra.get("description", "")
-                    prefix = extra.get("prefix", "")
-
-            # Try metadata (Pydantic v1/Field)
-            if not desc and hasattr(field, "description"):
-                desc = field.description
-
-            # Try dspy.InputField/OutputField attributes
-            if not prefix and hasattr(field, "prefix"):
-                prefix = field.prefix
-
-            field_info = {
-                "name": field_name,
-                "desc": str(desc),
-                "prefix": str(prefix),
-            }
-
-            # Determine if input or output
-            # DSPy signatures usually have input_fields and output_fields maps
-            if hasattr(signature, "input_fields") and field_name in signature.input_fields:
-                inputs.append(field_info)
-            elif hasattr(signature, "output_fields") and field_name in signature.output_fields:
-                outputs.append(field_info)
-            else:
-                # Fallback heuristic
-                inputs.append(field_info)  # Default to input if unsure
-
-        # Get demos (few-shot examples)
-        demos = []
-        if hasattr(predictor, "demos"):
-            demos_list = getattr(predictor, "demos", None) or []
-            for demo in demos_list:
-                # Convert demo to dict
-                demo_dict = {}
-                # demo is usually a dspy.Example which acts like a dict
-                try:
-                    for k, v in demo.items():
-                        demo_dict[k] = str(v)
-                except Exception as e:
-                    # Demo objects may have various formats; skip malformed demos gracefully.
-                    logger.warning(f"Malformed demo skipped: {e}")
-                demos.append(demo_dict)
-
-        prompts[name] = {
-            "instructions": instructions,
-            "inputs": inputs,
-            "outputs": outputs,
-            "demos_count": len(demos),
-            "demos": demos,  # Maybe limit this if too large?
-        }
-
-    return prompts
 
 
 @router.get("/dspy/config", response_model=dict[str, Any])
-async def get_dspy_config() -> dict[str, Any]:
+async def get_dspy_config(workflow: WorkflowDep) -> dict[str, Any]:
     """Retrieve DSPy configuration.
 
     Returns:
         Dictionary containing DSPy settings.
     """
-    # DSPy config is global via dspy.settings
-    lm_info = "unknown"
-    if hasattr(dspy.settings, "lm") and dspy.settings.lm:
-        lm_info = str(dspy.settings.lm)
-        # Try to get model name if available
-        if hasattr(dspy.settings.lm, "model"):
-            lm_info = f"{dspy.settings.lm.__class__.__name__}(model={dspy.settings.lm.model})"
-
-    config = {
-        "lm_provider": lm_info,
-        "adapter": str(dspy.settings.adapter)
-        if hasattr(dspy.settings, "adapter") and dspy.settings.adapter
-        else "default",
-    }
-
-    return config
+    service = DSPyService(workflow)
+    return service.get_config()
 
 
 @router.get("/dspy/stats", response_model=dict[str, Any])
-async def get_dspy_stats() -> dict[str, Any]:
+async def get_dspy_stats(workflow: WorkflowDep) -> dict[str, Any]:
     """Retrieve DSPy usage statistics.
 
     Returns:
         Dictionary containing usage stats.
     """
-    # Check if LM has history
-    lm = getattr(dspy.settings, "lm", None)
-    history_count = 0
-    if lm and hasattr(lm, "history"):
-        history_count = len(lm.history)
+    service = DSPyService(workflow)
+    return service.get_stats()
 
-    stats = {
-        "history_count": history_count,
-    }
 
-    return stats
+@router.get("/dspy/cache", response_model=CacheInfo)
+async def get_cache_info_endpoint(workflow: WorkflowDep) -> CacheInfo:
+    """Get information about the DSPy compilation cache.
+
+    Returns cache metadata including creation time, size, and optimizer used.
+
+    Returns:
+        CacheInfo: Cache metadata or indication that no cache exists.
+    """
+    service = DSPyService(workflow)
+    cache_info = service.get_cache_info()
+
+    if cache_info is None:
+        # Return a CacheInfo indicating no cache exists
+        return CacheInfo(exists=False)
+
+    # Convert cache info to CacheInfo model
+    return CacheInfo(
+        exists=True,
+        created_at=cache_info.get("created_at"),
+        cache_size_bytes=cache_info.get("cache_size_bytes"),
+        optimizer=cache_info.get("optimizer"),
+        signature_hash=cache_info.get("signature_hash"),
+    )
+
+
+@router.delete("/dspy/cache", status_code=status.HTTP_204_NO_CONTENT)
+async def clear_cache_endpoint(workflow: WorkflowDep) -> None:
+    """Clear the DSPy compilation cache.
+
+    Removes cached compiled modules, forcing recompilation on next use.
+    """
+    service = DSPyService(workflow)
+    service.clear_cache()
+
+
+@router.get("/dspy/reasoner/summary", response_model=ReasonerSummary)
+async def get_reasoner_summary_endpoint(workflow: WorkflowDep) -> ReasonerSummary:
+    """Get summary of DSPy reasoner state.
+
+    Returns information about the reasoner's execution history,
+    routing cache, and configuration.
+
+    Returns:
+        ReasonerSummary: Reasoner state summary.
+    """
+    service = DSPyService(workflow)
+    summary = service.get_reasoner_summary()
+
+    return ReasonerSummary(**summary)
+
+
+@router.delete("/dspy/reasoner/routing-cache", status_code=status.HTTP_204_NO_CONTENT)
+async def clear_routing_cache_endpoint(workflow: WorkflowDep) -> None:
+    """Clear the DSPy reasoner's routing decision cache.
+
+    Forces fresh routing decisions on next workflow execution.
+
+    Raises:
+        HTTPException: If the workflow has no DSPy reasoner (HTTP 404).
+    """
+    service = DSPyService(workflow)
+    try:
+        service.clear_routing_cache()
+    except ValueError as e:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=str(e),
+        )
+
+
+@router.get("/dspy/signatures", response_model=dict[str, Any])
+async def list_signatures_endpoint(workflow: WorkflowDep) -> dict[str, Any]:
+    """List all available DSPy signatures.
+
+    Returns information about all signature classes defined in the system,
+    including their instructions, input fields, and output fields.
+
+    Returns:
+        dict: Mapping of signature names to their details.
+    """
+    service = DSPyService(workflow)
+    return service.list_signatures()
