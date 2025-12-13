@@ -738,14 +738,14 @@ def _load_config_cached(
         if validate:
             try:
                 validated = validate_config(config_dict)
-                logger.debug(f"Loaded and validated configuration from {config_file} (cached)")
+                logger.debug(f"Loaded and validated configuration from {config_file}")
                 return validated.to_dict()
             except Exception as e:
                 error_msg = f"Configuration validation failed for {config_file}: {e}"
                 logger.error(error_msg)
                 raise ConfigurationError(error_msg, config_key=str(config_file)) from e
 
-        logger.debug(f"Loaded configuration from {config_file} (validation skipped, cached)")
+        logger.debug(f"Loaded configuration from {config_file} (validation skipped)")
         return config_dict
     except ConfigurationError:
         raise

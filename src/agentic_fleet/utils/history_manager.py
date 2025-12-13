@@ -81,12 +81,10 @@ class HistoryManager:
         if not workflow_id:
             return
 
-        # Update or add to index (move to end for LRU)
-        if workflow_id in self._recent_executions_index:
-            # Move existing entry to end (most recently used)
-            self._recent_executions_index.move_to_end(workflow_id)
-
+        # Add/update entry and move to end (most recently used)
+        # OrderedDict.__setitem__ + move_to_end maintains insertion order properly
         self._recent_executions_index[workflow_id] = execution
+        self._recent_executions_index.move_to_end(workflow_id)
 
         # Trim index if it exceeds size limit (evict oldest/least recently used)
         while len(self._recent_executions_index) > self._index_size_limit:
@@ -338,6 +336,8 @@ class HistoryManager:
         # Check in-memory index first for O(1) lookup
         if workflow_id in self._recent_executions_index:
             logger.debug(f"Found execution {workflow_id} in memory index (O(1) lookup)")
+            # Update LRU order on access (move to end = most recently used)
+            self._recent_executions_index.move_to_end(workflow_id)
             return self._recent_executions_index[workflow_id]
 
         # Try Cosmos DB first if enabled
