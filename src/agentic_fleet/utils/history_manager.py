@@ -478,10 +478,10 @@ class HistoryManager:
 
         # Try Cosmos DB first if enabled
         try:
-            from .cosmos import is_cosmos_enabled, load_execution_history
+            from .cosmos import get_default_user_id, is_cosmos_enabled, load_execution_history
 
             if is_cosmos_enabled():
-                history = load_execution_history(limit=n)
+                history = load_execution_history(limit=n, user_id=get_default_user_id())
                 if history:
                     # Cosmos returns newest first
                     return history
@@ -534,10 +534,10 @@ class HistoryManager:
         """
         # Try Cosmos DB first if enabled
         try:
-            from .cosmos import is_cosmos_enabled, load_execution_history
+            from .cosmos import get_default_user_id, is_cosmos_enabled, load_execution_history
 
             if is_cosmos_enabled():
-                history = load_execution_history(limit=limit or 20)
+                history = load_execution_history(limit=limit or 20, user_id=get_default_user_id())
                 if history:
                     return history
         except Exception as e:

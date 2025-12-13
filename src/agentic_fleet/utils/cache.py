@@ -5,6 +5,7 @@ Simple in-memory caching utilities with TTL support and hit rate metrics.
 from __future__ import annotations
 
 import hashlib
+import os
 import time
 from collections.abc import Callable
 from dataclasses import dataclass, field
@@ -185,6 +186,25 @@ class TTLCache[K, V]:
 _agent_response_cache: TTLCache[str, Any] = TTLCache(ttl_seconds=DEFAULT_CACHE_TTL)
 
 
+def _truthy_env(name: str) -> bool:
+    value = os.getenv(name, "").strip().lower()
+    return value in {"1", "true", "yes", "on"}
+
+
+def _capture_sensitive_for_telemetry() -> bool:
+    """Return True if sensitive user inputs may be captured for telemetry.
+
+    We intentionally require an explicit opt-in via environment variables.
+    This mirrors the tracing module's conventions.
+    """
+
+    return (
+        _truthy_env("ENABLE_SENSITIVE_DATA")
+        or _truthy_env("TRACING_SENSITIVE_DATA")
+        or _truthy_env("AGENTICFLEET_CAPTURE_SENSITIVE")
+    )
+
+
 def cache_agent_response(
     ttl: int = DEFAULT_CACHE_TTL,
 ) -> Callable[[Callable[..., Any]], Callable[..., Any]]:
@@ -219,14 +239,20 @@ def cache_agent_response(
             result = await func(self, task, *args, **kwargs)
             cache.set(cache_key, result)
             try:
+                payload: dict[str, Any] = {
+                    "agentName": agent_name,
+                    "ttlSeconds": ttl,
+                    "responseType": type(result).__name__,
+                    "taskLength": len(task),
+                }
+                if _capture_sensitive_for_telemetry():
+                    payload["taskPreview"] = task[:256]
+                else:
+                    payload["taskPreview"] = "[redacted]"
+
                 mirror_cache_entry(
                     cache_key,
-                    {
-                        "agentName": agent_name,
-                        "taskPreview": task[:256],
-                        "ttlSeconds": ttl,
-                        "responseType": type(result).__name__,
-                    },
+                    payload,
                 )
             except Exception as exc:  # pragma: no cover - defensive
                 logger.debug("Failed to mirror cache entry: %s", exc)

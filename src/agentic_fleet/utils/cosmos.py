@@ -283,6 +283,13 @@ def mirror_execution_history(execution: dict[str, Any]) -> None:
     item.setdefault("id", workflow_id)
     item.setdefault("createdAt", datetime.now(UTC).isoformat())
 
+    # Best-effort tenant scoping: attach a userId when available so callers can
+    # filter history without exposing other users' runs.
+    if not item.get("userId"):
+        default_user_id = get_default_user_id()
+        if default_user_id:
+            item["userId"] = default_user_id
+
     try:
         # Partition key path for the container is /workflowId.
         container.upsert_item(body=item)
@@ -374,6 +381,7 @@ def query_agent_memory(
         items = container.query_items(
             query=query,
             parameters=parameters,
+            partition_key=user_id,
             enable_cross_partition_query=False,
         )
         return list(items)
@@ -468,8 +476,18 @@ def mirror_cache_entry(cache_key: str, entry: dict[str, Any]) -> None:
 
     doc = dict(entry)
     doc["cacheKey"] = cache_key
-    doc.setdefault("id", str(uuid.uuid4()))
+    # Align with the documented cache container semantics: stable id per cacheKey.
+    # If callers want append-only analytics, they can provide their own id.
+    doc.setdefault("id", cache_key)
     doc.setdefault("createdAt", datetime.now(UTC).isoformat())
+    doc["updatedAt"] = datetime.now(UTC).isoformat()
+
+    # Optional: per-item TTL (seconds). This is only applied if the container has TTL enabled.
+    ttl_seconds = doc.get("ttl")
+    if ttl_seconds is None:
+        ttl_seconds = doc.get("ttlSeconds")
+    if isinstance(ttl_seconds, int):
+        doc.setdefault("ttl", ttl_seconds)
 
     try:
         container.upsert_item(doc)
@@ -479,7 +497,7 @@ def mirror_cache_entry(cache_key: str, entry: dict[str, Any]) -> None:
         logger.debug("Unexpected error mirroring cache entry: %s", exc)
 
 
-def load_execution_history(limit: int = 20) -> list[dict[str, Any]]:
+def load_execution_history(limit: int = 20, *, user_id: str | None = None) -> list[dict[str, Any]]:
     """Load execution history from Cosmos DB.
 
     Args:
@@ -495,8 +513,15 @@ def load_execution_history(limit: int = 20) -> list[dict[str, Any]]:
     if container is None:
         return []
 
-    query = "SELECT TOP @limit * FROM c ORDER BY c.createdAt DESC"
-    parameters = [{"name": "@limit", "value": limit}]
+    if user_id:
+        query = "SELECT TOP @limit * FROM c WHERE c.userId = @userId ORDER BY c.createdAt DESC"
+        parameters = [
+            {"name": "@userId", "value": user_id},
+            {"name": "@limit", "value": limit},
+        ]
+    else:
+        query = "SELECT TOP @limit * FROM c ORDER BY c.createdAt DESC"
+        parameters = [{"name": "@limit", "value": limit}]
 
     try:
         items = container.query_items(
