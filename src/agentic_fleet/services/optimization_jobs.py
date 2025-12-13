@@ -114,8 +114,21 @@ def _compile_all(
     workflow: Any,
     request: CompileRequest,
     progress_callback: ProgressCallback,
+    parallel: bool = False,
 ) -> dict[str, Any]:
-    """Run compilation steps; designed to be patched in tests."""
+    """Run compilation steps; designed to be patched in tests.
+
+    Phase 4: Added parallel compilation support when parallel=True.
+
+    Args:
+        workflow: Workflow instance with dspy_reasoner
+        request: Compilation request parameters
+        progress_callback: Progress callback for updates
+        parallel: Whether to run quality and NLU compilation in parallel
+
+    Returns:
+        Dictionary with cache paths for compiled modules
+    """
     config = getattr(workflow, "config", None)
     dspy_reasoner = getattr(workflow, "dspy_reasoner", None)
     if dspy_reasoner is None:
@@ -155,17 +168,50 @@ def _compile_all(
     except Exception as exc:  # pragma: no cover - best effort
         logger.debug("Failed to hot-swap compiled supervisor: %s", exc)
 
-    progress_callback.on_progress("Compiling AnswerQualityModule...")
-    compile_answer_quality(use_cache=bool(request.use_cache), progress_callback=progress_callback)
-    try:
-        from agentic_fleet.dspy_modules.answer_quality import clear_module_cache
+    # Phase 4: Compile quality and NLU in parallel when requested
+    if parallel:
+        import concurrent.futures
 
-        clear_module_cache()
-    except Exception:
-        pass
+        progress_callback.on_progress("Compiling quality and NLU modules in parallel...")
 
-    progress_callback.on_progress("Compiling DSPyNLU...")
-    compile_nlu(use_cache=bool(request.use_cache), progress_callback=progress_callback)
+        def compile_quality():
+            compile_answer_quality(
+                use_cache=bool(request.use_cache), progress_callback=NullProgressCallback()
+            )
+            try:
+                from agentic_fleet.dspy_modules.answer_quality import clear_module_cache
+
+                clear_module_cache()
+            except Exception:
+                pass
+
+        def compile_nlu_module():
+            compile_nlu(use_cache=bool(request.use_cache), progress_callback=NullProgressCallback())
+
+        # Run in parallel using thread pool
+        with concurrent.futures.ThreadPoolExecutor(max_workers=2) as executor:
+            futures = [executor.submit(compile_quality), executor.submit(compile_nlu_module)]
+            concurrent.futures.wait(futures)
+
+            # Check for exceptions
+            for future in futures:
+                if future.exception():
+                    logger.warning("Parallel compilation error: %s", future.exception())
+    else:
+        # Sequential compilation (original behavior)
+        progress_callback.on_progress("Compiling AnswerQualityModule...")
+        compile_answer_quality(
+            use_cache=bool(request.use_cache), progress_callback=progress_callback
+        )
+        try:
+            from agentic_fleet.dspy_modules.answer_quality import clear_module_cache
+
+            clear_module_cache()
+        except Exception:
+            pass
+
+        progress_callback.on_progress("Compiling DSPyNLU...")
+        compile_nlu(use_cache=bool(request.use_cache), progress_callback=progress_callback)
 
     return {
         "cache_paths": {
