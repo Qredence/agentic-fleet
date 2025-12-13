@@ -56,6 +56,18 @@ class AnalysisExecutor(Executor):
         self.supervisor = supervisor
         self.context = context
 
+    def _create_fallback_message(
+        self, task: str, metadata: dict[str, Any]
+    ) -> AnalysisMessage:
+        """Create a fallback analysis message when DSPy analysis fails."""
+        fallback_dict = self._fallback_analysis(task)
+        analysis_result = self._to_analysis_result(fallback_dict)
+        return AnalysisMessage(
+            task=task,
+            analysis=analysis_result,
+            metadata={**metadata, "used_fallback": True},
+        )
+
     @staticmethod
     def _safe_int_setting(cfg: Any, name: str, default: int) -> int:
         """Read an int setting from cfg, tolerating mocks/non-numeric values."""
@@ -205,13 +217,7 @@ class AnalysisExecutor(Executor):
                     f"Analysis failed due to a network or timeout error ({type(e).__name__}): {e}",
                     exc_info=True,
                 )
-                fallback_dict = self._fallback_analysis(task_msg.task)
-                analysis_result = self._to_analysis_result(fallback_dict)
-                analysis_msg = AnalysisMessage(
-                    task=task_msg.task,
-                    analysis=analysis_result,
-                    metadata={**task_msg.metadata, "used_fallback": True},
-                )
+                analysis_msg = self._create_fallback_message(task_msg.task, task_msg.metadata)
                 self.context.latest_phase_status["analysis"] = "fallback"
                 await ctx.send_message(analysis_msg)
 
@@ -221,13 +227,7 @@ class AnalysisExecutor(Executor):
                 # or other unexpected exceptions from external libraries). TimeoutError and ConnectionError
                 # are handled separately above. We gracefully degrade to heuristic-based analysis to maintain system availability.
                 logger.exception(f"Analysis failed with unexpected error ({type(e).__name__}): {e}")
-                fallback_dict = self._fallback_analysis(task_msg.task)
-                analysis_result = self._to_analysis_result(fallback_dict)
-                analysis_msg = AnalysisMessage(
-                    task=task_msg.task,
-                    analysis=analysis_result,
-                    metadata={**task_msg.metadata, "used_fallback": True},
-                )
+                analysis_msg = self._create_fallback_message(task_msg.task, task_msg.metadata)
                 self.context.latest_phase_status["analysis"] = "fallback"
                 await ctx.send_message(analysis_msg)
             finally:

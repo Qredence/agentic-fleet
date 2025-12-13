@@ -14,6 +14,7 @@ from typing import Any
 import openai
 from agent_framework._agents import ChatAgent
 
+from ..dspy_modules.reasoner_utils import is_time_sensitive_task
 from ..utils.logger import setup_logger
 from ..utils.models import ExecutionMode, RoutingDecision, ensure_routing_decision
 
@@ -21,34 +22,6 @@ logger = setup_logger(__name__)
 
 
 # --- Task Classification Helpers ---
-
-
-def is_time_sensitive_task(task: str) -> bool:
-    """Heuristic detection for queries that require fresh, web-sourced data."""
-
-    task_lower = task.lower()
-    freshness_keywords = [
-        "today",
-        "now",
-        "current",
-        "latest",
-        "recent",
-        "breaking",
-        "this week",
-        "this month",
-    ]
-
-    if any(keyword in task_lower for keyword in freshness_keywords):
-        return True
-
-    # Detect explicit four-digit years 2023+ (signals recency)
-    match = re.search(r"\b(20[2-9][0-9])\b", task)
-    if match:
-        year = int(match.group(1))
-        if year >= 2023:
-            return True
-
-    return False
 
 
 class FastPathDetector:
@@ -275,6 +248,31 @@ def create_openai_client_with_store(
 # --- Routing Helpers ---
 
 
+def _create_routing_decision(
+    routing: RoutingDecision,
+    mode: ExecutionMode | None = None,
+    subtasks: tuple[str, ...] | None = None,
+) -> RoutingDecision:
+    """Create a new RoutingDecision with updated mode and/or subtasks.
+
+    Args:
+        routing: The original routing decision
+        mode: Optional new mode (defaults to routing.mode)
+        subtasks: Optional new subtasks (defaults to routing.subtasks)
+
+    Returns:
+        New RoutingDecision with updated fields
+    """
+    return RoutingDecision(
+        task=routing.task,
+        assigned_to=routing.assigned_to,
+        mode=mode if mode is not None else routing.mode,
+        subtasks=subtasks if subtasks is not None else routing.subtasks,
+        confidence=routing.confidence,
+        tool_requirements=routing.tool_requirements,
+    )
+
+
 def normalize_routing_decision(
     routing: RoutingDecision | dict[str, Any], task: str
 ) -> RoutingDecision:
@@ -313,9 +311,8 @@ def normalize_routing_decision(
     # - Parallel with insufficient subtasks ⇒ normalize subtasks.
     # - Parallel with single agent ⇒ back to delegated.
     if routing.mode is ExecutionMode.DELEGATED and len(routing.assigned_to) > 1:
-        routing = RoutingDecision(
-            task=routing.task,
-            assigned_to=routing.assigned_to,
+        routing = _create_routing_decision(
+            routing,
             mode=ExecutionMode.PARALLEL,
             subtasks=tuple(
                 prepare_subtasks(
@@ -324,24 +321,17 @@ def normalize_routing_decision(
                     task,
                 )
             ),
-            confidence=routing.confidence,
-            tool_requirements=routing.tool_requirements,
         )
 
     elif routing.mode is ExecutionMode.PARALLEL:
         if len(routing.assigned_to) <= 1:
-            routing = RoutingDecision(
-                task=routing.task,
-                assigned_to=routing.assigned_to,
+            routing = _create_routing_decision(
+                routing,
                 mode=ExecutionMode.DELEGATED,
-                subtasks=routing.subtasks,
-                confidence=routing.confidence,
-                tool_requirements=routing.tool_requirements,
             )
         else:
-            routing = RoutingDecision(
-                task=routing.task,
-                assigned_to=routing.assigned_to,
+            routing = _create_routing_decision(
+                routing,
                 mode=ExecutionMode.PARALLEL,
                 subtasks=tuple(
                     prepare_subtasks(
@@ -350,8 +340,6 @@ def normalize_routing_decision(
                         task,
                     )
                 ),
-                confidence=routing.confidence,
-                tool_requirements=routing.tool_requirements,
             )
 
     return routing
