@@ -268,31 +268,26 @@ class HandoffManager:
         tool_requirements = self._identify_required_tools(to_agent)
 
         try:
+            # Prepare common protocol parameters
+            protocol_params = {
+                "from_agent": from_agent,
+                "to_agent": to_agent,
+                "work_completed": work_completed,
+                "artifacts": json.dumps(artifacts, indent=2),
+                "remaining_objectives": "\n".join(f"- {obj}" for obj in remaining_objectives),
+                "success_criteria": "\n".join(f"- {crit}" for crit in success_criteria),
+                "tool_requirements": ", ".join(tool_requirements) if tool_requirements else "None",
+            }
+
             # Get structured handoff protocol from DSPy (prefer compiled supervisor chains)
             sup = self._sup()
             if hasattr(sup, "handoff_protocol"):
-                protocol = sup.handoff_protocol(
-                    from_agent=from_agent,
-                    to_agent=to_agent,
-                    work_completed=work_completed,
-                    artifacts=json.dumps(artifacts, indent=2),
-                    remaining_objectives="\n".join(f"- {obj}" for obj in remaining_objectives),
-                    success_criteria="\n".join(f"- {crit}" for crit in success_criteria),
-                    tool_requirements=", ".join(tool_requirements) if tool_requirements else "None",
-                )
+                protocol = sup.handoff_protocol(**protocol_params)
             else:
                 module = self.handoff_protocol_module or dspy.ChainOfThought(
                     HandoffProtocol  # type: ignore[arg-type]
                 )
-                protocol = module(
-                    from_agent=from_agent,
-                    to_agent=to_agent,
-                    work_completed=work_completed,
-                    artifacts=json.dumps(artifacts, indent=2),
-                    remaining_objectives="\n".join(f"- {obj}" for obj in remaining_objectives),
-                    success_criteria="\n".join(f"- {crit}" for crit in success_criteria),
-                    tool_requirements=", ".join(tool_requirements) if tool_requirements else "None",
-                )
+                protocol = module(**protocol_params)
 
             # Parse quality checklist
             checklist = self._parse_checklist(str(getattr(protocol, "quality_checklist", "")))

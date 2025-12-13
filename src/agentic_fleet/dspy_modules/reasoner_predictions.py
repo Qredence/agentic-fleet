@@ -10,7 +10,11 @@ from typing import Any
 
 from ..utils.logger import setup_logger
 from ..utils.telemetry import optional_span
-from .reasoner_utils import is_simple_task, is_time_sensitive_task
+from .reasoner_utils import (
+    _format_team_description,
+    is_simple_task,
+    is_time_sensitive_task,
+)
 
 logger = setup_logger(__name__)
 
@@ -196,24 +200,52 @@ class PredictionMethods:
         self, task: str, agents: dict[str, Any], context: str
     ) -> dict[str, Any]:
         """Route task using enhanced signatures."""
+        return self._route_internal(task, agents, context, use_typed=True)
+
+    def _route_with_standard_signatures(
+        self, task: str, agents: dict[str, Any], context: str
+    ) -> dict[str, Any]:
+        """Route task using standard signatures."""
+        return self._route_internal(task, agents, context, use_typed=False)
+
+    def _route_internal(
+        self, task: str, agents: dict[str, Any], context: str, use_typed: bool
+    ) -> dict[str, Any]:
+        """Internal routing implementation that handles both typed and standard signatures.
+
+        Args:
+            task: The task to route
+            agents: Available agents
+            context: Additional context
+            use_typed: Whether to use typed signatures (True) or standard signatures (False)
+
+        Returns:
+            Dictionary with routing information
+        """
         team_desc = self._format_team_description(agents)
 
-        if self.reasoner.use_typed_signatures:
-            if self.reasoner.strategy_selector:
-                strategy_pred = self.reasoner.strategy_selector(
-                    task=task, team_composition=team_desc
-                )
+        # Determine strategy
+        if self.reasoner.strategy_selector:
+            strategy_pred = self.reasoner.strategy_selector(
+                task=task, team_composition=team_desc
+            )
+            if use_typed:
                 strategy = getattr(strategy_pred, "strategy", "standard")
             else:
-                strategy = "standard"
+                strategy = getattr(strategy_pred, "workflow_mode", "standard")
+        else:
+            strategy = "standard"
 
-            routing_pred = self.reasoner.router(
-                task=task,
-                team=team_desc,
-                context=context,
-                current_date=self._get_current_date(),
-            )
+        # Get routing prediction
+        routing_pred = self.reasoner.router(
+            task=task,
+            team=team_desc,
+            context=context,
+            current_date=self._get_current_date(),
+        )
 
+        # Build result based on signature type
+        if use_typed and self.reasoner.use_typed_signatures:
             # Extract from typed output
             return {
                 "assigned_to": routing_pred.assigned_to,
@@ -229,21 +261,7 @@ class PredictionMethods:
                 "strategy": strategy,
             }
         else:
-            if self.reasoner.strategy_selector:
-                strategy_pred = self.reasoner.strategy_selector(
-                    task=task, team_composition=team_desc
-                )
-                strategy = getattr(strategy_pred, "workflow_mode", "standard")
-            else:
-                strategy = "standard"
-
-            routing_pred = self.reasoner.router(
-                task=task,
-                team=team_desc,
-                context=context,
-                current_date=self._get_current_date(),
-            )
-
+            # Standard output
             return {
                 "assigned_to": routing_pred.assigned_to,
                 "mode": routing_pred.mode,
@@ -252,26 +270,6 @@ class PredictionMethods:
                 "reasoning": routing_pred.reasoning,
                 "strategy": strategy,
             }
-
-    def _route_with_standard_signatures(
-        self, task: str, agents: dict[str, Any], context: str
-    ) -> dict[str, Any]:
-        """Route task using standard signatures."""
-        team_desc = self._format_team_description(agents)
-        routing_pred = self.reasoner.router(
-            task=task,
-            team=team_desc,
-            context=context,
-            current_date=self._get_current_date(),
-        )
-
-        return {
-            "assigned_to": routing_pred.assigned_to,
-            "mode": routing_pred.mode,
-            "subtasks": routing_pred.subtasks,
-            "tool_requirements": routing_pred.tool_requirements,
-            "reasoning": routing_pred.reasoning,
-        }
 
     def generate_simple_response(self, task: str) -> str:
         """Generate a direct response for simple tasks using the simple responder module.
@@ -336,26 +334,15 @@ class PredictionMethods:
         with optional_span("DSPyReasoner.evaluate_progress"):
             logger.info(f"Evaluating progress for task: {task[:50]}...")
 
-            if self.reasoner.use_typed_signatures:
-                prediction = self.reasoner.progress_evaluator(task=task, result=result, **kwargs)
-                return {
-                    "state": prediction.state,
-                    "percentage_complete": prediction.percentage_complete,
-                    "remaining_work": prediction.remaining_work,
-                    "next_steps": prediction.next_steps,
-                    "confidence": prediction.confidence,
-                    "reasoning": prediction.reasoning,
-                }
-            else:
-                prediction = self.reasoner.progress_evaluator(task=task, result=result, **kwargs)
-                return {
-                    "state": prediction.state,
-                    "percentage_complete": prediction.percentage_complete,
-                    "remaining_work": prediction.remaining_work,
-                    "next_steps": prediction.next_steps,
-                    "confidence": prediction.confidence,
-                    "reasoning": prediction.reasoning,
-                }
+            prediction = self.reasoner.progress_evaluator(task=task, result=result, **kwargs)
+            return {
+                "state": prediction.state,
+                "percentage_complete": prediction.percentage_complete,
+                "remaining_work": prediction.remaining_work,
+                "next_steps": prediction.next_steps,
+                "confidence": prediction.confidence,
+                "reasoning": prediction.reasoning,
+            }
 
     def decide_tools(
         self,
@@ -429,22 +416,11 @@ class PredictionMethods:
         return datetime.now().strftime("%Y-%m-%d")
 
     def _format_team_description(self, agents: dict[str, Any]) -> str:
-        """Format agent team description for routing prompts."""
-        if not agents:
-            return "No agents available"
+        """Format agent team description for routing prompts.
 
-        descriptions = []
-        for name, agent in agents.items():
-            desc = f"**{name}**: "
-            if hasattr(agent, "description") and agent.description:
-                desc += agent.description
-            elif hasattr(agent, "instructions") and agent.instructions:
-                desc += agent.instructions[:100] + "..."
-            else:
-                desc += "General-purpose agent"
-            descriptions.append(desc)
-
-        return "\n".join(descriptions)
+        Delegates to the standalone function in reasoner_utils.
+        """
+        return _format_team_description(agents)
 
     def _parse_capabilities(self, capabilities_str: str) -> list[str]:
         """Parse capabilities string into list."""
