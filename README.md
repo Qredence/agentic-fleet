@@ -31,8 +31,8 @@ User Task → Analysis → Intelligent Routing → Agent Execution → Quality C
 **Key Features:**
 
 - 🧠 **DSPy-Powered Routing** – Typed signatures with Pydantic validation for reliable structured outputs
-- 🔄 **5 Execution Modes** – Auto, Delegated, Sequential, Parallel, Handoff, and Discussion
-- 🎯 **6 Specialized Agents** – Researcher, Analyst, Writer, Reviewer, Coder, Planner
+- 🔄 **6 Execution Modes** – Auto, Delegated, Sequential, Parallel, Handoff, and Discussion
+- 🎯 **9+ Specialized Agents** – Researcher, Analyst, Writer, Reviewer, Coder, Planner, Executor, Verifier, Generator
 - ⚡ **Smart Fast-Path** – Simple queries bypass multi-agent routing (<1s response)
 - 🧍 **Human-in-the-Loop (HITL)** – Request/response events can pause execution until the user responds
 - ♻️ **Checkpoint Resume** – Resume interrupted runs using agent-framework checkpoint semantics (message XOR checkpoint_id)
@@ -122,6 +122,9 @@ Notes:
 | **Reviewer**   | Quality assurance, fact-checking, critique          |
 | **Coder**      | Code generation, debugging, implementation          |
 | **Planner**    | Task decomposition, strategy, coordination          |
+| **Executor**   | Task execution and action coordination              |
+| **Verifier**   | Output validation and correctness checking          |
+| **Generator**  | Creative content and ideation                       |
 
 ### Execution Modes
 
@@ -143,10 +146,13 @@ Notes:
 OPENAI_API_KEY=sk-...
 
 # Optional
-TAVILY_API_KEY=tvly-...          # Web search capability
-DSPY_COMPILE=true                # Enable DSPy optimization
-ENABLE_OTEL=true                 # OpenTelemetry tracing
-OTLP_ENDPOINT=http://...         # Tracing endpoint
+TAVILY_API_KEY=tvly-...              # Web search capability
+DSPY_COMPILE=true                    # Enable DSPy optimization
+ENABLE_OTEL=true                     # OpenTelemetry tracing
+OTLP_ENDPOINT=http://...             # Tracing endpoint
+ENABLE_SENSITIVE_DATA=true           # Capture prompts in traces/telemetry (default: false)
+AGENTICFLEET_USE_COSMOS=true         # Enable Azure Cosmos DB integration
+AGENTICFLEET_DEFAULT_USER_ID=user123 # Default user ID for multi-tenant scoping
 ```
 
 ### Workflow Configuration
@@ -155,18 +161,27 @@ All runtime settings are in `src/agentic_fleet/config/workflow_config.yaml`:
 
 ```yaml
 dspy:
-  optimization:
-    use_typed_signatures: true # Pydantic-validated outputs
-    enable_routing_cache: true # Cache routing decisions
-    cache_ttl_seconds: 300 # Cache TTL
+  model: gpt-5.2 # Primary model for DSPy tasks
+  routing_model: grok-4-fast # Fast model for routing decisions
+  use_typed_signatures: true # Pydantic-validated outputs
+  enable_routing_cache: true # Cache routing decisions
+  routing_cache_ttl_seconds: 300 # Cache TTL (5 minutes)
 
-models:
-  router: gpt-4.1-mini # Fast routing decisions
-  agents: gpt-4.1-mini # Agent execution
+workflow:
+  supervisor:
+    max_rounds: 15
+    enable_streaming: true
+  quality:
+    refinement_threshold: 8.0
+    enable_refinement: false # Disabled for speed
 
-execution:
-  max_iterations: 10
-  quality_threshold: 0.8
+agents:
+  researcher:
+    model: gpt-4.1-mini
+    tools: [TavilySearchTool]
+  coder:
+    model: gpt-5.1-codex-mini
+    tools: [HostedCodeInterpreterTool]
 ```
 
 ## 🏗️ Architecture
@@ -174,15 +189,20 @@ execution:
 ```
 src/agentic_fleet/
 ├── agents/           # Agent definitions & AgentFactory
-├── workflows/        # Orchestration: supervisor, executors, strategies
-├── dspy_modules/     # DSPy signatures, typed models, assertions
-├── tools/            # Tavily, browser, MCP bridges, code interpreter
-├── app/              # FastAPI backend + SSE streaming
+├── api/              # FastAPI backend, routes, SSE streaming, middleware
 ├── cli/              # Typer CLI commands
 ├── config/           # workflow_config.yaml (source of truth)
-└── utils/            # Helpers, caching, tracing
+├── core/             # Core abstractions and base classes
+├── data/             # Training examples, evaluation datasets
+├── dspy_modules/     # DSPy signatures, typed models, assertions
+├── evaluation/       # Azure AI Evaluation integration
+├── models/           # Pydantic models and schemas
+├── services/         # Business logic services
+├── tools/            # Tavily, browser, MCP bridges, code interpreter
+├── utils/            # Helpers, caching, tracing, Cosmos DB
+└── workflows/        # Orchestration: supervisor, executors, strategies
 
-src/frontend/         # React/Vite UI
+src/frontend/         # React 19 + Vite + Tailwind UI
 ```
 
 **Key Design Principles:**
@@ -214,12 +234,14 @@ make clear-cache       # Clear DSPy cache after module changes
 | [Tracing](docs/guides/tracing.md)                                   | OpenTelemetry setup             |
 | [Troubleshooting](docs/users/troubleshooting.md)                    | Common issues and solutions     |
 
-## 🆕 What's New in v0.6.9
+## 🆕 What's New in v0.6.95
 
+- **Secure-by-Default Tracing** – `capture_sensitive` now defaults to `false` everywhere (schema, YAML, built-in defaults)
+- **Cosmos DB Partition-Key Fixes** – `query_agent_memory()` uses single-partition queries; history loads are user-scoped when `userId` is available
+- **Cache Telemetry Redaction** – Task previews are redacted by default; opt-in via `ENABLE_SENSITIVE_DATA=true`
 - **Typed DSPy Signatures** – Pydantic models for validated, type-safe outputs
 - **DSPy Assertions** – Hard constraints and soft suggestions for routing validation
 - **Routing Cache** – TTL-based caching for routing decisions
-- **Task Type Detection** – Automatic classification (research/coding/analysis/writing)
 
 See [CHANGELOG.md](CHANGELOG.md) for full release history.
 

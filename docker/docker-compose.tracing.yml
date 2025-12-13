@@ -13,7 +13,7 @@ services:
     networks:
       - agentic-fleet-network
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:14269/status"]
+      test: ["CMD-SHELL", "wget --spider -q http://localhost:14269/ || exit 1"]
       interval: 10s
       timeout: 5s
       retries: 5
