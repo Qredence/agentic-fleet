@@ -126,7 +126,7 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
         logger.warning(
             "Continuing with degraded DSPy functionality due to artifact loading error: %s", e
         )
-        
+
         # Create workflow without preloaded decision modules (fallback)
         workflow = await create_supervisor_workflow()
         app.state.workflow = workflow
