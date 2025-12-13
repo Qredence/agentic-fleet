@@ -56,9 +56,6 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     settings = get_settings()
     app.state.settings = settings
 
-    workflow = await create_supervisor_workflow()
-    app.state.workflow = workflow
-
     # Phase 1: Load and validate compiled DSPy artifacts with fail-fast enforcement
     try:
         # Load workflow config to get DSPy settings
@@ -102,6 +99,15 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
 
         logger.info("DSPy decision modules initialized successfully")
 
+        # Phase 2: Create workflow with preloaded decision modules
+        workflow = await create_supervisor_workflow(
+            dspy_routing_module=routing_module,
+            dspy_quality_module=quality_module,
+            dspy_tool_planning_module=tool_planning_module,
+        )
+        app.state.workflow = workflow
+        logger.info("Workflow initialized with Phase 2 decision modules")
+
     except RuntimeError as e:
         # Fail-fast: Required compiled artifacts missing
         logger.error("Failed to load required compiled DSPy artifacts: %s", e)
@@ -120,6 +126,11 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
         logger.warning(
             "Continuing with degraded DSPy functionality due to artifact loading error: %s", e
         )
+        
+        # Create workflow without preloaded decision modules (fallback)
+        workflow = await create_supervisor_workflow()
+        app.state.workflow = workflow
+        logger.info("Workflow initialized without Phase 2 decision modules (fallback mode)")
 
     # Initialize managers with settings-aware configuration and attach to app state
     app.state.session_manager = WorkflowSessionManager(

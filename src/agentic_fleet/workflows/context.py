@@ -233,5 +233,10 @@ class SupervisorContext:
     compilation_lock: asyncio.Lock | None = None
     compilation_state: CompilationState | None = None
 
+    # Phase 2: Preloaded DSPy decision modules from app.state
+    dspy_routing_module: Any | None = None
+    dspy_quality_module: Any | None = None
+    dspy_tool_planning_module: Any | None = None
+
     # Conversation thread for multi-turn context (agent-framework AgentThread)
     conversation_thread: AgentThread | None = None
