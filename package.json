@@ -1,0 +1,8 @@
+{
+  "devDependencies": {
+    "shadcn": "^3.6.0"
+  },
+  "dependencies": {
+    "applicationinsights": "^3.12.1"
+  }
+}

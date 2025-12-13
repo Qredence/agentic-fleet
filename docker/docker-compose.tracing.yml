@@ -1,0 +1,23 @@
+version: "3.8"
+
+services:
+  # OpenTelemetry Collector with Jaeger backend
+  jaeger:
+    image: jaegertracing/all-in-one:latest
+    container_name: agentic-fleet-jaeger
+    environment:
+      - COLLECTOR_OTLP_ENABLED=true
+    ports:
+      - "4319:4317" # OTLP/gRPC endpoint (maps container 4317 to host 4319)
+      - "16686:16686" # Jaeger UI (view traces at http://localhost:16686)
+    networks:
+      - agentic-fleet-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:14269/status"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+networks:
+  agentic-fleet-network:
+    driver: bridge
