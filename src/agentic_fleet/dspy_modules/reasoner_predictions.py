@@ -200,24 +200,52 @@ class PredictionMethods:
         self, task: str, agents: dict[str, Any], context: str
     ) -> dict[str, Any]:
         """Route task using enhanced signatures."""
+        return self._route_internal(task, agents, context, use_typed=True)
+
+    def _route_with_standard_signatures(
+        self, task: str, agents: dict[str, Any], context: str
+    ) -> dict[str, Any]:
+        """Route task using standard signatures."""
+        return self._route_internal(task, agents, context, use_typed=False)
+
+    def _route_internal(
+        self, task: str, agents: dict[str, Any], context: str, use_typed: bool
+    ) -> dict[str, Any]:
+        """Internal routing implementation that handles both typed and standard signatures.
+
+        Args:
+            task: The task to route
+            agents: Available agents
+            context: Additional context
+            use_typed: Whether to use typed signatures (True) or standard signatures (False)
+
+        Returns:
+            Dictionary with routing information
+        """
         team_desc = self._format_team_description(agents)
 
-        if self.reasoner.use_typed_signatures:
-            if self.reasoner.strategy_selector:
-                strategy_pred = self.reasoner.strategy_selector(
-                    task=task, team_composition=team_desc
-                )
+        # Determine strategy
+        if self.reasoner.strategy_selector:
+            strategy_pred = self.reasoner.strategy_selector(
+                task=task, team_composition=team_desc
+            )
+            if use_typed:
                 strategy = getattr(strategy_pred, "strategy", "standard")
             else:
-                strategy = "standard"
+                strategy = getattr(strategy_pred, "workflow_mode", "standard")
+        else:
+            strategy = "standard"
 
-            routing_pred = self.reasoner.router(
-                task=task,
-                team=team_desc,
-                context=context,
-                current_date=self._get_current_date(),
-            )
+        # Get routing prediction
+        routing_pred = self.reasoner.router(
+            task=task,
+            team=team_desc,
+            context=context,
+            current_date=self._get_current_date(),
+        )
 
+        # Build result based on signature type
+        if use_typed and self.reasoner.use_typed_signatures:
             # Extract from typed output
             return {
                 "assigned_to": routing_pred.assigned_to,
@@ -233,21 +261,7 @@ class PredictionMethods:
                 "strategy": strategy,
             }
         else:
-            if self.reasoner.strategy_selector:
-                strategy_pred = self.reasoner.strategy_selector(
-                    task=task, team_composition=team_desc
-                )
-                strategy = getattr(strategy_pred, "workflow_mode", "standard")
-            else:
-                strategy = "standard"
-
-            routing_pred = self.reasoner.router(
-                task=task,
-                team=team_desc,
-                context=context,
-                current_date=self._get_current_date(),
-            )
-
+            # Standard output
             return {
                 "assigned_to": routing_pred.assigned_to,
                 "mode": routing_pred.mode,
@@ -256,21 +270,6 @@ class PredictionMethods:
                 "reasoning": routing_pred.reasoning,
                 "strategy": strategy,
             }
-
-    def _route_with_standard_signatures(
-        self, task: str, agents: dict[str, Any], context: str
-    ) -> dict[str, Any]:
-        """Route task using standard signatures.
-
-        This method delegates to _route_with_enhanced_signatures with use_typed_signatures=False.
-        """
-        # Temporarily disable typed signatures if enabled
-        original_typed = self.reasoner.use_typed_signatures
-        try:
-            self.reasoner.use_typed_signatures = False
-            return self._route_with_enhanced_signatures(task, agents, context)
-        finally:
-            self.reasoner.use_typed_signatures = original_typed
 
     def generate_simple_response(self, task: str) -> str:
         """Generate a direct response for simple tasks using the simple responder module.

@@ -4,12 +4,17 @@ This submodule provides an organized interface to infrastructure-related
 utilities. All exports are backward-compatible with direct imports from
 utils.telemetry, utils.tracing, utils.resilience, and utils.logger.
 
-Re-exports from agentic_fleet.core.logging for backward compatibility.
+Note:
+    This module re-exports all functionality from agentic_fleet.core.logging
+    for backward compatibility. New code should prefer importing from
+    agentic_fleet.core.logging directly.
 
 Usage:
     from agentic_fleet.utils.infra import initialize_tracing, setup_logger
     # or
     from agentic_fleet.utils.tracing import initialize_tracing  # still works
+    # or (preferred)
+    from agentic_fleet.core.logging import initialize_tracing
 """
 
 from __future__ import annotations
