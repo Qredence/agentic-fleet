@@ -1334,13 +1334,51 @@ async def create_supervisor_workflow(
     config: WorkflowConfig | None = None,
     mode: str = "standard",
     context: SupervisorContext | None = None,
+    dspy_routing_module: Any | None = None,
+    dspy_quality_module: Any | None = None,
+    dspy_tool_planning_module: Any | None = None,
 ) -> SupervisorWorkflow:
-    """Create and initialize the supervisor workflow."""
+    """Create and initialize the supervisor workflow.
+
+    Args:
+        compile_dspy: Whether to compile DSPy modules
+        config: Workflow configuration
+        mode: Workflow mode (standard, handoff, group_chat, etc.)
+        context: Pre-initialized context (optional)
+        dspy_routing_module: Preloaded routing decision module (Phase 2)
+        dspy_quality_module: Preloaded quality assessment module (Phase 2)
+        dspy_tool_planning_module: Preloaded tool planning module (Phase 2)
+
+    Returns:
+        Initialized SupervisorWorkflow instance
+    """
     if context is None:
         context = await initialize_workflow_context(config=config, compile_dspy=compile_dspy)
 
+    # Phase 2: Attach decision modules to context if provided
+    if dspy_routing_module is not None:
+        context.dspy_routing_module = dspy_routing_module
+    if dspy_quality_module is not None:
+        context.dspy_quality_module = dspy_quality_module
+    if dspy_tool_planning_module is not None:
+        context.dspy_tool_planning_module = dspy_tool_planning_module
+
     if context.dspy_supervisor is None:
         raise RuntimeError("DSPy reasoner not initialized in context")
+
+    # Phase 2: Inject preloaded decision modules into DSPy reasoner
+    # This allows the reasoner to use compiled modules loaded at startup
+    if (
+        context.dspy_routing_module is not None
+        or context.dspy_quality_module is not None
+        or context.dspy_tool_planning_module is not None
+    ):
+        context.dspy_supervisor.set_decision_modules(
+            routing_module=context.dspy_routing_module,
+            quality_module=context.dspy_quality_module,
+            tool_planning_module=context.dspy_tool_planning_module,
+        )
+        logger.info("Injected preloaded decision modules into DSPy reasoner")
 
     # Build workflow
     workflow_builder = build_fleet_workflow(

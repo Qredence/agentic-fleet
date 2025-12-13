@@ -598,6 +598,32 @@ class DSPyReasoner(dspy.Module):
         """Attach a tool registry to the supervisor."""
         self.tool_registry = tool_registry
 
+    def set_decision_modules(
+        self,
+        routing_module: Any | None = None,
+        quality_module: Any | None = None,
+        tool_planning_module: Any | None = None,
+    ) -> None:
+        """Inject external decision modules from Phase 2 integration.
+
+        This allows the workflow to use preloaded, compiled decision modules
+        from app.state instead of the reasoner's internal modules.
+
+        Args:
+            routing_module: Preloaded routing decision module
+            quality_module: Preloaded quality assessment module
+            tool_planning_module: Preloaded tool planning module
+        """
+        if routing_module is not None:
+            self._router = routing_module
+            logger.debug("Injected external routing decision module")
+        if quality_module is not None:
+            self._quality_assessor = quality_module
+            logger.debug("Injected external quality assessment module")
+        if tool_planning_module is not None:
+            self._tool_planner = tool_planning_module
+            logger.debug("Injected external tool planning module")
+
     def select_workflow_mode(self, task: str) -> dict[str, str]:
         """Select the optimal workflow architecture for a task.
 
