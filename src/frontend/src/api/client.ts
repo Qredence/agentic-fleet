@@ -5,7 +5,7 @@
  * Uses the typed HTTP layer with retry logic and error handling.
  */
 
-import { http } from "./http";
+import { http } from "@/api/http";
 import type {
   Conversation,
   WorkflowSession,
@@ -16,6 +16,11 @@ import type {
   EntityRequest,
   EntityResponse,
   CreateConversationRequest,
+  OptimizationRequest,
+  OptimizationResult,
+  HistoryExecutionEntry,
+  SelfImproveRequest,
+  SelfImproveResponse,
 } from "./types";
 
 // =============================================================================
@@ -101,6 +106,53 @@ export const nluApi = {
 };
 
 // =============================================================================
+// Optimization API
+// =============================================================================
+
+export const optimizationApi = {
+  /**
+   * Start an optimization/compilation run.
+   */
+  run: (request: OptimizationRequest) =>
+    http.post<OptimizationResult>("/optimize", request),
+
+  /**
+   * Get status for an optimization job.
+   */
+  status: (jobId: string) =>
+    http.get<OptimizationResult>(`/optimize/${encodeURIComponent(jobId)}`),
+};
+
+// =============================================================================
+// Evaluation API (History)
+// =============================================================================
+
+export const evaluationApi = {
+  /**
+   * Retrieve execution history (newest first).
+   */
+  history: (params?: { limit?: number; offset?: number }) => {
+    const limit = params?.limit ?? 20;
+    const offset = params?.offset ?? 0;
+    return http.get<HistoryExecutionEntry[]>(
+      `/history?limit=${encodeURIComponent(limit)}&offset=${encodeURIComponent(offset)}`,
+    );
+  },
+};
+
+// =============================================================================
+// Self-Improvement API
+// =============================================================================
+
+export const improvementApi = {
+  /**
+   * Trigger a self-improvement run based on history.
+   */
+  trigger: (request: SelfImproveRequest) =>
+    http.post<SelfImproveResponse>("/self-improve", request),
+};
+
+// =============================================================================
 // Health API
 // Note: Health endpoints are at root level, not under /api/v1
 // =============================================================================
@@ -161,4 +213,10 @@ export const api = {
 
   // Agents
   listAgents: agentsApi.list,
+
+  // Optimization / Evaluation / Improvement
+  optimize: optimizationApi.run,
+  optimizeStatus: optimizationApi.status,
+  history: evaluationApi.history,
+  selfImprove: improvementApi.trigger,
 };

@@ -12,12 +12,25 @@ import {
   type UseQueryOptions,
   type UseMutationOptions,
 } from "@tanstack/react-query";
-import { conversationsApi, sessionsApi, agentsApi, healthApi } from "./client";
+import {
+  conversationsApi,
+  sessionsApi,
+  agentsApi,
+  healthApi,
+  optimizationApi,
+  evaluationApi,
+  improvementApi,
+} from "./client";
 import type {
   Conversation,
   Message,
   WorkflowSession,
   AgentInfo,
+  OptimizationResult,
+  OptimizationRequest,
+  HistoryExecutionEntry,
+  SelfImproveRequest,
+  SelfImproveResponse,
 } from "./types";
 import type { HealthResponse, ReadinessResponse } from "./client";
 
@@ -42,6 +55,16 @@ export const queryKeys = {
   agents: {
     all: ["agents"] as const,
     list: () => [...queryKeys.agents.all, "list"] as const,
+  },
+  optimization: {
+    all: ["optimization"] as const,
+    status: (jobId: string) =>
+      [...queryKeys.optimization.all, "status", jobId] as const,
+  },
+  history: {
+    all: ["history"] as const,
+    page: (limit: number, offset: number) =>
+      [...queryKeys.history.all, "page", limit, offset] as const,
   },
   health: {
     check: ["health", "check"] as const,
@@ -213,6 +236,63 @@ export function useReadinessCheck(
     queryFn: healthApi.ready,
     staleTime: 10_000,
     retry: false,
+    ...options,
+  });
+}
+
+// =============================================================================
+// Optimization / Evaluation / Self-Improvement Hooks
+// =============================================================================
+
+export function useOptimizationRun(
+  options?: UseMutationOptions<OptimizationResult, Error, OptimizationRequest>,
+) {
+  return useMutation({
+    mutationFn: optimizationApi.run,
+    ...options,
+  });
+}
+
+export function useOptimizationStatus(
+  jobId: string | null,
+  options?: Omit<
+    UseQueryOptions<OptimizationResult>,
+    "queryKey" | "queryFn" | "enabled" | "refetchInterval"
+  >,
+) {
+  return useQuery({
+    queryKey: queryKeys.optimization.status(jobId ?? ""),
+    queryFn: () => optimizationApi.status(jobId!),
+    enabled: !!jobId,
+    refetchInterval: (query) => {
+      const status = query.state.data?.status;
+      if (!status) return 2000;
+      return status === "started" || status === "running" ? 2000 : false;
+    },
+    ...options,
+  });
+}
+
+export function useEvaluationHistory(
+  params: { limit: number; offset: number },
+  options?: Omit<
+    UseQueryOptions<HistoryExecutionEntry[]>,
+    "queryKey" | "queryFn"
+  >,
+) {
+  return useQuery({
+    queryKey: queryKeys.history.page(params.limit, params.offset),
+    queryFn: () => evaluationApi.history(params),
+    staleTime: 5_000,
+    ...options,
+  });
+}
+
+export function useTriggerSelfImprove(
+  options?: UseMutationOptions<SelfImproveResponse, Error, SelfImproveRequest>,
+) {
+  return useMutation({
+    mutationFn: improvementApi.trigger,
     ...options,
   });
 }

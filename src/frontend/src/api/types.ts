@@ -221,6 +221,76 @@ export interface EntityResponse {
 }
 
 // =============================================================================
+// Optimization / Evaluation / Self-Improvement Types
+// =============================================================================
+
+export interface OptimizationRequest {
+  optimizer?: "bootstrap" | "gepa";
+  use_cache?: boolean;
+  gepa_auto?: "light" | "medium" | "heavy" | null;
+  harvest_history?: boolean;
+  min_quality?: number;
+}
+
+export interface OptimizationResult {
+  status: "started" | "running" | "completed" | "cached" | "failed";
+  job_id?: string | null;
+  message: string;
+  cache_path?: string | null;
+  started_at?: string;
+  completed_at?: string;
+  error?: string;
+  progress?: number;
+  details?: Record<string, unknown>;
+}
+
+export interface HistoryQualityMetrics {
+  score?: number;
+  flag?: string;
+  improvements?: string;
+}
+
+export interface HistoryExecutionEntry {
+  workflowId?: string;
+  workflow_id?: string;
+  task?: string;
+  status?: string;
+  created_at?: string;
+  started_at?: string;
+  completed_at?: string;
+  latency?: string | number;
+  mode?: string;
+  routing?: Record<string, unknown>;
+  quality?: HistoryQualityMetrics;
+  metadata?: Record<string, unknown>;
+  [key: string]: unknown;
+}
+
+export interface SelfImproveRequest {
+  min_quality?: number;
+  max_examples?: number;
+  stats_only?: boolean;
+}
+
+export interface SelfImproveStats {
+  total_executions?: number;
+  high_quality_executions?: number;
+  potential_new_examples?: number;
+  min_quality_threshold?: number;
+  average_quality_score?: number;
+  quality_score_distribution?: Record<string, number>;
+  [key: string]: unknown;
+}
+
+export interface SelfImproveResponse {
+  status: "completed" | "no_op" | "failed";
+  message: string;
+  new_examples_added?: number;
+  stats?: SelfImproveStats;
+  details?: Record<string, unknown>;
+}
+
+// =============================================================================
 // Exported Type Aliases for Convenience
 // =============================================================================
 

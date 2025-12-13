@@ -17,6 +17,9 @@ export {
   sessionsApi,
   agentsApi,
   nluApi,
+  optimizationApi,
+  evaluationApi,
+  improvementApi,
   healthApi,
 } from "./client";
 
@@ -33,6 +36,10 @@ export {
   useAgents,
   useHealthCheck,
   useReadinessCheck,
+  useOptimizationRun,
+  useOptimizationStatus,
+  useEvaluationHistory,
+  useTriggerSelfImprove,
   useInvalidateConversations,
 } from "./hooks";
 
@@ -76,6 +83,14 @@ export type {
   IntentResponse,
   EntityRequest,
   EntityResponse,
+  // Optimization / Evaluation / Improvement types
+  OptimizationRequest,
+  OptimizationResult,
+  HistoryExecutionEntry,
+  HistoryQualityMetrics,
+  SelfImproveRequest,
+  SelfImproveResponse,
+  SelfImproveStats,
   // Error types
   ApiError,
 } from "./types";

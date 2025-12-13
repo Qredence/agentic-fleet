@@ -45,8 +45,9 @@ import {
 import type { Conversation, Message as ChatMessage } from "@/api/types";
 import type { ConversationStep } from "@/api/types";
 import { useChatStore } from "@/stores";
+import { OptimizationDashboard } from "@/components/blocks/optimization-dashboard";
 import { cn } from "@/lib/utils";
-import { Copy, PlusIcon, Search, Square, ArrowUp } from "lucide-react";
+import { Copy, PlusIcon, Search, Square, ArrowUp, Gauge } from "lucide-react";
 import { useMemo, useState } from "react";
 import { useShallow } from "zustand/shallow";
 
@@ -391,6 +392,8 @@ function ChatSidebar() {
     createConversation,
     selectConversation,
     isConversationsLoading,
+    activeView,
+    setActiveView,
   } = useChatStore(
     useShallow((state) => ({
       conversations: state.conversations,
@@ -398,6 +401,8 @@ function ChatSidebar() {
       createConversation: state.createConversation,
       selectConversation: state.selectConversation,
       isConversationsLoading: state.isConversationsLoading,
+      activeView: state.activeView,
+      setActiveView: state.setActiveView,
     })),
   );
 
@@ -433,6 +438,20 @@ function ChatSidebar() {
             <span>New Chat</span>
           </Button>
         </div>
+
+        <SidebarGroup>
+          <SidebarGroupLabel>Tools</SidebarGroupLabel>
+          <SidebarMenu>
+            <SidebarMenuButton
+              isActive={activeView === "dashboard"}
+              onClick={() => setActiveView("dashboard")}
+              aria-label="Open optimization dashboard"
+            >
+              <Gauge className="mr-2 size-4" />
+              <span>Optimization</span>
+            </SidebarMenuButton>
+          </SidebarMenu>
+        </SidebarGroup>
 
         {isConversationsLoading ? (
           <div className="px-4 py-2 text-sm text-muted-foreground">
@@ -647,11 +666,16 @@ function ChatContent() {
 }
 
 export function FullChatApp() {
+  const activeView = useChatStore((state) => state.activeView);
   return (
     <SidebarProvider>
       <ChatSidebar />
       <SidebarInset>
-        <ChatContent />
+        {activeView === "dashboard" ? (
+          <OptimizationDashboard />
+        ) : (
+          <ChatContent />
+        )}
       </SidebarInset>
     </SidebarProvider>
   );

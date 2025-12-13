@@ -82,6 +82,7 @@ interface ChatState {
   messages: Message[];
   conversations: Conversation[];
   conversationId: string | null;
+  activeView: "chat" | "dashboard";
 
   // Loading states
   isLoading: boolean;
@@ -103,6 +104,7 @@ interface ChatState {
   sendWorkflowResponse: (requestId: string, response: unknown) => void;
   cancelStreaming: () => void;
   setMessages: (messages: Message[]) => void;
+  setActiveView: (view: "chat" | "dashboard") => void;
   reset: () => void;
 }
 
@@ -135,6 +137,7 @@ export const useChatStore = create<ChatState>()(
       messages: [],
       conversations: [],
       conversationId: null,
+      activeView: "chat",
       isLoading: false,
       isInitializing: true,
       isConversationsLoading: false,
@@ -181,6 +184,7 @@ export const useChatStore = create<ChatState>()(
           const convMessages = await api.loadConversationMessages(id);
           set({
             conversationId: id,
+            activeView: "chat",
             messages: convMessages,
             currentReasoning: "",
             isReasoningStreaming: false,
@@ -201,6 +205,7 @@ export const useChatStore = create<ChatState>()(
           const conv = await api.createConversation(title);
           set({
             conversationId: conv.id,
+            activeView: "chat",
             messages: [],
             currentReasoning: "",
             isReasoningStreaming: false,
@@ -283,12 +288,15 @@ export const useChatStore = create<ChatState>()(
 
       setMessages: (messages) => set({ messages }),
 
+      setActiveView: (view) => set({ activeView: view }),
+
       reset: () => {
         const ws = getWebSocketService();
         ws.disconnect();
         set({
           messages: [],
           conversationId: null,
+          activeView: "chat",
           isLoading: false,
           currentReasoning: "",
           isReasoningStreaming: false,
