@@ -15,7 +15,6 @@ except ImportError:  # pragma: no cover
     dspy = None  # type: ignore
 
 from ..signatures import TypedQualityAssessment
-from ..typed_models import QualityAssessmentOutput
 
 logger = logging.getLogger(__name__)
 
@@ -88,12 +87,11 @@ def get_quality_module(compiled_module: Any | None = None) -> Any | None:
 
 def clear_quality_cache() -> None:
     """Clear the quality module cache."""
-    if "quality" in _MODULE_CACHE:
-        del _MODULE_CACHE["quality"]
+    _MODULE_CACHE.pop("quality", None)
 
 
 __all__ = [
     "QualityDecisionModule",
-    "get_quality_module",
     "clear_quality_cache",
+    "get_quality_module",
 ]

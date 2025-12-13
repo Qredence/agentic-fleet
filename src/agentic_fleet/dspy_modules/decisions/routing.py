@@ -15,7 +15,6 @@ except ImportError:  # pragma: no cover
     dspy = None  # type: ignore
 
 from ..signatures import TypedEnhancedRouting
-from ..typed_models import RoutingDecisionOutput
 
 logger = logging.getLogger(__name__)
 
@@ -97,12 +96,11 @@ def get_routing_module(compiled_module: Any | None = None) -> Any | None:
 
 def clear_routing_cache() -> None:
     """Clear the routing module cache."""
-    if "routing" in _MODULE_CACHE:
-        del _MODULE_CACHE["routing"]
+    _MODULE_CACHE.pop("routing", None)
 
 
 __all__ = [
     "RoutingDecisionModule",
-    "get_routing_module",
     "clear_routing_cache",
+    "get_routing_module",
 ]

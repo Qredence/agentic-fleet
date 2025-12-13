@@ -111,8 +111,7 @@ def load_required_compiled_modules(
         import dspy  # noqa: F401
     except ImportError as e:
         raise ImportError(
-            "DSPy is required for compiled module loading. "
-            "Install with: pip install dspy-ai>=3.0.3"
+            "DSPy is required for compiled module loading. Install with: pip install dspy-ai>=3.0.3"
         ) from e
 
     from ..utils.compiler import load_compiled_module
@@ -140,9 +139,7 @@ def load_required_compiled_modules(
         CompiledArtifact(
             name="quality",
             path=_resolve_artifact_path(
-                dspy_config.get(
-                    "compiled_quality_path", ".var/logs/compiled_answer_quality.pkl"
-                )
+                dspy_config.get("compiled_quality_path", ".var/logs/compiled_answer_quality.pkl")
             ),
             required=require_compiled,
             description="Quality assessment module for answer scoring",

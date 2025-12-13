@@ -15,7 +15,6 @@ except ImportError:  # pragma: no cover
     dspy = None  # type: ignore
 
 from ..signatures import TypedToolPlan
-from ..typed_models import ToolPlanOutput
 
 logger = logging.getLogger(__name__)
 
@@ -91,12 +90,11 @@ def get_tool_planning_module(compiled_module: Any | None = None) -> Any | None:
 
 def clear_tool_planning_cache() -> None:
     """Clear the tool planning module cache."""
-    if "tool_planning" in _MODULE_CACHE:
-        del _MODULE_CACHE["tool_planning"]
+    _MODULE_CACHE.pop("tool_planning", None)
 
 
 __all__ = [
     "ToolPlanningModule",
-    "get_tool_planning_module",
     "clear_tool_planning_cache",
+    "get_tool_planning_module",
 ]

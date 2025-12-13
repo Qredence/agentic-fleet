@@ -27,7 +27,7 @@ class TestArtifactRegistry:
         """Test that get_module retrieves modules by name."""
         mock_module = MagicMock()
         registry = ArtifactRegistry(routing=mock_module)
-        
+
         assert registry.get_module("routing") is mock_module
         assert registry.get_module("quality") is None
         assert registry.get_module("nonexistent") is None
@@ -40,7 +40,7 @@ class TestValidateArtifactRegistry:
         """Test validation of empty registry."""
         registry = ArtifactRegistry()
         status = validate_artifact_registry(registry)
-        
+
         assert status == {
             "routing": False,
             "tool_planning": False,
@@ -53,7 +53,7 @@ class TestValidateArtifactRegistry:
         mock_module = MagicMock()
         registry = ArtifactRegistry(routing=mock_module, quality=mock_module)
         status = validate_artifact_registry(registry)
-        
+
         assert status == {
             "routing": True,
             "tool_planning": False,
@@ -73,20 +73,20 @@ class TestLoadRequiredCompiledModules:
         mock_path = MagicMock()
         mock_path.exists.return_value = False
         mock_path_cls.return_value = mock_path
-        
+
         dspy_config = {
             "compiled_routing_path": ".var/cache/dspy/compiled_routing.json",
             "compiled_tool_planning_path": ".var/cache/dspy/compiled_tool_planning.json",
             "compiled_quality_path": ".var/logs/compiled_answer_quality.pkl",
             "compiled_reasoner_path": ".var/cache/dspy/compiled_reasoner.json",
         }
-        
+
         # Should not raise with require_compiled=False
         registry = load_required_compiled_modules(
             dspy_config=dspy_config,
             require_compiled=False,
         )
-        
+
         assert registry is not None
         assert isinstance(registry, ArtifactRegistry)
 
@@ -98,14 +98,14 @@ class TestLoadRequiredCompiledModules:
             "compiled_tool_planning_path": "/nonexistent/tool_planning.json",
             "compiled_quality_path": "/nonexistent/quality.pkl",
         }
-        
+
         # Should raise RuntimeError with require_compiled=True
         with pytest.raises(RuntimeError) as exc_info:
             load_required_compiled_modules(
                 dspy_config=dspy_config,
                 require_compiled=True,
             )
-        
+
         error_msg = str(exc_info.value)
         assert "Required compiled DSPy artifacts not found" in error_msg
         assert "routing" in error_msg
@@ -119,23 +119,23 @@ class TestLoadRequiredCompiledModules:
         # Mock successful artifact loading
         mock_module = MagicMock()
         mock_load.return_value = mock_module
-        
+
         # Mock path resolution to return existing paths
         mock_path = MagicMock(spec=Path)
         mock_path.exists.return_value = True
         mock_resolve.return_value = mock_path
-        
+
         dspy_config = {
             "compiled_routing_path": ".var/cache/dspy/compiled_routing.json",
             "compiled_tool_planning_path": ".var/cache/dspy/compiled_tool_planning.json",
             "compiled_quality_path": ".var/logs/compiled_answer_quality.pkl",
         }
-        
+
         registry = load_required_compiled_modules(
             dspy_config=dspy_config,
             require_compiled=True,
         )
-        
+
         assert registry is not None
         assert registry.routing is mock_module
         assert registry.tool_planning is mock_module
@@ -153,7 +153,7 @@ class TestCompiledArtifact:
             required=True,
             description="Test module",
         )
-        
+
         assert artifact.name == "test_module"
         assert artifact.path == Path("/test/path.json")
         assert artifact.required is True

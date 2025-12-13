@@ -66,9 +66,7 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
         dspy_config = config.get("dspy", {})
         require_compiled = dspy_config.get("require_compiled", False)
 
-        logger.info(
-            "Loading compiled DSPy artifacts (require_compiled=%s)...", require_compiled
-        )
+        logger.info("Loading compiled DSPy artifacts (require_compiled=%s)...", require_compiled)
 
         # Load all required compiled modules using the registry
         artifact_registry = load_required_compiled_modules(
