@@ -825,7 +825,7 @@ def get_default_config() -> dict[str, Any]:
         "tracing": {
             "enabled": False,
             "otlp_endpoint": "http://localhost:4317",
-            "capture_sensitive": True,
+            "capture_sensitive": False,
         },
         "evaluation": {
             "enabled": False,
