@@ -36,7 +36,6 @@ from fastapi import HTTPException, WebSocket, WebSocketDisconnect, status
 
 from agentic_fleet.api.events import classify_event, map_workflow_event
 from agentic_fleet.core.settings import get_settings
-from agentic_fleet.dspy_modules.answer_quality import score_answer_with_dspy
 from agentic_fleet.models import (
     ChatRequest,
     MessageRole,
@@ -46,6 +45,7 @@ from agentic_fleet.models import (
     WorkflowSession,
     WorkflowStatus,
 )
+from agentic_fleet.services.background_evaluation import schedule_quality_evaluation
 from agentic_fleet.utils.logger import setup_logger
 
 logger = setup_logger(__name__)
@@ -332,6 +332,10 @@ async def _event_generator(
         stream_kwargs: dict[str, Any] = {
             "reasoning_effort": reasoning_effort,
             "thread": thread,
+            # Align workflow history ids with the session id used by the websocket surface.
+            "workflow_id": session.workflow_id,
+            # We'll evaluate quality after sending the final answer so users don't wait.
+            "schedule_quality_eval": False,
         }
 
         is_resume = task is None
@@ -875,10 +879,8 @@ class ChatWebSocketService:
                 or "Sorry, I couldn't produce a final answer this time."
             )
 
-            # Always emit a final RESPONSE_COMPLETED with quality metadata so the UI
-            # has a single authoritative "final answer" payload, even if the workflow
-            # did not emit a completion event.
-            quality = score_answer_with_dspy(message or "", final_text)
+            # Always emit a final RESPONSE_COMPLETED so the UI has a single authoritative
+            # "final answer" payload, even if the workflow did not emit a completion event.
             completed_type = StreamEventType.RESPONSE_COMPLETED
             comp_category, comp_ui = classify_event(completed_type)
             completed_event = StreamEvent(
@@ -886,9 +888,7 @@ class ChatWebSocketService:
                 message=final_text,
                 author=last_author,
                 agent_id=last_agent_id,
-                data=quality,
-                quality_score=quality.get("quality_score"),
-                quality_flag=quality.get("quality_flag"),
+                data={"quality_pending": True},
                 category=comp_category,
                 ui_hint=comp_ui,
                 workflow_id=session.workflow_id,
@@ -906,13 +906,33 @@ class ChatWebSocketService:
                 )
                 await websocket.send_json(done_event.to_sse_dict())
 
+            assistant_message = None
             if conversation_id and final_text:
-                conversation_manager.add_message(
+                assistant_message = conversation_manager.add_message(
                     conversation_id,
                     MessageRole.ASSISTANT,
                     final_text,
                     author=last_author,
                     agent_id=last_agent_id,
+                    workflow_id=session.workflow_id,
+                    quality_pending=True,
+                )
+
+            # Background quality evaluation (do not block the user).
+            if (
+                message
+                and final_text
+                and hasattr(workflow, "history_manager")
+                and workflow.history_manager is not None
+            ):
+                schedule_quality_evaluation(
+                    workflow_id=session.workflow_id,
+                    task=message,
+                    answer=final_text,
+                    history_manager=workflow.history_manager,
+                    conversation_manager=conversation_manager,
+                    conversation_id=conversation_id,
+                    message_id=getattr(assistant_message, "id", None),
                 )
 
         except WebSocketDisconnect:

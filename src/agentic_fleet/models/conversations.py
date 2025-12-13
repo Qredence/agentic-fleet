@@ -28,6 +28,28 @@ class Message(BaseModel):
     created_at: datetime = Field(default_factory=datetime.now)
     author: str | None = Field(default=None, description="Author or agent display name")
     agent_id: str | None = Field(default=None, description="Agent identifier if applicable")
+    workflow_id: str | None = Field(
+        default=None,
+        description="Optional workflow identifier associated with this message (e.g. streaming session id)",
+    )
+    quality_score: float | None = Field(
+        default=None,
+        description="Optional quality score for the assistant message (0-10 scale)",
+        ge=0,
+        le=10,
+    )
+    quality_flag: str | None = Field(
+        default=None,
+        description="Optional quality flag for the assistant message",
+    )
+    quality_pending: bool = Field(
+        default=False,
+        description="True if quality evaluation is pending for this message",
+    )
+    quality_details: dict[str, object] | None = Field(
+        default=None,
+        description="Optional structured quality details/metrics",
+    )
     id: str = Field(default_factory=lambda: uuid4().hex)
 
     model_config = ConfigDict(from_attributes=True)

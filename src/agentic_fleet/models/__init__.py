@@ -10,7 +10,16 @@ from .base import EventCategory, MessageRole, StreamEventType, UIHint, WorkflowS
 from .conversations import Conversation, Message
 
 # DSPy models
-from .dspy import CacheInfo, CompileRequest, CompileResponse, ReasonerSummary, SignatureInfo
+from .dspy import (
+    CacheInfo,
+    CompileRequest,
+    CompileResponse,
+    OptimizationJobStatus,
+    ReasonerSummary,
+    SelfImproveRequest,
+    SelfImproveResponse,
+    SignatureInfo,
+)
 
 # Event models
 from .events import StreamEvent
@@ -35,9 +44,12 @@ __all__ = [
     "EventCategory",
     "Message",
     "MessageRole",
+    "OptimizationJobStatus",
     "ReasonerSummary",
     "RunRequest",
     "RunResponse",
+    "SelfImproveRequest",
+    "SelfImproveResponse",
     "SignatureInfo",
     "StreamEvent",
     "StreamEventType",

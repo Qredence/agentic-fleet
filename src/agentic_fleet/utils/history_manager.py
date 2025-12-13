@@ -390,6 +390,71 @@ class HistoryManager:
 
         return None
 
+    def update_execution(self, workflow_id: str, patch: dict[str, Any]) -> bool:
+        """Update a specific execution record in-place (best-effort).
+
+        For JSONL history, this rewrites the file to preserve ordering.
+        For JSON history, this rewrites the JSON list.
+
+        Returns:
+            True if an execution was updated, False if not found.
+        """
+        if not workflow_id:
+            return False
+
+        # Update in-memory index if present
+        if workflow_id in self._recent_executions_index:
+            existing = self._recent_executions_index[workflow_id]
+            existing.update(patch)
+            self._recent_executions_index[workflow_id] = existing
+            self._recent_executions_index.move_to_end(workflow_id)
+
+        jsonl_file = self.history_dir / "execution_history.jsonl"
+        if jsonl_file.exists():
+            try:
+                updated = False
+                tmp_path = self.history_dir / "execution_history.jsonl.tmp"
+                with open(jsonl_file) as src, open(tmp_path, "w") as dst:
+                    for line in src:
+                        if not line.strip():
+                            dst.write(line)
+                            continue
+                        try:
+                            obj = json.loads(line)
+                        except json.JSONDecodeError:
+                            dst.write(line)
+                            continue
+                        if obj.get("workflowId") == workflow_id:
+                            obj.update(patch)
+                            updated = True
+                            dst.write(json.dumps(obj, cls=FleetJSONEncoder) + "\n")
+                        else:
+                            dst.write(json.dumps(obj, cls=FleetJSONEncoder) + "\n")
+                tmp_path.replace(jsonl_file)
+                return updated
+            except Exception as e:
+                logger.warning("Failed to update JSONL history: %s", e)  # nosec B608
+
+        json_file = self.history_dir / "execution_history.json"
+        if json_file.exists():
+            try:
+                with open(json_file) as f:
+                    entries = json.load(f)
+                updated = False
+                for entry in entries if isinstance(entries, list) else []:
+                    if entry.get("workflowId") == workflow_id:
+                        entry.update(patch)
+                        updated = True
+                        break
+                if updated:
+                    with open(json_file, "w") as f:
+                        json.dump(entries, f, indent=2, cls=FleetJSONEncoder)
+                return updated
+            except Exception as e:
+                logger.warning("Failed to update JSON history: %s", e)  # nosec B608
+
+        return False
+
     def delete_execution(self, workflow_id: str) -> bool:
         """
         Delete a specific execution by ID.

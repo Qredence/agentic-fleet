@@ -127,10 +127,11 @@ def initialize_tracing(config: dict[str, Any] | None = None) -> bool:
     vs_code_port = os.getenv("VS_CODE_EXTENSION_PORT")
     vs_code_port_int = int(vs_code_port) if vs_code_port else None
 
-    # Suppress noisy OpenTelemetry export errors
-    logging.getLogger("opentelemetry.exporter.otlp.proto.grpc.exporter").setLevel(logging.WARNING)
-    logging.getLogger("opentelemetry.exporter.otlp.proto.http.exporter").setLevel(logging.WARNING)
+    # Suppress noisy OpenTelemetry export errors (including UNIMPLEMENTED for metrics on Jaeger)
+    logging.getLogger("opentelemetry.exporter.otlp.proto.grpc.exporter").setLevel(logging.CRITICAL)
+    logging.getLogger("opentelemetry.exporter.otlp.proto.http.exporter").setLevel(logging.CRITICAL)
     logging.getLogger("opentelemetry.sdk._logs._internal").setLevel(logging.WARNING)
+    logging.getLogger("opentelemetry.sdk.metrics").setLevel(logging.WARNING)
 
     # Check for HTTP OTLP endpoint (preferred for Aspire Dashboard compatibility)
     otlp_http_endpoint = os.getenv("OTLP_HTTP_ENDPOINT") or cfg_tracing.get("otlp_http_endpoint")

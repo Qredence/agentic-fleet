@@ -11,7 +11,7 @@ Each module provides endpoints for a specific domain:
 - agents: Agent listing and information
 """
 
-from . import agents, chat, conversations, dspy, history, nlu, sessions, workflows
+from . import agents, chat, conversations, dspy, history, nlu, optimize, sessions, workflows
 
 __all__ = [
     "agents",
@@ -20,6 +20,7 @@ __all__ = [
     "dspy",
     "history",
     "nlu",
+    "optimize",
     "sessions",
     "workflows",
 ]

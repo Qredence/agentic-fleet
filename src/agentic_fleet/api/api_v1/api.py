@@ -7,7 +7,16 @@ This module mirrors the FastAPI full-stack template pattern:
 
 from fastapi import APIRouter
 
-from agentic_fleet.api.routes import agents, conversations, dspy, history, nlu, sessions, workflows
+from agentic_fleet.api.routes import (
+    agents,
+    conversations,
+    dspy,
+    history,
+    nlu,
+    optimize,
+    sessions,
+    workflows,
+)
 
 api_router = APIRouter()
 
@@ -18,5 +27,6 @@ api_router.include_router(history.router, tags=["history"])
 api_router.include_router(sessions.router, tags=["sessions"])
 api_router.include_router(dspy.router, tags=["dspy"])
 api_router.include_router(nlu.router, tags=["nlu"])
+api_router.include_router(optimize.router, tags=["optimization"])
 
 __all__ = ["api_router"]

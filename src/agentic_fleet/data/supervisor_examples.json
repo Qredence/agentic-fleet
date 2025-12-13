@@ -1040,5 +1040,18 @@
       "BrowserTool (conditional) \u2014 visit top 3 Tavily-cited pages for direct quotes/figures",
       "No additional tools to be used to keep token and latency budgets low"
     ]
+  },
+  {
+    "task": "i mean microsoft/agent-framework",
+    "team": "Writer: Content creation",
+    "available_tools": "- TavilySearchTool/TavilyMCPTool (available to Researcher): Search the web for real-time information using Tavily. Provides accurate, up-to-date results with source citations. [Capabilities: web_search, real_time, citations]",
+    "context": "Self-improvement: Quality score 6.5/10",
+    "assigned_to": "ResearcherAgent,Copilot_ResearcherAgent,WriterAgent,VerifierAgent,ReviewerAgent,Planner",
+    "mode": "sequential",
+    "tool_requirements": [
+      "tavily_search (ResearcherAgent) \u2014 query: \"microsoft/agent-framework\"; collect top 3 sources and snippets",
+      "BrowserTool (Copilot_ResearcherAgent) \u2014 visit repository/doc pages identified, extract README intro, example usage, license and last commit if available",
+      "(No code execution tool needed unless examples require live testing \u2014 then escalate to Coder)"
+    ]
   }
 ]

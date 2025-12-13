@@ -42,6 +42,37 @@ class CompileResponse(BaseModel):
     cache_path: str | None = Field(default=None)
 
 
+class OptimizationJobStatus(BaseModel):
+    """Status for a background optimization job started via the API."""
+
+    status: Literal["started", "running", "completed", "cached", "failed"]
+    job_id: str | None = Field(default=None)
+    message: str
+    cache_path: str | None = Field(default=None)
+    started_at: str | None = Field(default=None)
+    completed_at: str | None = Field(default=None)
+    error: str | None = Field(default=None)
+    progress: float | None = Field(default=None, ge=0.0, le=1.0)
+    details: dict[str, object] | None = Field(default=None)
+
+
+class SelfImproveRequest(BaseModel):
+    """Request to trigger self-improvement from execution history."""
+
+    min_quality: float = Field(default=8.0, ge=0, le=10)
+    max_examples: int = Field(default=20, ge=1, le=200)
+    stats_only: bool = Field(default=False)
+
+
+class SelfImproveResponse(BaseModel):
+    """Response from self-improvement."""
+
+    status: Literal["completed", "no_op", "failed"]
+    message: str
+    new_examples_added: int = Field(default=0, ge=0)
+    stats: dict[str, object] | None = Field(default=None)
+
+
 class CacheInfo(BaseModel):
     """Information about DSPy compilation cache.
 

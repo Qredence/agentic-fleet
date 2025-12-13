@@ -57,13 +57,28 @@ class ConversationManager:
         *,
         author: str | None = None,
         agent_id: str | None = None,
+        workflow_id: str | None = None,
+        quality_score: float | None = None,
+        quality_flag: str | None = None,
+        quality_pending: bool = False,
+        quality_details: dict[str, object] | None = None,
     ) -> Message | None:
         """Add a message to a conversation."""
         conversation = self._store.get(str(conversation_id))
         if not conversation:
             return None
 
-        message = Message(role=role, content=content, author=author, agent_id=agent_id)
+        message = Message(
+            role=role,
+            content=content,
+            author=author,
+            agent_id=agent_id,
+            workflow_id=workflow_id,
+            quality_score=quality_score,
+            quality_flag=quality_flag,
+            quality_pending=quality_pending,
+            quality_details=quality_details,
+        )
         conversation.messages.append(message)
         conversation.updated_at = datetime.now()
 
@@ -76,6 +91,47 @@ class ConversationManager:
 
         self._store.upsert(conversation)
         return message
+
+    def update_message(
+        self,
+        conversation_id: str,
+        message_id: str,
+        *,
+        quality_score: float | None = None,
+        quality_flag: str | None = None,
+        quality_pending: bool | None = None,
+        quality_details: dict[str, object] | None = None,
+    ) -> Message | None:
+        """Update an existing message and persist the conversation."""
+        conversation = self._store.get(str(conversation_id))
+        if not conversation:
+            return None
+
+        updated: Message | None = None
+        for idx, msg in enumerate(conversation.messages):
+            if msg.id != message_id:
+                continue
+
+            patch: dict[str, object] = {}
+            if quality_score is not None:
+                patch["quality_score"] = float(quality_score)
+            if quality_flag is not None:
+                patch["quality_flag"] = str(quality_flag)
+            if quality_pending is not None:
+                patch["quality_pending"] = bool(quality_pending)
+            if quality_details is not None:
+                patch["quality_details"] = quality_details
+
+            updated = msg.model_copy(update=patch)
+            conversation.messages[idx] = updated
+            conversation.updated_at = datetime.now()
+            break
+
+        if updated is None:
+            return None
+
+        self._store.upsert(conversation)
+        return updated
 
 
 class WorkflowSessionManager:

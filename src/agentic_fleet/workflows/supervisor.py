@@ -324,8 +324,10 @@ class SupervisorWorkflow:
         self,
         task: str,
         *,
+        workflow_id: str | None = None,
         checkpoint_id: str | None = None,
         checkpoint_storage: Any | None = None,
+        schedule_quality_eval: bool = True,
     ) -> dict[str, Any]:
         """
         Run the supervisor workflow for a single textual task and return the final result and associated metadata.
@@ -340,7 +342,7 @@ class SupervisorWorkflow:
         """
         with optional_span("SupervisorWorkflow.run", attributes={"task": task, "mode": self.mode}):
             start_time = datetime.now()
-            workflow_id = str(uuid4())
+            workflow_id = workflow_id or str(uuid4())
             current_mode = self.mode
 
             # Notify middlewares
@@ -432,20 +434,35 @@ class SupervisorWorkflow:
                     {
                         "result": result_text,
                         "routing": {"mode": current_mode},
-                        "quality": {"score": 0.0},
+                        "quality": {"score": 0.0, "pending": True},
                         "end_time": datetime.now().isoformat(),
                     }
                 )
                 result_dict = {
                     "result": result_text,
                     "routing": {"mode": current_mode},
-                    "quality": {"score": 0.0},
+                    "quality": {"score": 0.0, "pending": True},
                     "judge_evaluations": [],
                     "metadata": {"mode": current_mode},
                 }
                 if hasattr(self.context, "middlewares"):
                     for mw in self.context.middlewares:
                         await mw.on_end(result_dict)
+
+                if schedule_quality_eval and result_text.strip():
+                    try:
+                        from agentic_fleet.services.background_evaluation import (
+                            schedule_quality_evaluation,
+                        )
+
+                        schedule_quality_evaluation(
+                            workflow_id=workflow_id,
+                            task=task,
+                            answer=result_text,
+                            history_manager=self.history_manager,
+                        )
+                    except Exception:
+                        pass
                 return result_dict
 
             task_msg = TaskMessage(task)
@@ -465,6 +482,19 @@ class SupervisorWorkflow:
 
             result_dict = self._final_message_to_dict(final_msg)
 
+            # If quality scoring is not available in the pipeline (common when judge is disabled),
+            # evaluate quality in the background and update history after the response is returned.
+            try:
+                score_value = float(result_dict.get("quality", {}).get("score", 0.0) or 0.0)
+            except Exception:
+                score_value = 0.0
+            if (
+                schedule_quality_eval
+                and score_value <= 0.0
+                and result_dict.get("result", "").strip()
+            ):
+                result_dict.setdefault("quality", {})["pending"] = True
+
             # Persist execution history for non-streaming runs
             self.current_execution.update(
                 {
@@ -482,6 +512,25 @@ class SupervisorWorkflow:
             if hasattr(self.context, "middlewares"):
                 for mw in self.context.middlewares:
                     await mw.on_end(result_dict)
+
+            if (
+                schedule_quality_eval
+                and score_value <= 0.0
+                and result_dict.get("result", "").strip()
+            ):
+                try:
+                    from agentic_fleet.services.background_evaluation import (
+                        schedule_quality_evaluation,
+                    )
+
+                    schedule_quality_evaluation(
+                        workflow_id=workflow_id,
+                        task=task,
+                        answer=str(result_dict.get("result") or ""),
+                        history_manager=self.history_manager,
+                    )
+                except Exception:
+                    pass
 
             return result_dict
 
@@ -765,10 +814,12 @@ class SupervisorWorkflow:
         self,
         task: str | None,
         *,
+        workflow_id: str | None = None,
         reasoning_effort: str | None = None,
         thread: AgentThread | None = None,
         checkpoint_id: str | None = None,
         checkpoint_storage: Any | None = None,
+        schedule_quality_eval: bool = True,
     ) -> AsyncIterator[Any]:
         """
         Execute the workflow for a single task and stream WorkflowEvent objects representing progress and results.
@@ -812,7 +863,7 @@ class SupervisorWorkflow:
 
             # Store thread in context for strategies to use
             self.context.conversation_thread = thread
-            workflow_id = str(uuid4())
+            workflow_id = workflow_id or str(uuid4())
             current_mode = self.mode
 
             # Apply reasoning effort override if provided
@@ -903,6 +954,7 @@ class SupervisorWorkflow:
 
             final_msg = None
             saw_output_event = False
+            should_schedule_quality_eval = False
             try:
                 if current_mode in ("group_chat", "handoff"):
                     msg = None if is_resume else ChatMessage(role=Role.USER, text=task_text)
@@ -1148,6 +1200,20 @@ class SupervisorWorkflow:
                     }
                 )
 
+                # Background evaluation for streaming runs (skip on resume).
+                try:
+                    score_value = float(final_dict.get("quality", {}).get("score", 0.0) or 0.0)
+                except Exception:
+                    score_value = 0.0
+                if (
+                    schedule_quality_eval
+                    and not is_resume
+                    and score_value <= 0.0
+                    and str(final_dict.get("result") or "").strip()
+                ):
+                    self.current_execution.setdefault("quality", {})["pending"] = True
+                    should_schedule_quality_eval = True
+
             self.current_execution["end_time"] = datetime.now().isoformat()
 
             # Log completion timing
@@ -1159,6 +1225,21 @@ class SupervisorWorkflow:
             if hasattr(self.context, "middlewares"):
                 for mw in self.context.middlewares:
                     await mw.on_end(self.current_execution)
+
+            if should_schedule_quality_eval and final_msg is not None:
+                try:
+                    from agentic_fleet.services.background_evaluation import (
+                        schedule_quality_evaluation,
+                    )
+
+                    schedule_quality_evaluation(
+                        workflow_id=workflow_id,
+                        task=task_text,
+                        answer=str(getattr(final_msg, "result", "") or ""),
+                        history_manager=self.history_manager,
+                    )
+                except Exception:
+                    pass
 
     async def _yield_fast_path_events(self, task: str) -> AsyncIterator[WorkflowEvent]:
         # Assertion for type checker - _should_fast_path ensures dspy_reasoner is not None
@@ -1202,10 +1283,25 @@ class SupervisorWorkflow:
         return [msg]
 
     def _final_message_to_dict(self, final_msg: FinalResultMessage) -> dict[str, Any]:
+        pending = False
+        try:
+            pending = float(final_msg.quality.score or 0.0) <= 0.0 and not bool(
+                final_msg.quality.used_fallback
+            )
+        except Exception:
+            pending = False
         return {
             "result": final_msg.result,
             "routing": final_msg.routing.to_dict(),
-            "quality": {"score": final_msg.quality.score, "missing": final_msg.quality.missing},
+            "quality": {
+                "score": final_msg.quality.score,
+                "missing": final_msg.quality.missing,
+                "improvements": final_msg.quality.improvements,
+                "judge_score": final_msg.quality.judge_score,
+                "final_evaluation": final_msg.quality.final_evaluation,
+                "used_fallback": final_msg.quality.used_fallback,
+                "pending": pending,
+            },
             "judge_evaluations": final_msg.judge_evaluations,
             "execution_summary": final_msg.execution_summary,
             "phase_timings": final_msg.phase_timings,
