@@ -5,6 +5,7 @@ This module provides tools for tracking and logging slow operations in AgenticFl
 
 from __future__ import annotations
 
+import inspect
 import logging
 import time
 from collections.abc import Callable
@@ -86,8 +87,6 @@ def profile_function(threshold_ms: float = 100.0) -> Callable[[F], F]:
                 return await func(*args, **kwargs)
 
         # Return appropriate wrapper based on function type
-        import inspect
-
         if inspect.iscoroutinefunction(func):
             return async_wrapper  # type: ignore[return-value]
         return sync_wrapper  # type: ignore[return-value]

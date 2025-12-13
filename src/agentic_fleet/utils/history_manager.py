@@ -7,6 +7,7 @@ from __future__ import annotations
 import asyncio
 import json
 import logging
+from collections import OrderedDict
 from pathlib import Path
 from typing import Any
 
@@ -55,10 +56,9 @@ class HistoryManager:
         self.history_dir.mkdir(parents=True, exist_ok=True)
 
         # In-memory index for fast O(1) lookups of recent executions
-        # Maps workflow_id -> execution dict
-        self._recent_executions_index: dict[str, dict[str, Any]] = {}
+        # Using OrderedDict for true O(1) LRU operations (move_to_end is O(1))
+        self._recent_executions_index: OrderedDict[str, dict[str, Any]] = OrderedDict()
         self._index_size_limit = index_size
-        self._index_insertion_order: list[str] = []  # Track insertion order for LRU
 
         # Warn about JSON format performance implications
         if history_format == "json":
@@ -71,6 +71,9 @@ class HistoryManager:
     def _update_index(self, execution: dict[str, Any]) -> None:
         """Update in-memory index with new execution for O(1) lookups.
 
+        Uses OrderedDict for true O(1) LRU operations. The move_to_end() method
+        is O(1) unlike list.remove() which would be O(n).
+
         Args:
             execution: Execution data dictionary
         """
@@ -78,20 +81,17 @@ class HistoryManager:
         if not workflow_id:
             return
 
-        # Update or add to index
-        if workflow_id not in self._recent_executions_index:
-            self._index_insertion_order.append(workflow_id)
-        else:
-            # Move to end for LRU tracking (remove and re-add)
-            self._index_insertion_order.remove(workflow_id)
-            self._index_insertion_order.append(workflow_id)
+        # Update or add to index (move to end for LRU)
+        if workflow_id in self._recent_executions_index:
+            # Move existing entry to end (most recently used)
+            self._recent_executions_index.move_to_end(workflow_id)
 
         self._recent_executions_index[workflow_id] = execution
 
-        # Trim index if it exceeds size limit (LRU eviction)
+        # Trim index if it exceeds size limit (evict oldest/least recently used)
         while len(self._recent_executions_index) > self._index_size_limit:
-            oldest_id = self._index_insertion_order.pop(0)
-            self._recent_executions_index.pop(oldest_id, None)
+            # Pop first item (oldest/least recently used) - O(1) operation
+            oldest_id, _ = self._recent_executions_index.popitem(last=False)
             logger.debug(f"Evicted execution {oldest_id} from index (LRU)")
 
     async def save_execution_async(self, execution: dict[str, Any]) -> str:
