@@ -432,3 +432,5 @@ evaluation:
     - estimated_cost_usd # Estimated model cost based on token_count
   max_tasks: 5 # 0 = no limit
   stop_on_failure: true # Abort early on first failed success metric
+  # Phase 4: Disable caching during evaluation for accurate measurements
+  disable_caching: false # Set to true to disable all caching during evaluation runs

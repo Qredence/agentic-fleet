@@ -6,6 +6,7 @@ caching, and introspection.
 
 from __future__ import annotations
 
+import asyncio
 import inspect
 import logging
 from typing import Any
@@ -201,6 +202,139 @@ class DSPyService:
             logger.error("Failed to list signatures: %s", exc)
 
         return signatures_info
+
+    async def compile_module_async(
+        self,
+        module_name: str,
+        use_cache: bool = True,
+        optimizer: str = "bootstrap",
+    ) -> dict[str, Any]:
+        """Compile a single DSPy module asynchronously.
+
+        Phase 4: Individual module compilation API for parallel execution.
+
+        Args:
+            module_name: Name of module to compile ('reasoner', 'quality', 'nlu')
+            use_cache: Whether to use cached compilation if available
+            optimizer: Optimizer to use ('bootstrap', 'gepa')
+
+        Returns:
+            Compilation result with cache path and status
+
+        Raises:
+            ValueError: If module_name is invalid
+        """
+        from agentic_fleet.utils.compiler import (
+            compile_answer_quality,
+            compile_nlu,
+            compile_reasoner,
+        )
+        from agentic_fleet.utils.progress import NullProgressCallback
+
+        valid_modules = {"reasoner", "quality", "nlu"}
+        if module_name not in valid_modules:
+            raise ValueError(
+                f"Invalid module_name '{module_name}'. "
+                f"Must be one of: {', '.join(valid_modules)}"
+            )
+
+        logger.info("Starting async compilation for module: %s", module_name)
+
+        def _compile_sync():
+            """Synchronous compilation wrapper for executor."""
+            callback = NullProgressCallback()
+
+            if module_name == "reasoner":
+                if not self.workflow.dspy_reasoner:
+                    raise ValueError("DSPy reasoner not available")
+
+                result = compile_reasoner(
+                    self.workflow.dspy_reasoner,
+                    use_cache=use_cache,
+                    optimizer=optimizer,
+                    progress_callback=callback,
+                )
+                return {
+                    "module": module_name,
+                    "cache_path": ".var/cache/dspy/compiled_reasoner.json",
+                    "status": "completed",
+                    "compiled": result is not None,
+                }
+
+            elif module_name == "quality":
+                result = compile_answer_quality(
+                    use_cache=use_cache,
+                    progress_callback=callback,
+                )
+                return {
+                    "module": module_name,
+                    "cache_path": ".var/logs/compiled_answer_quality.pkl",
+                    "status": "completed",
+                    "compiled": result is not None,
+                }
+
+            elif module_name == "nlu":
+                result = compile_nlu(
+                    use_cache=use_cache,
+                    progress_callback=callback,
+                )
+                return {
+                    "module": module_name,
+                    "cache_path": ".var/logs/compiled_nlu.pkl",
+                    "status": "completed",
+                    "compiled": result is not None,
+                }
+
+        # Run compilation in executor to avoid blocking
+        loop = asyncio.get_event_loop()
+        result = await loop.run_in_executor(None, _compile_sync)
+        logger.info("Completed async compilation for module: %s", module_name)
+        return result
+
+    async def compile_modules_parallel(
+        self,
+        modules: list[str],
+        use_cache: bool = True,
+        optimizer: str = "bootstrap",
+    ) -> list[dict[str, Any]]:
+        """Compile multiple DSPy modules in parallel.
+
+        Phase 4: Parallel module compilation for faster optimization.
+
+        Args:
+            modules: List of module names to compile
+            use_cache: Whether to use cached compilation if available
+            optimizer: Optimizer to use
+
+        Returns:
+            List of compilation results, one per module
+        """
+        logger.info("Starting parallel compilation for modules: %s", modules)
+
+        # Create compilation tasks
+        tasks = [
+            self.compile_module_async(module, use_cache, optimizer) for module in modules
+        ]
+
+        # Execute in parallel
+        results = await asyncio.gather(*tasks, return_exceptions=True)
+
+        # Convert exceptions to error results
+        final_results = []
+        for i, result in enumerate(results):
+            if isinstance(result, Exception):
+                final_results.append(
+                    {
+                        "module": modules[i],
+                        "status": "failed",
+                        "error": str(result),
+                    }
+                )
+            else:
+                final_results.append(result)
+
+        logger.info("Completed parallel compilation for %d modules", len(modules))
+        return final_results
 
 
 __all__ = ["DSPyService"]

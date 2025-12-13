@@ -152,6 +152,8 @@ def _save_cache_metadata(
 ):
     """Save cache metadata.
 
+    Phase 3: Enhanced with DSPy version tracking for compatibility checks.
+
     Args:
         cache_path: Path to cache file
         examples_path: Path to examples file used for compilation
@@ -163,8 +165,17 @@ def _save_cache_metadata(
         reasoner_source_hash: Hash of reasoner source files
     """
     metadata_path = cache_path + ".meta"
+
+    # Phase 3: Capture DSPy version for compatibility validation
+    dspy_version = "unknown"
+    try:
+        dspy_version = getattr(dspy, "__version__", "unknown")
+    except Exception:
+        pass
+
     metadata = {
         "version": version,
+        "dspy_version": dspy_version,  # Phase 3: Add DSPy version
         "examples_path": examples_path,
         "examples_mtime": os.path.getmtime(examples_path) if os.path.exists(examples_path) else 0,
         "optimizer": optimizer,

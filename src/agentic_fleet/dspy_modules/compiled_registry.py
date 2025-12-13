@@ -9,16 +9,51 @@ Phase 1 Goals:
 - Enforce that required compiled artifacts exist at startup
 - Fail-fast in FastAPI lifespan instead of warning/falling back
 - Support typed, independently-loadable DSPy decision modules
+
+Phase 3 Goals:
+- Add artifact metadata and compatibility checks
+- Validate schema version, DSPy version compatibility
+- Provide actionable error messages with resolution steps
 """
 
 from __future__ import annotations
 
+import json
 import logging
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
 logger = logging.getLogger(__name__)
+
+# Minimum required DSPy version
+MIN_DSPY_VERSION = "3.0.3"
+
+
+@dataclass
+class ArtifactMetadata:
+    """Metadata for compiled artifact validation.
+
+    Phase 3: Extended metadata for compatibility checking.
+    """
+
+    schema_version: int
+    """Schema version of the artifact format"""
+
+    dspy_version: str | None = None
+    """DSPy version used for compilation"""
+
+    created_at: str | None = None
+    """Timestamp when artifact was created"""
+
+    optimizer: str | None = None
+    """Optimizer used for compilation"""
+
+    build_id: str | None = None
+    """Optional build/commit identifier"""
+
+    serializer: str | None = None
+    """Serialization method used"""
 
 
 @dataclass
@@ -30,6 +65,7 @@ class CompiledArtifact:
     required: bool
     description: str
     module: Any | None = None
+    metadata: ArtifactMetadata | None = None
 
 
 @dataclass
@@ -79,10 +115,105 @@ def _resolve_artifact_path(relative_path: str | Path) -> Path:
     for base in bases:
         candidate = (base / path).resolve()
         if candidate.exists():
+            logger.debug("Resolved artifact path: %s -> %s", relative_path, candidate)
             return candidate
 
     # Return the path relative to repo root if not found
-    return (bases[0] / path).resolve()
+    resolved = (bases[0] / path).resolve()
+    logger.debug("Artifact path (not found): %s -> %s", relative_path, resolved)
+    return resolved
+
+
+def _load_artifact_metadata(path: Path) -> ArtifactMetadata | None:
+    """Load metadata from artifact file.
+
+    Phase 3: Extract metadata for compatibility validation.
+
+    Args:
+        path: Path to artifact file
+
+    Returns:
+        ArtifactMetadata if found, None otherwise
+    """
+    metadata_path = Path(str(path) + ".meta")
+    if not metadata_path.exists():
+        logger.debug("No metadata file found at %s", metadata_path)
+        return None
+
+    try:
+        with open(metadata_path) as f:
+            data = json.load(f)
+
+        # Extract relevant fields
+        metadata = ArtifactMetadata(
+            schema_version=data.get("version", 0),
+            dspy_version=data.get("dspy_version"),
+            created_at=data.get("created_at"),
+            optimizer=data.get("optimizer"),
+            build_id=data.get("build_id"),
+            serializer=data.get("serializer"),
+        )
+        logger.debug("Loaded metadata for %s: schema_version=%s", path, metadata.schema_version)
+        return metadata
+    except Exception as e:
+        logger.warning("Failed to load metadata from %s: %s", metadata_path, e)
+        return None
+
+
+def _validate_dspy_version_compatibility(metadata: ArtifactMetadata) -> tuple[bool, str]:
+    """Validate DSPy version compatibility.
+
+    Phase 3: Ensure compiled artifacts are compatible with current DSPy version.
+
+    Args:
+        metadata: Artifact metadata
+
+    Returns:
+        Tuple of (is_compatible, error_message)
+    """
+    if not metadata.dspy_version:
+        # No version info - allow but warn
+        return True, ""
+
+    try:
+        import dspy
+
+        current_version = getattr(dspy, "__version__", "unknown")
+
+        # Parse versions for comparison
+        def parse_version(v: str) -> tuple[int, ...]:
+            try:
+                return tuple(int(x) for x in v.split(".")[:3])
+            except (ValueError, AttributeError):
+                return (0, 0, 0)
+
+        current = parse_version(current_version)
+        required = parse_version(MIN_DSPY_VERSION)
+        artifact = parse_version(metadata.dspy_version)
+
+        # Check if current version meets minimum
+        if current < required:
+            return False, (
+                f"Current DSPy version {current_version} is below minimum required {MIN_DSPY_VERSION}. "
+                f"Upgrade with: pip install 'dspy-ai>={MIN_DSPY_VERSION}'"
+            )
+
+        # Warn if artifact compiled with different version
+        if artifact != current:
+            logger.warning(
+                "Artifact compiled with DSPy %s, running with %s. "
+                "Consider recompiling if you encounter issues.",
+                metadata.dspy_version,
+                current_version,
+            )
+
+        return True, ""
+
+    except ImportError:
+        return False, "DSPy is not installed"
+    except Exception as e:
+        logger.warning("Failed to validate DSPy version: %s", e)
+        return True, ""  # Allow to proceed on validation failure
 
 
 def load_required_compiled_modules(
@@ -156,6 +287,19 @@ def load_required_compiled_modules(
 
     registry = ArtifactRegistry()
     missing_required = []
+    incompatible_artifacts = []
+
+    # Phase 3: Log all resolved artifact paths at startup
+    logger.info("=== DSPy Artifact Registry Startup ===")
+    logger.info("require_compiled: %s", require_compiled)
+    for artifact in artifacts:
+        logger.info(
+            "  %s: %s (required=%s)",
+            artifact.name,
+            artifact.path,
+            artifact.required,
+        )
+    logger.info("=" * 40)
 
     for artifact in artifacts:
         logger.info(
@@ -181,12 +325,40 @@ def load_required_compiled_modules(
                 )
             continue
 
+        # Phase 3: Load and validate metadata
+        metadata = _load_artifact_metadata(artifact.path)
+        if metadata:
+            artifact.metadata = metadata
+
+            # Validate DSPy version compatibility
+            is_compatible, error_msg = _validate_dspy_version_compatibility(metadata)
+            if not is_compatible:
+                if artifact.required and require_compiled:
+                    incompatible_artifacts.append((artifact, error_msg))
+                    logger.error(
+                        "Incompatible artifact %s: %s",
+                        artifact.name,
+                        error_msg,
+                    )
+                    continue
+                else:
+                    logger.warning(
+                        "Artifact %s has compatibility issue (proceeding): %s",
+                        artifact.name,
+                        error_msg,
+                    )
+
         try:
             module = load_compiled_module(str(artifact.path))
             if module is not None:
                 artifact.module = module
                 setattr(registry, artifact.name, module)
-                logger.info("Successfully loaded compiled artifact: %s", artifact.name)
+                logger.info(
+                    "Successfully loaded compiled artifact: %s (schema_version=%s, dspy_version=%s)",
+                    artifact.name,
+                    metadata.schema_version if metadata else "unknown",
+                    metadata.dspy_version if metadata else "unknown",
+                )
             else:
                 if artifact.required:
                     missing_required.append(artifact)
@@ -217,20 +389,39 @@ def load_required_compiled_modules(
                     e,
                 )
 
-    # Fail-fast if required artifacts are missing
-    if missing_required:
-        missing_names = [a.name for a in missing_required]
-        missing_paths = [str(a.path) for a in missing_required]
-        raise RuntimeError(
-            f"Required compiled DSPy artifacts not found: {missing_names}\n"
-            f"Paths checked: {missing_paths}\n\n"
+    # Phase 3: Fail-fast if required artifacts are missing or incompatible
+    if missing_required or incompatible_artifacts:
+        error_parts = []
+
+        if missing_required:
+            missing_names = [a.name for a in missing_required]
+            missing_paths = [str(a.path) for a in missing_required]
+            error_parts.append(
+                f"Missing required artifacts: {missing_names}\n"
+                f"Expected paths: {missing_paths}"
+            )
+
+        if incompatible_artifacts:
+            incompat_details = [
+                f"  - {a.name}: {msg}" for a, msg in incompatible_artifacts
+            ]
+            error_parts.append(
+                "Incompatible artifacts:\n" + "\n".join(incompat_details)
+            )
+
+        error_message = "\n\n".join(error_parts)
+        error_message += (
+            "\n\n"
             "To fix this:\n"
             "1. Run 'agentic-fleet optimize' to compile DSPy modules\n"
-            "2. Or set 'dspy.require_compiled: false' in workflow_config.yaml "
+            "2. Ensure DSPy version >= 3.0.3: pip install 'dspy-ai>=3.0.3'\n"
+            "3. Or set 'dspy.require_compiled: false' in workflow_config.yaml "
             "to allow zero-shot fallback (not recommended for production)\n\n"
             "DSPy compilation is mandatory in production to ensure consistent, "
             "high-quality outputs. Zero-shot fallback degrades performance significantly."
         )
+
+        raise RuntimeError(error_message)
 
     return registry
 
@@ -253,6 +444,7 @@ def validate_artifact_registry(registry: ArtifactRegistry) -> dict[str, bool]:
 
 
 __all__ = [
+    "ArtifactMetadata",
     "ArtifactRegistry",
     "CompiledArtifact",
     "load_required_compiled_modules",
