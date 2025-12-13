@@ -5,6 +5,10 @@ dspy:
   temperature: 1.0
   max_tokens: 16000
   compiled_reasoner_path: .var/cache/dspy/compiled_reasoner.json
+  # Phase 1: Compiled artifact paths for decision modules
+  compiled_routing_path: .var/cache/dspy/compiled_routing.json
+  compiled_tool_planning_path: .var/cache/dspy/compiled_tool_planning.json
+  compiled_quality_path: .var/logs/compiled_answer_quality.pkl
   # When true, raise an error if no compiled DSPy artifact is found.
   # Recommended for production environments to prevent degraded performance
   # from zero-shot fallback. Run 'agentic-fleet optimize' before enabling.
