@@ -37,11 +37,21 @@ if TYPE_CHECKING:
         validate_agentic_fleet_env,
     )
     from agentic_fleet.utils.models import ExecutionMode, RoutingDecision
+    from agentic_fleet.utils.profiling import (
+        PerformanceTracker,
+        get_performance_stats,
+        log_performance_summary,
+        profile_function,
+        reset_performance_stats,
+        timed_operation,
+        track_operation,
+    )
     from agentic_fleet.utils.tool_registry import ToolMetadata, ToolRegistry
     from agentic_fleet.utils.tracing import get_meter, get_tracer, initialize_tracing
 
 __all__ = [
     "ExecutionMode",
+    "PerformanceTracker",
     "RoutingDecision",
     "TTLCache",
     "ToolMetadata",
@@ -51,9 +61,15 @@ __all__ = [
     "get_agent_model",
     "get_config_path",
     "get_meter",
+    "get_performance_stats",
     "get_tracer",
     "initialize_tracing",
     "load_config",
+    "log_performance_summary",
+    "profile_function",
+    "reset_performance_stats",
+    "timed_operation",
+    "track_operation",
     "validate_agentic_fleet_env",
 ]
 
@@ -115,5 +131,34 @@ def __getattr__(name: str) -> object:
         if name == "get_tracer":
             return get_tracer
         return get_meter
+
+    if name in (
+        "timed_operation",
+        "profile_function",
+        "PerformanceTracker",
+        "track_operation",
+        "get_performance_stats",
+        "log_performance_summary",
+        "reset_performance_stats",
+    ):
+        from agentic_fleet.utils.profiling import (
+            PerformanceTracker,
+            get_performance_stats,
+            log_performance_summary,
+            profile_function,
+            reset_performance_stats,
+            timed_operation,
+            track_operation,
+        )
+
+        return {
+            "timed_operation": timed_operation,
+            "profile_function": profile_function,
+            "PerformanceTracker": PerformanceTracker,
+            "track_operation": track_operation,
+            "get_performance_stats": get_performance_stats,
+            "log_performance_summary": log_performance_summary,
+            "reset_performance_stats": reset_performance_stats,
+        }[name]
 
     raise AttributeError(f"module {__name__!r} has no attribute {name!r}")

@@ -19,6 +19,7 @@ from __future__ import annotations
 
 import logging
 import os
+from functools import lru_cache
 from pathlib import Path
 from typing import Any, Literal
 
@@ -699,16 +700,22 @@ def get_config_path(filename: str = "workflow_config.yaml") -> Path:
     return _package_root() / "config" / filename
 
 
-def load_config(config_path: str | None = None, validate: bool = True) -> dict[str, Any]:
-    """Load and validate configuration from YAML file."""
+def _load_config_cached(
+    config_file_str: str, mtime: float, validate: bool
+) -> dict[str, Any]:
+    """Internal cached config loader.
+
+    Args:
+        config_file_str: Path to config file as string
+        mtime: Modification time of config file (for cache invalidation)
+        validate: Whether to validate the config
+
+    Returns:
+        Loaded and optionally validated configuration dictionary
+    """
     from ..workflows.exceptions import ConfigurationError
 
-    if config_path is None:
-        cwd_default = Path("config/workflow_config.yaml")
-        pkg_default = _package_root() / "config" / "workflow_config.yaml"
-        config_file = cwd_default if cwd_default.exists() else pkg_default
-    else:
-        config_file = Path(config_path)
+    config_file = Path(config_file_str)
 
     if not config_file.exists():
         logger.warning(f"Config file not found at {config_file}, using built-in defaults")
@@ -731,14 +738,14 @@ def load_config(config_path: str | None = None, validate: bool = True) -> dict[s
         if validate:
             try:
                 validated = validate_config(config_dict)
-                logger.info(f"Loaded and validated configuration from {config_file}")
+                logger.debug(f"Loaded and validated configuration from {config_file}")
                 return validated.to_dict()
             except Exception as e:
                 error_msg = f"Configuration validation failed for {config_file}: {e}"
                 logger.error(error_msg)
                 raise ConfigurationError(error_msg, config_key=str(config_file)) from e
 
-        logger.info(f"Loaded configuration from {config_file} (validation skipped)")
+        logger.debug(f"Loaded configuration from {config_file} (validation skipped)")
         return config_dict
     except ConfigurationError:
         raise
@@ -746,6 +753,42 @@ def load_config(config_path: str | None = None, validate: bool = True) -> dict[s
         error_msg = f"Failed to load config from {config_file}: {e}"
         logger.error(error_msg)
         raise ConfigurationError(error_msg, config_key=str(config_file)) from e
+
+
+# Cache config loads based on file path, modification time, and validation flag
+# This avoids repeated YAML parsing for the same config file
+# Cache size of 4 supports: main config + 3 test/dev configs
+_load_config_cached_lru = lru_cache(maxsize=4)(_load_config_cached)
+
+
+def load_config(config_path: str | None = None, validate: bool = True) -> dict[str, Any]:
+    """Load and validate configuration from YAML file with caching.
+
+    Configuration is cached based on file path and modification time to avoid
+    repeated YAML parsing. Cache is automatically invalidated when the file changes.
+
+    Args:
+        config_path: Optional path to config file. If None, uses default locations.
+        validate: Whether to validate the configuration with Pydantic schemas.
+
+    Returns:
+        Dictionary containing the loaded (and optionally validated) configuration.
+    """
+    if config_path is None:
+        cwd_default = Path("config/workflow_config.yaml")
+        pkg_default = _package_root() / "config" / "workflow_config.yaml"
+        config_file = cwd_default if cwd_default.exists() else pkg_default
+    else:
+        config_file = Path(config_path)
+
+    # Get modification time for cache invalidation
+    # Use 0 if file doesn't exist (will return defaults)
+    try:
+        mtime = config_file.stat().st_mtime if config_file.exists() else 0.0
+    except (OSError, PermissionError):
+        mtime = 0.0
+
+    return _load_config_cached_lru(str(config_file.resolve()), mtime, validate)
 
 
 def get_default_config() -> dict[str, Any]:
