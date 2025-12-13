@@ -1,64 +1,80 @@
-import { render, screen } from "@testing-library/react";
-import { describe, it, expect, vi } from "vitest";
+import { render, screen, waitFor } from "@testing-library/react";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import App from "@/App";
 
-// Mock child components to isolate App testing
-// Actual paths based on file list: components/Sidebar.tsx, components/InputBar.tsx
-// It seems ChatContainer and ConversationsSidebar might have been placeholders or from a previous structure.
-// In App.tsx:
-// import { Sidebar } from './components/Sidebar';
-// import { MessageBubble } from './components/MessageBubble';
-// import { InputBar } from './components/InputBar';
+type MockChatStoreState = {
+  messages: unknown[];
+  conversations: unknown[];
+  conversationId: string | null;
+  isLoading: boolean;
+  isInitializing: boolean;
+  isConversationsLoading: boolean;
+  currentReasoning: string;
+  isReasoningStreaming: boolean;
+  currentWorkflowPhase: string;
+  currentAgent: string | null;
+  completedPhases: string[];
+  sendMessage: ReturnType<typeof vi.fn>;
+  createConversation: ReturnType<typeof vi.fn>;
+  cancelStreaming: ReturnType<typeof vi.fn>;
+  selectConversation: ReturnType<typeof vi.fn>;
+  loadConversations: ReturnType<typeof vi.fn>;
+};
 
-vi.mock("@/components/Sidebar", () => ({
-  Sidebar: () => <div data-testid="sidebar">Sidebar</div>,
+let mockStoreState: MockChatStoreState | null = null;
+
+vi.mock("@/stores", () => ({
+  useChatStore: (
+    selector?: (state: MockChatStoreState) => unknown,
+    _equalityFn?: unknown,
+  ) => {
+    if (!mockStoreState) {
+      throw new Error("Test misconfiguration: mockStoreState not initialized");
+    }
+    return typeof selector === "function"
+      ? selector(mockStoreState)
+      : mockStoreState;
+  },
 }));
 
-vi.mock("@/components/ChatInput", () => ({
-  ChatInput: () => <div data-testid="input-bar">ChatInput</div>,
-}));
-
-vi.mock("@/components/MessageBubble", () => ({
-  MessageBubble: () => <div data-testid="message-bubble">MessageBubble</div>,
-}));
-
-// Mock hooks
-vi.mock("@/hooks/useChat", () => ({
-  useChat: () => ({
+beforeEach(() => {
+  mockStoreState = {
     messages: [],
-    sendMessage: vi.fn(),
-    createConversation: vi.fn(),
+    conversations: [],
+    conversationId: null,
     isLoading: false,
     isInitializing: false,
+    isConversationsLoading: false,
     currentReasoning: "",
     isReasoningStreaming: false,
     currentWorkflowPhase: "",
     currentAgent: null,
+    completedPhases: [],
+    sendMessage: vi.fn(),
+    createConversation: vi.fn(),
     cancelStreaming: vi.fn(),
-    conversationId: null,
-    conversations: [],
-    loadConversations: vi.fn(),
     selectConversation: vi.fn(),
-    isConversationsLoading: false,
-  }),
-}));
+    loadConversations: vi.fn(),
+  };
+});
 
 describe("App", () => {
   it("renders sidebar and input area", () => {
     render(<App />);
 
-    expect(screen.getByTestId("sidebar")).toBeInTheDocument();
-    expect(screen.getByTestId("input-bar")).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: /start new chat/i }),
+    ).toBeInTheDocument();
+    expect(screen.getByPlaceholderText("Ask anything...")).toBeInTheDocument();
   });
 
-  it("has correct layout classes", () => {
+  it("calls loadConversations on mount", async () => {
     const { container } = render(<App />);
-    // Check for flex layout classes based on Layout component
-    // Layout wrapper has: flex h-screen ...
-    expect(container.firstChild).toHaveClass(
-      "flex",
-      "h-screen",
-      "overflow-hidden",
-    );
+
+    const loadConversations = mockStoreState?.loadConversations;
+    await waitFor(() => expect(loadConversations).toHaveBeenCalledTimes(1));
+
+    // Also assert the UI mounted (sanity check).
+    expect(container.querySelector("main.flex.h-screen")).toBeTruthy();
   });
 });

@@ -11,18 +11,18 @@
 ```
 Traceback (most recent call last):
   File "console.py", line 24, in <module>
-    from src.agentic_fleet.dspy_modules.reasoner import DSPyReasoner
+    from agentic_fleet.dspy_modules.reasoner import DSPyReasoner
 ModuleNotFoundError: No module named 'src'
 ```
 
 **Solution**:
 
 ```bash
-# Reinstall the package in editable mode using uv
-uv pip install -e .
+# Reinstall dependencies using the repo Makefile (uv under the hood)
+make install
 ```
 
-**Explanation**: The package uses `package_dir={"": "src"}` which makes packages inside `src/` available at the top level. After structural changes, reinstallation is required.
+**Explanation**: AgenticFleet uses a `src/` layout; ensure dependencies are synced so the package is importable as `agentic_fleet`.
 
 ---
 
@@ -132,13 +132,13 @@ HistoryError: Failed to save execution history
 
 **Solutions**:
 
-1. Check permissions on `logs/` directory
+1. Check permissions on `.var/logs/` directory (or run `make init-var`)
 2. Ensure disk space available
 3. Check file is not locked by another process
 
 ```bash
 # Fix permissions
-chmod 755 logs/
+chmod 755 .var/logs/
 ```
 
 ---
@@ -156,7 +156,7 @@ workflow = await create_supervisor_workflow(compile_dspy=False)
 **To clear cache**:
 
 ```python
-from src.agentic_fleet.utils.compiler import clear_cache
+from agentic_fleet.utils.compiler import clear_cache
 clear_cache()
 ```
 
@@ -241,10 +241,9 @@ python3 -c "import yaml; yaml.safe_load(open('config/workflow_config.yaml'))"
 2. Validate configuration:
 
 ```python
-from src.agentic_fleet.utils.config_schema import validate_config
-from src.agentic_fleet.utils.config_loader import load_config
+from agentic_fleet.core.config import load_workflow_config, validate_config
 
-config = load_config()
+config = load_workflow_config()
 validated = validate_config(config)
 ```
 
@@ -270,7 +269,7 @@ dspy:
 Verify:
 
 ```bash
-uv run python -c "from src.agentic_fleet.utils.config_schema import validate_config; from src.agentic_fleet.utils.config_loader import load_config; validate_config(load_config())"
+uv run python -c "from agentic_fleet.core.config import load_workflow_config, validate_config; validate_config(load_workflow_config())"
 ```
 
 ---
@@ -284,7 +283,7 @@ uv run python -c "from src.agentic_fleet.utils.config_schema import validate_con
 **Incorrect**:
 
 ```python
-from src.agentic_fleet.workflows import SupervisorWorkflow  # ❌
+from agentic_fleet.workflows import SupervisorWorkflow  # ❌
 ```
 
 **Correct**:
@@ -293,11 +292,7 @@ from src.agentic_fleet.workflows import SupervisorWorkflow  # ❌
 from agentic_fleet.workflows.supervisor import SupervisorWorkflow  # ✅
 ```
 
-**For console.py and examples** (not installed as package):
-
-```python
-from src.agentic_fleet.workflows.supervisor import SupervisorWorkflow  # ✅
-```
+If you see `from src...` imports in older snippets, replace them with `from agentic_fleet...`.
 
 ---
 
@@ -306,7 +301,7 @@ from src.agentic_fleet.workflows.supervisor import SupervisorWorkflow  # ✅
 ### Enable Debug Logging
 
 ```python
-from src.agentic_fleet.utils.logger import setup_logger
+from agentic_fleet.utils.logger import setup_logger
 
 setup_logger("dspy_agent_framework", "DEBUG")
 ```
@@ -318,13 +313,13 @@ setup_logger("dspy_agent_framework", "DEBUG")
 print(workflow.tool_registry.get_available_tools())
 
 # View execution history
-from src.agentic_fleet.utils.history_manager import HistoryManager
+from agentic_fleet.utils.history_manager import HistoryManager
 manager = HistoryManager()
 stats = manager.get_history_stats()
 print(stats)
 
 # View cache info
-from src.agentic_fleet.utils.compiler import get_cache_info
+from agentic_fleet.utils.compiler import get_cache_info
 info = get_cache_info()
 print(info)
 ```
@@ -333,7 +328,7 @@ print(info)
 
 ```bash
 # Check JSON is valid
-uv run python -c "import json; data = json.load(open('data/supervisor_examples.json')); print(f'{len(data)} examples loaded')"
+uv run python -c "import json; data = json.load(open('src/agentic_fleet/data/supervisor_examples.json')); print(f'{len(data)} examples loaded')"
 ```
 
 ### Test Individual Components
@@ -354,8 +349,8 @@ uv run python -c "from agentic_fleet.utils.tool_registry import ToolRegistry; r 
    - [Configuration](configuration.md) - Config options
 
 2. **View Logs**:
-   - `logs/workflow.log` - Detailed execution logs
-   - `logs/execution_history.jsonl` - Structured history
+   - `.var/logs/workflow.log` - Detailed execution logs
+   - `.var/logs/execution_history.jsonl` - Structured history
 
 3. **Run with Verbose**:
 

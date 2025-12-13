@@ -89,70 +89,95 @@ KEY_VAULT_ID="/subscriptions/${SUBSCRIPTION_ID}/resourceGroups/${RESOURCE_GROUP}
 # Step 5: Assign RBAC roles
 echo "📋 Step 5: Assigning RBAC roles..."
 
+# Track role assignment failures
+ROLE_ASSIGNMENT_FAILURES=0
+
+# Function to safely assign a role (idempotent with proper error handling)
+assign_role() {
+  local role_name="$1"
+  local scope="$2"
+  local assignee="$3"
+  local display_name="$4"
+
+  echo "  Assigning ${display_name}..."
+
+  # Check if role assignment already exists
+  existing=$(az role assignment list \
+    --assignee "${assignee}" \
+    --role "${role_name}" \
+    --scope "${scope}" \
+    --query "[0].id" \
+    -o tsv 2>/dev/null)
+
+  if [ -n "$existing" ]; then
+    echo "    ✓ Role already assigned"
+    return 0
+  fi
+
+  # Create the role assignment
+  local error_output
+  error_output=$(az role assignment create \
+    --assignee-object-id "${assignee}" \
+    --assignee-principal-type ServicePrincipal \
+    --role "${role_name}" \
+    --scope "${scope}" \
+    -o json 2>&1)
+
+  local exit_code=$?
+
+  if [ $exit_code -ne 0 ]; then
+    echo "    ❌ Failed to assign role '${role_name}'"
+    echo "    Error: ${error_output}"
+
+    # Check for common error patterns and provide actionable guidance
+    if echo "$error_output" | grep -qi "does not exist in the directory"; then
+      echo "    → The principal ID '${assignee}' was not found. Verify the managed identity exists."
+    elif echo "$error_output" | grep -qi "authorization"; then
+      echo "    → Insufficient permissions. Ensure you have Owner or User Access Administrator role on the scope."
+    elif echo "$error_output" | grep -qi "InvalidPrincipalId"; then
+      echo "    → Invalid principal ID format. Check PROJECT_PRINCIPAL_ID value."
+    fi
+
+    ROLE_ASSIGNMENT_FAILURES=$((ROLE_ASSIGNMENT_FAILURES + 1))
+    return 1
+  fi
+
+  echo "    ✓ Role assigned successfully"
+  return 0
+}
+
 # Cosmos DB Operator (account level)
-echo "  Assigning Cosmos DB Operator..."
-az role assignment create \
-  --assignee-object-id "${PROJECT_PRINCIPAL_ID}" \
-  --assignee-principal-type ServicePrincipal \
-  --role "Cosmos DB Operator" \
-  --scope "${COSMOS_DB_RESOURCE_ID}" \
-  2>/dev/null || echo "  (role may already exist)"
+assign_role "Cosmos DB Operator" "${COSMOS_DB_RESOURCE_ID}" "${PROJECT_PRINCIPAL_ID}" "Cosmos DB Operator"
 
 # Storage Account Contributor
-echo "  Assigning Storage Account Contributor..."
-az role assignment create \
-  --assignee-object-id "${PROJECT_PRINCIPAL_ID}" \
-  --assignee-principal-type ServicePrincipal \
-  --role "Storage Account Contributor" \
-  --scope "${STORAGE_ACCOUNT_RESOURCE_ID}" \
-  2>/dev/null || echo "  (role may already exist)"
+assign_role "Storage Account Contributor" "${STORAGE_ACCOUNT_RESOURCE_ID}" "${PROJECT_PRINCIPAL_ID}" "Storage Account Contributor"
 
 # Storage Blob Data Contributor
-echo "  Assigning Storage Blob Data Contributor..."
-az role assignment create \
-  --assignee-object-id "${PROJECT_PRINCIPAL_ID}" \
-  --assignee-principal-type ServicePrincipal \
-  --role "Storage Blob Data Contributor" \
-  --scope "${STORAGE_ACCOUNT_RESOURCE_ID}" \
-  2>/dev/null || echo "  (role may already exist)"
+assign_role "Storage Blob Data Contributor" "${STORAGE_ACCOUNT_RESOURCE_ID}" "${PROJECT_PRINCIPAL_ID}" "Storage Blob Data Contributor"
 
 # Storage Blob Data Owner
-echo "  Assigning Storage Blob Data Owner..."
-az role assignment create \
-  --assignee-object-id "${PROJECT_PRINCIPAL_ID}" \
-  --assignee-principal-type ServicePrincipal \
-  --role "Storage Blob Data Owner" \
-  --scope "${STORAGE_ACCOUNT_RESOURCE_ID}" \
-  2>/dev/null || echo "  (role may already exist)"
+assign_role "Storage Blob Data Owner" "${STORAGE_ACCOUNT_RESOURCE_ID}" "${PROJECT_PRINCIPAL_ID}" "Storage Blob Data Owner"
 
 # Search Index Data Contributor
-echo "  Assigning Search Index Data Contributor..."
-az role assignment create \
-  --assignee-object-id "${PROJECT_PRINCIPAL_ID}" \
-  --assignee-principal-type ServicePrincipal \
-  --role "Search Index Data Contributor" \
-  --scope "${AI_SEARCH_RESOURCE_ID}" \
-  2>/dev/null || echo "  (role may already exist)"
+assign_role "Search Index Data Contributor" "${AI_SEARCH_RESOURCE_ID}" "${PROJECT_PRINCIPAL_ID}" "Search Index Data Contributor"
 
 # Search Service Contributor
-echo "  Assigning Search Service Contributor..."
-az role assignment create \
-  --assignee-object-id "${PROJECT_PRINCIPAL_ID}" \
-  --assignee-principal-type ServicePrincipal \
-  --role "Search Service Contributor" \
-  --scope "${AI_SEARCH_RESOURCE_ID}" \
-  2>/dev/null || echo "  (role may already exist)"
+assign_role "Search Service Contributor" "${AI_SEARCH_RESOURCE_ID}" "${PROJECT_PRINCIPAL_ID}" "Search Service Contributor"
 
 # Key Vault Secrets Officer
-echo "  Assigning Key Vault Secrets Officer..."
-az role assignment create \
-  --assignee-object-id "${PROJECT_PRINCIPAL_ID}" \
-  --assignee-principal-type ServicePrincipal \
-  --role "Key Vault Secrets Officer" \
-  --scope "${KEY_VAULT_ID}" \
-  2>/dev/null || echo "  (role may already exist)"
+assign_role "Key Vault Secrets Officer" "${KEY_VAULT_ID}" "${PROJECT_PRINCIPAL_ID}" "Key Vault Secrets Officer"
 
-echo "  ✓ RBAC roles assigned"
+# Check for failures
+if [ $ROLE_ASSIGNMENT_FAILURES -gt 0 ]; then
+  echo "  ⚠️  ${ROLE_ASSIGNMENT_FAILURES} role assignment(s) failed"
+  echo "  Review the errors above and ensure:"
+  echo "    1. The principal ID ${PROJECT_PRINCIPAL_ID} is valid"
+  echo "    2. You have sufficient permissions (Owner or User Access Administrator)"
+  echo "    3. The target resources exist and are accessible"
+  exit 1
+fi
+
+echo "  ✓ All RBAC roles assigned successfully"
 
 # Step 6: Create Cosmos DB database and containers (if not exists)
 echo "📋 Step 6: Setting up Cosmos DB containers for agent storage..."

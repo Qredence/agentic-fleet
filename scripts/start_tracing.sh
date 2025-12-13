@@ -27,21 +27,27 @@ echo ""
 
 # Start the tracing collector
 echo "🔧 Starting OpenTelemetry Collector with Jaeger..."
-${DOCKER_COMPOSE} -f docker-compose.tracing.yml up -d
+${DOCKER_COMPOSE} -f docker/docker-compose.tracing.yml up -d
 
 echo "✅ Collector started!"
 echo ""
 
 # Wait for collector to be ready
 echo "⏳ Waiting for collector to be ready..."
-for i in {1..30}; do
-    if curl -s http://localhost:16686/api/services > /dev/null 2>&1; then
-        echo "✅ Collector is ready!"
-        break
-    fi
-    echo -n "."
-    sleep 1
-done
+# Wait for collector to be ready
+echo "⏳ Waiting for collector to be ready..."
+if ! command -v curl &> /dev/null; then
+    echo "⚠️  curl not found, skipping readiness check (verify manually at http://localhost:16686)"
+else
+    for i in {1..30}; do
+        if curl -s http://localhost:16686/api/services > /dev/null 2>&1; then
+            echo "✅ Collector is ready!"
+            break
+        fi
+        echo -n "."
+        sleep 1
+    done
+fi
 
 echo ""
 echo "==========================================="
@@ -55,5 +61,5 @@ echo "   2. Run a workflow: agentic-fleet run -m 'Your task here'"
 echo "   3. Open http://localhost:16686 and select 'agentic-fleet' service"
 echo ""
 echo "🛑 To stop the collector later, run:"
-echo "   ${DOCKER_COMPOSE} -f docker-compose.tracing.yml down"
+echo "   ${DOCKER_COMPOSE} -f docker/docker-compose.tracing.yml down"
 echo ""

@@ -5,7 +5,7 @@
 
 [project]
 name = "agentic-fleet"
-version = "0.6.9"
+version = "0.6.95"
 description = "Multi-agent orchestration system built with Microsoft Agent Framework's Magentic Fleet pattern"
 authors = [{ name = "Qredence", email = "contact@qredence.ai" }]
 readme = "README.md"
@@ -78,14 +78,15 @@ dependencies = [
     "tenacity>=8.2.3",
     "prometheus-fastapi-instrumentator>=6.1.0",
     "python-json-logger>=2.0.7",
-    "agent-framework-declarative>=1.0.0b251204",
+    "agent-framework-declarative>=1.0.0b251211",
     "agent-framework-azure-ai-search>=0.0.0a1",
     "agent-framework-azurefunctions>=0.0.0a1",
-    "agent-framework>=1.0.0b251204",
+    "agent-framework>=1.0.0b251211",
     "azure-search-documents>=11.6.0",
-    "azure-monitor-opentelemetry>=1.8.2",
-    "azure-monitor-opentelemetry-exporter>=1.0.0b45",
+    "azure-monitor-opentelemetry>=1.8.3",
+    "azure-monitor-opentelemetry-exporter>=1.0.0b46",
     "opentelemetry-exporter-otlp-proto-http>=1.38.0",
+    "azure-ai-projects>=2.0.0b2",
 ]
 requires-python = ">=3.12,<4"
 

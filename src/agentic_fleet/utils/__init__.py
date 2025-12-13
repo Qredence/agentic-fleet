@@ -4,11 +4,16 @@ This package provides utility functions and classes used throughout agentic_flee
 including configuration management, DSPy compilation, caching, logging, tracing,
 and tool registry functionality.
 
-Public API:
+Submodules (organized by domain):
+    - utils.cfg: Configuration, schemas, models, types, constants (organized re-exports)
+    - utils.infra: Telemetry, tracing, resilience, logging (organized re-exports)
+    - utils.storage: Cosmos DB, persistence, history, job stores (organized re-exports)
+
+Public API (backward-compatible):
     - ToolRegistry: Central registry for managing tool metadata
     - ToolMetadata: Metadata class for registered tools
     - TTLCache: In-memory cache with TTL support
-    - compile_supervisor: Function to compile DSPy supervisor modules
+    - compile_reasoner: Function to compile DSPy supervisor modules
     - load_config: Function to load workflow configuration
     - ExecutionMode: Enumeration of execution modes
     - RoutingDecision: Typed routing decision dataclass

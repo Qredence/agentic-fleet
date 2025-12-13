@@ -130,7 +130,11 @@ def dedupe_examples(records: Sequence[dict[str, Any]]) -> list[dict[str, Any]]:
         fingerprint = "|".join(
             [
                 record.get("task", "").strip().lower(),
-                record.get("assigned_to", ""),
+                str(
+                    sorted(record.get("assigned_to", []))
+                    if isinstance(record.get("assigned_to"), list)
+                    else record.get("assigned_to", "")
+                ),
                 record.get("mode", record.get("execution_mode", "")),
             ]
         )

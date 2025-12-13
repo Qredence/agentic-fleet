@@ -20,16 +20,20 @@ from __future__ import annotations
 
 import asyncio
 import hashlib
+import json
 import time
+from functools import lru_cache
+from pathlib import Path
 from typing import Any
 
 import dspy
 
+from ..utils.config import load_config
 from ..utils.logger import setup_logger
 from ..utils.telemetry import optional_span
 from ..workflows.exceptions import ToolError
-from ..workflows.helpers import is_simple_task, is_time_sensitive_task
 from .nlu import DSPyNLU, get_nlu_module
+from .reasoner_utils import get_reasoner_source_hash, is_simple_task, is_time_sensitive_task
 from .signatures import (
     EnhancedTaskRouting,
     GroupChatSpeakerSelection,
@@ -52,6 +56,45 @@ from .signatures import (
 logger = setup_logger(__name__)
 
 
+def _search_bases() -> list[Path]:
+    resolved = Path(__file__).resolve()
+    parents = resolved.parents
+    repo_root = parents[3] if len(parents) > 3 else parents[-1]
+    package_root = parents[1] if len(parents) > 1 else parents[-1]
+    module_dir = resolved.parent
+    return [repo_root, package_root, module_dir, Path.cwd()]
+
+
+@lru_cache(maxsize=1)
+def _resolve_compiled_reasoner_path() -> Path:
+    config: dict[str, Any] = {}
+    try:
+        config = load_config(validate=False)
+    except Exception as exc:  # pragma: no cover - best-effort fallback
+        logger.debug("Failed to load workflow config for compiled reasoner path: %s", exc)
+
+    dspy_config = config.get("dspy", {})
+    relative_path = Path(
+        dspy_config.get("compiled_reasoner_path", ".var/cache/dspy/compiled_reasoner.json")
+    ).expanduser()
+    if relative_path.is_absolute():
+        return relative_path
+
+    bases = _search_bases()
+    for base in bases:
+        candidate = (base / relative_path).resolve()
+        if candidate.exists():
+            return candidate
+
+    return (bases[0] / relative_path).resolve()
+
+
+def get_configured_compiled_reasoner_path() -> Path:
+    """Return the configured path to the compiled DSPy reasoner artifact."""
+
+    return _resolve_compiled_reasoner_path()
+
+
 # Module-level cache for DSPy module instances (stateless, can be shared)
 _MODULE_CACHE: dict[str, dspy.Module] = {}
 
@@ -72,6 +115,7 @@ class DSPyReasoner(dspy.Module):
         use_typed_signatures: bool = True,
         enable_routing_cache: bool = True,
         cache_ttl_seconds: int = 300,
+        cache_max_entries: int = 1024,
     ) -> None:
         """
         Initialize the DSPyReasoner with configuration for signature mode and routing cache.
@@ -81,12 +125,14 @@ class DSPyReasoner(dspy.Module):
             use_typed_signatures (bool): Use Pydantic-typed signatures for structured/typed module outputs.
             enable_routing_cache (bool): Enable in-memory caching of routing decisions to reduce repeated model calls.
             cache_ttl_seconds (int): Time-to-live for cached routing entries in seconds.
+            cache_max_entries (int): Maximum number of cached routing entries to retain in memory.
         """
         super().__init__()
         self.use_enhanced_signatures = use_enhanced_signatures
         self.use_typed_signatures = use_typed_signatures
         self.enable_routing_cache = enable_routing_cache
         self.cache_ttl_seconds = cache_ttl_seconds
+        self.cache_max_entries = max(1, int(cache_max_entries))
 
         self._execution_history: list[dict[str, Any]] = []
         self._modules_initialized = False
@@ -131,6 +177,8 @@ class DSPyReasoner(dspy.Module):
             self.cache_ttl_seconds = 300
         if not hasattr(self, "_routing_cache"):
             self._routing_cache = {}
+        if not hasattr(self, "cache_max_entries"):
+            self.cache_max_entries = 1024
 
         # Ensure lazy module placeholders exist for deserialized objects
         for attr in (
@@ -143,6 +191,7 @@ class DSPyReasoner(dspy.Module):
             "_simple_responder",
             "_group_chat_selector",
             "_nlu",
+            "_event_narrator",
         ):
             if not hasattr(self, attr):
                 setattr(self, attr, None)
@@ -242,9 +291,86 @@ class DSPyReasoner(dspy.Module):
                 _MODULE_CACHE[gc_key] = dspy.ChainOfThought(GroupChatSpeakerSelection)
             self._group_chat_selector = _MODULE_CACHE[gc_key]
 
+        # Event Narrator
+        if self._event_narrator is None:
+            en_key = "event_narrator"
+            if en_key not in _MODULE_CACHE:
+                from agentic_fleet.workflows.narrator import EventNarrator
+
+                _MODULE_CACHE[en_key] = EventNarrator()
+            self._event_narrator = _MODULE_CACHE[en_key]
+
         self._modules_initialized = True
         mode_str = "typed" if self.use_typed_signatures else "standard"
         logger.debug(f"DSPy modules initialized (lazy, mode={mode_str})")
+
+        # Load compiled optimization if available
+        self._load_compiled_module()
+
+    def _load_compiled_module(self) -> None:
+        """Attempt to load optimized prompt weights from disk."""
+        compiled_path = get_configured_compiled_reasoner_path()
+        meta_path = Path(f"{compiled_path}.meta")
+
+        if compiled_path.exists():
+            try:
+                if meta_path.exists():
+                    try:
+                        meta = json.loads(meta_path.read_text())
+                        expected_hash = meta.get("reasoner_source_hash")
+                        current_hash = get_reasoner_source_hash()
+                        if expected_hash and expected_hash != current_hash:
+                            logger.info(
+                                "Compiled reasoner ignored (source hash mismatch: %s != %s)",
+                                expected_hash,
+                                current_hash,
+                            )
+                            return
+                    except Exception as exc:  # pragma: no cover - best-effort
+                        logger.debug("Failed to read compiled reasoner metadata: %s", exc)
+
+                logger.info(f"Loading compiled reasoner from {compiled_path}")
+                self.load(str(compiled_path))
+                logger.debug("Successfully loaded compiled DSPy prompts.")
+            except Exception as e:
+                logger.warning(f"Failed to load compiled reasoner: {e}")
+        else:
+            logger.debug(
+                "No compiled reasoner found at %s. Using default zero-shot prompts.",
+                compiled_path,
+            )
+
+    @property
+    def event_narrator(self) -> dspy.Module:
+        """Lazily initialized event narrator."""
+        self._ensure_modules_initialized()
+        return self._event_narrator  # type: ignore[return-value]
+
+    @event_narrator.setter
+    def event_narrator(self, value: dspy.Module) -> None:
+        """Allow setting event narrator."""
+        self._event_narrator = value
+
+    def narrate_events(self, events: list[dict[str, Any]]) -> str:
+        """Generate a narrative summary from workflow events.
+
+        Args:
+            events: List of event dictionaries.
+
+        Returns:
+            Narrative string.
+        """
+        with optional_span("DSPyReasoner.narrate_events"):
+            if not events:
+                return "No events to narrate."
+
+            try:
+                # The EventNarrator module's forward method takes 'events' list
+                prediction = self.event_narrator(events=events)
+                return getattr(prediction, "narrative", "")
+            except Exception as e:
+                logger.error(f"Event narration failed: {e}")
+                return "Narrative generation unavailable."
 
     @property
     def analyzer(self) -> dspy.Module:
@@ -1029,6 +1155,18 @@ class DSPyReasoner(dspy.Module):
         """
         if not self.enable_routing_cache:
             return
+
+        # Bound memory usage: evict oldest entries when exceeding the cap.
+        if len(self._routing_cache) >= self.cache_max_entries:
+            try:
+                oldest_key = min(
+                    self._routing_cache.keys(),
+                    key=lambda k: float(self._routing_cache[k].get("timestamp", 0)),
+                )
+                self._routing_cache.pop(oldest_key, None)
+            except Exception:
+                # If eviction fails for any reason, fall back to clearing to avoid unbounded growth.
+                self._routing_cache.clear()
 
         self._routing_cache[cache_key] = {
             "result": result,

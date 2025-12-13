@@ -17,7 +17,7 @@ You now have a complete setup for visualizing your multi-agent workflow with Ope
 
 ### 2. **Docker Compose for Easy Setup**
 
-- **File**: `docker-compose.tracing.yml`
+- **File**: `docker/docker-compose.tracing.yml`
 - **Purpose**: Runs Jaeger with OTLP collector in one command
 - **Usage**: `make tracing-start`
 

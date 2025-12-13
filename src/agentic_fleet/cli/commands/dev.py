@@ -72,7 +72,7 @@ def dev(
                 sys.executable,
                 "-m",
                 "uvicorn",
-                "agentic_fleet.app.main:app",
+                "agentic_fleet.main:app",
                 "--reload",
                 "--port",
                 str(backend_port),

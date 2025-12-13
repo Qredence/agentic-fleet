@@ -2,7 +2,7 @@
 
 Welcome to AgenticFleet documentation. This index organizes documentation by audience to help you find what you need quickly.
 
-**Current Version:** 0.6.7
+**Current Version:** See `pyproject.toml` (`[project].version`).
 
 ## Quick Start
 
@@ -29,28 +29,30 @@ make dev
 User-facing documentation for using the framework:
 
 1. **[Getting Started](users/getting-started.md)** - Installation, setup, and first steps
-2. **[User Guide](users/user-guide.md)** - Complete usage guide
+2. **[Overview](users/overview.md)** - What AgenticFleet is and common use cases
+3. **[User Guide](users/user-guide.md)** - Complete usage guide
    - Core concepts and features
    - Usage patterns and examples
    - Tool integration
    - Quality assessment
    - Monitoring and history
-3. **[Frontend Guide](users/frontend.md)** - Web interface guide
+4. **[Frontend Guide](users/frontend.md)** - Web interface guide
    - Starting the frontend
    - Chat interface features
    - Workflow visualization
+   - WebSocket protocol + message flow diagrams (new run, HITL, resume)
    - Configuration and development
-4. **[Configuration](users/configuration.md)** - Configuration guide
+5. **[Configuration](users/configuration.md)** - Configuration guide
    - All configuration options
    - Environment variables
    - Performance tuning
    - Migration guide
-5. **[Troubleshooting](users/troubleshooting.md)** - Common issues and solutions
+6. **[Troubleshooting](users/troubleshooting.md)** - Common issues and solutions
    - Installation problems
    - Runtime issues
    - Performance tuning
    - Debugging tips
-6. **[Self-Improvement](users/self-improvement.md)** - Automatic learning from history
+7. **[Self-Improvement](users/self-improvement.md)** - Automatic learning from history
    - How self-improvement works
    - Usage and configuration
    - Best practices
@@ -62,6 +64,7 @@ Developer-facing documentation for extending and contributing:
 
 1. **[Architecture](developers/architecture.md)** - System architecture
    - Component overview
+   - Full-stack architecture diagram (Web + CLI)
    - Data flow
    - Module structure
    - DSPy integration

@@ -16,7 +16,7 @@ logger = setup_logger("evaluate_routing")
 
 def evaluate_routing():
     load_dotenv()
-    configure_dspy_settings(model="gpt-4o")
+    configure_dspy_settings(model="gpt-4.1-mini")
 
     dataset_path = Path("src/agentic_fleet/data/golden_dataset.json")
     if not dataset_path.exists():

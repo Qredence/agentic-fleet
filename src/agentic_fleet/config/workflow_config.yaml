@@ -1,9 +1,10 @@
 # DSPy Configuration
 dspy:
-  model: gpt-4.1-mini # High-capacity model for DSPy tasks
-  routing_model: gpt-5-nano # Fast model for analysis/routing phases (Plan #4)
+  model: gpt-5.2 # High-capacity model for DSPy tasks
+  routing_model: grok-4-fast-non-reasoning # Fast model for analysis/routing phases (Plan #4)
   temperature: 1.0
   max_tokens: 16000
+  compiled_reasoner_path: .var/cache/dspy/compiled_reasoner.json
   # When true, raise an error if no compiled DSPy artifact is found.
   # Recommended for production environments to prevent degraded performance
   # from zero-shot fallback. Run 'agentic-fleet optimize' before enabling.
@@ -12,6 +13,14 @@ dspy:
   use_typed_signatures: true # Enable Pydantic-based typed signatures for structured outputs
   enable_routing_cache: true # Cache routing decisions to avoid redundant LLM calls
   routing_cache_ttl_seconds: 300 # TTL for routing cache entries (5 minutes)
+
+  # Azure AI Foundry Configuration
+  foundry:
+    enabled: true
+    project_connection_string: ${AZURE_AI_PROJECT_ENDPOINT}
+    # Optional: Semantic narrator model name in Foundry
+    narrator_model: gpt-5.1-nano
+
   optimization:
     enabled: true
     examples_path: src/agentic_fleet/data/supervisor_examples.json
@@ -28,10 +37,10 @@ dspy:
     # gepa_auto: light  # DISABLED for speed
     # Switched from full eval cap (still expensive) to metric call cap for ultra-fast run.
     # gepa_max_full_evals: 3  # (previous setting) commented out; full eval cycles still slow
-    gepa_max_metric_calls: 10 # Increased from 5 for better optimization with typed signatures
-    gepa_reflection_model: gpt-5-mini # Use fast model for reflection to reduce latency
+    gepa_max_metric_calls: 3 # Reduced from 10 to 3 for faster execution
+    gepa_reflection_model: Kimi-K2-Thinking # Use fast model for reflection to reduce latency
     gepa_reflection_minibatch_size: 2 # Smaller batches for faster reflection cycles
-    gepa_log_dir: .var/logs/gepa
+    gepa_log_dir: .var/logs/dspy/gepa
     gepa_perfect_score: 1.0
     gepa_use_history_examples: true
     gepa_history_min_quality: 8.0
@@ -69,10 +78,14 @@ workflow:
     dspy_retry_attempts: 3
     dspy_retry_backoff_seconds: 1.0
     analysis_cache_ttl_seconds: 3600
+    # Inject recent conversation messages into analysis/routing so short
+    # follow-up replies (e.g., quick-reply buttons) stay contextual.
+    conversation_context_max_messages: 8
+    conversation_context_max_chars: 4000
 
   execution:
     parallel_threshold: 3
-    timeout_seconds: 300 # Increased from 60 to 300 seconds for complex tasks
+    timeout_seconds: 120 # Reduced from 300 to 120 seconds to prevent hanging
     retry_attempts: 2
     enable_parallel: true # Enable parallel agent execution where possible
     max_parallel_agents: 3 # Maximum concurrent agents
@@ -111,7 +124,7 @@ agents:
     timeout: 60 # Task timeout in seconds
 
   analyst:
-    model: gpt-5-mini
+    model: gpt-5.1-codex
     tools:
       - HostedCodeInterpreterTool
     temperature: 0.3
@@ -121,7 +134,7 @@ agents:
     strategy: "react" # Switch to ReAct for stability
 
   writer:
-    model: gpt-5-mini
+    model: gpt-5.1-chat
     tools: []
     temperature: 0.7
     enable_dspy: true
@@ -129,7 +142,7 @@ agents:
     timeout: 60
 
   reviewer:
-    model: gpt-5-mini
+    model: gpt-5-mini # Changed from DeepSeek-R1-0528 (not supported by Responses API)
     tools: []
     temperature: 0.2
     enable_dspy: true
@@ -138,7 +151,7 @@ agents:
 
   # New expanded agent roster (configuration-driven; keeps legacy agents for compatibility)
   planner:
-    model: gpt-5-mini
+    model: gpt-5.1 # Changed from Kimi-K2-Thinking (not supported by Responses API)
     tools: []
     temperature: 0.5
     instructions: prompts.planner
@@ -166,7 +179,7 @@ agents:
     timeout: 90
 
   verifier:
-    model: gpt-5-nano
+    model: gpt-5-mini
     tools: []
     temperature: 0.5
     instructions: prompts.verifier
@@ -175,7 +188,7 @@ agents:
     timeout: 60
 
   generator:
-    model: gpt-5.1-chat
+    model: gpt-5-mini
     tools: []
     temperature: 0.8
     instructions: prompts.generator
@@ -184,7 +197,7 @@ agents:
     timeout: 60
 
   copilot_researcher:
-    model: gpt-4.1
+    model: gpt-5-mini
     tools:
       - PackageSearchMCPTool
       - Context7DeepWikiTool
@@ -195,6 +208,18 @@ agents:
     enable_dspy: true
     cache_ttl: 300
     timeout: 120
+
+  # Example Foundry Agent Configuration (Disabled for dev startup stability)
+  # FinancialAnalyst:
+  #   type: foundry
+  #   agent_id: "asst_0123456789abcdef" # Replace with actual Agent ID
+  #   description: "A specialized financial analyst agent hosted on Azure."
+  #   tools:
+  #     - name: "bing_search"
+  #     - name: "stock_data_api"
+  #   capabilities:
+  #     - "market_analysis"
+  #     - "financial_forecasting"
 
 # Tool Configuration
 tools:

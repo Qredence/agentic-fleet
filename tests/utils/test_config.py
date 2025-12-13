@@ -21,7 +21,7 @@ workflow:
     max_rounds: 5
 agents:
   researcher:
-    model: gpt-4o
+    model: gpt-4.1-mini
     temperature: 0.7
 """
 
@@ -83,7 +83,7 @@ class TestValidateConfig:
         """Provide valid configuration."""
         return {
             "workflow": {"supervisor": {"max_rounds": 5}},
-            "agents": {"researcher": {"model": "gpt-4o"}},
+            "agents": {"researcher": {"model": "gpt-4.1-mini"}},
         }
 
     def test_validate_config_valid(self, valid_config):

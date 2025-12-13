@@ -10,6 +10,12 @@ SRC = ROOT / "src"
 if str(SRC) not in sys.path:
     sys.path.insert(0, str(SRC))
 
+# Ensure agent-framework shims are applied before any tests import `agent_framework`
+# internals directly (some upstream distributions ship an empty root module).
+from agentic_fleet.utils.agent_framework_shims import ensure_agent_framework_shims  # noqa: E402
+
+ensure_agent_framework_shims()
+
 # Keep DSPy disk cache inside the workspace so it remains writable in sandboxed CI.
 # Consolidated under .var/cache/ following project conventions.
 DSPY_CACHE = ROOT / ".var" / "cache" / "dspy"
@@ -31,9 +37,15 @@ def remove_cosmos_env_vars(monkeypatch):
 
 @pytest.fixture
 def client():
+    from unittest.mock import AsyncMock, MagicMock, patch
+
     from fastapi.testclient import TestClient
 
-    from agentic_fleet.app.main import app
+    from agentic_fleet.main import app
 
-    with TestClient(app) as client:
-        yield client
+    with patch(
+        "agentic_fleet.api.lifespan.create_supervisor_workflow", new_callable=AsyncMock
+    ) as mock_create:
+        mock_create.return_value = MagicMock()
+        with TestClient(app) as client:
+            yield client

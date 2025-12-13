@@ -106,3 +106,10 @@ The project uses a `Makefile` to simplify common development tasks.
 - **DSPy Integration:** DSPy is used for high-level reasoning (routing, analysis). Modules are compiled offline.
 - **Agent Framework:** Microsoft's framework handles the low-level agent execution loop and event stream.
 - **Configuration:** All runtime settings are in `src/agentic_fleet/config/workflow_config.yaml`.
+
+### Streaming, HITL, and Resume (runtime semantics)
+
+- **Fast-path** is optimized for first-turn/simple prompts; follow-up turns in an existing conversation must respect thread history and therefore route through the full workflow.
+- **Human-in-the-loop (HITL)**: streaming may emit request events; clients can reply with `workflow.response` to continue.
+- **Checkpointing + resume** follow agent-framework semantics: enable checkpoint storage for new runs; resume explicitly with `workflow.resume` + `checkpoint_id`.
+- `checkpoint_id` is **resume-only** (message XOR checkpoint_id).

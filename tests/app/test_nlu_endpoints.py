@@ -3,12 +3,8 @@
 from unittest.mock import MagicMock
 
 import pytest
-from fastapi.testclient import TestClient
 
-from agentic_fleet.app.main import app
 from agentic_fleet.dspy_modules.nlu import DSPyNLU
-
-client = TestClient(app)
 
 
 @pytest.fixture
@@ -32,7 +28,8 @@ def mock_workflow():
     mock_wf.dspy_reasoner.nlu = mock_nlu
 
     # Override dependency
-    from agentic_fleet.app.dependencies import get_workflow
+    from agentic_fleet.api.deps import get_workflow
+    from agentic_fleet.main import app
 
     app.dependency_overrides[get_workflow] = lambda: mock_wf
 
@@ -41,7 +38,7 @@ def mock_workflow():
     app.dependency_overrides = {}
 
 
-def test_classify_intent_endpoint(mock_workflow: MagicMock) -> None:
+def test_classify_intent_endpoint(client, mock_workflow: MagicMock) -> None:
     """Test POST /api/v1/classify_intent."""
     response = client.post(
         "/api/v1/classify_intent",
@@ -59,7 +56,7 @@ def test_classify_intent_endpoint(mock_workflow: MagicMock) -> None:
     )
 
 
-def test_extract_entities_endpoint(mock_workflow: MagicMock) -> None:
+def test_extract_entities_endpoint(client, mock_workflow: MagicMock) -> None:
     """Test POST /api/v1/extract_entities."""
     response = client.post(
         "/api/v1/extract_entities", json={"text": "test text", "entity_types": ["Type1", "Type2"]}

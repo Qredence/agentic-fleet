@@ -3,6 +3,7 @@ export interface ConversationStep {
   type:
     | "thought"
     | "status"
+    | "request"
     | "reasoning"
     | "error"
     | "agent_start"
@@ -54,6 +55,14 @@ export interface Message {
   workflowPhase?: string;
   qualityFlag?: string;
   qualityScore?: number;
+  /** Narrative summary of the execution */
+  narrative?: string;
+  /** Whether this was a fast path execution */
+  isFast?: boolean;
+  /** Execution latency */
+  latency?: string;
+  /** Completed workflow phases for this message */
+  completedPhases?: string[];
 }
 
 export interface Conversation {
@@ -70,6 +79,41 @@ export interface ChatRequest {
   stream?: boolean;
   /** Per-request reasoning effort override for GPT-5 models */
   reasoning_effort?: "minimal" | "medium" | "maximal";
+  /**
+   * Enable workflow checkpoint persistence for this new run.
+   *
+   * This is separate from resume. To resume a previously checkpointed workflow,
+   * send a `workflow.resume` message with a `checkpoint_id`.
+   */
+  enable_checkpointing?: boolean;
+  /**
+   * Optional checkpoint identifier for resuming a previously checkpointed workflow.
+   *
+   * Do not set this for normal chat requests (new runs). In agent-framework, `message` and
+   * `checkpoint_id` are mutually exclusive.
+   *
+   * @deprecated Prefer `enable_checkpointing` for new runs and `workflow.resume` for resume.
+   */
+  checkpoint_id?: string;
+}
+
+export interface WorkflowResumeRequest {
+  type: "workflow.resume";
+  conversation_id?: string;
+  checkpoint_id: string;
+  stream?: boolean;
+  /** Per-request reasoning effort override for GPT-5 models */
+  reasoning_effort?: "minimal" | "medium" | "maximal";
+}
+
+export interface CancelRequest {
+  type: "cancel";
+}
+
+export interface WorkflowResponseRequest {
+  type: "workflow.response";
+  request_id: string;
+  response: unknown;
 }
 
 export interface CreateConversationRequest {
@@ -93,7 +137,8 @@ export interface StreamEvent {
     | "agent.message"
     | "connected"
     | "cancelled"
-    | "heartbeat";
+    | "heartbeat"
+    | "workflow.status";
   delta?: string;
   agent_id?: string;
   author?: string;
@@ -123,10 +168,16 @@ export interface StreamEvent {
   workflow_id?: string;
   /** Terminal-friendly log line mirrored from the backend logger */
   log_line?: string;
+  /** Workflow status (for workflow.status events) */
+  status?: "in_progress" | "failed" | "idle" | "completed";
 }
 
 /** Messages sent from client to server over WebSocket */
-export type WebSocketClientMessage = ChatRequest | { type: "cancel" };
+export type WebSocketClientMessage =
+  | ChatRequest
+  | WorkflowResumeRequest
+  | CancelRequest
+  | WorkflowResponseRequest;
 
 export interface WorkflowSession {
   workflow_id: string;
@@ -167,4 +218,60 @@ export interface EntityResponse {
     confidence: string;
   }[];
   reasoning: string;
+}
+
+// =============================================================================
+// Exported Type Aliases for Convenience
+// =============================================================================
+
+export type MessageRole = "user" | "assistant" | "system";
+export type ReasoningEffort = "minimal" | "medium" | "maximal";
+export type WorkflowStatus =
+  | "created"
+  | "running"
+  | "completed"
+  | "failed"
+  | "cancelled";
+export type StreamEventType = StreamEvent["type"];
+
+export type StepCategory =
+  | "step"
+  | "thought"
+  | "reasoning"
+  | "planning"
+  | "output"
+  | "response"
+  | "status"
+  | "error";
+
+export interface UIHint {
+  component: string;
+  priority: "low" | "medium" | "high";
+  collapsible: boolean;
+  iconHint?: string;
+}
+
+// =============================================================================
+// API Error Types
+// =============================================================================
+
+export interface ApiError {
+  message: string;
+  status: number;
+  code?: string;
+  details?: Record<string, unknown>;
+}
+
+export class ApiRequestError extends Error {
+  status: number;
+  code?: string;
+  details?: Record<string, unknown>;
+
+  constructor(error: ApiError) {
+    super(error.message);
+    this.name = "ApiRequestError";
+    this.status = error.status;
+    this.code = error.code;
+    this.details = error.details;
+  }
 }

@@ -6,6 +6,74 @@ AgenticFleet combines Microsoft's agent-framework with DSPy's intelligent prompt
 
 ## System Architecture
 
+### Full-Stack Overview (Web + CLI)
+
+```mermaid
+graph TB
+  subgraph Client[Clients]
+    UI[React/Vite Frontend]
+    CLI[CLI: agentic-fleet]
+  end
+
+  subgraph Backend[FastAPI Backend]
+    HTTP[HTTP API: /api/*]
+    WS[WebSocket: /api/ws/chat]
+    CHAT[Chat WebSocket Service]
+  end
+
+  subgraph Workflow[Supervisor Workflow (agent-framework)]
+    A[Analysis]
+    R[Routing]
+    E[Execution]
+    P[Progress]
+    Q[Quality]
+  end
+
+  subgraph Intelligence[DSPy Intelligence Layer]
+    REASONER[DSPyReasoner (cached, offline-compiled)]
+    SIGS[Typed signatures + assertions]
+  end
+
+  subgraph Runtime[Agents + Tools]
+    AGENTS[ChatAgent instances]
+    MODEL[OpenAIResponsesClient]
+    TOOLS[ToolRegistry + tools]
+  end
+
+  subgraph StateObs[State & Observability]
+    CONV[(Conversations store)]
+    THREAD[(AgentThread / multi-turn state)]
+    CKPT[(Checkpoint storage)]
+    HIST[(Execution history JSONL)]
+    OTEL[(OpenTelemetry tracing)]
+  end
+
+  UI -->|REST| HTTP
+  UI -->|stream events| WS
+  WS --> CHAT
+
+  CHAT -->|new run: message (+ enable_checkpointing)| Workflow
+  CHAT -->|resume: checkpoint_id only| Workflow
+  CHAT --> CONV
+  CHAT --> THREAD
+  CHAT --> CKPT
+
+  CLI -->|run / run_stream| Workflow
+
+  A --> REASONER
+  R --> REASONER
+  P --> REASONER
+  Q --> REASONER
+  REASONER --> SIGS
+
+  E --> AGENTS
+  AGENTS --> MODEL
+  AGENTS --> TOOLS
+
+  Workflow --> HIST
+  Workflow --> OTEL
+```
+
 ### Core Components
 
 ```
@@ -63,33 +131,33 @@ graph TB
 
     subgraph "Workflow Creation"
         FACTORY[create_supervisor_workflow]
-        BUILDER[WorkflowBuilder<br/>agent-framework]
-        CONTEXT[SupervisorContext<br/>DSPy + Agents + Tools]
+        BUILDER["WorkflowBuilder<br/>agent-framework"]
+        CONTEXT["SupervisorContext<br/>DSPy + Agents + Tools"]
     end
 
     subgraph "Agent-Framework Executors"
-        AE[AnalysisExecutor<br/>extends Executor]
-        RE[RoutingExecutor<br/>extends Executor]
-        EE[ExecutionExecutor<br/>extends Executor]
-        PE[ProgressExecutor<br/>extends Executor]
-        QE[QualityExecutor<br/>extends Executor]
+        AE["AnalysisExecutor<br/>extends Executor"]
+        RE["RoutingExecutor<br/>extends Executor"]
+        EE["ExecutionExecutor<br/>extends Executor"]
+        PE["ProgressExecutor<br/>extends Executor"]
+        QE["QualityExecutor<br/>extends Executor"]
     end
 
     subgraph "DSPy Intelligence Layer"
         DSPY[DSPyReasoner]
-        SIGS[Enhanced Signatures<br/>EnhancedTaskRouting<br/>JudgeEvaluation]
+        SIGS["Enhanced Signatures<br/>EnhancedTaskRouting<br/>JudgeEvaluation"]
     end
 
     subgraph "Agent Execution"
-        CA[ChatAgent<br/>agent-framework]
-        OAI[OpenAIResponsesClient<br/>agent-framework.openai]
+        CA["ChatAgent<br/>agent-framework"]
+        OAI["OpenAIResponsesClient<br/>agent-framework.openai"]
         TOOLS[Tool Registry]
     end
 
     subgraph "Event Streaming"
-        MAE[MagenticAgentMessageEvent<br/>agent-framework]
-        WOE[WorkflowOutputEvent<br/>agent-framework]
-        CM[ChatMessage + Role<br/>agent-framework]
+        MAE["MagenticAgentMessageEvent<br/>agent-framework"]
+        WOE["WorkflowOutputEvent<br/>agent-framework"]
+        CM["ChatMessage + Role<br/>agent-framework"]
     end
 
     CLI --> FACTORY
@@ -209,6 +277,29 @@ D1 --> E[Quality assessment]
 D2 --> E
 D3 --> E
 E --> F[Final output]
+```
+
+### CLI Run Flow
+
+```mermaid
+sequenceDiagram
+  participant U as User
+  participant CLI as CLI (agentic-fleet)
+  participant WF as Supervisor Workflow
+  participant AG as Agents/Tools
+
+  U->>CLI: agentic-fleet run -m "..."
+  CLI->>WF: run_stream(message)
+
+  WF->>AG: execute phases + tool calls
+
+  loop Stream events
+    WF-->>CLI: StreamEvent
+    CLI-->>U: Render output/progress
+  end
+
+  WF-->>CLI: final output
+  CLI-->>U: exit 0
 ```
 
 > Entry point: [`cli/console.py`](src/agentic_fleet/cli/console.py:39) provides the Typer CLI used to start workflows.

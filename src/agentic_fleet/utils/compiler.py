@@ -27,7 +27,7 @@ from .progress import NullProgressCallback, ProgressCallback
 logger = logging.getLogger(__name__)
 
 # Cache version for invalidation
-CACHE_VERSION = 2  # Incremented to include signature/config hashes
+CACHE_VERSION = 3  # Incremented to include reasoner source hash
 
 
 def _compute_signature_hash() -> str:
@@ -148,6 +148,7 @@ def _save_cache_metadata(
     serializer: str = "pickle",
     signature_hash: str | None = None,
     config_hash: str | None = None,
+    reasoner_source_hash: str | None = None,
 ):
     """Save cache metadata.
 
@@ -159,6 +160,7 @@ def _save_cache_metadata(
         serializer: Serialization method used
         signature_hash: Hash of signature classes (for granular invalidation)
         config_hash: Hash of configuration (for granular invalidation)
+        reasoner_source_hash: Hash of reasoner source files
     """
     metadata_path = cache_path + ".meta"
     metadata = {
@@ -175,6 +177,8 @@ def _save_cache_metadata(
         metadata["signature_hash"] = signature_hash
     if config_hash:
         metadata["config_hash"] = config_hash
+    if reasoner_source_hash:
+        metadata["reasoner_source_hash"] = reasoner_source_hash
 
     try:
         with open(metadata_path, "w") as f:
@@ -189,6 +193,7 @@ def _is_cache_valid(
     optimizer: str,
     signature_hash: str | None = None,
     config_hash: str | None = None,
+    reasoner_source_hash: str | None = None,
 ) -> bool:
     """Check if cache is valid based on modification times, version, and hashes.
 
@@ -243,6 +248,15 @@ def _is_cache_valid(
         # Check config hash if available (granular invalidation)
         if config_hash and "config_hash" in metadata and metadata["config_hash"] != config_hash:
             logger.debug("Cache config hash mismatch: configuration changed, invalidating cache")
+            return False
+
+        # Check reasoner source hash if available (invalidates when reasoner code changes)
+        if (
+            reasoner_source_hash
+            and "reasoner_source_hash" in metadata
+            and metadata["reasoner_source_hash"] != reasoner_source_hash
+        ):
+            logger.debug("Cache reasoner hash mismatch: code changed, invalidating cache")
             return False
 
         recorded_examples_mtime = metadata.get("examples_mtime")
@@ -366,6 +380,13 @@ def compile_reasoner(
     # Compute hashes for granular cache invalidation
     progress_callback.on_progress("Computing cache hashes...")
     signature_hash = _compute_signature_hash()
+    reasoner_source_hash = None
+    try:
+        from ..dspy_modules.reasoner_utils import get_reasoner_source_hash
+
+        reasoner_source_hash = get_reasoner_source_hash()
+    except Exception as exc:  # pragma: no cover - best-effort
+        logger.debug("Failed to compute reasoner source hash: %s", exc)
     config_hash = None
     if dspy_model:
         config_hash = _compute_config_hash(
@@ -383,6 +404,7 @@ def compile_reasoner(
             optimizer,
             signature_hash=signature_hash,
             config_hash=config_hash,
+            reasoner_source_hash=reasoner_source_hash,
         ):
             cached = load_compiled_module(cache_path)
             if cached is not None:
@@ -410,6 +432,7 @@ def compile_reasoner(
             optimizer,
             signature_hash=signature_hash,
             config_hash=config_hash,  # Note: config hash might differ if it includes optimizer
+            reasoner_source_hash=reasoner_source_hash,
         ):
             cached = load_compiled_module(cache_path)
             if cached is not None:
@@ -566,6 +589,7 @@ def compile_reasoner(
                     serializer=serializer_used,
                     signature_hash=signature_hash,
                     config_hash=config_hash,
+                    reasoner_source_hash=reasoner_source_hash,
                 )
                 progress_callback.on_progress("Cache saved successfully")
             except Exception as e:

@@ -99,6 +99,8 @@ agentic-fleet dev --no-frontend
 
 Then open http://localhost:5173 in your browser.
 
+New here? Start with `docs/users/overview.md` for what AgenticFleet is and common use cases.
+
 ### Using the CLI
 
 The command-line interface for interacting with the framework:
@@ -111,7 +113,7 @@ agentic-fleet run -m "Your question here"
 agentic-fleet run -m "Your question here" --verbose
 
 # Save output to file
-agentic-fleet run -m "Your question here" --verbose 2>&1 | tee logs/output.log
+agentic-fleet run -m "Your question here" --verbose 2>&1 | tee .var/logs/output.log
 ```
 
 ### Programmatic Usage
@@ -143,7 +145,7 @@ asyncio.run(main())
 
 ```bash
 # Clear any existing compiled DSPy supervisor cache
-uv run python -m src.agentic_fleet.scripts.manage_cache --clear
+uv run python src/agentic_fleet/scripts/manage_cache.py --clear
 ```
 
 ### Run First Task
@@ -211,7 +213,7 @@ git pull origin main
 uv sync
 
 # Clear cache to force recompilation
-uv run python -m src.agentic_fleet.scripts.manage_cache --clear
+uv run python src/agentic_fleet/scripts/manage_cache.py --clear
 ```
 
 ## Uninstallation
@@ -220,12 +222,11 @@ uv run python -m src.agentic_fleet.scripts.manage_cache --clear
 # Remove package
 uv pip uninstall agentic-fleet
 
-# Remove virtual environment
-deactivate
-rm -rf venv
+# Remove virtual environment (uv-managed)
+rm -rf .venv
 
-# Remove logs and cache (optional)
-rm -rf logs/ htmlcov/ .pytest_cache/
+# Remove runtime data and cache (optional)
+rm -rf .var/ htmlcov/ .pytest_cache/ .ruff_cache/ .mypy_cache/
 ```
 
 ## Docker Installation (Optional)

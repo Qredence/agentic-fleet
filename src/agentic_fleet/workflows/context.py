@@ -220,6 +220,8 @@ class SupervisorContext:
     analysis_cache: TTLCache[str, dict[str, Any]] | None = None
     latest_phase_timings: dict[str, float] = field(default_factory=dict)
     latest_phase_status: dict[str, str] = field(default_factory=dict)
+    latest_phase_memory_mb: dict[str, float] = field(default_factory=dict)
+    latest_phase_memory_delta_mb: dict[str, float] = field(default_factory=dict)
 
     progress_callback: ProgressCallback = field(default_factory=NullProgressCallback)
     current_execution: dict[str, Any] = field(default_factory=dict)

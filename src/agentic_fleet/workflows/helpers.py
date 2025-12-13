@@ -23,170 +23,137 @@ logger = setup_logger(__name__)
 # --- Task Classification Helpers ---
 
 
-def is_simple_task(task: str, max_words: int | None = None) -> bool:
-    """Identify simple tasks that can be answered directly without multi-agent routing.
+def is_time_sensitive_task(task: str) -> bool:
+    """Heuristic detection for queries that require fresh, web-sourced data."""
 
-    This function detects tasks that should bypass the full orchestration pipeline:
-    - Greetings and heartbeats
-    - Simple factual questions
-    - Math/calculations
-    - Direct knowledge questions
-
-    Args:
-        task: The task string to classify
-        max_words: Maximum word count for simple tasks. If None, uses the default
-            from WorkflowConfig.simple_task_max_words (40).
-
-    Returns:
-        True if the task is simple enough to bypass routing, False otherwise
-    """
-    # Use config default if not specified
-    simple_task_max_words = max_words if max_words is not None else 40
-
-    task_lower = task.strip().lower()
-    word_count = len(task.split())
-
-    # Keywords that imply real-time data or complex research needs
-    complex_keywords = [
-        "news",
-        "latest",
+    task_lower = task.lower()
+    freshness_keywords = [
+        "today",
+        "now",
         "current",
-        "election",
-        "price",
-        "stock",
-        "weather",
-        "who won",
-        "mayor",
-        "governor",
-        "president",
-        "compare and contrast",
-        "analyze in detail",
-        "create a plan",
-        "step by step guide",
-        "comprehensive",
-        "research",
-        "investigate",
+        "latest",
+        "recent",
+        "breaking",
+        "this week",
+        "this month",
     ]
 
-    # Patterns that require multi-step workflows
-    complex_patterns = [
-        r"create\s+(a\s+)?(detailed|full|comprehensive)",
-        r"write\s+(a\s+)?(report|essay|article|document)",
-        r"plan\s+(a\s+|my\s+)?(trip|project|event|wedding)",
-        r"help\s+me\s+(plan|design|build|create)",
-        r"include\s+.*(activities|restaurants|hotels|examples)",
-    ]
-
-    # Heartbeat / greeting style tasks
-    trivial_keywords = [
-        "ping",
-        "hello",
-        "hi",
-        "hey",
-        "test",
-        "are you there",
-        "you there",
-        "you awake",
-        "good morning",
-        "good evening",
-        "thanks",
-        "thank you",
-    ]
-
-    # Keywords/patterns that imply a simple direct response
-    simple_keywords = [
-        "define",
-        "calculate",
-        "solve",
-        "meaning of",
-        "what is",
-        "what are",
-        "who is",
-        "who are",
-        "how many",
-        "how much",
-        "when was",
-        "when did",
-        "where is",
-        "where are",
-        "why is",
-        "why do",
-        "explain",
-        "describe",
-        "list",
-        "name",
-    ]
-
-    # Math patterns (arithmetic expressions)
-    math_patterns = [
-        r"^\d+\s*[\+\-\*\/\^]\s*\d+",  # "7+7", "2*3", etc.
-        r"^\d+\s*\+\s*\d+",  # Addition
-        r"what\s+is\s+\d+\s*[\+\-\*\/]",  # "what is 2+2"
-        r"calculate\s+\d+",
-        r"solve\s+\d+",
-    ]
-
-    # Check for time-sensitive content (years like 2024, 2025)
-    is_time_sensitive = bool(re.search(r"20[2-9][0-9]", task))
-
-    # Creation / planning verbs that should force full workflows even when short
-    generation_keywords = [
-        "write",
-        "draft",
-        "design",
-        "generate",
-        "implement",
-        "build",
-        "create",
-        "compose",
-        "develop",
-        "produce",
-        "craft",
-        "architect",
-        "plan",
-        "summarize",
-        "outline",
-        "story",
-        "stories",
-    ]
-
-    # Check complex patterns first
-    has_complex_keyword = any(
-        re.search(r"\b" + re.escape(k) + r"\b", task_lower) for k in complex_keywords
-    )
-    has_complex_pattern = any(re.search(p, task_lower) for p in complex_patterns)
-
-    # If complex indicators found, not simple
-    if has_complex_keyword or has_complex_pattern:
-        return False
-
-    # Check for trivial/greeting tasks
-    has_trivial_keyword = any(
-        re.search(r"\b" + re.escape(k) + r"\b", task_lower) for k in trivial_keywords
-    )
-    if has_trivial_keyword:
+    if any(keyword in task_lower for keyword in freshness_keywords):
         return True
 
-    # Check for math expressions
-    has_math_pattern = any(re.search(p, task_lower) for p in math_patterns)
-    if has_math_pattern:
-        return True
+    # Detect explicit four-digit years 2023+ (signals recency)
+    match = re.search(r"\b(20[2-9][0-9])\b", task)
+    if match:
+        year = int(match.group(1))
+        if year >= 2023:
+            return True
 
-    # Check for simple question patterns
-    has_simple_keyword = any(
-        re.search(r"^" + re.escape(k) + r"\b", task_lower) for k in simple_keywords
-    )
+    return False
 
-    # Short generative/creative requests should not be treated as simple even if short
-    if any(re.search(r"\b" + re.escape(k) + r"\b", task_lower) for k in generation_keywords):
-        return False
 
-    # Short tasks (under max_words) starting with simple keywords are simple
-    # unless they're time-sensitive. Otherwise require a simple keyword to avoid
-    # misclassifying short creative asks.
-    return bool(
-        has_simple_keyword and word_count <= simple_task_max_words and not is_time_sensitive
-    )
+class FastPathDetector:
+    """Robust detection for tasks that can bypass the full agent orchestration."""
+
+    def __init__(self, max_words: int = 60) -> None:
+        self.max_words = max_words
+
+        # 1. Complex Intent Patterns (Immediate Disqualification)
+        # These imply a need for planning, multi-step reasoning, or deep research.
+        self.complex_patterns = [
+            r"\b(create|plan|design|build|architect)\b.*?\b(detailed|comprehensive|full)\b",
+            r"\b(write|draft)\b.*?\b(report|article|paper|essay)\b",
+            r"\b(research|investigate|analyze)\s",
+            r"\b(compare|contrast)\s+and\s",
+            r"\b(step\s+by\s+step|guide|tutorial)\b",
+            r"\b(summary|summarize)\s+of\b",  # summarization typicaly needs context/retrieval
+        ]
+
+        # 2. Complex Keywords
+        self.complex_keywords = {
+            "election",
+            "stock",
+            "forecast",
+            "prediction",
+            "medical",
+            "legal",
+            "advice",  # generic advice often needs safety checks/reasoning
+        }
+
+        # 3. Fast Path Patterns (Immediate Qualification if short & not complex)
+        self.simple_intents = [
+            # Greetings / Heartbeats
+            r"^(hi|hello|hey|greetings|ping|test|yo)\b",
+            r"^(good\s+morning|good\s+afternoon|good\s+evening)\b",
+            r"^(are\s+you\s+(there|awake|online))\?",
+            r"^(thanks|thank\s+you)\b",
+            # Basic Definitions / Factual
+            r"^(define|meaning\s+of)\s+[\w\s]+$",
+            r"^(what\s+is|who\s+is|where\s+is)\s+[\w\s]+\??$",
+            r"^(what\s+does|what\s+are)\s+[\w\s]+\??$",
+            r"^(when\s+is|when\s+was|when\s+did)\s+[\w\s]+\??$",
+            r"^(why\s+is|why\s+does|why\s+do)\s+[\w\s]+\??$",
+            r"^(how\s+do|how\s+does|how\s+is)\s+[\w\s]+\??$",
+            # Simple explanations (short)
+            r"^explain\s+[\w\s]{1,50}\??$",
+            r"^describe\s+[\w\s]{1,50}\??$",
+            # Yes/No questions (short)
+            r"^(is|are|can|does|do|will|would|should|could)\s+[\w\s]{1,40}\??$",
+            # Simple Math
+            r"^\d+\s*[\+\-\*\/]\s*\d+$",
+            r"^(calculate|solve)\s+\d+\s*[\+\-\*\/]",
+            # Single-word or very short queries
+            r"^[\w\-]+\??$",  # Single word questions (e.g., "Python?", "help")
+            r"^[\w\-]+\s+[\w\-]+\??$",  # Two-word questions (e.g., "what time", "how many")
+        ]
+
+    def is_time_sensitive(self, task: str) -> bool:
+        """Reuse the existing time sensitivity check logic."""
+        return is_time_sensitive_task(task)
+
+    def classify(self, task: str) -> bool:
+        """
+        Determine if a task should go to the Fast Path.
+
+        Returns:
+            True if the task is simple/routine and qualifies for Fast Path.
+            False if the task requires full agent routing/planning.
+        """
+        task = task.strip()
+        if not task:
+            return True  # Empty task is trivial
+
+        # 0. Length Check (Hard limit for Fast Path)
+        if len(task.split()) > self.max_words:
+            return False
+
+        task_lower = task.lower()
+
+        # 1. Check disqualifiers (Complex patterns/keywords)
+        for pattern in self.complex_patterns:
+            if re.search(pattern, task_lower):
+                return False
+
+        if any(w in task_lower for w in self.complex_keywords):
+            return False
+
+        # 2. Time Sensitivity Check
+        # Fast Path typically cannot do fresh search efficiently (unless tool-enabled, but usually we route)
+        if self.is_time_sensitive(task):
+            return False
+
+        # 3. Check Qualifiers (Simple Intents)
+        for pattern in self.simple_intents:
+            if re.search(pattern, task_lower):
+                return True
+
+        # 4. Fallback: If very short and not complex, assume simple (chatty)
+        return len(task.split()) < 5
+
+
+def is_simple_task(task: str, max_words: int | None = None) -> bool:
+    """Wrapper for FastPathDetector classification."""
+    detector = FastPathDetector(max_words=max_words if max_words is not None else 60)
+    return detector.classify(task)
 
 
 # --- Workflow Utility Functions ---
@@ -471,34 +438,6 @@ def prepare_subtasks(
         normalized = normalized[: len(agents)]
 
     return normalized
-
-
-def is_time_sensitive_task(task: str) -> bool:
-    """Heuristic detection for queries that require fresh, web-sourced data."""
-
-    task_lower = task.lower()
-    freshness_keywords = [
-        "today",
-        "now",
-        "current",
-        "latest",
-        "recent",
-        "breaking",
-        "this week",
-        "this month",
-    ]
-
-    if any(keyword in task_lower for keyword in freshness_keywords):
-        return True
-
-    # Detect explicit four-digit years 2023+ (signals recency)
-    match = re.search(r"\b(20[2-9][0-9])\b", task)
-    if match:
-        year = int(match.group(1))
-        if year >= 2023:
-            return True
-
-    return False
 
 
 # --- Quality Helpers ---

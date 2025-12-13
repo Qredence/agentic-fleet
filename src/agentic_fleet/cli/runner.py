@@ -6,7 +6,6 @@ execution and coordinates with the display system.
 
 from __future__ import annotations
 
-import os
 from datetime import datetime
 from typing import Any
 
@@ -161,6 +160,10 @@ class WorkflowRunner:
             else supervisor_cfg.get("pipeline_profile", "full")
         )
         simple_task_max_words = supervisor_cfg.get("simple_task_max_words", 40)
+        conversation_context_max_messages = supervisor_cfg.get(
+            "conversation_context_max_messages", 8
+        )
+        conversation_context_max_chars = supervisor_cfg.get("conversation_context_max_chars", 4000)
 
         quality_cfg = (
             yaml_config.get("workflow", {}).get("quality", {})
@@ -175,6 +178,8 @@ class WorkflowRunner:
             enable_streaming=supervisor_cfg.get("enable_streaming", True),
             pipeline_profile=effective_profile,
             simple_task_max_words=simple_task_max_words,
+            conversation_context_max_messages=int(conversation_context_max_messages),
+            conversation_context_max_chars=int(conversation_context_max_chars),
             parallel_threshold=yaml_config.get("workflow", {})
             .get("execution", {})
             .get("parallel_threshold", 3),
@@ -230,13 +235,11 @@ class WorkflowRunner:
             # We'll use a lightweight config for this check if possible, or just rely on what we have.
             try:
                 # Basic DSPy setup just for this decision
+                # Use dspy_manager for proper Azure OpenAI support
+                from agentic_fleet.utils.dspy_manager import configure_dspy_settings
+
                 if not dspy.settings.lm:
-                    # Manual fallback if helper not available easily
-                    api_key = os.getenv("OPENAI_API_KEY")
-                    model_name = effective_model
-                    if api_key:
-                        lm = dspy.LM(f"openai/{model_name}", api_key=api_key)
-                        dspy.configure(lm=lm)
+                    configure_dspy_settings(effective_model)
             except Exception as e:
                 logger.warning(
                     f"Failed to configure DSPy for auto-mode: {e}. Fallback to standard."

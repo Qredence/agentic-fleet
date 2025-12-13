@@ -21,99 +21,27 @@ Configuration values are resolved in this order (highest priority first):
 
 ## Configuration File Structure
 
-### Complete Example
+### Source of Truth
+
+The canonical configuration lives in `config/workflow_config.yaml` and is kept in sync with the runtime
+schema. Use that file as the definitive reference when keys drift over time.
+
+### Common Path Defaults
+
+AgenticFleet writes runtime artifacts under `.var/` by default (gitignored). These are the commonly-adjusted
+paths:
 
 ```yaml
-# config/workflow_config.yaml
+# config/workflow_config.yaml (excerpt)
 
-# DSPy Configuration
 dspy:
-  model: gpt-5-mini # Model for DSPy supervisor
-  temperature: 0.7 # 0.0-2.0, controls randomness
-  max_tokens: 2000 # Max tokens per DSPy call
-
   optimization:
-    enabled: true # Enable DSPy compilation
-    examples_path: data/supervisor_examples.json
-    metric_threshold: 0.8 # Minimum routing accuracy
-    max_bootstrapped_demos: 4 # Few-shot examples per prompt
-    use_gepa: false # Switch to dspy.GEPA optimizer
-    gepa_auto: light # light|medium|heavy search budget
-    gepa_max_full_evals: 50
-    gepa_max_metric_calls: 150
-    gepa_reflection_model:
-    gepa_log_dir: logs/gepa
-    gepa_perfect_score: 1.0
-    gepa_use_history_examples: false
-    gepa_history_min_quality: 8.0
-    gepa_history_limit: 200
-    gepa_val_split: 0.2
-    gepa_seed: 13
-    # Typed Signatures & Assertions (v0.6.9+)
-    use_typed_signatures: true # Use Pydantic output models
-    enable_routing_cache: true # Cache routing decisions
-    cache_ttl_seconds: 300 # Cache TTL (5 minutes)
+    examples_path: src/agentic_fleet/data/supervisor_examples.json
+    gepa_log_dir: .var/logs/dspy/gepa
 
-# Workflow Configuration
-workflow:
-  supervisor:
-    max_rounds: 15 # Max agent conversation turns
-    max_stalls: 3 # Max stuck iterations before reset
-    max_resets: 2 # Max workflow resets
-    enable_streaming: true # Stream events for live UI
-
-  execution:
-    parallel_threshold: 3 # Min agents for parallel mode
-    timeout_seconds: 300 # Max execution time
-    retry_attempts: 2 # Retry failed operations
-
-  quality:
-    refinement_threshold: 8.0 # Quality score threshold
-    enable_refinement: true # Auto-refine low-quality results
-
-# Agent Configuration
-agents:
-  researcher:
-    model: gpt-4.1 # Agent-specific model
-    tools:
-      - TavilySearchTool
-    temperature: 0.5 # Lower = more factual
-
-  analyst:
-    model: gpt-4.1
-    tools:
-      - HostedCodeInterpreterTool
-    temperature: 0.3 # Very low for precision
-
-  writer:
-    model: gpt-4.1
-    tools: []
-    temperature: 0.7 # Higher for creativity
-
-  reviewer:
-    model: gpt-4.1
-    tools: []
-    temperature: 0.2 # Low for consistency
-
-# Tool Configuration
-tools:
-  enable_tool_aware_routing: true # DSPy considers tools
-  pre_analysis_tool_usage: true # Use tools in analysis
-  tool_registry_cache: true # Cache tool metadata
-  tool_usage_tracking: true # Track tool usage
-
-# Logging Configuration
 logging:
-  level: INFO # DEBUG, INFO, WARNING, ERROR
-  format: "% (asctime)s - %(name)s - %(levelname)s - %(message)s"
-  file: logs/workflow.log # Log file path
-  save_history: true # Save execution history
-  history_file: logs/execution_history.jsonl
-  verbose: true # Verbose execution logs
-
-# OpenAI Configuration
-openai:
-  enable_completion_storage: false # Store completions in OpenAI
+  file: .var/logs/workflow.log
+  history_file: .var/logs/execution_history.jsonl
 ```
 
 ## Command-Line Overrides
@@ -160,7 +88,7 @@ Controls DSPy reasoner behavior and optimization.
 - First run is slower (compilation time)
 - Subsequent runs are faster (cached)
 
-**optimization.examples_path** (`str`, default: `"data/supervisor_examples.json"`)
+**optimization.examples_path** (`str`, default: `"src/agentic_fleet/data/supervisor_examples.json"`)
 
 - Path to training examples for DSPy
 - See [Training Examples](#training-examples) section
@@ -183,9 +111,9 @@ Controls DSPy reasoner behavior and optimization.
 - `optimization.gepa_max_full_evals` (`int`, default: `50`): cap on full GEPA evaluations.
 - `optimization.gepa_max_metric_calls` (`int`, default: `150`): guardrail for expensive feedback metrics.
 - `optimization.gepa_reflection_model` (`str|None`): optional LM ID dedicated to reflective feedback (defaults to `dspy.model`).
-- `optimization.gepa_log_dir` (`str`, default: `logs/gepa`): directory for GEPA traces/stats.
+- `optimization.gepa_log_dir` (`str`, default: `.var/logs/dspy/gepa`): directory for GEPA traces/stats.
 - `optimization.gepa_perfect_score` (`float`, default: `1.0`): max score reported by the metric.
-- `optimization.gepa_use_history_examples` (`bool`, default: `false`): merge high-quality executions from `logs/execution_history.*` into the training set.
+- `optimization.gepa_use_history_examples` (`bool`, default: `false`): merge high-quality executions from `.var/logs/execution_history.*` into the training set.
 - `optimization.gepa_history_min_quality` (`float`, default: `8.0`): minimum quality score for harvested executions.
 - `optimization.gepa_history_limit` (`int`, default: `200`): lookback window when harvesting history.
 - `optimization.gepa_val_split` (`float`, default: `0.2`): fraction of routing examples held out for validation.
@@ -193,9 +121,9 @@ Controls DSPy reasoner behavior and optimization.
 
 **Typed Signatures & Assertions (v0.6.9+)**
 
-- `optimization.use_typed_signatures` (`bool`, default: `true`): Use Pydantic-based output models for DSPy signatures. Provides JSON schema compliance, automatic validation, and better error handling.
-- `optimization.enable_routing_cache` (`bool`, default: `true`): Cache routing decisions to avoid redundant LLM calls for similar tasks.
-- `optimization.cache_ttl_seconds` (`int`, default: `300`): Time-to-live for cached routing decisions (5 minutes default).
+- `dspy.use_typed_signatures` (`bool`, default: `true`): Use Pydantic-based output models for DSPy signatures. Provides JSON schema compliance, automatic validation, and better error handling.
+- `dspy.enable_routing_cache` (`bool`, default: `true`): Cache routing decisions to avoid redundant LLM calls for similar tasks.
+- `dspy.routing_cache_ttl_seconds` (`int`, default: `300`): Time-to-live for cached routing decisions (5 minutes default).
 
 ### Workflow Configuration
 
@@ -357,7 +285,7 @@ Controls logging behavior.
 
 - Log format string (Python logging format)
 
-**file** (`str`, default: `"logs/workflow.log"`)
+**file** (`str`, default: `".var/logs/workflow.log"`)
 
 - Path to log file
 
@@ -365,7 +293,7 @@ Controls logging behavior.
 
 - Save execution history
 
-**history_file** (`str`, default: `"logs/execution_history.jsonl"`)
+**history_file** (`str`, default: `".var/logs/execution_history.jsonl"`)
 
 - Path to history file
 - Use `.jsonl` for performance, `.json` for readability
@@ -405,7 +333,7 @@ Batch evaluation lives under the `evaluation` section:
 evaluation:
   enabled: true
   dataset_path: data/evaluation_tasks.jsonl
-  output_dir: logs/evaluation
+  output_dir: .var/logs/evaluation
   metrics:
     - quality_score
     - keyword_success
@@ -582,7 +510,7 @@ dspy:
     max_bootstrapped_demos: 8 # More examples per prompt
 ```
 
-Add more training examples to `data/supervisor_examples.json`.
+Add more training examples to `src/agentic_fleet/data/supervisor_examples.json`.
 
 ### Lower Costs
 
@@ -601,7 +529,7 @@ agents:
 
 ```yaml
 logging:
-  history_file: logs/execution_history.jsonl # JSONL is 10-100x faster
+  history_file: .var/logs/execution_history.jsonl # JSONL is 10-100x faster
 ```
 
 ## Configuration Validation
@@ -609,8 +537,8 @@ logging:
 The framework validates configuration at startup using Pydantic schemas:
 
 ```python
-from src.agentic_fleet.utils.config_schema import validate_config
-from src.agentic_fleet.workflows.exceptions import ConfigurationError
+from agentic_fleet.core.config import validate_config
+from agentic_fleet.workflows.exceptions import ConfigurationError
 
 try:
     schema = validate_config(config_dict)
@@ -634,14 +562,14 @@ except ConfigurationError as e:
 
 ### Breaking Changes
 
-1. **History format**: Execution history now appends to `logs/execution_history.jsonl`. The legacy `.json` file is still readable, but all tooling writes JSONL for better streaming performance.
+1. **History format**: Execution history now appends to `.var/logs/execution_history.jsonl`. The legacy `.json` file is still readable, but all tooling writes JSONL for better streaming performance.
 2. **WorkflowConfig fields**: New required attributes (quality thresholds, streaming flags, tool switches) were added in v0.5. If you instantiate `WorkflowConfig` manually, supply the new fields or rely on defaults.
 3. **Optional `TAVILY_API_KEY`**: Web search is now optional. When the key is missing, the Researcher agent automatically degrades to non-search mode. Run `uv run agentic-fleet list-agents` to confirm the active capabilities.
 
 ### JSON to JSONL History
 
 ```python
-from src.agentic_fleet.utils.history_manager import HistoryManager
+from agentic_fleet.utils.history_manager import HistoryManager
 
 # Load from old JSON format
 old_manager = HistoryManager(history_format="json")
@@ -673,12 +601,12 @@ quality:
 
 ```yaml
 logging:
-  history_file: logs/execution_history.jsonl # Changed from .json
+  history_file: .var/logs/execution_history.jsonl # Changed from .json
 ```
 
 ### New in v0.5
 
-- **Cached compilation**: Compiled DSPy reasoners are cached under `logs/compiled_supervisor.pkl`, shrinking cold-start time by ~5–10 seconds.
+- **Cached compilation**: Compiled DSPy reasoners are cached under `.var/logs/compiled_supervisor.pkl`, shrinking cold-start time by ~5–10 seconds.
 - **Parallel execution resilience**: Failures inside one parallel branch no longer terminate the entire workflow; the supervisor retries or continues with remaining agents.
 - **Configurable refinement**: `workflow.quality.refinement_threshold` and `workflow.quality.enable_refinement` tune when the Reviewer requests another pass.
 - **Completion storage controls**: `openai.enable_completion_storage` lets you disable OpenAI's default query storage for privacy-sensitive runs.
@@ -699,7 +627,7 @@ uv run python src/agentic_fleet/scripts/manage_cache.py --info
 uv run python src/agentic_fleet/scripts/manage_cache.py --clear
 ```
 
-Clearing the cache is recommended whenever you update `data/supervisor_examples.json` or switch models.
+Clearing the cache is recommended whenever you update `src/agentic_fleet/data/supervisor_examples.json` or switch models.
 
 ## Examples
 
@@ -716,7 +644,7 @@ workflow:
     enable_streaming: true
 
 logging:
-  history_file: logs/execution_history.jsonl
+  history_file: .var/logs/execution_history.jsonl
 ```
 
 ### Production Configuration
@@ -759,7 +687,7 @@ tools:
 
 logging:
   level: INFO
-  history_file: logs/execution_history.jsonl
+  history_file: .var/logs/execution_history.jsonl
   verbose: true
 ```
 
@@ -798,7 +726,7 @@ logging:
 
 ### Cached module feels stale
 
-- Run `uv run python src/agentic_fleet/scripts/manage_cache.py --clear` after updating `data/supervisor_examples.json` or switching models.
+- Run `uv run python src/agentic_fleet/scripts/manage_cache.py --clear` after updating `src/agentic_fleet/data/supervisor_examples.json` or switching models.
 - Verify cache health with `uv run python src/agentic_fleet/scripts/manage_cache.py --info`; stale timestamps usually indicate a restart is needed.
 
 ## Operational Best Practices

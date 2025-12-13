@@ -129,7 +129,7 @@ history_format: str = "jsonl"           # "jsonl" or "json"
 **Example**:
 
 ```python
-from src.agentic_fleet.workflows.config import WorkflowConfig
+from agentic_fleet.workflows.config import WorkflowConfig
 
 config = WorkflowConfig(
     dspy_model="gpt-5-mini",
@@ -247,7 +247,7 @@ Find tools by capability tag.
 **Example**:
 
 ```python
-from src.agentic_fleet.utils.tool_registry import ToolRegistry
+from agentic_fleet.utils.tool_registry import ToolRegistry
 
 registry = ToolRegistry()
 # Get all tools with web_search capability
@@ -371,7 +371,7 @@ Factory function to create and initialize workflow.
 **Example**:
 
 ```python
-from src.agentic_fleet.workflows.supervisor_workflow import create_supervisor_workflow
+from agentic_fleet.workflows.supervisor_workflow import create_supervisor_workflow
 
 # With compilation
 workflow = await create_supervisor_workflow(compile_dspy=True)
@@ -395,7 +395,7 @@ Load configuration from YAML file.
 **Example**:
 
 ```python
-from src.agentic_fleet.utils.config_loader import load_config
+from agentic_fleet.core.config import load_config
 
 config = load_config()
 ```
@@ -415,8 +415,8 @@ Validate configuration using Pydantic.
 **Example**:
 
 ```python
-from src.agentic_fleet.utils.config_schema import validate_config
-from src.agentic_fleet.workflows.exceptions import ConfigurationError
+from agentic_fleet.core.config import validate_config
+from agentic_fleet.workflows.exceptions import ConfigurationError
 
 try:
     validated = validate_config(config_dict)
@@ -441,8 +441,8 @@ Compile DSPy supervisor module with training examples.
 **Example**:
 
 ```python
-from src.agentic_fleet.utils.compiler import compile_supervisor
-from src.agentic_fleet.dspy_modules.reasoner import DSPyReasoner
+from agentic_fleet.utils.compiler import compile_supervisor
+from agentic_fleet.dspy_modules.reasoner import DSPyReasoner
 
 # ...
 
@@ -454,26 +454,26 @@ compiled = compile_supervisor(
 )
 ```
 
-### `clear_cache(cache_path: str = "logs/compiled_supervisor.pkl")`
+### `clear_cache(cache_path: str = ".var/logs/compiled_supervisor.pkl")`
 
 Clear compiled module cache.
 
 **Example**:
 
 ```python
-from src.agentic_fleet.utils.compiler import clear_cache
+from agentic_fleet.utils.compiler import clear_cache
 
 clear_cache()
 ```
 
-### `get_cache_info(cache_path: str = "logs/compiled_supervisor.pkl") -> Optional[Dict]`
+### `get_cache_info(cache_path: str = ".var/logs/compiled_supervisor.pkl") -> Optional[Dict]`
 
 Get cache metadata and statistics.
 
 **Example**:
 
 ```python
-from src.agentic_fleet.utils.compiler import get_cache_info
+from agentic_fleet.utils.compiler import get_cache_info
 
 info = get_cache_info()
 if info:
@@ -499,7 +499,7 @@ Key type definitions used throughout:
 
 ```python
 from typing import Dict, Any, List, Optional, AsyncIterator
-from src.agentic_fleet.utils.models import ExecutionMode, RoutingDecision
+from agentic_fleet.utils.models import ExecutionMode, RoutingDecision
 
 AgentDict = Dict[str, ChatAgent]
 QualityAssessment = Dict[str, Any]
@@ -531,7 +531,7 @@ Final workflow result.
 ## Constants
 
 ```python
-from src.agentic_fleet.utils.compiler import CACHE_VERSION
+from agentic_fleet.utils.compiler import CACHE_VERSION
 
 # CACHE_VERSION = 1  # Current cache version for invalidation
 ```
@@ -557,7 +557,7 @@ Enhanced health check with dependency verification (v0.6.7+).
     "session_manager": "ok",
     "conversations": "ok"
   },
-  "version": "0.6.7"
+  "version": "<package version>"
 }
 ```
 

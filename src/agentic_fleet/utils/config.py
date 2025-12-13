@@ -296,6 +296,77 @@ class EnvConfig:
             lambda: get_env_bool("AZURE_COSMOS_USE_MANAGED_IDENTITY", default=False),
         )
 
+    # Azure OpenAI Configuration
+    @property
+    def azure_openai_api_key(self) -> str:
+        """Azure OpenAI API key (AZURE_OPENAI_API_KEY or AZURE_API_KEY)."""
+        return self._get_cached(
+            "azure_openai_api_key",
+            lambda: get_env_var("AZURE_OPENAI_API_KEY", "") or get_env_var("AZURE_API_KEY", ""),
+        )
+
+    @property
+    def azure_openai_endpoint(self) -> str:
+        """Azure OpenAI endpoint (AZURE_OPENAI_ENDPOINT or AZURE_API_BASE)."""
+        return self._get_cached(
+            "azure_openai_endpoint",
+            lambda: get_env_var("AZURE_OPENAI_ENDPOINT", "") or get_env_var("AZURE_API_BASE", ""),
+        )
+
+    @property
+    def azure_openai_api_version(self) -> str:
+        """Azure OpenAI API version (empty for v1 Responses API)."""
+        return self._get_cached(
+            "azure_openai_api_version",
+            lambda: get_env_var("AZURE_OPENAI_API_VERSION", ""),
+        )
+
+    @staticmethod
+    def _is_valid_azure_openai_endpoint(endpoint: str) -> bool:
+        """Check if endpoint is a valid Azure OpenAI/AI Foundry endpoint.
+
+        Supports:
+        - Azure OpenAI: *.openai.azure.com
+        - Azure AI Models: *.models.ai.azure.com
+        - Azure AI Foundry Services: *.services.ai.azure.com (per MS docs 2025)
+        """
+        endpoint_lc = endpoint.strip().lower()
+        return any(
+            marker in endpoint_lc
+            for marker in (".openai.azure.com", ".models.ai.azure.com", ".services.ai.azure.com")
+        )
+
+    @property
+    def azure_openai_deployment(self) -> str:
+        """Azure OpenAI deployment name (AZURE_OPENAI_CHAT_COMPLETION_DEPLOYED_MODEL_NAME)."""
+        return self._get_cached(
+            "azure_openai_deployment",
+            lambda: get_env_var("AZURE_OPENAI_CHAT_COMPLETION_DEPLOYED_MODEL_NAME", ""),
+        )
+
+    @property
+    def use_azure_openai(self) -> bool:
+        """Check if Azure OpenAI should be used (endpoint and key both set)."""
+
+        def _load() -> bool:
+            endpoint = self.azure_openai_endpoint
+            api_key = self.azure_openai_api_key
+
+            if not (endpoint and api_key):
+                return False
+
+            if not self._is_valid_azure_openai_endpoint(endpoint):
+                logger.warning(
+                    "AZURE_OPENAI_ENDPOINT does not appear to be an Azure OpenAI host "
+                    "(.openai.azure.com or .models.ai.azure.com); skipping Azure OpenAI path and "
+                    "falling back to standard OpenAI/Foundry configuration."
+                )
+                return False
+
+            return True
+
+        return self._get_cached("use_azure_openai", _load)
+
     @property
     def otel_exporter_endpoint(self) -> str | None:
         def _load() -> str | None:
@@ -397,6 +468,7 @@ class DSPyConfig(BaseModel):
     routing_model: str | None = None  # Optional fast model for routing/analysis
     temperature: float = Field(default=0.7, ge=0.0, le=2.0)
     max_tokens: int = Field(default=2000, ge=1, le=32000)
+    compiled_reasoner_path: str = ".var/cache/dspy/compiled_reasoner.json"
     require_compiled: bool = False
     # DSPy 3.x TypedPredictor settings for structured outputs
     use_typed_signatures: bool = True  # Enable Pydantic-based typed signatures
@@ -414,6 +486,10 @@ class SupervisorConfig(BaseModel):
     enable_streaming: bool = True
     pipeline_profile: Literal["full", "light"] = "full"
     simple_task_max_words: int = Field(default=40, ge=1, le=2000)
+    # Include a small recent message window in analysis/routing to resolve
+    # short follow-up inputs (e.g., quick replies).
+    conversation_context_max_messages: int = Field(default=8, ge=0, le=50)
+    conversation_context_max_chars: int = Field(default=4000, ge=0, le=20000)
 
 
 class ExecutionConfig(BaseModel):
@@ -677,9 +753,10 @@ def get_default_config() -> dict[str, Any]:
     pkg = _package_root()
     return {
         "dspy": {
-            "model": "gpt-4.1",
+            "model": "gpt-4.1-mini",
             "temperature": 0.7,
             "max_tokens": 2000,
+            "compiled_reasoner_path": ".var/cache/dspy/compiled_reasoner.json",
             "optimization": {
                 "enabled": True,
                 "examples_path": str(pkg / "data" / "supervisor_examples.json"),
@@ -727,14 +804,14 @@ def get_default_config() -> dict[str, Any]:
             "handoffs": {"enabled": True},
         },
         "agents": {
-            "researcher": {"model": "gpt-4.1", "tools": ["TavilyMCPTool"], "temperature": 0.5},
+            "researcher": {"model": "gpt-4.1-mini", "tools": ["TavilyMCPTool"], "temperature": 0.5},
             "analyst": {
-                "model": "gpt-4.1",
+                "model": "gpt-4.1-mini",
                 "tools": ["HostedCodeInterpreterTool"],
                 "temperature": 0.3,
             },
-            "writer": {"model": "gpt-4.1", "tools": [], "temperature": 0.7},
-            "reviewer": {"model": "gpt-4.1", "tools": [], "temperature": 0.2},
+            "writer": {"model": "gpt-4.1-mini", "tools": [], "temperature": 0.7},
+            "reviewer": {"model": "gpt-4.1-mini", "tools": [], "temperature": 0.2},
         },
         "logging": {
             "level": "INFO",
@@ -767,7 +844,7 @@ def get_default_config() -> dict[str, Any]:
     }
 
 
-def get_agent_model(config: dict[str, Any], agent_name: str, default: str = "gpt-4.1") -> str:
+def get_agent_model(config: dict[str, Any], agent_name: str, default: str = "gpt-4.1-mini") -> str:
     """Get model for specific agent from config."""
     try:
         return str(config.get("agents", {}).get(agent_name.lower(), {}).get("model", default))

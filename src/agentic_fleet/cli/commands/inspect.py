@@ -91,7 +91,7 @@ def export_history(
     task: Annotated[str, typer.Option("--task", "-t", help="Task to run before export")] = "",
     model: Annotated[
         str, typer.Option("--model", help="Model to use for task execution")
-    ] = "gpt-4.1",
+    ] = "gpt-4.1-mini",
 ) -> None:
     """Export workflow execution history to a file."""
 

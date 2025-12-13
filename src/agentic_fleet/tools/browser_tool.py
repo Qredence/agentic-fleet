@@ -9,7 +9,7 @@ from __future__ import annotations
 import contextlib
 import os
 from collections.abc import Callable
-from typing import TYPE_CHECKING, Any, cast
+from typing import TYPE_CHECKING, Any
 from urllib.parse import urlparse
 
 from agent_framework._serialization import SerializationMixin
@@ -84,8 +84,8 @@ class BrowserTool(SerializationMixin, ToolProtocol):
             factory = async_playwright_factory
             playwright_manager = factory()
             cls._shared_playwright = await playwright_manager.start()
-            playwright_obj = cast(Any, cls._shared_playwright)
-            cls._shared_browser = await playwright_obj.chromium.launch(headless=headless)
+            assert cls._shared_playwright is not None
+            cls._shared_browser = await cls._shared_playwright.chromium.launch(headless=headless)
 
         assert cls._shared_browser is not None
         return cls._shared_browser

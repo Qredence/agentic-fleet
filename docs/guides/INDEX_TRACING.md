@@ -75,7 +75,7 @@ agentic-fleet run -m "Who is the CEO of Apple?"  # Run a task
 - OTLP endpoint: `http://localhost:4319`
 - Sensitive data capture: enabled (for local dev)
 
-✅ **Docker Setup** (`docker-compose.tracing.yml`)
+✅ **Docker Setup** (`docker/docker-compose.tracing.yml`)
 
 - One-command Jaeger launch
 

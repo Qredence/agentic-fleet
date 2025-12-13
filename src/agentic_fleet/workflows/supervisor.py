@@ -5,11 +5,15 @@ Consolidated public API and implementation.
 
 from __future__ import annotations
 
-from collections.abc import AsyncIterator
+import inspect
+import time
+from collections.abc import AsyncIterable, AsyncIterator
 from datetime import datetime
-from typing import TYPE_CHECKING, Any
+from pathlib import Path
+from typing import TYPE_CHECKING, Any, cast
 from uuid import uuid4
 
+import agent_framework._workflows as _af_workflows
 from agent_framework._types import ChatMessage, Role
 from agent_framework._workflows import (
     AgentRunUpdateEvent,
@@ -19,11 +23,6 @@ from agent_framework._workflows import (
     WorkflowRunState,
     WorkflowStartedEvent,
     WorkflowStatusEvent,
-)
-
-from agentic_fleet.workflows.models import (
-    MagenticAgentMessageEvent,
-    ReasoningStreamEvent,
 )
 
 from ..utils.history_manager import HistoryManager
@@ -37,7 +36,17 @@ from .context import SupervisorContext
 from .handoff import HandoffManager
 from .helpers import is_simple_task
 from .initialization import initialize_workflow_context
-from .models import FinalResultMessage, QualityReport, TaskMessage
+from .models import (
+    FinalResultMessage,
+    MagenticAgentMessageEvent,
+    QualityReport,
+    ReasoningStreamEvent,
+    TaskMessage,
+)
+
+# agent-framework 1.0.0b251211+ uses explicit workflow request events.
+# Avoid direct symbol imports here to keep static analysis working across versions.
+WorkflowRequestEvent = getattr(_af_workflows, "WorkflowRequestEvent", None)
 
 if TYPE_CHECKING:
     from agent_framework._agents import ChatAgent
@@ -54,9 +63,98 @@ WorkflowEvent = (
     | MagenticAgentMessageEvent
     | ExecutorCompletedEvent
     | ReasoningStreamEvent
+    | RequestInfoEvent
 )
 
 logger = setup_logger(__name__)
+
+
+def _thread_has_history(thread: Any | None) -> bool:
+    """Best-effort check for whether an agent-framework AgentThread has prior messages.
+
+    We intentionally avoid importing/depending on AgentThread internals here so this
+    remains compatible across agent-framework versions.
+    """
+
+    if thread is None:
+        return False
+
+    # Common case: AgentThread supports __len__.
+    try:
+        return len(thread) > 0  # type: ignore[arg-type]
+    except Exception:
+        pass
+
+    # agent-framework AgentThread does not implement __len__ but may expose
+    # messages via a ChatMessageStore on `message_store`.
+    #
+    # We keep this best-effort and defensive to remain compatible across
+    # agent-framework versions and custom stores.
+    store = getattr(thread, "message_store", None)
+    if store is None:
+        store = getattr(thread, "_message_store", None)
+    if store is not None:
+        for attr in ("messages", "_messages", "history"):
+            msgs = getattr(store, attr, None)
+            if msgs is None:
+                continue
+            try:
+                return len(msgs) > 0  # type: ignore[arg-type]
+            except Exception:
+                continue
+        try:
+            return len(store) > 0  # type: ignore[arg-type]
+        except Exception:
+            pass
+
+    # Service-managed threads: if a service thread id is set, treat this as
+    # multi-turn context and avoid stateless fast-path.
+    service_thread_id = getattr(thread, "service_thread_id", None) or getattr(
+        thread, "_service_thread_id", None
+    )
+    if service_thread_id:
+        return True
+
+    # Last-resort: if the thread is initialized, conservatively assume it may
+    # have context (better to skip fast-path than ignore history).
+    if bool(getattr(thread, "is_initialized", False)):
+        return True
+
+    # Common attribute names across thread implementations.
+    for attr in ("messages", "history", "_messages"):
+        msgs = getattr(thread, attr, None)
+        if msgs is None:
+            continue
+        try:
+            return len(msgs) > 0  # type: ignore[arg-type]
+        except Exception:
+            continue
+
+    # Fallback: try calling methods that might return an iterable of messages.
+    for method_name in ("get_messages", "to_messages", "iter_messages"):
+        method = getattr(thread, method_name, None)
+        if not callable(method):
+            continue
+        try:
+            maybe_msgs = method()
+        except TypeError:
+            # Method likely requires args we don't know.
+            continue
+        except Exception:
+            continue
+        try:
+            it = iter(maybe_msgs)  # type: ignore[arg-type]
+        except Exception:
+            continue
+        try:
+            next(it)
+            return True
+        except StopIteration:
+            return False
+        except Exception:
+            continue
+
+    return False
 
 
 def _materialize_workflow(builder: Workflow | Any) -> Workflow | Any:
@@ -158,6 +256,13 @@ class SupervisorWorkflow:
         if not self.dspy_reasoner:
             return False
 
+        # Multi-turn: if we already have conversation context, do NOT fast-path.
+        # Fast-path is intentionally stateless and would ignore prior turns.
+        conversation_thread = getattr(self.context, "conversation_thread", None)
+        if _thread_has_history(conversation_thread):
+            logger.debug("Fast-path disabled due to existing conversation thread history")
+            return False
+
         # Check auto-mode fast-path detection (uses cached decision)
         if self.mode == "auto":
             decision = self._get_mode_decision(task)
@@ -215,7 +320,13 @@ class SupervisorWorkflow:
             "metadata": metadata,
         }
 
-    async def run(self, task: str) -> dict[str, Any]:
+    async def run(
+        self,
+        task: str,
+        *,
+        checkpoint_id: str | None = None,
+        checkpoint_storage: Any | None = None,
+    ) -> dict[str, Any]:
         """
         Run the supervisor workflow for a single textual task and return the final result and associated metadata.
 
@@ -298,7 +409,11 @@ class SupervisorWorkflow:
 
             if current_mode in ("group_chat", "handoff"):
                 msg = ChatMessage(role=Role.USER, text=task)
-                result = await self.workflow.run(msg)
+                result = await self._run_workflow(
+                    msg,
+                    checkpoint_id=checkpoint_id,
+                    checkpoint_storage=checkpoint_storage,
+                )
 
                 # Handle Handoff/GroupChat result (usually a list of messages or a single message)
                 result_text = ""
@@ -333,8 +448,12 @@ class SupervisorWorkflow:
                         await mw.on_end(result_dict)
                 return result_dict
 
-            task_msg = TaskMessage(task=task)
-            result = await self.workflow.run(task_msg)
+            task_msg = TaskMessage(task)
+            result = await self._run_workflow(
+                task_msg,
+                checkpoint_id=checkpoint_id,
+                checkpoint_storage=checkpoint_storage,
+            )
             outputs = result.get_outputs() if hasattr(result, "get_outputs") else []
             if not outputs:
                 raise RuntimeError("Workflow did not produce any outputs")
@@ -365,6 +484,187 @@ class SupervisorWorkflow:
                     await mw.on_end(result_dict)
 
             return result_dict
+
+    def _resolve_checkpoint_storage(
+        self,
+        *,
+        checkpoint_id: str | None,
+        checkpoint_storage: Any | None,
+    ) -> Any | None:
+        """Resolve the agent-framework CheckpointStorage to use for a given run.
+
+        If a storage is provided explicitly, it wins. Otherwise, if checkpointing is
+        requested (checkpoint_id is not None), we default to a file-based storage
+        rooted at `.var/checkpoints`.
+
+        This keeps checkpointing opt-in and avoids impacting existing callers.
+        """
+
+        if checkpoint_storage is not None:
+            return checkpoint_storage
+
+        if checkpoint_id is None:
+            return None
+
+        # Allow contexts/configs to inject their own storage implementation.
+        injected = getattr(self.context, "checkpoint_storage", None)
+        if injected is not None:
+            return injected
+
+        # Default file-based storage under .var/ (repo convention).
+        checkpoint_dir = getattr(self.config, "checkpoint_dir", None) or ".var/checkpoints"
+        try:
+            Path(checkpoint_dir).mkdir(parents=True, exist_ok=True)
+        except Exception as exc:
+            logger.warning(
+                "Failed to create checkpoint_dir=%s (%s); falling back to in-memory checkpointing",
+                checkpoint_dir,
+                exc,
+            )
+            checkpoint_dir = None
+
+        try:
+            import agent_framework._workflows._checkpoint as _af_checkpoint
+
+            if checkpoint_dir:
+                return _af_checkpoint.FileCheckpointStorage(checkpoint_dir)
+            return _af_checkpoint.InMemoryCheckpointStorage()
+        except Exception as exc:  # pragma: no cover - environment / version drift
+            logger.warning("Checkpointing unavailable (could not import storage): %s", exc)
+            return None
+
+    async def _run_workflow(
+        self,
+        message: Any,
+        *,
+        checkpoint_id: str | None,
+        checkpoint_storage: Any | None,
+        include_status_events: bool | None = None,
+    ) -> Any:
+        """Run the underlying agent-framework workflow with optional checkpointing.
+
+        Uses keyword args when supported, with a safe fallback for older builds.
+        """
+
+        if self.workflow is None:
+            raise RuntimeError("Workflow runner not initialized.")
+
+        storage = self._resolve_checkpoint_storage(
+            checkpoint_id=checkpoint_id,
+            checkpoint_storage=checkpoint_storage,
+        )
+
+        run_fn = getattr(self.workflow, "run", None)
+        if not callable(run_fn):
+            raise RuntimeError("Workflow runner does not support run().")
+
+        # agent-framework semantics:
+        # - message != None  => new run (checkpoint_id must be omitted)
+        # - message == None  => resume (checkpoint_id required)
+        if message is not None and checkpoint_id is not None:
+            logger.debug(
+                "Ignoring checkpoint_id for new run (checkpoint_id=%s)",
+                checkpoint_id,
+            )
+
+        kwargs: dict[str, Any] = {}
+        if checkpoint_id is not None and message is None:
+            kwargs["checkpoint_id"] = checkpoint_id
+        if storage is not None:
+            kwargs["checkpoint_storage"] = storage
+        if include_status_events is not None:
+            kwargs["include_status_events"] = include_status_events
+
+        try:
+            result = run_fn(message, **kwargs)
+        except TypeError:
+            # Older versions may not accept checkpoint kwargs.
+            result = run_fn(message)
+
+        if inspect.isawaitable(result):
+            return await result
+        return result
+
+    async def _run_workflow_stream(
+        self,
+        message: Any,
+        *,
+        checkpoint_id: str | None,
+        checkpoint_storage: Any | None,
+    ) -> AsyncIterator[Any]:
+        """Stream events from the underlying workflow with optional checkpointing.
+
+        agent-framework 1.0.0b251211+ supports kw-only `checkpoint_id` and
+        `checkpoint_storage`. This helper passes those kwargs when requested,
+        while remaining compatible with older versions.
+        """
+
+        if self.workflow is None:
+            raise RuntimeError("Workflow runner not initialized.")
+
+        storage = self._resolve_checkpoint_storage(
+            checkpoint_id=checkpoint_id,
+            checkpoint_storage=checkpoint_storage,
+        )
+
+        run_stream_fn = getattr(self.workflow, "run_stream", None)
+        if not callable(run_stream_fn):
+            raise RuntimeError("Workflow runner does not support run_stream().")
+
+        # agent-framework semantics:
+        # - message != None  => new run (checkpoint_id must be omitted)
+        # - message == None  => resume (checkpoint_id required)
+        if message is not None and checkpoint_id is not None:
+            logger.debug(
+                "Ignoring checkpoint_id for new streaming run (checkpoint_id=%s)",
+                checkpoint_id,
+            )
+
+        kwargs: dict[str, Any] = {}
+        if checkpoint_id is not None and message is None:
+            kwargs["checkpoint_id"] = checkpoint_id
+        if storage is not None:
+            kwargs["checkpoint_storage"] = storage
+
+        try:
+            stream = cast(AsyncIterable[Any], run_stream_fn(message, **kwargs))
+        except TypeError:
+            stream = cast(AsyncIterable[Any], run_stream_fn(message))
+
+        async for event in stream:
+            yield event
+
+    async def send_workflow_responses(self, responses: dict[str, Any]) -> None:
+        """Send HITL responses back into an in-flight agent-framework workflow.
+
+        In agent-framework 1.0+, workflows and orchestrations can emit request events
+        (e.g., tool approval, user input) and pause until the host sends responses.
+        This helper forwards responses to the underlying workflow runner using the
+        best available API.
+
+        Args:
+            responses: Mapping of request_id -> response payload.
+
+        Raises:
+            RuntimeError: If no workflow runner is initialized or it does not support
+                receiving responses.
+        """
+        if self.workflow is None:
+            raise RuntimeError("Workflow runner not initialized.")
+
+        send_fn = getattr(self.workflow, "send_responses_streaming", None)
+        if not callable(send_fn):
+            send_fn = getattr(self.workflow, "send_responses", None)
+
+        if not callable(send_fn):
+            raise RuntimeError(
+                "Underlying workflow does not support send_responses_streaming/send_responses. "
+                "Upgrade agent-framework and ensure the workflow is request/response capable."
+            )
+
+        result = send_fn(responses)
+        if inspect.isawaitable(result):
+            await result
 
     def _handle_agent_run_update(
         self, event: AgentRunUpdateEvent
@@ -463,11 +763,13 @@ class SupervisorWorkflow:
 
     async def run_stream(
         self,
-        task: str,
+        task: str | None,
         *,
         reasoning_effort: str | None = None,
         thread: AgentThread | None = None,
-    ) -> AsyncIterator[WorkflowEvent]:
+        checkpoint_id: str | None = None,
+        checkpoint_storage: Any | None = None,
+    ) -> AsyncIterator[Any]:
         """
         Execute the workflow for a single task and stream WorkflowEvent objects representing progress and results.
 
@@ -479,15 +781,34 @@ class SupervisorWorkflow:
             thread (AgentThread | None): Optional multi-turn conversation context to store in the workflow context.
 
         Yields:
-            WorkflowEvent: Events emitted during execution, including WorkflowStatusEvent, MagenticAgentMessageEvent, ReasoningStreamEvent, ExecutorCompletedEvent, RequestInfoEvent, and WorkflowOutputEvent containing the final result.
+            Any: Events emitted during execution. Most callers should expect a mix of
+            agent-framework workflow events (status/output/request) and AgenticFleet
+            wrapper events (agent messages/reasoning deltas).
 
         Raises:
             RuntimeError: If the workflow runner is not initialized.
         """
+        task_text = task or ""
+        is_resume = task is None
+        if is_resume and checkpoint_id is None:
+            raise ValueError("Resume requires checkpoint_id when task is None")
+
+        task_for_metadata = task_text
+        if is_resume:
+            # Avoid leaking large/unsafe ids; checkpoint ids are usually short, but still sanitize.
+            task_for_metadata = f"[resume:{checkpoint_id}]"
+
         with optional_span(
-            "SupervisorWorkflow.run_stream", attributes={"task": task, "mode": self.mode}
+            "SupervisorWorkflow.run_stream",
+            attributes={"task": task_for_metadata, "mode": self.mode, "is_resume": is_resume},
         ):
-            logger.info(f"Running fleet workflow (streaming) for task: {task[:50]}...")
+            if is_resume:
+                logger.info(
+                    "Resuming fleet workflow (streaming) from checkpoint: %s",
+                    str(checkpoint_id)[:50],
+                )
+            else:
+                logger.info(f"Running fleet workflow (streaming) for task: {task_text[:50]}...")
 
             # Store thread in context for strategies to use
             self.context.conversation_thread = thread
@@ -510,7 +831,7 @@ class SupervisorWorkflow:
                     if hasattr(self.context, "middlewares"):
                         for mw in self.context.middlewares:
                             await mw.on_end(
-                                task,
+                                task_for_metadata,
                                 {
                                     "workflowId": workflow_id,
                                     "mode": current_mode,
@@ -532,19 +853,29 @@ class SupervisorWorkflow:
             if hasattr(self.context, "middlewares"):
                 for mw in self.context.middlewares:
                     await mw.on_start(
-                        task,
+                        task_for_metadata,
                         {
                             "workflowId": workflow_id,
                             "mode": current_mode,
                             "reasoning_effort": reasoning_effort,
                             "start_time": datetime.now().isoformat(),
+                            "is_resume": is_resume,
+                            "checkpoint_id": checkpoint_id if is_resume else None,
                         },
                     )
 
-            # Unified fast-path check for streaming
-            if self._should_fast_path(task):
-                async for event in self._yield_fast_path_events(task):
+            # Start timing for observability
+            workflow_start_time = time.time()
+            logger.info(
+                f"[Workflow {workflow_id}] Starting execution for task: {task_for_metadata[:80]}..."
+            )
+
+            # Unified fast-path check for streaming (not applicable for resume)
+            if not is_resume and self._should_fast_path(task_text):
+                async for event in self._yield_fast_path_events(task_text):
                     yield event
+                duration = time.time() - workflow_start_time
+                logger.info(f"[Workflow {workflow_id}] Fast-path completed in {duration:.2f}s")
                 return
 
             if self.workflow is None:
@@ -552,113 +883,253 @@ class SupervisorWorkflow:
 
             self.current_execution = {
                 "workflowId": workflow_id,
-                "task": task,
+                "task": task_for_metadata,
                 "start_time": datetime.now().isoformat(),
             }
 
+            # Emit initial status event immediately so frontend knows workflow started
+            yield WorkflowStatusEvent(
+                state=WorkflowRunState.IN_PROGRESS,
+                data={
+                    "message": (
+                        "Workflow resume started" if is_resume else "Workflow execution started"
+                    ),
+                    "workflow_id": workflow_id,
+                    "mode": current_mode,
+                    "is_resume": is_resume,
+                    "checkpoint_id": checkpoint_id if is_resume else None,
+                },
+            )
+
             final_msg = None
-            if current_mode in ("group_chat", "handoff"):
-                msg = ChatMessage(role=Role.USER, text=task)
-                async for event in self.workflow.run_stream(msg):
-                    # Surface MagenticAgentMessageEvent from executors (agent.start, agent.output, etc.)
-                    if isinstance(event, MagenticAgentMessageEvent):
-                        yield event
-                    elif isinstance(event, AgentRunUpdateEvent):
-                        converted = self._handle_agent_run_update(event)
-                        if converted is not None:
-                            yield converted
-                            if isinstance(converted, ReasoningStreamEvent):
-                                continue
-
-                    elif isinstance(event, RequestInfoEvent):
-                        # If request contains conversation, extracting last message might be useful
-                        event_data = getattr(event, "data", None)
-                        if event_data and hasattr(event_data, "conversation"):
-                            conversation = getattr(event_data, "conversation", None)
-                            if conversation:
-                                last_msg = conversation[-1]
-                                # Log or capture partial result
-                                logger.info(
-                                    f"RequestInfoEvent: Last message from {getattr(last_msg, 'author_name', 'unknown')}: {getattr(last_msg, 'text', '')[:50]}..."
-                                )
-
-                    elif isinstance(event, WorkflowOutputEvent) and (
-                        isinstance(event.data, list)
-                        and event.data
-                        and isinstance(event.data[0], ChatMessage)
+            saw_output_event = False
+            try:
+                if current_mode in ("group_chat", "handoff"):
+                    msg = None if is_resume else ChatMessage(role=Role.USER, text=task_text)
+                    async for event in self._run_workflow_stream(
+                        msg,
+                        checkpoint_id=checkpoint_id,
+                        checkpoint_storage=checkpoint_storage,
                     ):
-                        last_msg = event.data[-1]
-                        final_msg = FinalResultMessage(
-                            result=last_msg.text,
-                            routing=RoutingDecision(
-                                task=task,
-                                assigned_to=(current_mode,),
-                                mode=ExecutionMode.DELEGATED,  # or GroupChat/Handoff specific
-                                subtasks=(task,),
-                            ),
-                            quality=QualityReport(score=0.0),
-                            judge_evaluations=[],
-                            execution_summary={},
-                            phase_timings={},
-                            phase_status={},
-                            metadata={"mode": current_mode},
-                        )
-                        # Yield the formatted output event
-                        yield WorkflowOutputEvent(
-                            data=self._create_output_event_data(final_msg),
-                            source_executor_id=current_mode,
-                        )
-            else:
-                task_msg = TaskMessage(task=task)
-                async for event in self.workflow.run_stream(task_msg):
-                    # Surface MagenticAgentMessageEvent from executors (agent.start, agent.output, etc.)
-                    # and ExecutorCompletedEvent for phase completions
-                    if isinstance(event, (MagenticAgentMessageEvent, ExecutorCompletedEvent)):
-                        yield event
-                    elif isinstance(event, AgentRunUpdateEvent):
-                        converted = self._handle_agent_run_update(event)
-                        if converted is not None:
-                            yield converted
-                            if isinstance(converted, ReasoningStreamEvent):
-                                continue
-                    elif isinstance(event, WorkflowOutputEvent):
-                        if hasattr(event, "data"):
-                            data = event.data
+                        # Surface MagenticAgentMessageEvent from executors (agent.start, agent.output, etc.)
+                        if isinstance(event, MagenticAgentMessageEvent):
+                            yield event
+                        elif isinstance(event, AgentRunUpdateEvent):
+                            converted = self._handle_agent_run_update(event)
+                            if converted is not None:
+                                yield converted
+                                if isinstance(converted, ReasoningStreamEvent):
+                                    continue
+
+                        elif isinstance(event, RequestInfoEvent) or (
+                            WorkflowRequestEvent is not None
+                            and isinstance(event, WorkflowRequestEvent)  # type: ignore[arg-type]
+                        ):
+                            # Surface request events so the API/websocket layer can drive HITL.
+                            # (e.g., tool approval, user input, plan review)
+                            yield event
+
+                        elif isinstance(event, WorkflowOutputEvent):
+                            saw_output_event = True
+                            data = getattr(event, "data", None)
+
+                            # If we already have a structured FinalResultMessage, normalize
+                            # to the list[ChatMessage] format expected by downstream mappers.
                             if isinstance(data, FinalResultMessage):
                                 final_msg = data
-                                # Convert to list[ChatMessage] for consistency with new format
                                 yield WorkflowOutputEvent(
-                                    data=self._create_output_event_data(data),
-                                    source_executor_id=getattr(
-                                        event, "source_executor_id", "workflow"
-                                    ),
+                                    data=self._create_output_event_data(final_msg),
+                                    source_executor_id=current_mode,
                                 )
                                 continue
-                            elif isinstance(data, dict) and "result" in data:
-                                final_msg = self._dict_to_final_message(data)
-                            elif isinstance(data, list) and data:
-                                # Handle legacy list[ChatMessage] format from strategies
+
+                            # Legacy list[ChatMessage] output.
+                            if isinstance(data, list) and data and isinstance(data[0], ChatMessage):
                                 last_msg = data[-1]
-                                text = getattr(last_msg, "text", str(last_msg))
                                 final_msg = FinalResultMessage(
-                                    result=text,
+                                    result=last_msg.text,
                                     routing=RoutingDecision(
-                                        task=task,
-                                        assigned_to=(),
-                                        mode=ExecutionMode.SEQUENTIAL,
-                                        subtasks=(),
+                                        task=task_for_metadata,
+                                        assigned_to=(current_mode,),
+                                        mode=ExecutionMode.DELEGATED,
+                                        subtasks=(task_for_metadata,),
                                     ),
                                     quality=QualityReport(score=0.0),
                                     judge_evaluations=[],
                                     execution_summary={},
                                     phase_timings={},
                                     phase_status={},
-                                    metadata={"legacy_list_output": True},
+                                    metadata={"mode": current_mode, "legacy_list_output": True},
                                 )
-                        yield event
+                                yield WorkflowOutputEvent(
+                                    data=self._create_output_event_data(final_msg),
+                                    source_executor_id=current_mode,
+                                )
+                                continue
 
-            if final_msg is None and current_mode not in ("group_chat", "handoff"):
-                final_msg = await self._create_fallback_result(task)
+                            # AgentRunResponse-like: capture text so we don't trigger fallback.
+                            result_text = ""
+                            if data is not None and hasattr(data, "messages"):
+                                msgs = list(getattr(data, "messages", []) or [])
+                                if msgs:
+                                    last_msg = msgs[-1]
+                                    result_text = getattr(last_msg, "text", str(last_msg)) or str(
+                                        last_msg
+                                    )
+                            elif data is not None and hasattr(data, "result"):
+                                result_text = str(getattr(data, "result", "") or "")
+                            elif data is not None:
+                                result_text = str(data)
+
+                            if result_text and final_msg is None:
+                                final_msg = FinalResultMessage(
+                                    result=result_text,
+                                    routing=RoutingDecision(
+                                        task=task_for_metadata,
+                                        assigned_to=(current_mode,),
+                                        mode=ExecutionMode.DELEGATED,
+                                        subtasks=(task_for_metadata,),
+                                    ),
+                                    quality=QualityReport(score=0.0),
+                                    judge_evaluations=[],
+                                    execution_summary={},
+                                    phase_timings={},
+                                    phase_status={},
+                                    metadata={
+                                        "mode": current_mode,
+                                        "workflow_output_unwrapped": True,
+                                    },
+                                )
+
+                            # Let downstream mapping handle modern WorkflowOutputEvent shapes.
+                            yield event
+                else:
+                    task_msg = None if is_resume else TaskMessage(task_text)
+                    async for event in self._run_workflow_stream(
+                        task_msg,
+                        checkpoint_id=checkpoint_id,
+                        checkpoint_storage=checkpoint_storage,
+                    ):
+                        # Surface MagenticAgentMessageEvent from executors (agent.start, agent.output, etc.)
+                        # and ExecutorCompletedEvent for phase completions
+                        if isinstance(event, (MagenticAgentMessageEvent, ExecutorCompletedEvent)):
+                            yield event
+                        elif isinstance(event, AgentRunUpdateEvent):
+                            converted = self._handle_agent_run_update(event)
+                            if converted is not None:
+                                yield converted
+                                if isinstance(converted, ReasoningStreamEvent):
+                                    continue
+                        elif isinstance(event, RequestInfoEvent) or (
+                            WorkflowRequestEvent is not None
+                            and isinstance(event, WorkflowRequestEvent)  # type: ignore[arg-type]
+                        ):
+                            yield event
+                        elif isinstance(event, WorkflowOutputEvent):
+                            saw_output_event = True
+                            if hasattr(event, "data"):
+                                data = event.data
+                                if isinstance(data, FinalResultMessage):
+                                    final_msg = data
+                                    # Convert to list[ChatMessage] for consistency with new format
+                                    yield WorkflowOutputEvent(
+                                        data=self._create_output_event_data(data),
+                                        source_executor_id=getattr(
+                                            event, "source_executor_id", "workflow"
+                                        ),
+                                    )
+                                    continue
+                                elif isinstance(data, dict) and "result" in data:
+                                    final_msg = self._dict_to_final_message(data)
+                                    yield WorkflowOutputEvent(
+                                        data=self._create_output_event_data(final_msg),
+                                        source_executor_id=getattr(
+                                            event, "source_executor_id", "workflow"
+                                        ),
+                                    )
+                                    continue
+                                elif isinstance(data, list) and data:
+                                    # Handle legacy list[ChatMessage] format from strategies
+                                    last_msg = data[-1]
+                                    text = getattr(last_msg, "text", str(last_msg))
+                                    final_msg = FinalResultMessage(
+                                        result=text,
+                                        routing=RoutingDecision(
+                                            task=task_for_metadata,
+                                            assigned_to=(),
+                                            mode=ExecutionMode.SEQUENTIAL,
+                                            subtasks=(),
+                                        ),
+                                        quality=QualityReport(score=0.0),
+                                        judge_evaluations=[],
+                                        execution_summary={},
+                                        phase_timings={},
+                                        phase_status={},
+                                        metadata={"legacy_list_output": True},
+                                    )
+                                elif data is not None and hasattr(data, "messages"):
+                                    # AgentRunResponse-like payload (framework 1.0+)
+                                    msgs = list(getattr(data, "messages", []) or [])
+                                    if msgs:
+                                        last_msg = msgs[-1]
+                                        text = getattr(last_msg, "text", str(last_msg)) or str(
+                                            last_msg
+                                        )
+                                        final_msg = FinalResultMessage(
+                                            result=text,
+                                            routing=RoutingDecision(
+                                                task=task_for_metadata,
+                                                assigned_to=(),
+                                                mode=ExecutionMode.SEQUENTIAL,
+                                                subtasks=(),
+                                            ),
+                                            quality=QualityReport(score=0.0),
+                                            judge_evaluations=[],
+                                            execution_summary={},
+                                            phase_timings={},
+                                            phase_status={},
+                                            metadata={"workflow_output_unwrapped": True},
+                                        )
+                                elif data is not None and hasattr(data, "result"):
+                                    text = str(getattr(data, "result", "") or "")
+                                    if text:
+                                        final_msg = FinalResultMessage(
+                                            result=text,
+                                            routing=RoutingDecision(
+                                                task=task_for_metadata,
+                                                assigned_to=(),
+                                                mode=ExecutionMode.SEQUENTIAL,
+                                                subtasks=(),
+                                            ),
+                                            quality=QualityReport(score=0.0),
+                                            judge_evaluations=[],
+                                            execution_summary={},
+                                            phase_timings={},
+                                            phase_status={},
+                                            metadata={"workflow_output_unwrapped": True},
+                                        )
+                            yield event
+            except TimeoutError:
+                duration = time.time() - workflow_start_time
+                logger.error(
+                    f"[Workflow {workflow_id}] TIMEOUT after {duration:.2f}s for task: {task_for_metadata[:50]}"
+                )
+                yield WorkflowStatusEvent(
+                    state=WorkflowRunState.FAILED,
+                    data={"message": "Workflow timed out", "workflow_id": workflow_id},
+                )
+            except Exception as e:
+                duration = time.time() - workflow_start_time
+                logger.exception(
+                    f"[Workflow {workflow_id}] ERROR after {duration:.2f}s for task: {task_for_metadata[:50]}: {e}"
+                )
+                yield WorkflowStatusEvent(
+                    state=WorkflowRunState.FAILED,
+                    data={"message": f"Workflow error: {e!s}", "workflow_id": workflow_id},
+                )
+
+            if final_msg is None and not saw_output_event:
+                final_msg = await self._create_fallback_result(task_for_metadata)
                 yield WorkflowOutputEvent(
                     data=self._create_output_event_data(final_msg), source_executor_id="fallback"
                 )
@@ -678,6 +1149,13 @@ class SupervisorWorkflow:
                 )
 
             self.current_execution["end_time"] = datetime.now().isoformat()
+
+            # Log completion timing
+            duration = time.time() - workflow_start_time
+            logger.info(
+                f"[Workflow {workflow_id}] Completed in {duration:.2f}s (mode={current_mode})"
+            )
+
             if hasattr(self.context, "middlewares"):
                 for mw in self.context.middlewares:
                     await mw.on_end(self.current_execution)

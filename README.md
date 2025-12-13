@@ -34,6 +34,8 @@ User Task → Analysis → Intelligent Routing → Agent Execution → Quality C
 - 🔄 **5 Execution Modes** – Auto, Delegated, Sequential, Parallel, Handoff, and Discussion
 - 🎯 **6 Specialized Agents** – Researcher, Analyst, Writer, Reviewer, Coder, Planner
 - ⚡ **Smart Fast-Path** – Simple queries bypass multi-agent routing (<1s response)
+- 🧍 **Human-in-the-Loop (HITL)** – Request/response events can pause execution until the user responds
+- ♻️ **Checkpoint Resume** – Resume interrupted runs using agent-framework checkpoint semantics (message XOR checkpoint_id)
 - 📊 **Built-in Evaluation** – Azure AI Evaluation integration for quality metrics
 - 🔍 **OpenTelemetry Tracing** – Full observability with Azure Monitor export
 
@@ -103,6 +105,11 @@ The web interface provides:
 - Conversation history with persistence
 - Agent activity display and orchestration insights
 
+Notes:
+
+- The **fast-path** is intended for first-turn/simple prompts; follow-up turns in an existing conversation are routed through the full workflow so history is respected.
+- For advanced streaming semantics (HITL responses and checkpoint resume), see the [Frontend Guide](docs/users/frontend.md#websocket-protocol).
+
 ## 🤖 Agents & Execution Modes
 
 ### Specialized Agents
@@ -154,8 +161,8 @@ dspy:
     cache_ttl_seconds: 300 # Cache TTL
 
 models:
-  router: gpt-4o-mini # Fast routing decisions
-  agents: gpt-4o # Agent execution
+  router: gpt-4.1-mini # Fast routing decisions
+  agents: gpt-4.1-mini # Agent execution
 
 execution:
   max_iterations: 10

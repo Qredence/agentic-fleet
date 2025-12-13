@@ -53,9 +53,16 @@ resource keyVault 'Microsoft.KeyVault/vaults@2023-07-01' = {
     softDeleteRetentionInDays: 90
     enablePurgeProtection: true
     networkAcls: {
-      defaultAction: 'Allow'
+      defaultAction: 'Deny'
       bypass: 'AzureServices'
+      // Add management IP ranges here when known (e.g., CI/CD runners, admin workstations)
+      ipRules: []
+      // Add VNet subnet resource IDs here for private access
+      // Example: { id: '/subscriptions/.../subnets/default', ignoreMissingVnetServiceEndpoint: false }
+      virtualNetworkRules: []
     }
+    // For production, consider enabling private endpoints instead of public network access
+    publicNetworkAccess: 'Disabled'
   }
 }
 

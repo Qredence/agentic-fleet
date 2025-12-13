@@ -22,7 +22,7 @@ try:
 
     logger.info("Attempting to import app...")
     try:
-        from agentic_fleet.app.main import app
+        from agentic_fleet.main import app
 
         logger.info(f"SUCCESS: App imported - {type(app)}")
     except ImportError as ie:

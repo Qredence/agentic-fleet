@@ -166,17 +166,35 @@ class AgentFactory:
                 if context_provider_names:
                     span.set_attribute("agent.context_providers", ",".join(context_provider_names))
 
-            # Get API key at runtime
-            api_key = env_config.openai_api_key
-            if not api_key:
-                raise ValueError("OPENAI_API_KEY environment variable is required")
+            # Determine API credentials based on Azure vs standard OpenAI
+            # Azure OpenAI takes precedence if configured
+            if env_config.use_azure_openai:
+                # Use Azure OpenAI Responses API
+                api_key = env_config.azure_openai_api_key
+                # Azure endpoint should be in format: https://<resource>.openai.azure.com/
+                base_url = env_config.azure_openai_endpoint
+                # For Azure, use deployment name as model_id if configured
+                effective_model_id = env_config.azure_openai_deployment or model_id
+                logger.info(
+                    f"Using Azure OpenAI Responses API for agent '{name}': "
+                    f"deployment={effective_model_id}, endpoint={base_url}"
+                )
+            else:
+                # Use standard OpenAI
+                api_key = env_config.openai_api_key
+                base_url = env_config.openai_base_url
+                effective_model_id = model_id
 
-            base_url = env_config.openai_base_url
+            if not api_key:
+                raise ValueError(
+                    "API key required: Set OPENAI_API_KEY for OpenAI or "
+                    "AZURE_OPENAI_API_KEY + AZURE_OPENAI_ENDPOINT for Azure OpenAI"
+                )
 
             # Create OpenAI client using agent_framework directly
             # Use shared async_client if available for proper resource reuse
             chat_client = OpenAIResponsesClient(
-                model_id=model_id,
+                model_id=effective_model_id,
                 api_key=api_key,
                 base_url=base_url,
                 async_client=self.openai_client,  # Reuse shared client instance
@@ -303,8 +321,10 @@ class AgentFactory:
             span.set_attribute("agent.type", "foundry")
             span.set_attribute("agent.foundry_id", agent_id)
 
-        conn_str = agent_config.get("connection_string") or os.environ.get(
-            "PROJECT_CONNECTION_STRING"
+        conn_str = (
+            agent_config.get("connection_string")
+            or os.environ.get("AZURE_AI_PROJECT_ENDPOINT")
+            or os.environ.get("PROJECT_CONNECTION_STRING")
         )
         if not conn_str:
             raise ValueError(f"Connection string required for Foundry agent {name}")
@@ -338,6 +358,119 @@ class AgentFactory:
         )
         logger.debug(f"Created Foundry agent '{name}' (ID: {agent_id})")
         return agent
+
+    async def load_foundry_agents_async(
+        self, connection_string: str | None = None
+    ) -> list[ChatAgent]:
+        """Dynamically discover and load agents from Azure AI Foundry.
+
+        Args:
+            connection_string: Azure AI Project connection string.
+                If None, uses PROJECT_CONNECTION_STRING env var.
+
+        Returns:
+            List of instantiated FoundryAgentAdapter agents.
+        """
+        if not _FOUNDRY_AVAILABLE:
+            logger.warning("Cannot load Foundry agents: azure-ai-projects not installed.")
+            return []
+
+        import os
+
+        # Ensure imports are available
+        from azure.ai.projects.aio import AIProjectClient
+        from azure.identity import DefaultAzureCredential
+
+        from agentic_fleet.agents.foundry import FoundryAgentAdapter
+
+        conn_str = (
+            connection_string
+            or os.environ.get("AZURE_AI_PROJECT_ENDPOINT")
+            or os.environ.get("PROJECT_CONNECTION_STRING")
+        )
+        if not conn_str:
+            logger.warning(
+                "No connection string available (AZURE_AI_PROJECT_ENDPOINT or PROJECT_CONNECTION_STRING) for loading Foundry agents."
+            )
+            return []
+
+        loaded_agents: list[ChatAgent] = []
+
+        try:
+            async with AIProjectClient.from_connection_string(  # type: ignore[attr-defined]
+                credential=DefaultAzureCredential(),
+                conn_str=conn_str,
+            ) as project_client:
+                # Get the agents client
+                agents_client = project_client.agents
+
+                # List all agents (assistants)
+                # Note: This returns an AsyncPageable
+                remote_agents = agents_client.list_agents()
+
+                async for remote_agent in remote_agents:
+                    # Filter: Only load agents that have a specific metadata/tag if needed?
+                    # For now, we load all, but we could check for 'agentic_role' in metadata.
+                    # Let's assume we load all standard assistants.
+
+                    # Name is required
+                    if not remote_agent.name:
+                        continue
+
+                    # Extract metadata
+                    metadata = remote_agent.metadata or {}
+
+                    # Optional: Check for fleet marker
+                    # if "agentic_fleet" not in metadata: continue
+
+                    # Create adapter (new instance for each)
+                    # We need a new client for each adapter to ensure lifecycle management,
+                    # OR we share one client. Sharing is better for connection pooling,
+                    # but FoundryAgentAdapter takes ownership currently.
+                    # Let's create a fresh client connection for the adapter to own.
+                    # Alternatively, pass the connection string and let it create it?
+                    # The adapter takes an initialized client.
+                    # We should probably pass a new client to the adapter since it might be
+                    # used long-term in the fleet, while this context manager closes `project_client`.
+
+                    # Re-creating client for the agent instance
+                    agent_client = AIProjectClient.from_connection_string(  # type: ignore[attr-defined]
+                        credential=DefaultAzureCredential(),
+                        conn_str=conn_str,
+                    )
+                    # Note: We are not entering the context manager here, relying on
+                    # the adapter or upper layer to close it if needed, or it stays open.
+
+                    # Parse tools from remote if possible
+                    # Remote definition has tool_resources, etc.
+                    # We'll just map names for now.
+                    tool_names = [t.type for t in remote_agent.tools] if remote_agent.tools else []
+
+                    # Parse capabilities from metadata
+                    capabilities = (
+                        metadata.get("capabilities", "").split(",")
+                        if "capabilities" in metadata
+                        else []
+                    )
+
+                    agent = FoundryAgentAdapter(
+                        name=remote_agent.name,
+                        project_client=agent_client,
+                        agent_id=remote_agent.id,
+                        description=remote_agent.description or "",
+                        instructions=remote_agent.instructions or "",
+                        tool_names=tool_names,
+                        capabilities=capabilities,
+                    )
+                    loaded_agents.append(agent)
+                    logger.debug(f"Loaded dynamic Foundry agent: {agent.name}")
+
+        except Exception as e:
+            logger.error(f"Failed to load Foundry agents: {e}")
+            return []
+
+        logger.info(f"Dynamically loaded {len(loaded_agents)} Foundry agents.")
+        return loaded_agents
 
     def _resolve_context_providers(self, provider_names: list[str]) -> list[Any]:
         """Resolve context provider names to instances.

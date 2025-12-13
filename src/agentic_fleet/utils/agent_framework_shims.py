@@ -19,6 +19,28 @@ from typing import Any, cast
 __all__ = ["ensure_agent_framework_shims"]
 
 
+def _reexport_public_api(root: Any, module_name: str) -> None:
+    """Best-effort re-export of a submodule's public API onto ``agent_framework`` root."""
+
+    try:  # pragma: no cover - depends on optional dependency versions
+        module = importlib.import_module(module_name)
+    except Exception:
+        return
+
+    public_names = getattr(module, "__all__", None)
+    if not isinstance(public_names, (list, tuple)):
+        return
+
+    for name in public_names:
+        if not isinstance(name, str):
+            continue
+        if hasattr(root, name):
+            continue
+        if not hasattr(module, name):
+            continue
+        setattr(root, name, getattr(module, name))
+
+
 def _import_or_stub(name: str) -> types.ModuleType:
     module = sys.modules.get(name)
     if module is not None:
@@ -58,6 +80,10 @@ def ensure_agent_framework_shims() -> None:
     """Ensure ``agent_framework`` symbols exist even when dependency is absent."""
 
     root = cast(Any, _import_or_stub("agent_framework"))
+    if not hasattr(root, "__version__"):
+        # Some installed versions ship an empty `agent_framework/__init__.py`, but
+        # internal modules (e.g., `observability`) expect `__version__` to exist.
+        root.__version__ = "0.0.0"  # type: ignore[attr-defined]
 
     exceptions = cast(Any, _ensure_submodule("agent_framework.exceptions"))
     root.exceptions = exceptions  # type: ignore[attr-defined]
@@ -84,6 +110,17 @@ def ensure_agent_framework_shims() -> None:
             (base_exception,),
             {"__doc__": "Fallback tool execution exception shim."},
         )
+
+    # -- Prefer real agent-framework implementations when available --
+    # Some distributions ship an empty `agent_framework/__init__.py` and rely on consumers
+    # importing from internal modules. The workflows package, however, imports many symbols
+    # from the root package. Re-exporting known public APIs keeps those imports working.
+    _reexport_public_api(root, "agent_framework._types")
+    _reexport_public_api(root, "agent_framework._tools")
+    _reexport_public_api(root, "agent_framework._memory")
+    _reexport_public_api(root, "agent_framework._threads")
+    _reexport_public_api(root, "agent_framework._agents")
+    _reexport_public_api(root, "agent_framework._workflows")
 
     # -- Core agent-framework symbols (used heavily across the codebase) --
 

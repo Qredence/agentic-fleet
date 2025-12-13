@@ -85,7 +85,7 @@ uv run python src/agentic_fleet/scripts/self_improve.py --min-quality 9.0 --max-
 ### Programmatic Usage
 
 ```python
-from src.agentic_fleet.utils.self_improvement import SelfImprovementEngine
+from agentic_fleet.utils.self_improvement import SelfImprovementEngine
 
 # Create engine
 engine = SelfImprovementEngine(
@@ -241,7 +241,7 @@ After adding examples, test routing:
 
 ```bash
 # Clear cache to force recompilation
-uv run python -c "from src.agentic_fleet.utils.compiler import clear_cache; clear_cache()"
+uv run python -c "from agentic_fleet.utils.compiler import clear_cache; clear_cache()"
 
 # Run test task
 uv run agentic-fleet run -m "Test task similar to learned patterns" --verbose
@@ -289,7 +289,7 @@ This ensures:
 Self-improvement works seamlessly with DSPy optimization through a "Lazy Loading" architecture:
 
 1. **Data Preparation (Fast)**: The `self-improve` command analyzes history and updates `src/agentic_fleet/data/supervisor_examples.json`. It does _not_ run the expensive DSPy compilation process itself.
-2. **Cache Invalidation**: It clears the compilation cache (`src/agentic_fleet/data/logs/compiled_supervisor.pkl`), signaling that the current model is outdated.
+2. **Cache Invalidation**: It clears the compilation cache (`.var/logs/compiled_supervisor.pkl`), signaling that the current model is outdated.
 3. **Just-in-Time Optimization**: The _next_ time you run `agentic-fleet run`, the system detects the missing cache and automatically triggers the DSPy compiler.
 4. **Result**: The new run uses a fresh model optimized with your latest high-quality examples.
 
@@ -318,7 +318,7 @@ engine.auto_improve(
 
 ```python
 # Only learn from specific execution patterns
-from src.agentic_fleet.utils.history_manager import HistoryManager
+from agentic_fleet.utils.history_manager import HistoryManager
 
 manager = HistoryManager()
 executions = manager.load_history()
@@ -358,7 +358,7 @@ research_tasks = [
 1. Verify cache was cleared:
 
    ```bash
-   uv run python -c "from src.agentic_fleet.utils.compiler import clear_cache; clear_cache()"
+   uv run python -c "from agentic_fleet.utils.compiler import clear_cache; clear_cache()"
    ```
 
 2. Check examples were added:

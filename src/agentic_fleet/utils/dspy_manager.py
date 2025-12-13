@@ -4,6 +4,10 @@ Centralized DSPy LM management that aligns with agent-framework patterns.
 Manages DSPy language model instances, handles async context conflicts,
 and enables prompt caching. Uses agent-framework's shared client pattern
 as inspiration for singleton-like management.
+
+Supports both standard OpenAI and Azure OpenAI backends:
+- Standard OpenAI: Uses `openai/{model}` format
+- Azure OpenAI: Uses `azure/{deployment}` format with Azure-specific credentials
 """
 
 from __future__ import annotations
@@ -13,6 +17,8 @@ import threading
 from typing import Any
 
 import dspy
+
+from agentic_fleet.utils.config import env_config
 
 logger = logging.getLogger(__name__)
 
@@ -31,7 +37,7 @@ def get_dspy_lm(model: str, enable_cache: bool = True, **kwargs: Any) -> dspy.LM
     and reusing it across all agents/workflows.
 
     Args:
-        model: Model identifier (e.g., "gpt-4", "gpt-5-mini")
+        model: Model identifier (e.g., "gpt-4.1-mini", "gpt-5-mini")
         enable_cache: Whether to enable prompt caching (default: True)
         **kwargs: Additional arguments for dspy.LM (e.g. temperature, max_tokens)
 
@@ -51,22 +57,51 @@ def get_dspy_lm(model: str, enable_cache: bool = True, **kwargs: Any) -> dspy.LM
                 "'test-model' was a dummy placeholder. Please configure a real model for DSPy."
             )
 
-        model_path = f"openai/{model}"
-        logger.debug(f"Creating DSPy LM instance for {model_path} with kwargs: {kwargs}")
+        # Determine if we should use Azure OpenAI or standard OpenAI
+        # Azure OpenAI uses `azure/{deployment}` format with LiteLLM
+        if env_config.use_azure_openai:
+            # Use Azure OpenAI Responses API format
+            deployment = env_config.azure_openai_deployment or model
+            model_path = f"azure/{deployment}"
+
+            # Set Azure-specific environment variables for LiteLLM
+            # LiteLLM reads these automatically when using azure/ prefix
+            azure_kwargs: dict[str, Any] = {
+                "api_key": env_config.azure_openai_api_key,
+                "api_base": env_config.azure_openai_endpoint,
+            }
+            # Only add api_version if explicitly set (v1 Responses API doesn't need it)
+            if env_config.azure_openai_api_version:
+                azure_kwargs["api_version"] = env_config.azure_openai_api_version
+
+            # Merge Azure kwargs with user-provided kwargs (user kwargs take precedence)
+            merged_kwargs = {**azure_kwargs, **kwargs}
+
+            logger.info(
+                f"Using Azure OpenAI Responses API: deployment={deployment}, "
+                f"endpoint={env_config.azure_openai_endpoint}"
+            )
+        else:
+            # Use standard OpenAI Chat Completions API
+            model_path = f"openai/{model}"
+            merged_kwargs = kwargs
+            logger.debug(f"Using standard OpenAI: model={model}")
+
+        logger.debug(f"Creating DSPy LM instance for {model_path}")
 
         # Create LM with caching enabled if requested
         # DSPy LMs support caching via the 'cache' parameter or through dspy.settings
         if enable_cache:
             try:
                 # Try to enable caching via LM kwargs if supported
-                if "cache" not in kwargs:
+                if "cache" not in merged_kwargs:
                     # Some DSPy versions support cache=True or cache_size parameter
                     # We'll configure it through dspy.settings after creation
                     pass
             except Exception as e:
                 logger.debug(f"Cache parameter not supported in LM constructor: {e}")
 
-        lm = dspy.LM(model_path, **kwargs)  # type: ignore[attr-defined]
+        lm = dspy.LM(model_path, **merged_kwargs)  # type: ignore[attr-defined]
 
         # Enable prompt caching if supported and requested
         if enable_cache:
@@ -98,7 +133,7 @@ def configure_dspy_settings(
     agent-framework handles shared client initialization.
 
     Args:
-        model: Model identifier (e.g., "gpt-4", "gpt-5-mini")
+        model: Model identifier (e.g., "gpt-4.1-mini", "gpt-5-mini")
         enable_cache: Whether to enable prompt caching
         force_reconfigure: Force reconfiguration even if already configured
 

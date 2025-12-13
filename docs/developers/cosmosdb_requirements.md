@@ -120,7 +120,7 @@ _Will be documented if modernizing from existing system_
   - Model as a **single document aggregate** per `workflowId` with nested arrays for events (`events[]`), quality (`quality`), judge evaluations (`judge_evaluations[]`), and analysis/routing.
 - **Justification**
   - Simplifies reads: a single point read serves most UX and debugging scenarios.
-  - Matches the current `logs/execution_history.jsonl` shape, easing migration.
+  - Matches the current `.var/logs/execution_history.jsonl` shape, easing migration.
   - Write rate is low and concurrency per workflow is effectively 1, so document updates per step are acceptable.
 - **Risks & mitigations**
   - Risk: very long-running workflows could approach the 2 MB document limit.

@@ -7,7 +7,11 @@ sys.path.append(str(Path(__file__).parents[1] / "src"))
 
 from dotenv import load_dotenv
 
-from agentic_fleet.dspy_modules.reasoner import DSPyReasoner
+from agentic_fleet.dspy_modules.reasoner import (
+    DSPyReasoner,
+    get_configured_compiled_reasoner_path,
+)
+from agentic_fleet.dspy_modules.reasoner_utils import get_reasoner_source_hash
 from agentic_fleet.utils.dspy_manager import configure_dspy_settings
 from agentic_fleet.utils.gepa_optimizer import (
     optimize_with_gepa,
@@ -18,16 +22,25 @@ from agentic_fleet.utils.logger import setup_logger
 logger = setup_logger("optimize_reasoner")
 
 
-def main():
+def main() -> None:
+    """
+    Optimize the DSPyReasoner using GEPA optimization.
+
+    Loads the golden dataset, prepares train/validation splits, initializes
+    the reasoner with enhanced signatures, runs GEPA optimization, and saves
+    the compiled module to disk.
+    """
+    # Load environment variables
     # Load environment variables
     load_dotenv()
 
     # Configure DSPy global settings (uses OPENAI_API_KEY from .env)
-    configure_dspy_settings(model="gpt-4o")
+    configure_dspy_settings(model="gpt-4.1-mini")
 
     # Configuration
     dataset_path = Path("src/agentic_fleet/data/golden_dataset.json")
-    output_path = Path("src/agentic_fleet/dspy_modules/compiled_reasoner.json")
+    output_path = get_configured_compiled_reasoner_path()
+    output_path.parent.mkdir(parents=True, exist_ok=True)
 
     if not dataset_path.exists():
         logger.error(f"Dataset not found at {dataset_path}")
@@ -67,7 +80,7 @@ def main():
         max_metric_calls=30,
         perfect_score=1.0,
         log_dir=".var/logs/gepa_reasoner",
-        reflection_model="gpt-4o-mini",  # or whatever is available/configured
+        reflection_model="gpt-4.1-mini",  # or whatever is available/configured
     )
 
     logger.info("Optimization complete.")
@@ -75,6 +88,17 @@ def main():
     # Save the compiled module
     logger.info(f"Saving compiled module to {output_path}")
     compiled_reasoner.save(str(output_path))
+
+    meta_path = Path(f"{output_path}.meta")
+    meta_path.write_text(
+        json.dumps(
+            {
+                "version": 1,
+                "reasoner_source_hash": get_reasoner_source_hash(),
+            },
+            indent=2,
+        )
+    )
     logger.info("Done.")
 
 

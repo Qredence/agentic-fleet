@@ -964,9 +964,9 @@
     "assigned_to": "planner,copilot_researcher,researcher,analyst,coder,writer,reviewer,verifier,generator,executor",
     "mode": "sequential",
     "tool_requirements": [
-      "TavilySearch (TavilySearchTool) — use only for queries about events/data from 2024 onwards or when up-to-date web data is required",
-      "BrowserTool — optional, used by Copilot_researcher for deep site browsing or extracting complex web content",
-      "No-tool — default until user confirms research is needed"
+      "TavilySearch (TavilySearchTool) \u2014 use only for queries about events/data from 2024 onwards or when up-to-date web data is required",
+      "BrowserTool \u2014 optional, used by Copilot_researcher for deep site browsing or extracting complex web content",
+      "No-tool \u2014 default until user confirms research is needed"
     ]
   },
   {
@@ -980,6 +980,65 @@
       "tavily_search",
       "browser",
       "HostedCodeInterpreterTool"
+    ]
+  },
+  {
+    "task": "Explain quantum computing in 2 sentences",
+    "team": "Writer: Content creation",
+    "available_tools": "No tools available",
+    "context": "Self-improvement: Quality score 10.0/10",
+    "assigned_to": "FastResponder",
+    "mode": "delegated",
+    "tool_requirements": []
+  },
+  {
+    "task": "What are 3 interesting facts about the Eiffel Tower?",
+    "team": "Writer: Content creation",
+    "available_tools": "No tools available",
+    "context": "Self-improvement: Quality score 10.0/10",
+    "assigned_to": "FastResponder",
+    "mode": "delegated",
+    "tool_requirements": []
+  },
+  {
+    "task": "what can DSPy do to improve Microsoft Foundry Agent",
+    "team": "Writer: Content creation",
+    "available_tools": "- TavilySearchTool/TavilyMCPTool (available to Researcher): Search the web for real-time information using Tavily. Provides accurate, up-to-date results with source citations. [Capabilities: web_search, real_time, citations]",
+    "context": "Self-improvement: Quality score 9.0/10",
+    "assigned_to": "ResearcherAgent,CopilotResearchAgent,AnalystAgent,CoderAgent,WriterAgent,ReviewerAgent,VerifierAgent,PlannerAgent,ExecutorAgent",
+    "mode": "parallel",
+    "tool_requirements": ["TavilySearchTool", "BrowserTool"]
+  },
+  {
+    "task": "Summarize the main idea of the following: Paris is the capital of France and a center for art and fashion.",
+    "team": "Writer: Content creation",
+    "available_tools": "No tools available",
+    "context": "Edge case: Ambiguous Task - Self-improvement: Quality score 0.0/10 - Ambiguous tasks should default to Researcher for clarification",
+    "assigned_to": "generator",
+    "mode": "parallel",
+    "tool_requirements": []
+  },
+  {
+    "task": "Analyze the latest market trends for AI startups\n",
+    "team": "Writer: Content creation",
+    "available_tools": "No tools available",
+    "context": "Edge case: Ambiguous Task - Self-improvement: Quality score 0.0/10 - Ambiguous tasks should default to Researcher for clarification",
+    "assigned_to": "",
+    "mode": "delegated",
+    "tool_requirements": []
+  },
+  {
+    "task": "Detail and analyze how DSPy is groundbreaking in today's AI landscape.",
+    "team": "Researcher: Web research specialist",
+    "available_tools": "- TavilySearchTool/TavilyMCPTool (available to Researcher): Search the web for real-time information using Tavily. Provides accurate, up-to-date results with source citations. [Capabilities: web_search, real_time, citations]",
+    "context": "Edge case: Time Sensitive - Self-improvement: Quality score 0.0/10 - Time-sensitive queries require TavilySearchTool",
+    "assigned_to": "Researcher,PlannerAgent,ResearcherAgent,CopilotResearcher,AnalystAgent,WriterAgent,ReviewerAgent,VerifierAgent,GeneratorAgent",
+    "mode": "sequential",
+    "tool_requirements": [
+      "tavily_search",
+      "TavilySearchTool (mandatory) \u2014 run focused queries, collect ranked results and citations",
+      "BrowserTool (conditional) \u2014 visit top 3 Tavily-cited pages for direct quotes/figures",
+      "No additional tools to be used to keep token and latency budgets low"
     ]
   }
 ]

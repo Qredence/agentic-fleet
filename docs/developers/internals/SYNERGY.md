@@ -27,11 +27,7 @@ graph TD
 
     Execution --> Progress[Progress Executor]
     Progress -->|DSPy ProgressEvaluation| Quality[Quality Executor]
-    Quality -->|DSPy JudgeEvaluation| JudgeRefine[Judge & Refine Executor]
-
-    JudgeRefine -->|Score < Threshold| RefineLoop[Refinement Loop]
-    RefineLoop --> JudgeRefine
-    JudgeRefine -->|Score >= Threshold| Final[Final Result]
+    Quality -->|DSPy QualityAssessment| Final[Final Result]
 ```
 
 ## Integration Points
@@ -56,11 +52,11 @@ graph TD
   - **Analyst**: Uses `FleetPoT` to write and execute Python code for precise calculations.
 - **Benefit**: The "Body" (ChatAgent) gains specialized "Brain" capabilities without changing its external interface.
 
-### 4. Quality & Refinement
+### 4. Quality Evaluation
 
-- **Component**: `JudgeRefineExecutor`
-- **Synergy**: This executor uses the `JudgeEvaluation` DSPy signature to score results against specific criteria. If the score is low, it triggers a **Refinement Loop** within the executor itself (or via workflow edges in future iterations).
-- **Benefit**: Quality control is semantic and adaptive, not just a simple syntax check.
+- **Component**: `QualityExecutor`
+- **Synergy**: The executor uses DSPy to assess the final output against task-specific criteria and produces a structured `QualityReport` (score + missing elements + suggested improvements).
+- **Benefit**: Quality control remains semantic and adaptive while keeping the workflow graph latency-lean (no additional judge/refine phase).
 
 ## Developer Guide
 

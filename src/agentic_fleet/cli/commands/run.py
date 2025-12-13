@@ -142,13 +142,11 @@ def run(
                 import dspy
 
                 from ...dspy_modules.reasoner import DSPyReasoner
+                from ...utils.dspy_manager import configure_dspy_settings
 
                 if not dspy.settings.lm:
-                    # Minimal config
-                    lm = dspy.LM(
-                        f"openai/{model or 'gpt-5-mini'}", api_key=os.getenv("OPENAI_API_KEY")
-                    )
-                    dspy.configure(lm=lm)
+                    # Use dspy_manager for proper Azure OpenAI support
+                    configure_dspy_settings(model or "gpt-5-mini")
 
                 reasoner = DSPyReasoner(use_enhanced_signatures=True)
                 decision = reasoner.select_workflow_mode(message_input)

@@ -11,7 +11,7 @@ else
 fi
 
 echo "🛑 Stopping OpenTelemetry Collector and Jaeger..."
-${DOCKER_COMPOSE} -f docker-compose.tracing.yml down
+${DOCKER_COMPOSE} -f docker/docker-compose.tracing.yml down
 
 echo "✅ Tracing stopped."
 echo ""

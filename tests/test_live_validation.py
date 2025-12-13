@@ -10,8 +10,7 @@ from agentic_fleet.workflows.helpers import FastPathDetector
 load_dotenv()
 
 
-@pytest.mark.asyncio
-async def test_fast_path_detector():
+def test_fast_path_detector():
     """Verify FastPathDetector patterns match expected user intents."""
     detector = FastPathDetector()
 
@@ -26,8 +25,7 @@ async def test_fast_path_detector():
     assert not detector.classify("Detail the history of Quantum Computing")
 
 
-@pytest.mark.asyncio
-async def test_foundry_agent_config_loading():
+def test_foundry_agent_config_loading():
     """Verify that AgentFactory can parse the Foundry config structure."""
     # We can't easily mock the full Azure cloud without credentials here,
     # but we can verify that the factory *attempts* to correct flow or fails gracefully if credentials missing.
@@ -36,10 +34,7 @@ async def test_foundry_agent_config_loading():
 
     # Check if correct env vars are present (just a warning if not, since we can't force user to have them set in CI)
     if not os.getenv("AZURE_AI_PROJECT_ENDPOINT"):
-        print(
-            "WARNING: AZURE_AI_PROJECT_ENDPOINT not set. Skipping live Foundry connectivity test."
-        )
-        return
+        pytest.skip("AZURE_AI_PROJECT_ENDPOINT not set. Skipping live Foundry connectivity test.")
 
     # If credentials exist, we would attempt:
     # agents = await factory.load_foundry_agents()

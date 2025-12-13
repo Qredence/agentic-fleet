@@ -20,6 +20,13 @@ class WorkflowConfig:
     pipeline_profile: str = "full"
     # Heuristic threshold for simple-task detection (word count)
     simple_task_max_words: int = 40
+    # ------------------------------------------------------------------
+    # Conversation context injection
+    # ------------------------------------------------------------------
+    # For short follow-up inputs (quick replies), include a small window of
+    # recent conversation messages when performing analysis/routing.
+    conversation_context_max_messages: int = 8
+    conversation_context_max_chars: int = 4000
     parallel_threshold: int = 2
     dspy_model: str = "gpt-5-mini"
     dspy_temperature: float = 1.0
