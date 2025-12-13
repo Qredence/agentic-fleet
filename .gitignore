@@ -107,3 +107,5 @@ curl_output.txt
 plan.md
 memory-bank/
 .config/
+.github/prompts/plan-addKnowledgeLayerToDspy.prompt.md
+.factory/skills/change-log-generator/SKILL.md
