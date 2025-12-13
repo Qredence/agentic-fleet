@@ -1,0 +1,211 @@
+[
+  {
+    "task": "Write a haiku about a robot dreaming.",
+    "team_capabilities": "- Writer: Creative writing, storytelling, poetry.\n- Researcher: Web search, fact checking.\n- Coder: Python, coding, debugging.\n- Analyst: Data analysis, planning.",
+    "available_tools": "- tavilysearchtool: Web search.\n- hostedcodeinterpretertool: Python execution.",
+    "context": "",
+    "assigned_to": ["Writer"],
+    "mode": "delegated",
+    "tool_requirements": [],
+    "latency_budget": "low",
+    "reasoning": "Creative writing task requires the Writer agent. No external tools needed."
+  },
+  {
+    "task": "Find the latest stock price of Nvidia and explain the recent trends.",
+    "team_capabilities": "- Writer: Creative writing.\n- Researcher: Web search, financial research.\n- Analyst: Data analysis.",
+    "available_tools": "- tavilysearchtool: Web search.\n- hostedcodeinterpretertool: Python code.",
+    "context": "Current date: 2024-05-20",
+    "assigned_to": ["Researcher"],
+    "mode": "delegated",
+    "tool_requirements": ["tavilysearchtool"],
+    "latency_budget": "medium",
+    "reasoning": "Live data request requires Researcher agent with web search capabilities."
+  },
+  {
+    "task": "Calculate the 50th Fibonacci number using Python.",
+    "team_capabilities": "- Coder: Python expert.\n- Analyst: Math and logic.",
+    "available_tools": "- hostedcodeinterpretertool: Execute Python code.",
+    "context": "",
+    "assigned_to": ["Coder"],
+    "mode": "delegated",
+    "tool_requirements": ["hostedcodeinterpretertool"],
+    "latency_budget": "medium",
+    "reasoning": "Coding task requiring execution. Coder agent is best suited."
+  },
+  {
+    "task": "Research the benefits of Mediterranean diet and then write a weekly meal plan.",
+    "team_capabilities": "- Researcher: Information retrieval.\n- Writer: Content creation.\n- Analyst: Planning.",
+    "available_tools": "- tavilysearchtool: Web search.",
+    "context": "",
+    "assigned_to": ["Researcher", "Writer"],
+    "mode": "sequential",
+    "tool_requirements": ["tavilysearchtool"],
+    "latency_budget": "high",
+    "reasoning": "Two distinct phases: 1. Researching facts (Researcher), 2. creating content based on facts (Writer). Sequential dependency."
+  },
+  {
+    "task": "Compare the features of iPhone 15 and Samsung S24.",
+    "team_capabilities": "- Researcher: Product research.\n- Analyst: Comparison and review.",
+    "available_tools": "- tavilysearchtool: Web search.",
+    "context": "",
+    "assigned_to": ["Researcher"],
+    "mode": "delegated",
+    "tool_requirements": ["tavilysearchtool"],
+    "latency_budget": "medium",
+    "reasoning": "Standard comparison task can be handled by a single Researcher gathering and synthesizing specs."
+  },
+  {
+    "task": "Plot a graph of y = x^2 and y = x^3 to see where they intersect.",
+    "team_capabilities": "- Coder: Plotting and math.\n- Analyst: Analysis.",
+    "available_tools": "- hostedcodeinterpretertool: Python plotting library.",
+    "context": "",
+    "assigned_to": ["Coder"],
+    "mode": "delegated",
+    "tool_requirements": ["hostedcodeinterpretertool"],
+    "latency_budget": "medium",
+    "reasoning": "Visualization/Plotting requires code execution."
+  },
+  {
+    "task": "Who won the Super Bowl in 2024?",
+    "team_capabilities": "- Researcher: Sports knowledge and search.\n- Writer: General chat.",
+    "available_tools": "- tavilysearchtool: Web search.",
+    "context": "",
+    "assigned_to": ["Researcher"],
+    "mode": "delegated",
+    "tool_requirements": ["tavilysearchtool"],
+    "latency_budget": "low",
+    "reasoning": "Fact retrieval about a past event. Requires search."
+  },
+  {
+    "task": "Summarize this long email thread: [Email content...]",
+    "team_capabilities": "- Analyst: Summarization and extraction.\n- Writer: Editing.",
+    "available_tools": [],
+    "context": "Email thread attached in user message.",
+    "assigned_to": ["Analyst"],
+    "mode": "delegated",
+    "tool_requirements": [],
+    "latency_budget": "medium",
+    "reasoning": "Summarization of provided text is an analysis task. No external tools needed."
+  },
+  {
+    "task": "Create a marketing slogan for a new coffee brand.",
+    "team_capabilities": "- Writer: Creative copywriting.\n- Analyst: Market research.",
+    "available_tools": [],
+    "context": "Brand values: Organic, fast, bold.",
+    "assigned_to": ["Writer"],
+    "mode": "delegated",
+    "tool_requirements": [],
+    "latency_budget": "low",
+    "reasoning": "Creative task. Writer is the specialist."
+  },
+  {
+    "task": "Check if my server is running by pinging 192.168.1.1",
+    "team_capabilities": "- DevOps: Server management.\n- Coder: Scripts.",
+    "available_tools": "- hostedcodeinterpretertool: Net utils.",
+    "context": "",
+    "assigned_to": ["DevOps"],
+    "mode": "delegated",
+    "tool_requirements": ["hostedcodeinterpretertool"],
+    "latency_budget": "low",
+    "reasoning": "Infrastructure check. DevOps agent using code/shell tool."
+  },
+  {
+    "task": "Translate 'Hello world' to French, Spanish, and German.",
+    "team_capabilities": "- Writer: Translation and language.\n- Researcher: Search.",
+    "available_tools": [],
+    "context": "",
+    "assigned_to": ["Writer"],
+    "mode": "delegated",
+    "tool_requirements": [],
+    "latency_budget": "low",
+    "reasoning": "Simple translation task. Writer handles language tasks."
+  },
+  {
+    "task": "Find the average temperature in Tokyo for each month of last year and plot it.",
+    "team_capabilities": "- Researcher: Data collection.\n- Coder: Data visualization.\n- Analyst: Trends.",
+    "available_tools": "- tavilysearchtool: Find data.\n- hostedcodeinterpretertool: Plot data.",
+    "context": "",
+    "assigned_to": ["Researcher", "Coder"],
+    "mode": "sequential",
+    "tool_requirements": ["tavilysearchtool", "hostedcodeinterpretertool"],
+    "latency_budget": "high",
+    "reasoning": "Two step dependency: 1. Get data (Researcher), 2. Plot data (Coder)."
+  },
+  {
+    "task": "Explain the theory of relativity to a 5 year old.",
+    "team_capabilities": "- Writer: Simplification and education.\n- Researcher: Physics knowledge.",
+    "available_tools": [],
+    "context": "",
+    "assigned_to": ["Writer"],
+    "mode": "delegated",
+    "tool_requirements": [],
+    "latency_budget": "medium",
+    "reasoning": "Explanation task requiring simple language. Writer is best for tone adaptation."
+  },
+  {
+    "task": "Debug this python code snippet: def foo(): return 1/0",
+    "team_capabilities": "- Coder: Debugging and fixing.\n- Analyst: Code review.",
+    "available_tools": "- hostedcodeinterpretertool: Run code to see error.",
+    "context": "",
+    "assigned_to": ["Coder"],
+    "mode": "delegated",
+    "tool_requirements": ["hostedcodeinterpretertool"],
+    "latency_budget": "medium",
+    "reasoning": "Debugging task. Coder is the specialist."
+  },
+  {
+    "task": "What are the top 3 restaurants in NYC and London right now?",
+    "team_capabilities": "- Researcher: Local search.\n- Analyst: Ranking.",
+    "available_tools": "- tavilysearchtool: Search.",
+    "context": "",
+    "assigned_to": ["Researcher"],
+    "mode": "parallel",
+    "tool_requirements": ["tavilysearchtool"],
+    "latency_budget": "medium",
+    "reasoning": "Can search for NYC and London in parallel or as a single complex search. Parallel subtasks logic applies."
+  },
+  {
+    "task": "Draft a legal contract for a freelance web developer.",
+    "team_capabilities": "- Writer: Drafting.\n- LegalExpert: Contract law.\n- Researcher: Template search.",
+    "available_tools": "- tavilysearchtool: Search templates.",
+    "context": "",
+    "assigned_to": ["LegalExpert", "Writer"],
+    "mode": "sequential",
+    "tool_requirements": ["tavilysearchtool"],
+    "latency_budget": "high",
+    "reasoning": "Requires domain expertise (Legal) to outline terms, then Writer to polish, or LegalExpert to do it all. Sequential collaboration is safer."
+  },
+  {
+    "task": "Analyze the sentiment of these 500 tweets.",
+    "team_capabilities": "- Analyst: Data and sentiment analysis.\n- Coder: Scripts for batch processing.",
+    "available_tools": "- hostedcodeinterpretertool: NLP libraries.",
+    "context": "Tweets provided in CSV.",
+    "assigned_to": ["Analyst", "Coder"],
+    "mode": "sequential",
+    "tool_requirements": ["hostedcodeinterpretertool"],
+    "latency_budget": "high",
+    "reasoning": "Analyst defines criteria, Coder runs the batch analysis script."
+  },
+  {
+    "task": "Help me plan a birthday party for my 10 year old.",
+    "team_capabilities": "- Analyst: Planning and logistics.\n- Writer: Creative ideas.",
+    "available_tools": "- tavilysearchtool: Find venues/supplies.",
+    "context": "",
+    "assigned_to": ["Analyst"],
+    "mode": "delegated",
+    "tool_requirements": ["tavilysearchtool"],
+    "latency_budget": "medium",
+    "reasoning": "Planning task. Analyst or general planner agent."
+  },
+  {
+    "task": "Convert this currency: 100 USD to EUR.",
+    "team_capabilities": "- Analyst: Financial data.\n- Researcher: Live rates.",
+    "available_tools": "- tavilysearchtool: Live rate search.",
+    "context": "",
+    "assigned_to": ["Researcher"],
+    "mode": "delegated",
+    "tool_requirements": ["tavilysearchtool"],
+    "latency_budget": "low",
+    "reasoning": "Simple lookup of live data."
+  }
+]
