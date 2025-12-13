@@ -56,9 +56,7 @@ class AnalysisExecutor(Executor):
         self.supervisor = supervisor
         self.context = context
 
-    def _create_fallback_message(
-        self, task: str, metadata: dict[str, Any]
-    ) -> AnalysisMessage:
+    def _create_fallback_message(self, task: str, metadata: dict[str, Any]) -> AnalysisMessage:
         """Create a fallback analysis message when DSPy analysis fails."""
         fallback_dict = self._fallback_analysis(task)
         analysis_result = self._to_analysis_result(fallback_dict)

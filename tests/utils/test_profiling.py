@@ -21,9 +21,8 @@ from agentic_fleet.utils.profiling import (
 
 def test_timed_operation_fast(caplog):
     """Test timed_operation for fast operations."""
-    with caplog.at_level(logging.DEBUG):
-        with timed_operation("fast_operation", threshold_ms=100):
-            time.sleep(0.01)  # 10ms
+    with caplog.at_level(logging.DEBUG), timed_operation("fast_operation", threshold_ms=100):
+        time.sleep(0.01)  # 10ms
 
     # Should only log debug, not warning
     assert "fast_operation completed in" in caplog.text
@@ -32,9 +31,8 @@ def test_timed_operation_fast(caplog):
 
 def test_timed_operation_slow(caplog):
     """Test timed_operation for slow operations."""
-    with caplog.at_level(logging.WARNING):
-        with timed_operation("slow_operation", threshold_ms=10):
-            time.sleep(0.02)  # 20ms
+    with caplog.at_level(logging.WARNING), timed_operation("slow_operation", threshold_ms=10):
+        time.sleep(0.02)  # 20ms
 
     # Should log warning for slow operation
     assert "Slow operation" in caplog.text
@@ -209,9 +207,8 @@ def test_global_reset():
 def test_timed_operation_with_exception():
     """Test that timed_operation still logs when an exception occurs."""
 
-    with pytest.raises(ValueError):
-        with timed_operation("failing_op"):
-            raise ValueError("Test error")
+    with pytest.raises(ValueError, match="Test error"), timed_operation("failing_op"):
+        raise ValueError("Test error")
 
     # Should still track timing even on exception
 

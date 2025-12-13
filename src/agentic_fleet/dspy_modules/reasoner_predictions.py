@@ -226,9 +226,7 @@ class PredictionMethods:
 
         # Determine strategy
         if self.reasoner.strategy_selector:
-            strategy_pred = self.reasoner.strategy_selector(
-                task=task, team_composition=team_desc
-            )
+            strategy_pred = self.reasoner.strategy_selector(task=task, team_composition=team_desc)
             if use_typed:
                 strategy = getattr(strategy_pred, "strategy", "standard")
             else:

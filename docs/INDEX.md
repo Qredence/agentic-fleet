@@ -60,7 +60,7 @@ User-facing documentation for using the framework:
    - Runtime issues
    - Performance tuning
    - Debugging tips
-7. **[Self-Improvement](users/self-improvement.md)** - Automatic learning from history
+9. **[Self-Improvement](users/self-improvement.md)** - Automatic learning from history
    - How self-improvement works
    - Usage and configuration
    - Best practices

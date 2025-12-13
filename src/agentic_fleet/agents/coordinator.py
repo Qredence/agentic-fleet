@@ -304,14 +304,16 @@ class AgentFactory:
         agent_config: dict[str, Any],
         span: Any | None = None,
     ) -> ChatAgent:
-        """Create a Foundry Agent instance."""
+        """Create a Foundry Agent instance.
+
+        Supports two modes:
+        1. Legacy FoundryAgentAdapter - uses AIProjectClient for basic agent access
+        2. FoundryHostedAgent - uses AzureAIAgentClient for Code Interpreter support
+
+        The mode is determined by the 'use_hosted_agent' config flag or presence of
+        'code_interpreter' in capabilities.
+        """
         import os
-
-        # Ensure imports are available locally if top-level failed or for safety
-        from azure.ai.projects.aio import AIProjectClient
-        from azure.identity import DefaultAzureCredential
-
-        from agentic_fleet.agents.foundry import FoundryAgentAdapter
 
         agent_id = agent_config.get("agent_id")
         if not agent_id:
@@ -321,42 +323,89 @@ class AgentFactory:
             span.set_attribute("agent.type", "foundry")
             span.set_attribute("agent.foundry_id", agent_id)
 
-        conn_str = (
-            agent_config.get("connection_string")
+        # Determine endpoint/connection string
+        endpoint = (
+            agent_config.get("endpoint")
+            or agent_config.get("connection_string")
             or os.environ.get("AZURE_AI_PROJECT_ENDPOINT")
             or os.environ.get("PROJECT_CONNECTION_STRING")
         )
-        if not conn_str:
-            raise ValueError(f"Connection string required for Foundry agent {name}")
-
-        # Create the client (synchronous creation of async client object)
-        project_client = AIProjectClient.from_connection_string(  # type: ignore[attr-defined]
-            credential=DefaultAzureCredential(),
-            conn_str=conn_str,
-        )
-
-        description = agent_config.get("description", "")
-        instructions = agent_config.get("instructions", "")
-
-        # Extract metadata (defaulting list of tools/capabilities)
-        # Note: 'tools' in config might be names (remote) or local definitions. For Foundry, we assume names.
-        tool_names = agent_config.get("tools", [])
-        if tool_names and isinstance(tool_names[0], dict):
-            # If defined as dicts, extract names
-            tool_names = [t.get("name", str(t)) for t in tool_names]
+        if not endpoint:
+            raise ValueError(f"Endpoint/connection string required for Foundry agent {name}")
 
         capabilities = agent_config.get("capabilities", [])
+        description = agent_config.get("description", "")
 
-        agent = FoundryAgentAdapter(
-            name=name,
-            project_client=project_client,
-            agent_id=agent_id,
-            description=description,
-            instructions=instructions,
-            tool_names=tool_names,
-            capabilities=capabilities,
+        # Determine if we should use the new FoundryHostedAgent
+        use_hosted = (
+            agent_config.get("use_hosted_agent", False) or "code_interpreter" in capabilities
         )
-        logger.debug(f"Created Foundry agent '{name}' (ID: {agent_id})")
+
+        if use_hosted:
+            # Use AzureAIAgentClient as the chat client and wrap it in a standard ChatAgent.
+            # This keeps the rest of the system working with a uniform ChatAgent surface.
+            from agent_framework.azure import AzureAIAgentClient
+            from azure.identity.aio import DefaultAzureCredential
+
+            # Accept either a direct project endpoint URL or an Azure AI Projects connection string.
+            project_endpoint = endpoint
+            if "=" in project_endpoint and ";" in project_endpoint:
+                for part in project_endpoint.split(";"):
+                    if not part:
+                        continue
+                    key, sep, value = part.partition("=")
+                    if sep and key.strip().lower() == "endpoint" and value.strip():
+                        project_endpoint = value.strip()
+                        break
+
+            instructions = agent_config.get("instructions")
+
+            chat_client = AzureAIAgentClient(
+                credential=DefaultAzureCredential(),
+                project_endpoint=project_endpoint,
+                agent_id=agent_id,
+                should_cleanup_agent=False,
+            )
+            agent = ChatAgent(
+                chat_client=chat_client,
+                name=name,
+                description=description,
+                instructions=instructions,
+            )
+            logger.debug(f"Created hosted Foundry ChatAgent '{name}' (ID: {agent_id})")
+        else:
+            # Use the legacy FoundryAgentAdapter
+            from azure.ai.projects.aio import AIProjectClient
+            from azure.identity import DefaultAzureCredential
+
+            from agentic_fleet.agents.foundry import FoundryAgentAdapter
+
+            # Create the client (synchronous creation of async client object)
+            project_client = AIProjectClient.from_connection_string(  # type: ignore[attr-defined]
+                credential=DefaultAzureCredential(),
+                conn_str=endpoint,
+            )
+
+            instructions = agent_config.get("instructions", "")
+
+            # Extract metadata (defaulting list of tools/capabilities)
+            # Note: 'tools' in config might be names (remote) or local definitions.
+            tool_names = agent_config.get("tools", [])
+            if tool_names and isinstance(tool_names[0], dict):
+                # If defined as dicts, extract names
+                tool_names = [t.get("name", str(t)) for t in tool_names]
+
+            agent = FoundryAgentAdapter(
+                name=name,
+                project_client=project_client,
+                agent_id=agent_id,
+                description=description,
+                instructions=instructions,
+                tool_names=tool_names,
+                capabilities=capabilities,
+            )
+            logger.debug(f"Created FoundryAgentAdapter '{name}' (ID: {agent_id})")
+
         return agent
 
     async def load_foundry_agents_async(

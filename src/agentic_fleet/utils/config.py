@@ -700,9 +700,7 @@ def get_config_path(filename: str = "workflow_config.yaml") -> Path:
     return _package_root() / "config" / filename
 
 
-def _load_config_cached(
-    config_file_str: str, mtime: float, validate: bool
-) -> dict[str, Any]:
+def _load_config_cached(config_file_str: str, mtime: float, validate: bool) -> dict[str, Any]:
     """Internal cached config loader.
 
     Args:

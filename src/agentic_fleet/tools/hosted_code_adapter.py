@@ -29,7 +29,7 @@ if TYPE_CHECKING:  # pragma: no cover - typing helper
             ...
 
 else:
-    from agent_framework import ToolProtocol as ToolProtocolBase
+    from agent_framework._tools import ToolProtocol as ToolProtocolBase
 
 
 class HostedCodeInterpreterAdapter(ToolProtocolBase, SerializationMixin):

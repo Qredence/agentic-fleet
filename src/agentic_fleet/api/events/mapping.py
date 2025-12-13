@@ -12,20 +12,11 @@ from typing import Any, Literal, TypedDict
 import yaml
 from agent_framework._workflows import (
     ExecutorCompletedEvent,
+    RequestInfoEvent,
     WorkflowOutputEvent,
     WorkflowStartedEvent,
     WorkflowStatusEvent,
 )
-
-try:  # agent-framework 1.0+ (beta) exposes explicit request events for HITL
-    from agent_framework._workflows import WorkflowRequestEvent  # type: ignore
-except Exception:  # pragma: no cover - depends on installed agent-framework
-    WorkflowRequestEvent = None  # type: ignore[assignment]
-
-try:  # older builds used RequestInfoEvent for similar "needs response" semantics
-    from agent_framework._workflows import RequestInfoEvent  # type: ignore
-except Exception:  # pragma: no cover - depends on installed agent-framework
-    RequestInfoEvent = None  # type: ignore[assignment]
 
 from agentic_fleet.models import (
     EventCategory,
@@ -461,11 +452,7 @@ def map_workflow_event(
 
     # Handle agent-framework workflow request events (HITL).
     # These pause workflow execution until the host sends responses keyed by request_id.
-    if (
-        (WorkflowRequestEvent is not None and isinstance(event, WorkflowRequestEvent))
-        or (RequestInfoEvent is not None and isinstance(event, RequestInfoEvent))
-        or type(event).__name__ in {"WorkflowRequestEvent", "RequestInfoEvent"}
-    ):
+    if isinstance(event, RequestInfoEvent):
         data = getattr(event, "data", None)
         request_id = None
         request_obj = None

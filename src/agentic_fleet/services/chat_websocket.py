@@ -609,7 +609,10 @@ class ChatWebSocketService:
             checkpoint_storage: Any | None = None
             if enable_checkpointing or is_resume:
                 try:
-                    import agent_framework._workflows._checkpoint as _af_checkpoint
+                    from agent_framework._workflows import (
+                        FileCheckpointStorage,
+                        InMemoryCheckpointStorage,
+                    )
 
                     checkpoint_dir = ".var/checkpoints"
                     try:
@@ -620,9 +623,9 @@ class ChatWebSocketService:
                         checkpoint_dir = ""
 
                     if checkpoint_dir:
-                        checkpoint_storage = _af_checkpoint.FileCheckpointStorage(checkpoint_dir)
+                        checkpoint_storage = FileCheckpointStorage(checkpoint_dir)
                     else:
-                        checkpoint_storage = _af_checkpoint.InMemoryCheckpointStorage()
+                        checkpoint_storage = InMemoryCheckpointStorage()
                 except Exception:
                     checkpoint_storage = None
 

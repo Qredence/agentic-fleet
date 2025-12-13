@@ -13,11 +13,12 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Any, cast
 from uuid import uuid4
 
-import agent_framework._workflows as _af_workflows
 from agent_framework._types import ChatMessage, Role
 from agent_framework._workflows import (
     AgentRunUpdateEvent,
     ExecutorCompletedEvent,
+    FileCheckpointStorage,
+    InMemoryCheckpointStorage,
     RequestInfoEvent,
     WorkflowOutputEvent,
     WorkflowRunState,
@@ -43,10 +44,6 @@ from .models import (
     ReasoningStreamEvent,
     TaskMessage,
 )
-
-# agent-framework 1.0.0b251211+ uses explicit workflow request events.
-# Avoid direct symbol imports here to keep static analysis working across versions.
-WorkflowRequestEvent = getattr(_af_workflows, "WorkflowRequestEvent", None)
 
 if TYPE_CHECKING:
     from agent_framework._agents import ChatAgent
@@ -573,13 +570,11 @@ class SupervisorWorkflow:
             checkpoint_dir = None
 
         try:
-            import agent_framework._workflows._checkpoint as _af_checkpoint
-
             if checkpoint_dir:
-                return _af_checkpoint.FileCheckpointStorage(checkpoint_dir)
-            return _af_checkpoint.InMemoryCheckpointStorage()
-        except Exception as exc:  # pragma: no cover - environment / version drift
-            logger.warning("Checkpointing unavailable (could not import storage): %s", exc)
+                return FileCheckpointStorage(checkpoint_dir)
+            return InMemoryCheckpointStorage()
+        except Exception as exc:  # pragma: no cover - environment / filesystem edge
+            logger.warning("Checkpointing unavailable (could not initialize storage): %s", exc)
             return None
 
     async def _run_workflow(
@@ -973,10 +968,7 @@ class SupervisorWorkflow:
                                 if isinstance(converted, ReasoningStreamEvent):
                                     continue
 
-                        elif isinstance(event, RequestInfoEvent) or (
-                            WorkflowRequestEvent is not None
-                            and isinstance(event, WorkflowRequestEvent)  # type: ignore[arg-type]
-                        ):
+                        elif isinstance(event, RequestInfoEvent):
                             # Surface request events so the API/websocket layer can drive HITL.
                             # (e.g., tool approval, user input, plan review)
                             yield event
@@ -1072,10 +1064,7 @@ class SupervisorWorkflow:
                                 yield converted
                                 if isinstance(converted, ReasoningStreamEvent):
                                     continue
-                        elif isinstance(event, RequestInfoEvent) or (
-                            WorkflowRequestEvent is not None
-                            and isinstance(event, WorkflowRequestEvent)  # type: ignore[arg-type]
-                        ):
+                        elif isinstance(event, RequestInfoEvent):
                             yield event
                         elif isinstance(event, WorkflowOutputEvent):
                             saw_output_event = True

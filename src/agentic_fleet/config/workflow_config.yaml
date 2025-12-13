@@ -209,7 +209,19 @@ agents:
     cache_ttl: 300
     timeout: 120
 
-  # Example Foundry Agent Configuration (Disabled for dev startup stability)
+  # Microsoft Foundry Hosted Agent - Code Interpreter
+  # This agent is hosted on Microsoft Foundry with Code Interpreter enabled in the portal
+  codex_agent:
+    type: foundry
+    agent_id: codex-agent
+    description: "Python code execution agent with Code Interpreter for file generation, data analysis, and computations"
+    capabilities:
+      - code_interpreter
+      - file_generation
+      - data_analysis
+      - python_execution
+    timeout: 120
+    cleanup_files: false # Keep generated files for user download
   # FinancialAnalyst:
   #   type: foundry
   #   agent_id: "asst_0123456789abcdef" # Replace with actual Agent ID

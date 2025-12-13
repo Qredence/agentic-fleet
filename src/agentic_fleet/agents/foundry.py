@@ -1,18 +1,33 @@
 """Adapter for Azure AI Foundry Agents.
 
-This module allows remote agents hosted in Azure AI Foundry (Project Foundry)
+This module allows remote agents hosted in Azure AI Foundry (Microsoft Foundry)
 to be used transparently within the AgenticFleet, adhering to the standard
 ChatAgent interface.
+
+Supports two patterns:
+1. FoundryAgentAdapter - Legacy polling-based adapter using AIProjectClient
+2. FoundryHostedAgent - Modern streaming adapter using AzureAIAgentClient (recommended)
 """
 
 from __future__ import annotations
 
 import asyncio
+import os
 from collections.abc import AsyncIterable
+from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Any, cast
 
 from agent_framework._agents import ChatAgent
-from agent_framework._types import AgentRunResponse, AgentRunResponseUpdate, ChatMessage, Role
+from agent_framework._types import (
+    AgentRunResponse,
+    AgentRunResponseUpdate,
+    ChatMessage,
+    ChatResponse,
+    ChatResponseUpdate,
+    HostedFileContent,
+    Role,
+)
+from agent_framework.azure import AzureAIAgentClient
 
 from ..utils.logger import setup_logger
 from ..utils.telemetry import optional_span
@@ -22,6 +37,291 @@ if TYPE_CHECKING:
     from azure.ai.projects.aio import AIProjectClient
 
 logger = setup_logger(__name__)
+
+
+@dataclass
+class FoundryAgentConfig:
+    """Configuration for a Foundry-hosted agent."""
+
+    agent_id: str
+    """The agent ID/name in Microsoft Foundry (e.g., 'codex-agent')."""
+
+    endpoint: str | None = None
+    """Project endpoint URL. If None, uses AZURE_AI_PROJECT_ENDPOINT env var."""
+
+    description: str = ""
+    """Agent description for routing purposes."""
+
+    capabilities: list[str] = field(default_factory=list)
+    """List of agent capabilities (e.g., ['code_interpreter', 'file_generation'])."""
+
+    timeout: float = 120.0
+    """Timeout for agent operations in seconds."""
+
+    cleanup_files: bool = True
+    """Whether to cleanup generated files after retrieval."""
+
+
+class FoundryHostedAgent:
+    """Modern adapter for Microsoft Foundry hosted agents using AzureAIAgentClient.
+
+    This class provides streaming support and handles Code Interpreter tool output
+    including file generation and retrieval.
+
+    Example:
+        ```python
+        async with FoundryHostedAgent(
+            config=FoundryAgentConfig(agent_id="codex-agent")
+        ) as agent:
+            async for chunk in agent.run_stream("Create a fibonacci script"):
+                print(chunk.text, end="", flush=True)
+        ```
+    """
+
+    def __init__(
+        self,
+        config: FoundryAgentConfig,
+        credential: Any | None = None,
+    ) -> None:
+        """Initialize the Foundry Hosted Agent.
+
+        Args:
+            config: Agent configuration.
+            credential: Azure credential. If None, uses DefaultAzureCredential.
+        """
+        self.config = config
+        self._credential = credential
+        self._client: AzureAIAgentClient | None = None
+        self._owns_credential = credential is None
+
+    @property
+    def endpoint(self) -> str:
+        """Get the project endpoint URL."""
+        raw = self.config.endpoint or os.environ.get("AZURE_AI_PROJECT_ENDPOINT", "")
+        if "=" in raw and ";" in raw:
+            # Support Azure AI Projects connection string format, e.g.
+            # "Endpoint=https://...;SubscriptionId=...;ResourceGroup=...;ProjectName=..."
+            for part in raw.split(";"):
+                if not part:
+                    continue
+                key, sep, value = part.partition("=")
+                if sep and key.strip().lower() == "endpoint" and value.strip():
+                    return value.strip()
+        return raw
+
+    async def __aenter__(self) -> FoundryHostedAgent:
+        """Async context manager entry."""
+        await self.connect()
+        return self
+
+    async def __aexit__(self, exc_type: Any, exc_val: Any, exc_tb: Any) -> None:
+        """Async context manager exit."""
+        await self.close()
+
+    async def connect(self) -> None:
+        """Establish connection to the Foundry project."""
+        if self._client is not None:
+            return
+
+        if not self.endpoint:
+            raise ValueError(
+                "Foundry endpoint required. Set AZURE_AI_PROJECT_ENDPOINT env var "
+                "or pass endpoint in FoundryAgentConfig."
+            )
+
+        # Create credential if not provided
+        if self._credential is None:
+            from azure.identity.aio import DefaultAzureCredential
+
+            self._credential = DefaultAzureCredential()
+            self._owns_credential = True
+
+        # Create the Azure AI Agent client pointing at the hosted agent ID.
+        self._client = AzureAIAgentClient(
+            credential=self._credential,
+            project_endpoint=self.endpoint,
+            agent_id=self.config.agent_id,
+            # Never delete an existing hosted agent (only affects agents created by the client).
+            should_cleanup_agent=False,
+        )
+
+        logger.info(f"Connected to Foundry agent '{self.config.agent_id}' at {self.endpoint}")
+
+    async def close(self) -> None:
+        """Close the connection and cleanup resources."""
+        if self._client is not None:
+            try:
+                await self._client.close()
+            except Exception as e:
+                logger.warning(f"Error closing Foundry client: {e}")
+            finally:
+                self._client = None
+
+        if self._owns_credential and self._credential is not None:
+            try:
+                await self._credential.close()
+            except Exception as e:
+                logger.debug(f"Error closing credential: {e}")
+            finally:
+                self._credential = None
+
+    async def run(self, query: str) -> AgentRunResponse:
+        """Execute the agent and return the full response.
+
+        Args:
+            query: The user query/prompt.
+
+        Returns:
+            AgentRunResponse with the agent's output.
+        """
+        if self._client is None:
+            await self.connect()
+
+        assert self._client is not None
+
+        with optional_span(
+            "FoundryHostedAgent.run",
+            attributes={
+                "agent.id": self.config.agent_id,
+                "agent.endpoint": self.endpoint,
+            },
+        ):
+            try:
+                response: ChatResponse = await self._client.get_response(
+                    [ChatMessage(role=Role.USER, text=query)]
+                )
+                return AgentRunResponse(
+                    messages=[ChatMessage(role=Role.ASSISTANT, text=response.text or "")],
+                    additional_properties={
+                        "provider": "foundry",
+                        "agent_id": self.config.agent_id,
+                    },
+                )
+            except Exception as e:
+                logger.error(f"Foundry agent execution failed: {e}")
+                return AgentRunResponse(
+                    messages=[ChatMessage(role=Role.ASSISTANT, text=f"Error: {e}")],
+                )
+
+    async def run_stream(
+        self,
+        query: str,
+    ) -> AsyncIterable[AgentRunResponseUpdate]:
+        """Stream the agent response with file handling.
+
+        Args:
+            query: The user query/prompt.
+
+        Yields:
+            AgentRunResponseUpdate chunks with text and file information.
+        """
+        if self._client is None:
+            await self.connect()
+
+        assert self._client is not None
+
+        file_ids: list[str] = []
+
+        with optional_span(
+            "FoundryHostedAgent.run_stream",
+            attributes={
+                "agent.id": self.config.agent_id,
+                "agent.endpoint": self.endpoint,
+            },
+        ):
+            try:
+                async for update in self._client.get_streaming_response(
+                    [ChatMessage(role=Role.USER, text=query)]
+                ):
+                    update = cast(ChatResponseUpdate, update)
+                    for content in update.contents:
+                        if isinstance(content, HostedFileContent):
+                            file_ids.append(content.file_id)
+
+                    # Preserve the original content stream, but wrap in AgentRunResponseUpdate
+                    # since the rest of AgenticFleet speaks in agent-level updates.
+                    yield AgentRunResponseUpdate(
+                        contents=update.contents,
+                        role=update.role,
+                        response_id=update.response_id,
+                        message_id=update.message_id,
+                        created_at=update.created_at,
+                        additional_properties={
+                            "provider": "foundry",
+                            **(update.additional_properties or {}),
+                        },
+                        raw_representation=update.raw_representation,
+                    )
+
+                # Handle file retrieval after streaming completes
+                if file_ids:
+                    yield AgentRunResponseUpdate(
+                        text=f"\n\n📁 Generated {len(file_ids)} file(s)",
+                        role=Role.ASSISTANT,
+                        additional_properties={
+                            "provider": "foundry",
+                            "file_ids": file_ids,
+                        },
+                    )
+
+                    # Optionally retrieve file metadata
+                    for file_id in file_ids:
+                        try:
+                            await asyncio.sleep(0.5)  # Brief delay for file availability
+                            file_info = await self._client.agents_client.files.get(file_id)
+                            yield AgentRunResponseUpdate(
+                                text=f"\n  • {file_info.filename} ({file_info.bytes} bytes)",
+                                role=Role.ASSISTANT,
+                                additional_properties={
+                                    "provider": "foundry",
+                                    "file_id": file_id,
+                                    "filename": file_info.filename,
+                                    "size": file_info.bytes,
+                                },
+                            )
+
+                            # Cleanup if configured
+                            if self.config.cleanup_files:
+                                try:
+                                    await self._client.agents_client.files.delete(file_id)
+                                    logger.debug(f"Cleaned up file: {file_id}")
+                                except Exception as e:
+                                    logger.warning(f"Failed to cleanup file {file_id}: {e}")
+
+                        except Exception as e:
+                            logger.warning(f"Failed to retrieve file {file_id}: {e}")
+
+            except Exception as e:
+                logger.error(f"Foundry agent streaming failed: {e}")
+                yield AgentRunResponseUpdate(
+                    text=f"\nError: {e}",
+                    role=Role.ASSISTANT,
+                    additional_properties={"provider": "foundry", "error": str(e)},
+                )
+
+    async def retrieve_file(self, file_id: str) -> bytes | None:
+        """Retrieve file content by ID.
+
+        Args:
+            file_id: The file ID from Code Interpreter output.
+
+        Returns:
+            File content as bytes, or None if retrieval failed.
+        """
+        if self._client is None:
+            await self.connect()
+
+        assert self._client is not None
+
+        try:
+            stream = await self._client.agents_client.files.get_content(file_id)
+            chunks: list[bytes] = []
+            async for chunk in stream:
+                chunks.append(chunk)
+            return b"".join(chunks)
+        except Exception as e:
+            logger.error(f"Failed to retrieve file content {file_id}: {e}")
+            return None
 
 
 class FoundryAgentAdapter(ChatAgent):

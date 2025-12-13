@@ -31,6 +31,7 @@ with timed_operation("api_call", threshold_ms=500):
 ```
 
 **Output:**
+
 ```
 DEBUG: database_query completed in 45.2ms
 WARNING: Slow operation: api_call took 623.1ms (threshold: 500.0ms)
@@ -85,6 +86,7 @@ tracker.log_summary()
 ```
 
 **Output:**
+
 ```
 INFO: Performance Summary:
 INFO:   operation1: avg=125.3ms, min=98.2ms, max=167.8ms, count=5
@@ -136,10 +138,10 @@ from agentic_fleet.utils import timed_operation, load_config
 def initialize_app():
     with timed_operation("load_config", threshold_ms=50):
         config = load_config()
-    
+
     with timed_operation("initialize_agents", threshold_ms=200):
         agents = initialize_agents(config)
-    
+
     return config, agents
 ```
 
@@ -155,10 +157,10 @@ tracker = PerformanceTracker()
 @app.middleware("http")
 async def track_request_performance(request: Request, call_next):
     endpoint = f"{request.method} {request.url.path}"
-    
+
     with tracker.track(endpoint):
         response = await call_next(request)
-    
+
     return response
 
 @app.get("/stats")
@@ -178,7 +180,7 @@ class ProfiledReasoner(DSPyReasoner):
     async def analyze_task(self, task: str) -> dict:
         """Profile task analysis."""
         return await super().analyze_task(task)
-    
+
     @profile_function(threshold_ms=500)
     async def route_to_agents(self, task: str, agents: list) -> dict:
         """Profile routing decisions."""
@@ -193,23 +195,24 @@ from agentic_fleet.utils import track_operation, log_performance_summary
 async def run_optimized_workflow(task: str):
     with track_operation("workflow.analysis"):
         analysis = await analyze_task(task)
-    
+
     with track_operation("workflow.routing"):
         routing = await route_task(analysis)
-    
+
     with track_operation("workflow.execution"):
         result = await execute_task(routing)
-    
+
     with track_operation("workflow.quality_check"):
         validated = await check_quality(result)
-    
+
     # Log performance summary at end
     log_performance_summary()
-    
+
     return validated
 ```
 
 **Output:**
+
 ```
 INFO: Performance Summary:
 INFO:   workflow.analysis: avg=234.5ms, min=201.3ms, max=289.7ms, count=1
@@ -317,18 +320,21 @@ logging.getLogger("agentic_fleet.utils.profiling").setLevel(logging.DEBUG)
 ## Performance Optimization Workflow
 
 1. **Identify bottlenecks:**
+
    ```python
    with track_operation("suspect_operation"):
        result = slow_function()
    ```
 
 2. **Measure baseline:**
+
    ```python
    stats = get_performance_stats("suspect_operation")
    print(f"Baseline: {stats['avg_ms']:.1f}ms")
    ```
 
 3. **Optimize:**
+
    ```python
    # Add caching, indexing, async operations, etc.
    ```
@@ -357,10 +363,10 @@ tracker = PerformanceTracker()
 with tracker.track("total"):
     with tracker.track("total.step1"):
         step1()
-    
+
     with tracker.track("total.step2"):
         step2()
-    
+
     with tracker.track("total.step3"):
         step3()
 
@@ -377,24 +383,24 @@ from agentic_fleet.utils import PerformanceTracker
 
 def compare_implementations():
     tracker = PerformanceTracker()
-    
+
     # Test implementation A
     for _ in range(100):
         with tracker.track("impl_a"):
             implementation_a()
-    
+
     # Test implementation B
     for _ in range(100):
         with tracker.track("impl_b"):
             implementation_b()
-    
+
     # Compare
     stats_a = tracker.get_stats("impl_a")
     stats_b = tracker.get_stats("impl_b")
-    
+
     print(f"Implementation A: {stats_a['avg_ms']:.1f}ms")
     print(f"Implementation B: {stats_b['avg_ms']:.1f}ms")
-    
+
     if stats_b['avg_ms'] < stats_a['avg_ms']:
         improvement = (1 - stats_b['avg_ms']/stats_a['avg_ms']) * 100
         print(f"B is {improvement:.1f}% faster!")
@@ -410,4 +416,4 @@ def compare_implementations():
 
 ---
 
-*Last Updated: 2025-12-13*
+_Last Updated: 2025-12-13_

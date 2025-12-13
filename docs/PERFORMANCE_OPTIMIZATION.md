@@ -15,6 +15,7 @@ AgenticFleet is a complex multi-agent orchestration system that combines DSPy fo
 **Impact:** File I/O and YAML parsing repeated multiple times during initialization and runtime.
 
 **Current Code:** `src/agentic_fleet/utils/config.py:702`
+
 ```python
 def load_config(config_path: str | None = None, validate: bool = True) -> dict[str, Any]:
     """Load and validate configuration from YAML file."""
@@ -24,6 +25,7 @@ def load_config(config_path: str | None = None, validate: bool = True) -> dict[s
 ```
 
 **Called From:**
+
 - `src/agentic_fleet/cli/runner.py:85`
 - `src/agentic_fleet/cli/utils.py:17`
 - `src/agentic_fleet/cli/commands/optimize.py:98`
@@ -51,10 +53,10 @@ def load_config(config_path: str | None = None, validate: bool = True) -> dict[s
         config_file = cwd_default if cwd_default.exists() else pkg_default
     else:
         config_file = Path(config_path)
-    
+
     # Get modification time for cache invalidation
     mtime = config_file.stat().st_mtime if config_file.exists() else 0
-    
+
     return _load_config_cached(str(config_file), mtime, validate)
 ```
 
@@ -69,6 +71,7 @@ def load_config(config_path: str | None = None, validate: bool = True) -> dict[s
 **Impact:** Slow lookups as history grows; reading entire file for single record retrieval.
 
 **Current Code:** `src/agentic_fleet/utils/history_manager.py:306-334`
+
 ```python
 def get_execution_by_id(self, workflow_id: str) -> dict[str, Any] | None:
     # ... scans entire JSONL file line by line
@@ -88,10 +91,10 @@ class HistoryManager:
         # ... existing init
         self._recent_executions_index: dict[str, dict[str, Any]] = {}
         self._index_size_limit = 1000
-        
+
     def save_execution(self, execution: dict[str, Any]) -> str:
         workflow_id = execution.get("workflowId")
-        
+
         # Update index
         if workflow_id:
             self._recent_executions_index[workflow_id] = execution
@@ -101,14 +104,14 @@ class HistoryManager:
                 to_remove = list(self._recent_executions_index.keys())[:100]
                 for key in to_remove:
                     del self._recent_executions_index[key]
-        
+
         # ... existing save logic
-        
+
     def get_execution_by_id(self, workflow_id: str) -> dict[str, Any] | None:
         # Check index first (O(1))
         if workflow_id in self._recent_executions_index:
             return self._recent_executions_index[workflow_id]
-        
+
         # Fall back to file scan for older entries
         # ... existing scan logic
 ```
@@ -126,6 +129,7 @@ class HistoryManager:
 **Impact:** Blocks event loop during file operations, reducing concurrency.
 
 **Current Code:** `src/agentic_fleet/utils/history_manager.py:202-228`
+
 ```python
 def _save_json(self, execution: dict[str, Any]) -> str:
     """Save execution in JSON format (full read/write)."""
@@ -141,7 +145,7 @@ Use `aiofiles` consistently for all file operations in async paths:
 async def _save_json_async(self, execution: dict[str, Any]) -> str:
     """Save execution in JSON format (async)."""
     history_file = self.history_dir / "execution_history.json"
-    
+
     # Load existing history
     existing_history: list[dict[str, Any]] = []
     if history_file.exists():
@@ -151,12 +155,12 @@ async def _save_json_async(self, execution: dict[str, Any]) -> str:
                 existing_history = json.loads(content)
         except Exception as e:
             logger.warning(f"Failed to load existing history: {e}")
-    
+
     # Append and rotate
     existing_history.append(execution)
     if self.max_entries and len(existing_history) > self.max_entries:
         existing_history = existing_history[-self.max_entries:]
-    
+
     # Write atomically
     content = json.dumps(existing_history, indent=2, cls=FleetJSONEncoder)
     async with aiofiles.open(history_file, "w") as f:
@@ -174,6 +178,7 @@ async def _save_json_async(self, execution: dict[str, Any]) -> str:
 **Impact:** Minor CPU overhead during reasoner initialization (200+ lines of cache key logic).
 
 **Current Code:** `src/agentic_fleet/dspy_modules/reasoner.py:200-300`
+
 ```python
 def _ensure_modules_initialized(self) -> None:
     # Repeated cache key construction
@@ -190,15 +195,15 @@ class DSPyReasoner:
     def __init__(self, ...):
         # ... existing init
         self._cache_keys = self._compute_cache_keys()
-        
+
     def _compute_cache_keys(self) -> dict[str, str]:
         """Pre-compute all cache keys based on configuration."""
         typed_suffix = "_typed" if self.use_typed_signatures else ""
         cache_key_prefix = (
-            f"enhanced{typed_suffix}" if self.use_enhanced_signatures 
+            f"enhanced{typed_suffix}" if self.use_enhanced_signatures
             else f"standard{typed_suffix}"
         )
-        
+
         return {
             "analyzer": f"{cache_key_prefix}_analyzer",
             "router": f"{cache_key_prefix}_router",
@@ -210,7 +215,7 @@ class DSPyReasoner:
             "group_chat_selector": "group_chat_selector",
             "event_narrator": "event_narrator",
         }
-    
+
     def _ensure_modules_initialized(self) -> None:
         # Use pre-computed keys
         if self._analyzer is None:
@@ -229,6 +234,7 @@ class DSPyReasoner:
 **Impact:** Unnecessary delays and API calls; not adaptive to actual agent response times.
 
 **Current Code:** `src/agentic_fleet/agents/foundry.py:171`
+
 ```python
 while run.status in ("queued", "in_progress", "requires_action"):
     await asyncio.sleep(self.poll_interval)  # Fixed 1-2 second delay
@@ -240,9 +246,9 @@ Implement exponential backoff with configurable max interval:
 
 ```python
 async def _poll_run_with_backoff(
-    self, 
-    agents_client, 
-    thread_id: str, 
+    self,
+    agents_client,
+    thread_id: str,
     run_id: str,
     initial_interval: float = 0.5,
     max_interval: float = 5.0,
@@ -250,19 +256,19 @@ async def _poll_run_with_backoff(
 ) -> Any:
     """Poll run status with exponential backoff."""
     interval = initial_interval
-    
+
     while True:
         run = await agents_client.get_run(thread_id=thread_id, run_id=run_id)
-        
+
         if run.status not in ("queued", "in_progress", "requires_action"):
             return run
-            
+
         if run.status == "requires_action":
             # Handle immediately
             logger.warning(...)
             await agents_client.cancel_run(...)
             return run
-        
+
         # Exponential backoff
         await asyncio.sleep(interval)
         interval = min(interval * backoff_factor, max_interval)
@@ -279,10 +285,12 @@ async def _poll_run_with_backoff(
 **Impact:** CPU overhead for serialization, especially with large objects.
 
 **Current Code:** Multiple locations including:
+
 - `src/agentic_fleet/workflows/handoff.py:278` - `json.dumps(artifacts, indent=2)`
 - `src/agentic_fleet/utils/history_manager.py:145` - `json.dumps(execution, cls=FleetJSONEncoder)`
 
 **Recommendation:**
+
 1. Cache serialized representations when objects don't change
 2. Remove `indent=2` for non-debugging contexts (saves CPU and space)
 3. Use orjson for faster JSON serialization:
@@ -365,6 +373,7 @@ def timed_operation(operation_name: str, threshold_ms: float = 100.0):
 For production deployments, consider:
 
 1. **SQLite with indexes** for local history:
+
    ```sql
    CREATE TABLE executions (
        workflow_id TEXT PRIMARY KEY,
@@ -386,6 +395,7 @@ For production deployments, consider:
 Current implementation already uses `run_in_executor`, but ensure it's non-blocking:
 
 ✅ Good - already implemented in `compiler.py:902`:
+
 ```python
 self._compilation_task = loop.run_in_executor(None, _compile)
 ```
@@ -395,15 +405,18 @@ self._compilation_task = loop.run_in_executor(None, _compile)
 ## Implementation Priority
 
 ### High Priority (Implement First)
+
 1. ✅ **Configuration caching** - Most frequent bottleneck
 2. ✅ **History index** - Critical for scalability
 3. ✅ **Async file I/O** - Improves concurrency
 
 ### Medium Priority
+
 4. **Polling optimization** - Better UX and fewer API calls
 5. **Performance monitoring utilities** - Essential for tracking improvements
 
 ### Low Priority (Nice to Have)
+
 6. Cache key optimization
 7. JSON optimization with orjson
 8. Lazy imports
@@ -455,20 +468,20 @@ Add performance tuning options to `workflow_config.yaml`:
 ```yaml
 performance:
   # History management
-  history_index_size: 1000  # Number of recent executions to index in memory
-  history_max_entries: 10000  # Max entries before rotation
-  
+  history_index_size: 1000 # Number of recent executions to index in memory
+  history_max_entries: 10000 # Max entries before rotation
+
   # Caching
   config_cache_enabled: true
   module_cache_enabled: true
-  
+
   # File I/O
   use_async_file_io: true
-  batch_write_size: 10  # Batch history writes
-  
+  batch_write_size: 10 # Batch history writes
+
   # Polling
-  foundry_poll_interval: 0.5  # Initial poll interval (seconds)
-  foundry_poll_max_interval: 5.0  # Max poll interval with backoff
+  foundry_poll_interval: 0.5 # Initial poll interval (seconds)
+  foundry_poll_max_interval: 5.0 # Max poll interval with backoff
   foundry_poll_backoff_factor: 1.5
 ```
 
@@ -536,5 +549,5 @@ Implementing high-priority optimizations should yield:
 
 ---
 
-*Last Updated: 2025-12-13*
-*Analysis Version: 1.0*
+_Last Updated: 2025-12-13_
+_Analysis Version: 1.0_
