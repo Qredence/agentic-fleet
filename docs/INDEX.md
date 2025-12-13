@@ -47,7 +47,15 @@ User-facing documentation for using the framework:
    - Environment variables
    - Performance tuning
    - Migration guide
-6. **[Troubleshooting](users/troubleshooting.md)** - Common issues and solutions
+6. **[Performance Optimization](PERFORMANCE_OPTIMIZATION.md)** - Performance analysis and recommendations
+   - Identified bottlenecks and solutions
+   - Configuration caching and history indexing
+   - Priority-ranked optimization opportunities
+7. **[Profiling Guide](PROFILING_GUIDE.md)** - Performance monitoring utilities
+   - Using `timed_operation` and `@profile_function`
+   - Tracking operations with `PerformanceTracker`
+   - Practical examples and best practices
+8. **[Troubleshooting](users/troubleshooting.md)** - Common issues and solutions
    - Installation problems
    - Runtime issues
    - Performance tuning

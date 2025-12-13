@@ -528,6 +528,7 @@ Implementing high-priority optimizations should yield:
 
 ## Related Documentation
 
+- [Profiling Guide](./PROFILING_GUIDE.md) - **How to use performance monitoring utilities**
 - [Architecture Overview](../README.md#architecture)
 - [Configuration Guide](../README.md#configuration)
 - [Development Guide](../CONTRIBUTING.md)
