@@ -17,6 +17,29 @@ from agentic_fleet.api.deps import WorkflowDep
 router = APIRouter()
 
 
+def _get_nlu_reasoner(workflow: Any) -> Any:
+    """Get and validate NLU reasoner from workflow.
+
+    Args:
+        workflow: The workflow instance
+
+    Returns:
+        The NLU reasoner
+
+    Raises:
+        HTTPException: If NLU module is not available
+    """
+    reasoner = getattr(workflow, "dspy_reasoner", None)
+
+    if reasoner is None or not hasattr(reasoner, "nlu"):
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="NLU module not initialized in reasoner",
+        )
+
+    return reasoner
+
+
 class IntentRequest(BaseModel):
     """Request model for intent classification."""
 
@@ -56,14 +79,8 @@ class EntityResponse(BaseModel):
 )
 async def classify_intent(request: IntentRequest, workflow: WorkflowDep) -> IntentResponse:
     """Classify intent for the provided text."""
-    reasoner = getattr(workflow, "dspy_reasoner", None)
+    reasoner = _get_nlu_reasoner(workflow)
     legacy_reasoner = getattr(workflow, "reasoner", None)
-
-    if reasoner is None or not hasattr(reasoner, "nlu"):
-        raise HTTPException(
-            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-            detail="NLU module not initialized in reasoner",
-        )
 
     try:
         result = reasoner.nlu.classify_intent(
@@ -91,14 +108,8 @@ async def classify_intent(request: IntentRequest, workflow: WorkflowDep) -> Inte
 )
 async def extract_entities(request: EntityRequest, workflow: WorkflowDep) -> EntityResponse:
     """Extract entities from the provided text."""
-    reasoner = getattr(workflow, "dspy_reasoner", None)
+    reasoner = _get_nlu_reasoner(workflow)
     legacy_reasoner = getattr(workflow, "reasoner", None)
-
-    if reasoner is None or not hasattr(reasoner, "nlu"):
-        raise HTTPException(
-            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-            detail="NLU module not initialized in reasoner",
-        )
 
     try:
         result = reasoner.nlu.extract_entities(text=request.text, entity_types=request.entity_types)
