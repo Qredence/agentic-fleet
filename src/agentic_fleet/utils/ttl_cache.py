@@ -13,6 +13,7 @@ Features:
 from __future__ import annotations
 
 import asyncio
+import threading as _threading
 import time
 from collections import OrderedDict
 from dataclasses import dataclass, field
@@ -203,12 +204,10 @@ class SyncTTLCache(Generic[K, V]):
             ttl_seconds: Time to live for cache entries in seconds
             max_size: Maximum number of entries before LRU eviction
         """
-        import threading
-
         self.ttl_seconds = ttl_seconds
         self.max_size = max_size
         self._cache: OrderedDict[K, _CacheEntry[V]] = OrderedDict()
-        self._lock = threading.Lock()
+        self._lock = _threading.Lock()
         self._stats = CacheStats()
 
     def get(self, key: K) -> V | None:

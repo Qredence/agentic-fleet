@@ -37,10 +37,19 @@ class TestPhase3Integration:
 
     def test_fail_fast_with_require_compiled_true(self, tmp_path):
         """Test that missing artifacts fail fast in production mode."""
+        routing_path = tmp_path / "nonexistent_routing.json"
+        tool_planning_path = tmp_path / "nonexistent_tool_planning.json"
+        quality_path = tmp_path / "nonexistent_quality.pkl"
+
+        # Verify files don't exist
+        assert not routing_path.exists()
+        assert not tool_planning_path.exists()
+        assert not quality_path.exists()
+
         dspy_config = {
-            "compiled_routing_path": str(tmp_path / "nonexistent_routing.json"),
-            "compiled_tool_planning_path": str(tmp_path / "nonexistent_tool_planning.json"),
-            "compiled_quality_path": str(tmp_path / "nonexistent_quality.pkl"),
+            "compiled_routing_path": str(routing_path),
+            "compiled_tool_planning_path": str(tool_planning_path),
+            "compiled_quality_path": str(quality_path),
         }
 
         # Should raise RuntimeError with require_compiled=True
@@ -221,12 +230,13 @@ class TestConstraintsVerification:
             return await cache.get(key)
 
         # Run many concurrent operations
-        start = asyncio.get_event_loop().time()
+        loop = asyncio.get_running_loop()
+        start = loop.time()
         await asyncio.gather(
             *[writer(f"key{i}", f"value{i}") for i in range(100)],
             *[reader(f"key{i}") for i in range(100)],
         )
-        elapsed = asyncio.get_event_loop().time() - start
+        elapsed = loop.time() - start
 
         # Should complete quickly (under 1 second for 200 operations)
         assert elapsed < 1.0, "Cache operations should not block significantly"

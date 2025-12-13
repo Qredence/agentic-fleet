@@ -8,6 +8,7 @@ Note: This is process-local state (sufficient for single-process deployments and
 
 from __future__ import annotations
 
+import concurrent.futures
 import threading
 from dataclasses import dataclass, field
 from datetime import datetime
@@ -19,7 +20,7 @@ from agentic_fleet.utils.compiler import compile_answer_quality, compile_nlu, co
 from agentic_fleet.utils.config import DEFAULT_GEPA_LOG_DIR
 from agentic_fleet.utils.dspy_manager import configure_dspy_settings
 from agentic_fleet.utils.logger import setup_logger
-from agentic_fleet.utils.progress import ProgressCallback
+from agentic_fleet.utils.progress import NullProgressCallback, ProgressCallback
 
 logger = setup_logger(__name__)
 
@@ -170,8 +171,6 @@ def _compile_all(
 
     # Phase 4: Compile quality and NLU in parallel when requested
     if parallel:
-        import concurrent.futures
-
         progress_callback.on_progress("Compiling quality and NLU modules in parallel...")
 
         def compile_quality():

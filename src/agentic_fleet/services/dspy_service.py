@@ -6,6 +6,7 @@ caching, and introspection.
 
 from __future__ import annotations
 
+import asyncio
 import inspect
 import logging
 from typing import Any
@@ -223,8 +224,6 @@ class DSPyService:
         Raises:
             ValueError: If module_name is invalid
         """
-        import asyncio
-
         from agentic_fleet.utils.compiler import (
             compile_answer_quality,
             compile_nlu,
@@ -310,8 +309,6 @@ class DSPyService:
         Returns:
             List of compilation results, one per module
         """
-        import asyncio
-
         logger.info("Starting parallel compilation for modules: %s", modules)
 
         # Create compilation tasks
