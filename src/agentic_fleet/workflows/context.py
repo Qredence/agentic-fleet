@@ -240,3 +240,7 @@ class SupervisorContext:
 
     # Conversation thread for multi-turn context (agent-framework AgentThread)
     conversation_thread: AgentThread | None = None
+
+    # Persisted conversation history (from ConversationManager) for context rendering.
+    # Used as a fallback when the AgentThread does not expose a local message store.
+    conversation_history: list[Any] = field(default_factory=list)

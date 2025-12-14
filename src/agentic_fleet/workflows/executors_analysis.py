@@ -19,7 +19,10 @@ from ..utils.memory import get_process_rss_mb
 from ..utils.resilience import async_call_with_retry
 from ..utils.telemetry import optional_span
 from .context import SupervisorContext
-from .conversation_context import render_conversation_context
+from .conversation_context import (
+    render_conversation_context,
+    render_conversation_context_from_messages,
+)
 from .exceptions import ToolError
 from .executors_base import handler
 from .models import AnalysisMessage, AnalysisResult, TaskMessage
@@ -108,6 +111,17 @@ class AnalysisExecutor(Executor):
                 max_messages=ctx_max_messages,
                 max_chars=ctx_max_chars,
             )
+
+            # Fallback: use persisted conversation history if the AgentThread does not expose
+            # a local message store (common with service-managed threads).
+            if not conversation_context:
+                persisted = getattr(self.context, "conversation_history", None) or []
+                conversation_context = render_conversation_context_from_messages(
+                    list(persisted),
+                    current_user_input=task_msg.task,
+                    max_messages=ctx_max_messages,
+                    max_chars=ctx_max_chars,
+                )
 
             analysis_input = task_msg.task
             if conversation_context:

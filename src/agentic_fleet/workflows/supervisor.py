@@ -812,6 +812,7 @@ class SupervisorWorkflow:
         workflow_id: str | None = None,
         reasoning_effort: str | None = None,
         thread: AgentThread | None = None,
+        conversation_history: list[Any] | None = None,
         checkpoint_id: str | None = None,
         checkpoint_storage: Any | None = None,
         schedule_quality_eval: bool = True,
@@ -858,6 +859,16 @@ class SupervisorWorkflow:
 
             # Store thread in context for strategies to use
             self.context.conversation_thread = thread
+            # Store persisted conversation history for context rendering (best-effort).
+            try:
+                self.context.conversation_history = list(conversation_history or [])
+            except Exception as e:
+                logger.warning(
+                    "Failed to convert conversation_history to list (value: %r): %s",
+                    conversation_history,
+                    e,
+                )
+                self.context.conversation_history = []
             workflow_id = workflow_id or str(uuid4())
             current_mode = self.mode
 

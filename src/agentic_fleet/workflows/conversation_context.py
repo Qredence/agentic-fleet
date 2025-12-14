@@ -63,14 +63,84 @@ def _coerce_role(msg: Any) -> str:
     role = getattr(msg, "role", None)
     if role is None and isinstance(msg, dict):
         role = msg.get("role")
-    return str(role or "").strip().lower()
+    # Support enums (e.g., MessageRole.USER) by using `.value` when present.
+    # If `.value` is not present, use the original `role` object as-is.
+    role_value = getattr(role, "value", role)
+    return str(role_value or "").strip().lower()
 
 
 def _coerce_text(msg: Any) -> str:
     text = getattr(msg, "text", None)
+    # Persisted conversation messages use `content` instead of `text`.
+    if text is None:
+        text = getattr(msg, "content", None)
     if text is None and isinstance(msg, dict):
         text = msg.get("text")
+        if text is None:
+            text = msg.get("content")
     return str(text or "").strip()
+
+
+def render_conversation_context_from_messages(
+    messages: list[Any],
+    *,
+    current_user_input: str | None,
+    max_messages: int,
+    max_chars: int,
+) -> str:
+    """Render a compact context string from a message list.
+
+    This is useful when AgentThread-local history is unavailable (e.g. when
+    using service-managed threads that do not expose a local message store).
+    """
+
+    if not messages or max_messages <= 0 or max_chars <= 0:
+        return ""
+
+    current_user_input_s = (current_user_input or "").strip()
+
+    pairs: list[tuple[str, str]] = []
+    for msg in messages:
+        role = _coerce_role(msg)
+        if role not in {"user", "assistant"}:
+            continue
+        text = _coerce_text(msg)
+        if not text:
+            continue
+        pairs.append((role, text))
+
+    if not pairs:
+        return ""
+
+    # Drop trailing current user input if already present.
+    while pairs and pairs[-1][0] == "user":
+        if not current_user_input_s:
+            break
+        last_user_text_stripped = pairs[-1][1].strip()
+        if last_user_text_stripped == current_user_input_s:
+            pairs.pop()
+            continue
+        break
+
+    if not pairs:
+        return ""
+
+    pairs = pairs[-max_messages:]
+    lines: list[str] = []
+    for role, text in pairs:
+        prefix = "User" if role == "user" else "Assistant"
+        cleaned = " ".join(text.split())
+        lines.append(f"{prefix}: {cleaned}")
+
+    rendered = "\n".join(lines).strip()
+    if not rendered:
+        return ""
+
+    if len(rendered) > max_chars:
+        rendered = rendered[-max_chars:]
+        rendered = "…" + rendered.lstrip()
+
+    return rendered.strip()
 
 
 def render_conversation_context(
@@ -91,43 +161,11 @@ def render_conversation_context(
     if thread is None or max_messages <= 0 or max_chars <= 0:
         return ""
 
-    current_user_input_s = (current_user_input or "").strip()
+    current_user_input_s = (current_user_input or "").strip() or None
 
-    pairs: list[tuple[str, str]] = []
-    for msg in _get_messages_list(thread):
-        role = _coerce_role(msg)
-        if role not in {"user", "assistant"}:
-            continue
-        text = _coerce_text(msg)
-        if not text:
-            continue
-        pairs.append((role, text))
-
-    if not pairs:
-        return ""
-
-    # Drop trailing current user input if already stored on the thread.
-    if current_user_input_s:
-        while pairs and pairs[-1][0] == "user" and pairs[-1][1].strip() == current_user_input_s:
-            pairs.pop()
-
-    if not pairs:
-        return ""
-
-    pairs = pairs[-max_messages:]
-    lines: list[str] = []
-    for role, text in pairs:
-        prefix = "User" if role == "user" else "Assistant"
-        cleaned = " ".join(text.split())
-        lines.append(f"{prefix}: {cleaned}")
-
-    rendered = "\n".join(lines).strip()
-    if not rendered:
-        return ""
-
-    if len(rendered) > max_chars:
-        rendered = rendered[-max_chars:]
-        # Prefer indicating truncation.
-        rendered = "…" + rendered.lstrip()
-
-    return rendered.strip()
+    return render_conversation_context_from_messages(
+        _get_messages_list(thread),
+        current_user_input=current_user_input_s,
+        max_messages=max_messages,
+        max_chars=max_chars,
+    )
