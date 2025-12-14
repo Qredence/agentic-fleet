@@ -31,35 +31,51 @@ if dspy:
         def __init__(self) -> None:
             """Initialize the routing decision module."""
             super().__init__()
-            # Use TypedPredictor for structured Pydantic outputs
-            self.predictor: Any = dspy.TypedPredictor(TypedEnhancedRouting)
+            # Prefer TypedPredictor when available, otherwise fall back to Predict.
+            # (DSPy releases have renamed/removed TypedPredictor across versions.)
+            predictor_factory = getattr(dspy, "TypedPredictor", None) or getattr(
+                dspy, "Predict", None
+            )
+            if predictor_factory is None:  # pragma: no cover
+                raise RuntimeError(
+                    "DSPy predictor API not found (expected TypedPredictor or Predict)"
+                )
+            self.predictor: Any = predictor_factory(TypedEnhancedRouting)
 
-        def forward(
-            self,
-            task: str,
-            team: str,
-            context: str = "",
-            current_date: str = "",
-            available_tools: str = "",
-        ) -> dspy.Prediction:  # type: ignore[name-defined]
+        def forward(self, task: str, **kwargs: Any) -> dspy.Prediction:  # type: ignore[name-defined]
             """Route a task to appropriate agents.
 
-            Args:
-                task: Task description to route
-                team: Description of available agents
-                context: Optional execution context
-                current_date: Current date for time-sensitive decisions
-                available_tools: Available tools for the task
+            This module is used in two contexts:
 
-            Returns:
-                DSPy prediction with routing decision
+            1) Runtime "enhanced routing" (AgenticFleet default):
+               Uses the TypedEnhancedRouting signature fields:
+               - team_capabilities
+               - available_tools
+               - current_context
+               - handoff_history
+               - workflow_state
+
+            2) Legacy/test callers that pass older field names:
+               - team (alias for team_capabilities)
+               - context (alias for current_context)
+               - current_date (ignored for enhanced routing)
+
+            We accept both shapes and map them to the typed signature.
             """
+
+            team_capabilities = str(kwargs.get("team_capabilities") or kwargs.get("team") or "")
+            available_tools = str(kwargs.get("available_tools") or "")
+            current_context = str(kwargs.get("current_context") or kwargs.get("context") or "")
+            handoff_history = str(kwargs.get("handoff_history") or "")
+            workflow_state = str(kwargs.get("workflow_state") or "Active")
+
             return self.predictor(
                 task=task,
-                team=team,
-                context=context,
-                current_date=current_date,
+                team_capabilities=team_capabilities,
                 available_tools=available_tools,
+                current_context=current_context,
+                handoff_history=handoff_history,
+                workflow_state=workflow_state,
             )
 
 

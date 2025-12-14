@@ -31,8 +31,16 @@ if dspy:
         def __init__(self) -> None:
             """Initialize the tool planning module."""
             super().__init__()
-            # Use TypedPredictor for structured Pydantic outputs
-            self.predictor: Any = dspy.TypedPredictor(TypedToolPlan)
+            # Prefer TypedPredictor when available, otherwise fall back to Predict.
+            # (DSPy releases have renamed/removed TypedPredictor across versions.)
+            predictor_factory = getattr(dspy, "TypedPredictor", None) or getattr(
+                dspy, "Predict", None
+            )
+            if predictor_factory is None:  # pragma: no cover
+                raise RuntimeError(
+                    "DSPy predictor API not found (expected TypedPredictor or Predict)"
+                )
+            self.predictor: Any = predictor_factory(TypedToolPlan)
 
         def forward(
             self,
