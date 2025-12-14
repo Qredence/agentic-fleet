@@ -109,3 +109,12 @@ memory-bank/
 .config/
 .github/prompts/plan-addKnowledgeLayerToDspy.prompt.md
 .factory/skills/change-log-generator/SKILL.md
+.factory/skills/python-backend-reviewer/SKILL.md
+.factory/skills/python-backend-reviewer/references/best_practices.md
+.factory/skills/python-backend-reviewer/references/python_antipatterns.md
+.factory/skills/python-backend-reviewer/references/refactoring_patterns.md
+.factory/skills/python-backend-reviewer/scripts/analyze_imports.py
+.factory/skills/python-backend-reviewer/scripts/complexity_analyzer.py
+.factory/skills/python-backend-reviewer/scripts/concurrency_analyzer.py
+.factory/skills/python-backend-reviewer/scripts/detect_duplicates.py
+report/jscpd-report.json
