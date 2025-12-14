@@ -118,3 +118,4 @@ memory-bank/
 .factory/skills/python-backend-reviewer/scripts/concurrency_analyzer.py
 .factory/skills/python-backend-reviewer/scripts/detect_duplicates.py
 report/jscpd-report.json
+report/jscpd-report.json
