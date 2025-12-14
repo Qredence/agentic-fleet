@@ -12,6 +12,7 @@ from agentic_fleet.dspy_modules.compiled_registry import load_required_compiled_
 from agentic_fleet.services.conversation import ConversationManager, WorkflowSessionManager
 from agentic_fleet.services.optimization_jobs import OptimizationJobManager
 from agentic_fleet.utils.config import load_config
+from agentic_fleet.utils.tracing import initialize_tracing
 from agentic_fleet.workflows.supervisor import create_supervisor_workflow
 
 logger = logging.getLogger(__name__)
@@ -60,6 +61,10 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     try:
         # Load workflow config to get DSPy settings
         config = load_config(validate=False)
+
+        # Initialize tracing early using YAML config so `tracing.enabled: true`
+        # works without requiring environment flags.
+        initialize_tracing(config)
         dspy_config = config.get("dspy", {})
         require_compiled = dspy_config.get("require_compiled", False)
 

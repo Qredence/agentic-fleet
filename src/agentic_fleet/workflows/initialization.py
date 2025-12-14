@@ -13,7 +13,7 @@ from ..agents import AgentFactory, validate_tool
 from ..dspy_modules.reasoner import DSPyReasoner
 from ..utils.agent_framework_shims import ensure_agent_framework_shims
 from ..utils.cache import TTLCache
-from ..utils.config import validate_agentic_fleet_env
+from ..utils.config import load_config, validate_agentic_fleet_env
 from ..utils.dspy_manager import configure_dspy_settings
 from ..utils.history_manager import HistoryManager
 from ..utils.logger import setup_logger
@@ -192,8 +192,20 @@ async def initialize_workflow_context(
 
     _validate_environment()
 
-    # Initialize tracing if enabled in config
-    initialize_tracing(config.config)
+    # Initialize tracing if enabled.
+    #
+    # IMPORTANT: `WorkflowConfig` is a lightweight runtime dataclass and does not
+    # include the full `tracing:` section from `config/workflow_config.yaml`.
+    # Use the YAML config loader here so that `tracing.enabled: true` actually
+    # activates tracing without requiring env flags.
+    tracing_config: dict[str, Any]
+    try:
+        tracing_config = load_config(validate=False)
+    except Exception:
+        # Fall back to dataclass values (env vars may still enable tracing).
+        tracing_config = config.config
+
+    initialize_tracing(tracing_config)
 
     openai_client, tool_registry = _create_shared_components(config)
 
