@@ -177,15 +177,19 @@ def _validate_dspy_version_compatibility(metadata: ArtifactMetadata) -> tuple[bo
 
     try:
         import dspy
+        from packaging.version import InvalidVersion, Version
 
         current_version = getattr(dspy, "__version__", "unknown")
 
-        # Parse versions for comparison
-        def parse_version(v: str) -> tuple[int, ...]:
+        # Parse versions for comparison.
+        # NOTE: DSPy frequently publishes prerelease versions like `3.1.0b1`.
+        # A naive `split('.')`+`int()` parser will treat these as invalid and
+        # incorrectly mark them as (0, 0, 0). Use PEP 440 parsing instead.
+        def parse_version(v: str) -> Version:
             try:
-                return tuple(int(x) for x in v.split(".")[:3])
-            except (ValueError, AttributeError):
-                return (0, 0, 0)
+                return Version(v)
+            except InvalidVersion:
+                return Version("0")
 
         current = parse_version(current_version)
         required = parse_version(MIN_DSPY_VERSION)
@@ -397,17 +401,12 @@ def load_required_compiled_modules(
             missing_names = [a.name for a in missing_required]
             missing_paths = [str(a.path) for a in missing_required]
             error_parts.append(
-                f"Missing required artifacts: {missing_names}\n"
-                f"Expected paths: {missing_paths}"
+                f"Missing required artifacts: {missing_names}\nExpected paths: {missing_paths}"
             )
 
         if incompatible_artifacts:
-            incompat_details = [
-                f"  - {a.name}: {msg}" for a, msg in incompatible_artifacts
-            ]
-            error_parts.append(
-                "Incompatible artifacts:\n" + "\n".join(incompat_details)
-            )
+            incompat_details = [f"  - {a.name}: {msg}" for a, msg in incompatible_artifacts]
+            error_parts.append("Incompatible artifacts:\n" + "\n".join(incompat_details))
 
         error_message = "\n\n".join(error_parts)
         error_message += (

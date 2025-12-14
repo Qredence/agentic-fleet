@@ -16,11 +16,7 @@ import asyncio
 import threading as _threading
 import time
 from collections import OrderedDict
-from dataclasses import dataclass, field
-from typing import Any, Generic, TypeVar
-
-K = TypeVar("K")
-V = TypeVar("V")
+from dataclasses import dataclass
 
 
 @dataclass
@@ -34,14 +30,14 @@ class CacheStats:
 
 
 @dataclass
-class _CacheEntry(Generic[V]):
+class _CacheEntry[V]:
     """Internal cache entry with TTL tracking."""
 
     value: V
     expires_at: float
 
 
-class AsyncTTLCache(Generic[K, V]):
+class AsyncTTLCache[K, V]:
     """Async-safe TTL+LRU cache with metrics.
 
     This cache combines TTL-based expiration with LRU eviction when
@@ -186,7 +182,7 @@ class AsyncTTLCache(Generic[K, V]):
             return len(expired_keys)
 
 
-class SyncTTLCache(Generic[K, V]):
+class SyncTTLCache[K, V]:
     """Synchronous TTL+LRU cache with metrics.
 
     Same functionality as AsyncTTLCache but for synchronous code.

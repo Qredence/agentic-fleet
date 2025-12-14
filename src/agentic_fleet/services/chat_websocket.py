@@ -63,6 +63,33 @@ _threads_lock: asyncio.Lock = asyncio.Lock()
 _UNSET_TASK: object = object()
 
 
+def _prefer_service_thread_mode(thread: Any | None) -> None:
+    """Best-effort: prefer service-managed thread storage over local message stores.
+
+    Certain agent-framework backends (notably Responses API implementations) may
+    set a service-managed thread id on an AgentThread. If a local message_store is
+    already attached, agent-framework raises:
+    "Only the service_thread_id or message_store may be set...".
+
+    To avoid that mode switch, we proactively clear any local message_store on
+    cached threads and mark the thread so hydration is skipped.
+    """
+
+    if thread is None:
+        return
+
+    with contextlib.suppress(Exception):
+        thread._agentic_fleet_prefer_service_thread = True
+
+    with contextlib.suppress(Exception):
+        if getattr(thread, "message_store", None) is not None:
+            thread.message_store = None
+
+    with contextlib.suppress(Exception):
+        if getattr(thread, "_message_store", None) is not None:
+            thread._message_store = None
+
+
 def _sanitize_log_input(value: str) -> str:
     # Remove all control and non-printable characters (keep only safe, printable ASCII).
     # Truncate excessively long input for logging.
@@ -191,6 +218,17 @@ async def _hydrate_thread_from_conversation(
     if thread is None:
         return
 
+    # If we prefer service-managed threads, do not hydrate local message stores.
+    # This avoids invalid mode switching (message_store <-> service_thread_id).
+    if bool(getattr(thread, "_agentic_fleet_prefer_service_thread", False)):
+        return
+
+    service_thread_id = getattr(thread, "service_thread_id", None) or getattr(
+        thread, "_service_thread_id", None
+    )
+    if service_thread_id:
+        return
+
     on_new_messages = getattr(thread, "on_new_messages", None)
     if not callable(on_new_messages):
         return
@@ -296,6 +334,7 @@ async def _event_generator(
     reasoning_effort: str | None = None,
     cancel_event: asyncio.Event | None = None,
     thread: AgentThread | None = None,
+    conversation_history: list[Any] | None = None,
     checkpoint_id: str | None = None,
     checkpoint_storage: Any | None = None,
 ) -> AsyncIterator[dict[str, Any]]:
@@ -332,6 +371,7 @@ async def _event_generator(
         stream_kwargs: dict[str, Any] = {
             "reasoning_effort": reasoning_effort,
             "thread": thread,
+            "conversation_history": conversation_history,
             # Align workflow history ids with the session id used by the websocket surface.
             "workflow_id": session.workflow_id,
             # We'll evaluate quality after sending the final answer so users don't wait.
@@ -631,6 +671,9 @@ class ChatWebSocketService:
 
             conversation_thread = await _get_or_create_thread(conversation_id)
 
+            # Normalize thread storage mode to avoid service_thread_id/message_store conflicts.
+            _prefer_service_thread_mode(conversation_thread)
+
             # Best-effort hydration for new socket connections.
             if conversation_history and not _thread_has_any_messages(conversation_thread):
                 await _hydrate_thread_from_conversation(conversation_thread, conversation_history)
@@ -775,6 +818,7 @@ class ChatWebSocketService:
                     reasoning_effort=reasoning_effort,
                     cancel_event=cancel_event,
                     thread=conversation_thread,
+                    conversation_history=conversation_history,
                     checkpoint_id=effective_checkpoint_id,
                     checkpoint_storage=checkpoint_storage,
                 ):

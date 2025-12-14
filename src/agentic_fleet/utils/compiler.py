@@ -5,6 +5,7 @@ DSPy compilation utilities for optimizing modules.
 from __future__ import annotations
 
 import asyncio
+import contextlib
 import hashlib
 import inspect
 import json
@@ -168,10 +169,8 @@ def _save_cache_metadata(
 
     # Phase 3: Capture DSPy version for compatibility validation
     dspy_version = "unknown"
-    try:
+    with contextlib.suppress(Exception):
         dspy_version = getattr(dspy, "__version__", "unknown")
-    except Exception:
-        pass
 
     metadata = {
         "version": version,
