@@ -1,7 +1,8 @@
 """Tests for lifespan DSPy artifact registry integration."""
 
+from unittest.mock import MagicMock, patch
+
 import pytest
-from unittest.mock import AsyncMock, MagicMock, patch
 
 from agentic_fleet.api.lifespan import lifespan
 from agentic_fleet.dspy_modules.compiled_registry import ArtifactRegistry

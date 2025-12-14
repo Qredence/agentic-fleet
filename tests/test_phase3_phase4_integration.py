@@ -1,13 +1,13 @@
 """Integration tests for Phase 3 and Phase 4 enhancements."""
 
-import json
-import pytest
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
+import pytest
+
 from agentic_fleet.dspy_modules.compiled_registry import (
-    load_required_compiled_modules,
     ArtifactMetadata,
+    load_required_compiled_modules,
 )
 
 
@@ -68,9 +68,7 @@ class TestPhase3Integration:
     @patch("agentic_fleet.utils.compiler.load_compiled_module")
     @patch("agentic_fleet.dspy_modules.compiled_registry._resolve_artifact_path")
     @patch("agentic_fleet.dspy_modules.compiled_registry._load_artifact_metadata")
-    def test_metadata_captured_in_registry(
-        self, mock_load_meta, mock_resolve, mock_load, tmp_path
-    ):
+    def test_metadata_captured_in_registry(self, mock_load_meta, mock_resolve, mock_load, tmp_path):
         """Test that artifact metadata is properly captured."""
         # Create artifact files
         artifact_path = tmp_path / "test_routing.json"
@@ -145,8 +143,8 @@ class TestPhase4Integration:
 
     def test_parallel_compilation_flag(self):
         """Test that parallel compilation flag is properly handled."""
-        from agentic_fleet.services.optimization_jobs import _compile_all
         from agentic_fleet.models.dspy import CompileRequest
+        from agentic_fleet.services.optimization_jobs import _compile_all
 
         # Mock workflow
         mock_workflow = MagicMock()
@@ -165,27 +163,29 @@ class TestPhase4Integration:
         mock_callback = MagicMock()
 
         # Patch all compilation functions
-        with patch("agentic_fleet.services.optimization_jobs.compile_reasoner") as mock_reasoner:
-            with patch(
+        with (
+            patch("agentic_fleet.services.optimization_jobs.compile_reasoner") as mock_reasoner,
+            patch(
                 "agentic_fleet.services.optimization_jobs.compile_answer_quality"
-            ) as mock_quality:
-                with patch("agentic_fleet.services.optimization_jobs.compile_nlu") as mock_nlu:
-                    mock_reasoner.return_value = MagicMock()
-                    mock_quality.return_value = MagicMock()
-                    mock_nlu.return_value = MagicMock()
+            ) as mock_quality,
+            patch("agentic_fleet.services.optimization_jobs.compile_nlu") as mock_nlu,
+        ):
+            mock_reasoner.return_value = MagicMock()
+            mock_quality.return_value = MagicMock()
+            mock_nlu.return_value = MagicMock()
 
-                    # Test parallel=True
-                    result = _compile_all(mock_workflow, request, mock_callback, parallel=True)
+            # Test parallel=True
+            result = _compile_all(mock_workflow, request, mock_callback, parallel=True)
 
-                    # Verify all modules were compiled
-                    assert "cache_paths" in result
-                    assert "supervisor" in result["cache_paths"]
-                    assert "answer_quality" in result["cache_paths"]
-                    assert "nlu" in result["cache_paths"]
+            # Verify all modules were compiled
+            assert "cache_paths" in result
+            assert "supervisor" in result["cache_paths"]
+            assert "answer_quality" in result["cache_paths"]
+            assert "nlu" in result["cache_paths"]
 
-                    # Test parallel=False (backward compatibility)
-                    result = _compile_all(mock_workflow, request, mock_callback, parallel=False)
-                    assert "cache_paths" in result
+            # Test parallel=False (backward compatibility)
+            result = _compile_all(mock_workflow, request, mock_callback, parallel=False)
+            assert "cache_paths" in result
 
 
 class TestConstraintsVerification:
@@ -217,6 +217,7 @@ class TestConstraintsVerification:
     async def test_cache_operations_do_not_block(self):
         """Verify that cache operations are async-safe and don't block."""
         import asyncio
+
         from agentic_fleet.utils.ttl_cache import AsyncTTLCache
 
         cache = AsyncTTLCache[str, str](ttl_seconds=10, max_size=100)

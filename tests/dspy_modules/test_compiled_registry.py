@@ -1,18 +1,19 @@
 """Tests for compiled DSPy artifact registry."""
 
 import json
-import pytest
 from pathlib import Path
-from unittest.mock import MagicMock, mock_open, patch
+from unittest.mock import MagicMock, patch
+
+import pytest
 
 from agentic_fleet.dspy_modules.compiled_registry import (
     ArtifactMetadata,
     ArtifactRegistry,
     CompiledArtifact,
-    load_required_compiled_modules,
-    validate_artifact_registry,
     _load_artifact_metadata,
     _validate_dspy_version_compatibility,
+    load_required_compiled_modules,
+    validate_artifact_registry,
 )
 
 
@@ -308,9 +309,7 @@ class TestLoadRequiredCompiledModulesPhase3:
     @patch("agentic_fleet.dspy_modules.compiled_registry._resolve_artifact_path")
     @patch("agentic_fleet.dspy_modules.compiled_registry._load_artifact_metadata")
     @patch("agentic_fleet.dspy_modules.compiled_registry._validate_dspy_version_compatibility")
-    def test_load_with_valid_metadata(
-        self, mock_validate, mock_load_meta, mock_resolve, mock_load
-    ):
+    def test_load_with_valid_metadata(self, mock_validate, mock_load_meta, mock_resolve, mock_load):
         """Test successful loading with valid metadata."""
         # Mock path resolution
         mock_path = MagicMock(spec=Path)

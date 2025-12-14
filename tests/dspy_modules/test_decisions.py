@@ -1,6 +1,5 @@
 """Tests for typed DSPy decision modules."""
 
-import pytest
 from unittest.mock import MagicMock, patch
 
 # Import decision modules
