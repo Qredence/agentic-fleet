@@ -88,6 +88,17 @@ Controls DSPy reasoner behavior and optimization.
 - First run is slower (compilation time)
 - Subsequent runs are faster (cached)
 
+**require_compiled** (`bool`, default: `false`)
+
+- When `true`, the API **fails fast at startup** if compiled DSPy artifacts are missing
+- Recommended for production to avoid silent zero-shot fallback
+- Set in `src/agentic_fleet/config/workflow_config.yaml` as `dspy.require_compiled: true`
+
+**Runtime compilation note (dev vs prod)**
+
+- AgenticFleet can optionally start **background compilation** at runtime (lazy/non-blocking) when workflow initialization is invoked with `compile_dspy=True` (CLI default; can be disabled with `--no-compile`).
+- For production, treat compilation as **offline-only**: run `agentic-fleet optimize`, set `dspy.require_compiled: true`, and disable runtime compilation paths (e.g., initialize workflows with `compile_dspy=False`).
+
 **optimization.examples_path** (`str`, default: `"src/agentic_fleet/data/supervisor_examples.json"`)
 
 - Path to training examples for DSPy

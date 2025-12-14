@@ -76,22 +76,27 @@ Developer-facing documentation for extending and contributing:
    - Data flow
    - Module structure
    - DSPy integration
-2. **[API Reference](developers/api-reference.md)** - API documentation
+2. **[Operations Runbook](developers/operations.md)** - Production operations
+   - Backpressure / concurrency limits
+   - Rate limiting guidance
+   - Scaling considerations (WebSocket + state)
+   - Production checklist
+3. **[API Reference](developers/api-reference.md)** - API documentation
    - Core classes and methods
    - Type hints
    - Examples
    - Events and exceptions
-3. **[Testing](developers/testing.md)** - Testing guide
+4. **[Testing](developers/testing.md)** - Testing guide
    - Running tests
    - Writing tests
    - Test patterns
    - Debugging
-4. **[Contributing](developers/contributing.md)** - Development guidelines
+5. **[Contributing](developers/contributing.md)** - Development guidelines
    - Code style
    - Commit conventions
    - Pull request process
    - Adding features
-5. **[Code Quality](developers/code-quality.md)** - Code quality improvements
+6. **[Code Quality](developers/code-quality.md)** - Code quality improvements
    - Error handling enhancements
    - Type safety improvements
    - Caching optimizations

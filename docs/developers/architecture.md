@@ -118,6 +118,8 @@ graph TB
 
 > **Note**: The Judge/Refinement phase was removed in v0.6.6 for ~66% latency improvement (from ~6 min to ~2 min for complex queries).
 
+> **Operational note (concurrency)**: Per-request `reasoning_effort` can require mutating agent client state in `SupervisorWorkflow._apply_reasoning_effort`. To avoid cross-request interference under concurrent WebSocket sessions, the WebSocket service initializes a **fresh SupervisorWorkflow per socket session** (isolating agent instances).
+
 ### Agent-Framework Integration Architecture
 
 The workflow is built entirely on agent-framework primitives:
