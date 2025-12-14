@@ -244,3 +244,8 @@ class SupervisorContext:
     # Persisted conversation history (from ConversationManager) for context rendering.
     # Used as a fallback when the AgentThread does not expose a local message store.
     conversation_history: list[Any] = field(default_factory=list)
+
+    # Request-scoped reasoning effort level ("minimal", "medium", "maximal").
+    # Stored in context for strategies to access without relying on shared agent mutation.
+    # Note: Use get_current_reasoning_effort() from supervisor module for contextvar access.
+    reasoning_effort: str | None = None

@@ -85,6 +85,11 @@ def ensure_agent_framework_shims() -> None:
         # internal modules (e.g., `observability`) expect `__version__` to exist.
         root.__version__ = "0.0.0"  # type: ignore[attr-defined]
 
+    # User-Agent string expected by agent_framework_azure_ai package
+    if not hasattr(root, "AGENT_FRAMEWORK_USER_AGENT"):
+        version = getattr(root, "__version__", "0.0.0")
+        root.AGENT_FRAMEWORK_USER_AGENT = f"agentic-fleet/{version}"  # type: ignore[attr-defined]
+
     exceptions = cast(Any, _ensure_submodule("agent_framework.exceptions"))
     root.exceptions = exceptions  # type: ignore[attr-defined]
 
@@ -121,6 +126,9 @@ def ensure_agent_framework_shims() -> None:
     _reexport_public_api(root, "agent_framework._threads")
     _reexport_public_api(root, "agent_framework._agents")
     _reexport_public_api(root, "agent_framework._workflows")
+    _reexport_public_api(root, "agent_framework._clients")  # BaseChatClient
+    _reexport_public_api(root, "agent_framework._logging")  # get_logger
+    _reexport_public_api(root, "agent_framework._middleware")  # use_chat_middleware
 
     # -- Core agent-framework symbols (used heavily across the codebase) --
 

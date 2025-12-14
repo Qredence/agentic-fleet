@@ -5,6 +5,8 @@ Consolidated public API and implementation.
 
 from __future__ import annotations
 
+import asyncio
+import contextvars
 import inspect
 import time
 from collections.abc import AsyncIterable, AsyncIterator
@@ -64,6 +66,30 @@ WorkflowEvent = (
 )
 
 logger = setup_logger(__name__)
+
+# Request-scoped reasoning effort using contextvars for thread-safe access.
+# This allows concurrent requests to have different reasoning_effort values
+# without race conditions on shared agent state.
+_reasoning_effort_ctx: contextvars.ContextVar[str | None] = contextvars.ContextVar(
+    "reasoning_effort", default=None
+)
+
+# Module-level lock and tracking for reasoning effort mutation.
+# Used to detect concurrent modifications to shared agent state.
+_reasoning_effort_lock = asyncio.Lock()
+_active_reasoning_requests: dict[str, str] = {}  # workflow_id -> reasoning_effort
+
+
+def get_current_reasoning_effort() -> str | None:
+    """Get the current request's reasoning effort from contextvar.
+
+    This is the recommended way to access reasoning_effort in a request-scoped manner,
+    avoiding race conditions from shared agent state mutation.
+
+    Returns:
+        The reasoning effort level for the current request, or None if not set.
+    """
+    return _reasoning_effort_ctx.get()
 
 
 def _thread_has_history(thread: Any | None) -> bool:
@@ -755,22 +781,52 @@ class SupervisorWorkflow:
 
         return None
 
-    def _apply_reasoning_effort(self, reasoning_effort: str | None) -> None:
-        """Apply reasoning effort to all agents that support it.
+    async def _apply_reasoning_effort(self, reasoning_effort: str | None, workflow_id: str) -> None:
+        """Apply reasoning effort to context and agents with concurrency safety.
 
-        Note: This method mutates shared agent state. When multiple concurrent
-        requests have different reasoning_effort values, they may overwrite each
-        other's settings. For production use with concurrent requests, consider
-        implementing request-scoped agent instances or passing reasoning_effort
-        through the workflow context instead of mutating shared state.
+        This method:
+        1. Sets the contextvar for request-scoped access (preferred, thread-safe)
+        2. Stores reasoning_effort in self.context for strategy access
+        3. Mutates shared agent state (legacy, with concurrency detection)
+
+        For production with high concurrency, prefer reading from contextvar via
+        get_current_reasoning_effort() or from context.reasoning_effort.
 
         Args:
             reasoning_effort: Reasoning effort level ("minimal", "medium", "maximal").
                 Must match API schema values defined in ChatRequest.
+            workflow_id: Unique identifier for this workflow execution, used for
+                concurrency conflict detection.
         """
-        if not self.agents:
+        # 1. Set contextvar for thread-safe request-scoped access
+        _reasoning_effort_ctx.set(reasoning_effort)
+
+        # 2. Store in context for strategies to access
+        self.context.reasoning_effort = reasoning_effort
+
+        if not self.agents or not reasoning_effort:
             return
 
+        # 3. Detect and warn about concurrent mutations
+        async with _reasoning_effort_lock:
+            # Check for conflicting concurrent requests
+            conflicting = [
+                (wf_id, effort)
+                for wf_id, effort in _active_reasoning_requests.items()
+                if effort != reasoning_effort
+            ]
+            if conflicting:
+                logger.warning(
+                    f"Concurrent reasoning_effort conflict detected! "
+                    f"Workflow {workflow_id} setting '{reasoning_effort}' while "
+                    f"{len(conflicting)} other workflow(s) have different values: "
+                    f"{conflicting[:3]}. Shared agent state may be inconsistent."
+                )
+
+            # Track this request
+            _active_reasoning_requests[workflow_id] = reasoning_effort
+
+        # 4. Mutate shared agent state (legacy behavior, with warning logged above)
         for agent_name, agent in self.agents.items():
             if hasattr(agent, "chat_client"):
                 chat_client = agent.chat_client
@@ -804,6 +860,13 @@ class SupervisorWorkflow:
                         f"Unexpected error setting reasoning_effort on {agent_name}: {e}",
                         exc_info=True,
                     )
+
+    def _cleanup_reasoning_effort_tracking(self, workflow_id: str) -> None:
+        """Remove workflow from active reasoning effort tracking.
+
+        Called at the end of run_stream to clean up tracking state.
+        """
+        _active_reasoning_requests.pop(workflow_id, None)
 
     async def run_stream(
         self,
@@ -904,7 +967,7 @@ class SupervisorWorkflow:
                     )
                     return
                 logger.info(f"Applying reasoning_effort={reasoning_effort} for this request")
-                self._apply_reasoning_effort(reasoning_effort)
+                await self._apply_reasoning_effort(reasoning_effort, workflow_id)
 
             # Notify middlewares
             if hasattr(self.context, "middlewares"):
@@ -1240,6 +1303,9 @@ class SupervisorWorkflow:
                     )
                 except Exception:
                     pass
+
+            # Cleanup reasoning effort tracking to prevent stale entries
+            self._cleanup_reasoning_effort_tracking(workflow_id)
 
     async def _yield_fast_path_events(self, task: str) -> AsyncIterator[WorkflowEvent]:
         # Assertion for type checker - _should_fast_path ensures dspy_reasoner is not None
