@@ -15,6 +15,7 @@ from typing import TYPE_CHECKING, Any, TypedDict
 from agent_framework._serialization import SerializationMixin
 from agent_framework._tools import ToolProtocol
 
+from agentic_fleet.tools.base import SchemaToolMixin
 from agentic_fleet.utils.config import env_config
 from agentic_fleet.utils.resilience import external_api_retry
 
@@ -43,7 +44,7 @@ if TYPE_CHECKING:
         answer: str
 
 
-class TavilySearchTool(ToolProtocol, SerializationMixin):
+class TavilySearchTool(SchemaToolMixin, ToolProtocol, SerializationMixin):
     """Web search tool using the Tavily API."""
 
     def __init__(self, api_key: str | None = None, max_results: int = 5):
@@ -184,9 +185,4 @@ class TavilySearchTool(ToolProtocol, SerializationMixin):
     def __str__(self) -> str:
         return self.name
 
-    def to_dict(self, **kwargs: Any) -> dict[str, Any]:
-        """Convert tool to dictionary format for agent-framework.
-
-        Returns the OpenAI function calling schema format.
-        """
-        return self.schema
+    # to_dict inherited from SchemaToolMixin

@@ -15,6 +15,7 @@ from urllib.parse import urlparse
 from agent_framework._serialization import SerializationMixin
 from agent_framework._tools import ToolProtocol
 
+from agentic_fleet.tools.base import SchemaToolMixin
 from agentic_fleet.utils.config import (
     DEFAULT_BROWSER_MAX_TEXT_LENGTH,
     DEFAULT_BROWSER_SELECTOR_TIMEOUT_MS,
@@ -37,7 +38,7 @@ except ImportError:
     PLAYWRIGHT_AVAILABLE = False
 
 
-class BrowserTool(SerializationMixin, ToolProtocol):
+class BrowserTool(SchemaToolMixin, SerializationMixin, ToolProtocol):
     """
     Browser automation tool using Playwright for real-time web browsing.
 
@@ -285,9 +286,4 @@ class BrowserTool(SerializationMixin, ToolProtocol):
         """
         pass
 
-    def to_dict(self, **kwargs: Any) -> dict[str, Any]:
-        """Convert tool to dictionary format for agent-framework.
-
-        Returns the OpenAI function calling schema format.
-        """
-        return self.schema
+    # to_dict inherited from SchemaToolMixin
