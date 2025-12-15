@@ -21,10 +21,18 @@ export const API_PREFIX = "/api/v1";
  */
 export function getWebSocketUrl(path: string): string {
   const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
-  const host = API_BASE_URL ? new URL(API_BASE_URL).host : window.location.host;
+  let host = window.location.host;
+  if (API_BASE_URL) {
+    try {
+      host = new URL(API_BASE_URL).host;
+    } catch {
+      console.warn(
+        `Invalid API_BASE_URL: ${API_BASE_URL}, falling back to window.location.host`,
+      );
+    }
+  }
   return `${protocol}//${host}${path}`;
 }
-
 /**
  * API request timeout in milliseconds.
  */

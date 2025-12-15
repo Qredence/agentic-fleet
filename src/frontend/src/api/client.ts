@@ -21,6 +21,12 @@ import type {
   HistoryExecutionEntry,
   SelfImproveRequest,
   SelfImproveResponse,
+  DSPyConfig,
+  DSPyStats,
+  CacheInfo,
+  ReasonerSummary,
+  DSPySignatures,
+  DSPyPrompts,
 } from "./types";
 
 // =============================================================================
@@ -153,6 +159,52 @@ export const improvementApi = {
 };
 
 // =============================================================================
+// DSPy Management API
+// =============================================================================
+
+export const dspyApi = {
+  /**
+   * Get DSPy predictor prompts and demos.
+   */
+  getPrompts: () => http.get<DSPyPrompts>("/dspy/prompts"),
+
+  /**
+   * Get current DSPy configuration.
+   */
+  getConfig: () => http.get<DSPyConfig>("/dspy/config"),
+
+  /**
+   * Get DSPy usage statistics.
+   */
+  getStats: () => http.get<DSPyStats>("/dspy/stats"),
+
+  /**
+   * Get DSPy compilation cache information.
+   */
+  getCacheInfo: () => http.get<CacheInfo>("/dspy/cache"),
+
+  /**
+   * Clear DSPy compilation cache.
+   */
+  clearCache: () => http.delete<void>("/dspy/cache"),
+
+  /**
+   * Get DSPy reasoner summary (routing cache, typed signatures).
+   */
+  getReasonerSummary: () => http.get<ReasonerSummary>("/dspy/reasoner/summary"),
+
+  /**
+   * Clear DSPy routing decision cache.
+   */
+  clearRoutingCache: () => http.delete<void>("/dspy/reasoner/routing-cache"),
+
+  /**
+   * List all available DSPy signatures.
+   */
+  getSignatures: () => http.get<DSPySignatures>("/dspy/signatures"),
+};
+
+// =============================================================================
 // Health API
 // Note: Health endpoints are at root level, not under /api/v1
 // =============================================================================
@@ -219,4 +271,14 @@ export const api = {
   optimizeStatus: optimizationApi.status,
   history: evaluationApi.history,
   selfImprove: improvementApi.trigger,
+
+  // DSPy Management
+  dspyPrompts: dspyApi.getPrompts,
+  dspyConfig: dspyApi.getConfig,
+  dspyStats: dspyApi.getStats,
+  dspyCacheInfo: dspyApi.getCacheInfo,
+  dspyClearCache: dspyApi.clearCache,
+  dspyReasonerSummary: dspyApi.getReasonerSummary,
+  dspyClearRoutingCache: dspyApi.clearRoutingCache,
+  dspySignatures: dspyApi.getSignatures,
 };

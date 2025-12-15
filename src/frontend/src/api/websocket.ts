@@ -149,6 +149,12 @@ export class ChatWebSocketService {
     if (this.isConnected) {
       const cancelRequest: CancelRequest = { type: "cancel" };
       this.ws?.send(JSON.stringify(cancelRequest));
+      // Give browser time to flush the send buffer
+      setTimeout(() => {
+        this.shouldReconnect = false;
+        this.disconnect();
+      }, 50);
+      return;
     }
     this.shouldReconnect = false;
     this.disconnect();

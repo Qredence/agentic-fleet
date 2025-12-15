@@ -33,7 +33,7 @@
     "clsx": "^2.1.1",
     "lucide-react": "^0.552.0",
     "marked": "^16.4.2",
-    "motion": "^12.23.25",
+    "motion": "^12.23.26",
     "react": "^19.1.1",
     "react-dom": "^19.1.1",
     "react-markdown": "^10.1.0",

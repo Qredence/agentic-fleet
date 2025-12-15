@@ -20,6 +20,7 @@ import {
   optimizationApi,
   evaluationApi,
   improvementApi,
+  dspyApi,
 } from "./client";
 import type {
   Conversation,
@@ -31,6 +32,12 @@ import type {
   HistoryExecutionEntry,
   SelfImproveRequest,
   SelfImproveResponse,
+  DSPyConfig,
+  DSPyStats,
+  CacheInfo,
+  ReasonerSummary,
+  DSPySignatures,
+  DSPyPrompts,
 } from "./types";
 import type { HealthResponse, ReadinessResponse } from "./client";
 
@@ -69,6 +76,15 @@ export const queryKeys = {
   health: {
     check: ["health", "check"] as const,
     ready: ["health", "ready"] as const,
+  },
+  dspy: {
+    all: ["dspy"] as const,
+    config: () => [...queryKeys.dspy.all, "config"] as const,
+    stats: () => [...queryKeys.dspy.all, "stats"] as const,
+    cache: () => [...queryKeys.dspy.all, "cache"] as const,
+    reasonerSummary: () => [...queryKeys.dspy.all, "reasoner-summary"] as const,
+    signatures: () => [...queryKeys.dspy.all, "signatures"] as const,
+    prompts: () => [...queryKeys.dspy.all, "prompts"] as const,
   },
 } as const;
 
@@ -293,6 +309,107 @@ export function useTriggerSelfImprove(
 ) {
   return useMutation({
     mutationFn: improvementApi.trigger,
+    ...options,
+  });
+}
+
+// =============================================================================
+// DSPy Management Hooks
+// =============================================================================
+
+export function useDSPyConfig(
+  options?: Omit<UseQueryOptions<DSPyConfig>, "queryKey" | "queryFn">,
+) {
+  return useQuery({
+    queryKey: queryKeys.dspy.config(),
+    queryFn: dspyApi.getConfig,
+    staleTime: 60_000, // 1 minute
+    ...options,
+  });
+}
+
+export function useDSPyStats(
+  options?: Omit<UseQueryOptions<DSPyStats>, "queryKey" | "queryFn">,
+) {
+  return useQuery({
+    queryKey: queryKeys.dspy.stats(),
+    queryFn: dspyApi.getStats,
+    staleTime: 10_000, // 10 seconds
+    ...options,
+  });
+}
+
+export function useDSPyCacheInfo(
+  options?: Omit<UseQueryOptions<CacheInfo>, "queryKey" | "queryFn">,
+) {
+  return useQuery({
+    queryKey: queryKeys.dspy.cache(),
+    queryFn: dspyApi.getCacheInfo,
+    staleTime: 30_000, // 30 seconds
+    ...options,
+  });
+}
+
+export function useReasonerSummary(
+  options?: Omit<UseQueryOptions<ReasonerSummary>, "queryKey" | "queryFn">,
+) {
+  return useQuery({
+    queryKey: queryKeys.dspy.reasonerSummary(),
+    queryFn: dspyApi.getReasonerSummary,
+    staleTime: 10_000, // 10 seconds
+    ...options,
+  });
+}
+
+export function useDSPySignatures(
+  options?: Omit<UseQueryOptions<DSPySignatures>, "queryKey" | "queryFn">,
+) {
+  return useQuery({
+    queryKey: queryKeys.dspy.signatures(),
+    queryFn: dspyApi.getSignatures,
+    staleTime: 5 * 60_000, // 5 minutes - signatures rarely change
+    ...options,
+  });
+}
+
+export function useDSPyPrompts(
+  options?: Omit<UseQueryOptions<DSPyPrompts>, "queryKey" | "queryFn">,
+) {
+  return useQuery({
+    queryKey: queryKeys.dspy.prompts(),
+    queryFn: dspyApi.getPrompts,
+    staleTime: 60_000, // 1 minute
+    ...options,
+  });
+}
+
+export function useClearDSPyCache(options?: UseMutationOptions<void, Error>) {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: dspyApi.clearCache,
+    onSuccess: () => {
+      // Invalidate cache-related queries
+      queryClient.invalidateQueries({ queryKey: queryKeys.dspy.cache() });
+      queryClient.invalidateQueries({ queryKey: queryKeys.dspy.stats() });
+    },
+    ...options,
+  });
+}
+
+export function useClearRoutingCache(
+  options?: UseMutationOptions<void, Error>,
+) {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: dspyApi.clearRoutingCache,
+    onSuccess: () => {
+      // Invalidate reasoner summary since routing cache size changed
+      queryClient.invalidateQueries({
+        queryKey: queryKeys.dspy.reasonerSummary(),
+      });
+    },
     ...options,
   });
 }

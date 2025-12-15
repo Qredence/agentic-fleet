@@ -291,6 +291,59 @@ export interface SelfImproveResponse {
 }
 
 // =============================================================================
+// DSPy Management Types
+// =============================================================================
+
+export interface DSPyConfig {
+  lm_provider: string;
+  adapter: string;
+}
+
+export interface DSPyStats {
+  history_count: number;
+}
+
+export interface CacheInfo {
+  exists: boolean;
+  created_at?: string;
+  cache_size_bytes?: number;
+  optimizer?: string;
+  signature_hash?: string;
+}
+
+export interface ReasonerSummary {
+  history_count: number;
+  routing_cache_size: number;
+  use_typed_signatures: boolean;
+  modules_initialized: boolean;
+}
+
+export interface SignatureFieldInfo {
+  name: string;
+  desc: string;
+  prefix: string;
+}
+
+export interface SignatureInfo {
+  name: string;
+  type: string;
+  instructions?: string;
+  input_fields: string[];
+  output_fields: string[];
+}
+
+export interface PredictorPromptInfo {
+  instructions: string;
+  inputs: SignatureFieldInfo[];
+  outputs: SignatureFieldInfo[];
+  demos_count: number;
+  demos: Record<string, string>[];
+}
+
+export type DSPySignatures = Record<string, SignatureInfo>;
+export type DSPyPrompts = Record<string, PredictorPromptInfo>;
+
+// =============================================================================
 // Exported Type Aliases for Convenience
 // =============================================================================
 

@@ -1,6 +1,6 @@
 import { render, screen, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import App from "@/App";
+import App from "@/app/App";
 
 type MockChatStoreState = {
   messages: unknown[];
@@ -25,7 +25,7 @@ type MockChatStoreState = {
 
 let mockStoreState: MockChatStoreState | null = null;
 
-vi.mock("@/stores", () => ({
+vi.mock("@/features/chat/stores", () => ({
   useChatStore: (
     selector?: (state: MockChatStoreState) => unknown,
     _equalityFn?: unknown,
