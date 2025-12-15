@@ -6,12 +6,13 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 AgenticFleet is a multi-agent orchestration system combining DSPy + Microsoft Agent Framework. Tasks flow through a 5-phase pipeline: **Analysis → Routing → Execution → Progress → Quality**. Supports delegated, sequential, parallel, handoff, and discussion execution modes.
 
-**Current version highlights (v0.6.9)**:
+**Current version highlights (v0.6.95)**:
 
 - Typed DSPy Signatures with Pydantic validation
 - DSPy Assertions for routing validation
 - Routing Cache (TTL 5m) for latency reduction
 - Smart Fast-Path for simple queries (<1s)
+- Secure-by-default tracing (`capture_sensitive` defaults to false)
 
 ## Development Commands
 
@@ -92,6 +93,13 @@ src/frontend/         # React/Vite UI with React Query
 - Event types: `WorkflowStatusEvent`, `ExecutorCompletedEvent`, `MagenticAgentMessageEvent`, `ReasoningStreamEvent`
 - Event mapping: `api/events/mapping.py` routes events to UI components
 
+**Adding new events**: When adding streaming event types:
+
+1. Update backend mapping in `src/agentic_fleet/api/events/mapping.py`
+2. Add `ui_routing:` entry in `workflow_config.yaml`
+3. Update frontend types in `src/frontend/src/api/types.ts`
+4. Handle in `src/frontend/src/stores/chatStore.ts`
+
 **Human-in-the-loop + resume protocol (WebSocket)**:
 
 - During streaming, the backend may emit request events that require a client response.
@@ -113,14 +121,14 @@ src/frontend/         # React/Vite UI with React Query
 
 ### DSPy Integration
 
-- **Compilation is offline only**—never compile at runtime (via `scripts/optimize_reasoner.py`)
+- **Compilation is offline-first**—production should be **offline-only** (via `scripts/optimize_reasoner.py` / `agentic-fleet optimize`) and fail-fast when artifacts are missing by setting `dspy.require_compiled: true` in `src/agentic_fleet/config/workflow_config.yaml`. Development may optionally start **background compilation** when enabled (see `initialize_workflow_context(..., compile_dspy=True)`).
 - Signatures: `src/agentic_fleet/dspy_modules/signatures.py`
 - Cache: `.var/logs/compiled_supervisor.pkl`
 - Clear cache after modifying DSPy modules: `make clear-cache`
 - Examples: `src/agentic_fleet/data/supervisor_examples.json`
-- **Typed Signatures (v0.6.9)**: All outputs use Pydantic models (`typed_models.py`)
-- **Assertions (v0.6.9)**: Routing validation via `dspy.Assert` and `dspy.Suggest` (`assertions.py`)
-- **Routing Cache (v0.6.9)**: Cached decisions (TTL 5m) in `reasoner.py`
+- **Typed Signatures (v0.6.9+)**: All outputs use Pydantic models (`typed_models.py`)
+- **Assertions (v0.6.9+)**: Routing validation via `dspy.Assert` and `dspy.Suggest` (`assertions.py`)
+- **Routing Cache (v0.6.9+)**: Cached decisions (TTL 5m) in `reasoner.py`
 - **Management API**: Runtime inspection via `/dspy/*` endpoints (`api/routes/dspy.py`)
   - `GET /dspy/prompts` - List all DSPy prompts
   - `GET /dspy/config` - Get DSPy configuration
@@ -274,9 +282,12 @@ npx playwright install chromium     # Install browser (first time)
 - `TAVILY_API_KEY` (web search)
 - `DSPY_COMPILE=false` (skip recompilation)
 - `ENABLE_OTEL=true` + `OTLP_ENDPOINT` (tracing)
+- `ENABLE_SENSITIVE_DATA=true` (capture prompts in traces/telemetry; default: false)
 - `LOG_JSON=0` (human-readable logs; JSON on by default)
 - `AZURE_OPENAI_ENDPOINT`, `AZURE_OPENAI_API_KEY` (Azure OpenAI)
 - `AZURE_AI_SEARCH_ENDPOINT`, `AZURE_COSMOS_ENDPOINT` (Azure services)
+- `AGENTICFLEET_USE_COSMOS=true` (enable Azure Cosmos DB integration)
+- `AGENTICFLEET_DEFAULT_USER_ID=user123` (default user ID for multi-tenant scoping)
 
 Copy `.env.example` → `.env` for local development.
 
@@ -310,7 +321,7 @@ Initialize: `make init-var`
 - **DSPy fallback**: If no compiled cache, system uses zero-shot (set `require_compiled: true` in production)
 - **Frontend not connecting**: Verify `VITE_API_URL` matches backend port
 - **Type errors**: Run `make type-check` to catch issues before runtime
-- **Tracing**: Start Jaeger UI with `make tracing-start`, view at http://localhost:16686
+- **Tracing**: Start Jaeger UI with `make tracing-start`, view at <http://localhost:16686>
 
 ## Common Pitfalls
 
@@ -331,7 +342,9 @@ Initialize: `make init-var`
 2. `src/agentic_fleet/workflows/supervisor.py` — Main orchestration entry
 3. `src/agentic_fleet/agents/coordinator.py` — AgentFactory (creates agents from YAML)
 4. `src/agentic_fleet/dspy_modules/reasoner.py` — DSPy module manager
-5. `AGENTS.md` (root) — Toolchain defaults and working agreements
+5. `src/agentic_fleet/api/events/mapping.py` — Event routing (maps workflow events → UI)
+6. `AGENTS.md` (root) — Toolchain defaults and working agreements
+7. `.github/copilot-instructions.md` — Additional AI assistant context
 
 ## Deployment
 
@@ -357,7 +370,7 @@ Deploys: App Service, Cosmos DB, Azure OpenAI, Key Vault, and supporting resourc
 
 ## Additional Resources
 
-- **DSPy Documentation**: https://dspy-docs.vercel.app/
+- **DSPy Documentation**: https://dspy.ai
 - **Agent Framework**: https://github.com/microsoft/agent-framework
 - **Contributing Guide**: See `CONTRIBUTING.md` for detailed guidelines
 - **Troubleshooting**: See `docs/users/troubleshooting.md`

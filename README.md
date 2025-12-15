@@ -22,7 +22,7 @@
 
 ## ✨ What is AgenticFleet?
 
-AgenticFleet is a production-ready multi-agent orchestration system that **automatically routes tasks to specialized AI agents** and orchestrates their execution through a self-optimizing pipeline.
+AgenticFleet is a production-oriented multi-agent orchestration system that **automatically routes tasks to specialized AI agents** and orchestrates their execution through a self-optimizing pipeline.
 
 ```
 User Task → Analysis → Intelligent Routing → Agent Execution → Quality Check → Output

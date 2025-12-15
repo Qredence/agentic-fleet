@@ -34,7 +34,7 @@
 - **5-Phase Pipeline** (v0.6.6): `analysis → routing → execution → progress → quality`. Judge phase removed for ~66% latency reduction.
 - **Smart Fast-Path** (v0.6.7): Simple tasks (factual questions, math, greetings) bypass multi-agent routing via `is_simple_task()` and get direct LLM responses in <1 second.
   - Important: fast-path is intentionally **disabled on follow-up turns** (when a conversation thread already has history) so multi-turn context is not lost.
-- **Offline Layer**: DSPy compilation is strictly offline (via `scripts/optimize.py`). Runtime uses cached modules (`.var/logs/compiled_supervisor.pkl`) and never compiles on the fly.
+- **Offline Layer (Production)**: DSPy compilation should be treated as **offline-only** via `agentic-fleet optimize` (cached under `.var/logs/compiled_supervisor.pkl`). Set `dspy.require_compiled: true` in `src/agentic_fleet/config/workflow_config.yaml` to fail-fast if artifacts are missing. Development can optionally start **background compilation** when enabled.
 - **Dynamic Prompts**: Agent instructions (e.g., Planner) are generated dynamically via DSPy signatures (`PlannerInstructionSignature`) and optimized offline.
 - **Middleware**: `ChatMiddleware` handles cross-cutting concerns. `BridgeMiddleware` captures runtime history for offline learning.
 - Routing/quality loops configured via `config/workflow_config.yaml`; history & tracing in `.var/logs/execution_history.jsonl`.
