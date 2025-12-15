@@ -1,8 +1,46 @@
 # Routing Evaluation Report
 
+## Summary
+
 **Total Examples**: 19
-**Agent Selection Accuracy**: 57.9%
-**Execution Mode Accuracy**: 68.4%
+**Agent Selection Accuracy**: 57.9% (11/19 matches)
+**Execution Mode Accuracy**: 68.4% (13/19 matches)
+
+### Scope & Methodology
+
+> **Note on Simple Task Inclusion**: These accuracy metrics include **both simple tasks** (detected by `is_simple_task()` and routed directly to LLM) **and complex tasks** requiring multi-agent coordination. Simple tasks bypass the multi-agent routing system; execution mode mismatches for simple tasks indicate detection edge cases.
+
+### Breakdown by Task Category
+
+| Category                                            | Count | Agent Selection Accuracy | Execution Mode Accuracy |
+| --------------------------------------------------- | ----- | ------------------------ | ----------------------- |
+| **Simple Tasks** (factual queries, greetings, math) | 6     | 83.3% (5/6)              | 50.0% (3/6)             |
+| **Complex Tasks** (multi-step reasoning, analysis)  | 13    | 46.2% (6/13)             | 76.9% (10/13)           |
+| **Overall**                                         | 19    | 57.9% (11/19)            | 68.4% (13/19)           |
+
+### Failure Pattern Analysis
+
+#### Simple Task Misclassifications (3 failures in execution mode)
+
+- **False Negatives** (incorrectly routed to multi-agent when should use delegated/fast-path):
+  - ID 11: "Translate 'Hello world'..." — Detected as simple (agent ✅) but predicted `parallel` mode instead of `delegated` (execution ❌)
+  - ID 18: "Help me plan a birthday party..." — Complex task incorrectly detected as simple; added 'Writer' agent and predicted `parallel` mode (agent ❌, execution ❌)
+
+#### Complex Task Misrouting (7 failures in agent selection)
+
+- **Over-Delegation** (predicting extra agents):
+  - ID 2, 5, 9, 15: Adding 'Analyst' agent when not required (fine-grained research/comparison tasks)
+  - ID 4, 12, 16: Adding 'Analyst' agent to sequential workflows for verification/synthesis roles not in expected roster
+
+- **Mode Selection Misalignment**:
+  - ID 2, 5, 9, 15, 18: Predicting `sequential` mode for multi-researcher tasks that should use `parallel` or `delegated`
+
+### Recommended Next Steps
+
+1. **Tune Simple Task Detection**: Review `is_simple_task()` heuristics (ID 11, 18) — consider adding explicit patterns for translation/planning tasks
+2. **Analyze Over-Delegation**: Profile routing decisions for IDs 2, 5, 9, 15 to understand why Analyst role is consistently added; may indicate implicit expectation in training data
+3. **Execution Mode Correlation**: Investigate why agent selection accuracy (57.9%) diverges from execution mode accuracy (68.4%) — suggests mode logic is more robust than agent roster selection
+4. **Validation on New Data**: Test refined routing on a holdout dataset to confirm improvements before production deployment
 
 ## Detailed Results
 

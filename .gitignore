@@ -136,3 +136,5 @@ report/jscpd-report.json
 .claude/skills/python-backend-reviewer/scripts/detect_duplicates.py
 docker/docker-compose.tracing.yml
 report/jscpd-report.json
+.claude/python-backend-reviewer.skill
+docker/docker-compose.tracing.yml
