@@ -33,6 +33,7 @@ from ..utils.logger import setup_logger
 from ..utils.models import ExecutionMode, RoutingDecision, ensure_routing_decision
 from ..utils.telemetry import optional_span
 from ..utils.tool_registry import ToolRegistry
+from ..utils.ttl_cache import SyncTTLCache
 from .builder import build_fleet_workflow
 from .config import WorkflowConfig
 from .context import SupervisorContext
@@ -229,10 +230,30 @@ class SupervisorWorkflow:
         self.execution_history: list[dict[str, Any]] = []
         self.current_execution: dict[str, Any] = {}
 
+    def _map_mode_to_execution_mode(self, mode: str) -> ExecutionMode:
+        """Map runtime mode string to ExecutionMode enum.
+
+        Args:
+            mode: Runtime mode string (e.g., 'group_chat', 'handoff', 'standard')
+
+        Returns:
+            Corresponding ExecutionMode enum member
+        """
+        mode_mapping = {
+            "group_chat": ExecutionMode.GROUP_CHAT,
+            "handoff": ExecutionMode.HANDOFF,
+            "discussion": ExecutionMode.DISCUSSION,
+            "parallel": ExecutionMode.PARALLEL,
+            "sequential": ExecutionMode.SEQUENTIAL,
+            "auto": ExecutionMode.AUTO,
+        }
+        return mode_mapping.get(mode, ExecutionMode.DELEGATED)
+
     def _get_mode_decision(self, task: str) -> dict[str, str]:
         """Get cached mode decision for a task.
 
-        Caches the result to avoid duplicate DSPy calls within the same workflow run.
+        Caches the result with TTL and size bounds to avoid memory leaks and
+        duplicate DSPy calls within the same workflow run.
 
         Args:
             task: The task string to evaluate
@@ -240,15 +261,18 @@ class SupervisorWorkflow:
         Returns:
             Dictionary with 'mode' and 'reasoning' keys
         """
+        # Initialize bounded TTL cache if needed (max 1024 entries, 5 min TTL)
+        if not hasattr(self, "_mode_decision_cache"):
+            self._mode_decision_cache: SyncTTLCache[str, dict[str, str]] = SyncTTLCache(
+                max_size=1024,
+                ttl_seconds=300,
+            )
+
         # Check if we have a cached decision for this task
         cache_key = f"mode_decision_{hash(task)}"
-        cached = getattr(self, "_mode_decision_cache", {}).get(cache_key)
+        cached = self._mode_decision_cache.get(cache_key)
         if cached is not None:
             return cached
-
-        # Initialize cache if needed
-        if not hasattr(self, "_mode_decision_cache"):
-            self._mode_decision_cache: dict[str, dict[str, str]] = {}
 
         # Compute mode decision
         if (
@@ -260,8 +284,8 @@ class SupervisorWorkflow:
         else:
             decision = {"mode": self.mode, "reasoning": ""}
 
-        # Cache and return
-        self._mode_decision_cache[cache_key] = decision
+        # Cache with TTL and return
+        self._mode_decision_cache.set(cache_key, decision)
         return decision
 
     def _should_fast_path(self, task: str) -> bool:
@@ -320,7 +344,7 @@ class SupervisorWorkflow:
         routing = RoutingDecision(
             task=task,
             assigned_to=("FastResponder",),
-            mode=ExecutionMode.DELEGATED,
+            mode=self._map_mode_to_execution_mode(self.mode),
             subtasks=(task,),
         )
 
@@ -782,21 +806,26 @@ class SupervisorWorkflow:
         return None
 
     async def _apply_reasoning_effort(self, reasoning_effort: str | None, workflow_id: str) -> None:
-        """Apply reasoning effort to context and agents with concurrency safety.
+        """Apply reasoning effort via thread-safe contextvar (concurrency-safe).
 
-        This method:
+        This method sets reasoning_effort using two thread-safe mechanisms:
         1. Sets the contextvar for request-scoped access (preferred, thread-safe)
         2. Stores reasoning_effort in self.context for strategy access
-        3. Mutates shared agent state (legacy, with concurrency detection)
 
-        For production with high concurrency, prefer reading from contextvar via
-        get_current_reasoning_effort() or from context.reasoning_effort.
+        Callers should read reasoning_effort via:
+        - `get_current_reasoning_effort()` (contextvar - preferred)
+        - `context.reasoning_effort` (request-scoped)
+
+        Note: Previously this method also mutated shared agent chat_client state,
+        which caused race conditions in concurrent requests. That behavior has been
+        removed. If reasoning_effort needs to be applied to API calls, it should
+        be done at call time by reading from the contextvar.
 
         Args:
             reasoning_effort: Reasoning effort level ("minimal", "medium", "maximal").
                 Must match API schema values defined in ChatRequest.
             workflow_id: Unique identifier for this workflow execution, used for
-                concurrency conflict detection.
+                tracking active requests.
         """
         # 1. Set contextvar for thread-safe request-scoped access
         _reasoning_effort_ctx.set(reasoning_effort)
@@ -804,62 +833,16 @@ class SupervisorWorkflow:
         # 2. Store in context for strategies to access
         self.context.reasoning_effort = reasoning_effort
 
-        if not self.agents or not reasoning_effort:
+        if not reasoning_effort:
             return
 
-        # 3. Detect and warn about concurrent mutations
+        # 3. Track active requests for debugging/monitoring
         async with _reasoning_effort_lock:
-            # Check for conflicting concurrent requests
-            conflicting = [
-                (wf_id, effort)
-                for wf_id, effort in _active_reasoning_requests.items()
-                if effort != reasoning_effort
-            ]
-            if conflicting:
-                logger.warning(
-                    f"Concurrent reasoning_effort conflict detected! "
-                    f"Workflow {workflow_id} setting '{reasoning_effort}' while "
-                    f"{len(conflicting)} other workflow(s) have different values: "
-                    f"{conflicting[:3]}. Shared agent state may be inconsistent."
-                )
-
-            # Track this request
             _active_reasoning_requests[workflow_id] = reasoning_effort
 
-        # 4. Mutate shared agent state (legacy behavior, with warning logged above)
-        for agent_name, agent in self.agents.items():
-            if hasattr(agent, "chat_client"):
-                chat_client = agent.chat_client
-                try:
-                    # Try setting via extra_body (most common approach)
-                    # Type ignores needed for dynamic attribute assignment on chat clients
-                    if hasattr(chat_client, "extra_body"):
-                        existing = dict(getattr(chat_client, "extra_body", None) or {})
-                        existing["reasoning"] = {"effort": reasoning_effort}
-                        chat_client.extra_body = existing  # type: ignore[assignment]
-                    elif hasattr(chat_client, "_default_extra_body"):
-                        existing = dict(getattr(chat_client, "_default_extra_body", None) or {})
-                        existing["reasoning"] = {"effort": reasoning_effort}
-                        chat_client._default_extra_body = existing  # type: ignore[assignment]
-                    else:
-                        # Store as attribute for later use
-                        chat_client._reasoning_effort = reasoning_effort  # type: ignore[assignment]
-                    logger.debug(
-                        f"Applied reasoning_effort={reasoning_effort} to agent {agent_name}"
-                    )
-                except AttributeError as e:
-                    logger.warning(
-                        f"Agent {agent_name} chat_client doesn't support reasoning_effort: {e}"
-                    )
-                except TypeError as e:
-                    logger.warning(
-                        f"Invalid type when setting reasoning_effort on {agent_name}: {e}"
-                    )
-                except Exception as e:
-                    logger.error(
-                        f"Unexpected error setting reasoning_effort on {agent_name}: {e}",
-                        exc_info=True,
-                    )
+        logger.debug(
+            f"Applied reasoning_effort={reasoning_effort} via contextvar for workflow {workflow_id}"
+        )
 
     def _cleanup_reasoning_effort_tracking(self, workflow_id: str) -> None:
         """Remove workflow from active reasoning effort tracking.
@@ -1064,12 +1047,13 @@ class SupervisorWorkflow:
                             # Legacy list[ChatMessage] output.
                             if isinstance(data, list) and data and isinstance(data[0], ChatMessage):
                                 last_msg = data[-1]
+                                execution_mode = self._map_mode_to_execution_mode(current_mode)
                                 final_msg = FinalResultMessage(
                                     result=last_msg.text,
                                     routing=RoutingDecision(
                                         task=task_for_metadata,
                                         assigned_to=(current_mode,),
-                                        mode=ExecutionMode.DELEGATED,
+                                        mode=execution_mode,
                                         subtasks=(task_for_metadata,),
                                     ),
                                     quality=QualityReport(score=0.0),
@@ -1100,12 +1084,13 @@ class SupervisorWorkflow:
                                 result_text = str(data)
 
                             if result_text and final_msg is None:
+                                execution_mode = self._map_mode_to_execution_mode(current_mode)
                                 final_msg = FinalResultMessage(
                                     result=result_text,
                                     routing=RoutingDecision(
                                         task=task_for_metadata,
                                         assigned_to=(current_mode,),
-                                        mode=ExecutionMode.DELEGATED,
+                                        mode=execution_mode,
                                         subtasks=(task_for_metadata,),
                                     ),
                                     quality=QualityReport(score=0.0),
@@ -1167,12 +1152,16 @@ class SupervisorWorkflow:
                                     # Handle legacy list[ChatMessage] format from strategies
                                     last_msg = data[-1]
                                     text = getattr(last_msg, "text", str(last_msg))
+                                    execution_mode = self._map_mode_to_execution_mode(current_mode)
                                     final_msg = FinalResultMessage(
                                         result=text,
                                         routing=RoutingDecision(
                                             task=task_for_metadata,
                                             assigned_to=(),
-                                            mode=ExecutionMode.SEQUENTIAL,
+                                            mode=execution_mode
+                                            if execution_mode != ExecutionMode.GROUP_CHAT
+                                            and execution_mode != ExecutionMode.HANDOFF
+                                            else ExecutionMode.SEQUENTIAL,
                                             subtasks=(),
                                         ),
                                         quality=QualityReport(score=0.0),
@@ -1190,12 +1179,18 @@ class SupervisorWorkflow:
                                         text = getattr(last_msg, "text", str(last_msg)) or str(
                                             last_msg
                                         )
+                                        execution_mode = self._map_mode_to_execution_mode(
+                                            current_mode
+                                        )
                                         final_msg = FinalResultMessage(
                                             result=text,
                                             routing=RoutingDecision(
                                                 task=task_for_metadata,
                                                 assigned_to=(),
-                                                mode=ExecutionMode.SEQUENTIAL,
+                                                mode=execution_mode
+                                                if execution_mode != ExecutionMode.GROUP_CHAT
+                                                and execution_mode != ExecutionMode.HANDOFF
+                                                else ExecutionMode.SEQUENTIAL,
                                                 subtasks=(),
                                             ),
                                             quality=QualityReport(score=0.0),
@@ -1208,12 +1203,18 @@ class SupervisorWorkflow:
                                 elif data is not None and hasattr(data, "result"):
                                     text = str(getattr(data, "result", "") or "")
                                     if text:
+                                        execution_mode = self._map_mode_to_execution_mode(
+                                            current_mode
+                                        )
                                         final_msg = FinalResultMessage(
                                             result=text,
                                             routing=RoutingDecision(
                                                 task=task_for_metadata,
                                                 assigned_to=(),
-                                                mode=ExecutionMode.SEQUENTIAL,
+                                                mode=execution_mode
+                                                if execution_mode != ExecutionMode.GROUP_CHAT
+                                                and execution_mode != ExecutionMode.HANDOFF
+                                                else ExecutionMode.SEQUENTIAL,
                                                 subtasks=(),
                                             ),
                                             quality=QualityReport(score=0.0),
@@ -1316,12 +1317,13 @@ class SupervisorWorkflow:
         # Only yield the actual response
         result_text = self.dspy_reasoner.generate_simple_response(task)
 
+        execution_mode = self._map_mode_to_execution_mode(self.mode)
         final_msg = FinalResultMessage(
             result=result_text,
             routing=RoutingDecision(
                 task=task,
                 assigned_to=("FastResponder",),
-                mode=ExecutionMode.DELEGATED,
+                mode=execution_mode,
                 subtasks=(task,),
             ),
             quality=QualityReport(score=10.0),
@@ -1388,12 +1390,13 @@ class SupervisorWorkflow:
         )
 
     async def _create_fallback_result(self, task: str) -> FinalResultMessage:
+        execution_mode = self._map_mode_to_execution_mode(self.mode)
         return FinalResultMessage(
             result="Workflow execution completed (fallback)",
             routing=RoutingDecision(
                 task=task,
                 assigned_to=(),
-                mode=ExecutionMode.DELEGATED,
+                mode=execution_mode,
                 subtasks=(),
             ),
             quality=QualityReport(score=0.0, used_fallback=True),

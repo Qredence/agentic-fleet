@@ -332,7 +332,7 @@ async def _event_generator(
     session: WorkflowSession,
     session_manager: Any,
     *,
-    task: str | None | object = _UNSET_TASK,
+    task: str | object | None = _UNSET_TASK,
     log_reasoning: bool = False,
     reasoning_effort: str | None = None,
     cancel_event: asyncio.Event | None = None,
@@ -545,20 +545,19 @@ class ChatWebSocketService:
             await websocket.close()
             return
 
-        # Create a fresh SupervisorWorkflow per WebSocket session.
+        # Get or create a shared SupervisorWorkflow cached in app.state.
         #
-        # Rationale: `SupervisorWorkflow._apply_reasoning_effort()` can mutate agent chat_client state.
-        # Sharing a single workflow instance across concurrent WebSocket sessions can therefore cause
-        # cross-request interference. A per-session workflow isolates agent instances and eliminates
-        # this class of concurrency bugs.
+        # The workflow is shared across all WebSocket sessions to avoid expensive
+        # per-session initialization. This is safe because:
+        # - reasoning_effort is stored in contextvars (thread-safe, request-scoped)
+        # - conversation context is passed per-request
+        # - agent chat_client state is no longer mutated (see _apply_reasoning_effort)
         #
-        # We reuse any preloaded compiled DSPy decision modules from app.state (Phase 2) and disable
-        # runtime compilation for deterministic production behavior. We also build WorkflowConfig from
-        # the YAML config stored in app.state to ensure WebSocket sessions use the same configuration
-        # as the server (models, max_rounds, pipeline_profile, agent settings, etc.).
+        # We reuse preloaded compiled DSPy decision modules from app.state (Phase 2)
+        # and disable runtime compilation for deterministic production behavior.
+        # WorkflowConfig is built from YAML in app.state to ensure WebSocket sessions
+        # use the same configuration as the server.
         try:
-            # Cache the SupervisorWorkflow in app.state to avoid expensive per-session initialization.
-            # This assumes the workflow is stateless or safe to share across sessions.
             workflow = getattr(app.state, "supervisor_workflow", None)
             if workflow is None:
                 # Load YAML config from app.state (stored during lifespan) or fallback to loading it
@@ -840,8 +839,9 @@ class ChatWebSocketService:
             log_reasoning = False
             if hasattr(workflow, "config") and workflow.config:
                 config = workflow.config
-                if hasattr(config, "logging") and hasattr(config.logging, "log_reasoning"):
-                    log_reasoning = bool(config.logging.log_reasoning)
+                logging_config = getattr(config, "logging", None)
+                if logging_config and hasattr(logging_config, "log_reasoning"):
+                    log_reasoning = bool(logging_config.log_reasoning)
 
             response_text = ""
             response_delta_text = ""
@@ -849,6 +849,7 @@ class ChatWebSocketService:
             last_author: str | None = None
             last_agent_id: str | None = None
             saw_done = False
+            response_completed_emitted = False
 
             try:
                 async for event_data in _event_generator(
@@ -940,6 +941,7 @@ class ChatWebSocketService:
                         if completed_msg:
                             response_text = completed_msg
                         last_author = event_data.get("author") or last_author
+                        response_completed_emitted = True
                     elif event_type in (
                         StreamEventType.AGENT_OUTPUT.value,
                         StreamEventType.AGENT_MESSAGE.value,
@@ -963,27 +965,27 @@ class ChatWebSocketService:
 
             final_text = (
                 response_text.strip()
-                or response_delta_text.strip()
                 or last_agent_text.strip()
                 or "Sorry, I couldn't produce a final answer this time."
             )
 
-            # Always emit a final RESPONSE_COMPLETED so the UI has a single authoritative
-            # "final answer" payload, even if the workflow did not emit a completion event.
-            completed_type = StreamEventType.RESPONSE_COMPLETED
-            comp_category, comp_ui = classify_event(completed_type)
-            completed_event = StreamEvent(
-                type=completed_type,
-                message=final_text,
-                author=last_author,
-                agent_id=last_agent_id,
-                data={"quality_pending": True},
-                category=comp_category,
-                ui_hint=comp_ui,
-                workflow_id=session.workflow_id,
-            )
-            completed_event.log_line = _log_stream_event(completed_event, session.workflow_id)
-            await websocket.send_json(completed_event.to_sse_dict())
+            # Emit a final RESPONSE_COMPLETED only if the workflow did not already emit one.
+            # This ensures the UI has a single authoritative "final answer" payload.
+            if not response_completed_emitted:
+                completed_type = StreamEventType.RESPONSE_COMPLETED
+                comp_category, comp_ui = classify_event(completed_type)
+                completed_event = StreamEvent(
+                    type=completed_type,
+                    message=final_text,
+                    author=last_author,
+                    agent_id=last_agent_id,
+                    data={"quality_pending": True},
+                    category=comp_category,
+                    ui_hint=comp_ui,
+                    workflow_id=session.workflow_id,
+                )
+                completed_event.log_line = _log_stream_event(completed_event, session.workflow_id)
+                await websocket.send_json(completed_event.to_sse_dict())
 
             if not saw_done:
                 done_category, done_ui_hint = classify_event(StreamEventType.DONE)

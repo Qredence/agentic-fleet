@@ -127,14 +127,12 @@ def dedupe_examples(records: Sequence[dict[str, Any]]) -> list[dict[str, Any]]:
     unique: list[dict[str, Any]] = []
 
     for record in records:
+        assigned_to = record.get("assigned_to", [])
+        normalized_agents = sorted(_normalize_agents(assigned_to))
         fingerprint = "|".join(
             [
                 record.get("task", "").strip().lower(),
-                str(
-                    sorted(record.get("assigned_to", []))
-                    if isinstance(record.get("assigned_to"), list)
-                    else record.get("assigned_to", "")
-                ),
+                str(normalized_agents),
                 record.get("mode", record.get("execution_mode", "")),
             ]
         )

@@ -38,7 +38,7 @@ class FastPathDetector:
             r"\b(research|investigate|analyze)\s",
             r"\b(compare|contrast)\s+and\s",
             r"\b(step\s+by\s+step|guide|tutorial)\b",
-            r"\b(summary|summarize)\s+of\b",  # summarization typicaly needs context/retrieval
+            r"\b(summary|summarize)\s+of\b",  # summarization typically needs context/retrieval
         ]
 
         # 2. Complex Keywords

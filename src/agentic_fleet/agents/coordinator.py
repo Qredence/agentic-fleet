@@ -87,6 +87,7 @@ class AgentFactory:
         """
         self.tool_registry = tool_registry or ToolRegistry()
         self.openai_client = openai_client
+        self._foundry_clients: list[Any] = []  # Track AIProjectClient instances for cleanup
 
         # Check if DSPy enhancement should be enabled globally
         self.enable_dspy = env_config.enable_dspy_agents
@@ -97,6 +98,36 @@ class AgentFactory:
                 self.instruction_generator = dspy.ChainOfThought(PlannerInstructionSignature)
             except Exception as e:
                 logger.warning(f"Failed to initialize DSPy instruction generator: {e}")
+
+    async def cleanup_foundry_clients(self) -> None:
+        """Close all tracked AIProjectClient instances.
+
+        Call this during fleet shutdown to ensure proper resource cleanup.
+        This is essential to prevent connection leaks when creating multiple
+        FoundryAgentAdapter instances.
+
+        Example:
+            ```python
+            factory = AgentFactory()
+            # ... create agents ...
+            await factory.cleanup_foundry_clients()
+            ```
+        """
+        if not self._foundry_clients:
+            return
+
+        logger.info(f"Closing {len(self._foundry_clients)} Foundry client(s)...")
+        for i, client in enumerate(self._foundry_clients):
+            try:
+                if hasattr(client, "close"):
+                    await client.close()
+                elif hasattr(client, "__aexit__"):
+                    await client.__aexit__(None, None, None)
+                logger.debug(f"Closed Foundry client {i + 1}/{len(self._foundry_clients)}")
+            except Exception as e:
+                logger.warning(f"Failed to close Foundry client {i + 1}: {e}")
+
+        self._foundry_clients.clear()
 
     def create_agent(
         self,
@@ -375,12 +406,15 @@ class AgentFactory:
             logger.debug(f"Created hosted Foundry ChatAgent '{name}' (ID: {agent_id})")
         else:
             # Use the legacy FoundryAgentAdapter
+            # FoundryAgentAdapter shares the project_client (does not take ownership).
+            # Sharing is safe: the adapter just uses the client for API calls.
+            # For now, create a new client per agent (future: refactor to accept shared_project_client)
+            # TODO: Integrate shared_project_client parameter once coordinator manages lifecycle
             from azure.ai.projects.aio import AIProjectClient
             from azure.identity import DefaultAzureCredential
 
             from agentic_fleet.agents.foundry import FoundryAgentAdapter
 
-            # Create the client (synchronous creation of async client object)
             project_client = AIProjectClient.from_connection_string(  # type: ignore[attr-defined]
                 credential=DefaultAzureCredential(),
                 conn_str=endpoint,
@@ -405,6 +439,11 @@ class AgentFactory:
                 capabilities=capabilities,
             )
             logger.debug(f"Created FoundryAgentAdapter '{name}' (ID: {agent_id})")
+
+            # Store client for later cleanup during shutdown
+            if not hasattr(self, "_foundry_clients"):
+                self._foundry_clients: list[Any] = []
+            self._foundry_clients.append(project_client)
 
         return agent
 
@@ -473,22 +512,13 @@ class AgentFactory:
                     # if "agentic_fleet" not in metadata: continue
 
                     # Create adapter (new instance for each)
-                    # We need a new client for each adapter to ensure lifecycle management,
-                    # OR we share one client. Sharing is better for connection pooling,
-                    # but FoundryAgentAdapter takes ownership currently.
-                    # Let's create a fresh client connection for the adapter to own.
-                    # Alternatively, pass the connection string and let it create it?
-                    # The adapter takes an initialized client.
-                    # We should probably pass a new client to the adapter since it might be
-                    # used long-term in the fleet, while this context manager closes `project_client`.
-
-                    # Re-creating client for the agent instance
+                    # Re-create client for the agent instance to avoid lifecycle conflicts
+                    # Store in _foundry_clients for cleanup during shutdown
                     agent_client = AIProjectClient.from_connection_string(  # type: ignore[attr-defined]
                         credential=DefaultAzureCredential(),
                         conn_str=conn_str,
                     )
-                    # Note: We are not entering the context manager here, relying on
-                    # the adapter or upper layer to close it if needed, or it stays open.
+                    self._foundry_clients.append(agent_client)
 
                     # Parse tools from remote if possible
                     # Remote definition has tool_resources, etc.

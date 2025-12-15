@@ -5,12 +5,27 @@ This module uses DSPy to verify and translate raw workflow events
 into user-friendly narratives.
 """
 
+from typing import Any, TypedDict
+
 import dspy
 
 from ..dspy_modules.signatures import WorkflowNarration
 from ..utils.logger import setup_logger
 
 logger = setup_logger(__name__)
+
+
+class WorkflowEvent(TypedDict, total=False):
+    """Structure of a workflow event."""
+
+    timestamp: str
+    """Event timestamp."""
+
+    type: str
+    """Event type identifier."""
+
+    data: dict[str, Any]
+    """Event data payload."""
 
 
 class EventNarrator(dspy.Module):
@@ -20,12 +35,12 @@ class EventNarrator(dspy.Module):
         super().__init__()
         self.generate_narrative = dspy.Predict(WorkflowNarration)
 
-    def forward(self, events: list[dict]) -> dspy.Prediction:
+    def forward(self, events: list[WorkflowEvent]) -> dspy.Prediction:
         """
         Generate a narrative for the given list of events.
 
         Args:
-            events: List of event dictionaries containing workflow details.
+            events: List of WorkflowEvent dictionaries containing workflow details.
 
         Returns:
             dspy.Prediction with a 'narrative' field.
