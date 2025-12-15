@@ -34,7 +34,7 @@ else:
 
 from fastapi import HTTPException, WebSocket, WebSocketDisconnect, status
 
-from agentic_fleet.api.events import classify_event, map_workflow_event
+from agentic_fleet.api.events.mapping import classify_event, map_workflow_event
 from agentic_fleet.core.settings import get_settings
 from agentic_fleet.models import (
     ChatRequest,
@@ -46,7 +46,10 @@ from agentic_fleet.models import (
     WorkflowStatus,
 )
 from agentic_fleet.services.background_evaluation import schedule_quality_evaluation
+from agentic_fleet.utils.config import load_config
 from agentic_fleet.utils.logger import setup_logger
+from agentic_fleet.workflows.config import build_workflow_config_from_yaml
+from agentic_fleet.workflows.supervisor import create_supervisor_workflow
 
 logger = setup_logger(__name__)
 
@@ -529,7 +532,6 @@ class ChatWebSocketService:
         conversation_manager = (
             app.state.conversation_manager if hasattr(app.state, "conversation_manager") else None
         )
-        workflow = app.state.workflow if hasattr(app.state, "workflow") else None
 
         if session_manager is None or conversation_manager is None:
             logger.error("Required managers not available in app state")
@@ -543,12 +545,52 @@ class ChatWebSocketService:
             await websocket.close()
             return
 
-        if workflow is None:
-            logger.error("Workflow not available in app state")
+        # Create a fresh SupervisorWorkflow per WebSocket session.
+        #
+        # Rationale: `SupervisorWorkflow._apply_reasoning_effort()` can mutate agent chat_client state.
+        # Sharing a single workflow instance across concurrent WebSocket sessions can therefore cause
+        # cross-request interference. A per-session workflow isolates agent instances and eliminates
+        # this class of concurrency bugs.
+        #
+        # We reuse any preloaded compiled DSPy decision modules from app.state (Phase 2) and disable
+        # runtime compilation for deterministic production behavior. We also build WorkflowConfig from
+        # the YAML config stored in app.state to ensure WebSocket sessions use the same configuration
+        # as the server (models, max_rounds, pipeline_profile, agent settings, etc.).
+        try:
+            # Cache the SupervisorWorkflow in app.state to avoid expensive per-session initialization.
+            # This assumes the workflow is stateless or safe to share across sessions.
+            workflow = getattr(app.state, "supervisor_workflow", None)
+            if workflow is None:
+                # Load YAML config from app.state (stored during lifespan) or fallback to loading it
+                yaml_config = getattr(app.state, "yaml_config", None)
+                if yaml_config is None:
+                    logger.warning(
+                        "YAML config not found in app.state, loading from file (should not happen in normal operation)"
+                    )
+                    yaml_config = load_config(validate=False)
+
+                # Build WorkflowConfig from YAML to preserve all server settings
+                workflow_config = build_workflow_config_from_yaml(
+                    yaml_config,
+                    compile_dspy=False,  # Disable runtime compilation for production
+                )
+
+                workflow = await create_supervisor_workflow(
+                    compile_dspy=False,
+                    config=workflow_config,
+                    dspy_routing_module=getattr(app.state, "dspy_routing_module", None),
+                    dspy_quality_module=getattr(app.state, "dspy_quality_module", None),
+                    dspy_tool_planning_module=getattr(app.state, "dspy_tool_planning_module", None),
+                )
+                app.state.supervisor_workflow = workflow
+        except Exception as exc:
+            logger.error(
+                "Failed to initialize workflow for WebSocket session: %s", exc, exc_info=True
+            )
             await websocket.send_json(
                 {
                     "type": "error",
-                    "error": "Workflow not initialized",
+                    "error": "Workflow initialization failed",
                     "timestamp": datetime.now().isoformat(),
                 }
             )

@@ -221,7 +221,7 @@ async def initialize_workflow_context(
             logger.info(f"Loaded compiled DSPy supervisor from {compiled_path}")
             dspy_supervisor = loaded_supervisor
         else:
-            if config.require_compiled_dspy:
+            if config.require_compiled:
                 raise RuntimeError(
                     f"Compiled DSPy artifact not found at {compiled_path} and "
                     "dspy.require_compiled is enabled. Run 'agentic-fleet optimize' "

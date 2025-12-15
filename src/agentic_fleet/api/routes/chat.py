@@ -8,16 +8,17 @@ from __future__ import annotations
 
 from fastapi import APIRouter, WebSocket
 
-from agentic_fleet.services.chat_websocket import ChatWebSocketService
-
 router = APIRouter()
-_service = ChatWebSocketService()
 
 
 @router.websocket("/ws/chat")
 async def websocket_chat(websocket: WebSocket) -> None:
     """WebSocket endpoint for streaming chat responses."""
-    await _service.handle(websocket)
+    # Lazy import to avoid circular dependency with api.events
+    from agentic_fleet.services.chat_websocket import ChatWebSocketService
+
+    service = ChatWebSocketService()
+    await service.handle(websocket)
 
 
 __all__ = ["router"]

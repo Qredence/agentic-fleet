@@ -61,6 +61,8 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     try:
         # Load workflow config to get DSPy settings
         config = load_config(validate=False)
+        # Store YAML config in app.state for reuse by WebSocket sessions
+        app.state.yaml_config = config
 
         # Initialize tracing early using YAML config so `tracing.enabled: true`
         # works without requiring environment flags.
@@ -132,6 +134,10 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
             "Continuing with degraded DSPy functionality due to artifact loading error: %s", e
         )
 
+        # Ensure YAML config is stored even in fallback path
+        if not hasattr(app.state, "yaml_config"):
+            app.state.yaml_config = config
+
         # Create workflow without preloaded decision modules (fallback)
         workflow = await create_supervisor_workflow()
         app.state.workflow = workflow
@@ -162,3 +168,4 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     app.state.dspy_quality_module = None
     app.state.dspy_routing_module = None
     app.state.dspy_tool_planning_module = None
+    app.state.yaml_config = None

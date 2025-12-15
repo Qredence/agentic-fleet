@@ -7,7 +7,6 @@ including the DSPy-enhanced agent that integrates with the Agent Framework.
 from __future__ import annotations
 
 import asyncio
-import contextlib
 import time
 from collections.abc import AsyncIterable
 from typing import TYPE_CHECKING, Any, cast
@@ -362,16 +361,24 @@ class DSPyEnhancedAgent(ChatAgent):
 
         fallback_response = await super().run(messages=messages, thread=thread, **agent_kwargs)
         # Prepend note to the first message text
-        first_msg = None
+        # Fix: ChatMessage.text is read-only, so create a new ChatMessage instead of modifying
         if fallback_response.messages:
             first_msg = fallback_response.messages[0]
-            # Use contextlib.suppress since text property may be read-only
-            with contextlib.suppress(AttributeError):
-                first_msg.text = self._apply_note_to_text(first_msg.text, note)  # type: ignore[misc]
+            original_text = getattr(first_msg, "text", "")
+            updated_text = self._apply_note_to_text(original_text, note)
+            # Create a new ChatMessage with the updated text
+            updated_msg = ChatMessage(
+                role=first_msg.role,
+                text=updated_text,
+                metadata=getattr(first_msg, "metadata", None),
+            )
+            # Replace the first message with the updated one
+            fallback_response.messages = [updated_msg, *fallback_response.messages[1:]]
         else:
             fallback_response_text = getattr(fallback_response, "text", "")
-            with contextlib.suppress(AttributeError):
-                fallback_response.text = self._apply_note_to_text(fallback_response_text, note)  # type: ignore[attr-defined]
+            updated_text = self._apply_note_to_text(fallback_response_text, note)
+            # Create a new message if there are no messages
+            fallback_response.messages = [ChatMessage(role=Role.ASSISTANT, text=updated_text)]
 
         existing_props = dict(fallback_response.additional_properties or {})
         existing_props.update(
