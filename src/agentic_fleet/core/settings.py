@@ -36,7 +36,7 @@ class AppSettings:
     max_concurrent_workflows: int
     conversations_path: Path
     ws_allow_localhost: bool
-    app_version: str = "0.7.0"
+    app_version: str = "0.6.95"
     app_name: str = "AgenticFleet API"
 
 
