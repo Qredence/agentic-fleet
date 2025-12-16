@@ -22,22 +22,42 @@
 
 ## ✨ What is AgenticFleet?
 
-AgenticFleet is a production-oriented multi-agent orchestration system that **automatically routes tasks to specialized AI agents** and orchestrates their execution through a self-optimizing pipeline.
+AgenticFleet is a production-oriented multi-agent orchestration system that **automatically routes tasks to specialized AI agents** and orchestrates their execution through a self-optimizing 5-phase pipeline.
+
+### The 5-Phase Pipeline
+
+Every task flows through intelligent orchestration:
 
 ```
-User Task → Analysis → Intelligent Routing → Agent Execution → Quality Check → Output
+┌─────────┐    ┌─────────┐    ┌───────────┐    ┌──────────┐    ┌─────────┐
+│ANALYSIS │───►│ ROUTING │───►│ EXECUTION │───►│ PROGRESS │───►│ QUALITY │
+│         │    │         │    │           │    │          │    │         │
+│Complexity│    │Agent(s) │    │Delegated/ │    │Complete? │    │Score    │
+│Skills    │    │Mode     │    │Sequential/│    │Refine?   │    │0-10     │
+│Tools     │    │Subtasks │    │Parallel   │    │Continue? │    │Feedback │
+└─────────┘    └─────────┘    └───────────┘    └──────────┘    └─────────┘
 ```
 
-**Key Features:**
+**How it works:**
 
-- 🧠 **DSPy-Powered Routing** – Typed signatures with Pydantic validation for reliable structured outputs
+1. **Analysis** – DSPy analyzes task complexity, required skills, and recommended tools
+2. **Routing** – Intelligent selection of agents and execution mode based on learned patterns
+3. **Execution** – Agents work in parallel, sequence, or delegation with tool access
+4. **Progress** – Evaluates if task is complete or needs refinement
+5. **Quality** – Scores output (0-10) and identifies missing elements
+
+### Key Features
+
+- 🧠 **DSPy-Powered Intelligence** – Typed signatures with Pydantic validation for reliable structured outputs
 - 🔄 **6 Execution Modes** – Auto, Delegated, Sequential, Parallel, Handoff, and Discussion
 - 🎯 **9+ Specialized Agents** – Researcher, Analyst, Writer, Reviewer, Coder, Planner, Executor, Verifier, Generator
 - ⚡ **Smart Fast-Path** – Simple queries bypass multi-agent routing (<1s response)
+- 🛠️ **Tool Integration** – Web search (Tavily), code execution, browser automation, MCP tools
 - 🧍 **Human-in-the-Loop (HITL)** – Request/response events can pause execution until the user responds
-- ♻️ **Checkpoint Resume** – Resume interrupted runs using agent-framework checkpoint semantics (message XOR checkpoint_id)
+- ♻️ **Checkpoint Resume** – Resume interrupted runs using agent-framework checkpoint semantics
+- 📈 **Self-Improvement** – Learns from execution history to improve routing decisions
 - 📊 **Built-in Evaluation** – Azure AI Evaluation integration for quality metrics
-- 🔍 **OpenTelemetry Tracing** – Full observability with Azure Monitor export
+- 🔍 **OpenTelemetry Tracing** – Full observability with Jaeger and Azure Monitor export
 
 ## 🚀 Quick Start
 
@@ -186,31 +206,65 @@ agents:
 
 ## 🏗️ Architecture
 
+### System Overview
+
+```
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                              Entry Points                                    │
+│    ┌─────────┐         ┌─────────┐         ┌─────────────────────────┐      │
+│    │   CLI   │         │ Web UI  │         │      Python API         │      │
+│    │ (Typer) │         │ (React) │         │ create_supervisor_      │      │
+│    │         │         │         │         │ workflow()              │      │
+│    └────┬────┘         └────┬────┘         └───────────┬─────────────┘      │
+│         └──────────────────┬┴──────────────────────────┘                    │
+│                            │                                                │
+│                   ┌────────▼────────┐                                       │
+│                   │ SupervisorWorkflow │ ◄── 5-Phase Pipeline               │
+│                   └────────┬────────┘                                       │
+│         ┌──────────────────┼──────────────────┐                             │
+│         │                  │                  │                             │
+│  ┌──────▼──────┐   ┌───────▼───────┐  ┌──────▼──────┐                       │
+│  │DSPyReasoner │   │  AgentFactory │  │ ToolRegistry│                       │
+│  │ (Analysis,  │   │ (Creates      │  │ (Tavily,    │                       │
+│  │  Routing,   │   │  Specialized  │  │  Code, MCP) │                       │
+│  │  Quality)   │   │  Agents)      │  │             │                       │
+│  └─────────────┘   └───────────────┘  └─────────────┘                       │
+└─────────────────────────────────────────────────────────────────────────────┘
+```
+
+### Directory Structure
+
 ```
 src/agentic_fleet/
-├── agents/           # Agent definitions & AgentFactory
-├── api/              # FastAPI backend, routes, SSE streaming, middleware
-├── cli/              # Typer CLI commands
-├── config/           # workflow_config.yaml (source of truth)
-├── core/             # Core abstractions and base classes
-├── data/             # Training examples, evaluation datasets
-├── dspy_modules/     # DSPy signatures, typed models, assertions
-├── evaluation/       # Azure AI Evaluation integration
-├── models/           # Pydantic models and schemas
-├── services/         # Business logic services
+├── workflows/        # Orchestration: supervisor.py (entry), executors.py (5 phases)
+│   ├── supervisor.py # Main workflow entry + fast-path detection
+│   ├── executors.py  # AnalysisExecutor, RoutingExecutor, ExecutionExecutor, etc.
+│   └── strategies.py # Execution modes (delegated/sequential/parallel)
+├── dspy_modules/     # DSPy intelligence layer
+│   ├── reasoner.py   # DSPyReasoner (orchestrates all DSPy modules)
+│   ├── signatures.py # TaskAnalysis, TaskRouting, QualityAssessment
+│   ├── typed_models.py # Pydantic output models
+│   └── assertions.py # DSPy assertions for validation
+├── agents/           # Agent definitions & AgentFactory (coordinator.py)
 ├── tools/            # Tavily, browser, MCP bridges, code interpreter
-├── utils/            # Helpers, caching, tracing, Cosmos DB
-└── workflows/        # Orchestration: supervisor, executors, strategies
+├── app/              # FastAPI backend, WebSocket streaming
+├── config/           # workflow_config.yaml (source of truth)
+├── utils/            # Organized into subpackages:
+│   ├── cfg/          # Configuration loading
+│   ├── infra/        # Tracing, resilience, telemetry
+│   └── storage/      # Cosmos DB, history, persistence
+└── cli/              # Typer CLI commands
 
 src/frontend/         # React 19 + Vite + Tailwind UI
 ```
 
-**Key Design Principles:**
+### Key Design Principles
 
-1. **Config-Driven** – All models, agents, and thresholds in YAML
-2. **Offline Compilation** – DSPy modules compiled offline, never at runtime
-3. **Type Safety** – Pydantic models for all DSPy outputs
-4. **Assertion-Driven** – DSPy assertions for routing validation
+1. **Config-Driven** – All models, agents, and thresholds in `workflow_config.yaml`
+2. **Offline Compilation** – DSPy modules compiled offline, never at runtime in production
+3. **Type Safety** – Pydantic models for all DSPy outputs (typed signatures)
+4. **Assertion-Driven** – DSPy assertions validate routing decisions
+5. **Self-Improving** – Learns from execution history via BridgeMiddleware
 
 ## 🧪 Development
 
@@ -224,24 +278,43 @@ make clear-cache       # Clear DSPy cache after module changes
 
 ## 📚 Documentation
 
-| Guide                                                               | Description                     |
-| ------------------------------------------------------------------- | ------------------------------- |
-| [Getting Started](docs/users/getting-started.md)                    | Installation and first steps    |
-| [Configuration](docs/users/configuration.md)                        | Environment and workflow config |
-| [Frontend Guide](docs/users/frontend.md)                            | Web interface usage             |
-| [Architecture](docs/developers/architecture.md)                     | System design and internals     |
-| [DSPy Integration](docs/guides/dspy-agent-framework-integration.md) | DSPy + Agent Framework patterns |
-| [Tracing](docs/guides/tracing.md)                                   | OpenTelemetry setup             |
-| [Troubleshooting](docs/users/troubleshooting.md)                    | Common issues and solutions     |
+### For Users
+
+| Guide                                            | Description                                       |
+| ------------------------------------------------ | ------------------------------------------------- |
+| [Getting Started](docs/users/getting-started.md) | Installation, "Hello World", progressive examples |
+| [Overview](docs/users/overview.md)               | What AgenticFleet is and how it works             |
+| [User Guide](docs/users/user-guide.md)           | Complete usage guide and features                 |
+| [Configuration](docs/users/configuration.md)     | Environment and workflow config                   |
+| [Frontend Guide](docs/users/frontend.md)         | Web interface and WebSocket protocol              |
+| [Troubleshooting](docs/users/troubleshooting.md) | Common issues and solutions                       |
+
+### For Developers
+
+| Guide                                                               | Description                                      |
+| ------------------------------------------------------------------- | ------------------------------------------------ |
+| [System Overview](docs/developers/system-overview.md)               | **Comprehensive technical guide** (1,150+ lines) |
+| [Architecture](docs/developers/architecture.md)                     | System design, diagrams, and data flow           |
+| [API Reference](docs/developers/api-reference.md)                   | Core classes, methods, and types                 |
+| [DSPy Integration](docs/guides/dspy-agent-framework-integration.md) | DSPy + Agent Framework patterns                  |
+| [Tracing](docs/guides/tracing.md)                                   | OpenTelemetry and Jaeger setup                   |
+| [Contributing](docs/developers/contributing.md)                     | Development guidelines                           |
 
 ## 🆕 What's New in v0.6.95
 
-- **Secure-by-Default Tracing** – `capture_sensitive` now defaults to `false` everywhere (schema, YAML, built-in defaults)
-- **Cosmos DB Partition-Key Fixes** – `query_agent_memory()` uses single-partition queries; history loads are user-scoped when `userId` is available
-- **Cache Telemetry Redaction** – Task previews are redacted by default; opt-in via `ENABLE_SENSITIVE_DATA=true`
+### Highlights
+
+- **Secure-by-Default Tracing** – `capture_sensitive` defaults to `false` everywhere
+- **Package Reorganization** – `utils/` split into `cfg/`, `infra/`, `storage/` subpackages
+- **Cosmos DB Fixes** – Single-partition queries, user-scoped history loads
+- **Cache Telemetry Redaction** – Task previews redacted by default
+
+### Core Features (v0.6.9+)
+
 - **Typed DSPy Signatures** – Pydantic models for validated, type-safe outputs
 - **DSPy Assertions** – Hard constraints and soft suggestions for routing validation
-- **Routing Cache** – TTL-based caching for routing decisions
+- **Routing Cache** – TTL-based caching (5 min) for routing decisions
+- **Smart Fast-Path** – Simple queries bypass pipeline (<1s response)
 
 See [CHANGELOG.md](CHANGELOG.md) for full release history.
 
