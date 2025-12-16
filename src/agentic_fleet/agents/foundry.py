@@ -38,6 +38,9 @@ if TYPE_CHECKING:
 
 logger = setup_logger(__name__)
 
+# File availability delay in seconds (Azure file operations may require brief propagation time)
+FILE_AVAILABILITY_DELAY_SECONDS = 0.5
+
 
 @dataclass
 class FoundryAgentConfig:
@@ -258,7 +261,7 @@ class FoundryHostedAgent:
                     # Optionally retrieve file metadata
                     for file_id in file_ids:
                         try:
-                            await asyncio.sleep(0.5)  # Brief delay for file availability
+                            await asyncio.sleep(FILE_AVAILABILITY_DELAY_SECONDS)
                             file_info = await self._client.agents_client.files.get(file_id)
                             yield AgentRunResponseUpdate(
                                 text=f"\n  • {file_info.filename} ({file_info.bytes} bytes)",

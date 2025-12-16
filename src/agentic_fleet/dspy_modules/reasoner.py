@@ -22,6 +22,7 @@ import asyncio
 import hashlib
 import json
 import time
+from collections import OrderedDict
 from functools import lru_cache
 from pathlib import Path
 from typing import Any
@@ -167,8 +168,8 @@ class DSPyReasoner(dspy.Module):
         self._modules_initialized = False
         self.tool_registry: Any | None = None
 
-        # Routing cache for performance optimization
-        self._routing_cache: dict[str, dict[str, Any]] = {}
+        # Routing cache for performance optimization (OrderedDict for O(1) LRU eviction)
+        self._routing_cache: OrderedDict[str, dict[str, Any]] = OrderedDict()
 
         # Placeholders for lazy-initialized modules
         self._analyzer: dspy.Module | None = None
@@ -205,7 +206,7 @@ class DSPyReasoner(dspy.Module):
         if not hasattr(self, "cache_ttl_seconds"):
             self.cache_ttl_seconds = 300
         if not hasattr(self, "_routing_cache"):
-            self._routing_cache = {}
+            self._routing_cache = OrderedDict()
         if not hasattr(self, "cache_max_entries"):
             self.cache_max_entries = 1024
 
@@ -1212,21 +1213,21 @@ class DSPyReasoner(dspy.Module):
             return
 
         # Bound memory usage: evict oldest entries when exceeding the cap.
+        # OrderedDict maintains insertion order, enabling O(1) eviction of the oldest entry.
         if len(self._routing_cache) >= self.cache_max_entries:
             try:
-                oldest_key = min(
-                    self._routing_cache.keys(),
-                    key=lambda k: float(self._routing_cache[k].get("timestamp", 0)),
-                )
-                self._routing_cache.pop(oldest_key, None)
+                # Remove the oldest entry (first item in OrderedDict)
+                self._routing_cache.popitem(last=False)
             except Exception:
                 # If eviction fails for any reason, fall back to clearing to avoid unbounded growth.
                 self._routing_cache.clear()
 
+        # Store the new entry and move to end (most recently used)
         self._routing_cache[cache_key] = {
             "result": result,
             "timestamp": time.time(),
         }
+        self._routing_cache.move_to_end(cache_key)
 
     def clear_routing_cache(self) -> None:
         """Clear the routing cache."""
