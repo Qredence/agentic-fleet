@@ -12,7 +12,6 @@ from typing import Any, Literal, TypedDict
 import yaml
 from agent_framework._workflows import (
     ExecutorCompletedEvent,
-    RequestInfoEvent,
     WorkflowOutputEvent,
     WorkflowStartedEvent,
     WorkflowStatusEvent,
