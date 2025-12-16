@@ -98,16 +98,7 @@ class FoundryHostedAgent:
     def endpoint(self) -> str:
         """Get the project endpoint URL."""
         raw = self.config.endpoint or os.environ.get("AZURE_AI_PROJECT_ENDPOINT", "")
-        if "=" in raw and ";" in raw:
-            # Support Azure AI Projects connection string format, e.g.
-            # "Endpoint=https://...;SubscriptionId=...;ResourceGroup=...;ProjectName=..."
-            for part in raw.split(";"):
-                if not part:
-                    continue
-                key, sep, value = part.partition("=")
-                if sep and key.strip().lower() == "endpoint" and value.strip():
-                    return value.strip()
-        return raw
+        return parse_connection_string_endpoint(raw)
 
     async def __aenter__(self) -> FoundryHostedAgent:
         """Async context manager entry."""
