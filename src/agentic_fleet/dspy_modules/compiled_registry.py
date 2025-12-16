@@ -188,13 +188,19 @@ def _validate_dspy_version_compatibility(metadata: ArtifactMetadata) -> tuple[bo
         def parse_version(v: str) -> Version:
             try:
                 return Version(v)
-            except InvalidVersion:
-                logger.warning("Invalid version string encountered: '%s'. Falling back to Version('0').", v)
-                return Version("0")
+            except InvalidVersion as e:
+                logger.error("Invalid version string encountered: '%s'.", v)
+                raise
 
-        current = parse_version(current_version)
-        required = parse_version(MIN_DSPY_VERSION)
-        artifact = parse_version(metadata.dspy_version)
+        try:
+            current = parse_version(current_version)
+            required = parse_version(MIN_DSPY_VERSION)
+            artifact = parse_version(metadata.dspy_version)
+        except InvalidVersion as e:
+            return False, (
+                f"Invalid version string encountered during DSPy version compatibility check: {e}. "
+                "Artifact or environment version is malformed. Please check your installation and artifact metadata."
+            )
 
         # Check if current version meets minimum
         if current < required:

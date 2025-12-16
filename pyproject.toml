@@ -24,7 +24,7 @@ classifiers = [
 ]
 
 dependencies = [
-    "azure-ai-agents==1.2.0b5",
+    "azure-ai-agents>=1.2.0b5,<1.3",
     "azure-identity>=1.25.1,<2.0",
     "azure-cosmos>=4.8.0,<5.0",
     "python-dotenv>=1.2.1,<2.0",

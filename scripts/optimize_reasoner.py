@@ -46,12 +46,15 @@ def validate_and_resolve_paths(base_path: Path, *path_specs: str | None) -> list
     """
     Validate and resolve file/directory paths relative to base_path.
 
+    This function accepts both files and directories. All paths must exist
+    before this function is called. It does not create missing directories.
+
     Args:
         base_path: Base directory for resolving relative paths.
         *path_specs: Path strings (may be relative or absolute).
 
     Returns:
-        list[Path]: Resolved Path objects.
+        list[Path]: Resolved Path objects (may be files or directories).
 
     Raises:
         ValueError: If a path doesn't exist or is None/empty.

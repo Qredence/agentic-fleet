@@ -224,11 +224,13 @@ class AgentFactory:
 
             # Create OpenAI client using agent_framework directly
             # Use shared async_client if available for proper resource reuse
+            # Note: self.openai_client may be None; OpenAIResponsesClient handles this
+            # by creating its own client if async_client is None
             chat_client = OpenAIResponsesClient(
                 model_id=effective_model_id,
                 api_key=api_key,
                 base_url=base_url,
-                async_client=self.openai_client,  # Reuse shared client instance
+                async_client=self.openai_client,  # Reuse shared client instance (or None)
                 reasoning_effort=reasoning_effort,
                 reasoning_verbosity=reasoning_verbosity,
                 store=store,
@@ -391,6 +393,9 @@ class AgentFactory:
 
             instructions = agent_config.get("instructions")
 
+            # Note: Creating a new DefaultAzureCredential() per hosted agent.
+            # For production with many agents, consider passing a shared credential
+            # instance via the constructor to enable proper lifecycle management.
             chat_client = AzureAIAgentClient(
                 credential=DefaultAzureCredential(),
                 project_endpoint=project_endpoint,

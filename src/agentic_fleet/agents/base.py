@@ -361,18 +361,21 @@ class DSPyEnhancedAgent(ChatAgent):
 
         fallback_response = await super().run(messages=messages, thread=thread, **agent_kwargs)
         # Prepend note to the first message text
-        # Fix: ChatMessage.text is read-only, so create a new ChatMessage instead of modifying
+        # ChatMessage.text is read-only, so create a new ChatMessage instead of modifying
         if fallback_response.messages:
             first_msg = fallback_response.messages[0]
             original_text = getattr(first_msg, "text", "")
             updated_text = self._apply_note_to_text(original_text, note)
-            # Create a new ChatMessage with the updated text
+            # Create a new ChatMessage with the updated text, preserving all attributes
             updated_msg = ChatMessage(
                 role=first_msg.role,
                 text=updated_text,
                 metadata=getattr(first_msg, "metadata", None),
+                additional_properties=getattr(first_msg, "additional_properties", None),
             )
             # Replace the first message with the updated one
+            # Note: We reassign messages assuming it's mutable. If AgentRunResponse.messages
+            # becomes immutable, construct a new AgentRunResponse instead.
             fallback_response.messages = [updated_msg, *fallback_response.messages[1:]]
         else:
             fallback_response_text = getattr(fallback_response, "text", "")

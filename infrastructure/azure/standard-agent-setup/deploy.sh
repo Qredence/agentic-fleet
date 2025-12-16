@@ -4,8 +4,18 @@
 
 set -e
 
-# Configuration
-SUBSCRIPTION_ID="10f3a1a0-7334-4df9-878b-ca03178af6f3"
+# Parameterize subscription ID: from env var or first argument
+if [ -n "$AZURE_SUBSCRIPTION_ID" ]; then
+  SUBSCRIPTION_ID="$AZURE_SUBSCRIPTION_ID"
+elif [ -n "$1" ]; then
+  SUBSCRIPTION_ID="$1"
+else
+  echo "❌ ERROR: Azure subscription ID not set."
+  echo "Please set the AZURE_SUBSCRIPTION_ID environment variable or pass as the first argument:"
+  echo "  export AZURE_SUBSCRIPTION_ID=<your-subscription-id>"
+  echo "  ./deploy.sh <subscription-id>"
+  exit 1
+fi
 RESOURCE_GROUP="rg-production"
 LOCATION="swedencentral"
 FOUNDRY_ACCOUNT="fleet-agent-resource"

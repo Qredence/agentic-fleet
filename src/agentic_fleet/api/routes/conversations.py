@@ -42,7 +42,10 @@ async def list_conversations(manager: ConversationManagerDep) -> list[Conversati
     response_model=Conversation,
     summary="Get conversation details",
 )
-async def get_conversation(conversation_id: str, manager: ConversationManagerDep) -> Conversation:
+async def get_conversation(
+    conversation_id: str,
+    manager: ConversationManagerDep,
+) -> Conversation:
     """Get a conversation by ID."""
     conversation = manager.get_conversation(conversation_id)
     if not conversation:

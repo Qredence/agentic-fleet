@@ -40,6 +40,9 @@ logger = setup_logger(__name__)
 # Type alias for priority literal
 PriorityType = Literal["low", "medium", "high"]
 
+# Valid workflow state names for WorkflowStatusEvent processing
+VALID_WORKFLOW_STATES = {"FAILED", "IN_PROGRESS", "IDLE"}
+
 
 class UIHintData(TypedDict):
     """Typed dict for validated UI hint data."""
@@ -414,7 +417,6 @@ def map_workflow_event(
         workflow_id = data.get("workflow_id", "")
 
         # Convert state to a valid state name (enum or string), else skip with warning
-        VALID_STATES = {"FAILED", "IN_PROGRESS", "IDLE"}
         if hasattr(state, "name"):
             state_name = state.name
         elif isinstance(state, str):
@@ -423,7 +425,7 @@ def map_workflow_event(
             logger.warning(f"Unrecognized workflow state type: {type(state)} ({state!r}) in WorkflowStatusEvent; skipping event.")
             return None, accumulated_reasoning
 
-        if state_name not in VALID_STATES:
+        if state_name not in VALID_WORKFLOW_STATES:
             logger.warning(f"Unrecognized workflow state value: {state_name!r} in WorkflowStatusEvent; skipping event.")
             return None, accumulated_reasoning
         if state_name == "FAILED":
