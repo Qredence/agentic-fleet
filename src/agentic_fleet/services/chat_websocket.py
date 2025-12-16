@@ -144,7 +144,7 @@ async def _get_or_create_thread(conversation_id: str | None) -> AgentThread | No
         new_thread = AgentThread()
         _conversation_threads[conversation_id] = (new_thread, now)
         _conversation_threads.move_to_end(conversation_id)
-        logger.debug("Created new conversation thread for: %s", conversation_id)
+        logger.debug("Created new conversation thread for: %s", _sanitize_log_input(conversation_id))
 
         # Evict oldest entries if capacity exceeded.
         while len(_conversation_threads) > _MAX_THREADS:
