@@ -17,6 +17,13 @@ from agentic_fleet.utils.logger import setup_logger
 
 logger = setup_logger(__name__)
 
+
+def sanitize_for_log(value: str | None) -> str:
+    """Sanitize a string so it is safe for log entry: remove line breaks/CR."""
+    if value is None:
+        return ""
+    return str(value).replace('\r\n', '').replace('\n', '').replace('\r', '')
+
 # Retain task references to prevent premature GC (ruff RUF006 style).
 _background_tasks: set[asyncio.Task[Any]] = set()
 
@@ -95,8 +102,8 @@ def schedule_quality_evaluation(
                 except Exception as exc:
                     logger.debug(
                         "Conversation quality update failed (conversation_id=%s, message_id=%s): %s",
-                        conversation_id,
-                        message_id,
+                        sanitize_for_log(conversation_id),
+                        sanitize_for_log(message_id),
                         exc,
                     )
         except Exception as exc:
