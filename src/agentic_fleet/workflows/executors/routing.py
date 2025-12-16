@@ -11,17 +11,17 @@ from typing import Any, cast
 
 from agent_framework._workflows import Executor, WorkflowContext
 
-from ..dspy_modules.assertions import detect_task_type, validate_full_routing
-from ..dspy_modules.reasoner import DSPyReasoner
-from ..utils.logger import setup_logger
-from ..utils.memory import get_process_rss_mb
-from ..utils.models import ExecutionMode, RoutingDecision, ensure_routing_decision
-from ..utils.resilience import async_call_with_retry
-from ..utils.telemetry import optional_span
-from .context import SupervisorContext
-from .executors_base import handler
-from .helpers import detect_routing_edge_cases, normalize_routing_decision
-from .models import AnalysisMessage, RoutingMessage, RoutingPlan
+from ...dspy_modules.assertions import detect_task_type, validate_full_routing
+from ...dspy_modules.reasoner import DSPyReasoner
+from ...utils.logger import setup_logger
+from ...utils.memory import get_process_rss_mb
+from ...utils.models import ExecutionMode, RoutingDecision, ensure_routing_decision
+from ...utils.resilience import async_call_with_retry
+from ...utils.telemetry import optional_span
+from ..context import SupervisorContext
+from ..helpers import detect_routing_edge_cases, normalize_routing_decision
+from ..models import AnalysisMessage, RoutingMessage, RoutingPlan
+from .base import handler
 
 logger = setup_logger(__name__)
 

@@ -12,6 +12,11 @@ Usage:
 from __future__ import annotations
 
 # =============================================================================
+# Helpers
+# =============================================================================
+from agentic_fleet.dspy_modules.reasoner_utils import is_time_sensitive_task
+
+# =============================================================================
 # Builder
 # =============================================================================
 from agentic_fleet.workflows.builder import WorkflowBuilder
@@ -44,22 +49,12 @@ from agentic_fleet.workflows.executors import (
 )
 
 # =============================================================================
-# Group Chat
-# =============================================================================
-from agentic_fleet.workflows.group_chat_adapter import DSPyGroupChatManager, GroupChatBuilder
-
-# =============================================================================
 # Handoff
 # =============================================================================
 from agentic_fleet.workflows.handoff import HandoffContext, HandoffManager
-
-# =============================================================================
-# Helpers
-# =============================================================================
 from agentic_fleet.workflows.helpers import (
     FastPathDetector,
     is_simple_task,
-    is_time_sensitive_task,
     normalize_routing_decision,
     synthesize_results,
 )
@@ -89,6 +84,14 @@ from agentic_fleet.workflows.strategies import (
     execute_sequential_with_handoffs,
     run_execution_phase,
     run_execution_phase_streaming,
+)
+
+# =============================================================================
+# Group Chat
+# =============================================================================
+from agentic_fleet.workflows.strategies.group_chat_adapter import (
+    DSPyGroupChatManager,
+    GroupChatBuilder,
 )
 
 # =============================================================================

@@ -28,14 +28,14 @@ from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
     from agentic_fleet.utils.cache import TTLCache
-    from agentic_fleet.utils.compiler import compile_reasoner
-    from agentic_fleet.utils.config import (
+    from agentic_fleet.utils.cfg import (
         env_config,
         get_agent_model,
         get_config_path,
         load_config,
         validate_agentic_fleet_env,
     )
+    from agentic_fleet.utils.compiler import compile_reasoner
     from agentic_fleet.utils.models import ExecutionMode, RoutingDecision
     from agentic_fleet.utils.profiling import (
         PerformanceTracker,
@@ -102,7 +102,7 @@ def __getattr__(name: str) -> object:
         "env_config",
         "validate_agentic_fleet_env",
     ):
-        from agentic_fleet.utils.config import (
+        from agentic_fleet.utils.cfg import (
             env_config,
             get_agent_model,
             get_config_path,

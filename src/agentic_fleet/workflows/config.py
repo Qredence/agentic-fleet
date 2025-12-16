@@ -5,7 +5,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Any
 
-from agentic_fleet.utils.config import DEFAULT_GEPA_LOG_DIR, DEFAULT_HISTORY_PATH, get_agent_model
+from agentic_fleet.utils.cfg import DEFAULT_GEPA_LOG_DIR, DEFAULT_HISTORY_PATH, get_agent_model
 
 
 @dataclass

@@ -141,8 +141,8 @@ def run(
                 # Quick DSPy init for decision
                 import dspy
 
+                from ...dspy_modules.lifecycle import configure_dspy_settings
                 from ...dspy_modules.reasoner import DSPyReasoner
-                from ...utils.dspy_manager import configure_dspy_settings
 
                 if not dspy.settings.lm:
                     # Use dspy_manager for proper Azure OpenAI support

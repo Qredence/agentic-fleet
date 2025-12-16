@@ -26,8 +26,8 @@ from __future__ import annotations
 # Re-export FastAPI settings from core/settings.py
 from agentic_fleet.core.settings import AppSettings, get_settings
 
-# Re-export everything from utils/config.py for backward compatibility
-from agentic_fleet.utils.config import (
+# Re-export everything from utils/cfg for backward compatibility
+from agentic_fleet.utils.cfg import (
     # Constants
     DEFAULT_AGENT_MODEL,
     DEFAULT_CACHE_DIR,

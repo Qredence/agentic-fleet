@@ -9,17 +9,17 @@ from agent_framework._threads import AgentThread
 from agent_framework._types import ChatMessage, Role
 from agent_framework._workflows import WorkflowOutputEvent
 
-from ..utils.logger import setup_logger
-from ..utils.models import ExecutionMode, RoutingDecision
-from .exceptions import AgentExecutionError
-from .handoff import HandoffContext, HandoffManager
-from .helpers import (
+from ...utils.logger import setup_logger
+from ...utils.models import ExecutionMode, RoutingDecision
+from ..exceptions import AgentExecutionError
+from ..handoff import HandoffContext, HandoffManager
+from ..helpers import (
     derive_objectives,
     estimate_remaining_work,
     extract_artifacts,
 )
-from .models import MagenticAgentMessageEvent
-from .strategies_base import (
+from ..models import MagenticAgentMessageEvent
+from .base import (
     ExecutionPhaseError,
     _extract_tool_usage,
     _get_agent,
@@ -30,8 +30,8 @@ from .strategies_base import (
 if TYPE_CHECKING:
     from collections.abc import AsyncIterator
 
-    from ..utils.progress import ProgressCallback
-    from .context import SupervisorContext
+    from ...utils.progress import ProgressCallback
+    from ..context import SupervisorContext
 
 logger = setup_logger(__name__)
 

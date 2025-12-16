@@ -5,7 +5,7 @@ from unittest.mock import patch
 
 import pytest
 
-from agentic_fleet.utils.config import EnvConfig, load_config, validate_config
+from agentic_fleet.utils.cfg import EnvConfig, load_config, validate_config
 from agentic_fleet.workflows.exceptions import ConfigurationError
 
 

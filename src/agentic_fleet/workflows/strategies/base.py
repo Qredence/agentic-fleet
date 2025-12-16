@@ -7,8 +7,8 @@ from typing import Any
 from agent_framework._agents import ChatAgent
 from agent_framework._types import ChatMessage, Role
 
-from ..utils.logger import setup_logger
-from .models import MagenticAgentMessageEvent
+from ...utils.logger import setup_logger
+from ..models import MagenticAgentMessageEvent
 
 logger = setup_logger(__name__)
 

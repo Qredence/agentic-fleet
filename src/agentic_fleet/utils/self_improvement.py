@@ -13,7 +13,7 @@ import re
 from pathlib import Path
 from typing import Any
 
-from .config import DEFAULT_EXAMPLES_PATH
+from .cfg import DEFAULT_EXAMPLES_PATH
 from .cosmos import get_default_user_id, mirror_dspy_examples
 from .history_manager import HistoryManager
 

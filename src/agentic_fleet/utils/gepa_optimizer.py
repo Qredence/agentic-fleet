@@ -23,8 +23,8 @@ import dspy
 from dspy.teleprompt.gepa.gepa import GEPAFeedbackMetric
 from dspy.teleprompt.gepa.gepa_utils import ScoreWithFeedback
 
+from ..dspy_modules.lifecycle import get_reflection_lm
 from .cosmos import get_default_user_id, record_dspy_optimization_run
-from .dspy_manager import get_reflection_lm
 from .history_manager import HistoryManager
 from .progress import NullProgressCallback, ProgressCallback
 from .self_improvement import SelfImprovementEngine

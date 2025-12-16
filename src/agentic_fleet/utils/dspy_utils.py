@@ -7,13 +7,13 @@ Existing modules remain intact; this file provides a convenience import surface.
 
 from __future__ import annotations
 
-from .compiler import compile_reasoner
-from .dspy_manager import (
+from ..dspy_modules.lifecycle import (
     configure_dspy_settings,
     get_dspy_lm,
     get_reflection_lm,
     reset_dspy_manager,
 )
+from .compiler import compile_reasoner
 from .gepa_optimizer import (
     convert_to_dspy_examples,
     harvest_history_examples,

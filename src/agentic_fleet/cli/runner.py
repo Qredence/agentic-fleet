@@ -19,7 +19,7 @@ from rich.markdown import Markdown
 from rich.panel import Panel
 from rich.text import Text
 
-from ..utils.config import (
+from ..utils.cfg import (
     DEFAULT_GEPA_LOG_DIR,
     DEFAULT_HISTORY_PATH,
     get_agent_model,
@@ -236,7 +236,7 @@ class WorkflowRunner:
             try:
                 # Basic DSPy setup just for this decision
                 # Use dspy_manager for proper Azure OpenAI support
-                from agentic_fleet.utils.dspy_manager import configure_dspy_settings
+                from agentic_fleet.dspy_modules.lifecycle import configure_dspy_settings
 
                 if not dspy.settings.lm:
                     configure_dspy_settings(effective_model)

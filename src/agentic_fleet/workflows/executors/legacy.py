@@ -19,7 +19,7 @@ from typing import Any
 
 from agent_framework._workflows import Executor
 
-from .executors_dspy import DSPyExecutor
+from .dspy_executor import DSPyExecutor
 
 
 class JudgeRefineExecutor(Executor):

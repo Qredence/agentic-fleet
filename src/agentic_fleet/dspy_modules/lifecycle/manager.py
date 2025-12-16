@@ -18,7 +18,7 @@ from typing import Any
 
 import dspy
 
-from agentic_fleet.utils.config import env_config
+from agentic_fleet.utils.cfg import env_config
 
 logger = logging.getLogger(__name__)
 

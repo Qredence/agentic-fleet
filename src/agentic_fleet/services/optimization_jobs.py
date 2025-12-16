@@ -15,10 +15,10 @@ from datetime import datetime
 from typing import Any, Literal
 from uuid import uuid4
 
+from agentic_fleet.dspy_modules.lifecycle import configure_dspy_settings
 from agentic_fleet.models.dspy import CompileRequest
+from agentic_fleet.utils.cfg import DEFAULT_GEPA_LOG_DIR
 from agentic_fleet.utils.compiler import compile_answer_quality, compile_nlu, compile_reasoner
-from agentic_fleet.utils.config import DEFAULT_GEPA_LOG_DIR
-from agentic_fleet.utils.dspy_manager import configure_dspy_settings
 from agentic_fleet.utils.logger import setup_logger
 from agentic_fleet.utils.progress import NullProgressCallback, ProgressCallback
 

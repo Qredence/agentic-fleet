@@ -1,6 +1,7 @@
 from unittest.mock import MagicMock
 
-from agentic_fleet.workflows.helpers import FastPathDetector, is_time_sensitive_task
+from agentic_fleet.dspy_modules.reasoner_utils import is_time_sensitive_task
+from agentic_fleet.workflows.helpers import FastPathDetector
 from agentic_fleet.workflows.narrator import EventNarrator
 
 # --- FastPathDetector Tests ---

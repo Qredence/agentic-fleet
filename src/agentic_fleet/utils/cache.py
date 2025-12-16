@@ -12,7 +12,7 @@ from dataclasses import dataclass, field
 from functools import wraps
 from typing import Any, TypeVar
 
-from .config import DEFAULT_CACHE_TTL
+from .cfg import DEFAULT_CACHE_TTL
 from .cosmos import mirror_cache_entry
 from .logger import setup_logger
 
