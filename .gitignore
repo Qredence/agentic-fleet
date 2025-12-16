@@ -42,7 +42,9 @@ env/
 .serena/
 .playwright-mcp/
 .trae/
-
+docker/
+infrastructure/
+report/
 .gemini/
 .kilocode/
 
@@ -137,4 +139,5 @@ report/jscpd-report.json
 docker/docker-compose.tracing.yml
 report/jscpd-report.json
 .claude/python-backend-reviewer.skill
+docker/docker-compose.tracing.yml
 docker/docker-compose.tracing.yml
