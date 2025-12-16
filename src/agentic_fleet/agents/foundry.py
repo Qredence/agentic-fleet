@@ -38,7 +38,12 @@ if TYPE_CHECKING:
 
 logger = setup_logger(__name__)
 
-# File availability delay in seconds (Azure file operations may require brief propagation time)
+# File availability delay in seconds.
+# Azure file operations (such as uploading or generating files) may not make files immediately
+# available for download due to eventual consistency and propagation delays in Azure's storage
+# backend. Empirically, a short delay (0.5 seconds) is often sufficient to ensure that files
+# are accessible after creation or upload. This value may need to be adjusted if Azure's
+# behavior changes or if file availability issues are observed in production.
 FILE_AVAILABILITY_DELAY_SECONDS = 0.5
 
 
