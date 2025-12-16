@@ -32,11 +32,11 @@
     "editor.formatOnSave": true
   },
   "[typescript]": {
-    "editor.defaultFormatter": "vscode.typescript-language-features",
+    "editor.defaultFormatter": "TypeScriptTeam.native-preview",
     "editor.formatOnSave": true
   },
   "[typescriptreact]": {
-    "editor.defaultFormatter": "vscode.typescript-language-features",
+    "editor.defaultFormatter": "TypeScriptTeam.native-preview",
     "editor.formatOnSave": true
   },
   // ---------- Testing helpers ----------
