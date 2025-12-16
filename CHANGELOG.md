@@ -1,5 +1,88 @@
 # Changelog
 
+## v0.6.95 (2025-12-16) – Package Reorganization & Security Defaults
+
+### Highlights
+
+#### Secure-by-Default Tracing
+
+- **`capture_sensitive` defaults to `false`** – All tracing configurations now default to secure mode across schema, YAML, and built-in defaults.
+- **Task preview redaction** – Cache telemetry redacts task previews by default; opt-in via `ENABLE_SENSITIVE_DATA=true`.
+
+#### Package Reorganization
+
+- **Utils subpackages** – Split `utils/` into focused modules for better maintainability:
+  - `utils/infra/` – Tracing, resilience, telemetry, logging
+  - `utils/storage/` – Cosmos, persistence, history management
+  - `utils/cfg/` – Configuration utilities
+- **Import path updates** – Changed `from agentic_fleet.utils.config` to `from agentic_fleet.utils.cfg` for consistency.
+
+#### Cosmos DB Improvements
+
+- **Partition-key fixes** – `query_agent_memory()` now uses single-partition queries for better performance.
+- **User-scoped history** – History loads are user-scoped when `userId` is available.
+
+#### Frontend Enhancements
+
+- **New UI components** – Added Skeleton, Tabs, Textarea, Tooltip (shadcn/ui).
+- **Theme context** – Centralized theme management via `ThemeContext`.
+- **Frontend restructure design** – Approved plan for feature-based organization (see `docs/plans/2025-12-15-frontend-restructure-design.md`).
+
+#### Documentation Overhaul
+
+- **Comprehensive System Overview** – New `docs/developers/system-overview.md` (1,150+ lines) providing in-depth technical guide covering:
+  - 5-phase pipeline architecture with diagrams
+  - Agent system (Factory, Roles, Tools, Handoffs)
+  - DSPy integration (GEPA, Training, Self-improvement)
+  - User interfaces (CLI, Python API, Web Frontend)
+  - Observability (Events, OpenTelemetry, Middleware)
+- **Enriched User Documentation** – React-docs style transformation:
+  - `docs/users/overview.md`: Complete rewrite (84 → 446 lines) with problem/solution framework, visual diagrams, and FAQ
+  - `docs/users/getting-started.md`: Enriched (277 → 491 lines) with "Hello World" tutorial, progressive examples, and troubleshooting
+- **README.md Updates** – Enhanced with 5-phase pipeline diagram, system architecture overview, and split documentation sections (Users/Developers)
+
+#### Repository Cleanup
+
+- **Removed legacy tracking files** – Deleted redundant root-level files:
+  - `GEMINI.md`, `PLANS.md`, `PLANS_previous.md` (consolidated into docs/plans)
+  - `PR_SUMMARY.md`, `TRACING_STATUS.md`, `PHASE3_PHASE4_IMPLEMENTATION.md` (temporary tracking)
+  - `docs/plans/archive/` (old version-specific plans)
+- **Cleaned .gitignore** – Removed duplicate entries, kept `docker/` and `infrastructure/` tracked (useful deployment templates)
+- **Untracked generated files** – `report/jscpd-report.json` now properly excluded
+
+### Changes
+
+#### Backend
+
+- **`src/agentic_fleet/utils/`**: Reorganized into `infra/`, `storage/`, and `cfg/` subpackages.
+- **Import paths**: Updated all imports from `config` to `cfg` module for consistency.
+- **`evaluate_routing` function**: Enhanced with detailed docstring and type hinting.
+- **`optimize_reasoner` script**: Updated import paths for clarity.
+- **`ChatSSEService`**: Streamlined `workflow_id` handling; added session creation assertion.
+- **`DSPyService`**: Cleaner async task creation in `compile_module_async`.
+
+#### Frontend
+
+- **`src/frontend/src/components/ui/`**: Added Skeleton, Tabs, Textarea, Tooltip components.
+- **`src/frontend/src/contexts/`**: Added ThemeContext for centralized theme management.
+
+#### Documentation
+
+- **`docs/plans/2025-12-15-frontend-restructure-design.md`** (NEW): Approved design for feature-based frontend structure.
+- **`provision_cosmos` script**: Updated documentation with usage examples and container descriptions.
+
+#### Tests
+
+- **`test_phase3_phase4_integration`**: Added assertions to ensure cache retrieval.
+
+### Migration Notes
+
+- **Update imports**: `from agentic_fleet.utils.config` → `from agentic_fleet.utils.cfg`
+- **Legacy compatibility**: Re-exports maintained in package `__init__.py` files for backward compatibility.
+- **No breaking changes**: Existing workflows continue to work without modification.
+
+---
+
 ## v0.6.9 (2025-12-07) – DSPy Typed Signatures, Workflow Refactor & Docs
 
 ### Highlights
