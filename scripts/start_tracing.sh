@@ -32,7 +32,6 @@ ${DOCKER_COMPOSE} -f docker/docker-compose.tracing.yml up -d
 echo "✅ Collector started!"
 echo ""
 
-# Wait for collector to be ready
 echo "⏳ Waiting for collector to be ready..."
 # Wait for collector to be ready
 echo "⏳ Waiting for collector to be ready..."

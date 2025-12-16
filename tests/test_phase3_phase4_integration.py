@@ -133,6 +133,8 @@ class TestPhase4Integration:
         result1 = await cache.get(conv1_key)
         result2 = await cache.get(conv2_key)
 
+        assert result1 is not None
+        assert result2 is not None
         assert result1["agent"] == "analyst"
         assert result2["agent"] == "researcher"
 

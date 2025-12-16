@@ -234,13 +234,12 @@ class DSPyService:
         valid_modules = {"reasoner", "quality", "nlu"}
         if module_name not in valid_modules:
             raise ValueError(
-                f"Invalid module_name '{module_name}'. "
-                f"Must be one of: {', '.join(valid_modules)}"
+                f"Invalid module_name '{module_name}'. Must be one of: {', '.join(valid_modules)}"
             )
 
         logger.info("Starting async compilation for module: %s", module_name)
 
-        def _compile_sync():
+        def _compile_sync() -> dict[str, Any]:
             """Synchronous compilation wrapper for executor."""
             callback = NullProgressCallback()
 
@@ -285,6 +284,8 @@ class DSPyService:
                     "compiled": result is not None,
                 }
 
+            raise ValueError(f"Unexpected module name: {module_name}")
+
         # Run compilation in executor to avoid blocking
         loop = asyncio.get_event_loop()
         result = await loop.run_in_executor(None, _compile_sync)
@@ -312,9 +313,7 @@ class DSPyService:
         logger.info("Starting parallel compilation for modules: %s", modules)
 
         # Create compilation tasks
-        tasks = [
-            self.compile_module_async(module, use_cache, optimizer) for module in modules
-        ]
+        tasks = [self.compile_module_async(module, use_cache, optimizer) for module in modules]
 
         # Execute in parallel
         results = await asyncio.gather(*tasks, return_exceptions=True)

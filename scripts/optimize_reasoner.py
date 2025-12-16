@@ -11,9 +11,9 @@ if _SRC_PATH not in sys.path:
 import yaml  # noqa: E402
 from dotenv import load_dotenv  # noqa: E402
 
+from agentic_fleet.dspy_modules.lifecycle import configure_dspy_settings  # noqa: E402
 from agentic_fleet.dspy_modules.reasoner import DSPyReasoner  # noqa: E402
 from agentic_fleet.dspy_modules.reasoner_utils import get_reasoner_source_hash  # noqa: E402
-from agentic_fleet.utils.dspy_manager import configure_dspy_settings  # noqa: E402
 from agentic_fleet.utils.gepa_optimizer import (  # noqa: E402
     optimize_with_gepa,
     prepare_gepa_datasets,

@@ -140,10 +140,13 @@ class ChatSSEService:
                 task=message,
                 reasoning_effort=reasoning_effort,
             )
+            # Type narrowing: session is guaranteed non-None after create_session
+            assert session is not None, "Session creation failed"
+            workflow_id = session.workflow_id
 
             # Store cancel event for this workflow
-            self._cancel_events[session.workflow_id] = cancel_event
-            self._pending_responses[session.workflow_id] = asyncio.Queue()
+            self._cancel_events[workflow_id] = cancel_event
+            self._pending_responses[workflow_id] = asyncio.Queue()
 
             # Emit connected event
             connected_type = StreamEventType.CONNECTED
@@ -157,7 +160,7 @@ class ChatSSEService:
                 },
                 category=connected_category,
                 ui_hint=connected_ui_hint,
-                workflow_id=session.workflow_id,
+                workflow_id=workflow_id,
             )
             yield f"data: {json.dumps(connected_event.to_sse_dict())}\n\n"
 
@@ -170,7 +173,7 @@ class ChatSSEService:
             response_completed_emitted = False
 
             await self.session_manager.update_status(
-                session.workflow_id,
+                workflow_id,
                 WorkflowStatus.RUNNING,
                 started_at=datetime.now(),
             )
@@ -179,7 +182,7 @@ class ChatSSEService:
                 "reasoning_effort": reasoning_effort,
                 "thread": conversation_thread,
                 "conversation_history": conversation_history,
-                "workflow_id": session.workflow_id,
+                "workflow_id": workflow_id,
                 "schedule_quality_eval": False,
             }
 
@@ -188,7 +191,7 @@ class ChatSSEService:
 
             async for event in self.workflow.run_stream(message, **stream_kwargs):
                 if cancel_event.is_set():
-                    logger.info("SSE stream cancelled: workflow_id=%s", session.workflow_id)
+                    logger.info("SSE stream cancelled: workflow_id=%s", workflow_id)
                     break
 
                 stream_event, accumulated_reasoning = map_workflow_event(
@@ -199,8 +202,8 @@ class ChatSSEService:
 
                 events_to_emit = stream_event if isinstance(stream_event, list) else [stream_event]
                 for se in events_to_emit:
-                    se.workflow_id = session.workflow_id
-                    log_line = _log_stream_event(se, session.workflow_id)
+                    se.workflow_id = workflow_id
+                    log_line = _log_stream_event(se, workflow_id)
                     if log_line:
                         se.log_line = log_line
 
@@ -249,9 +252,9 @@ class ChatSSEService:
                     data={"quality_pending": True},
                     category=comp_category,
                     ui_hint=comp_ui,
-                    workflow_id=session.workflow_id,
+                    workflow_id=workflow_id,
                 )
-                completed_event.log_line = _log_stream_event(completed_event, session.workflow_id)
+                completed_event.log_line = _log_stream_event(completed_event, workflow_id)
                 yield f"data: {json.dumps(completed_event.to_sse_dict())}\n\n"
 
             # Persist assistant message
@@ -263,7 +266,7 @@ class ChatSSEService:
                     final_text,
                     author=last_author,
                     agent_id=last_agent_id,
-                    workflow_id=session.workflow_id,
+                    workflow_id=workflow_id,
                     quality_pending=True,
                 )
 
@@ -274,7 +277,7 @@ class ChatSSEService:
                 and self.workflow.history_manager is not None
             ):
                 schedule_quality_evaluation(
-                    workflow_id=session.workflow_id,
+                    workflow_id=workflow_id,
                     task=message,
                     answer=final_text,
                     history_manager=self.workflow.history_manager,
@@ -288,7 +291,7 @@ class ChatSSEService:
                 WorkflowStatus.CANCELLED if cancel_event.is_set() else WorkflowStatus.COMPLETED
             )
             await self.session_manager.update_status(
-                session.workflow_id,
+                workflow_id,
                 final_status,
                 completed_at=datetime.now(),
             )
@@ -300,7 +303,7 @@ class ChatSSEService:
                 type=done_type,
                 category=done_category,
                 ui_hint=done_ui_hint,
-                workflow_id=session.workflow_id,
+                workflow_id=workflow_id,
             )
             yield f"data: {json.dumps(done_event.to_sse_dict())}\n\n"
 

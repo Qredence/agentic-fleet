@@ -7,14 +7,23 @@ from dotenv import load_dotenv
 # Add src to path
 sys.path.append(str(Path(__file__).parents[1] / "src"))
 
+from agentic_fleet.dspy_modules.lifecycle import configure_dspy_settings
 from agentic_fleet.dspy_modules.reasoner import DSPyReasoner
-from agentic_fleet.utils.dspy_manager import configure_dspy_settings
 from agentic_fleet.utils.logger import setup_logger
 
 logger = setup_logger("evaluate_routing")
 
 
-def evaluate_routing():
+def evaluate_routing() -> None:
+    """
+    Evaluate routing accuracy against golden dataset.
+
+    Loads examples from golden_dataset.json, runs DSPyReasoner routing,
+    compares predictions against ground truth, and generates a Markdown report
+    with agent assignment accuracy and execution mode accuracy metrics.
+
+    Report is written to evaluation_report.md.
+    """
     load_dotenv()
     configure_dspy_settings(model="gpt-4.1-mini")
 

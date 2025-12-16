@@ -2,7 +2,7 @@ from unittest.mock import MagicMock
 
 from agentic_fleet.dspy_modules.reasoner_utils import is_time_sensitive_task
 from agentic_fleet.workflows.helpers import FastPathDetector
-from agentic_fleet.workflows.narrator import EventNarrator
+from agentic_fleet.workflows.narrator import EventNarrator, WorkflowEvent
 
 # --- FastPathDetector Tests ---
 
@@ -58,8 +58,8 @@ def test_event_narrator_mock():
     narrator.generate_narrative = MagicMock(return_value=MagicMock(narrative="Mock narrative"))
 
     events = [
-        {"timestamp": "10:00", "type": "task", "data": "start task"},
-        {"timestamp": "10:01", "type": "completion", "data": "done"},
+        WorkflowEvent(timestamp="10:00", type="task", data={"action": "start task"}),
+        WorkflowEvent(timestamp="10:01", type="completion", data={"status": "done"}),
     ]
 
     # We invoke forward directly or via call if mocked properly at class level
