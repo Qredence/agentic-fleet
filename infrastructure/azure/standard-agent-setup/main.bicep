@@ -31,9 +31,6 @@ param tags object = {
 }
 
 // Variables
-var subscriptionId = subscription().subscriptionId
-var resourceGroupName = resourceGroup().name
-var cosmosDbAccountName = last(split(cosmosDBResourceId, '/'))
 var storageAccountName = last(split(storageAccountResourceId, '/'))
 var searchServiceName = last(split(aiSearchResourceId, '/'))
 
@@ -153,10 +150,6 @@ resource projectCapabilityHost 'Microsoft.CognitiveServices/accounts/projects/ca
   parent: project
   dependsOn: [
     accountCapabilityHost
-    cosmosDbConnection
-    storageConnection
-    searchConnection
-    keyVaultConnection
   ]
   properties: {
     capabilityHostKind: 'Agents'

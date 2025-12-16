@@ -3,7 +3,7 @@ version: "3.8"
 services:
   # OpenTelemetry Collector with Jaeger backend
   jaeger:
-    image: jaegertracing/all-in-one:latest
+    image: jaegertracing/all-in-one:1.76.0
     container_name: agentic-fleet-jaeger
     environment:
       - COLLECTOR_OTLP_ENABLED=true

@@ -42,11 +42,11 @@ env/
 .serena/
 .playwright-mcp/
 .trae/
-docker/
-infrastructure/
-report/
 .gemini/
 .kilocode/
+
+# Generated reports
+report/
 
 # Environment variables
 .env
@@ -119,8 +119,6 @@ memory-bank/
 .factory/skills/python-backend-reviewer/scripts/complexity_analyzer.py
 .factory/skills/python-backend-reviewer/scripts/concurrency_analyzer.py
 .factory/skills/python-backend-reviewer/scripts/detect_duplicates.py
-report/jscpd-report.json
-report/jscpd-report.json
 .claude/skills/change-log-generator/SKILL.md
 .claude/skills/feature-dev/README.md
 .claude/skills/feature-dev/.claude-plugin/plugin.json
@@ -136,8 +134,4 @@ report/jscpd-report.json
 .claude/skills/python-backend-reviewer/scripts/complexity_analyzer.py
 .claude/skills/python-backend-reviewer/scripts/concurrency_analyzer.py
 .claude/skills/python-backend-reviewer/scripts/detect_duplicates.py
-docker/docker-compose.tracing.yml
-report/jscpd-report.json
 .claude/python-backend-reviewer.skill
-docker/docker-compose.tracing.yml
-docker/docker-compose.tracing.yml
