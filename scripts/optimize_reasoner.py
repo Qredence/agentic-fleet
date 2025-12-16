@@ -1,24 +1,16 @@
 import json
 import logging
-import sys
 from pathlib import Path
-
-# Ensure local `src/` is importable when running as a script from a fresh checkout.
-_SRC_PATH = str(Path(__file__).resolve().parents[1] / "src")
-if _SRC_PATH not in sys.path:
-    sys.path.insert(0, _SRC_PATH)
-
-import yaml  # noqa: E402
-from dotenv import load_dotenv  # noqa: E402
-
-from agentic_fleet.dspy_modules.lifecycle import configure_dspy_settings  # noqa: E402
-from agentic_fleet.dspy_modules.reasoner import DSPyReasoner  # noqa: E402
-from agentic_fleet.dspy_modules.reasoner_utils import get_reasoner_source_hash  # noqa: E402
-from agentic_fleet.utils.gepa_optimizer import (  # noqa: E402
+import yaml
+from dotenv import load_dotenv
+from agentic_fleet.dspy_modules.lifecycle import configure_dspy_settings
+from agentic_fleet.dspy_modules.reasoner import DSPyReasoner
+from agentic_fleet.dspy_modules.reasoner_utils import get_reasoner_source_hash
+from agentic_fleet.utils.gepa_optimizer import (
     optimize_with_gepa,
     prepare_gepa_datasets,
 )
-from agentic_fleet.utils.logger import setup_logger  # noqa: E402
+from agentic_fleet.utils.logger import setup_logger
 
 logger: logging.Logger = setup_logger("optimize_reasoner")
 
