@@ -189,6 +189,7 @@ def _validate_dspy_version_compatibility(metadata: ArtifactMetadata) -> tuple[bo
             try:
                 return Version(v)
             except InvalidVersion:
+                logger.warning("Invalid version string encountered: '%s'. Falling back to Version('0').", v)
                 return Version("0")
 
         current = parse_version(current_version)
