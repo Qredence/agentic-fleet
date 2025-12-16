@@ -1224,12 +1224,11 @@ class DSPyReasoner(dspy.Module):
                 # If eviction fails for any reason, fall back to clearing to avoid unbounded growth.
                 self._routing_cache.clear()
 
-        # Store the new entry and move to end (most recently used)
+        # Store the new entry (OrderedDict automatically places it at the end)
         self._routing_cache[cache_key] = {
             "result": result,
             "timestamp": time.time(),
         }
-        self._routing_cache.move_to_end(cache_key)
 
     def clear_routing_cache(self) -> None:
         """Clear the routing cache."""
