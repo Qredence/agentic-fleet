@@ -1,83 +1,464 @@
-# AgenticFleet Overview
+# Understanding AgenticFleet
 
-## What is AgenticFleet?
+Welcome to AgenticFleet! This guide will help you understand what AgenticFleet is, why it exists, and how it works under the hood.
 
-AgenticFleet is a production-oriented **agentic workflow framework**: it helps you route a user request to the
-right mix of specialized agents and tools, execute the work, and return a high-quality final answer with
-traceable logs and history.
+## The Problem: Why Single LLM Calls Aren't Enough
 
-At its core, AgenticFleet combines:
+Imagine you ask an AI assistant: _"Research the latest AI regulations in Europe, analyze their impact on tech startups, and write a comprehensive report with recommendations."_
 
-- **DSPy** for structured reasoning, routing decisions, progress/quality evaluation, and offline optimization.
-- **Microsoft agent-framework** for reliable agent execution, tool invocation, and orchestration mechanics.
+A single LLM call struggles with this because:
 
-## What problems does it solve?
+- **Knowledge cutoff**: The model may not have current information
+- **No tool access**: It can't search the web or run calculations
+- **Context limits**: Complex tasks overflow context windows
+- **No verification**: No way to check accuracy or completeness
+- **One-shot answers**: No iteration or refinement
 
-AgenticFleet is designed for teams building systems where a single LLM call is not enough:
+You could try to work around this by:
 
-- Multi-step tasks that need **planning + execution + verification**
-- Tool-using assistants (web search, code execution, MCP bridges)
-- Workflows that must be **observable** (logs, traces, history) and tunable over time
-- Systems that should run quickly for simple prompts but still scale up to complex requests
+1. Breaking the task into multiple prompts manually
+2. Copy-pasting outputs between prompts
+3. Manually deciding what to do next
 
-## Typical use cases
+But this is tedious, error-prone, and doesn't scale.
 
-### 1) Internal “Ops Copilot” / Engineering assistant
+**What if the AI could do this automatically?**
 
-- Triage incidents, draft postmortems, summarize logs, propose mitigations
-- Generate PR descriptions, release notes, and migration checklists
+---
 
-### 2) Research + synthesis pipelines
+## The Solution: AgenticFleet
 
-- Time-sensitive research (when a web-search tool is available)
-- Compare sources, extract key points, produce concise briefs
+AgenticFleet is a **multi-agent orchestration system** that automatically:
 
-### 3) Data / analysis workflows
+1. **Analyzes** your task to understand what's needed
+2. **Routes** it to specialized AI agents with the right tools
+3. **Executes** the work (in parallel, sequence, or delegation)
+4. **Evaluates** progress and quality
+5. **Returns** a polished, verified result
 
-- Quick calculations, data transformations, and report drafts
-- “Explain my results” or “find anomalies” style tasks (depending on enabled tools)
+Think of it like a **smart team lead** who:
 
-### 4) Documentation and knowledge workflows
+- Receives your request
+- Figures out who should work on it
+- Coordinates the team
+- Reviews the output before delivering it
 
-- Turn rough notes into structured docs
-- Maintain consistent style and completeness via quality scoring and iteration
+### What Makes AgenticFleet Different?
 
-### 5) Evaluation and self-improvement loops
+AgenticFleet combines two powerful technologies:
 
-- Use execution history to evaluate performance over time
-- Harvest high-quality runs to improve routing/decision quality offline
+| Technology                    | What It Does                                                    |
+| ----------------------------- | --------------------------------------------------------------- |
+| **DSPy**                      | Intelligent routing and decision-making that improves over time |
+| **Microsoft Agent Framework** | Reliable agent execution with tools and orchestration           |
 
-## How it works (high level)
+This combination gives you:
 
-Most requests follow a 5-phase pipeline:
+- ✅ **Smart routing** – Tasks go to the right agents automatically
+- ✅ **Tool integration** – Web search, code execution, and more
+- ✅ **Quality assurance** – Built-in scoring and refinement
+- ✅ **Self-improvement** – Learns from execution history
+- ✅ **Full observability** – Traces, logs, and history for debugging
 
-`analysis → routing → execution → progress → quality`
+---
 
-- **Analysis**: understand the request and constraints.
-- **Routing**: choose the execution mode and agents/tools to use.
-- **Execution**: run agents (delegated / sequential / parallel).
-- **Progress**: decide if the task is complete or needs another iteration.
-- **Quality**: score the output, record missing items, and optionally refine (if enabled).
+## How AgenticFleet Works
 
-Simple prompts may take a fast-path to reduce latency.
+### The 5-Phase Pipeline
 
-For interactive sessions, AgenticFleet also supports:
+Every task flows through a **5-phase pipeline**:
 
-- **Multi-turn continuity**: follow-up turns in the same conversation are executed with thread/history context.
-- **Human-in-the-loop (HITL)**: workflows can pause on request events until a user responds.
-- **Checkpoint resume**: interrupted runs can be resumed using agent-framework checkpoint semantics (resume requires a `checkpoint_id`).
+```
+┌─────────────────────────────────────────────────────────────────────────┐
+│                         YOUR TASK ENTERS HERE                           │
+└─────────────────────────────────────────────────────────────────────────┘
+                                    │
+                                    ▼
+┌─────────────────────────────────────────────────────────────────────────┐
+│  PHASE 1: ANALYSIS                                                      │
+│  ─────────────────                                                      │
+│  • What is this task asking for?                                        │
+│  • How complex is it? (simple/moderate/complex)                         │
+│  • What capabilities are needed? (research, coding, writing...)         │
+│  • What tools might help? (web search, code execution...)               │
+└─────────────────────────────────────────────────────────────────────────┘
+                                    │
+                                    ▼
+┌─────────────────────────────────────────────────────────────────────────┐
+│  PHASE 2: ROUTING                                                       │
+│  ────────────────                                                       │
+│  • Which agents should handle this?                                     │
+│  • What execution mode? (delegated/sequential/parallel)                 │
+│  • How should subtasks be structured?                                   │
+│  • What's the expected approach?                                        │
+└─────────────────────────────────────────────────────────────────────────┘
+                                    │
+                                    ▼
+┌─────────────────────────────────────────────────────────────────────────┐
+│  PHASE 3: EXECUTION                                                     │
+│  ──────────────────                                                     │
+│  • Agents receive their assignments                                     │
+│  • Tools are invoked as needed (search, compute, etc.)                  │
+│  • Results are collected and combined                                   │
+│  • Progress events stream in real-time                                  │
+└─────────────────────────────────────────────────────────────────────────┘
+                                    │
+                                    ▼
+┌─────────────────────────────────────────────────────────────────────────┐
+│  PHASE 4: PROGRESS                                                      │
+│  ────────────────                                                       │
+│  • Is the task complete?                                                │
+│  • Does it need another iteration?                                      │
+│  • Are there missing pieces?                                            │
+│  • Should we continue or finalize?                                      │
+└─────────────────────────────────────────────────────────────────────────┘
+                                    │
+                                    ▼
+┌─────────────────────────────────────────────────────────────────────────┐
+│  PHASE 5: QUALITY                                                       │
+│  ───────────────                                                        │
+│  • Score the output (0-10 scale)                                        │
+│  • Identify missing elements                                            │
+│  • Suggest improvements                                                 │
+│  • Optionally trigger refinement                                        │
+└─────────────────────────────────────────────────────────────────────────┘
+                                    │
+                                    ▼
+┌─────────────────────────────────────────────────────────────────────────┐
+│                         FINAL RESULT DELIVERED                          │
+└─────────────────────────────────────────────────────────────────────────┘
+```
 
-## What you get out of the box
+### Simple Tasks Get a Fast Path
 
-- CLI (`agentic-fleet`) for running tasks and dev servers
-- YAML config (`config/workflow_config.yaml`) for models, routing, timeouts, and tool/agent settings
-- Runtime artifacts under `.var/` (logs, JSONL history, evaluation outputs, caches)
-- Developer docs in `docs/` (architecture, tracing, optimization, testing)
+Not every task needs the full pipeline. AgenticFleet detects simple queries like:
 
-## Where to go next
+- "Hello!"
+- "What is 2 + 2?"
+- "Define machine learning"
 
-- Start here: `docs/users/getting-started.md`
-- Configure behavior: `docs/users/configuration.md`
-- Day-to-day usage: `docs/users/user-guide.md`
-- Commands at a glance: `docs/guides/quick-reference.md`
-- Architecture details: `docs/developers/architecture.md`
+These bypass the pipeline for **instant responses** (under 1 second).
+
+---
+
+## Core Concepts
+
+### Agents: Your Specialized Team
+
+AgenticFleet includes **9 specialized agents**, each with specific expertise:
+
+| Agent          | Expertise             | Tools               | Best For                             |
+| -------------- | --------------------- | ------------------- | ------------------------------------ |
+| **Researcher** | Information gathering | Web search (Tavily) | Finding current info, fact-checking  |
+| **Analyst**    | Data processing       | Code interpreter    | Calculations, data analysis, charts  |
+| **Writer**     | Content creation      | None                | Reports, summaries, documentation    |
+| **Reviewer**   | Quality assurance     | None                | Fact-checking, validation, critique  |
+| **Coder**      | Code generation       | Code interpreter    | Writing code, debugging, refactoring |
+| **Planner**    | Task decomposition    | None                | Breaking down complex tasks          |
+| **Executor**   | Task execution        | Various             | Running specific actions             |
+| **Verifier**   | Output validation     | None                | Checking correctness                 |
+| **Generator**  | Creative content      | None                | Brainstorming, ideation              |
+
+**Why specialized agents?**
+
+Just like a real team, specialists are better than generalists for specific tasks:
+
+- A **Researcher** with web search tools finds current information faster
+- An **Analyst** with code execution can actually run calculations
+- A **Writer** focused on prose produces better content
+
+### Tools: Agent Superpowers
+
+Agents can use **tools** to extend their capabilities:
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                        TOOL REGISTRY                            │
+├─────────────────────────────────────────────────────────────────┤
+│                                                                 │
+│  TavilySearchTool          HostedCodeInterpreterTool           │
+│  ─────────────────         ─────────────────────────           │
+│  • Real-time web search    • Python code execution             │
+│  • With citations          • Data processing                   │
+│  • Current events          • Visualizations                    │
+│  • Fact verification       • Calculations                      │
+│                                                                 │
+│  Used by: Researcher       Used by: Analyst, Coder             │
+│                                                                 │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+**Tool-aware routing**: DSPy automatically considers which tools are needed when assigning tasks. If your task requires web search, it routes to an agent with `TavilySearchTool`.
+
+### Execution Modes: How Work Gets Done
+
+AgenticFleet supports **6 execution modes**:
+
+#### 1. Auto Mode (Default)
+
+Let DSPy decide the best approach based on task analysis.
+
+#### 2. Delegated Mode
+
+**One agent handles everything.**
+
+```
+Task ──► Single Agent ──► Result
+```
+
+Best for: Simple, focused tasks that fit one agent's expertise.
+
+**Example**: "Write a haiku about coding" → Writer agent handles it alone.
+
+#### 3. Sequential Mode
+
+**Agents work in order, passing results forward.**
+
+```
+Task ──► Agent 1 ──► Agent 2 ──► Agent 3 ──► Result
+```
+
+Best for: Multi-step tasks where each step builds on the previous.
+
+**Example**: "Research AI trends, analyze the data, write a report"
+
+- Researcher gathers information
+- Analyst processes the data
+- Writer creates the report
+
+#### 4. Parallel Mode
+
+**Agents work simultaneously, results are combined.**
+
+```
+         ┌──► Agent 1 ──┐
+Task ────┼──► Agent 2 ──┼──► Combine ──► Result
+         └──► Agent 3 ──┘
+```
+
+Best for: Independent subtasks that can run concurrently.
+
+**Example**: "Analyze our sales data AND research competitor pricing"
+
+- Analyst processes sales data (simultaneously)
+- Researcher finds competitor info (simultaneously)
+- Results combined at the end
+
+#### 5. Handoff Mode
+
+**Agents pass control directly to each other.**
+
+```
+Task ──► Triage ──► Specialist A ──► Specialist B ──► Result
+```
+
+Best for: Linear tasks where speed is priority.
+
+#### 6. Discussion Mode
+
+**Agents collaborate in a group chat.**
+
+Best for: Complex problems requiring multiple perspectives.
+
+### DSPy Intelligence: The Brain Behind Routing
+
+**DSPy** (Declarative Self-improving Python) is what makes AgenticFleet smart. It:
+
+1. **Analyzes tasks** using structured reasoning
+2. **Makes routing decisions** based on learned patterns
+3. **Evaluates quality** of outputs
+4. **Improves over time** from execution history
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                      DSPy REASONER                              │
+├─────────────────────────────────────────────────────────────────┤
+│                                                                 │
+│  Signatures (What to decide)                                    │
+│  ──────────────────────────                                     │
+│  • TaskAnalysis: Understand complexity and requirements         │
+│  • TaskRouting: Choose agents and execution mode                │
+│  • ProgressEvaluation: Is the task complete?                    │
+│  • QualityAssessment: Score and critique output                 │
+│                                                                 │
+│  Optimization (How it improves)                                 │
+│  ────────────────────────────                                   │
+│  • Learns from training examples                                │
+│  • Caches successful routing patterns                           │
+│  • Uses typed Pydantic models for reliability                   │
+│  • Validates decisions with assertions                          │
+│                                                                 │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+---
+
+## Real-World Use Cases
+
+### Use Case 1: Research Assistant
+
+**Task**: "What are the latest developments in quantum computing this month?"
+
+**What happens**:
+
+1. **Analysis**: Detects need for current information → requires web search
+2. **Routing**: Assigns to Researcher (has TavilySearchTool) in delegated mode
+3. **Execution**: Researcher searches web, gathers sources, synthesizes findings
+4. **Quality**: Scores output, checks for completeness and citations
+
+**Result**: A well-sourced summary with citations to recent articles.
+
+### Use Case 2: Data Analysis Pipeline
+
+**Task**: "Calculate the average customer lifetime value from this data and visualize the trend."
+
+**What happens**:
+
+1. **Analysis**: Detects need for computation and visualization → requires code
+2. **Routing**: Assigns to Analyst (has HostedCodeInterpreterTool)
+3. **Execution**: Analyst writes Python code, runs calculations, generates chart
+4. **Quality**: Verifies calculations, checks visualization quality
+
+**Result**: Numerical analysis with a generated chart.
+
+### Use Case 3: Multi-Step Report
+
+**Task**: "Research EU AI regulations, analyze their impact on startups, and write a strategic brief."
+
+**What happens**:
+
+1. **Analysis**: Complex multi-step task requiring research + analysis + writing
+2. **Routing**: Sequential mode: Researcher → Analyst → Writer
+3. **Execution**:
+   - Researcher finds current regulation info
+   - Analyst processes implications
+   - Writer synthesizes into brief
+4. **Quality**: Comprehensive review for completeness
+
+**Result**: A polished strategic brief with research backing.
+
+### Use Case 4: Parallel Information Gathering
+
+**Task**: "Get current Bitcoin price AND analyze historical volatility."
+
+**What happens**:
+
+1. **Analysis**: Two independent subtasks
+2. **Routing**: Parallel mode: Researcher + Analyst
+3. **Execution**: Both work simultaneously
+4. **Quality**: Combined results reviewed
+
+**Result**: Faster completion than sequential execution.
+
+---
+
+## What You Get Out of the Box
+
+### Command-Line Interface
+
+```bash
+agentic-fleet run -m "Your task here"     # Run a task
+agentic-fleet dev                          # Start dev servers
+agentic-fleet list-agents                  # See available agents
+```
+
+### Web Interface
+
+```bash
+agentic-fleet dev
+# Opens at http://localhost:5173
+```
+
+Features:
+
+- Real-time streaming responses
+- Workflow visualization
+- Conversation history
+- Agent activity display
+
+### Configuration
+
+All settings in one place: `config/workflow_config.yaml`
+
+```yaml
+dspy:
+  model: gpt-4.1 # Model for routing decisions
+  enable_routing_cache: true # Cache routing for speed
+
+workflow:
+  max_rounds: 15 # Prevent infinite loops
+  enable_streaming: true # Real-time updates
+
+agents:
+  researcher:
+    model: gpt-4.1-mini # Per-agent model override
+    tools: [TavilySearchTool]
+```
+
+### Observability
+
+Everything is logged and traceable:
+
+```
+.var/
+├── logs/
+│   ├── execution_history.jsonl  # All executions
+│   ├── workflow.log             # Runtime logs
+│   └── gepa/                    # Optimization logs
+└── cache/
+    └── dspy/                    # Compiled modules
+```
+
+---
+
+## Key Takeaways
+
+1. **AgenticFleet automates multi-agent coordination** – No more manual prompt chaining
+2. **5-phase pipeline ensures quality** – Analysis → Routing → Execution → Progress → Quality
+3. **Specialized agents with tools** – Right expert for each job
+4. **Multiple execution modes** – Delegated, sequential, parallel, and more
+5. **DSPy makes it smart** – Learns and improves from history
+6. **Full observability** – Logs, traces, and history for debugging
+
+---
+
+## Next Steps
+
+Now that you understand how AgenticFleet works:
+
+1. **[Getting Started](getting-started.md)** – Install and run your first task
+2. **[User Guide](user-guide.md)** – Deep dive into features
+3. **[Configuration](configuration.md)** – Customize behavior
+4. **[Troubleshooting](troubleshooting.md)** – Common issues and solutions
+
+---
+
+## Frequently Asked Questions
+
+### How is this different from just using ChatGPT?
+
+ChatGPT is a single model responding to prompts. AgenticFleet:
+
+- Uses multiple specialized agents
+- Has tools (web search, code execution)
+- Automatically routes tasks to the right expert
+- Evaluates and refines output quality
+- Learns from execution history
+
+### Do I need multiple API keys?
+
+Only **OpenAI API key** is required. Tavily API key is optional but recommended for web search capabilities.
+
+### How fast is it?
+
+- **Simple tasks**: Under 1 second (fast path)
+- **Standard tasks**: 30-60 seconds
+- **Complex multi-step tasks**: 2-5 minutes
+
+### Can I add custom agents?
+
+Yes! Add agent configuration to `workflow_config.yaml` and prompts to `agents/prompts.py`. See the [User Guide](user-guide.md#adding-custom-tools) for details.
+
+### Does it work offline?
+
+No, it requires API access to language models (OpenAI). However, DSPy modules are compiled once and cached locally for faster subsequent runs.

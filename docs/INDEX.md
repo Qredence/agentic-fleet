@@ -28,8 +28,16 @@ make dev
 
 User-facing documentation for using the framework:
 
-1. **[Getting Started](users/getting-started.md)** - Installation, setup, and first steps
-2. **[Overview](users/overview.md)** - What AgenticFleet is and common use cases
+1. **[Getting Started](users/getting-started.md)** - Your first task in 5 minutes
+   - Step-by-step installation
+   - "Hello World" tutorial with explanation
+   - Progressive examples (simple → research → multi-step → parallel)
+   - Understanding output and quality scores
+2. **[Overview](users/overview.md)** - Deep dive into how AgenticFleet works
+   - The problem AgenticFleet solves
+   - The 5-phase pipeline explained with diagrams
+   - Core concepts: Agents, Tools, Execution Modes
+   - Real-world use cases with walkthroughs
 3. **[User Guide](users/user-guide.md)** - Complete usage guide
    - Core concepts and features
    - Usage patterns and examples
@@ -70,33 +78,41 @@ User-facing documentation for using the framework:
 
 Developer-facing documentation for extending and contributing:
 
-1. **[Architecture](developers/architecture.md)** - System architecture
+1. **[System Overview](developers/system-overview.md)** - Comprehensive technical guide
+   - Purpose and scope of AgenticFleet
+   - Complete system architecture with diagrams
+   - Five-phase execution pipeline deep dive
+   - Agent system (Factory, Roles, Tools, Handoffs)
+   - DSPy integration (GEPA, Training, Self-improvement)
+   - User interfaces (CLI, Python API, Web Frontend)
+   - Observability (Events, OpenTelemetry, Middleware)
+2. **[Architecture](developers/architecture.md)** - System architecture
    - Component overview
    - Full-stack architecture diagram (Web + CLI)
    - Data flow
    - Module structure
    - DSPy integration
-2. **[Operations Runbook](developers/operations.md)** - Production operations
+3. **[Operations Runbook](developers/operations.md)** - Production operations
    - Backpressure / concurrency limits
    - Rate limiting guidance
    - Scaling considerations (WebSocket + state)
    - Production checklist
-3. **[API Reference](developers/api-reference.md)** - API documentation
+4. **[API Reference](developers/api-reference.md)** - API documentation
    - Core classes and methods
    - Type hints
    - Examples
    - Events and exceptions
-4. **[Testing](developers/testing.md)** - Testing guide
+5. **[Testing](developers/testing.md)** - Testing guide
    - Running tests
    - Writing tests
    - Test patterns
    - Debugging
-5. **[Contributing](developers/contributing.md)** - Development guidelines
+6. **[Contributing](developers/contributing.md)** - Development guidelines
    - Code style
    - Commit conventions
    - Pull request process
    - Adding features
-6. **[Code Quality](developers/code-quality.md)** - Code quality improvements
+7. **[Code Quality](developers/code-quality.md)** - Code quality improvements
    - Error handling enhancements
    - Type safety improvements
    - Caching optimizations
@@ -173,24 +189,39 @@ Detailed guides for specific features and workflows:
 ```
 docs/
 ├── INDEX.md                    # This file
+├── CHANGELOG.md                # Version history (symlink to root)
+├── PERFORMANCE_OPTIMIZATION.md # Performance analysis
+├── PROFILING_GUIDE.md          # Profiling utilities
 ├── users/                      # User-facing documentation
 │   ├── getting-started.md
+│   ├── overview.md             # What AgenticFleet is
 │   ├── user-guide.md
+│   ├── frontend.md             # Web interface guide
 │   ├── configuration.md
 │   ├── troubleshooting.md
 │   └── self-improvement.md
 ├── developers/                 # Developer documentation
+│   ├── system-overview.md      # Comprehensive technical guide (NEW)
 │   ├── architecture.md
 │   ├── api-reference.md
 │   ├── testing.md
 │   ├── contributing.md
+│   ├── code-quality.md
+│   ├── operations.md           # Production runbook
 │   └── internals/             # Internal documentation
 │       ├── tool-awareness.md
-│       └── handoffs.md
-└── guides/                     # Feature guides
-    ├── dspy-optimizer.md
-    ├── evaluation.md
-    ├── tracing.md
-    ├── logging-history.md
-    └── quick-reference.md
+│       ├── handoffs.md
+│       ├── AGENTS.md
+│       ├── ARCHITECTURE.md
+│       └── SYNERGY.md
+├── guides/                     # Feature guides
+│   ├── dspy-optimizer.md
+│   ├── dspy-agent-framework-integration.md
+│   ├── evaluation.md
+│   ├── tracing.md
+│   ├── logging-history.md
+│   └── quick-reference.md
+└── plans/                      # Implementation plans
+    ├── current.md              # Active/completed work
+    └── archive/                # Historical plans
 ```

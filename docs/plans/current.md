@@ -141,3 +141,108 @@ Align the frontend client, types, and state management with the existing FastAPI
 - Frontend can display rich agent lifecycle events (start, complete, thoughts).
 - Frontend API client covers all major backend endpoints.
 - Types are consistent between backend and frontend.
+
+---
+
+## Package Reorganization (Utils Subpackages)
+
+**Status**: Completed
+**Date**: 2025-12-16
+
+### Goal
+
+Reorganize `src/agentic_fleet/utils/` into focused subpackages for better maintainability and clearer separation of concerns.
+
+### Design Approach
+
+Split the monolithic `utils/` directory into domain-specific subpackages:
+
+- Infrastructure concerns (tracing, resilience, telemetry)
+- Storage concerns (Cosmos, persistence, history)
+- Configuration utilities
+
+### Changes Made
+
+#### New Package Structure
+
+```
+src/agentic_fleet/utils/
+├── __init__.py          # Re-exports for backward compatibility
+├── infra/               # Infrastructure concerns
+│   ├── __init__.py
+│   ├── tracing.py       # OpenTelemetry tracing
+│   ├── resilience.py    # Circuit breakers, retries
+│   ├── telemetry.py     # Metrics and telemetry
+│   └── logging.py       # Logging setup
+├── storage/             # Data persistence
+│   ├── __init__.py
+│   ├── cosmos.py        # Azure Cosmos DB integration
+│   ├── persistence.py   # Local persistence
+│   └── history_manager.py # Execution history
+└── cfg/                 # Configuration
+    ├── __init__.py
+    ├── config_loader.py # YAML/env loading
+    └── config_schema.py # Pydantic schemas
+```
+
+#### Import Path Changes
+
+| Old Import                               | New Import                                   |
+| ---------------------------------------- | -------------------------------------------- |
+| `from agentic_fleet.utils.config`        | `from agentic_fleet.utils.cfg`               |
+| `from agentic_fleet.utils.config_loader` | `from agentic_fleet.utils.cfg.config_loader` |
+| `from agentic_fleet.utils.tracing`       | `from agentic_fleet.utils.infra.tracing`     |
+
+#### Backward Compatibility
+
+- Legacy imports continue to work via re-exports in `utils/__init__.py`
+- No breaking changes for existing code
+
+### Files Modified
+
+1. `src/agentic_fleet/utils/__init__.py` - Added re-exports for new subpackages
+2. `src/agentic_fleet/utils/cfg/__init__.py` - New package
+3. `src/agentic_fleet/utils/infra/__init__.py` - New package
+4. `src/agentic_fleet/utils/storage/__init__.py` - New package
+5. All files importing from `utils.config` - Updated to `utils.cfg`
+
+### Test Results
+
+- All 499+ tests passing
+- No regressions from restructuring
+- Import compatibility verified
+
+---
+
+## Frontend Restructure Design
+
+**Status**: Approved (Implementation Pending)
+**Date**: 2025-12-15
+**Document**: `docs/plans/2025-12-15-frontend-restructure-design.md`
+
+### Goal
+
+Reorganize frontend to feature-based structure for clarity and performance optimization readiness.
+
+### Problem Statement
+
+1. **Unclear file placement** - Developers unsure where new files should go
+2. **Performance issues** - 880KB main bundle, no code splitting
+3. **Inconsistent structure** - `blocks/` vs `prompt-kit/` distinction unclear
+4. **Duplicate folders** - Both `test/` and `tests/` exist
+
+### Solution
+
+Feature-based structure with:
+
+- `features/` - Domain-specific code (chat, dashboard)
+- `shared/` - Reusable components, hooks, utilities
+- `app/` - App shell and providers
+- `api/` - API layer (unchanged)
+
+### Next Steps
+
+- Implement file moves per migration plan
+- Add barrel exports for each feature
+- Update path aliases in Vite config
+- Enable code splitting with `React.lazy()`

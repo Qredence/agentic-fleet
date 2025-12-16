@@ -283,7 +283,18 @@ E --> F[Final output]
 
 ### CLI Run Flow
 
-```mermaid
+```graph TD
+  U[User] -->|agentic-fleet run -m "..."| CLI[CLI (agentic-fleet)]
+  CLI -->|run_stream(message)| WF[Supervisor Workflow]
+  WF -->|execute phases + tool calls| AG[Agents/Tools]
+  AG -->|results| WF
+  WF -->|StreamEvent| CLI
+  CLI -->|Render output/progress| U
+  WF -->|final output| CLI
+  CLI -->|exit 0| U
+```
+
+```
 sequenceDiagram
   participant U as User
   participant CLI as CLI (agentic-fleet)
@@ -385,21 +396,29 @@ async for event in workflow_agent.run_stream(task_msg):
     - `improve.py` - Self-improvement command
     - `evaluate.py` - Batch evaluation command
 
-- `src/utils/` - Utilities
-  - `compiler.py` - DSPy compilation with caching
-  - `config_loader.py` - Configuration loading
-  - `config_schema.py` - Configuration validation
-  - `dspy_manager.py` - DSPy settings and LM management
-  - `gepa_optimizer.py` - GEPA optimization utilities
-  - `history_manager.py` - Execution history management
-  - `logger.py` - Logging setup
-  - `models.py` - Data models and type definitions
-  - `self_improvement.py` - Self-improvement engine
-  - `tool_registry.py` - Tool metadata registry
-  - `tracing.py` - OpenTelemetry tracing integration
-  - `cache.py` - TTL cache utilities
-  - `constants.py` - Centralized constants and defaults
-  - `async_compiler.py` - Async compilation utilities
+- `src/utils/` - Utilities (organized into subpackages)
+  - `cfg/` - Configuration utilities
+    - `config_loader.py` - YAML/environment configuration loading
+    - `config_schema.py` - Pydantic configuration validation
+  - `infra/` - Infrastructure concerns
+    - `tracing.py` - OpenTelemetry tracing integration
+    - `resilience.py` - Circuit breakers, retries, fault tolerance
+    - `telemetry.py` - Metrics and telemetry collection
+    - `logging.py` - Structured logging setup
+  - `storage/` - Data persistence
+    - `cosmos.py` - Azure Cosmos DB integration
+    - `persistence.py` - Local file persistence
+    - `history_manager.py` - Execution history management
+  - Root utilities:
+    - `compiler.py` - DSPy compilation with caching
+    - `dspy_manager.py` - DSPy settings and LM management
+    - `gepa_optimizer.py` - GEPA optimization utilities
+    - `models.py` - Data models and type definitions
+    - `self_improvement.py` - Self-improvement engine
+    - `tool_registry.py` - Tool metadata registry
+    - `cache.py` - TTL cache utilities
+    - `constants.py` - Centralized constants and defaults
+    - `async_compiler.py` - Async compilation utilities
 
 - `src/tools/` - Tool implementations
   - `tavily_tool.py` - Tavily web search tool
