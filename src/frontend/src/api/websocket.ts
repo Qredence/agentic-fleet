@@ -351,7 +351,16 @@ export class ChatWebSocketService {
     this.clearHeartbeatTimer();
     this.heartbeatTimeout = setTimeout(() => {
       // If we haven't received anything in heartbeatInterval, connection may be dead
-      console.warn("WebSocket: Heartbeat timeout, connection may be stale");
+      console.warn(
+        "WebSocket: Heartbeat timeout, closing connection to trigger recovery",
+      );
+      if (
+        this.ws &&
+        (this.ws.readyState === WebSocket.OPEN ||
+          this.ws.readyState === WebSocket.CONNECTING)
+      ) {
+        this.ws.close(4000, "Heartbeat timeout"); // Custom code 4000 for heartbeat timeout
+      }
     }, this.options.heartbeatInterval + 10000); // Give extra buffer
   }
 
