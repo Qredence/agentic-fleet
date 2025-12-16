@@ -99,9 +99,7 @@ def _sanitize_log_input(value: str) -> str:
     # Truncate excessively long input for logging.
     if not isinstance(value, str):
         value = str(value)
-    sanitized = "".join(
-        ch for ch in value if 32 <= ord(ch) <= 126 and ch not in ("\r", "\n")
-    )
+    sanitized = "".join(ch for ch in value if 32 <= ord(ch) <= 126 and ch not in ("\r", "\n"))
     return sanitized[:256]
 
 
@@ -144,7 +142,9 @@ async def _get_or_create_thread(conversation_id: str | None) -> AgentThread | No
         new_thread = AgentThread()
         _conversation_threads[conversation_id] = (new_thread, now)
         _conversation_threads.move_to_end(conversation_id)
-        logger.debug("Created new conversation thread for: %s", _sanitize_log_input(conversation_id))
+        logger.debug(
+            "Created new conversation thread for: %s", _sanitize_log_input(conversation_id)
+        )
 
         # Evict oldest entries if capacity exceeded.
         while len(_conversation_threads) > _MAX_THREADS:
@@ -384,7 +384,6 @@ async def _event_generator(
             "schedule_quality_eval": False,
         }
 
-        is_resume = task is None
         run_task: str | None
         if task is _UNSET_TASK:
             run_task = session.task

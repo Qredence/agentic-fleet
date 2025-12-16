@@ -168,7 +168,6 @@ def _save_cache_metadata(
     metadata_path = cache_path + ".meta"
 
     # Phase 3: Capture DSPy version for compatibility validation
-    dspy_version = "unknown"
     with contextlib.suppress(Exception):
         dspy_version = getattr(dspy, "__version__", "unknown")
 

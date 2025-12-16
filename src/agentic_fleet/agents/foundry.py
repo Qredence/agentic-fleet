@@ -42,6 +42,56 @@ logger = setup_logger(__name__)
 FILE_AVAILABILITY_DELAY_SECONDS = 0.5
 
 
+def parse_connection_string_endpoint(raw: str) -> str:
+    """Extract a project endpoint URL from a raw env/config value.
+
+    The Foundry/AI Projects endpoint is sometimes provided directly as a URL, and
+    sometimes embedded in a semicolon-separated connection string (e.g.
+    "Endpoint=https://...;...".
+
+    This helper is intentionally defensive: it returns an empty string for empty
+    input, extracts common key names from key/value strings, and falls back to a
+    best-effort URL substring search.
+    """
+
+    value = (raw or "").strip()
+    if not value:
+        return ""
+
+    if value.startswith(("https://", "http://")):
+        return value
+
+    # Parse semicolon-separated key=value pairs.
+    parts = [p.strip() for p in value.split(";") if p.strip()]
+    kv: dict[str, str] = {}
+    for part in parts:
+        if "=" not in part:
+            continue
+        key, val = part.split("=", 1)
+        kv[key.strip().lower()] = val.strip().strip('"').strip("'")
+
+    for key in ("endpoint", "project_endpoint", "projectendpoint", "url"):
+        endpoint = kv.get(key)
+        if endpoint:
+            return endpoint
+
+    # Fallback: try to locate a URL substring.
+    for scheme in ("https://", "http://"):
+        idx = value.find(scheme)
+        if idx == -1:
+            continue
+        tail = value[idx:]
+        for sep in (";", " ", "\n", "\r", "\t"):
+            cut = tail.find(sep)
+            if cut != -1:
+                tail = tail[:cut]
+                break
+        return tail.strip().strip('"').strip("'")
+
+    # Last resort: return as-is.
+    return value
+
+
 @dataclass
 class FoundryAgentConfig:
     """Configuration for a Foundry-hosted agent."""

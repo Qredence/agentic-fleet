@@ -69,6 +69,7 @@ def _find_upwards(start: Path, marker: str) -> Path | None:
         current = current.parent
     return None
 
+
 def _search_bases() -> list[Path]:
     resolved = Path(__file__).resolve()
     # Find repo root by searching for pyproject.toml
@@ -87,10 +88,7 @@ def _search_bases() -> list[Path]:
         if current.parent == current:
             break
         current = current.parent
-    if last_with_init is not None:
-        package_root = last_with_init
-    else:
-        package_root = resolved.parents[-1]
+    package_root = last_with_init if last_with_init is not None else resolved.parents[-1]
     module_dir = resolved.parent
     return [repo_root, package_root, module_dir, Path.cwd()]
 

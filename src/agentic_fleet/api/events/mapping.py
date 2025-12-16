@@ -12,6 +12,7 @@ from typing import Any, Literal, TypedDict
 import yaml
 from agent_framework._workflows import (
     ExecutorCompletedEvent,
+    RequestInfoEvent,
     WorkflowOutputEvent,
     WorkflowStartedEvent,
     WorkflowStatusEvent,
@@ -41,7 +42,7 @@ logger = setup_logger(__name__)
 PriorityType = Literal["low", "medium", "high"]
 
 # Valid workflow state names for WorkflowStatusEvent processing
-VALID_WORKFLOW_STATES = {"FAILED", "IN_PROGRESS", "IDLE"}
+VALID_WORKFLOW_STATES = {"FAILED", "IN_PROGRESS", "IDLE", "COMPLETED", "CANCELLED"}
 
 
 class UIHintData(TypedDict):
@@ -422,11 +423,15 @@ def map_workflow_event(
         elif isinstance(state, str):
             state_name = state.upper()
         else:
-            logger.warning(f"Unrecognized workflow state type: {type(state)} ({state!r}) in WorkflowStatusEvent; skipping event.")
+            logger.warning(
+                f"Unrecognized workflow state type: {type(state)} ({state!r}) in WorkflowStatusEvent; skipping event."
+            )
             return None, accumulated_reasoning
 
         if state_name not in VALID_WORKFLOW_STATES:
-            logger.warning(f"Unrecognized workflow state value: {state_name!r} in WorkflowStatusEvent; skipping event.")
+            logger.warning(
+                f"Unrecognized workflow state value: {state_name!r} in WorkflowStatusEvent; skipping event."
+            )
             return None, accumulated_reasoning
         if state_name == "FAILED":
             # Convert FAILED status to error event

@@ -1230,6 +1230,27 @@ class SupervisorWorkflow:
                 logger.error(
                     f"[Workflow {workflow_id}] TIMEOUT after {duration:.2f}s for task: {task_for_metadata[:50]}"
                 )
+
+                # Notify middlewares of timeout
+                if hasattr(self.context, "middlewares"):
+                    for mw in self.context.middlewares:
+                        try:
+                            await mw.on_end(
+                                task_for_metadata,
+                                {
+                                    "workflowId": workflow_id,
+                                    "mode": current_mode,
+                                    "reasoning_effort": reasoning_effort,
+                                    "end_time": datetime.now().isoformat(),
+                                    "status": "FAILED",
+                                    "error": "Workflow timed out",
+                                },
+                            )
+                        except Exception as mw_error:
+                            logger.warning(
+                                f"Middleware.on_end() failed during timeout handling: {mw_error}"
+                            )
+
                 yield WorkflowStatusEvent(
                     state=WorkflowRunState.FAILED,
                     data={"message": "Workflow timed out", "workflow_id": workflow_id},
@@ -1239,6 +1260,27 @@ class SupervisorWorkflow:
                 logger.exception(
                     f"[Workflow {workflow_id}] ERROR after {duration:.2f}s for task: {task_for_metadata[:50]}: {e}"
                 )
+
+                # Notify middlewares of error
+                if hasattr(self.context, "middlewares"):
+                    for mw in self.context.middlewares:
+                        try:
+                            await mw.on_end(
+                                task_for_metadata,
+                                {
+                                    "workflowId": workflow_id,
+                                    "mode": current_mode,
+                                    "reasoning_effort": reasoning_effort,
+                                    "end_time": datetime.now().isoformat(),
+                                    "status": "FAILED",
+                                    "error": str(e),
+                                },
+                            )
+                        except Exception as mw_error:
+                            logger.warning(
+                                f"Middleware.on_end() failed during exception handling: {mw_error}"
+                            )
+
                 yield WorkflowStatusEvent(
                     state=WorkflowRunState.FAILED,
                     data={"message": f"Workflow error: {e!s}", "workflow_id": workflow_id},

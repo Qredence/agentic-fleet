@@ -22,7 +22,8 @@ def sanitize_for_log(value: str | None) -> str:
     """Sanitize a string so it is safe for log entry: remove line breaks/CR."""
     if value is None:
         return ""
-    return str(value).replace('\r\n', '').replace('\n', '').replace('\r', '')
+    return str(value).replace("\r\n", "").replace("\n", "").replace("\r", "")
+
 
 # Retain task references to prevent premature GC (ruff RUF006 style).
 _background_tasks: set[asyncio.Task[Any]] = set()
