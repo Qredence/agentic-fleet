@@ -121,13 +121,20 @@ def main() -> None:
     )
     output_path.parent.mkdir(parents=True, exist_ok=True)
 
-    # Extract GEPA optimization parameters with sensible defaults
+    """
+    Extract GEPA optimization parameters with sensible defaults.
+
+    Note: If 'gepa_reflection_model' is not specified in the config, it defaults to the main DSPy
+    model specified by 'model'. This fallback ensures that the reflection phase uses the same
+    model as the main optimization unless explicitly overridden. This behavior is subtle but
+    important for reproducibility and consistency.
+    """
     val_split = opt_config.get("gepa_val_split", 0.2)
     seed = opt_config.get("gepa_seed", 42)
     max_metric_calls = opt_config.get("gepa_max_metric_calls", 30)
     perfect_score = opt_config.get("gepa_perfect_score", 1.0)
     log_dir = opt_config.get("gepa_log_dir", ".var/logs/dspy/gepa")
-    reflection_model = opt_config.get("gepa_reflection_model", model)  # Fall back to main model
+    reflection_model = opt_config.get("gepa_reflection_model", model)
 
     logger.info(f"Configuration loaded: model={model}, dataset={dataset_path}")
     logger.info(

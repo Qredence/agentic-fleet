@@ -61,12 +61,18 @@ az cognitiveservices account show --name "${FOUNDRY_ACCOUNT}" --resource-group "
 
 # Step 3: Get Project Managed Identity
 echo "📋 Step 3: Getting project managed identity..."
-PROJECT_PRINCIPAL_ID=$(az cognitiveservices account show \
+AZ_CMD_OUTPUT=$(az cognitiveservices account show \
   --name "${FOUNDRY_ACCOUNT}" \
   --resource-group "${RESOURCE_GROUP}" \
-  --query "identity.principalId" -o tsv 2>/dev/null || echo "")
-
-if [ -z "$PROJECT_PRINCIPAL_ID" ]; then
+  --query "identity.principalId" -o tsv 2>&1)
+AZ_CMD_EXIT_CODE=$?
+if [ $AZ_CMD_EXIT_CODE -eq 0 ]; then
+  PROJECT_PRINCIPAL_ID="$AZ_CMD_OUTPUT"
+else
+  echo "  ⚠️  Failed to get managed identity principal ID:"
+  echo "  $AZ_CMD_OUTPUT"
+  PROJECT_PRINCIPAL_ID=""
+fi
   echo "  ⚠️  Managed identity not found. Enabling system-assigned identity..."
   az cognitiveservices account identity assign \
     --name "${FOUNDRY_ACCOUNT}" \
