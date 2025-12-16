@@ -14,7 +14,7 @@ from typing import Any
 
 import dspy
 
-from ..utils.config import load_config
+from ..utils.cfg import load_config
 from ..utils.logger import setup_logger
 
 logger = setup_logger(__name__)

@@ -16,7 +16,7 @@ from agent_framework._serialization import SerializationMixin
 from agent_framework._tools import ToolProtocol
 
 from agentic_fleet.tools.base import SchemaToolMixin
-from agentic_fleet.utils.config import env_config
+from agentic_fleet.utils.cfg import env_config
 from agentic_fleet.utils.resilience import external_api_retry
 
 try:  # Optional dependency — keep import non-fatal at module load time

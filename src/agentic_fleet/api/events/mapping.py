@@ -24,7 +24,7 @@ from agentic_fleet.models import (
     StreamEventType,
     UIHint,
 )
-from agentic_fleet.utils.config import get_config_path
+from agentic_fleet.utils.cfg import get_config_path
 from agentic_fleet.utils.logger import setup_logger
 from agentic_fleet.workflows.models import (
     MagenticAgentMessageEvent,

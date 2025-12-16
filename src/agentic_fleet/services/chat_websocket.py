@@ -46,7 +46,7 @@ from agentic_fleet.models import (
     WorkflowStatus,
 )
 from agentic_fleet.services.background_evaluation import schedule_quality_evaluation
-from agentic_fleet.utils.config import load_config
+from agentic_fleet.utils.cfg import load_config
 from agentic_fleet.utils.logger import setup_logger
 from agentic_fleet.workflows.config import build_workflow_config_from_yaml
 from agentic_fleet.workflows.supervisor import create_supervisor_workflow

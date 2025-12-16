@@ -6,8 +6,8 @@ Script to retroactively evaluate execution history and assign quality scores.
 import json
 from pathlib import Path
 
+from agentic_fleet.dspy_modules.lifecycle import configure_dspy_settings
 from agentic_fleet.dspy_modules.reasoner import DSPyReasoner
-from agentic_fleet.utils.dspy_manager import configure_dspy_settings
 from agentic_fleet.utils.history_manager import HistoryManager
 from agentic_fleet.utils.logger import setup_logger
 

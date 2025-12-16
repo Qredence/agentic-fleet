@@ -28,7 +28,7 @@ from typing import Any
 
 import dspy
 
-from ..utils.config import load_config
+from ..utils.cfg import load_config
 from ..utils.logger import setup_logger
 from ..utils.telemetry import optional_span
 from ..workflows.exceptions import ToolError

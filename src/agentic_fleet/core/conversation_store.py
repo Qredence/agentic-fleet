@@ -16,7 +16,7 @@ from datetime import datetime
 from pathlib import Path
 
 from agentic_fleet.models import Conversation
-from agentic_fleet.utils.config import DEFAULT_DATA_DIR
+from agentic_fleet.utils.cfg import DEFAULT_DATA_DIR
 
 logger = logging.getLogger(__name__)
 

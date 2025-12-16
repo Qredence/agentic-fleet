@@ -16,7 +16,7 @@ from agent_framework._serialization import SerializationMixin
 from agent_framework._tools import ToolProtocol
 
 from agentic_fleet.tools.base import SchemaToolMixin
-from agentic_fleet.utils.config import (
+from agentic_fleet.utils.cfg import (
     DEFAULT_BROWSER_MAX_TEXT_LENGTH,
     DEFAULT_BROWSER_SELECTOR_TIMEOUT_MS,
     DEFAULT_BROWSER_TIMEOUT_MS,

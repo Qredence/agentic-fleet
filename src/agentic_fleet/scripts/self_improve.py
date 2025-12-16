@@ -16,7 +16,7 @@ from rich.console import Console
 from rich.panel import Panel
 from rich.table import Table
 
-from agentic_fleet.utils.config import DEFAULT_EXAMPLES_PATH
+from agentic_fleet.utils.cfg import DEFAULT_EXAMPLES_PATH
 
 from ..utils.self_improvement import SelfImprovementEngine
 

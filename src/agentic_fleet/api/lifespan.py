@@ -11,7 +11,7 @@ from agentic_fleet.core.settings import get_settings
 from agentic_fleet.dspy_modules.compiled_registry import load_required_compiled_modules
 from agentic_fleet.services.conversation import ConversationManager, WorkflowSessionManager
 from agentic_fleet.services.optimization_jobs import OptimizationJobManager
-from agentic_fleet.utils.config import load_config
+from agentic_fleet.utils.cfg import load_config
 from agentic_fleet.utils.tracing import initialize_tracing
 from agentic_fleet.workflows.supervisor import create_supervisor_workflow
 
