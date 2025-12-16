@@ -414,9 +414,19 @@ def map_workflow_event(
         message = data.get("message", "")
         workflow_id = data.get("workflow_id", "")
 
-        # Convert state name to string for comparison (handles enum or string)
-        state_name = state.name if hasattr(state, "name") else str(state).upper()
+        # Convert state to a valid state name (enum or string), else skip with warning
+        VALID_STATES = {"FAILED", "IN_PROGRESS", "IDLE"}
+        if hasattr(state, "name"):
+            state_name = state.name
+        elif isinstance(state, str):
+            state_name = state.upper()
+        else:
+            logger.warning(f"Unrecognized workflow state type: {type(state)} ({state!r}) in WorkflowStatusEvent; skipping event.")
+            return None, accumulated_reasoning
 
+        if state_name not in VALID_STATES:
+            logger.warning(f"Unrecognized workflow state value: {state_name!r} in WorkflowStatusEvent; skipping event.")
+            return None, accumulated_reasoning
         if state_name == "FAILED":
             # Convert FAILED status to error event
             event_type = StreamEventType.ERROR
