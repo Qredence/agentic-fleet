@@ -966,7 +966,7 @@
     "tool_requirements": [
       "TavilySearch (TavilySearchTool) - use only for queries about events/data from 2024 onwards or when up-to-date web data is required",
       "BrowserTool - optional, used by Copilot_researcher for deep site browsing or extracting complex web content",
-      "No-tool — default until user confirms research is needed"
+      "No-tool - default until user confirms research is needed"
     ]
   },
   {
