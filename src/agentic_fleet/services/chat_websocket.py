@@ -94,12 +94,15 @@ def _prefer_service_thread_mode(thread: Any | None) -> None:
 
 
 def _sanitize_log_input(value: str) -> str:
-    # Remove all control and non-printable characters (keep only safe, printable ASCII).
-    # Explicitly remove any newlines and carriage returns to prevent log injection.
+    # Only allow alphanumeric, dash, underscore, and dot for maximal log safety.
+    # Remove all other characters, including control codes and non-ASCII.
     # Truncate excessively long input for logging.
+    import re
     if not isinstance(value, str):
         value = str(value)
-    sanitized = "".join(ch for ch in value if 32 <= ord(ch) <= 126 and ch not in ("\r", "\n"))
+    sanitized = re.sub(r"[^a-zA-Z0-9._-]", "", value)
+    if not sanitized:
+        sanitized = "UNKNOWN"
     return sanitized[:256]
 
 
