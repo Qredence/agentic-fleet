@@ -123,14 +123,12 @@ def main() -> None:
     )
     output_path.parent.mkdir(parents=True, exist_ok=True)
 
-    """
-    Extract GEPA optimization parameters with sensible defaults.
-
-    Note: If 'gepa_reflection_model' is not specified in the config, it defaults to the main DSPy
-    model specified by 'model'. This fallback ensures that the reflection phase uses the same
-    model as the main optimization unless explicitly overridden. This behavior is subtle but
-    important for reproducibility and consistency.
-    """
+    # Extract GEPA optimization parameters with sensible defaults.
+    #
+    # Note: If 'gepa_reflection_model' is not specified in the config, it defaults to the main DSPy
+    # model specified by 'model'. This fallback ensures that the reflection phase uses the same
+    # model as the main optimization unless explicitly overridden. This behavior is subtle but
+    # important for reproducibility and consistency.
     val_split = opt_config.get("gepa_val_split", 0.2)
     seed = opt_config.get("gepa_seed", 42)
     max_metric_calls = opt_config.get("gepa_max_metric_calls", 30)
