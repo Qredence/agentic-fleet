@@ -1196,6 +1196,8 @@ class DSPyReasoner(dspy.Module):
             del self._routing_cache[cache_key]
             return None
 
+        # Move to end to maintain LRU order (mark as most recently used)
+        self._routing_cache.move_to_end(cache_key)
         logger.debug(f"Cache hit for routing key {cache_key[:8]}...")
         return cached["result"]
 
