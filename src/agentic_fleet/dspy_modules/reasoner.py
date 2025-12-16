@@ -56,11 +56,40 @@ from .signatures import (
 logger = setup_logger(__name__)
 
 
+def _find_upwards(start: Path, marker: str) -> Path | None:
+    """Search upward from start for a file or directory named marker. Return the containing directory, or None."""
+    current = start
+    while True:
+        candidate = current / marker
+        if candidate.exists():
+            return current
+        if current.parent == current:
+            break
+        current = current.parent
+    return None
+
 def _search_bases() -> list[Path]:
     resolved = Path(__file__).resolve()
-    parents = resolved.parents
-    repo_root = parents[3] if len(parents) > 3 else parents[-1]
-    package_root = parents[1] if len(parents) > 1 else parents[-1]
+    # Find repo root by searching for pyproject.toml
+    repo_root = _find_upwards(resolved.parent, "pyproject.toml")
+    if repo_root is None:
+        repo_root = resolved.parents[-1]
+    # Find package root by searching for the topmost __init__.py
+    package_root = None
+    current = resolved.parent
+    last_with_init = None
+    while True:
+        if (current / "__init__.py").exists():
+            last_with_init = current
+        else:
+            break
+        if current.parent == current:
+            break
+        current = current.parent
+    if last_with_init is not None:
+        package_root = last_with_init
+    else:
+        package_root = resolved.parents[-1]
     module_dir = resolved.parent
     return [repo_root, package_root, module_dir, Path.cwd()]
 
