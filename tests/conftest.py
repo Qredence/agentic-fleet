@@ -1,3 +1,4 @@
+import logging
 import os
 import sys
 from pathlib import Path
@@ -21,6 +22,21 @@ ensure_agent_framework_shims()
 DSPY_CACHE = ROOT / ".var" / "cache" / "dspy"
 DSPY_CACHE.mkdir(parents=True, exist_ok=True)
 os.environ.setdefault("DSPY_CACHEDIR", str(DSPY_CACHE))
+
+
+@pytest.fixture(scope="session", autouse=True)
+def suppress_litellm_cleanup_errors():
+    """
+    Suppress noisy LiteLLM async client cleanup errors during test teardown.
+
+    LiteLLM registers an atexit handler to close async HTTP clients, but by the time
+    it runs, pytest-asyncio has already torn down the event loop. This fixture
+    suppresses the resulting RuntimeError/ValueError log spam.
+    """
+    yield
+    # After all tests complete, suppress LiteLLM cleanup errors
+    logging.getLogger("litellm").setLevel(logging.CRITICAL)
+    logging.getLogger("asyncio").setLevel(logging.CRITICAL)
 
 
 @pytest.fixture(autouse=True)
