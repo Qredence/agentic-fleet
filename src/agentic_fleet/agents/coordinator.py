@@ -87,7 +87,9 @@ class AgentFactory:
         """
         self.tool_registry = tool_registry or ToolRegistry()
         self.openai_client = openai_client
-        self._foundry_clients: list[Any] = []  # Track AIProjectClient instances for cleanup
+        self._foundry_clients: list[
+            Any
+        ] = []  # Track AIProjectClient and AzureAIAgentClient instances for cleanup
 
         # Check if DSPy enhancement should be enabled globally
         self.enable_dspy = env_config.enable_dspy_agents

@@ -22,7 +22,7 @@ from ..utils.logger import setup_logger
 from ..utils.telemetry import PerformanceTracker, optional_span
 
 if TYPE_CHECKING:
-    from agent_framework.openai import OpenAIResponsesClient
+    from agent_framework.openai import OpenAIChatClient, OpenAIResponsesClient
 
 logger = setup_logger(__name__)
 
@@ -40,7 +40,7 @@ class DSPyEnhancedAgent(ChatAgent):
     def __init__(
         self,
         name: str,
-        chat_client: OpenAIResponsesClient,
+        chat_client: OpenAIResponsesClient | OpenAIChatClient,
         instructions: str = "",
         description: str = "",
         tools: Any = None,
