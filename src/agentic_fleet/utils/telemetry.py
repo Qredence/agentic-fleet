@@ -175,4 +175,61 @@ def optional_span(
         yield None
 
 
-__all__ = ["ExecutionMetrics", "PerformanceTracker", "optional_span"]
+def configure_telemetry(
+    service_name: str = "agentic-fleet",
+    connection_string: str | None = None,
+    enable_console: bool = False,
+) -> None:
+    """Configure OpenTelemetry global tracer provider.
+
+    Args:
+        service_name: Name of the service for traces.
+        connection_string: Azure Monitor connection string (optional).
+        enable_console: Whether to enable console exporter for debugging (default: False).
+    """
+    try:
+        from azure.monitor.opentelemetry import configure_azure_monitor
+        from opentelemetry import trace
+        from opentelemetry.sdk.resources import Resource
+        from opentelemetry.sdk.trace import TracerProvider
+        from opentelemetry.sdk.trace.export import (
+            BatchSpanProcessor,
+            ConsoleSpanExporter,
+        )
+
+        # Basic resource
+        resource = Resource.create({"service.name": service_name})
+
+        # If Azure Connection String is provided, use the Distro
+        if connection_string:
+            logger = logging.getLogger(__name__)
+            logger.info("Configuring Azure Monitor OpenTelemetry...")
+            configure_azure_monitor(connection_string=connection_string)
+            # The distro configures the global provider automatically
+            return
+
+        # accessible fallback: generic OTel SDK
+        provider = TracerProvider(resource=resource)
+
+        if enable_console:
+            processor = BatchSpanProcessor(ConsoleSpanExporter())
+            provider.add_span_processor(processor)
+
+        trace.set_tracer_provider(provider)
+
+        # Log successful init
+        logger = logging.getLogger(__name__)
+        logger.info(f"OpenTelemetry configured (Console={enable_console})")
+
+    except ImportError:
+        logger = logging.getLogger(__name__)
+        logger.warning(
+            "OpenTelemetry packages not found. Tracing will be disabled. "
+            "Install 'agentic-fleet[tracing]' to enable."
+        )
+    except Exception as e:
+        logger = logging.getLogger(__name__)
+        logger.error(f"Failed to configure telemetry: {e}")
+
+
+__all__ = ["ExecutionMetrics", "PerformanceTracker", "configure_telemetry", "optional_span"]

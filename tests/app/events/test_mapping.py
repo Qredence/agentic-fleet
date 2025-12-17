@@ -7,11 +7,8 @@ from agent_framework._workflows import (
     WorkflowStartedEvent,
 )
 
-from agentic_fleet.app.events.mapping import classify_event, map_workflow_event
-from agentic_fleet.app.schemas import (
-    EventCategory,
-    StreamEventType,
-)
+from agentic_fleet.api.events.mapping import classify_event, map_workflow_event
+from agentic_fleet.models import EventCategory, StreamEventType
 from agentic_fleet.workflows.models import (
     AnalysisMessage,
     AnalysisResult,

@@ -2,26 +2,31 @@
 
 ## Overview
 
-The DSPy-Enhanced Agent Framework now includes detailed logging and persistent history tracking that captures every phase of workflow execution.
+AgenticFleet includes detailed logging and persistent history tracking that captures each workflow phase for
+debugging, evaluation, and offline improvement.
 
 ## Features
 
-### 1. Four-Phase Logging Structure
+### 1. Five-Phase Workflow Logging
 
-**PHASE 1: DSPy Task Analysis**
+The default pipeline follows:
+
+`analysis → routing → execution → progress → quality`
+
+**PHASE 1: Analysis**
 
 - Task complexity assessment (simple/moderate/complex)
 - Required capabilities identification
 - Estimated steps for completion
 - Analysis execution time
 
-**PHASE 2: DSPy Task Routing**
+**PHASE 2: Routing**
 
 - Execution mode determination (SEQUENTIAL/PARALLEL/DELEGATED)
 - Agent assignments with explanations
 - Routing decision time
 
-**PHASE 3: Agent Execution**
+**PHASE 3: Execution**
 
 - Mode-specific execution details:
   - Sequential: Shows pipeline (Agent1 → Agent2 → Agent3)
@@ -30,16 +35,21 @@ The DSPy-Enhanced Agent Framework now includes detailed logging and persistent h
 - Real-time agent progress with "Processing..." and "Completed" events
 - Total execution time
 
-**PHASE 4: DSPy Quality Assessment**
+**PHASE 4: Progress**
+
+- Determines whether the task is complete or needs iteration
+- Records progress signals and loop decisions
+
+**PHASE 5: Quality**
 
 - Quality score (0-10 scale)
 - Missing elements analysis
 - Suggested improvements
 - Assessment execution time
 
-### 2. Persistent JSON History
+### 2. Persistent JSONL History
 
-All executions are saved to `logs/execution_history.json` with the following structure:
+All executions are saved to `.var/logs/execution_history.jsonl` by default (one JSON object per line).
 
 ```json
 {
@@ -82,9 +92,9 @@ All executions are saved to `logs/execution_history.json` with the following str
 
 **Log Files:**
 
-- `logs/workflow.log` - Detailed timestamped execution log
-- `logs/console_output.log` - Captured console output (when using `tee`)
-- `logs/execution_history.json` - Structured execution history
+- `.var/logs/workflow.log` - Detailed timestamped execution log
+- `.var/logs/execution_history.jsonl` - Structured execution history (JSONL)
+- `.var/logs/console_output.log` - Captured console output (when using `tee`, optional)
 
 ## Usage
 
@@ -103,7 +113,7 @@ uv run agentic-fleet run -m "Your question here" --verbose
 ### Capture Console Output to File
 
 ```bash
-uv run agentic-fleet run -m "Your question here" --verbose 2>&1 | tee logs/console_output.log
+uv run agentic-fleet run -m "Your question here" --verbose 2>&1 | tee .var/logs/console_output.log
 ```
 
 ## Configuration
@@ -113,7 +123,7 @@ Edit `config/workflow_config.yaml` to customize logging:
 ```yaml
 logging:
   save_history: true # Enable/disable JSON history
-  history_file: logs/execution_history.json
+  history_file: .var/logs/execution_history.jsonl
   verbose: true # Show detailed phase information
 ```
 
@@ -122,25 +132,25 @@ logging:
 ### View All Executions
 
 ```bash
-cat logs/execution_history.json | python -m json.tool
+tail -n 1 .var/logs/execution_history.jsonl | uv run python -m json.tool
 ```
 
 ### Count Total Executions
 
 ```bash
-cat logs/execution_history.json | python -c "import sys, json; print(len(json.load(sys.stdin)))"
+wc -l .var/logs/execution_history.jsonl
 ```
 
 ### Extract Quality Scores
 
 ```bash
-cat logs/execution_history.json | python -c "import sys, json; [print(f\"{e['task'][:50]}: {e['quality']['score']}/10\") for e in json.load(sys.stdin)]"
+tail -n 50 .var/logs/execution_history.jsonl | uv run python -c "import json,sys; [print(f\"{(r.get('task','')[:50])}: {r.get('quality',{}).get('score','?')}/10\") for r in (json.loads(line) for line in sys.stdin) if line.strip()]"
 ```
 
 ### Calculate Average Execution Time
 
 ```bash
-cat logs/execution_history.json | python -c "import sys, json; data=json.load(sys.stdin); print(f\"Avg: {sum(e['total_time_seconds'] for e in data)/len(data):.2f}s\")"
+uv run python -c "import json,sys; rows=[json.loads(l) for l in sys.stdin if l.strip()]; print(f\"Avg: {sum(r.get('total_time_seconds',0) for r in rows)/max(len(rows),1):.2f}s\")" < .var/logs/execution_history.jsonl
 ```
 
 ## Example Output
@@ -178,13 +188,13 @@ Invoking DSPy quality_assessor...
   Suggested Improvements: [suggestions]
   Assessment Time: 3.17s
 
-Execution history saved to logs/execution_history.json
+Execution history saved to .var/logs/execution_history.jsonl
 
 ================================================================================
 WORKFLOW EXECUTION COMPLETED
 Total Execution Time: 22.00s
 Result Length: 3972 characters
-History saved to: logs/execution_history.json
+History saved to: .var/logs/execution_history.jsonl
 ================================================================================
 ```
 
@@ -200,9 +210,9 @@ History saved to: logs/execution_history.json
 
 **History file not created:**
 
-- Check that `logs/` directory exists
+- Check that `.var/logs/` directory exists (or run `make init-var`)
 - Verify `save_history: true` in `workflow_config.yaml`
-- Ensure write permissions in `logs/` directory
+- Ensure write permissions in `.var/logs/` directory
 
 **Verbose logging not showing:**
 
@@ -212,6 +222,5 @@ History saved to: logs/execution_history.json
 
 **JSON parse errors:**
 
-- The history file uses JSON array format
-- Each execution is appended as a new object
-- Use `python -m json.tool` to validate structure
+- The default history file is JSONL (one JSON object per line)
+- Use `tail -n 1 .var/logs/execution_history.jsonl | uv run python -m json.tool` to validate an entry

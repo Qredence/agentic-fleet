@@ -2,7 +2,7 @@ from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
-from agentic_fleet.core.middlewares import ChatMiddleware
+from agentic_fleet.core.middleware import ChatMiddleware
 from agentic_fleet.utils.models import ExecutionMode, RoutingDecision
 from agentic_fleet.workflows.context import SupervisorContext
 from agentic_fleet.workflows.models import FinalResultMessage, QualityReport

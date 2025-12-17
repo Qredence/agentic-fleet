@@ -11,6 +11,8 @@ from typing import TYPE_CHECKING, Any, Protocol
 from agent_framework._serialization import SerializationMixin
 from agent_framework._tools import HostedCodeInterpreterTool
 
+from agentic_fleet.tools.base import SchemaToolMixin
+
 if TYPE_CHECKING:  # pragma: no cover - typing helper
 
     class ToolProtocolBase(Protocol):
@@ -29,10 +31,10 @@ if TYPE_CHECKING:  # pragma: no cover - typing helper
             ...
 
 else:
-    from agent_framework import ToolProtocol as ToolProtocolBase
+    from agent_framework._tools import ToolProtocol as ToolProtocolBase
 
 
-class HostedCodeInterpreterAdapter(ToolProtocolBase, SerializationMixin):
+class HostedCodeInterpreterAdapter(SchemaToolMixin, ToolProtocolBase, SerializationMixin):
     """Adapter that standardizes the HostedCodeInterpreterTool interface."""
 
     def __init__(self, underlying: HostedCodeInterpreterTool | None = None):
@@ -74,9 +76,4 @@ class HostedCodeInterpreterAdapter(ToolProtocolBase, SerializationMixin):
     def __str__(self) -> str:
         return self.name
 
-    def to_dict(self, **kwargs: Any) -> dict[str, Any]:
-        """Convert tool to dictionary format for agent-framework.
-
-        Returns the OpenAI function calling schema format.
-        """
-        return self.schema
+    # to_dict inherited from SchemaToolMixin

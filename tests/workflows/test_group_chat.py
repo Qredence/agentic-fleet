@@ -6,7 +6,10 @@ import pytest
 from agent_framework._types import ChatMessage, Role
 
 from agentic_fleet.dspy_modules.reasoner import DSPyReasoner
-from agentic_fleet.workflows.group_chat_adapter import DSPyGroupChatManager, GroupChatBuilder
+from agentic_fleet.workflows.strategies.group_chat_adapter import (
+    DSPyGroupChatManager,
+    GroupChatBuilder,
+)
 
 
 @pytest.fixture

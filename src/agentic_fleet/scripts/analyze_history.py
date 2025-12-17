@@ -12,7 +12,7 @@ import statistics
 from pathlib import Path
 from typing import Any
 
-from agentic_fleet.utils.config import DEFAULT_HISTORY_PATH
+from agentic_fleet.utils.cfg import DEFAULT_HISTORY_PATH
 
 
 def load_history() -> list[dict[str, Any]]:

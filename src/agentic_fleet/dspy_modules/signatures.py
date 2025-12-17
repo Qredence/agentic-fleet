@@ -420,6 +420,15 @@ class TypedWorkflowStrategy(dspy.Signature):
     )
 
 
+class WorkflowNarration(dspy.Signature):
+    """Transform raw workflow events into a user-friendly narrative."""
+
+    events_log: str = dspy.InputField(desc="Chronological log of workflow events")
+    narrative: str = dspy.OutputField(
+        desc="Concise, natural language summary of the workflow execution"
+    )
+
+
 # Export signatures (sorted alphabetically per ruff RUF022)
 __all__ = [
     "AgentInstructionSignature",
@@ -442,5 +451,6 @@ __all__ = [
     "TypedTaskRouting",
     "TypedToolPlan",
     "TypedWorkflowStrategy",
+    "WorkflowNarration",
     "WorkflowStrategy",
 ]

@@ -26,7 +26,7 @@ def run_query():
             "uv",
             "run",
             "uvicorn",
-            "agentic_fleet.app.main:app",
+            "agentic_fleet.main:app",
             "--port",
             "8000",
             "--host",

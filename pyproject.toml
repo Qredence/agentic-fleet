@@ -5,7 +5,7 @@
 
 [project]
 name = "agentic-fleet"
-version = "0.6.9"
+version = "0.6.95"
 description = "Multi-agent orchestration system built with Microsoft Agent Framework's Magentic Fleet pattern"
 authors = [{ name = "Qredence", email = "contact@qredence.ai" }]
 readme = "README.md"
@@ -24,7 +24,7 @@ classifiers = [
 ]
 
 dependencies = [
-    "azure-ai-agents>=1.2.0b5,<2.0",
+    "azure-ai-agents>=1.2.0b5,<1.3",
     "azure-identity>=1.25.1,<2.0",
     "azure-cosmos>=4.8.0,<5.0",
     "python-dotenv>=1.2.1,<2.0",
@@ -32,10 +32,9 @@ dependencies = [
     "requests>=2.28.0",
     "pydantic>=2.12.3,<3.0",
     "tiktoken>=0.12.0,<1.0",
-    "agent-framework-core",
-    "agent-framework-a2a",
-    "agent-framework-azure-ai",
-    "agent-framework-devui",
+    "agent-framework==1.0.0b251211",
+    "agent-framework-core==1.0.0b251211",
+    "agent-framework-azure-ai==1.0.0b251211",
     "rich>=14.2.0",
     "prompt-toolkit>=3.0.47,<4.0",
     "ipykernel>=7.0.1,<8.0",
@@ -78,14 +77,12 @@ dependencies = [
     "tenacity>=8.2.3",
     "prometheus-fastapi-instrumentator>=6.1.0",
     "python-json-logger>=2.0.7",
-    "agent-framework-declarative>=1.0.0b251204",
-    "agent-framework-azure-ai-search>=0.0.0a1",
-    "agent-framework-azurefunctions>=0.0.0a1",
-    "agent-framework>=1.0.0b251204",
+    "agent-framework-azure-ai-search==1.0.0b251211",
     "azure-search-documents>=11.6.0",
-    "azure-monitor-opentelemetry>=1.8.2",
-    "azure-monitor-opentelemetry-exporter>=1.0.0b45",
+    "azure-monitor-opentelemetry>=1.8.3",
+    "azure-monitor-opentelemetry-exporter>=1.0.0b46",
     "opentelemetry-exporter-otlp-proto-http>=1.38.0",
+    "azure-ai-projects==2.0.0b2",
 ]
 requires-python = ">=3.12,<4"
 
@@ -96,10 +93,23 @@ requires-python = ">=3.12,<4"
 
 [project.optional-dependencies]
 # Core Azure integration
-azure = ["azure-ai-agents>=1.2.0b5,<2.0", "azure-identity>=1.25.1,<2.0"]
+azure = [
+    "azure-ai-agents==1.2.0b5",
+    "azure-identity>=1.25.1,<2.0",
+    "azure-ai-projects==2.0.0b2",
+]
 
 # UI and interactive features
-ui = ["agent-framework-devui", "rich>=14.2.0", "prompt-toolkit>=3.0.47,<4.0"]
+ui = [
+    "agent-framework-devui==1.0.0b251211",
+    "rich>=14.2.0",
+    "prompt-toolkit>=3.0.47,<4.0",
+]
+
+# Optional Agent Framework integrations
+a2a = ["agent-framework-a2a==1.0.0b251211"]
+declarative = ["agent-framework-declarative==1.0.0b251211"]
+azurefunctions = ["agent-framework-azurefunctions==1.0.0b251211"]
 
 # Evaluation and testing
 evaluation = ["azure-ai-evaluation>=1.12.0,<2.0"]
@@ -204,9 +214,10 @@ required-version = ">=0.8.0"
 # Prefer uv-managed Python installations over system Python
 python-preference = "managed"
 
-# Allow pre-release versions for packages that only publish pre-releases
-# (e.g., agent-framework beta packages)
-prerelease = "if-necessary-or-explicit"
+# Allow pre-release versions globally.
+# This repo intentionally pins and depends on multiple preview/beta packages
+# (Agent Framework train, Azure AI Projects/Agents, Azure SDK previews).
+prerelease = "allow"
 
 # Default version specifier style when adding dependencies
 add-bounds = "lower"
@@ -290,6 +301,7 @@ known-first-party = ["agentic_fleet"]
 pythonpath = "src"
 testpaths = ["tests"]
 asyncio_mode = "auto"
+asyncio_default_fixture_loop_scope = "session"  # Keep event loop alive for LiteLLM cleanup
 addopts = "-m 'not e2e'"
 markers = [
     "e2e: End-to-end tests requiring a running server (deselect with '-m \"not e2e\"')",

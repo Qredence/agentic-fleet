@@ -33,15 +33,21 @@
 - Stack: DSPy + Microsoft `agent-framework` . Agents live under `src/agentic_fleet/agents/`; orchestration in `src/agentic_fleet/workflows/`; DSPy reasoning in `src/agentic_fleet/dspy_modules/`.
 - **5-Phase Pipeline** (v0.6.6): `analysis → routing → execution → progress → quality`. Judge phase removed for ~66% latency reduction.
 - **Smart Fast-Path** (v0.6.7): Simple tasks (factual questions, math, greetings) bypass multi-agent routing via `is_simple_task()` and get direct LLM responses in <1 second.
-- **Offline Layer**: DSPy compilation is strictly offline (via `scripts/optimize.py`). Runtime uses cached modules (`.var/logs/compiled_supervisor.pkl`) and never compiles on the fly.
+  - Important: fast-path is intentionally **disabled on follow-up turns** (when a conversation thread already has history) so multi-turn context is not lost.
+- **Offline Layer (Production)**: DSPy compilation should be treated as **offline-only** via `agentic-fleet optimize` (cached under `.var/logs/compiled_supervisor.pkl`). Set `dspy.require_compiled: true` in `src/agentic_fleet/config/workflow_config.yaml` to fail-fast if artifacts are missing. Development can optionally start **background compilation** when enabled.
 - **Dynamic Prompts**: Agent instructions (e.g., Planner) are generated dynamically via DSPy signatures (`PlannerInstructionSignature`) and optimized offline.
 - **Middleware**: `ChatMiddleware` handles cross-cutting concerns. `BridgeMiddleware` captures runtime history for offline learning.
 - Routing/quality loops configured via `config/workflow_config.yaml`; history & tracing in `.var/logs/execution_history.jsonl`.
 - **Group Chat**: Multi-agent discussions are supported via `DSPyGroupChatManager` and `GroupChatBuilder`. Workflows can participate as agents using the `workflow.as_agent()` pattern.
 - **Latency Tips**: Clear DSPy cache after changes (`make clear-cache`), use `gpt-5-mini` for routing, disable judge if not needed.
 - When adding or modifying agents/workflows, keep prompts/factories in sync and update config schema validation.
-- **Streaming/Event surface**: Workflow events are mapped through `agentic_fleet.app.events.mapping` to UI-friendly categories (reasoning, routing, analysis, quality, agent output). Keep SSE payloads and frontend workflow renderers in sync when adding new event kinds.
-- **NLU module**: A DSPy-backed NLU stack (`dspy_modules/nlu.py`, `app/routers/nlu.py`) exposes intent classification and entity extraction endpoints. Update signatures and compiled caches together when changing NLU behaviour.
+- **Streaming/Event surface**: Workflow events are mapped through `agentic_fleet.api.events.mapping` to UI-friendly categories (reasoning, routing, analysis, quality, agent output). Keep SSE payloads and frontend workflow renderers in sync when adding new event kinds.
+- **HITL + Resume (agent-framework semantics)**:
+  - The backend can surface **request events** during streaming; the client can respond with `workflow.response` messages to unblock execution.
+  - Checkpointing for new runs is enabled via an opt-in flag (e.g. `enable_checkpointing`), which configures checkpoint storage.
+  - Resuming is explicit and uses a `workflow.resume` message containing `checkpoint_id`.
+  - `checkpoint_id` is **resume-only** (message XOR checkpoint_id). Never send a start message and `checkpoint_id` together.
+- **NLU module**: A DSPy-backed NLU stack (`dspy_modules/nlu.py`, `api/routes/nlu.py`) exposes intent classification and entity extraction endpoints. Update signatures and compiled caches together when changing NLU behaviour.
 - **Typed Signatures & Assertions** (v0.6.9): All DSPy outputs now use Pydantic models (`dspy_modules/typed_models.py`) for strict validation. Routing decisions are guarded by `dspy.Assert` and `dspy.Suggest` in `dspy_modules/assertions.py`.
 - **Routing Cache**: Routing decisions are cached (TTL 5m) to reduce latency and cost. Configure via `enable_routing_cache` in `workflow_config.yaml`.
 - For multi-agent expansion with OpenAI Agents SDK, treat Codex CLI as an MCP server and mirror roles from `.github/agents/agent-framework-spec.md`; document new roles/prompts here and in `docs/` as needed.
