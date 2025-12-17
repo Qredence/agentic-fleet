@@ -72,6 +72,10 @@
 #     title-prefix: "[ci-doctor] "
 #     draft: true
 #     if-no-changes: "warn"
+#
+#   # Use the built-in workflow token for safe outputs. This avoids failures when a custom PAT
+#   # secret is missing scopes or repo access (e.g., 403: "Resource not accessible by personal access token").
+#   github-token: ${{ secrets.GITHUB_TOKEN }}
 # ```
 #
 # Job Dependency Graph:
@@ -354,7 +358,7 @@ jobs:
           GH_AW_WORKFLOW_NAME: "CI Doctor (PR)"
           GH_AW_ENGINE_ID: "copilot"
         with:
-          github-token: ${{ secrets.GH_AW_GITHUB_MCP_SERVER_TOKEN || secrets.GH_AW_GITHUB_TOKEN || secrets.GITHUB_TOKEN }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
             const fs = require("fs");
             const crypto = require("crypto");
@@ -1114,9 +1118,9 @@ jobs:
           github.event.pull_request
         uses: actions/github-script@ed597411d8f924073f98dfc5c65a23a2325f34cd # v8
         env:
-          GH_TOKEN: ${{ secrets.GH_AW_GITHUB_MCP_SERVER_TOKEN || secrets.GH_AW_GITHUB_TOKEN || secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          github-token: ${{ secrets.GH_AW_GITHUB_MCP_SERVER_TOKEN || secrets.GH_AW_GITHUB_TOKEN || secrets.GITHUB_TOKEN }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
             async function main() {
               const eventName = context.eventName;
@@ -7151,7 +7155,7 @@ jobs:
           GH_AW_NOOP_MAX: 1
           GH_AW_WORKFLOW_NAME: "CI Doctor (PR)"
         with:
-          github-token: ${{ secrets.GH_AW_GITHUB_MCP_SERVER_TOKEN || secrets.GH_AW_GITHUB_TOKEN || secrets.GITHUB_TOKEN }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
             const fs = require("fs");
             const MAX_LOG_CONTENT_LENGTH = 10000;
@@ -7243,7 +7247,7 @@ jobs:
           GH_AW_AGENT_OUTPUT: ${{ env.GH_AW_AGENT_OUTPUT }}
           GH_AW_WORKFLOW_NAME: "CI Doctor (PR)"
         with:
-          github-token: ${{ secrets.GH_AW_GITHUB_MCP_SERVER_TOKEN || secrets.GH_AW_GITHUB_TOKEN || secrets.GITHUB_TOKEN }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
             async function main() {
               const fs = require("fs");
@@ -7361,7 +7365,7 @@ jobs:
           GH_AW_OUTPUT_CREATE_PULL_REQUEST_PULL_REQUEST_URL: ${{ needs.create_pull_request.outputs.pull_request_url }}
           GH_AW_OUTPUT_ADD_COMMENT_COMMENT_URL: ${{ needs.add_comment.outputs.comment_url }}
         with:
-          github-token: ${{ secrets.GH_AW_GITHUB_MCP_SERVER_TOKEN || secrets.GH_AW_GITHUB_TOKEN || secrets.GITHUB_TOKEN }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
             const fs = require("fs");
             const MAX_LOG_CONTENT_LENGTH = 10000;
@@ -7684,7 +7688,7 @@ jobs:
           GH_AW_WORKFLOW_NAME: "CI Doctor (PR)"
           GH_AW_ENGINE_ID: "copilot"
         with:
-          github-token: ${{ secrets.GH_AW_GITHUB_MCP_SERVER_TOKEN || secrets.GH_AW_GITHUB_TOKEN || secrets.GITHUB_TOKEN }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
             const fs = require("fs");
             const crypto = require("crypto");

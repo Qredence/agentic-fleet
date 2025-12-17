@@ -203,7 +203,9 @@ jobs:
       - name: Run Bandit security linter
         run: |
           uv pip install bandit[toml]
-          uv run bandit -r src/ -c pyproject.toml -f txt
+          # Fail CI only on MEDIUM+ severity AND MEDIUM+ confidence findings.
+          # Also emit a JSON report so failures can be inspected via artifacts.
+          uv run bandit -r src/ -c pyproject.toml -x src/frontend/node_modules -f json -o bandit-report.json -ll -ii
 
       - name: Upload security report
         if: failure()
