@@ -864,15 +864,15 @@ wheels = [
 
 [[package]]
 name = "azure-cosmos"
-version = "4.15.0b1"
+version = "4.15.0b2"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "azure-core", marker = "sys_platform == 'darwin' or sys_platform == 'linux'" },
     { name = "typing-extensions", marker = "sys_platform == 'darwin' or sys_platform == 'linux'" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/36/ed/c0202a868284514842d6a17f475a234cc2d8efbfa6c8e55b3e339ac732d4/azure_cosmos-4.15.0b1.tar.gz", hash = "sha256:7d2558ba8333b455ee54c94a066c63e0d9af97457b27961e4473d9db65b2c1ce", size = 2084753, upload-time = "2025-11-27T00:55:57.088Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/d2/d2/687e9822df0f9ece13c20f438d68b71812a940b8c36d8cae5d569e18c6a0/azure_cosmos-4.15.0b2.tar.gz", hash = "sha256:ebb03832ae8b62bbcffe7829ddada40c2e911135ca323123d8c42e490f910816", size = 2087731, upload-time = "2025-12-17T09:23:19.904Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/81/e6/4f2a7def5b0b533e1cedea4d97159e8bdf89f73109ae21e50c46031217be/azure_cosmos-4.15.0b1-py3-none-any.whl", hash = "sha256:223b5b7b2725e857ad5bef614e5270adc23e5587d1ed9fabc49f2b4e0702e588", size = 418637, upload-time = "2025-11-27T00:55:58.937Z" },
+    { url = "https://files.pythonhosted.org/packages/cd/2f/1b55c00bc4e45a96542fc214f9a5c52d247f2425e5669e5a8a2554bcdb51/azure_cosmos-4.15.0b2-py3-none-any.whl", hash = "sha256:80efb81e4f96ceb72e1e5b526788b3524f23cb20a6d46762234448dc8d09e500", size = 420404, upload-time = "2025-12-17T09:23:21.883Z" },
 ]
 
 [[package]]
@@ -3036,31 +3036,31 @@ wheels = [
 
 [[package]]
 name = "microsoft-agents-activity"
-version = "0.7.0.dev10"
+version = "0.7.0.dev12"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "pydantic", marker = "sys_platform == 'darwin' or sys_platform == 'linux'" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/df/c7/dfac24864d286a24b2c84826e59bee675ad53c8d85a4caeb97acfd725490/microsoft_agents_activity-0.7.0.dev10.tar.gz", hash = "sha256:5f4aec34f6a8a3b479461966c4c22bf619084b1c9cdbf1e47813ba157ac7f320", size = 60969, upload-time = "2025-12-09T09:06:07.892Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/92/02/9c9eb63917392883ad371f1f8c534adfb68deeb0a2ffcf489951a3a5ebc6/microsoft_agents_activity-0.7.0.dev12.tar.gz", hash = "sha256:0b3d7ca7af9559729e32aa2c64aef6de4426a0d8357af7a55f5a8cded5d084a9", size = 60983, upload-time = "2025-12-17T09:06:38.39Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/3b/95/c96d7e6f75577fb6c906aabf996d98c310f1cc79e0efebda666cac42bb19/microsoft_agents_activity-0.7.0.dev10-py3-none-any.whl", hash = "sha256:03385ee56b1ac7f4c9fbe9d269ce69bc773293125f73cbea7e0a0b92debc7a8d", size = 132662, upload-time = "2025-12-09T09:06:16.871Z" },
+    { url = "https://files.pythonhosted.org/packages/9f/71/e946dfe26df5c57487c587b95e05c77f39a6a75181caad0a2e47fe2b0b70/microsoft_agents_activity-0.7.0.dev12-py3-none-any.whl", hash = "sha256:fb87ce08abe35e7e1226db34a76a2a6303989fa4f6ee3f82b39c51440d999cd8", size = 132661, upload-time = "2025-12-17T09:06:47.842Z" },
 ]
 
 [[package]]
 name = "microsoft-agents-copilotstudio-client"
-version = "0.7.0.dev10"
+version = "0.7.0.dev12"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "microsoft-agents-hosting-core", marker = "sys_platform == 'darwin' or sys_platform == 'linux'" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/c7/ce/a2b9104815aebc7ea4fa73b3c601a115133e9e61777575e1440304274fe2/microsoft_agents_copilotstudio_client-0.7.0.dev10.tar.gz", hash = "sha256:6dd31f3c54b1e05977ef812fef0040a9629f693e23c396fe811cabbf61d5000f", size = 12660, upload-time = "2025-12-09T09:06:09.993Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/88/e2/ee2077a873377c3d6832fb44c339dd2b1db9b65e53e9cdd1b460daa8aef2/microsoft_agents_copilotstudio_client-0.7.0.dev12.tar.gz", hash = "sha256:cab5c1bc149bbd3b32ce3f00ecdb38ff00664f180d93f882a5e65fa738d6ff88", size = 12648, upload-time = "2025-12-17T09:06:40.68Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/d3/b1/05e9a771b94a11f70a9dfd50cf18b67ca9a9ac17746cd97c15f93b1683a8/microsoft_agents_copilotstudio_client-0.7.0.dev10-py3-none-any.whl", hash = "sha256:9ed7bcc8154f16c7230976c7179b660f8bb8c4927360b6e7565cddcd67da9063", size = 13496, upload-time = "2025-12-09T09:06:18.805Z" },
+    { url = "https://files.pythonhosted.org/packages/a4/67/4d01168a35c4dd7ed97f9588143e3eea8f4894ce5de8401428da0dad3fc9/microsoft_agents_copilotstudio_client-0.7.0.dev12-py3-none-any.whl", hash = "sha256:c78682deb416652957992436b47c864c4287da377fe48fcd2bfef3eacf99cc75", size = 13494, upload-time = "2025-12-17T09:06:50.139Z" },
 ]
 
 [[package]]
 name = "microsoft-agents-hosting-core"
-version = "0.7.0.dev10"
+version = "0.7.0.dev12"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "azure-core", marker = "sys_platform == 'darwin' or sys_platform == 'linux'" },
@@ -3069,9 +3069,9 @@ dependencies = [
     { name = "pyjwt", marker = "sys_platform == 'darwin' or sys_platform == 'linux'" },
     { name = "python-dotenv", marker = "sys_platform == 'darwin' or sys_platform == 'linux'" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/66/2d/35409e4973168d5c4cb06bf04178e6fc66eeaa164c0ad6326de619b95eff/microsoft_agents_hosting_core-0.7.0.dev10.tar.gz", hash = "sha256:c773eaceee132745a340cc6b00fe17127a1bd85595780bf35b327c8179bb0245", size = 90615, upload-time = "2025-12-09T09:06:11.923Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/1e/ca/ffe2f0ed6aa9f7a2a9d793539003fee0e86622b83a61f0933065de7b7953/microsoft_agents_hosting_core-0.7.0.dev12.tar.gz", hash = "sha256:8093ced5a435cb2fb177be38dd1eeaec937aefa544ec1371f65b41dd53a3721d", size = 90609, upload-time = "2025-12-17T09:06:42.622Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/48/07/142c3a0e3587c0e0d32466bcc7fd18427effca9fec03e9b1752639726070/microsoft_agents_hosting_core-0.7.0.dev10-py3-none-any.whl", hash = "sha256:66a9da8697a785048284b8272c29d470908e9a752423d3b0b92b3d9c4cd1326a", size = 133794, upload-time = "2025-12-09T09:06:21.715Z" },
+    { url = "https://files.pythonhosted.org/packages/0a/19/b09facedd92b439ffed675ceaf611bd9107acfcf77df531816587019f865/microsoft_agents_hosting_core-0.7.0.dev12-py3-none-any.whl", hash = "sha256:cca0d752c8ce055cc53211e0e3e501466ac629bf50f391550c9f029b791b620e", size = 133796, upload-time = "2025-12-17T09:06:51.841Z" },
 ]
 
 [[package]]
@@ -4564,11 +4564,11 @@ wheels = [
 
 [[package]]
 name = "python-multipart"
-version = "0.0.20"
+version = "0.0.21"
 source = { registry = "https://pypi.org/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/f3/87/f44d7c9f274c7ee665a29b885ec97089ec5dc034c7f3fafa03da9e39a09e/python_multipart-0.0.20.tar.gz", hash = "sha256:8dd0cab45b8e23064ae09147625994d090fa46f5b0d1e13af944c331a7fa9d13", size = 37158, upload-time = "2024-12-16T19:45:46.972Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/78/96/804520d0850c7db98e5ccb70282e29208723f0964e88ffd9d0da2f52ea09/python_multipart-0.0.21.tar.gz", hash = "sha256:7137ebd4d3bbf70ea1622998f902b97a29434a9e8dc40eb203bbcf7c2a2cba92", size = 37196, upload-time = "2025-12-17T09:24:22.446Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/45/58/38b5afbc1a800eeea951b9285d3912613f2603bdf897a4ab0f4bd7f405fc/python_multipart-0.0.20-py3-none-any.whl", hash = "sha256:8a62d3a8335e06589fe01f2a3e178cdcc632f3fbe0d492ad9ee0ec35aab1f104", size = 24546, upload-time = "2024-12-16T19:45:44.423Z" },
+    { url = "https://files.pythonhosted.org/packages/aa/76/03af049af4dcee5d27442f71b6924f01f3efb5d2bd34f23fcd563f2cc5f5/python_multipart-0.0.21-py3-none-any.whl", hash = "sha256:cf7a6713e01c87aa35387f4774e812c4361150938d20d232800f75ffcf266090", size = 24541, upload-time = "2025-12-17T09:24:21.153Z" },
 ]
 
 [[package]]
@@ -4855,16 +4855,16 @@ wheels = [
 
 [[package]]
 name = "rich-toolkit"
-version = "0.17.0"
+version = "0.17.1"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "click", marker = "sys_platform == 'darwin' or sys_platform == 'linux'" },
     { name = "rich", marker = "sys_platform == 'darwin' or sys_platform == 'linux'" },
     { name = "typing-extensions", marker = "sys_platform == 'darwin' or sys_platform == 'linux'" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/ad/d0/8f8de36e1abf8339b497ce700dd7251ca465ffca4a1976969b0eaeb596fb/rich_toolkit-0.17.0.tar.gz", hash = "sha256:17ca7a32e613001aa0945ddea27a246f6de01dfc4c12403254c057a8ee542977", size = 187955, upload-time = "2025-11-27T11:10:24.863Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/97/09/3f9b8d9daaf235195c626f21e03604c05b987404ee3bcacee0c1f67f2a8e/rich_toolkit-0.17.1.tar.gz", hash = "sha256:5af54df8d1dd9c8530e462e1bdcaed625c9b49f5a55b035aa0ba1c17bdb87c9a", size = 187925, upload-time = "2025-12-17T10:49:22.583Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/b2/42/ef2ed40699567661d03b0b511ac46cf6cee736de8f3666819c12d6d20696/rich_toolkit-0.17.0-py3-none-any.whl", hash = "sha256:06fb47a5c5259d6b480287cd38aff5f551b6e1a307f90ed592453dd360e4e71e", size = 31412, upload-time = "2025-11-27T11:10:23.847Z" },
+    { url = "https://files.pythonhosted.org/packages/7f/7b/15e55fa8a76d0d41bf34d965af78acdaf80a315907adb30de8b63c272694/rich_toolkit-0.17.1-py3-none-any.whl", hash = "sha256:96d24bb921ecd225ffce7c526a9149e74006410c05e6d405bd74ffd54d5631ed", size = 31412, upload-time = "2025-12-17T10:49:21.793Z" },
 ]
 
 [[package]]
