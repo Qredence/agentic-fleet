@@ -1255,6 +1255,9 @@ class SupervisorWorkflow:
                     state=WorkflowRunState.FAILED,
                     data={"message": "Workflow timed out", "workflow_id": workflow_id},
                 )
+                # Cleanup and exit early - do not emit fallback output after timeout
+                self._cleanup_reasoning_effort_tracking(workflow_id)
+                return
             except Exception as e:
                 duration = time.time() - workflow_start_time
                 logger.exception(
@@ -1285,6 +1288,9 @@ class SupervisorWorkflow:
                     state=WorkflowRunState.FAILED,
                     data={"message": f"Workflow error: {e!s}", "workflow_id": workflow_id},
                 )
+                # Cleanup and exit early - do not emit fallback output after exception
+                self._cleanup_reasoning_effort_tracking(workflow_id)
+                return
 
             if final_msg is None and not saw_output_event:
                 final_msg = await self._create_fallback_result(task_for_metadata)
