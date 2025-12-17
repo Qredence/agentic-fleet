@@ -11,14 +11,14 @@ from rich.panel import Panel
 from rich.progress import Progress
 
 from ...dspy_modules.reasoner import DSPyReasoner
-from ...utils.compiler import compile_answer_quality, compile_nlu, compile_reasoner
-from ...utils.config import (
+from ...utils.cfg import (
     DEFAULT_ANSWER_QUALITY_CACHE_PATH,
     DEFAULT_CACHE_PATH,
     DEFAULT_GEPA_LOG_DIR,
     DEFAULT_NLU_CACHE_PATH,
     load_config,
 )
+from ...utils.compiler import compile_answer_quality, compile_nlu, compile_reasoner
 from ..utils import init_tracing, resolve_resource_path
 
 console = Console()
@@ -139,7 +139,7 @@ def gepa_optimize(
         raise typer.Exit(code=1) from exc
 
     # Use centralized DSPy manager (aligns with agent-framework patterns)
-    from ...utils.dspy_manager import configure_dspy_settings  # type: ignore
+    from ...dspy_modules.lifecycle import configure_dspy_settings
 
     configure_dspy_settings(model=effective_model, enable_cache=True)
 

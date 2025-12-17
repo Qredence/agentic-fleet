@@ -1,6 +1,6 @@
 import json
 
-from agentic_fleet.app.main import app
+from agentic_fleet.main import app
 
 
 def generate_openapi() -> None:

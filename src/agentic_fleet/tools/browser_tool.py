@@ -9,13 +9,14 @@ from __future__ import annotations
 import contextlib
 import os
 from collections.abc import Callable
-from typing import TYPE_CHECKING, Any, cast
+from typing import TYPE_CHECKING, Any
 from urllib.parse import urlparse
 
 from agent_framework._serialization import SerializationMixin
 from agent_framework._tools import ToolProtocol
 
-from agentic_fleet.utils.config import (
+from agentic_fleet.tools.base import SchemaToolMixin
+from agentic_fleet.utils.cfg import (
     DEFAULT_BROWSER_MAX_TEXT_LENGTH,
     DEFAULT_BROWSER_SELECTOR_TIMEOUT_MS,
     DEFAULT_BROWSER_TIMEOUT_MS,
@@ -37,7 +38,7 @@ except ImportError:
     PLAYWRIGHT_AVAILABLE = False
 
 
-class BrowserTool(SerializationMixin, ToolProtocol):
+class BrowserTool(SchemaToolMixin, SerializationMixin, ToolProtocol):
     """
     Browser automation tool using Playwright for real-time web browsing.
 
@@ -84,8 +85,8 @@ class BrowserTool(SerializationMixin, ToolProtocol):
             factory = async_playwright_factory
             playwright_manager = factory()
             cls._shared_playwright = await playwright_manager.start()
-            playwright_obj = cast(Any, cls._shared_playwright)
-            cls._shared_browser = await playwright_obj.chromium.launch(headless=headless)
+            assert cls._shared_playwright is not None
+            cls._shared_browser = await cls._shared_playwright.chromium.launch(headless=headless)
 
         assert cls._shared_browser is not None
         return cls._shared_browser
@@ -285,9 +286,4 @@ class BrowserTool(SerializationMixin, ToolProtocol):
         """
         pass
 
-    def to_dict(self, **kwargs: Any) -> dict[str, Any]:
-        """Convert tool to dictionary format for agent-framework.
-
-        Returns the OpenAI function calling schema format.
-        """
-        return self.schema
+    # to_dict inherited from SchemaToolMixin

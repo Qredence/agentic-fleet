@@ -964,9 +964,9 @@
     "assigned_to": "planner,copilot_researcher,researcher,analyst,coder,writer,reviewer,verifier,generator,executor",
     "mode": "sequential",
     "tool_requirements": [
-      "TavilySearch (TavilySearchTool) — use only for queries about events/data from 2024 onwards or when up-to-date web data is required",
-      "BrowserTool — optional, used by Copilot_researcher for deep site browsing or extracting complex web content",
-      "No-tool — default until user confirms research is needed"
+      "TavilySearch (TavilySearchTool) - use only for queries about events/data from 2024 onwards or when up-to-date web data is required",
+      "BrowserTool - optional, used by Copilot_researcher for deep site browsing or extracting complex web content",
+      "No-tool - default until user confirms research is needed"
     ]
   },
   {
@@ -980,6 +980,109 @@
       "tavily_search",
       "browser",
       "HostedCodeInterpreterTool"
+    ]
+  },
+  {
+    "task": "Explain quantum computing in 2 sentences",
+    "team": "Writer: Content creation",
+    "available_tools": "No tools available",
+    "context": "Self-improvement: Quality score 10.0/10",
+    "assigned_to": "FastResponder",
+    "mode": "delegated",
+    "tool_requirements": []
+  },
+  {
+    "task": "What are 3 interesting facts about the Eiffel Tower?",
+    "team": "Writer: Content creation",
+    "available_tools": "No tools available",
+    "context": "Self-improvement: Quality score 10.0/10",
+    "assigned_to": "FastResponder",
+    "mode": "delegated",
+    "tool_requirements": []
+  },
+  {
+    "task": "what can DSPy do to improve Microsoft Foundry Agent",
+    "team": "Writer: Content creation",
+    "available_tools": "- TavilySearchTool/TavilyMCPTool (available to Researcher): Search the web for real-time information using Tavily. Provides accurate, up-to-date results with source citations. [Capabilities: web_search, real_time, citations]",
+    "context": "Self-improvement: Quality score 9.0/10",
+    "assigned_to": "ResearcherAgent,CopilotResearchAgent,AnalystAgent,CoderAgent,WriterAgent,ReviewerAgent,VerifierAgent,PlannerAgent,ExecutorAgent",
+    "mode": "parallel",
+    "tool_requirements": ["TavilySearchTool", "BrowserTool"]
+  },
+  {
+    "task": "Summarize the main idea of the following: Paris is the capital of France and a center for art and fashion.",
+    "team": "Writer: Content creation",
+    "available_tools": "No tools available",
+    "context": "Edge case: Ambiguous Task - Self-improvement: Quality score 0.0/10 - Ambiguous tasks should default to Researcher for clarification",
+    "assigned_to": "generator",
+    "mode": "parallel",
+    "tool_requirements": []
+  },
+  {
+    "task": "Analyze the latest market trends for AI startups\n",
+    "team": "Writer: Content creation",
+    "available_tools": "No tools available",
+    "context": "Edge case: Ambiguous Task - Self-improvement: Quality score 0.0/10 - Ambiguous tasks should default to Researcher for clarification",
+    "assigned_to": "",
+    "mode": "delegated",
+    "tool_requirements": []
+  },
+  {
+    "task": "Detail and analyze how DSPy is groundbreaking in today's AI landscape.",
+    "team": "Researcher: Web research specialist",
+    "available_tools": "- TavilySearchTool/TavilyMCPTool (available to Researcher): Search the web for real-time information using Tavily. Provides accurate, up-to-date results with source citations. [Capabilities: web_search, real_time, citations]",
+    "context": "Edge case: Time Sensitive - Self-improvement: Quality score 0.0/10 - Time-sensitive queries require TavilySearchTool",
+    "assigned_to": "Researcher,PlannerAgent,ResearcherAgent,CopilotResearcher,AnalystAgent,WriterAgent,ReviewerAgent,VerifierAgent,GeneratorAgent",
+    "mode": "sequential",
+    "tool_requirements": [
+      "tavily_search",
+      "TavilySearchTool (mandatory) \u2014 run focused queries, collect ranked results and citations",
+      "BrowserTool (conditional) \u2014 visit top 3 Tavily-cited pages for direct quotes/figures",
+      "No additional tools to be used to keep token and latency budgets low"
+    ]
+  },
+  {
+    "task": "i mean microsoft/agent-framework",
+    "team": "Writer: Content creation",
+    "available_tools": "- TavilySearchTool/TavilyMCPTool (available to Researcher): Search the web for real-time information using Tavily. Provides accurate, up-to-date results with source citations. [Capabilities: web_search, real_time, citations]",
+    "context": "Self-improvement: Quality score 6.5/10",
+    "assigned_to": "ResearcherAgent,Copilot_ResearcherAgent,WriterAgent,VerifierAgent,ReviewerAgent,Planner",
+    "mode": "sequential",
+    "tool_requirements": [
+      "tavily_search (ResearcherAgent) \u2014 query: \"microsoft/agent-framework\"; collect top 3 sources and snippets",
+      "BrowserTool (Copilot_ResearcherAgent) \u2014 visit repository/doc pages identified, extract README intro, example usage, license and last commit if available",
+      "(No code execution tool needed unless examples require live testing \u2014 then escalate to Coder)"
+    ]
+  },
+  {
+    "task": "search what is a world cup of football go in detail , write as markdown",
+    "team": "Writer: Content creation",
+    "available_tools": "No tools available",
+    "context": "Self-improvement: Quality score 8.1/10",
+    "assigned_to": "Planner,ResearcherAgent,WriterAgent,ReviewerAgent",
+    "mode": "sequential",
+    "tool_requirements": []
+  },
+  {
+    "task": "write a code snippet of a DSPY program for a RAG agent",
+    "team": "Writer: Content creation",
+    "available_tools": "No tools available",
+    "context": "Edge case: Ambiguous Task - Self-improvement: Quality score 5.6/10 - Ambiguous tasks should default to Researcher for clarification",
+    "assigned_to": "coder,codex_agent,reviewer,generator",
+    "mode": "sequential",
+    "tool_requirements": []
+  },
+  {
+    "task": "Explore Cosmos DB and feature",
+    "team": "Writer: Content creation",
+    "available_tools": "- TavilySearchTool/TavilyMCPTool (available to Researcher): Search the web for real-time information using Tavily. Provides accurate, up-to-date results with source citations. [Capabilities: web_search, real_time, citations]",
+    "context": "Edge case: Ambiguous Task - Self-improvement: Quality score 0.0/10 - Ambiguous tasks should default to Researcher for clarification",
+    "assigned_to": "ResearcherAgent,CopilotResearchAgent,CodexAgent,AnalystAgent,WriterAgent,ReviewerAgent,VerifierAgent,GeneratorAgent,PlannerAgent",
+    "mode": "sequential",
+    "tool_requirements": [
+      "TavilySearchTool (ResearcherAgent): run targeted queries for release notes, 'Cosmos DB <feature> 2023 2024', 'Cosmos DB SDK <language> <feature>', and reputable blog posts or MS docs. Collect top 5 with citations.",
+      "BrowserTool (CopilotResearchAgent): open the identified MS docs, SDK references, and sample repos to extract exact code blocks, config fields, and endpoint details.",
+      "(Local execution via CodexAgent): implement and execute a short prototype based on extracted code (note: execution environment availability must be confirmed)."
     ]
   }
 ]

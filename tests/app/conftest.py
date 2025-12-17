@@ -3,8 +3,8 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import pytest
 from fastapi.testclient import TestClient
 
-from agentic_fleet.app.dependencies import get_workflow
-from agentic_fleet.app.main import app
+from agentic_fleet.api.deps import get_workflow
+from agentic_fleet.main import app
 from agentic_fleet.workflows.supervisor import SupervisorWorkflow
 
 
@@ -24,7 +24,7 @@ def client(mock_workflow):
 
     # Patch create_supervisor_workflow to prevent real initialization during startup
     with patch(
-        "agentic_fleet.app.dependencies.create_supervisor_workflow", new_callable=AsyncMock
+        "agentic_fleet.api.lifespan.create_supervisor_workflow", new_callable=AsyncMock
     ) as mock_create:
         mock_create.return_value = mock_workflow
         with TestClient(app) as client:

@@ -1,5 +1,137 @@
 # Changelog
 
+## v0.6.95 (2025-12-16) – Package Reorganization & Security Defaults
+
+### Highlights
+
+#### DSPy Compiled Artifact Pipeline (Phases 1-4)
+
+- **Compiled artifact registry** – Fail-fast enforcement ensures DSPy modules are pre-compiled before production use, eliminating runtime compilation overhead.
+- **Preloaded decision modules** – Routing, quality, and analysis modules are loaded at startup for faster first-request response times.
+- **Parallel optimization support** – GEPA optimizer can run training in parallel for faster model optimization.
+- **Phase integration tests** – Comprehensive test suite validates the complete compilation → loading → execution pipeline.
+
+#### Optimization & Self-Improvement Dashboard
+
+- **Optimization APIs** – REST endpoints for triggering DSPy optimization, evaluation runs, and self-improvement cycles.
+- **Dashboard integration** – Monitor optimization progress, view evaluation metrics, and track self-improvement results.
+- **History-based learning** – System learns from execution history to improve routing decisions over time.
+
+#### Performance & Reliability
+
+- **2x faster config loading** – Configuration caching reduces repeated YAML parsing overhead.
+- **History indexing** – Execution history now indexed for faster queries and analysis.
+- **70% code deduplication** – Helper extraction and delegation patterns reduced code redundancy.
+- **Enhanced WebSocket stability** – Improved heartbeat handling and reconnection logic with exponential backoff.
+
+#### Secure-by-Default Tracing
+
+- **`capture_sensitive` defaults to `false`** – All tracing configurations now default to secure mode across schema, YAML, and built-in defaults.
+- **Task preview redaction** – Cache telemetry redacts task previews by default; opt-in via `ENABLE_SENSITIVE_DATA=true`.
+
+#### Package Reorganization
+
+- **Utils subpackages** – Split `utils/` into focused modules for better maintainability:
+  - `utils/infra/` – Tracing, resilience, telemetry, logging
+  - `utils/storage/` – Cosmos, persistence, history management
+  - `utils/cfg/` – Configuration utilities
+- **Import path updates** – Changed `from agentic_fleet.utils.config` to `from agentic_fleet.utils.cfg` for consistency.
+
+#### Cosmos DB Improvements
+
+- **Partition-key fixes** – `query_agent_memory()` now uses single-partition queries for better performance.
+- **User-scoped history** – History loads are user-scoped when `userId` is available.
+
+#### Frontend Enhancements
+
+- **New UI components** – Added Skeleton, Tabs, Textarea, Tooltip (shadcn/ui).
+- **Theme context** – Centralized theme management via `ThemeContext`.
+- **Frontend restructure (partial)** – Implemented `features/chat/` and `features/dashboard/` structure with components, hooks, stores, and types.
+- **PromptInput accessibility** – Improved ARIA labels and keyboard navigation.
+- **Textarea styling consistency** – Unified styling across all input components.
+
+#### Documentation Overhaul
+
+- **Comprehensive System Overview** – New `docs/developers/system-overview.md` (1,150+ lines) providing in-depth technical guide covering:
+  - 5-phase pipeline architecture with diagrams
+  - Agent system (Factory, Roles, Tools, Handoffs)
+  - DSPy integration (GEPA, Training, Self-improvement)
+  - User interfaces (CLI, Python API, Web Frontend)
+  - Observability (Events, OpenTelemetry, Middleware)
+- **Enriched User Documentation** – React-docs style transformation:
+  - `docs/users/overview.md`: Complete rewrite (84 → 446 lines) with problem/solution framework, visual diagrams, and FAQ
+  - `docs/users/getting-started.md`: Enriched (277 → 491 lines) with "Hello World" tutorial, progressive examples, and troubleshooting
+- **README.md Updates** – Enhanced with 5-phase pipeline diagram, system architecture overview, and split documentation sections (Users/Developers)
+
+#### Repository Cleanup
+
+- **Removed legacy tracking files** – Deleted redundant root-level files:
+  - `GEMINI.md`, `PLANS.md`, `PLANS_previous.md` (consolidated into docs/plans)
+  - `PR_SUMMARY.md`, `TRACING_STATUS.md`, `PHASE3_PHASE4_IMPLEMENTATION.md` (temporary tracking)
+  - `docs/plans/archive/` (old version-specific plans)
+- **Cleaned .gitignore** – Removed duplicate entries, kept `docker/` and `infrastructure/` tracked (useful deployment templates)
+- **Untracked generated files** – `report/jscpd-report.json` now properly excluded
+
+### Changes
+
+#### Backend
+
+- **`src/agentic_fleet/utils/`**: Reorganized into `infra/`, `storage/`, and `cfg/` subpackages.
+- **Import paths**: Updated all imports from `config` to `cfg` module for consistency.
+- **`evaluate_routing` function**: Enhanced with detailed docstring and type hinting.
+- **`optimize_reasoner` script**: Updated import paths for clarity.
+- **`ChatSSEService`**: Streamlined `workflow_id` handling; added session creation assertion.
+- **`DSPyService`**: Cleaner async task creation in `compile_module_async`.
+
+#### Frontend
+
+- **`src/frontend/src/components/ui/`**: Added Skeleton, Tabs, Textarea, Tooltip components.
+- **`src/frontend/src/contexts/`**: Added ThemeContext for centralized theme management.
+
+#### Documentation
+
+- **`docs/plans/2025-12-15-frontend-restructure-design.md`** (NEW): Approved design for feature-based frontend structure.
+- **`provision_cosmos` script**: Updated documentation with usage examples and container descriptions.
+
+### Bug Fixes
+
+- **Fixed `load_config` import path** – Resolved module import error in reasoner that could cause startup failures.
+- **Fixed reasoning effort cleanup** – Proper cleanup on workflow timeout prevents resource leaks.
+- **Fixed LiteLLM test teardown** – Suppressed noisy cleanup errors during test execution.
+- **Fixed ChatMessage field preservation** – Pydantic model cloning ensures all fields are properly propagated.
+- **Fixed predictor initialization** – Corrected DSPy predictor setup for version compatibility.
+- **Fixed conversation context injection** – Proper injection of conversation history into workflow context.
+- **Fixed Jaeger image version** – Pinned to stable version preventing tracing failures.
+
+### Security
+
+- **Log injection prevention** – Addressed CodeQL alerts #164, #165, #166, #167, #169 by sanitizing user input before logging.
+
+### Tests
+
+- **Phase 3 & 4 integration tests** – Validates compiled module loading and caching.
+- **Tracing initialization tests** – Ensures YAML config properly initializes OpenTelemetry.
+- **FastPath detector tests** – Unit tests for simple task routing logic.
+- **EventNarrator tests** – Coverage for DSPy-based event narration.
+- **Profiling utility tests** – Tests for performance monitoring decorators.
+- **TTL cache tests** – Comprehensive tests for time-based caching.
+- **Background quality evaluation tests** – Tests for async quality assessment.
+
+### Migration Notes
+
+- **Update imports**: `from agentic_fleet.utils.config` → `from agentic_fleet.utils.cfg`
+- **Legacy compatibility**: Re-exports maintained in package `__init__.py` files for backward compatibility.
+- **No breaking changes**: Existing workflows continue to work without modification.
+
+### Stats
+
+- **93 commits** in this release
+- **390 files changed**
+- **+36,121 insertions**, **-16,352 deletions**
+- **55 test files** added or updated
+
+---
+
 ## v0.6.9 (2025-12-07) – DSPy Typed Signatures, Workflow Refactor & Docs
 
 ### Highlights

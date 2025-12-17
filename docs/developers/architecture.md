@@ -6,6 +6,74 @@ AgenticFleet combines Microsoft's agent-framework with DSPy's intelligent prompt
 
 ## System Architecture
 
+### Full-Stack Overview (Web + CLI)
+
+```mermaid
+graph TB
+  subgraph Client[Clients]
+    UI[React/Vite Frontend]
+    CLI[CLI: agentic-fleet]
+  end
+
+  subgraph Backend[FastAPI Backend]
+    HTTP[HTTP API: /api/*]
+    WS[WebSocket: /api/ws/chat]
+    CHAT[Chat WebSocket Service]
+  end
+
+  subgraph Workflow[Supervisor Workflow (agent-framework)]
+    A[Analysis]
+    R[Routing]
+    E[Execution]
+    P[Progress]
+    Q[Quality]
+  end
+
+  subgraph Intelligence[DSPy Intelligence Layer]
+    REASONER[DSPyReasoner (cached, offline-compiled)]
+    SIGS[Typed signatures + assertions]
+  end
+
+  subgraph Runtime[Agents + Tools]
+    AGENTS[ChatAgent instances]
+    MODEL[OpenAIResponsesClient]
+    TOOLS[ToolRegistry + tools]
+  end
+
+  subgraph StateObs[State & Observability]
+    CONV[(Conversations store)]
+    THREAD[(AgentThread / multi-turn state)]
+    CKPT[(Checkpoint storage)]
+    HIST[(Execution history JSONL)]
+    OTEL[(OpenTelemetry tracing)]
+  end
+
+  UI -->|REST| HTTP
+  UI -->|stream events| WS
+  WS --> CHAT
+
+  CHAT -->|new run: message (+ enable_checkpointing)| Workflow
+  CHAT -->|resume: checkpoint_id only| Workflow
+  CHAT --> CONV
+  CHAT --> THREAD
+  CHAT --> CKPT
+
+  CLI -->|run / run_stream| Workflow
+
+  A --> REASONER
+  R --> REASONER
+  P --> REASONER
+  Q --> REASONER
+  REASONER --> SIGS
+
+  E --> AGENTS
+  AGENTS --> MODEL
+  AGENTS --> TOOLS
+
+  Workflow --> HIST
+  Workflow --> OTEL
+```
+
 ### Core Components
 
 ```
@@ -50,6 +118,8 @@ AgenticFleet combines Microsoft's agent-framework with DSPy's intelligent prompt
 
 > **Note**: The Judge/Refinement phase was removed in v0.6.6 for ~66% latency improvement (from ~6 min to ~2 min for complex queries).
 
+> **Operational note (concurrency)**: Per-request `reasoning_effort` can require mutating agent client state in `SupervisorWorkflow._apply_reasoning_effort`. To avoid cross-request interference under concurrent WebSocket sessions, the WebSocket service initializes a **fresh SupervisorWorkflow per socket session** (isolating agent instances).
+
 ### Agent-Framework Integration Architecture
 
 The workflow is built entirely on agent-framework primitives:
@@ -63,33 +133,33 @@ graph TB
 
     subgraph "Workflow Creation"
         FACTORY[create_supervisor_workflow]
-        BUILDER[WorkflowBuilder<br/>agent-framework]
-        CONTEXT[SupervisorContext<br/>DSPy + Agents + Tools]
+        BUILDER["WorkflowBuilder<br/>agent-framework"]
+        CONTEXT["SupervisorContext<br/>DSPy + Agents + Tools"]
     end
 
     subgraph "Agent-Framework Executors"
-        AE[AnalysisExecutor<br/>extends Executor]
-        RE[RoutingExecutor<br/>extends Executor]
-        EE[ExecutionExecutor<br/>extends Executor]
-        PE[ProgressExecutor<br/>extends Executor]
-        QE[QualityExecutor<br/>extends Executor]
+        AE["AnalysisExecutor<br/>extends Executor"]
+        RE["RoutingExecutor<br/>extends Executor"]
+        EE["ExecutionExecutor<br/>extends Executor"]
+        PE["ProgressExecutor<br/>extends Executor"]
+        QE["QualityExecutor<br/>extends Executor"]
     end
 
     subgraph "DSPy Intelligence Layer"
         DSPY[DSPyReasoner]
-        SIGS[Enhanced Signatures<br/>EnhancedTaskRouting<br/>JudgeEvaluation]
+        SIGS["Enhanced Signatures<br/>EnhancedTaskRouting<br/>JudgeEvaluation"]
     end
 
     subgraph "Agent Execution"
-        CA[ChatAgent<br/>agent-framework]
-        OAI[OpenAIResponsesClient<br/>agent-framework.openai]
+        CA["ChatAgent<br/>agent-framework"]
+        OAI["OpenAIResponsesClient<br/>agent-framework.openai"]
         TOOLS[Tool Registry]
     end
 
     subgraph "Event Streaming"
-        MAE[MagenticAgentMessageEvent<br/>agent-framework]
-        WOE[WorkflowOutputEvent<br/>agent-framework]
-        CM[ChatMessage + Role<br/>agent-framework]
+        MAE["MagenticAgentMessageEvent<br/>agent-framework"]
+        WOE["WorkflowOutputEvent<br/>agent-framework"]
+        CM["ChatMessage + Role<br/>agent-framework"]
     end
 
     CLI --> FACTORY
@@ -211,6 +281,40 @@ D3 --> E
 E --> F[Final output]
 ```
 
+### CLI Run Flow
+
+```graph TD
+  U[User] -->|agentic-fleet run -m "..."| CLI[CLI (agentic-fleet)]
+  CLI -->|run_stream(message)| WF[Supervisor Workflow]
+  WF -->|execute phases + tool calls| AG[Agents/Tools]
+  AG -->|results| WF
+  WF -->|StreamEvent| CLI
+  CLI -->|Render output/progress| U
+  WF -->|final output| CLI
+  CLI -->|exit 0| U
+```
+
+```
+sequenceDiagram
+  participant U as User
+  participant CLI as CLI (agentic-fleet)
+  participant WF as Supervisor Workflow
+  participant AG as Agents/Tools
+
+  U->>CLI: agentic-fleet run -m "..."
+  CLI->>WF: run_stream(message)
+
+  WF->>AG: execute phases + tool calls
+
+  loop Stream events
+    WF-->>CLI: StreamEvent
+    CLI-->>U: Render output/progress
+  end
+
+  WF-->>CLI: final output
+  CLI-->>U: exit 0
+```
+
 > Entry point: [`cli/console.py`](src/agentic_fleet/cli/console.py:39) provides the Typer CLI used to start workflows.
 
 ### Agent-Framework Integration Summary
@@ -292,21 +396,29 @@ async for event in workflow_agent.run_stream(task_msg):
     - `improve.py` - Self-improvement command
     - `evaluate.py` - Batch evaluation command
 
-- `src/utils/` - Utilities
-  - `compiler.py` - DSPy compilation with caching
-  - `config_loader.py` - Configuration loading
-  - `config_schema.py` - Configuration validation
-  - `dspy_manager.py` - DSPy settings and LM management
-  - `gepa_optimizer.py` - GEPA optimization utilities
-  - `history_manager.py` - Execution history management
-  - `logger.py` - Logging setup
-  - `models.py` - Data models and type definitions
-  - `self_improvement.py` - Self-improvement engine
-  - `tool_registry.py` - Tool metadata registry
-  - `tracing.py` - OpenTelemetry tracing integration
-  - `cache.py` - TTL cache utilities
-  - `constants.py` - Centralized constants and defaults
-  - `async_compiler.py` - Async compilation utilities
+- `src/utils/` - Utilities (organized into subpackages)
+  - `cfg/` - Configuration utilities
+    - `config_loader.py` - YAML/environment configuration loading
+    - `config_schema.py` - Pydantic configuration validation
+  - `infra/` - Infrastructure concerns
+    - `tracing.py` - OpenTelemetry tracing integration
+    - `resilience.py` - Circuit breakers, retries, fault tolerance
+    - `telemetry.py` - Metrics and telemetry collection
+    - `logging.py` - Structured logging setup
+  - `storage/` - Data persistence
+    - `cosmos.py` - Azure Cosmos DB integration
+    - `persistence.py` - Local file persistence
+    - `history_manager.py` - Execution history management
+  - Root utilities:
+    - `compiler.py` - DSPy compilation with caching
+    - `dspy_manager.py` - DSPy settings and LM management
+    - `gepa_optimizer.py` - GEPA optimization utilities
+    - `models.py` - Data models and type definitions
+    - `self_improvement.py` - Self-improvement engine
+    - `tool_registry.py` - Tool metadata registry
+    - `cache.py` - TTL cache utilities
+    - `constants.py` - Centralized constants and defaults
+    - `async_compiler.py` - Async compilation utilities
 
 - `src/tools/` - Tool implementations
   - `tavily_tool.py` - Tavily web search tool

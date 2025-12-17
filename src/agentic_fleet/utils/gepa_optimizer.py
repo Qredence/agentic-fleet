@@ -23,8 +23,8 @@ import dspy
 from dspy.teleprompt.gepa.gepa import GEPAFeedbackMetric
 from dspy.teleprompt.gepa.gepa_utils import ScoreWithFeedback
 
+from ..dspy_modules.lifecycle import get_reflection_lm
 from .cosmos import get_default_user_id, record_dspy_optimization_run
-from .dspy_manager import get_reflection_lm
 from .history_manager import HistoryManager
 from .progress import NullProgressCallback, ProgressCallback
 from .self_improvement import SelfImprovementEngine
@@ -127,10 +127,12 @@ def dedupe_examples(records: Sequence[dict[str, Any]]) -> list[dict[str, Any]]:
     unique: list[dict[str, Any]] = []
 
     for record in records:
+        assigned_to = record.get("assigned_to", [])
+        normalized_agents = sorted(_normalize_agents(assigned_to))
         fingerprint = "|".join(
             [
                 record.get("task", "").strip().lower(),
-                record.get("assigned_to", ""),
+                str(normalized_agents),
                 record.get("mode", record.get("execution_mode", "")),
             ]
         )

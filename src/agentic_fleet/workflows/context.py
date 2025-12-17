@@ -220,6 +220,8 @@ class SupervisorContext:
     analysis_cache: TTLCache[str, dict[str, Any]] | None = None
     latest_phase_timings: dict[str, float] = field(default_factory=dict)
     latest_phase_status: dict[str, str] = field(default_factory=dict)
+    latest_phase_memory_mb: dict[str, float] = field(default_factory=dict)
+    latest_phase_memory_delta_mb: dict[str, float] = field(default_factory=dict)
 
     progress_callback: ProgressCallback = field(default_factory=NullProgressCallback)
     current_execution: dict[str, Any] = field(default_factory=dict)
@@ -231,5 +233,19 @@ class SupervisorContext:
     compilation_lock: asyncio.Lock | None = None
     compilation_state: CompilationState | None = None
 
+    # Phase 2: Preloaded DSPy decision modules from app.state
+    dspy_routing_module: Any | None = None
+    dspy_quality_module: Any | None = None
+    dspy_tool_planning_module: Any | None = None
+
     # Conversation thread for multi-turn context (agent-framework AgentThread)
     conversation_thread: AgentThread | None = None
+
+    # Persisted conversation history (from ConversationManager) for context rendering.
+    # Used as a fallback when the AgentThread does not expose a local message store.
+    conversation_history: list[Any] = field(default_factory=list)
+
+    # Request-scoped reasoning effort level ("minimal", "medium", "maximal").
+    # Stored in context for strategies to access without relying on shared agent mutation.
+    # Note: Use get_current_reasoning_effort() from supervisor module for contextvar access.
+    reasoning_effort: str | None = None

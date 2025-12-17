@@ -32,7 +32,7 @@ The DSPy-Enhanced Agent Framework combines Microsoft's agent-framework with DSPy
 
 ### Prerequisites
 
-- Python 3.10 or higher
+- Python 3.12 or higher
 - OpenAI API key
 - Tavily API key (optional, for web search capabilities)
 
@@ -45,20 +45,19 @@ git clone https://github.com/Qredence/agentic-fleet.git
 cd agentic-fleet
 ```
 
-2. **Create virtual environment**:
+2. **Install dependencies** (recommended: project Makefile + uv):
 
 ```bash
-uv python -m venv venv
-source venv/bin/activate  # On Windows: venv\Scripts\activate
+make install
 ```
 
-3. **Install dependencies**:
+Or, if you prefer direct `uv`:
 
 ```bash
 uv sync
 ```
 
-4. **Set up environment variables**:
+3. **Set up environment variables**:
 
 Create a `.env` file in the project root:
 
@@ -125,7 +124,7 @@ analyst desks, documentation teams, and evaluation/QA leads.
 
 ### Processing Flow
 
-Each CLI invocation triggers the same four-phase pipeline described in
+Each CLI invocation triggers the same five-phase pipeline described in
 [Execution Phases](#execution-phases):
 
 1. **Analysis** – DSPy inspects the prompt, required skills, and available tools.
@@ -133,20 +132,22 @@ Each CLI invocation triggers the same four-phase pipeline described in
    sequential vs. parallel mode, and synthesizes subtasks/handoffs.
 3. **Execution** – Microsoft agent-framework executors run the selected
    ChatAgents, stream tool calls, and capture artifacts.
-4. **Quality & Judge** – DSPy scores the output, records missing elements, and
-   optionally triggers refinement rounds until thresholds are met.
+4. **Progress** – DSPy determines whether the task is complete or needs iteration.
+5. **Quality** – DSPy scores the output, records missing elements, and may optionally
+   trigger refinement loops if enabled in configuration.
 
 The CLI surfaces these phases through the `--verbose` stream and also records
-timings/decisions in `src/agentic_fleet/data/logs/execution_history.jsonl` for later inspection via
-`uv run python scripts/analyze_history.py`.
+timings/decisions in `.var/logs/execution_history.jsonl` for later inspection via
+`uv run python src/agentic_fleet/scripts/analyze_history.py`.
 
 ### Programmatic Usage
 
 Integrate into your Python applications:
 
 ```python
-from agentic_fleet.workflows.supervisor_workflow import create_supervisor_workflow
 import asyncio
+
+from agentic_fleet.workflows import create_supervisor_workflow
 
 async def main():
     # Create and initialize workflow
@@ -167,7 +168,7 @@ asyncio.run(main())
 
 ### Agents
 
-The framework includes four specialized agents:
+AgenticFleet includes six specialized agents:
 
 1. **Researcher**
    - Information gathering and web research
@@ -189,6 +190,14 @@ The framework includes four specialized agents:
    - No special tools
    - Best for: checking accuracy, validating outputs, quality control
 
+5. **Coder**
+   - Code generation, debugging, implementation
+   - Best for: patches, refactors, implementation work
+
+6. **Planner**
+   - Task decomposition and orchestration support
+   - Best for: turning ambiguous prompts into structured plans
+
 ### DSPy Integration
 
 DSPy (Declarative Self-improving Python) optimizes prompts automatically. The framework uses DSPy for:
@@ -202,17 +211,17 @@ DSPy modules are compiled using BootstrapFewShot optimization with training exam
 
 ### Execution Phases
 
-Every workflow execution follows 4 phases:
+Every workflow execution follows 5 phases:
 
 ```
 ┌─────────────────────────────────────────────────────┐
-│ Phase 1: DSPy Task Analysis                        │
+│ Phase 1: Analysis                                  │
 │ - Analyze complexity, capabilities, tool needs      │
 │ - Optionally use tools for context gathering        │
 └─────────────────────────────────────────────────────┘
                         ▼
 ┌─────────────────────────────────────────────────────┐
-│ Phase 2: DSPy Task Routing                         │
+│ Phase 2: Routing                                   │
 │ - Select agents based on analysis                  │
 │ - Choose execution mode (parallel/sequential/
 │   delegated)                                       │
@@ -220,17 +229,23 @@ Every workflow execution follows 4 phases:
 └─────────────────────────────────────────────────────┘
                         ▼
 ┌─────────────────────────────────────────────────────┐
-│ Phase 3: Agent Execution                           │
+│ Phase 3: Execution                                 │
 │ - Agents process tasks using their tools           │
 │ - Results collected according to execution mode    │
 └─────────────────────────────────────────────────────┘
                         ▼
 ┌─────────────────────────────────────────────────────┐
-│ Phase 4: DSPy Quality Assessment                   │
+│ Phase 4: Progress                                  │
+│ - Decide if work is complete / needs iteration     │
+│ - Record progress signals for history + analytics  │
+└─────────────────────────────────────────────────────┘
+                        ▼
+┌─────────────────────────────────────────────────────┐
+│ Phase 5: Quality                                   │
 │ - Evaluate output quality (0-10 scale)             │
 │ - Identify missing elements                        │
 │ - Suggest improvements                             │
-│ - Optionally refine if score < threshold           │
+│ - Optionally refine if enabled in configuration    │
 └─────────────────────────────────────────────────────┘
 ```
 
@@ -238,72 +253,19 @@ Every workflow execution follows 4 phases:
 
 ### Configuration Files
 
-The framework uses YAML-based configuration in `config/workflow_config.yaml`:
+The framework uses YAML-based configuration in `config/workflow_config.yaml` (source of truth).
+
+Common path-related settings (excerpt):
 
 ```yaml
-# DSPy Configuration
 dspy:
-  model: gpt-5-mini # Model for DSPy supervisor
-  temperature: 0.7
-  max_tokens: 2000
   optimization:
-    enabled: true # Enable DSPy compilation
     examples_path: src/agentic_fleet/data/supervisor_examples.json
-    metric_threshold: 0.8
-    max_bootstrapped_demos: 4 # Few-shot examples per prompt
+    gepa_log_dir: .var/logs/dspy/gepa
 
-# Workflow Configuration
-workflow:
-  supervisor:
-    max_rounds: 15 # Max agent conversation turns
-    max_stalls: 3 # Max stuck iterations
-    max_resets: 2 # Max workflow resets
-    enable_streaming: true # Stream events for live UI
-
-  execution:
-    parallel_threshold: 3 # Min agents for parallel execution
-    timeout_seconds: 300
-    retry_attempts: 2
-
-# Agent Configuration
-agents:
-  researcher:
-    model: gpt-4.1
-    tools:
-      - TavilySearchTool
-    temperature: 0.5
-
-  analyst:
-    model: gpt-4.1
-    tools:
-      - HostedCodeInterpreterTool
-    temperature: 0.3
-
-  writer:
-    model: gpt-4.1
-    tools: []
-    temperature: 0.7
-
-  reviewer:
-    model: gpt-4.1
-    tools: []
-    temperature: 0.2
-
-# Tool Configuration
-tools:
-  enable_tool_aware_routing: true
-  pre_analysis_tool_usage: true
-  tool_registry_cache: true
-  tool_usage_tracking: true
-
-# Logging
 logging:
-  level: INFO
-  format: "% (asctime)s - %(name)s - %(levelname)s - %(message)s"
-  file: src/agentic_fleet/data/logs/workflow.log
-  save_history: true
-  history_file: src/agentic_fleet/data/logs/execution_history.jsonl
-  verbose: true
+  file: .var/logs/workflow.log
+  history_file: .var/logs/execution_history.jsonl
 ```
 
 ### Configuration Options Explained
@@ -377,6 +339,19 @@ async for event in workflow.run_stream("Your task here"):
     elif hasattr(event, 'data'):
         # Final result event
         result = event.data
+
+    #### Human-in-the-loop (HITL) responses (WebSocket)
+
+    When using the web UI (or any WebSocket client), workflows may emit request events that require a client response.
+    Clients can respond with `workflow.response` messages to unblock execution.
+
+    #### Checkpointing and resume
+
+    AgenticFleet follows agent-framework checkpoint semantics:
+
+    - For **new runs**, checkpointing is enabled by configuring checkpoint storage (opt-in flag), not by sending a `checkpoint_id`.
+    - For **resume**, send a `workflow.resume` message containing `checkpoint_id`.
+    - `checkpoint_id` is **resume-only** (message XOR checkpoint_id).
 ```
 
 ### Complex Multi-Step Tasks
@@ -401,7 +376,7 @@ You can override default configuration per execution:
 
 ```python
 from agentic_fleet.workflows.config import WorkflowConfig
-from agentic_fleet.workflows.supervisor_workflow import create_supervisor_workflow
+from agentic_fleet.workflows import create_supervisor_workflow
 
 # Create workflow with custom config
 config = WorkflowConfig(
@@ -532,7 +507,7 @@ class MyCustomTool(ToolProtocol):
 2. **Register with an agent**:
 
 ```python
-# In supervisor_workflow.py _create_agents()
+# In src/agentic_fleet/workflows/supervisor.py (workflow factory)
 agents["MyAgent"] = self._create_agent(
     name="MyAgent",
     description="Custom agent with special tool",
@@ -553,7 +528,7 @@ The DSPy reasoner analyzes the task complexity, time sensitivity, and structure 
 
 - **Fast Path**: For trivial queries ("Hello", "2+2"). Instant response, zero tool overhead.
 - **Handoff**: For linear tasks, simple research, or when speed is priority. Uses a "Triage" coordinator to route directly to specialists.
-- **Standard**: For complex, multi-step workflows requiring robustness. Uses the full "Committee" (Analysis → Routing → Execution → Review → Judge).
+- **Standard**: For complex, multi-step workflows requiring robustness. Uses the full pipeline (analysis → routing → execution → progress → quality).
 
 ### Handoff Mode
 
@@ -673,7 +648,7 @@ print(f"Improvements: {quality['improvements']}")
 
 ### Execution History
 
-All executions are automatically saved to `src/agentic_fleet/data/logs/execution_history.jsonl` (preferred) or `src/agentic_fleet/data/logs/execution_history.json` (legacy).
+All executions are automatically saved to `.var/logs/execution_history.jsonl` (preferred) or `.var/logs/execution_history.json` (legacy).
 
 **JSONL Format** (default):
 
@@ -693,21 +668,21 @@ Use the built-in analyzer:
 
 ```bash
 # Show overall summary and last 10 executions
-uv run python scripts/analyze_history.py
+uv run python src/agentic_fleet/scripts/analyze_history.py
 
 # Show all statistics
-uv run python scripts/analyze_history.py --all
+uv run python src/agentic_fleet/scripts/analyze_history.py --all
 
 # Show specific information
-uv run scripts/analyze_history.py --routing    # Routing mode distribution
-uv run scripts/analyze_history.py --agents     # Agent usage stats
-uv run scripts/analyze_history.py --timing     # Time breakdown by phase
+uv run python src/agentic_fleet/scripts/analyze_history.py --routing    # Routing mode distribution
+uv run python src/agentic_fleet/scripts/analyze_history.py --agents     # Agent usage stats
+uv run python src/agentic_fleet/scripts/analyze_history.py --timing     # Time breakdown by phase
 ```
 
 ### Programmatic History Access
 
 ```python
-from src.agentic_fleet.utils.history_manager import HistoryManager
+from agentic_fleet.utils.history_manager import HistoryManager
 
 manager = HistoryManager(history_format="jsonl")
 
@@ -749,8 +724,8 @@ clean answer:
 1. **Final Answer** – Markdown-formatted response and key metrics (always shown).
 2. **Reasoning & Plan** – DSPy analysis, proposed steps, and routing rationale.
 3. **Execution Log** – Timestamped agent/tool events, iterations, and handoffs.
-4. **Assertions & Checks** – Judge/referee evaluations, missing items, and
-   refinement outcomes.
+4. **Quality Checks** – Quality evaluation details, missing items, and
+   refinement outcomes (when enabled).
 
 The structured layout keeps executive-ready answers readable in the default
 mode while still exposing deep traces for operators and developers via
@@ -780,22 +755,22 @@ echo "TAVILY_API_KEY=tvly-your-key" >> .env
 **3. "ModuleNotFoundError: No module named 'src'"**
 
 ```bash
-# Solution: Install in editable mode
-pip install -e .
+# Solution: use uv sync (installs the package in the managed environment)
+uv sync
 ```
 
 **4. "Cache is stale / compilation fails"**
 
 ```bash
 # Solution: Clear cache
-python -c "from src.agentic_fleet.utils.compiler import clear_cache; clear_cache()"
+uv run python -c "from agentic_fleet.utils.compiler import clear_cache; clear_cache()"
 ```
 
 **5. Tests failing with import errors**
 
 ```bash
-# Solution: Set PYTHONPATH
-PYTHONPATH=. pytest -q tests/
+# Solution: run tests through uv so imports resolve via the managed environment
+uv run pytest -q
 ```
 
 ### Performance Tuning
@@ -826,7 +801,7 @@ Enable maximum verbosity:
 ```python
 import logging
 from agentic_fleet.utils.logger import setup_logger
-from agentic_fleet.workflows.supervisor_workflow import create_supervisor_workflow
+from agentic_fleet.workflows import create_supervisor_workflow
 
 setup_logger("dspy_agent_framework", "DEBUG")
 
@@ -837,8 +812,8 @@ result = await workflow.run("Your task")
 Check logs at:
 
 - Console output (real-time)
-- `src/agentic_fleet/data/logs/workflow.log` (persistent file log)
-- `logs/execution_history.jsonl` (structured execution data)
+- `.var/logs/workflow.log` (persistent file log)
+- `.var/logs/execution_history.jsonl` (structured execution data)
 
 ## Advanced Features
 
@@ -847,7 +822,7 @@ Check logs at:
 Programmatic history control:
 
 ```python
-from src.agentic_fleet.utils.history_manager import HistoryManager
+from agentic_fleet.utils.history_manager import HistoryManager
 
 manager = HistoryManager(
     history_format="jsonl",
@@ -872,7 +847,7 @@ stats = manager.get_history_stats()
 Control DSPy compilation cache:
 
 ```python
-from src.agentic_fleet.utils.compiler import clear_cache, get_cache_info
+from agentic_fleet.utils.compiler import clear_cache, get_cache_info
 
 # View cache info
 info = get_cache_info()
@@ -888,7 +863,7 @@ clear_cache()
 Handle workflow errors gracefully:
 
 ```python
-from src.agentic_fleet.workflows.exceptions import (
+from agentic_fleet.workflows.exceptions import (
     WorkflowError,
     AgentExecutionError,
     RoutingError,
@@ -913,7 +888,7 @@ except HistoryError as e:
 Use Pydantic schemas for validation:
 
 ```python
-from src.agentic_fleet.utils.config_schema import validate_config, WorkflowConfigSchema
+from agentic_fleet.core.config import WorkflowConfigSchema, validate_config
 
 # Validate configuration
 try:
@@ -945,7 +920,7 @@ except ConfigurationError as e:
 Reflective prompt evolution is available via the built-in GEPA command:
 
 ```bash
-uv run python console.py gepa-optimize \
+uv run agentic-fleet gepa-optimize \
   --auto medium \
   --max-full-evals 60 \
   --use-history
@@ -953,7 +928,7 @@ uv run python console.py gepa-optimize \
 
 - Enable GEPA globally by setting `dspy.optimization.use_gepa: true` in `config/workflow_config.yaml`.
 - Customize search intensity with `--auto` (`light`, `medium`, `heavy`) or the matching config key.
-- Add `--use-history` to merge high-quality records from `logs/execution_history.*` into the training split. Tune `--history-min-quality` and `--history-limit` as needed.
-- Results are cached at `logs/compiled_supervisor.pkl`. Delete the cache or pass `--no-cache` to force a fresh optimization run.
+- Add `--use-history` to merge high-quality records from `.var/logs/execution_history.*` into the training split. Tune `--history-min-quality` and `--history-limit` as needed.
+- Results are cached at `.var/logs/compiled_supervisor.pkl`. Delete the cache or pass `--no-cache` to force a fresh optimization run.
 
 Under the hood, the command configures `dspy.GEPA` with the routing feedback metric defined in `src/agentic_fleet/utils/gepa_optimizer.py`, ensuring actionable text feedback for each trajectory.

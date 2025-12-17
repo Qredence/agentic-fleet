@@ -35,9 +35,9 @@ def mock_context() -> MagicMock:
     }
     context.openai_client = MagicMock()
     context.config = MagicMock()
-    context.config.model = "gpt-4o"
+    context.config.model = "gpt-4.1-mini"
     context.config.dspy = MagicMock()
-    context.config.dspy.model = "gpt-4o"
+    context.config.dspy.model = "gpt-4.1-mini"
     return context
 
 

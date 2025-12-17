@@ -21,15 +21,20 @@
 
 | Pattern # | Description                                    | RPS (peak/avg) | Type  | Attributes Needed                                             | Latency SLO  | Consistency        | Expected Result Size                   | Document Size Band             | Design Considerations                                                                        | Status |
 | --------- | ---------------------------------------------- | -------------- | ----- | ------------------------------------------------------------- | ------------ | ------------------ | -------------------------------------- | ------------------------------ | -------------------------------------------------------------------------------------------- | ------ |
-| 1         | Create new workflow execution                  | 1 / <0.1       | Write | workflowId, userId, task, agents, config, timestamp           | P95 < 200 ms | Strong / session   | 1 document per request                 | Medium (5–50 KB)               | Point write with workflowId as partition key; low contention                                 | ⏳     |
-| 2         | Log agent execution step/event                 | 5 / ~1         | Write | workflowId, agentId, stepId, result, timestamp                | P95 < 200 ms | Session / eventual | 1 small document or subdocument append | Small (1–5 KB per step)        | Append-only pattern; co-locate with workflow to avoid cross-partition writes                 | ⏳     |
-| 3         | Query workflow execution history for dashboard | 2 / ~0.5       | Read  | workflowId, userId, time window                               | P95 < 100 ms | Session            | 1–20 documents per query               | Medium (5–100 KB each)         | Single-partition query by workflowId (primary); cross-partition by userId + time acceptable  | ⏳     |
-| 4         | Store/update DSPy training examples            | 0.5 / <<0.1    | Write | exampleId, task, routing, quality scores, team, mode          | P95 < 250 ms | Strong / session   | 1 document per write                   | Small–medium (2–20 KB)         | Document replacement; low write rate                                                         | ⏳     |
-| 5         | Query DSPy examples for optimization           | 1 / <<0.5      | Read  | task patterns, team, mode, quality thresholds                 | P95 < 200 ms | Session            | 10–200 documents                       | Small–medium (2–20 KB)         | Cross-partition queries acceptable at low scale; consider partitioning by team/mode          | ⏳     |
-| 6         | Store agent memory/knowledge                   | 2 / ~0.5       | Write | userId, agentId, content, embedding vector, metadata          | P95 < 250 ms | Eventual           | 1 document per write                   | Medium (2–10 KB text + vector) | Vector-friendly structure; partition by userId; optional TTL for stale memory                | ⏳     |
-| 7         | Retrieve agent memory for context              | 3 / ~1         | Read  | userId, agentId, semantic query/embedding                     | P95 < 150 ms | Session            | Top-k (5–20) documents                 | Medium (2–10 KB text + vector) | Efficient vector search (Cosmos DB vector index or external store); filter by userId/agentId | ⏳     |
-| 8         | Cache workflow results                         | 1 / ~0.2       | Write | cacheKey (task hash), userId, workflowId, result summary, TTL | P95 < 150 ms | Eventual           | 1 document per write                   | Medium (2–20 KB)               | TTL-based cleanup; partition by cacheKey; cache hits dominate reads                          | ⏳     |
-| 9         | Query cached results                           | 2 / ~0.5       | Read  | cacheKey                                                      | P95 < 50 ms  | Session            | 0–1 document                           | Medium (2–20 KB)               | Point read by cacheKey; high cache hit rate desired                                          | ⏳     |
+| 1         | Create new workflow execution                  | 1 / <0.1       | Write | workflowId, userId, task, agents, config, timestamp           | P95 < 200 ms | Strong / session   | 1 document per request                 | Medium (5–50 KB)               | Point write with workflowId as partition key; low contention                                 | ✅     |
+| 2         | Log agent execution step/event                 | 5 / ~1         | Write | workflowId, agentId, stepId, result, timestamp                | P95 < 200 ms | Session / eventual | 1 small document or subdocument append | Small (1–5 KB per step)        | Append-only pattern; co-locate with workflow to avoid cross-partition writes                 | ✅     |
+| 3         | Query workflow execution history for dashboard | 2 / ~0.5       | Read  | workflowId, userId, time window                               | P95 < 100 ms | Session            | 1–20 documents per query               | Medium (5–100 KB each)         | Single-partition query by workflowId (primary); cross-partition by userId + time acceptable  | ✅     |
+| 4         | Store/update DSPy training examples            | 0.5 / <<0.1    | Write | exampleId, task, routing, quality scores, team, mode          | P95 < 250 ms | Strong / session   | 1 document per write                   | Small–medium (2–20 KB)         | Document replacement; low write rate                                                         | ✅     |
+| 5         | Query DSPy examples for optimization           | 1 / <<0.5      | Read  | task patterns, team, mode, quality thresholds                 | P95 < 200 ms | Session            | 10–200 documents                       | Small–medium (2–20 KB)         | Cross-partition queries acceptable at low scale; consider partitioning by team/mode          | ✅     |
+| 6         | Store agent memory/knowledge                   | 2 / ~0.5       | Write | userId, agentId, content, embedding vector, metadata          | P95 < 250 ms | Eventual           | 1 document per write                   | Medium (2–10 KB text + vector) | Vector-friendly structure; partition by userId; optional TTL for stale memory                | ✅     |
+| 7         | Retrieve agent memory for context              | 3 / ~1         | Read  | userId, agentId, semantic query/embedding                     | P95 < 150 ms | Session            | Top-k (5–20) documents                 | Medium (2–10 KB text + vector) | Efficient vector search (Cosmos DB vector index or external store); filter by userId/agentId | ✅     |
+| 8         | Cache workflow results                         | 1 / ~0.2       | Write | cacheKey (task hash), userId, workflowId, result summary, TTL | P95 < 150 ms | Eventual           | 1 document per write                   | Medium (2–20 KB)               | TTL-based cleanup; partition by cacheKey; cache hits dominate reads                          | ✅     |
+| 9         | Query cached results                           | 2 / ~0.5       | Read  | cacheKey                                                      | P95 < 50 ms  | Session            | 0–1 document                           | Medium (2–20 KB)               | Point read by cacheKey; high cache hit rate desired                                          | ✅     |
+| 10        | Create new conversation thread                 | 1 / <0.1       | Write | conversationId, userId, title, createdAt                      | P95 < 200 ms | Strong / session   | 1 document per request                 | Small (1–5 KB)                 | Point write with conversationId as partition key                                             | ✅     |
+| 11        | Add message to conversation (user/assistant)   | 5 / ~1         | Write | conversationId, messageId, role, content, workflowId, quality | P95 < 150 ms | Session            | 1 document update (append to messages) | Medium (grows with messages)   | Embed messages in conversation doc; keeps thread context together                            | ✅     |
+| 12        | Get conversation with full message history     | 3 / ~1         | Read  | conversationId                                                | P95 < 100 ms | Session            | 1 document (full thread)               | Medium–Large (10–500 KB)       | Single point read; thread context for follow-ups and agent routing                           | ✅     |
+| 13        | List user's conversations                      | 1 / ~0.2       | Read  | userId, time range                                            | P95 < 200 ms | Session            | 10–50 conversation summaries           | Small (1–2 KB per summary)     | Cross-partition by userId acceptable; return only metadata (not full messages)               | ✅     |
+| 14        | Update message quality score (after eval)      | 0.5 / ~0.1     | Write | conversationId, messageId, qualityScore, qualityDetails       | P95 < 200 ms | Eventual           | 1 document patch                       | Small (patch only)             | Partial update to specific message within conversation                                       | ✅     |
 
 ## Legacy System Analysis (When Applicable)
 
@@ -102,6 +107,26 @@ _Will be documented if modernizing from existing system_
   - Links back to `userId` and optionally `workflowId`.
   - Relationships: `User (1) → CacheEntry (N)`; `WorkflowRun (0..1) → CacheEntry (N)` via `workflowId`.
 
+### Conversation & Threading (Multi-turn Context)
+
+- **Conversation**
+  - Represents a multi-turn chat session between a user and the agentic system.
+  - Natural key: `conversationId` (UUID).
+  - Contains full message history to preserve context for follow-up questions and agent routing.
+  - References: `userId` (owner), optional `workflowId` per message (links to specific workflow run).
+  - Cardinality: `User (1) → Conversation (N)`.
+
+- **Message (embedded)**
+  - Individual user or assistant message within a conversation.
+  - Modeled as an **embedded array** inside `Conversation.messages[]` so the full thread context is always available in a single read.
+  - Contains: `messageId`, `role` (user/assistant/system), `content`, `author`, `agentId`, `workflowId`, quality metadata.
+  - Cardinality: `Conversation (1) → Message (N)`.
+
+- **QualityMetadata (embedded per message)**
+  - Quality assessment for assistant responses: `qualityScore`, `qualityFlag`, `qualityPending`, `qualityDetails`.
+  - Modeled as inline fields in each `Message` object.
+  - Updated asynchronously after evaluation completes.
+
 - **ToolRegistryEntry / Configuration** (low-churn)
   - Static-ish records that describe tools, agents, and workflow configuration for reproducibility.
   - Usually stored as configuration files in the repo; in Cosmos we only need minimal metadata: `configVersion`, `agentRoster`, `toolVersionHashes`.
@@ -120,7 +145,7 @@ _Will be documented if modernizing from existing system_
   - Model as a **single document aggregate** per `workflowId` with nested arrays for events (`events[]`), quality (`quality`), judge evaluations (`judge_evaluations[]`), and analysis/routing.
 - **Justification**
   - Simplifies reads: a single point read serves most UX and debugging scenarios.
-  - Matches the current `logs/execution_history.jsonl` shape, easing migration.
+  - Matches the current `.var/logs/execution_history.jsonl` shape, easing migration.
   - Write rate is low and concurrency per workflow is effectively 1, so document updates per step are acceptable.
 - **Risks & mitigations**
   - Risk: very long-running workflows could approach the 2 MB document limit.
@@ -182,6 +207,29 @@ _Will be documented if modernizing from existing system_
   - Clean TTL semantics using container-level TTL.
   - Simple point reads/writes with predictable RU usage.
 
+### Conversation aggregate (multi-turn context)
+
+- **Access correlation**
+  - When rendering a conversation or processing a follow-up, we always need the full message history for context.
+  - Individual messages are meaningless without the conversation thread they belong to.
+  - Workflows triggered from a conversation reference the `conversationId` for provenance.
+- **Identifying relationship**
+  - Messages are owned by and only meaningful within the parent `Conversation`.
+  - Quality metadata is tied to individual messages within the conversation.
+- **Choice**
+  - Model as a **single document aggregate** per `conversationId` with nested arrays for messages (`messages[]`).
+  - Each message contains inline quality metadata fields.
+- **Justification**
+  - **Single point read for full context**: Agent routing and follow-up handling need the entire conversation history to maintain coherent multi-turn dialogue.
+  - **Simplifies context injection**: The full message array can be directly mapped to chat completion message arrays.
+  - **Matches UI/UX patterns**: Chat interfaces typically load and display entire conversation threads.
+  - **Matches current implementation**: Aligns with existing `Conversation` and `Message` Pydantic models in `src/agentic_fleet/models/conversations.py`.
+- **Risks & mitigations**
+  - Risk: Very long conversations could approach the 2 MB document limit.
+    - Mitigation 1: Enforce practical message retention (e.g., sliding window of last 100 messages, or 500 KB content limit).
+    - Mitigation 2: Archive older messages to a separate `ConversationArchive` container if needed, keeping recent context in the main document.
+    - Mitigation 3: Summarize older context using LLM and store summary as a "system" message.
+
 ## Container Consolidation Analysis
 
 | Root Aggregate      | Related Entity                     | Access Overlap                                                             | Consolidation Decision                                                     | Notes                                                                                                                                                                     |
@@ -191,6 +239,8 @@ _Will be documented if modernizing from existing system_
 | WorkflowRun         | AgentMemoryItem                    | Low (memory mostly reused across workflows, retrieved via semantic search) | **Do not consolidate** – separate `AgentMemoryItem` container              | Memory is long-lived, often shared across workflows, and optimized for vector search; coupling it to individual workflow documents would create large, uneven aggregates. |
 | DSPyOptimizationRun | DSPySupervisorExample              | Medium (runs reference many examples; examples reused across runs)         | **Do not consolidate** – reference examples by ID                          | Keeps examples reusable and avoids duplicating them into every optimization run; enables separate lifecycle policies.                                                     |
 | AgentMemoryItem     | CacheEntry                         | Very low                                                                   | **Do not consolidate**                                                     | Different purposes and TTL semantics; no meaningful shared access pattern.                                                                                                |
+| Conversation        | Message, QualityMetadata           | ~100% of queries need full message history for context                     | **Consolidate** – embed messages inside `Conversation`                     | Multi-turn context must be retrieved together; single point read serves chat UI and agent routing; matches existing Pydantic model structure.                             |
+| Conversation        | WorkflowRun                        | Medium (messages may trigger workflows; workflows produce responses)       | **Do not consolidate** – reference via `workflowId` in message             | Workflows have independent lifecycle and are queried separately; linking via ID preserves provenance without embedding.                                                   |
 
 ## Design Considerations (Subject to Change)
 
@@ -223,6 +273,24 @@ _Will be documented if modernizing from existing system_
   - Current assumption is single-region per user.
   - If AgenticFleet is later offered as a hosted multi-tenant service, consider hierarchical partition keys combining `tenantId` + `workflowId` and enable multi-region writes for low-latency global access.
 
+## Complementary Architecture: Azure AI Search + Foundry IQ
+
+This Cosmos DB design covers **transactional OLTP** workloads (workflows, conversations, memory, cache). For **enterprise-grade semantic retrieval (RAG)** over large document corpora, AgenticFleet uses **Azure AI Search with Foundry IQ** as a complementary architecture.
+
+| Storage Layer                | Purpose                                      | Access Pattern                           |
+| ---------------------------- | -------------------------------------------- | ---------------------------------------- |
+| Azure Cosmos DB NoSQL        | Transactional data (workflows, chat, memory) | Point reads/writes, real-time OLTP       |
+| Azure AI Search              | Semantic search, vector retrieval            | Query-time semantic ranking              |
+| Foundry IQ (Knowledge Bases) | Agentic retrieval with reasoning             | Multi-step retrieval with query planning |
+
+**Foundry IQ Benefits** (measured +36% RAG relevance improvement):
+
+- **Knowledge Bases**: Unified access to Blob, SharePoint, OneLake, Web sources
+- **Agentic Retrieval**: Query planning, federated search, reflective search
+- **Semantic Classifier (L3)**: Sub-chunk relevance ranking
+
+See [cosmosdb_data_model.md Section 13](./cosmosdb_data_model.md#13-complementary-architecture-azure-ai-search--foundry-iq-agentic-rag) for full integration architecture and code samples.
+
 ## Validation Checklist
 
 - [x] Application domain and scale documented
@@ -235,3 +303,4 @@ _Will be documented if modernizing from existing system_
 - [x] Hot partition risks evaluated
 - [x] Consolidation framework applied; candidates reviewed
 - [x] Design considerations captured (subject to final validation)
+- [x] Complementary RAG architecture documented (Azure AI Search + Foundry IQ)

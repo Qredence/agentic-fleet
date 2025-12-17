@@ -42,9 +42,11 @@ env/
 .serena/
 .playwright-mcp/
 .trae/
-.claude/
 .gemini/
 .kilocode/
+
+# Generated reports
+report/
 
 # Environment variables
 .env
@@ -107,3 +109,29 @@ curl_output.txt
 plan.md
 memory-bank/
 .config/
+.github/prompts/plan-addKnowledgeLayerToDspy.prompt.md
+.factory/skills/change-log-generator/SKILL.md
+.factory/skills/python-backend-reviewer/SKILL.md
+.factory/skills/python-backend-reviewer/references/best_practices.md
+.factory/skills/python-backend-reviewer/references/python_antipatterns.md
+.factory/skills/python-backend-reviewer/references/refactoring_patterns.md
+.factory/skills/python-backend-reviewer/scripts/analyze_imports.py
+.factory/skills/python-backend-reviewer/scripts/complexity_analyzer.py
+.factory/skills/python-backend-reviewer/scripts/concurrency_analyzer.py
+.factory/skills/python-backend-reviewer/scripts/detect_duplicates.py
+.claude/skills/change-log-generator/SKILL.md
+.claude/skills/feature-dev/README.md
+.claude/skills/feature-dev/.claude-plugin/plugin.json
+.claude/skills/feature-dev/agents/code-architect.md
+.claude/skills/feature-dev/agents/code-explorer.md
+.claude/skills/feature-dev/agents/code-reviewer.md
+.claude/skills/feature-dev/commands/feature-dev.md
+.claude/skills/python-backend-reviewer/SKILL.md
+.claude/skills/python-backend-reviewer/references/best_practices.md
+.claude/skills/python-backend-reviewer/references/python_antipatterns.md
+.claude/skills/python-backend-reviewer/references/refactoring_patterns.md
+.claude/skills/python-backend-reviewer/scripts/analyze_imports.py
+.claude/skills/python-backend-reviewer/scripts/complexity_analyzer.py
+.claude/skills/python-backend-reviewer/scripts/concurrency_analyzer.py
+.claude/skills/python-backend-reviewer/scripts/detect_duplicates.py
+.claude/python-backend-reviewer.skill

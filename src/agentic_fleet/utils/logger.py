@@ -10,7 +10,7 @@ from pathlib import Path
 
 from pythonjsonlogger import jsonlogger  # type: ignore[import]
 
-from .config import env_config
+from .cfg import env_config
 
 
 class _EnsureRequestIdFilter(logging.Filter):

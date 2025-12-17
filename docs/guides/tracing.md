@@ -119,7 +119,7 @@ connection_string = project_client.telemetry.get_application_insights_connection
 Early in command execution (`src/agentic_fleet/cli/console.py`) we call:
 
 ```python
-from src.agentic_fleet.utils.tracing import initialize_tracing
+from agentic_fleet.utils.tracing import initialize_tracing
 initialize_tracing(config)
 ```
 
