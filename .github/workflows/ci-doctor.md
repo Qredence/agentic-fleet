@@ -49,6 +49,10 @@ safe-outputs:
     title-prefix: "[ci-doctor] "
     draft: true
     if-no-changes: "warn"
+
+  # Use the built-in workflow token for safe outputs. This avoids failures when a custom PAT
+  # secret is missing scopes or repo access (e.g., 403: "Resource not accessible by personal access token").
+  github-token: ${{ secrets.GITHUB_TOKEN }}
 ---
 
 # CI Doctor

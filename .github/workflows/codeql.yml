@@ -35,3 +35,9 @@ jobs:
         uses: github/codeql-action/analyze@v4
         with:
           category: "/language:python"
+          # This repo currently has GitHub CodeQL "Default setup" enabled.
+          # When default setup is enabled, uploaded SARIF results from an advanced configuration
+          # (i.e., this workflow using github/codeql-action) are rejected with:
+          #   "CodeQL analyses from advanced configurations cannot be processed when the default setup is enabled"
+          # Disabling upload here keeps the workflow check green while Default setup handles code scanning uploads.
+          upload: false
