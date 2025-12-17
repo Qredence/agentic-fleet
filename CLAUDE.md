@@ -54,7 +54,7 @@ src/agentic_fleet/
 │   ├── supervisor.py # Main workflow entry + fast-path detection
 │   ├── executors.py  # 5 executors (Analysis, Routing, Execution, Progress, Quality)
 │   ├── strategies.py # Execution modes (delegated/sequential/parallel)
-│   ├── streaming_events.py # SSE event streaming
+│   ├── models.py     # Workflow data models and events
 │   └── narrator.py   # DSPy-based event narration for user-friendly messages
 ├── dspy_modules/     # DSPy signatures, reasoner, typed models, assertions
 │   ├── reasoner.py   # DSPyReasoner (manages all DSPy modules)
@@ -179,7 +179,7 @@ src/frontend/src/
 
 - Executors: `workflows/executors.py` (AnalysisExecutor, RoutingExecutor, etc.)
 - Strategies: `workflows/strategies.py` (delegated/sequential/parallel)
-- Streaming: `workflows/execution/streaming_events.py`
+- Models: `workflows/models.py` (workflow data models and events)
 
 ### Testing
 

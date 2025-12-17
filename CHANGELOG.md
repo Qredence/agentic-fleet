@@ -4,6 +4,26 @@
 
 ### Highlights
 
+#### DSPy Compiled Artifact Pipeline (Phases 1-4)
+
+- **Compiled artifact registry** – Fail-fast enforcement ensures DSPy modules are pre-compiled before production use, eliminating runtime compilation overhead.
+- **Preloaded decision modules** – Routing, quality, and analysis modules are loaded at startup for faster first-request response times.
+- **Parallel optimization support** – GEPA optimizer can run training in parallel for faster model optimization.
+- **Phase integration tests** – Comprehensive test suite validates the complete compilation → loading → execution pipeline.
+
+#### Optimization & Self-Improvement Dashboard
+
+- **Optimization APIs** – REST endpoints for triggering DSPy optimization, evaluation runs, and self-improvement cycles.
+- **Dashboard integration** – Monitor optimization progress, view evaluation metrics, and track self-improvement results.
+- **History-based learning** – System learns from execution history to improve routing decisions over time.
+
+#### Performance & Reliability
+
+- **2x faster config loading** – Configuration caching reduces repeated YAML parsing overhead.
+- **History indexing** – Execution history now indexed for faster queries and analysis.
+- **70% code deduplication** – Helper extraction and delegation patterns reduced code redundancy.
+- **Enhanced WebSocket stability** – Improved heartbeat handling and reconnection logic with exponential backoff.
+
 #### Secure-by-Default Tracing
 
 - **`capture_sensitive` defaults to `false`** – All tracing configurations now default to secure mode across schema, YAML, and built-in defaults.
@@ -26,7 +46,9 @@
 
 - **New UI components** – Added Skeleton, Tabs, Textarea, Tooltip (shadcn/ui).
 - **Theme context** – Centralized theme management via `ThemeContext`.
-- **Frontend restructure design** – Approved plan for feature-based organization (see `docs/plans/2025-12-15-frontend-restructure-design.md`).
+- **Frontend restructure (partial)** – Implemented `features/chat/` and `features/dashboard/` structure with components, hooks, stores, and types.
+- **PromptInput accessibility** – Improved ARIA labels and keyboard navigation.
+- **Textarea styling consistency** – Unified styling across all input components.
 
 #### Documentation Overhaul
 
@@ -71,15 +93,42 @@
 - **`docs/plans/2025-12-15-frontend-restructure-design.md`** (NEW): Approved design for feature-based frontend structure.
 - **`provision_cosmos` script**: Updated documentation with usage examples and container descriptions.
 
-#### Tests
+### Bug Fixes
 
-- **`test_phase3_phase4_integration`**: Added assertions to ensure cache retrieval.
+- **Fixed `load_config` import path** – Resolved module import error in reasoner that could cause startup failures.
+- **Fixed reasoning effort cleanup** – Proper cleanup on workflow timeout prevents resource leaks.
+- **Fixed LiteLLM test teardown** – Suppressed noisy cleanup errors during test execution.
+- **Fixed ChatMessage field preservation** – Pydantic model cloning ensures all fields are properly propagated.
+- **Fixed predictor initialization** – Corrected DSPy predictor setup for version compatibility.
+- **Fixed conversation context injection** – Proper injection of conversation history into workflow context.
+- **Fixed Jaeger image version** – Pinned to stable version preventing tracing failures.
+
+### Security
+
+- **Log injection prevention** – Addressed CodeQL alerts #164, #165, #166, #167, #169 by sanitizing user input before logging.
+
+### Tests
+
+- **Phase 3 & 4 integration tests** – Validates compiled module loading and caching.
+- **Tracing initialization tests** – Ensures YAML config properly initializes OpenTelemetry.
+- **FastPath detector tests** – Unit tests for simple task routing logic.
+- **EventNarrator tests** – Coverage for DSPy-based event narration.
+- **Profiling utility tests** – Tests for performance monitoring decorators.
+- **TTL cache tests** – Comprehensive tests for time-based caching.
+- **Background quality evaluation tests** – Tests for async quality assessment.
 
 ### Migration Notes
 
 - **Update imports**: `from agentic_fleet.utils.config` → `from agentic_fleet.utils.cfg`
 - **Legacy compatibility**: Re-exports maintained in package `__init__.py` files for backward compatibility.
 - **No breaking changes**: Existing workflows continue to work without modification.
+
+### Stats
+
+- **93 commits** in this release
+- **390 files changed**
+- **+36,121 insertions**, **-16,352 deletions**
+- **55 test files** added or updated
 
 ---
 
