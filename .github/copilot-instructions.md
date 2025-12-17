@@ -1,100 +1,41 @@
-# AgenticFleet Copilot Instructions
+# AgenticFleet – Copilot Instructions
 
-## Project Overview
+AgenticFleet is a **DSPy + Microsoft agent-framework** runtime that runs a 5-phase pipeline (**analysis → routing → execution → progress → quality**) and streams structured events to the UI.
 
-AgenticFleet is a hybrid **DSPy + Microsoft Agent Framework** runtime for multi-agent orchestration. The system routes tasks through a 5-phase pipeline (Analysis → Routing → Execution → Progress → Quality) and supports delegated, sequential, parallel, handoff, and discussion execution modes.
+## What to read first (to orient fast)
 
-## Architecture Quick Reference
+- `src/agentic_fleet/config/workflow_config.yaml` — **source of truth** (models, agents, tools, tracing, UI event routing).
+- `src/agentic_fleet/workflows/supervisor.py` — `SupervisorWorkflow.run()` / `run_stream()` (fast-path, modes, checkpoint semantics).
+- `src/agentic_fleet/agents/coordinator.py` — `AgentFactory` (YAML → agents, tool + prompt resolution).
+- `src/agentic_fleet/api/events/mapping.py` — maps workflow/framework events → `StreamEvent` and loads `ui_routing` from YAML.
 
-```
-src/agentic_fleet/
-├── agents/           # Agent definitions + AgentFactory (coordinator.py)
-├── workflows/        # Orchestration: supervisor.py (entry), executors.py (phases)
-├── dspy_modules/     # DSPy signatures (signatures.py) + reasoner (reasoner.py)
-├── tools/            # Tool adapters (Tavily, browser, MCP bridges, code interpreter)
-├── app/              # FastAPI backend + SSE streaming
-├── config/           # workflow_config.yaml - THE source of truth for all settings
-└── utils/            # Shared helpers, ToolRegistry, HistoryManager, caching
-src/frontend/         # React/Vite UI (state managed in hooks/useChat.ts)
-```
+## Non-negotiable project conventions
 
-**Config-Driven Architecture**: All models, agents, thresholds, and tools are declared in `src/agentic_fleet/config/workflow_config.yaml`. Never hardcode these values in Python—reference the YAML.
+- **Config-driven**: don’t hardcode models/thresholds/agent rosters; change YAML and the dataclasses/helpers that load it.
+- **Python deps via `uv` only** (see `Makefile`): never use `pip` directly. Frontend uses **`npm` only**.
+- Code quality is enforced by **Ruff + ty** (line length 100). Use `make check` before committing.
 
-## Development Commands (Use `make` Targets)
+## Developer workflows (preferred)
 
-| Task                 | Command                                         |
-| -------------------- | ----------------------------------------------- |
-| Install dependencies | `make install` (uv sync)                        |
-| Full stack dev       | `make dev` (backend :8000, frontend :5173)      |
-| Backend only         | `make backend`                                  |
-| Frontend only        | `make frontend-dev`                             |
-| Run tests            | `make test` (backend), `make test-frontend`     |
-| Lint + type check    | `make check` ← **Always run before committing** |
-| Clear DSPy cache     | `make clear-cache`                              |
-| CLI task             | `agentic-fleet run -m "your task" --verbose`    |
+- Setup: `make install` (+ `make frontend-install`), then `cp .env.example .env` and set `OPENAI_API_KEY`.
+- Dev: `make dev` (backend :8000 + frontend :5173) or `make backend` / `make frontend-dev`.
+- Tests: `make test` (backend), `make test-frontend`, `make test-config` (validates workflow config wiring).
+- Observability: `make tracing-start` / `make tracing-stop` (Jaeger UI at :16686).
 
-**Package manager**: `uv` only. Never use `pip` directly. Add dependencies with `uv add <package>`.
+## Patterns to follow when changing behavior
 
-## Key Conventions
+- **Adding/changing agents**: edit `workflow_config.yaml` under `agents:`; prompts are referenced like `instructions: prompts.planner` and resolved in `AgentFactory._resolve_instructions()`.
+- **Adding tools**: implement in `src/agentic_fleet/tools/` and/or register in `ToolRegistry`; `AgentFactory` resolves tools via `ToolRegistry` first, then `agentic_fleet.tools`.
+- **Streaming/UI events**: if you add a new event kind/type, update:
+  - backend mapping (`src/agentic_fleet/api/events/mapping.py`) and `ui_routing:` in YAML
+  - frontend types + handling (`src/frontend/src/api/types.ts`, `src/frontend/src/stores/chatStore.ts`)
 
-### Python (Backend)
+## Runtime data & “where did it go?”
 
-- **Python 3.12+** with modern syntax (`type | None`, not `Optional[type]`)
-- **Strict typing**: Use `ty` checker; avoid `Any`
-- **Absolute imports**: `from agentic_fleet.utils import ...`
-- **Line length**: 100 chars (Ruff enforced)
+- Runtime artifacts live under `.var/` (gitignored): history `.var/logs/execution_history.jsonl`, workflow logs `.var/logs/workflow.log`.
+- DSPy compiled artifacts may be in `.var/logs/compiled_supervisor.pkl` and/or `.var/cache/dspy/compiled_reasoner.json` (see YAML); reset with `make clear-cache`.
 
-### DSPy Integration
+## HITL + resume semantics (agent-framework)
 
-- **Compilation is offline only**—never compile at runtime
-- Signatures: `src/agentic_fleet/dspy_modules/signatures.py`
-- Cache: `.var/logs/compiled_supervisor.pkl`
-- Clear cache after modifying DSPy modules: `make clear-cache`
-- Examples: `src/agentic_fleet/data/supervisor_examples.json`
-
-### Frontend (React/TypeScript)
-
-- **State**: Chat state managed in `hooks/useChat.ts` (React hooks). Zustand installed for future global state needs.
-- **API calls**: Always through `lib/api/` (never direct fetch)
-- **Components**: Shared atoms in `components/ui/` (shadcn/ui)
-- **Config**: `VITE_API_URL` in `.env` (defaults to `http://localhost:8000`)
-
-## Common Tasks
-
-### Adding an Agent
-
-1. Add config to `src/agentic_fleet/config/workflow_config.yaml` under `agents:`
-2. Add prompts to `src/agentic_fleet/agents/prompts.py` (referenced as `prompts.<name>`)
-3. Tools auto-resolve via `ToolRegistry`; just list tool names in YAML
-
-### Adding a Tool
-
-1. Create adapter in `src/agentic_fleet/tools/` (extend base patterns)
-2. Tool is auto-discovered; add to agent's `tools:` list in workflow_config.yaml
-
-### Modifying Workflow Phases
-
-- Executors: `workflows/executors.py` (AnalysisExecutor, RoutingExecutor, etc.)
-- Strategies: `workflows/strategies.py` (delegated/sequential/parallel)
-- Streaming: `workflows/execution/streaming_events.py`
-
-## Environment Variables
-
-**Required**: `OPENAI_API_KEY`
-**Optional**: `TAVILY_API_KEY` (web search), `DSPY_COMPILE=false` (skip recompilation), `ENABLE_OTEL` + `OTLP_ENDPOINT` (tracing)
-
-Copy `.env.example` → `.env` for local development.
-
-## Debugging Tips
-
-- **Routing issues**: Check `.var/logs/execution_history.jsonl` for decisions
-- **Slow workflows**: Reduce `gepa_max_metric_calls` in workflow_config.yaml, or use `--fast` flag
-- **DSPy fallback**: If no compiled cache exists, system uses zero-shot (set `require_compiled: true` in production)
-- **Frontend not connecting**: Verify `VITE_API_URL` matches backend port
-
-## Files to Read First
-
-1. `src/agentic_fleet/config/workflow_config.yaml` — All runtime settings
-2. `src/agentic_fleet/workflows/supervisor.py` — Main orchestration entry
-3. `src/agentic_fleet/agents/coordinator.py` — AgentFactory (creates agents from YAML)
-4. `AGENTS.md` (root) — Toolchain defaults and working agreements
+- Resume is **message XOR checkpoint_id**: to resume, call `run_stream(task=None, checkpoint_id=...)`.
+- For a new run, any provided `checkpoint_id` is ignored (see `SupervisorWorkflow._run_workflow*`).

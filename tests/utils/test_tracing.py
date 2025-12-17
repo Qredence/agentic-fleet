@@ -88,8 +88,21 @@ class TestTracingConfiguration:
 
     def test_default_endpoint_localhost(self) -> None:
         """Default OTLP endpoint should be localhost:4317."""
-        # When no config or env var, default endpoint is used
-        # This is tested implicitly through the implementation
+        config: dict[str, Any] = {"tracing": {"enabled": True}}
+
+        with (
+            patch.dict("os.environ", {}, clear=True),
+            patch("agent_framework.observability.setup_observability") as mock_setup,
+        ):
+            reset_tracing()
+            result = initialize_tracing(config)
+
+            # We don't assert on result (it depends on runtime), but we do assert
+            # that observability setup used the default local gRPC collector.
+            assert isinstance(result, bool)
+            assert mock_setup.called
+            call_kwargs = mock_setup.call_args.kwargs
+            assert call_kwargs.get("otlp_endpoint") == "http://localhost:4317"
 
     def test_endpoint_env_takes_precedence(self) -> None:
         """OTEL_EXPORTER_OTLP_ENDPOINT should override config endpoint."""

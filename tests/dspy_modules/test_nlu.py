@@ -2,6 +2,7 @@
 
 from unittest.mock import MagicMock
 
+import dspy
 import pytest
 
 from agentic_fleet.dspy_modules.nlu import _MODULE_CACHE, DSPyNLU
@@ -11,6 +12,19 @@ from agentic_fleet.dspy_modules.nlu import _MODULE_CACHE, DSPyNLU
 def clear_module_cache():
     """Clear the module cache before each test."""
     _MODULE_CACHE.clear()
+
+
+@pytest.fixture(autouse=True)
+def enable_fake_dspy_lm(monkeypatch):
+    """Ensure DSPyNLU tests exercise the non-short-circuit path.
+
+    The test suite globally disables external LLM calls by setting
+    `dspy.settings.lm=None`. These unit tests fully mock the NLU predictors,
+    so we can safely set a dummy LM to bypass the early-return guard without
+    touching the network.
+    """
+
+    monkeypatch.setattr(dspy.settings, "lm", MagicMock(), raising=False)
     yield
     _MODULE_CACHE.clear()
 

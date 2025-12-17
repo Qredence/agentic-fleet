@@ -1,4 +1,4 @@
- .PHONY: help install dev-setup sync clean test test-config test-e2e test-frontend test-all lint format type-check check run pre-commit-install dev backend frontend-install frontend-dev build-frontend analyze-history self-improve init-var clear-cache qa frontend-lint frontend-format evaluate-history
+ .PHONY: help install dev-setup sync clean test test-config test-e2e test-frontend test-all lint format type-check check run pre-commit-install dev backend frontend-install frontend-dev build-frontend analyze-history self-improve init-var clear-cache qa frontend-lint frontend-format evaluate-history tracing-start tracing-stop
 
 # Centralized variables
 FRONTEND_DIR := src/frontend
@@ -49,10 +49,14 @@ help:
 	@echo "  make evaluate-history  Run DSPy-based evaluation on execution history"
 	@echo "  make self-improve      Run self-improvement analysis"
 	@echo ""
+	@echo "Tracing & Visualization (OpenTelemetry):"
+	@echo "  make tracing-start     Start OpenTelemetry collector + Jaeger UI (port 16686)"
+	@echo "  make tracing-stop      Stop the tracing collector"
+	@echo ""
 
 # Setup commands
 install:
-	GIT_LFS_SKIP_SMUDGE=1 uv sync --pre --all-extras --upgrade
+	GIT_LFS_SKIP_SMUDGE=1 uv sync --all-extras --upgrade
 	@echo "✓ Python dependencies installed"
 	@echo ""
 	@echo "Next: Run 'make frontend-install' to install frontend dependencies"
@@ -88,7 +92,7 @@ dev:
 	@echo ""
 	@bash -c ' \
 		trap "kill 0" EXIT INT TERM; \
-		uv run uvicorn agentic_fleet.app.main:app --reload --port 8000 --log-level info & \
+		uv run uvicorn agentic_fleet.main:app --reload --port 8000 --log-level info & \
 		sleep 2; \
 		cd $(FRONTEND_DIR) && npm run dev & \
 		wait'
@@ -97,7 +101,7 @@ dev:
 # DevUI backend server only
 backend:
 	@echo "Starting minimal backend on http://localhost:8000"
-	uv run uvicorn agentic_fleet.app.main:app --reload --port 8000 --log-level info
+	uv run uvicorn agentic_fleet.main:app --reload --port 8000 --log-level info
 
 # Frontend dev server only
 frontend-dev:
@@ -193,3 +197,9 @@ clean:
 	find . -type d -name ".pytest_cache" -exec rm -rf {} + 2>/dev/null || true
 	find . -type d -name ".ruff_cache" -exec rm -rf {} + 2>/dev/null || true
 	@echo "✓ Cleaned cache directories"
+# Tracing & Visualization
+tracing-start:
+	@bash scripts/start_tracing.sh
+
+tracing-stop:
+	@bash scripts/stop_tracing.sh

@@ -20,16 +20,22 @@ from __future__ import annotations
 
 import asyncio
 import hashlib
+import json
 import time
+from collections import OrderedDict
+from functools import lru_cache
+from pathlib import Path
 from typing import Any
 
 import dspy
 
+from agentic_fleet.utils.cfg import load_config
+
 from ..utils.logger import setup_logger
 from ..utils.telemetry import optional_span
 from ..workflows.exceptions import ToolError
-from ..workflows.helpers import is_simple_task, is_time_sensitive_task
 from .nlu import DSPyNLU, get_nlu_module
+from .reasoner_utils import get_reasoner_source_hash, is_simple_task, is_time_sensitive_task
 from .signatures import (
     EnhancedTaskRouting,
     GroupChatSpeakerSelection,
@@ -52,6 +58,72 @@ from .signatures import (
 logger = setup_logger(__name__)
 
 
+def _find_upwards(start: Path, marker: str) -> Path | None:
+    """Search upward from start for a file or directory named marker. Return the containing directory, or None."""
+    current = start
+    while True:
+        candidate = current / marker
+        if candidate.exists():
+            return current
+        if current.parent == current:
+            break
+        current = current.parent
+    return None
+
+
+def _search_bases() -> list[Path]:
+    resolved = Path(__file__).resolve()
+    # Find repo root by searching for pyproject.toml
+    repo_root = _find_upwards(resolved.parent, "pyproject.toml")
+    if repo_root is None:
+        repo_root = resolved.parents[-1]
+    # Find package root by searching for the topmost __init__.py
+    package_root = None
+    current = resolved.parent
+    last_with_init = None
+    while True:
+        if (current / "__init__.py").exists():
+            last_with_init = current
+        else:
+            break
+        if current.parent == current:
+            break
+        current = current.parent
+    package_root = last_with_init if last_with_init is not None else resolved.parents[-1]
+    module_dir = resolved.parent
+    return [repo_root, package_root, module_dir, Path.cwd()]
+
+
+@lru_cache(maxsize=1)
+def _resolve_compiled_reasoner_path() -> Path:
+    config: dict[str, Any] = {}
+    try:
+        config = load_config(validate=False)
+    except Exception as exc:  # pragma: no cover - best-effort fallback
+        logger.debug("Failed to load workflow config for compiled reasoner path: %s", exc)
+
+    dspy_config = config.get("dspy", {})
+    relative_path = Path(
+        dspy_config.get("compiled_reasoner_path", ".var/cache/dspy/compiled_reasoner.json")
+    ).expanduser()
+    if relative_path.is_absolute():
+        return relative_path
+
+    bases = _search_bases()
+    for base in bases:
+        candidate = (base / relative_path).resolve()
+        if candidate.exists():
+            return candidate
+
+    return (bases[0] / relative_path).resolve()
+
+
+def get_configured_compiled_reasoner_path() -> Path:
+    """Return the configured path to the compiled DSPy reasoner artifact."""
+
+    return _resolve_compiled_reasoner_path()
+
+
 # Module-level cache for DSPy module instances (stateless, can be shared)
 _MODULE_CACHE: dict[str, dspy.Module] = {}
 
@@ -72,6 +144,7 @@ class DSPyReasoner(dspy.Module):
         use_typed_signatures: bool = True,
         enable_routing_cache: bool = True,
         cache_ttl_seconds: int = 300,
+        cache_max_entries: int = 1024,
     ) -> None:
         """
         Initialize the DSPyReasoner with configuration for signature mode and routing cache.
@@ -81,19 +154,21 @@ class DSPyReasoner(dspy.Module):
             use_typed_signatures (bool): Use Pydantic-typed signatures for structured/typed module outputs.
             enable_routing_cache (bool): Enable in-memory caching of routing decisions to reduce repeated model calls.
             cache_ttl_seconds (int): Time-to-live for cached routing entries in seconds.
+            cache_max_entries (int): Maximum number of cached routing entries to retain in memory.
         """
         super().__init__()
         self.use_enhanced_signatures = use_enhanced_signatures
         self.use_typed_signatures = use_typed_signatures
         self.enable_routing_cache = enable_routing_cache
         self.cache_ttl_seconds = cache_ttl_seconds
+        self.cache_max_entries = max(1, int(cache_max_entries))
 
         self._execution_history: list[dict[str, Any]] = []
         self._modules_initialized = False
         self.tool_registry: Any | None = None
 
-        # Routing cache for performance optimization
-        self._routing_cache: dict[str, dict[str, Any]] = {}
+        # Routing cache for performance optimization (OrderedDict for O(1) LRU eviction)
+        self._routing_cache: OrderedDict[str, dict[str, Any]] = OrderedDict()
 
         # Placeholders for lazy-initialized modules
         self._analyzer: dspy.Module | None = None
@@ -130,7 +205,9 @@ class DSPyReasoner(dspy.Module):
         if not hasattr(self, "cache_ttl_seconds"):
             self.cache_ttl_seconds = 300
         if not hasattr(self, "_routing_cache"):
-            self._routing_cache = {}
+            self._routing_cache = OrderedDict()
+        if not hasattr(self, "cache_max_entries"):
+            self.cache_max_entries = 1024
 
         # Ensure lazy module placeholders exist for deserialized objects
         for attr in (
@@ -143,6 +220,7 @@ class DSPyReasoner(dspy.Module):
             "_simple_responder",
             "_group_chat_selector",
             "_nlu",
+            "_event_narrator",
         ):
             if not hasattr(self, attr):
                 setattr(self, attr, None)
@@ -242,9 +320,86 @@ class DSPyReasoner(dspy.Module):
                 _MODULE_CACHE[gc_key] = dspy.ChainOfThought(GroupChatSpeakerSelection)
             self._group_chat_selector = _MODULE_CACHE[gc_key]
 
+        # Event Narrator
+        if self._event_narrator is None:
+            en_key = "event_narrator"
+            if en_key not in _MODULE_CACHE:
+                from agentic_fleet.workflows.narrator import EventNarrator
+
+                _MODULE_CACHE[en_key] = EventNarrator()
+            self._event_narrator = _MODULE_CACHE[en_key]
+
         self._modules_initialized = True
         mode_str = "typed" if self.use_typed_signatures else "standard"
         logger.debug(f"DSPy modules initialized (lazy, mode={mode_str})")
+
+        # Load compiled optimization if available
+        self._load_compiled_module()
+
+    def _load_compiled_module(self) -> None:
+        """Attempt to load optimized prompt weights from disk."""
+        compiled_path = get_configured_compiled_reasoner_path()
+        meta_path = Path(f"{compiled_path}.meta")
+
+        if compiled_path.exists():
+            try:
+                if meta_path.exists():
+                    try:
+                        meta = json.loads(meta_path.read_text())
+                        expected_hash = meta.get("reasoner_source_hash")
+                        current_hash = get_reasoner_source_hash()
+                        if expected_hash and expected_hash != current_hash:
+                            logger.info(
+                                "Compiled reasoner ignored (source hash mismatch: %s != %s)",
+                                expected_hash,
+                                current_hash,
+                            )
+                            return
+                    except Exception as exc:  # pragma: no cover - best-effort
+                        logger.debug("Failed to read compiled reasoner metadata: %s", exc)
+
+                logger.info(f"Loading compiled reasoner from {compiled_path}")
+                self.load(str(compiled_path))
+                logger.debug("Successfully loaded compiled DSPy prompts.")
+            except Exception as e:
+                logger.warning(f"Failed to load compiled reasoner: {e}")
+        else:
+            logger.debug(
+                "No compiled reasoner found at %s. Using default zero-shot prompts.",
+                compiled_path,
+            )
+
+    @property
+    def event_narrator(self) -> dspy.Module:
+        """Lazily initialized event narrator."""
+        self._ensure_modules_initialized()
+        return self._event_narrator  # type: ignore[return-value]
+
+    @event_narrator.setter
+    def event_narrator(self, value: dspy.Module) -> None:
+        """Allow setting event narrator."""
+        self._event_narrator = value
+
+    def narrate_events(self, events: list[dict[str, Any]]) -> str:
+        """Generate a narrative summary from workflow events.
+
+        Args:
+            events: List of event dictionaries.
+
+        Returns:
+            Narrative string.
+        """
+        with optional_span("DSPyReasoner.narrate_events"):
+            if not events:
+                return "No events to narrate."
+
+            try:
+                # The EventNarrator module's forward method takes 'events' list
+                prediction = self.event_narrator(events=events)
+                return getattr(prediction, "narrative", "")
+            except Exception as e:
+                logger.error(f"Event narration failed: {e}")
+                return "Narrative generation unavailable."
 
     @property
     def analyzer(self) -> dspy.Module:
@@ -471,6 +626,32 @@ class DSPyReasoner(dspy.Module):
     def set_tool_registry(self, tool_registry: Any) -> None:
         """Attach a tool registry to the supervisor."""
         self.tool_registry = tool_registry
+
+    def set_decision_modules(
+        self,
+        routing_module: Any | None = None,
+        quality_module: Any | None = None,
+        tool_planning_module: Any | None = None,
+    ) -> None:
+        """Inject external decision modules from Phase 2 integration.
+
+        This allows the workflow to use preloaded, compiled decision modules
+        from app.state instead of the reasoner's internal modules.
+
+        Args:
+            routing_module: Preloaded routing decision module
+            quality_module: Preloaded quality assessment module
+            tool_planning_module: Preloaded tool planning module
+        """
+        if routing_module is not None:
+            self._router = routing_module
+            logger.debug("Injected external routing decision module")
+        if quality_module is not None:
+            self._quality_assessor = quality_module
+            logger.debug("Injected external quality assessment module")
+        if tool_planning_module is not None:
+            self._tool_planner = tool_planning_module
+            logger.debug("Injected external tool planning module")
 
     def select_workflow_mode(self, task: str) -> dict[str, str]:
         """Select the optimal workflow architecture for a task.
@@ -1014,6 +1195,8 @@ class DSPyReasoner(dspy.Module):
             del self._routing_cache[cache_key]
             return None
 
+        # Move to end to maintain LRU order (mark as most recently used)
+        self._routing_cache.move_to_end(cache_key)
         logger.debug(f"Cache hit for routing key {cache_key[:8]}...")
         return cached["result"]
 
@@ -1030,6 +1213,17 @@ class DSPyReasoner(dspy.Module):
         if not self.enable_routing_cache:
             return
 
+        # Bound memory usage: evict oldest entries when exceeding the cap.
+        # OrderedDict maintains insertion order, enabling O(1) eviction of the oldest entry.
+        if len(self._routing_cache) >= self.cache_max_entries:
+            try:
+                # Remove the oldest entry (first item in OrderedDict)
+                self._routing_cache.popitem(last=False)
+            except Exception:
+                # If eviction fails for any reason, fall back to clearing to avoid unbounded growth.
+                self._routing_cache.clear()
+
+        # Store the new entry (OrderedDict automatically places it at the end)
         self._routing_cache[cache_key] = {
             "result": result,
             "timestamp": time.time(),

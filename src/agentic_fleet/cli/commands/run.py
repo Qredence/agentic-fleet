@@ -5,6 +5,7 @@ from __future__ import annotations
 import asyncio
 import logging
 import os
+import sys
 
 import typer
 from dotenv import load_dotenv
@@ -59,6 +60,10 @@ async def interactive_loop(runner: WorkflowRunner, stream: bool) -> None:
 
         except KeyboardInterrupt:
             console.print("\n[yellow]Use 'exit' to quit[/yellow]\n")
+        except EOFError:
+            # Non-interactive stdin (or closed input) should not spin forever.
+            console.print("\n[yellow]EOF received. Exiting interactive mode.[/yellow]")
+            break
         except Exception as e:
             console.print(f"[red]Error: {e}[/red]\n")
 
@@ -141,14 +146,12 @@ def run(
                 # Quick DSPy init for decision
                 import dspy
 
+                from ...dspy_modules.lifecycle import configure_dspy_settings
                 from ...dspy_modules.reasoner import DSPyReasoner
 
                 if not dspy.settings.lm:
-                    # Minimal config
-                    lm = dspy.LM(
-                        f"openai/{model or 'gpt-5-mini'}", api_key=os.getenv("OPENAI_API_KEY")
-                    )
-                    dspy.configure(lm=lm)
+                    # Use dspy_manager for proper Azure OpenAI support
+                    configure_dspy_settings(model or "gpt-5-mini")
 
                 reasoner = DSPyReasoner(use_enhanced_signatures=True)
                 decision = reasoner.select_workflow_mode(message_input)
@@ -195,11 +198,19 @@ def run(
             cfg.judge_reasoning_effort = "minimal"
 
     try:
+        # Interactive mode requires a TTY; otherwise Click/Typer can block forever waiting for input.
+        interactive_enabled = bool(interactive and sys.stdin.isatty() and sys.stdout.isatty())
+        if interactive and not interactive_enabled and not message_input:
+            console.print(
+                "[yellow]Interactive mode disabled (no TTY detected). "
+                "Provide a message via -m/--message or pass --no-interactive.[/yellow]"
+            )
+
         if message_input:
             # Single message mode
             asyncio.run(init_runner())
             asyncio.run(process_message(message_input))
-        elif interactive:
+        elif interactive_enabled:
             # Interactive mode
             console.print(
                 Panel(

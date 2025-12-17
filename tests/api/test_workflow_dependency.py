@@ -3,7 +3,7 @@
 from fastapi import FastAPI, status
 from fastapi.testclient import TestClient
 
-from agentic_fleet.app.routers.agents import router as agents_router
+from agentic_fleet.api.routes.agents import router as agents_router
 
 
 def test_uninitialized_workflow_returns_503() -> None:

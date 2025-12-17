@@ -7,6 +7,7 @@ from __future__ import annotations
 import asyncio
 import json
 import logging
+from collections import OrderedDict
 from pathlib import Path
 from typing import Any
 
@@ -14,7 +15,7 @@ import aiofiles
 
 from ..utils.models import RoutingDecision
 from ..workflows.exceptions import HistoryError
-from .config import DEFAULT_HISTORY_PATH
+from .cfg import DEFAULT_HISTORY_PATH
 
 logger = logging.getLogger(__name__)
 
@@ -38,18 +39,26 @@ class FleetJSONEncoder(json.JSONEncoder):
 class HistoryManager:
     """Manages execution history storage and retrieval."""
 
-    def __init__(self, history_format: str = "jsonl", max_entries: int | None = None):
+    def __init__(
+        self, history_format: str = "jsonl", max_entries: int | None = None, index_size: int = 1000
+    ):
         """
         Initialize history manager.
 
         Args:
             history_format: Format to use ("jsonl" or "json")
             max_entries: Maximum number of entries to keep (None for unlimited)
+            index_size: Maximum number of recent executions to keep in memory index
         """
         self.history_format = history_format
         self.max_entries = max_entries
         self.history_dir = Path(DEFAULT_HISTORY_PATH).parent
         self.history_dir.mkdir(parents=True, exist_ok=True)
+
+        # In-memory index for fast O(1) lookups of recent executions
+        # Using OrderedDict for true O(1) LRU operations (move_to_end is O(1))
+        self._recent_executions_index: OrderedDict[str, dict[str, Any]] = OrderedDict()
+        self._index_size_limit = index_size
 
         # Warn about JSON format performance implications
         if history_format == "json":
@@ -58,6 +67,30 @@ class HistoryManager:
                 "on each save, which can be slow for large histories. Consider using "
                 "'jsonl' format for better performance (O(1) append vs O(n) rewrite)."
             )
+
+    def _update_index(self, execution: dict[str, Any]) -> None:
+        """Update in-memory index with new execution for O(1) lookups.
+
+        Uses OrderedDict for true O(1) LRU operations. The move_to_end() method
+        is O(1) unlike list.remove() which would be O(n).
+
+        Args:
+            execution: Execution data dictionary
+        """
+        workflow_id = execution.get("workflowId")
+        if not workflow_id:
+            return
+
+        # Add/update entry and move to end (most recently used)
+        # OrderedDict.__setitem__ + move_to_end maintains insertion order properly
+        self._recent_executions_index[workflow_id] = execution
+        self._recent_executions_index.move_to_end(workflow_id)
+
+        # Trim index if it exceeds size limit (evict oldest/least recently used)
+        while len(self._recent_executions_index) > self._index_size_limit:
+            # Pop first item (oldest/least recently used) - O(1) operation
+            oldest_id, _ = self._recent_executions_index.popitem(last=False)
+            logger.debug(f"Evicted execution {oldest_id} from index (LRU)")
 
     async def save_execution_async(self, execution: dict[str, Any]) -> str:
         """
@@ -72,6 +105,9 @@ class HistoryManager:
         Raises:
             HistoryError: If saving fails
         """
+        # Update in-memory index for fast lookups
+        self._update_index(execution)
+
         try:
             if self.history_format == "jsonl":
                 history_file = await self._save_jsonl_async(execution)
@@ -113,6 +149,9 @@ class HistoryManager:
         Raises:
             HistoryError: If saving fails
         """
+        # Update in-memory index for fast lookups
+        self._update_index(execution)
+
         # For backward compatibility, use the original synchronous implementation
         try:
             if self.history_format == "jsonl":
@@ -286,7 +325,7 @@ class HistoryManager:
 
     def get_execution(self, workflow_id: str) -> dict[str, Any] | None:
         """
-        Retrieve a specific execution by ID.
+        Retrieve a specific execution by ID with O(1) index lookup for recent entries.
 
         Args:
             workflow_id: The workflow ID to retrieve
@@ -294,14 +333,28 @@ class HistoryManager:
         Returns:
             Execution dictionary or None if not found
         """
+        # Check in-memory index first for O(1) lookup
+        if workflow_id in self._recent_executions_index:
+            logger.debug(f"Found execution {workflow_id} in memory index (O(1) lookup)")
+            # Update LRU order on access (move to end = most recently used)
+            self._recent_executions_index.move_to_end(workflow_id)
+            return self._recent_executions_index[workflow_id]
+
         # Try Cosmos DB first if enabled
         try:
             from .cosmos import get_execution, is_cosmos_enabled
 
             if is_cosmos_enabled():
-                return get_execution(workflow_id)
+                execution = get_execution(workflow_id)
+                if execution:
+                    # Add to index for future lookups
+                    self._update_index(execution)
+                    return execution
         except Exception as e:
             logger.warning(f"Failed to load execution from Cosmos DB: {e}")
+
+        # Fallback to file scan for older entries (O(n) operation)
+        logger.debug(f"Execution {workflow_id} not in index, scanning files (O(n) lookup)")
 
         # Scan local files
         # Check JSONL first
@@ -313,6 +366,8 @@ class HistoryManager:
                         try:
                             entry = json.loads(line)
                             if entry.get("workflowId") == workflow_id:
+                                # Add to index for future lookups
+                                self._update_index(entry)
                                 return entry
                         except json.JSONDecodeError:
                             continue
@@ -327,11 +382,78 @@ class HistoryManager:
                     entries = json.load(f)
                     for entry in entries:
                         if entry.get("workflowId") == workflow_id:
+                            # Add to index for future lookups
+                            self._update_index(entry)
                             return entry
             except Exception as e:
                 logger.warning(f"Failed to scan JSON history: {e}")
 
         return None
+
+    def update_execution(self, workflow_id: str, patch: dict[str, Any]) -> bool:
+        """Update a specific execution record in-place (best-effort).
+
+        For JSONL history, this rewrites the file to preserve ordering.
+        For JSON history, this rewrites the JSON list.
+
+        Returns:
+            True if an execution was updated, False if not found.
+        """
+        if not workflow_id:
+            return False
+
+        # Update in-memory index if present
+        if workflow_id in self._recent_executions_index:
+            existing = self._recent_executions_index[workflow_id]
+            existing.update(patch)
+            self._recent_executions_index[workflow_id] = existing
+            self._recent_executions_index.move_to_end(workflow_id)
+
+        jsonl_file = self.history_dir / "execution_history.jsonl"
+        if jsonl_file.exists():
+            try:
+                updated = False
+                tmp_path = self.history_dir / "execution_history.jsonl.tmp"
+                with open(jsonl_file) as src, open(tmp_path, "w") as dst:
+                    for line in src:
+                        if not line.strip():
+                            dst.write(line)
+                            continue
+                        try:
+                            obj = json.loads(line)
+                        except json.JSONDecodeError:
+                            dst.write(line)
+                            continue
+                        if obj.get("workflowId") == workflow_id:
+                            obj.update(patch)
+                            updated = True
+                            dst.write(json.dumps(obj, cls=FleetJSONEncoder) + "\n")
+                        else:
+                            dst.write(json.dumps(obj, cls=FleetJSONEncoder) + "\n")
+                tmp_path.replace(jsonl_file)
+                return updated
+            except Exception as e:
+                logger.warning("Failed to update JSONL history: %s", e)  # nosec B608
+
+        json_file = self.history_dir / "execution_history.json"
+        if json_file.exists():
+            try:
+                with open(json_file) as f:
+                    entries = json.load(f)
+                updated = False
+                for entry in entries if isinstance(entries, list) else []:
+                    if entry.get("workflowId") == workflow_id:
+                        entry.update(patch)
+                        updated = True
+                        break
+                if updated:
+                    with open(json_file, "w") as f:
+                        json.dump(entries, f, indent=2, cls=FleetJSONEncoder)
+                return updated
+            except Exception as e:
+                logger.warning("Failed to update JSON history: %s", e)  # nosec B608
+
+        return False
 
     def delete_execution(self, workflow_id: str) -> bool:
         """
@@ -421,10 +543,10 @@ class HistoryManager:
 
         # Try Cosmos DB first if enabled
         try:
-            from .cosmos import is_cosmos_enabled, load_execution_history
+            from .cosmos import get_default_user_id, is_cosmos_enabled, load_execution_history
 
             if is_cosmos_enabled():
-                history = load_execution_history(limit=n)
+                history = load_execution_history(limit=n, user_id=get_default_user_id())
                 if history:
                     # Cosmos returns newest first
                     return history
@@ -477,10 +599,10 @@ class HistoryManager:
         """
         # Try Cosmos DB first if enabled
         try:
-            from .cosmos import is_cosmos_enabled, load_execution_history
+            from .cosmos import get_default_user_id, is_cosmos_enabled, load_execution_history
 
             if is_cosmos_enabled():
-                history = load_execution_history(limit=limit or 20)
+                history = load_execution_history(limit=limit or 20, user_id=get_default_user_id())
                 if history:
                     return history
         except Exception as e:

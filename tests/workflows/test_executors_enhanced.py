@@ -26,6 +26,19 @@ from agentic_fleet.workflows.models import (
 class TestAnalysisExecutor:
     """Test suite for AnalysisExecutor."""
 
+    class _StubMsg:
+        def __init__(self, role: str, text: str):
+            self.role = role
+            self.text = text
+
+    class _StubStore:
+        def __init__(self, messages):
+            self.messages = messages
+
+    class _StubThread:
+        def __init__(self, messages):
+            self.message_store = TestAnalysisExecutor._StubStore(messages)
+
     @pytest.fixture
     def mock_supervisor(self):
         supervisor = MagicMock()
@@ -70,6 +83,30 @@ class TestAnalysisExecutor:
         assert isinstance(call_args, AnalysisMessage)
         assert call_args.task == "Analyze this"
         assert call_args.analysis.complexity == "moderate"
+
+    async def test_handle_task_injects_conversation_context(
+        self, executor, mock_supervisor, mock_context
+    ):
+        # Simulate a previous assistant question so a short follow-up can be interpreted.
+        mock_context.conversation_thread = self._StubThread(
+            [
+                self._StubMsg(
+                    "assistant",
+                    "Which theme(s) would you like more recommendations for? Tell me the reading level.",
+                )
+            ]
+        )
+
+        task_msg = TaskMessage(task="popular, intermediate", metadata={})
+        ctx = MagicMock()
+        ctx.send_message = AsyncMock()
+
+        await executor.handle_task(task_msg, ctx)
+
+        called_task = mock_supervisor.analyze_task.call_args.args[0]
+        assert "Conversation context" in called_task
+        assert "Which theme(s) would you like more recommendations for?" in called_task
+        assert "popular, intermediate" in called_task
 
     async def test_handle_task_fallback(self, executor, mock_supervisor):
         mock_supervisor.analyze_task.side_effect = Exception("DSPy error")
@@ -141,6 +178,33 @@ class TestRoutingExecutor:
         call_args = ctx.send_message.call_args[0][0]
         assert isinstance(call_args, RoutingMessage)
         assert call_args.routing.decision.assigned_to == ("Researcher",)
+
+    async def test_handle_analysis_includes_conversation_context_and_skips_cache(
+        self, executor, mock_supervisor
+    ):
+        analysis_msg = AnalysisMessage(
+            task="popular, intermediate",
+            analysis=AnalysisResult(
+                complexity="moderate",
+                capabilities=[],
+                tool_requirements=[],
+                steps=1,
+                search_context="",
+                needs_web_search=False,
+                search_query="",
+            ),
+            metadata={
+                "conversation_context": "Assistant: Which theme(s) would you like more recommendations for?",
+            },
+        )
+        ctx = MagicMock()
+        ctx.send_message = AsyncMock()
+
+        await executor.handle_analysis(analysis_msg, ctx)
+
+        kwargs = mock_supervisor.route_task.call_args.kwargs
+        assert "Conversation context" in (kwargs.get("context") or "")
+        assert kwargs.get("skip_cache") is True
 
     async def test_handle_analysis_fallback(self, executor, mock_supervisor):
         mock_supervisor.route_task.side_effect = Exception("Routing error")

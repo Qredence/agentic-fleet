@@ -5,15 +5,27 @@ a self-optimizing fleet of specialized AI agents. DSPy handles task analysis,
 routing, progress & quality assessment; agent-framework provides robust
 orchestration primitives, event streaming, and tool execution.
 
-Public API:
-    - SupervisorWorkflow: Main workflow orchestrator
-    - WorkflowConfig: Configuration for workflow execution
-    - AgentFactory: Factory for creating ChatAgent instances
-    - ToolRegistry: Central registry for managing tool metadata
-    - ExecutionMode: Enumeration of supported execution modes
-    - RoutingDecision: Typed representation of routing decisions
-    - Evaluator: Batch evaluation engine
-    - Tool classes: BrowserTool, TavilyMCPTool, TavilySearchTool
+**Clean Public API (v0.7+):**
+
+    Core infrastructure:
+        - ``get_settings``, ``AppSettings`` - Configuration management
+        - ``setup_logger``, ``initialize_tracing`` - Structured logging & tracing
+        - ``ConversationStore``, ``HistoryManager`` - Storage backends
+
+    Services:
+        - ``AgentFactory``, ``DSPyEnhancedAgent`` - Agent creation
+        - ``DSPyReasoner``, ``TaskAnalysis`` - DSPy reasoning
+        - ``SupervisorWorkflow``, ``create_supervisor_workflow`` - Orchestration
+        - ``ConversationManager`` - Conversation persistence
+
+    API routers (for app composition):
+        - ``api.health``, ``api.chat``, ``api.nlu``, ``api.streaming``
+        - ``api.sessions``, ``api.conversations``, ``api.models``
+
+    Legacy API (preserved for backward compatibility):
+        - ``ToolRegistry``, ``ExecutionMode``, ``RoutingDecision``
+        - ``Evaluator``, ``compute_metrics``
+        - Tool classes: ``BrowserTool``, ``TavilyMCPTool``, ``TavilySearchTool``
 
 Example:
     ```python
@@ -21,6 +33,13 @@ Example:
 
     workflow = await create_supervisor_workflow()
     result = await workflow.run("Your task here")
+    ```
+
+    Or using the new clean imports:
+
+    ```python
+    from agentic_fleet.core import get_settings, setup_logger
+    from agentic_fleet.services import AgentFactory, DSPyReasoner
     ```
 """
 
@@ -37,16 +56,32 @@ from agentic_fleet.utils.agent_framework_shims import (
 _ensure_agent_framework_shims()
 
 if TYPE_CHECKING:
-    from agentic_fleet.agents import AgentFactory
+    # Core infrastructure
+    from agentic_fleet.core import (
+        AppSettings,
+        ConversationStore,
+        HistoryManager,
+        TTLCache,
+        get_settings,
+        initialize_tracing,
+        setup_logger,
+    )
+
+    # Legacy imports (preserved for backward compat)
     from agentic_fleet.evaluation import Evaluator, compute_metrics
+
+    # Services
+    from agentic_fleet.services import (
+        AgentFactory,
+        ConversationManager,
+        DSPyReasoner,
+        SupervisorWorkflow,
+        create_supervisor_workflow,
+    )
     from agentic_fleet.tools import BrowserTool, TavilyMCPTool, TavilySearchTool
     from agentic_fleet.utils.models import ExecutionMode, RoutingDecision
     from agentic_fleet.utils.tool_registry import ToolMetadata, ToolRegistry
-    from agentic_fleet.workflows import (
-        SupervisorWorkflow,
-        WorkflowConfig,
-        create_supervisor_workflow,
-    )
+    from agentic_fleet.workflows import WorkflowConfig
 
 try:
     __version__ = _get_version("agentic-fleet")
@@ -54,12 +89,21 @@ except PackageNotFoundError:
     __version__ = "0.0.0.dev0"  # Fallback for editable installs without metadata
 
 __all__ = [
+    # Services (new clean API)
     "AgentFactory",
+    # Core infrastructure (new clean API)
+    "AppSettings",
+    # Legacy exports (backward compat)
     "BrowserTool",
+    "ConversationManager",
+    "ConversationStore",
+    "DSPyReasoner",
     "Evaluator",
     "ExecutionMode",
+    "HistoryManager",
     "RoutingDecision",
     "SupervisorWorkflow",
+    "TTLCache",
     "TavilyMCPTool",
     "TavilySearchTool",
     "ToolMetadata",
@@ -67,16 +111,47 @@ __all__ = [
     "WorkflowConfig",
     "compute_metrics",
     "create_supervisor_workflow",
+    "get_settings",
+    "initialize_tracing",
+    "setup_logger",
 ]
 
 
 def __getattr__(name: str) -> object:
     """Lazy import for public API to avoid circular imports."""
-    if (
-        name == "SupervisorWorkflow"
-        or name == "WorkflowConfig"
-        or name == "create_supervisor_workflow"
-    ):
+    # Core infrastructure (new clean API)
+    if name in ("AppSettings", "get_settings"):
+        from agentic_fleet.core import AppSettings, get_settings
+
+        return AppSettings if name == "AppSettings" else get_settings
+
+    if name in ("setup_logger", "initialize_tracing"):
+        from agentic_fleet.core import initialize_tracing, setup_logger
+
+        return setup_logger if name == "setup_logger" else initialize_tracing
+
+    if name in ("ConversationStore", "HistoryManager", "TTLCache"):
+        from agentic_fleet.core import ConversationStore, HistoryManager, TTLCache
+
+        return {
+            "ConversationStore": ConversationStore,
+            "HistoryManager": HistoryManager,
+            "TTLCache": TTLCache,
+        }[name]
+
+    # Services (new clean API)
+    if name == "DSPyReasoner":
+        from agentic_fleet.services import DSPyReasoner
+
+        return DSPyReasoner
+
+    if name == "ConversationManager":
+        from agentic_fleet.services import ConversationManager
+
+        return ConversationManager
+
+    # Workflows (both old and new paths)
+    if name in ("SupervisorWorkflow", "WorkflowConfig", "create_supervisor_workflow"):
         from agentic_fleet.workflows import SupervisorWorkflow, create_supervisor_workflow
         from agentic_fleet.workflows.config import WorkflowConfig
 
@@ -86,11 +161,13 @@ def __getattr__(name: str) -> object:
             return WorkflowConfig
         return create_supervisor_workflow
 
+    # Agents (both old and new paths)
     if name == "AgentFactory":
         from agentic_fleet.agents import AgentFactory
 
         return AgentFactory
 
+    # Legacy: Tool registry
     if name in ("ToolRegistry", "ToolMetadata"):
         from agentic_fleet.utils.tool_registry import ToolMetadata, ToolRegistry
 
@@ -98,6 +175,7 @@ def __getattr__(name: str) -> object:
             return ToolRegistry
         return ToolMetadata
 
+    # Legacy: Models
     if name in ("ExecutionMode", "RoutingDecision"):
         from agentic_fleet.utils.models import ExecutionMode, RoutingDecision
 
@@ -105,6 +183,7 @@ def __getattr__(name: str) -> object:
             return ExecutionMode
         return RoutingDecision
 
+    # Legacy: Tools
     if name in ("BrowserTool", "TavilyMCPTool", "TavilySearchTool"):
         from agentic_fleet.tools import BrowserTool, TavilyMCPTool, TavilySearchTool
 
@@ -114,6 +193,7 @@ def __getattr__(name: str) -> object:
             return TavilyMCPTool
         return TavilySearchTool
 
+    # Legacy: Evaluation
     if name in ("Evaluator", "compute_metrics"):
         from agentic_fleet.evaluation import Evaluator, compute_metrics
 
@@ -121,6 +201,7 @@ def __getattr__(name: str) -> object:
             return Evaluator
         return compute_metrics
 
+    # Legacy: CLI console
     if name == "console":
         # Expose the CLI console module as an attribute for
         # backward-compatible imports (tests and docs use

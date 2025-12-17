@@ -1,4 +1,4 @@
-"""DSPy module package: signatures and reasoner wrappers.
+"""DSPy module package: signatures, reasoner wrappers, and lifecycle management.
 
 This package contains DSPy signature definitions and the DSPyReasoner class
 that provides intelligent task analysis, routing, and quality assessment using
@@ -9,6 +9,7 @@ Public API:
     - Signature classes: TaskAnalysis, TaskRouting, QualityAssessment, etc.
     - Handoff signatures: HandoffDecision, HandoffProtocol, etc.
     - Reasoning modules: FleetReAct, FleetPoT
+    - Lifecycle management: configure_dspy_settings, get_dspy_lm, etc.
 """
 
 from __future__ import annotations
@@ -17,6 +18,13 @@ from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
     from agentic_fleet.dspy_modules.handoff_signatures import HandoffDecision, HandoffProtocol
+    from agentic_fleet.dspy_modules.lifecycle import (
+        configure_dspy_settings,
+        get_current_lm,
+        get_dspy_lm,
+        get_reflection_lm,
+        reset_dspy_manager,
+    )
     from agentic_fleet.dspy_modules.reasoner import DSPyReasoner
     from agentic_fleet.dspy_modules.signatures import (
         AgentInstructionSignature,
@@ -33,7 +41,9 @@ if TYPE_CHECKING:
     )
 
 __all__ = [
+    # Signatures
     "AgentInstructionSignature",
+    # Reasoner
     "DSPyReasoner",
     "EnhancedTaskRouting",
     "FleetPoT",
@@ -47,11 +57,41 @@ __all__ = [
     "TaskRouting",
     "ToolAwareTaskAnalysis",
     "WorkflowStrategy",
+    # Lifecycle management
+    "configure_dspy_settings",
+    "get_current_lm",
+    "get_dspy_lm",
+    "get_reflection_lm",
+    "reset_dspy_manager",
 ]
 
 
 def __getattr__(name: str) -> object:
     """Lazy import for public API."""
+    # Lifecycle management
+    if name in (
+        "configure_dspy_settings",
+        "get_current_lm",
+        "get_dspy_lm",
+        "get_reflection_lm",
+        "reset_dspy_manager",
+    ):
+        from agentic_fleet.dspy_modules.lifecycle import (
+            configure_dspy_settings,
+            get_current_lm,
+            get_dspy_lm,
+            get_reflection_lm,
+            reset_dspy_manager,
+        )
+
+        return {
+            "configure_dspy_settings": configure_dspy_settings,
+            "get_current_lm": get_current_lm,
+            "get_dspy_lm": get_dspy_lm,
+            "get_reflection_lm": get_reflection_lm,
+            "reset_dspy_manager": reset_dspy_manager,
+        }[name]
+
     if name == "DSPyReasoner":
         from agentic_fleet.dspy_modules.reasoner import DSPyReasoner
 

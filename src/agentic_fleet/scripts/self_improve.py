@@ -16,7 +16,7 @@ from rich.console import Console
 from rich.panel import Panel
 from rich.table import Table
 
-from agentic_fleet.utils.config import DEFAULT_EXAMPLES_PATH
+from agentic_fleet.utils.cfg import DEFAULT_EXAMPLES_PATH
 
 from ..utils.self_improvement import SelfImprovementEngine
 
@@ -33,7 +33,7 @@ def main():
     parser.add_argument(
         "--min-quality",
         type=float,
-        default=8.0,
+        default=7.0,
         help="Minimum quality score for examples (0-10)",
     )
     parser.add_argument(
