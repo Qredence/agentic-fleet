@@ -41,6 +41,9 @@ logger = logging.getLogger(__name__)
 _INITIALIZED = False
 
 
+_DEFAULT_OTLP_GRPC_ENDPOINT = "http://localhost:4317"
+
+
 def _env_bool(name: str, default: bool) -> bool:
     """Read boolean from environment variable."""
     val = os.getenv(name)
@@ -109,9 +112,11 @@ def initialize_tracing(config: dict[str, Any] | None = None) -> bool:
         "TRACING_SENSITIVE_DATA", bool(cfg_tracing.get("capture_sensitive", False))
     )
 
+    # Prefer the standard OpenTelemetry env var when present, so tests and local
+    # developer environments behave predictably even if OTLP_ENDPOINT is set.
     otlp_endpoint = (
-        os.getenv("OTLP_ENDPOINT")
-        or os.getenv("OTEL_EXPORTER_OTLP_ENDPOINT")
+        os.getenv("OTEL_EXPORTER_OTLP_ENDPOINT")
+        or os.getenv("OTLP_ENDPOINT")
         or cfg_tracing.get("otlp_endpoint")
     )
 
@@ -122,13 +127,19 @@ def initialize_tracing(config: dict[str, Any] | None = None) -> bool:
     vs_code_port = os.getenv("VS_CODE_EXTENSION_PORT")
     vs_code_port_int = int(vs_code_port) if vs_code_port else None
 
-    # Suppress noisy OpenTelemetry export errors
-    logging.getLogger("opentelemetry.exporter.otlp.proto.grpc.exporter").setLevel(logging.WARNING)
-    logging.getLogger("opentelemetry.exporter.otlp.proto.http.exporter").setLevel(logging.WARNING)
+    # Suppress noisy OpenTelemetry export errors (including UNIMPLEMENTED for metrics on Jaeger)
+    logging.getLogger("opentelemetry.exporter.otlp.proto.grpc.exporter").setLevel(logging.CRITICAL)
+    logging.getLogger("opentelemetry.exporter.otlp.proto.http.exporter").setLevel(logging.CRITICAL)
     logging.getLogger("opentelemetry.sdk._logs._internal").setLevel(logging.WARNING)
+    logging.getLogger("opentelemetry.sdk.metrics").setLevel(logging.WARNING)
 
     # Check for HTTP OTLP endpoint (preferred for Aspire Dashboard compatibility)
     otlp_http_endpoint = os.getenv("OTLP_HTTP_ENDPOINT") or cfg_tracing.get("otlp_http_endpoint")
+
+    # Best-practice default for local development / VS Code AI Toolkit is gRPC on 4317.
+    # If tracing is enabled but no endpoint was configured, fall back to localhost.
+    if not otlp_endpoint:
+        otlp_endpoint = _DEFAULT_OTLP_GRPC_ENDPOINT
 
     # Primary: Use Agent Framework's built-in observability setup
     try:

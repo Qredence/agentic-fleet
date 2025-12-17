@@ -18,7 +18,7 @@ if __package__ in (None, ""):
         sys.path.insert(0, project_root_str)
     globals()["__package__"] = "agentic_fleet.cli"
 
-from ..utils.config import validate_agentic_fleet_env
+from ..utils.cfg import validate_agentic_fleet_env
 from .commands import dev as dev_module
 from .commands import eval as eval_module
 from .commands import handoff as handoff_module

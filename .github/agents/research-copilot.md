@@ -63,7 +63,7 @@ description: "Quality assurance and validation specialist"
 instructions: "Ensure accuracy, completeness, and quality"
 
 CopilotResearcher:
-model: "gpt-4.1"
+model: "gpt-4.1-mini"
 description: "GitHub Copilot Research Agent for codebase and package documentation"
 instructions: "prompts.copilot_researcher"
 tools: - PackageSearchMCPTool - Context7DeepWikiTool - TavilyMCPTool - BrowserTool

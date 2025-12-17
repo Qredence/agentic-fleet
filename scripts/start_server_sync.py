@@ -1,11 +1,11 @@
 """Deprecated: synchronous starter for old agentic_fleet.api app.
 
-The application now lives at ``agentic_fleet.app.main:app``. Please use the
+The application now lives at ``agentic_fleet.main:app``. Please use the
 standard entrypoints instead of this legacy script:
 
 - ``make backend``
 - ``make dev``
-- ``uv run uvicorn agentic_fleet.app.main:app --reload --port 8000``
+- ``uv run uvicorn agentic_fleet.main:app --reload --port 8000``
 """
 
 raise SystemExit(

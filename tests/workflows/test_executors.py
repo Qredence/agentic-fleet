@@ -2,7 +2,7 @@
 
 This module tests the various executor classes used in the workflow pipeline:
 AnalysisExecutor, RoutingExecutor, ExecutionExecutor, ProgressExecutor,
-QualityExecutor, and JudgeRefineExecutor.
+QualityExecutor.
 """
 
 from __future__ import annotations

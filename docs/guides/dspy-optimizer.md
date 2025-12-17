@@ -31,7 +31,7 @@ The framework will:
 
 1. Load training examples from `data/supervisor_examples.json`
 2. Compile the reasoner using BootstrapFewShot
-3. Cache the optimized module at `logs/compiled_supervisor.pkl`
+3. Cache the optimized module at `.var/logs/compiled_supervisor.pkl`
 4. Use the optimized module for all task routing
 
 ### Using GEPA Optimizer
@@ -118,7 +118,7 @@ dspy:
     # gepa_max_full_evals: 50
     # Strategy C: explicit metric call count (comment out gepa_auto)
     # gepa_max_metric_calls: 150
-    gepa_log_dir: logs/gepa
+    gepa_log_dir: .var/logs/dspy/gepa
     gepa_perfect_score: 1.0
     gepa_val_split: 0.2
     gepa_seed: 13
@@ -181,7 +181,7 @@ dspy:
 
 This automatically:
 
-1. Scans `logs/execution_history.jsonl`
+1. Scans `.var/logs/execution_history.jsonl`
 2. Extracts runs with `quality.score >= 8.0`
 3. Converts them to training examples
 4. Adds them to your base examples
@@ -223,11 +223,11 @@ def routing_metric(example, prediction, trace=None):
 
 ### Understanding the Cache
 
-Compiled modules are cached at `logs/compiled_supervisor.pkl` to avoid recompilation:
+Compiled modules are cached at `.var/logs/compiled_supervisor.pkl` to avoid recompilation:
 
 ```bash
 # View cache info
-ls -lh logs/compiled_supervisor.pkl*
+ls -lh .var/logs/compiled_supervisor.pkl*
 
 # Cache files:
 # - compiled_supervisor.pkl       # Pickled module
@@ -246,7 +246,7 @@ Cache is automatically invalidated when:
 
 ```bash
 # Clear cache (forces recompilation)
-rm logs/compiled_supervisor.pkl*
+rm .var/logs/compiled_supervisor.pkl*
 
 # Next run will recompile
 uv run agentic-fleet run -m "Test task"
@@ -255,13 +255,13 @@ uv run agentic-fleet run -m "Test task"
 Or use the Python API:
 
 ```python
-from src.agentic_fleet.utils.compiler import clear_cache, get_cache_info
+from agentic_fleet.utils.compiler import clear_cache, get_cache_info
 
 # Get cache metadata
 info = get_cache_info()
 print(info)
 # {
-#   'cache_path': 'logs/compiled_supervisor.pkl',
+#   'cache_path': '.var/logs/compiled_supervisor.pkl',
 #   'cache_size_bytes': 45678,
 #   'cache_mtime': '2025-11-07T10:30:00',
 #   'optimizer': 'gepa',
@@ -313,7 +313,7 @@ workflow = await create_supervisor_workflow(compile_dspy=False)
 uv run agentic-fleet run -m "Analyze multi-agent benefits"
 
 # Force recompilation
-rm logs/compiled_supervisor.pkl
+rm .var/logs/compiled_supervisor.pkl
 uv run agentic-fleet run -m "Same task"
 ```
 
@@ -337,13 +337,13 @@ uv run agentic-fleet gepa-optimize \
 
 ```bash
 # View cache status
-ls -lh logs/compiled_supervisor.pkl*
+ls -lh .var/logs/compiled_supervisor.pkl*
 
 # Clear cache
-rm logs/compiled_supervisor.pkl*
+rm .var/logs/compiled_supervisor.pkl*
 
 # View GEPA logs
-cat logs/gepa/*.log
+cat .var/logs/dspy/gepa/*.log
 ```
 
 ## Best Practices
@@ -422,10 +422,10 @@ Check GEPA logs for insights:
 
 ```bash
 # View optimization progress
-tail -f logs/gepa/optimization.log
+tail -f .var/logs/dspy/gepa/optimization.log
 
 # Check if optimization improved metrics
-grep "Final metric" logs/gepa/optimization.log
+grep "Final metric" .var/logs/dspy/gepa/optimization.log
 ```
 
 ### 6. Version Your Examples
@@ -458,7 +458,7 @@ git tag -a v1.0-optimized -m "GEPA optimization run 2025-11-07"
 ```bash
 # Check cache validity
 python -c "
-from src.agentic_fleet.utils.compiler import get_cache_info
+from agentic_fleet.utils.compiler import get_cache_info
 print(get_cache_info())
 "
 ```
@@ -542,8 +542,8 @@ def routing_metric(example, prediction, trace=None):
 Use the compiler directly:
 
 ```python
-from src.agentic_fleet.utils.compiler import compile_supervisor
-from src.agentic_fleet.dspy_modules.reasoner import DSPyReasoner
+from agentic_fleet.utils.compiler import compile_supervisor
+from agentic_fleet.dspy_modules.reasoner import DSPyReasoner
 
 # Create supervisor
 supervisor = DSPyReasoner()
@@ -578,15 +578,15 @@ Compare BootstrapFewShot vs. GEPA:
 ```bash
 # Test BootstrapFewShot
 vim config/workflow_config.yaml  # Set use_gepa: false
-rm logs/compiled_supervisor.pkl
+rm .var/logs/compiled_supervisor.pkl
 uv run python console.py evaluate --dataset data/evaluation_tasks.jsonl
-mv logs/evaluation/evaluation_summary.json results_bootstrap.json
+mv .var/logs/evaluation/evaluation_summary.json results_bootstrap.json
 
 # Test GEPA
 vim config/workflow_config.yaml  # Set use_gepa: true
-rm logs/compiled_supervisor.pkl
+rm .var/logs/compiled_supervisor.pkl
 uv run python console.py evaluate --dataset data/evaluation_tasks.jsonl
-mv logs/evaluation/evaluation_summary.json results_gepa.json
+mv .var/logs/evaluation/evaluation_summary.json results_gepa.json
 
 # Compare
 python -c "
@@ -769,7 +769,7 @@ uv run agentic-fleet run -m "Task"
 uv run agentic-fleet gepa-optimize --auto light
 
 # Clear cache
-rm logs/compiled_supervisor.pkl*
+rm .var/logs/compiled_supervisor.pkl*
 
 # Evaluate performance
 uv run agentic-fleet evaluate --dataset data/evaluation_tasks.jsonl

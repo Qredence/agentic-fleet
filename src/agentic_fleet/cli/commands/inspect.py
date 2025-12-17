@@ -17,7 +17,7 @@ from rich.table import Table
 
 from agentic_fleet.cli.runner import WorkflowRunner
 from agentic_fleet.cli.utils import init_tracing
-from agentic_fleet.utils.config import env_config
+from agentic_fleet.utils.cfg import env_config
 from agentic_fleet.utils.self_improvement import SelfImprovementEngine
 
 console = Console()
@@ -91,7 +91,7 @@ def export_history(
     task: Annotated[str, typer.Option("--task", "-t", help="Task to run before export")] = "",
     model: Annotated[
         str, typer.Option("--model", help="Model to use for task execution")
-    ] = "gpt-4.1",
+    ] = "gpt-4.1-mini",
 ) -> None:
     """Export workflow execution history to a file."""
 

@@ -147,7 +147,7 @@ class TestWorkflowRunner:
         wf_runner = WorkflowRunner(verbose=True)
         await wf_runner.initialize_workflow(
             max_rounds=10,
-            model="gpt-4o-mini",
+            model="gpt-4.1-mini",
             mode="concurrent",
         )
 

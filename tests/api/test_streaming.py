@@ -12,21 +12,32 @@ Tests cover:
 
 import asyncio
 from datetime import datetime
-from unittest.mock import AsyncMock, patch
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 from fastapi import status
 from fastapi.testclient import TestClient
 
-from agentic_fleet.app.dependencies import WorkflowSessionManager
-from agentic_fleet.app.main import app
-from agentic_fleet.app.schemas import ChatRequest, StreamEvent, StreamEventType, WorkflowStatus
+from agentic_fleet.main import app
+from agentic_fleet.models import (
+    ChatRequest,
+    StreamEvent,
+    StreamEventType,
+    WorkflowResumeRequest,
+    WorkflowStatus,
+)
+from agentic_fleet.services.conversation import WorkflowSessionManager
 
 
 @pytest.fixture
 def client():
     """Create a test client."""
-    return TestClient(app)
+    with patch(
+        "agentic_fleet.api.lifespan.create_supervisor_workflow", new_callable=AsyncMock
+    ) as mock_create:
+        mock_create.return_value = MagicMock()
+        with TestClient(app) as client:
+            yield client
 
 
 @pytest.fixture
@@ -267,12 +278,45 @@ class TestChatRequest:
         assert request.stream is True
         assert request.reasoning_effort is None
         assert request.conversation_id is None
+        assert request.enable_checkpointing is False
+        assert request.checkpoint_id is None
+
+    def test_checkpoint_id_optional(self):
+        """ChatRequest should accept an optional checkpoint_id."""
+        request = ChatRequest(message="Hello", checkpoint_id="ckpt-123")
+        assert request.checkpoint_id == "ckpt-123"
+
+    def test_enable_checkpointing_optional(self):
+        """ChatRequest should accept enable_checkpointing for new runs."""
+        request = ChatRequest(message="Hello", enable_checkpointing=True)
+        assert request.enable_checkpointing is True
 
     def test_reasoning_effort_valid_values(self):
         """Test valid reasoning effort values."""
         for effort in ["minimal", "medium", "maximal"]:
             request = ChatRequest(message="Hello", reasoning_effort=effort)  # type: ignore[arg-type]
             assert request.reasoning_effort == effort
+
+
+class TestWorkflowResumeRequest:
+    """Tests for workflow.resume WebSocket message validation."""
+
+    def test_valid_resume_request(self):
+        req = WorkflowResumeRequest(
+            type="workflow.resume",
+            conversation_id="conv-1",
+            checkpoint_id="ckpt-123",
+            stream=True,
+        )
+        assert req.type == "workflow.resume"
+        assert req.conversation_id == "conv-1"
+        assert req.checkpoint_id == "ckpt-123"
+
+    def test_resume_requires_checkpoint_id(self):
+        from pydantic import ValidationError
+
+        with pytest.raises(ValidationError):
+            WorkflowResumeRequest(type="workflow.resume")  # type: ignore[call-arg]
 
 
 class TestStreamEventType:
@@ -324,41 +368,41 @@ class TestStreamingEndpointIntegration:
         from fastapi import FastAPI
         from fastapi.testclient import TestClient
 
-        from agentic_fleet.app.routers import sessions
+        from agentic_fleet.api.deps import get_session_manager
+        from agentic_fleet.api.routes import sessions
 
         test_app = FastAPI()
         test_app.include_router(sessions.router, prefix="/api/v1")
 
-        with patch("agentic_fleet.app.dependencies.get_session_manager") as mock_sm:
-            mock_manager = AsyncMock()
-            mock_manager.list_sessions.return_value = []
-            mock_sm.return_value = mock_manager
+        mock_manager = AsyncMock()
+        mock_manager.list_sessions.return_value = []
+        test_app.dependency_overrides[get_session_manager] = lambda: mock_manager
 
-            client = TestClient(test_app)
+        with TestClient(test_app) as client:
             response = client.get("/api/v1/sessions")
 
-            assert response.status_code == status.HTTP_200_OK
-            assert isinstance(response.json(), list)
+        assert response.status_code == status.HTTP_200_OK
+        assert isinstance(response.json(), list)
 
     def test_session_not_found(self):
         """Test GET /api/v1/sessions/{id} with non-existent ID."""
         from fastapi import FastAPI
         from fastapi.testclient import TestClient
 
-        from agentic_fleet.app.routers import sessions
+        from agentic_fleet.api.deps import get_session_manager
+        from agentic_fleet.api.routes import sessions
 
         test_app = FastAPI()
         test_app.include_router(sessions.router, prefix="/api/v1")
 
-        with patch("agentic_fleet.app.dependencies.get_session_manager") as mock_sm:
-            mock_manager = AsyncMock()
-            mock_manager.get_session.return_value = None
-            mock_sm.return_value = mock_manager
+        mock_manager = AsyncMock()
+        mock_manager.get_session.return_value = None
+        test_app.dependency_overrides[get_session_manager] = lambda: mock_manager
 
-            client = TestClient(test_app)
+        with TestClient(test_app) as client:
             response = client.get("/api/v1/sessions/wf-nonexistent")
 
-            assert response.status_code == status.HTTP_404_NOT_FOUND
+        assert response.status_code == status.HTTP_404_NOT_FOUND
 
 
 class TestEventMapping:

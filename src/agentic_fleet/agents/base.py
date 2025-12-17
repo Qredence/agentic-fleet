@@ -7,7 +7,7 @@ including the DSPy-enhanced agent that integrates with the Agent Framework.
 from __future__ import annotations
 
 import asyncio
-import contextlib
+import dataclasses
 import time
 from collections.abc import AsyncIterable
 from typing import TYPE_CHECKING, Any, cast
@@ -22,7 +22,7 @@ from ..utils.logger import setup_logger
 from ..utils.telemetry import PerformanceTracker, optional_span
 
 if TYPE_CHECKING:
-    from agent_framework.openai import OpenAIResponsesClient
+    from agent_framework.openai import OpenAIChatClient, OpenAIResponsesClient
 
 logger = setup_logger(__name__)
 
@@ -40,7 +40,7 @@ class DSPyEnhancedAgent(ChatAgent):
     def __init__(
         self,
         name: str,
-        chat_client: OpenAIResponsesClient,
+        chat_client: OpenAIResponsesClient | OpenAIChatClient,
         instructions: str = "",
         description: str = "",
         tools: Any = None,
@@ -362,16 +362,52 @@ class DSPyEnhancedAgent(ChatAgent):
 
         fallback_response = await super().run(messages=messages, thread=thread, **agent_kwargs)
         # Prepend note to the first message text
-        first_msg = None
+        # ChatMessage.text is read-only, so create a new ChatMessage instead of modifying
         if fallback_response.messages:
             first_msg = fallback_response.messages[0]
-            # Use contextlib.suppress since text property may be read-only
-            with contextlib.suppress(AttributeError):
-                first_msg.text = self._apply_note_to_text(first_msg.text, note)  # type: ignore[misc]
+            original_text = getattr(first_msg, "text", "")
+            updated_text = self._apply_note_to_text(original_text, note)
+
+            # Create a new ChatMessage with the updated text while preserving all other fields.
+            # Prefer Pydantic model cloning APIs if available.
+            update_patch: dict[str, Any] = {"text": updated_text}
+            model_fields = getattr(type(first_msg), "model_fields", None)
+            v1_fields = getattr(type(first_msg), "__fields__", None)
+            if (isinstance(model_fields, dict) and "content" in model_fields) or (
+                isinstance(v1_fields, dict) and "content" in v1_fields
+            ):
+                update_patch["content"] = updated_text
+
+            updated_msg: ChatMessage
+            model_copy = getattr(first_msg, "model_copy", None)
+            if callable(model_copy):
+                updated_msg = cast(ChatMessage, model_copy(update=update_patch))
+            else:
+                v1_copy = getattr(first_msg, "copy", None)
+                if callable(v1_copy):
+                    updated_msg = cast(ChatMessage, v1_copy(update=update_patch))
+                elif dataclasses.is_dataclass(first_msg):
+                    # Only pass fields that exist on the dataclass.
+                    patch = {k: v for k, v in update_patch.items() if hasattr(first_msg, k)}
+                    updated_msg = cast(ChatMessage, dataclasses.replace(first_msg, **patch))
+                else:
+                    # Last-resort fallback: manually reconstruct commonly used fields.
+                    # (This may drop unknown fields on non-pydantic, non-dataclass message types.)
+                    updated_msg = ChatMessage(
+                        role=first_msg.role,
+                        text=updated_text,
+                        metadata=getattr(first_msg, "metadata", None),
+                        additional_properties=getattr(first_msg, "additional_properties", None),
+                    )
+            # Replace the first message with the updated one
+            # Note: We reassign messages assuming it's mutable. If AgentRunResponse.messages
+            # becomes immutable, construct a new AgentRunResponse instead.
+            fallback_response.messages = [updated_msg, *fallback_response.messages[1:]]
         else:
             fallback_response_text = getattr(fallback_response, "text", "")
-            with contextlib.suppress(AttributeError):
-                fallback_response.text = self._apply_note_to_text(fallback_response_text, note)  # type: ignore[attr-defined]
+            updated_text = self._apply_note_to_text(fallback_response_text, note)
+            # Create a new message if there are no messages
+            fallback_response.messages = [ChatMessage(role=Role.ASSISTANT, text=updated_text)]
 
         existing_props = dict(fallback_response.additional_properties or {})
         existing_props.update(
