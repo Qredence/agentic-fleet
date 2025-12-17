@@ -6,7 +6,6 @@ execution and coordinates with the display system.
 
 from __future__ import annotations
 
-import os
 from datetime import datetime
 from typing import Any
 
@@ -20,7 +19,7 @@ from rich.markdown import Markdown
 from rich.panel import Panel
 from rich.text import Text
 
-from ..utils.config import (
+from ..utils.cfg import (
     DEFAULT_GEPA_LOG_DIR,
     DEFAULT_HISTORY_PATH,
     get_agent_model,
@@ -161,6 +160,10 @@ class WorkflowRunner:
             else supervisor_cfg.get("pipeline_profile", "full")
         )
         simple_task_max_words = supervisor_cfg.get("simple_task_max_words", 40)
+        conversation_context_max_messages = supervisor_cfg.get(
+            "conversation_context_max_messages", 8
+        )
+        conversation_context_max_chars = supervisor_cfg.get("conversation_context_max_chars", 4000)
 
         quality_cfg = (
             yaml_config.get("workflow", {}).get("quality", {})
@@ -175,6 +178,8 @@ class WorkflowRunner:
             enable_streaming=supervisor_cfg.get("enable_streaming", True),
             pipeline_profile=effective_profile,
             simple_task_max_words=simple_task_max_words,
+            conversation_context_max_messages=int(conversation_context_max_messages),
+            conversation_context_max_chars=int(conversation_context_max_chars),
             parallel_threshold=yaml_config.get("workflow", {})
             .get("execution", {})
             .get("parallel_threshold", 3),
@@ -182,7 +187,7 @@ class WorkflowRunner:
             dspy_temperature=yaml_config.get("dspy", {}).get("temperature", 0.7),
             dspy_max_tokens=yaml_config.get("dspy", {}).get("max_tokens", 2000),
             compile_dspy=compile_dspy,
-            require_compiled_dspy=yaml_config.get("dspy", {}).get("require_compiled", False),
+            require_compiled=yaml_config.get("dspy", {}).get("require_compiled", False),
             refinement_threshold=quality_cfg.get("refinement_threshold", 8.0),
             enable_refinement=quality_cfg.get("enable_refinement", True),
             enable_progress_eval=quality_cfg.get("enable_progress_eval", True),
@@ -230,13 +235,11 @@ class WorkflowRunner:
             # We'll use a lightweight config for this check if possible, or just rely on what we have.
             try:
                 # Basic DSPy setup just for this decision
+                # Use dspy_manager for proper Azure OpenAI support
+                from agentic_fleet.dspy_modules.lifecycle import configure_dspy_settings
+
                 if not dspy.settings.lm:
-                    # Manual fallback if helper not available easily
-                    api_key = os.getenv("OPENAI_API_KEY")
-                    model_name = effective_model
-                    if api_key:
-                        lm = dspy.LM(f"openai/{model_name}", api_key=api_key)
-                        dspy.configure(lm=lm)
+                    configure_dspy_settings(effective_model)
             except Exception as e:
                 logger.warning(
                     f"Failed to configure DSPy for auto-mode: {e}. Fallback to standard."

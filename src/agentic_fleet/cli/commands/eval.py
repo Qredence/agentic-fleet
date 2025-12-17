@@ -16,7 +16,7 @@ from rich.panel import Panel
 from rich.table import Table
 
 from ...evaluation import Evaluator
-from ...utils.config import load_config
+from ...utils.cfg import load_config
 from ..runner import WorkflowRunner
 from ..utils import init_tracing, resolve_resource_path
 

@@ -13,7 +13,7 @@ from typing import Any
 
 import dspy
 
-from ..utils.config import DEFAULT_NLU_CACHE_PATH
+from ..utils.cfg import DEFAULT_NLU_CACHE_PATH
 from .nlu_signatures import EntityExtraction, IntentClassification
 
 logger = logging.getLogger(__name__)

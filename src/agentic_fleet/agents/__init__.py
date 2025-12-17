@@ -13,8 +13,16 @@ if TYPE_CHECKING:
         get_default_agent_metadata,
         validate_tool,
     )
+    from .foundry import FoundryAgentAdapter, FoundryAgentConfig, FoundryHostedAgent
 
-__all__ = ["AgentFactory", "get_default_agent_metadata", "validate_tool"]
+__all__ = [
+    "AgentFactory",
+    "FoundryAgentAdapter",
+    "FoundryAgentConfig",
+    "FoundryHostedAgent",
+    "get_default_agent_metadata",
+    "validate_tool",
+]
 
 
 def __getattr__(name: str) -> Any:
@@ -26,4 +34,8 @@ def __getattr__(name: str) -> Any:
         from . import coordinator as _coordinator
 
         return getattr(_coordinator, name)
+    if name in ("FoundryAgentAdapter", "FoundryAgentConfig", "FoundryHostedAgent"):
+        from . import foundry as _foundry
+
+        return getattr(_foundry, name)
     raise AttributeError(name)

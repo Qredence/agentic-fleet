@@ -1,12 +1,12 @@
 """Tests for DSPy management endpoints."""
 
-from unittest.mock import MagicMock
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 from fastapi import status
 from fastapi.testclient import TestClient
 
-from agentic_fleet.app.main import app
+from agentic_fleet.main import app
 
 
 class TestDSPyEndpoints:
@@ -14,11 +14,16 @@ class TestDSPyEndpoints:
 
     @pytest.fixture
     def client(self):
-        return TestClient(app)
+        with patch(
+            "agentic_fleet.api.lifespan.create_supervisor_workflow", new_callable=AsyncMock
+        ) as mock_create:
+            mock_create.return_value = MagicMock()
+            with TestClient(app) as client:
+                yield client
 
     @pytest.fixture
     def mock_workflow(self):
-        from agentic_fleet.app.dependencies import _get_workflow
+        from agentic_fleet.api.deps import _get_workflow
 
         workflow = MagicMock()
 

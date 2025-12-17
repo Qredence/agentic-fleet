@@ -7,7 +7,7 @@ import logging
 from pathlib import Path
 from typing import Any
 
-from ..utils.config import env_config, load_config
+from ..utils.cfg import env_config, load_config
 
 logger = logging.getLogger(__name__)
 

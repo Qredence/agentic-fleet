@@ -1,4 +1,6 @@
 import type { Config } from "tailwindcss";
+import tailwindcssAnimate from "tailwindcss-animate";
+import typography from "@tailwindcss/typography";
 
 const config = {
   content: ["./index.html", "./src/**/*.{ts,tsx}"],
@@ -6,8 +8,8 @@ const config = {
     extend: {
       keyframes: {
         shimmer: {
-          "0%": { backgroundPosition: "0 0" },
-          "100%": { backgroundPosition: "-200% 0" },
+          "0%": { backgroundPosition: "200% 50%" },
+          "100%": { backgroundPosition: "-200% 50%" },
         },
         "collapsible-down": {
           from: { height: "0" },
@@ -25,7 +27,7 @@ const config = {
       },
     },
   },
-  plugins: [],
+  plugins: [tailwindcssAnimate, typography],
 } satisfies Config;
 
 export default config;

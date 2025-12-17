@@ -13,7 +13,7 @@ import re
 from pathlib import Path
 from typing import Any
 
-from .config import DEFAULT_EXAMPLES_PATH
+from .cfg import DEFAULT_EXAMPLES_PATH
 from .cosmos import get_default_user_id, mirror_dspy_examples
 from .history_manager import HistoryManager
 
@@ -246,6 +246,21 @@ class SelfImprovementEngine:
         examples = []
         edge_case_examples = []
 
+        def _process_edge_cases(execution: dict[str, Any], log_level: str = "warning") -> None:
+            """Helper to process edge cases from an execution."""
+            edge_cases = self._detect_edge_cases_in_execution(execution)
+            for edge_case in edge_cases:
+                clarifying_example = self._generate_clarifying_example_from_edge_case(
+                    execution, edge_case
+                )
+                if clarifying_example:
+                    edge_case_examples.append(clarifying_example)
+                    self._record_memory_from_execution(
+                        execution,
+                        clarifying_example,
+                        memory_type="edge_case_example",
+                    )
+
         for execution in sorted_executions:
             try:
                 # Convert successful execution to example
@@ -255,18 +270,7 @@ class SelfImprovementEngine:
                     self._record_memory_from_execution(execution, example)
 
                 # Also check for edge cases even in successful executions
-                edge_cases = self._detect_edge_cases_in_execution(execution)
-                for edge_case in edge_cases:
-                    clarifying_example = self._generate_clarifying_example_from_edge_case(
-                        execution, edge_case
-                    )
-                    if clarifying_example:
-                        edge_case_examples.append(clarifying_example)
-                        self._record_memory_from_execution(
-                            execution,
-                            clarifying_example,
-                            memory_type="edge_case_example",
-                        )
+                _process_edge_cases(execution)
             except Exception as e:
                 logger.warning(
                     "Failed to convert execution to example: %s", _sanitize_for_log(str(e))
@@ -283,18 +287,7 @@ class SelfImprovementEngine:
 
         for execution in failed_executions[:10]:  # Limit to avoid too many examples
             try:
-                edge_cases = self._detect_edge_cases_in_execution(execution)
-                for edge_case in edge_cases:
-                    clarifying_example = self._generate_clarifying_example_from_edge_case(
-                        execution, edge_case
-                    )
-                    if clarifying_example:
-                        edge_case_examples.append(clarifying_example)
-                        self._record_memory_from_execution(
-                            execution,
-                            clarifying_example,
-                            memory_type="edge_case_example",
-                        )
+                _process_edge_cases(execution)
             except Exception as e:
                 logger.debug(
                     "Failed to process edge case from failed execution: %s",

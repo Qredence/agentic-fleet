@@ -38,7 +38,7 @@ def test_resolve_context_providers_invalid(factory):
 
 @patch("agentic_fleet.agents.coordinator.OpenAIResponsesClient")
 def test_create_agent_with_context_provider(mock_client_cls, factory):
-    config = {"model": "gpt-4", "context_providers": ["AzureAISearchContextProvider"]}
+    config = {"model": "gpt-4.1-mini", "context_providers": ["AzureAISearchContextProvider"]}
 
     with patch.dict(
         "os.environ",

@@ -2,7 +2,18 @@
 """
 Provision Azure Cosmos DB resources for AgenticFleet.
 
-Creates the database and required containers based on the data model.
+Creates the database and required containers based on the data model
+defined in docs/developers/cosmosdb_data_model.md.
+
+Usage:
+    # With key-based auth
+    export AZURE_COSMOS_ENDPOINT="https://<account>.documents.azure.com:443/"
+    export AZURE_COSMOS_KEY="<your-key>"
+    python scripts/provision_cosmos.py
+
+    # With Managed Identity (no key needed)
+    export AZURE_COSMOS_ENDPOINT="https://<account>.documents.azure.com:443/"
+    python scripts/provision_cosmos.py
 """
 
 import os
@@ -49,22 +60,50 @@ def provision_cosmos() -> None:
         print(f"Failed to create database: {e}")
         sys.exit(1)
 
-    # 4. Create Containers
+    # 4. Create Containers (matches cosmosdb_data_model.md)
+    # See docs/developers/cosmosdb_data_model.md for full schema details
     containers = [
         {
-            "id": "Conversations",
-            "partition_key": "/conversationId",
+            "id": "workflowRuns",
+            "partition_key": "/workflowId",
+            "description": "End-to-end workflow runs with embedded events and quality data",
         },
         {
-            "id": "Workflows",
-            "partition_key": "/workflowId",
+            "id": "conversations",
+            "partition_key": "/conversationId",
+            "description": "Multi-turn chat sessions with embedded messages for context",
+        },
+        {
+            "id": "agentMemory",
+            "partition_key": "/userId",
+            "description": "Long-term per-user/agent memory items (vector-friendly)",
+        },
+        {
+            "id": "dspyExamples",
+            "partition_key": "/userId",
+            "description": "DSPy supervisor training/eval examples",
+        },
+        {
+            "id": "dspyOptimizationRuns",
+            "partition_key": "/userId",
+            "description": "DSPy optimization/compilation sessions",
+        },
+        {
+            "id": "cache",
+            "partition_key": "/cacheKey",
+            "description": "Cached workflow/query results with TTL",
+            # TTL should be enabled manually in portal or via indexing policy
         },
     ]
 
+    created = []
     for c_config in containers:
         c_id = cast(str, c_config["id"])
         pk_path = cast(str, c_config["partition_key"])
+        desc = c_config.get("description", "")
         print(f"Creating container '{c_id}' with PK '{pk_path}'...")
+        if desc:
+            print(f"  Purpose: {desc}")
 
         try:
             # Note: For Serverless accounts, offer_throughput must NOT be set.
@@ -73,13 +112,22 @@ def provision_cosmos() -> None:
                 id=c_id,
                 partition_key=PartitionKey(path=pk_path),
             )
-            print(f"Container '{c_id}' ready.")
+            print(f"  ✓ Container '{c_id}' ready.")
+            created.append(c_id)
         except exceptions.CosmosHttpResponseError as e:
-            print(f"Failed to create container '{c_id}': {e}")
+            print(f"  ✗ Failed to create container '{c_id}': {e}")
 
-    print("\nProvisioning complete!")
+    print("\n" + "=" * 50)
+    print("Provisioning complete!")
     print(f"Database: {database_id}")
-    print("Containers: Conversations, Workflows")
+    print(f"Containers created: {', '.join(created)}")
+    print("\nNext steps:")
+    print("1. Enable TTL on 'cache' container if needed (portal or CLI)")
+    print("2. Configure vector index on 'agentMemory' for semantic search")
+    print("3. Set environment variables in your app:")
+    print("   AGENTICFLEET_USE_COSMOS=true")
+    print(f"   AZURE_COSMOS_ENDPOINT={endpoint}")
+    print(f"   AZURE_COSMOS_DATABASE={database_id}")
 
 
 if __name__ == "__main__":

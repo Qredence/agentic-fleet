@@ -42,7 +42,7 @@ class TestIsCosmosEnabled:
         """Test that Cosmos is enabled when env var is set."""
         with patch.dict(
             os.environ,
-            {"COSMOS_ENABLED": "true", "COSMOS_ENDPOINT": "https://test.cosmos.azure.com:443/"},
+            {"AGENTICFLEET_USE_COSMOS": "true"},
         ):
             # Function checks for SDK availability too
             result = is_cosmos_enabled()
@@ -52,7 +52,7 @@ class TestIsCosmosEnabled:
         """Test that Cosmos is disabled when env var is false."""
         with patch.dict(
             os.environ,
-            {"COSMOS_ENABLED": "false", "AGENTICFLEET_USE_COSMOS": "false"},
+            {"AGENTICFLEET_USE_COSMOS": "false"},
             clear=True,
         ):
             result = is_cosmos_enabled()

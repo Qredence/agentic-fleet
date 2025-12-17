@@ -160,10 +160,98 @@ The frontend uses:
 
 The frontend communicates with the backend via WebSocket at `/api/ws/chat`:
 
-1. Client connects and sends `ChatRequest` JSON
+1. Client connects and sends a `ChatRequest` JSON payload (new run)
 2. Server streams `StreamEvent` messages
-3. Client can send `{"type": "cancel"}` to abort
-4. Server sends `{"type": "done"}` when complete
+3. If the workflow emits a human-in-the-loop request, the client can reply with a `workflow.response` message
+4. Client can send `{"type": "cancel"}` to abort
+5. Server sends `{"type": "done"}` when complete
+
+Supported client message types:
+
+- **New run**: `ChatRequest` (includes `message` and optional `enable_checkpointing`)
+- **Resume**: `{"type": "workflow.resume", "checkpoint_id": "..."}`
+- **HITL response**: `{"type": "workflow.response", ... }`
+- **Cancel**: `{"type": "cancel"}`
+
+Checkpoint semantics (agent-framework):
+
+- `checkpoint_id` is **resume-only** (message XOR checkpoint_id).
+- For new runs, checkpointing is enabled via `enable_checkpointing` (the server configures checkpoint storage).
+- To resume, send `workflow.resume` with a `checkpoint_id` and **do not** send a `message`.
+
+### Message Flow Diagrams
+
+These diagrams show the expected message flow for the web UI. They are intentionally aligned with agent-framework semantics:
+
+- **New run** uses `message` (and may opt into `enable_checkpointing`)
+- **Resume** uses `checkpoint_id` only
+- **HITL** uses `workflow.response` to unblock execution when the server emits a request
+
+#### New Run (Streaming)
+
+```mermaid
+sequenceDiagram
+	participant U as User
+	participant FE as Frontend (Web UI)
+	participant WS as Backend WS (/api/ws/chat)
+	participant WF as Supervisor Workflow
+
+	U->>FE: Type message + send
+	FE->>WS: ChatRequest {message, conversation_id, enable_checkpointing?}
+	WS->>WF: run_stream(message)
+
+	loop Stream events
+		WF-->>WS: StreamEvent
+		WS-->>FE: StreamEvent
+		FE-->>U: Render tokens/steps
+	end
+
+	WF-->>WS: done
+	WS-->>FE: {type: "done"}
+```
+
+#### Human-in-the-Loop (HITL) Request + Response
+
+```mermaid
+sequenceDiagram
+	participant FE as Frontend (Web UI)
+	participant WS as Backend WS (/api/ws/chat)
+	participant WF as Supervisor Workflow
+
+	WF-->>WS: request event (needs user input)
+	WS-->>FE: StreamEvent {type: "request", ...}
+
+	FE->>WS: {type: "workflow.response", request_id, data}
+	WS->>WF: forward response
+
+	loop Stream events
+		WF-->>WS: StreamEvent
+		WS-->>FE: StreamEvent
+	end
+
+	WF-->>WS: done
+	WS-->>FE: {type: "done"}
+```
+
+#### Resume from a Checkpoint
+
+```mermaid
+sequenceDiagram
+	participant FE as Frontend (Web UI)
+	participant WS as Backend WS (/api/ws/chat)
+	participant WF as Supervisor Workflow
+
+	FE->>WS: {type: "workflow.resume", checkpoint_id}
+	WS->>WF: resume(checkpoint_id)
+
+	loop Stream events
+		WF-->>WS: StreamEvent
+		WS-->>FE: StreamEvent
+	end
+
+	WF-->>WS: done
+	WS-->>FE: {type: "done"}
+```
 
 See `src/frontend/AGENTS.md` for detailed frontend architecture documentation.
 

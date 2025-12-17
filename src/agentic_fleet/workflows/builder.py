@@ -182,9 +182,11 @@ def _build_group_chat_workflow(
                 logger.warning("GroupChatBuilder missing participants() method; skipping")
 
         if context.openai_client:
+            from agent_framework._agents import ChatAgent
+            from agent_framework._workflows import ManagerSelectionResponse
             from agent_framework.openai import OpenAIResponsesClient
 
-            model_id = "gpt-4o"
+            model_id = "gpt-4.1-mini"
             if context.config:
                 cfg_model = getattr(context.config, "model", None)
                 if cfg_model:
@@ -198,21 +200,31 @@ def _build_group_chat_workflow(
             else:
                 raise ValueError("Model configuration not found in context.")
 
-            # Use OpenAIResponsesClient for consistency with agent-framework best practices
+            # Use OpenAIResponsesClient for consistency with agent-framework best practices.
             chat_client = OpenAIResponsesClient(
                 async_client=context.openai_client,
                 model_id=model_id,
             )
 
-            manager_fn = getattr(builder, "set_prompt_based_manager", None)
+            # agent-framework 1.0.0b251211 uses an explicit manager agent.
+            # The manager must return ManagerSelectionResponse for structured speaker selection.
+            manager = ChatAgent(
+                chat_client=chat_client,
+                name="Coordinator",
+                description="Coordinates multi-agent collaboration and selects the next speaker.",
+                instructions=(
+                    "You are the group chat coordinator. Review the conversation history and select the next "
+                    "participant to speak. When ready to finish, set finish=True and provide the final answer "
+                    "in final_message."
+                ),
+                response_format=ManagerSelectionResponse,
+            )
+
+            manager_fn = getattr(builder, "set_manager", None)
             if callable(manager_fn):
-                manager_fn(
-                    chat_client=chat_client,
-                    instructions="You are the manager of this group chat. Coordinate the agents to complete the task.",
-                    display_name="Manager",
-                )
+                manager_fn(manager, display_name="Orchestrator")
             else:
-                logger.warning("GroupChatBuilder missing set_prompt_based_manager(); skipping")
+                logger.warning("GroupChatBuilder missing set_manager(); skipping")
         else:
             logger.warning(
                 "No OpenAI client available. Group Chat manager might not function correctly."
@@ -250,7 +262,7 @@ def _build_handoff_workflow(
         # Create a Triage/Coordinator agent
         from agent_framework.openai import OpenAIResponsesClient
 
-        model_id = "gpt-4o"
+        model_id = "gpt-4.1-mini"
         if context.config:
             cfg_model = getattr(context.config, "model", None)
             if cfg_model:

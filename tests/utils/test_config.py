@@ -5,7 +5,7 @@ from unittest.mock import patch
 
 import pytest
 
-from agentic_fleet.utils.config import EnvConfig, load_config, validate_config
+from agentic_fleet.utils.cfg import EnvConfig, load_config, validate_config
 from agentic_fleet.workflows.exceptions import ConfigurationError
 
 
@@ -21,7 +21,7 @@ workflow:
     max_rounds: 5
 agents:
   researcher:
-    model: gpt-4o
+    model: gpt-4.1-mini
     temperature: 0.7
 """
 
@@ -83,7 +83,7 @@ class TestValidateConfig:
         """Provide valid configuration."""
         return {
             "workflow": {"supervisor": {"max_rounds": 5}},
-            "agents": {"researcher": {"model": "gpt-4o"}},
+            "agents": {"researcher": {"model": "gpt-4.1-mini"}},
         }
 
     def test_validate_config_valid(self, valid_config):

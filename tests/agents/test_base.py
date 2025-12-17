@@ -439,10 +439,6 @@ class TestPotFailureHandling:
     """Tests for Program of Thought failure handling."""
 
     @pytest.mark.asyncio
-    @pytest.mark.skip(
-        reason="Bug: ChatMessage.text is read-only but _handle_pot_failure tries to set it. "
-        "See base.py:353 - needs fix to create a new ChatMessage instead of modifying."
-    )
     async def test_handle_pot_failure_returns_fallback(self, pot_agent):
         """Test that _handle_pot_failure returns fallback response."""
         # Set pot_module to None to avoid mock attribute access

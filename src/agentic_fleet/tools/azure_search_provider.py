@@ -5,7 +5,8 @@ import os
 from collections.abc import MutableSequence
 from typing import Any
 
-from agent_framework import ChatMessage, Context, ContextProvider
+from agent_framework._memory import Context, ContextProvider
+from agent_framework._types import ChatMessage
 from azure.core.credentials import AzureKeyCredential
 from azure.search.documents import SearchClient
 

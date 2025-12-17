@@ -83,7 +83,7 @@ Enable and tune via `config/workflow_config.yaml`:
 evaluation:
   enabled: true
   dataset_path: data/evaluation_tasks.jsonl
-  output_dir: logs/evaluation
+  output_dir: .var/logs/evaluation
   metrics:
     - quality_score
     - keyword_success
@@ -160,20 +160,20 @@ uv run agentic-fleet evaluate \
   --max-tasks 10
 
 # 3. Review results
-cat logs/evaluation/evaluation_summary.json
+cat .var/logs/evaluation/evaluation_summary.json
 ```
 
 ## Output Artifacts
 
-| File                                      | Purpose                                |
-| ----------------------------------------- | -------------------------------------- |
-| `logs/evaluation/evaluation_report.jsonl` | Per-task metrics (stream friendly)     |
-| `logs/evaluation/evaluation_summary.json` | Aggregated statistics (means, min/max) |
-| `logs/evaluation/baseline_snapshot.json`  | First-run canonical output hashes      |
+| File                                           | Purpose                                |
+| ---------------------------------------------- | -------------------------------------- |
+| `.var/logs/evaluation/evaluation_report.jsonl` | Per-task metrics (stream friendly)     |
+| `.var/logs/evaluation/evaluation_summary.json` | Aggregated statistics (means, min/max) |
+| `.var/logs/evaluation/baseline_snapshot.json`  | First-run canonical output hashes      |
 
 ## Baseline Snapshots
 
-On first evaluation run, a baseline snapshot is created at `logs/evaluation/baseline_snapshot.json`:
+On first evaluation run, a baseline snapshot is created at `.var/logs/evaluation/baseline_snapshot.json`:
 
 **What it stores:**
 
@@ -191,7 +191,7 @@ On first evaluation run, a baseline snapshot is created at `logs/evaluation/base
 
 ```bash
 # Delete old baseline
-rm logs/evaluation/baseline_snapshot.json
+rm .var/logs/evaluation/baseline_snapshot.json
 
 # Next evaluation run creates new baseline
 uv run agentic-fleet evaluate \
@@ -256,7 +256,7 @@ uv run agentic-fleet evaluate \
   --max-tasks 10
 
 # Review summary for unexpected changes
-cat logs/evaluation/evaluation_summary.json
+cat .var/logs/evaluation/evaluation_summary.json
 ```
 
 ### Updating the Evaluation Dataset

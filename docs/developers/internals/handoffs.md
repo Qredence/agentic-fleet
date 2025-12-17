@@ -249,7 +249,7 @@ result = await workflow.run(complex_task)
 ### Enhanced GEPA Metric
 
 ```python
-from src.agentic_fleet.utils.gepa_optimizer import build_advanced_routing_feedback_metric
+from agentic_fleet.utils.gepa_optimizer import build_advanced_routing_feedback_metric
 
 # Create metric with handoff evaluation
 metric = build_advanced_routing_feedback_metric(
@@ -304,7 +304,7 @@ for handoff in workflow.handoff_manager.handoff_history:
 ### Execution History
 
 ```python
-from src.agentic_fleet.utils.history_manager import HistoryManager
+from agentic_fleet.utils.history_manager import HistoryManager
 
 history = HistoryManager()
 executions = history.load_history(limit=10)

@@ -170,8 +170,8 @@ async def test_error_handling():
 ```python
 def test_config_validation():
     """Test configuration validation."""
-    from src.agentic_fleet.utils.config_schema import validate_config
-    from src.agentic_fleet.workflows.exceptions import ConfigurationError
+    from agentic_fleet.core.config import validate_config
+    from agentic_fleet.workflows.exceptions import ConfigurationError
 
     invalid_config = {"dspy": {"temperature": 5.0}}  # Out of range
 
@@ -242,7 +242,7 @@ PYTHONPATH=. uv run pytest --cache-clear tests/
 
 ```python
 def test_validate_task_empty():
-    from src.agentic_fleet.workflows.supervisor_workflow import _validate_task
+    from agentic_fleet.workflows.supervisor_workflow import _validate_task
 
     with pytest.raises(ValueError, match="cannot be empty"):
         _validate_task("")
@@ -267,7 +267,7 @@ async def test_routing_normalization():
 
 ```python
 def test_tool_registration():
-    from src.agentic_fleet.utils.tool_registry import ToolRegistry
+    from agentic_fleet.utils.tool_registry import ToolRegistry
 
     registry = ToolRegistry()
     # Test registration logic
