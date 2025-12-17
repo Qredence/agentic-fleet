@@ -33,7 +33,7 @@ def main():
     parser.add_argument(
         "--min-quality",
         type=float,
-        default=8.0,
+        default=7.0,
         help="Minimum quality score for examples (0-10)",
     )
     parser.add_argument(

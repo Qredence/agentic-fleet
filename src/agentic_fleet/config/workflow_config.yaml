@@ -155,7 +155,7 @@ agents:
 
   # New expanded agent roster (configuration-driven; keeps legacy agents for compatibility)
   planner:
-    model: gpt-5.1 # Changed from Kimi-K2-Thinking (not supported by Responses API)
+    model: gpt-5.2 # Changed from Kimi-K2-Thinking (not supported by Responses API)
     tools: []
     temperature: 0.5
     instructions: prompts.planner
@@ -409,7 +409,7 @@ ui_routing:
 tracing:
   enabled: true # Set to false to disable all tracing
   otlp_endpoint: http://localhost:4317 # AI Toolkit / OpenTelemetry Collector endpoint (corrected port)
-  capture_sensitive: false # Capture prompts & completions (set to true only for debugging - GDPR/privacy risk)
+  capture_sensitive: true # Capture prompts & completions (set to true only for debugging - GDPR/privacy risk)
   # Azure Monitor / AI Foundry export (optional)
   # Set connection string to export traces to Microsoft AI Foundry
   # Get this from: Foundry Portal > Your Project > Tracing > Manage data source > Connection string
