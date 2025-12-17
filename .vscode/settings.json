@@ -89,10 +89,10 @@
         "copilot/gpt-5-codex",
         "copilot/gpt-5.1",
         "copilot/gpt-5.1-codex",
+        "copilot/gpt-5.1-codex-max",
         "copilot/gpt-5.1-codex-mini",
         "copilot/grok-code-fast-1",
-        "copilot/qredence/fleetw7ot/model-router",
-        "copilot/gpt-5.1-codex-max"
+        "copilot/gpt-5.2"
       ]
     },
     "AgenticFleet/.vscode/mcp.json: shadcn": {
