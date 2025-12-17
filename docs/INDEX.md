@@ -2,7 +2,7 @@
 
 Welcome to AgenticFleet documentation. This index organizes documentation by audience to help you find what you need quickly.
 
-**Current Version:** See `pyproject.toml` (`[project].version`).
+**Current Version:** v0.6.95 (see `pyproject.toml` for latest)
 
 ## Quick Start
 
@@ -163,6 +163,17 @@ Detailed guides for specific features and workflows:
    - Common commands
    - History analysis
    - Configuration snippets
+6. **[DSPy Integration Guide](guides/dspy-agent-framework-integration.md)** - DSPy + Agent Framework patterns
+   - Integration architecture
+   - Signature design patterns
+   - Compilation workflows
+
+## DSPy Refactoring Documentation
+
+Historical documentation from DSPy integration phases:
+
+- **[Phase 1 - DSPy Refactor](dspy-refactor-phase1.md)** - Initial DSPy integration planning
+- **[Phase 2 - DSPy Refactor](dspy-refactor-phase2.md)** - Advanced DSPy implementation
 
 ## Project Information
 
@@ -221,7 +232,8 @@ docs/
 │   ├── tracing.md
 │   ├── logging-history.md
 │   └── quick-reference.md
+├── dspy-refactor-phase1.md     # Historical DSPy integration
+├── dspy-refactor-phase2.md     # Advanced DSPy implementation
 └── plans/                      # Implementation plans
-    ├── current.md              # Active/completed work
-    └── archive/                # Historical plans
+    └── current.md              # Active/completed work
 ```

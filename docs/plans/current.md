@@ -216,8 +216,8 @@ src/agentic_fleet/utils/
 
 ## Frontend Restructure Design
 
-**Status**: Approved (Implementation Pending)
-**Date**: 2025-12-15
+**Status**: ✅ Partially Completed
+**Date**: 2025-12-15 (started), 2025-12-17 (updated)
 **Document**: `docs/plans/2025-12-15-frontend-restructure-design.md`
 
 ### Goal
@@ -240,9 +240,100 @@ Feature-based structure with:
 - `app/` - App shell and providers
 - `api/` - API layer (unchanged)
 
-### Next Steps
+### Implementation Progress
 
-- Implement file moves per migration plan
-- Add barrel exports for each feature
+#### ✅ Completed
+
+- Created `features/chat/` with components, hooks, stores, types subdirectories
+- Created `features/dashboard/` with components subdirectory
+- Added barrel exports (`index.ts`) for each feature
+- Migrated chat-related components to feature structure
+
+#### ⚠️ Remaining Work
+
+- Add `shared/` directory for reusable components
 - Update path aliases in Vite config
 - Enable code splitting with `React.lazy()`
+- Consolidate duplicate test folders
+- Performance optimization (bundle splitting)
+
+---
+
+## Recent Improvements (v0.6.95)
+
+**Date**: 2025-12-17
+
+### Bug Fixes & Stability
+
+#### ✅ Import Path Fixes
+
+- Fixed `load_config` import path in `reasoner.py` module
+- Updated relative imports to absolute paths for better module resolution
+
+#### ✅ Workflow Timeout Handling
+
+- Added early cleanup for reasoning effort tracking on workflow timeout
+- Proper exception handling prevents resource leaks during workflow failures
+
+#### ✅ ChatMessage Preservation
+
+- Enhanced ChatMessage creation by preserving fields using Pydantic model cloning
+- Dataclass replacement ensures proper field propagation
+
+#### ✅ Test Infrastructure
+
+- Added fixture to suppress LiteLLM cleanup errors during test teardown
+- Improved test reliability in CI environments
+
+### Configuration Updates
+
+#### ✅ Environment Variables
+
+- Updated `.env.example` with current best practices
+- Modified Jaeger image version in `docker-compose.tracing.yml` for stability
+
+#### ✅ Model Configuration
+
+- Updated model version in `workflow_config.yaml`
+- Adjusted default quality score in `self_improve.py` for better baselines
+
+### Frontend Improvements
+
+#### ✅ Component Refactoring
+
+- Refactored `PromptInput` and `Textarea` components for improved accessibility
+- Enhanced styling consistency across input components
+
+#### ✅ WebSocket Enhancements
+
+- Enhanced WebSocket heartbeat handling and reconnection logic
+- Improved connection stability in unstable network conditions
+
+### Security Fixes
+
+#### ✅ Log Injection Prevention
+
+- Addressed CodeQL alert #169 for potential log injection vulnerability
+- Sanitized user input before logging
+
+---
+
+## Best Practices Learned
+
+### DSPy Module Development
+
+1. **Always clear cache after signature changes** - Run `make clear-cache` after modifying DSPy signatures or reasoner
+2. **Use typed signatures** - Pydantic models (`typed_models.py`) must match DSPy outputs
+3. **Test routing cache** - Verify cache TTL settings don't cause stale routing decisions
+
+### Workflow Development
+
+1. **Early cleanup on timeout** - Always clean up state tracking on workflow exceptions
+2. **Preserve Pydantic fields** - Use `model_copy()` or explicit cloning for ChatMessage instances
+3. **Validate import paths** - Use absolute imports (`from agentic_fleet.utils.cfg import ...`) consistently
+
+### Frontend Development
+
+1. **Feature-based structure** - Organize by domain (chat, dashboard) not by type (components, hooks)
+2. **WebSocket resilience** - Implement heartbeat + exponential backoff reconnection
+3. **Accessibility first** - Ensure all interactive components have proper ARIA attributes
