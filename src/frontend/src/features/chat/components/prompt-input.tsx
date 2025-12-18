@@ -1,11 +1,10 @@
-import { Textarea } from "@/shared/components/ui/textarea";
+import { Textarea } from "@/components/ui/textarea";
 import {
   Tooltip,
   TooltipContent,
-  TooltipProvider,
   TooltipTrigger,
-} from "@/shared/components/ui/tooltip";
-import { cn } from "@/shared/lib/utils";
+} from "@/components/ui/tooltip";
+import { cn } from "@/lib/utils";
 import React, {
   createContext,
   useContext,
@@ -75,36 +74,35 @@ function PromptInput({
   };
 
   return (
-    <TooltipProvider>
-      <PromptInputContext.Provider
-        value={{
-          isLoading,
-          value: value ?? internalValue,
-          setValue: onValueChange ?? handleChange,
-          maxHeight,
-          onSubmit,
-          disabled,
-          textareaRef,
+    <PromptInputContext.Provider
+      value={{
+        isLoading,
+        value: value ?? internalValue,
+        setValue: onValueChange ?? handleChange,
+        maxHeight,
+        onSubmit,
+        disabled,
+        textareaRef,
+      }}
+    >
+      <div
+        onClick={handleClick}
+        className={cn(
+          "border-input cursor-text rounded-3xl border p-2 shadow-xs",
+          disabled && "cursor-not-allowed opacity-60",
+          className,
+        )}
+        style={{
+          backgroundColor: "var(--color-background-primary-soft)",
+          boxShadow:
+            "0px 0px 0px 0px rgba(0, 0, 0, 0), 0px 0px 0px 0px rgba(0, 0, 0, 0), 0px 0px 0px 0px rgba(0, 0, 0, 0), 0px 1px 2px 0px rgba(0, 0, 0, 0.05), 0px 4px 12px 0px rgba(0, 0, 0, 0.15)",
+          backdropFilter: "blur(85.5px)",
         }}
+        {...props}
       >
-        <div
-          onClick={handleClick}
-          className={cn(
-            "border-input cursor-text rounded-3xl border p-2 shadow-xs bg-white/70 dark:bg-neutral-900/70",
-            disabled && "cursor-not-allowed opacity-60",
-            className,
-          )}
-          style={{
-            boxShadow:
-              "0px 0px 0px 0px rgba(0, 0, 0, 0), 0px 0px 0px 0px rgba(0, 0, 0, 0), 0px 0px 0px 0px rgba(0, 0, 0, 0), 0px 1px 2px 0px rgba(0, 0, 0, 0.05), 0px 4px 12px 0px rgba(0, 0, 0, 0.15)",
-            backdropFilter: "blur(85.5px)",
-          }}
-          {...props}
-        >
-          {children}
-        </div>
-      </PromptInputContext.Provider>
-    </TooltipProvider>
+        {children}
+      </div>
+    </PromptInputContext.Provider>
   );
 }
 
@@ -207,7 +205,7 @@ function PromptInputAction({
   tooltip,
   children,
   className,
-  side = "top",
+  side = "left",
   ...props
 }: PromptInputActionProps) {
   const { disabled } = usePromptInput();

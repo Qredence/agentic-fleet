@@ -9,6 +9,11 @@ import {
 } from "./prompt-input";
 import {
   Button,
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
   Sidebar,
   SidebarContent,
   SidebarGroup,
@@ -19,11 +24,22 @@ import {
   SidebarMenuButton,
   SidebarProvider,
   SidebarTrigger,
-} from "@/shared/components/ui";
+} from "@/components/ui";
 import type { Conversation, Message as ChatMessage } from "@/api/types";
 import { useChatStore } from "../stores";
 import { OptimizationDashboard } from "@/features/dashboard";
-import { PlusIcon, Search, Square, ArrowUp, Gauge } from "lucide-react";
+import {
+  PlusIcon,
+  Search,
+  Square,
+  ArrowUp,
+  Gauge,
+  ListTree,
+  BrainCircuit,
+  Zap,
+  Settings,
+  Sparkles,
+} from "lucide-react";
 import { useMemo, useState } from "react";
 import { useShallow } from "zustand/shallow";
 
@@ -126,10 +142,10 @@ function ChatSidebar() {
       </SidebarHeader>
 
       <SidebarContent className="pt-4">
-        <div className="flex flex-wrap px-4">
+        <div className="flex flex-col flex-nowrap px-0 justify-start h-fit">
           <Button
-            variant="outline"
-            className="mb-4 flex w-fit flex-wrap items-start justify-start gap-2 rounded-3xl border-0 text-left"
+            variant="soft"
+            className="flex w-full flex-wrap items-start justify-start gap-2 rounded-3xl border-0 text-left"
             onClick={() => void createConversation()}
             disabled={isConversationsLoading}
             aria-label="Start new chat"
@@ -139,19 +155,14 @@ function ChatSidebar() {
           </Button>
         </div>
 
-        <SidebarGroup>
-          <SidebarGroupLabel>Tools</SidebarGroupLabel>
-          <SidebarMenu>
-            <SidebarMenuButton
-              isActive={activeView === "dashboard"}
-              onClick={() => setActiveView("dashboard")}
-              aria-label="Open optimization dashboard"
-            >
-              <Gauge className="mr-2 size-4" />
-              <span>Optimization</span>
-            </SidebarMenuButton>
-          </SidebarMenu>
-        </SidebarGroup>
+        <SidebarMenuButton
+          isActive={activeView === "dashboard"}
+          onClick={() => setActiveView("dashboard")}
+          aria-label="Open optimization dashboard"
+        >
+          <Gauge className="mr-2 size-4" />
+          <span>Optimization</span>
+        </SidebarMenuButton>
 
         {isConversationsLoading ? (
           <div className="px-4 py-2 text-sm text-muted-foreground">
@@ -172,7 +183,9 @@ function ChatSidebar() {
                     isActive={conversation.id === conversationId}
                     onClick={() => void selectConversation(conversation.id)}
                   >
-                    <span>{getConversationTitle(conversation)}</span>
+                    <span className="flex flex-col w-fit">
+                      {getConversationTitle(conversation)}
+                    </span>
                   </SidebarMenuButton>
                 ))}
               </SidebarMenu>
@@ -193,6 +206,14 @@ function ChatContent() {
     sendMessage,
     cancelStreaming,
     sendWorkflowResponse,
+    showTrace,
+    showRawReasoning,
+    executionMode,
+    enableGepa,
+    setShowTrace,
+    setShowRawReasoning,
+    setExecutionMode,
+    setEnableGepa,
   } = useChatStore(
     useShallow((state) => ({
       messages: state.messages,
@@ -202,6 +223,14 @@ function ChatContent() {
       sendMessage: state.sendMessage,
       cancelStreaming: state.cancelStreaming,
       sendWorkflowResponse: state.sendWorkflowResponse,
+      showTrace: state.showTrace,
+      showRawReasoning: state.showRawReasoning,
+      executionMode: state.executionMode,
+      enableGepa: state.enableGepa,
+      setShowTrace: state.setShowTrace,
+      setShowRawReasoning: state.setShowRawReasoning,
+      setExecutionMode: state.setExecutionMode,
+      setEnableGepa: state.setEnableGepa,
     })),
   );
 
@@ -223,25 +252,27 @@ function ChatContent() {
 
   return (
     <main className="flex h-screen flex-col overflow-hidden">
-      <ChatHeader
-        title={headerTitle}
-        sidebarTrigger={<SidebarTrigger className="-ml-1" />}
-      />
+      <ChatHeader title={headerTitle} sidebarTrigger={<SidebarTrigger />} />
 
       <div className="relative flex-1 overflow-y-auto">
         <ChatMessages
           messages={messages}
           isLoading={isLoading}
-          renderTrace={(message: ChatMessage, isStreaming: boolean) => (
-            <ChainOfThoughtTrace
-              message={message}
-              isStreaming={isStreaming}
-              isLoading={isLoading}
-              onWorkflowResponse={(requestId, payload) =>
-                sendWorkflowResponse(requestId, payload)
-              }
-            />
-          )}
+          renderTrace={
+            showTrace
+              ? (message: ChatMessage, isStreaming: boolean) => (
+                  <ChainOfThoughtTrace
+                    message={message}
+                    isStreaming={isStreaming}
+                    isLoading={isLoading}
+                    showRawReasoning={showRawReasoning}
+                    onWorkflowResponse={(requestId, payload) =>
+                      sendWorkflowResponse(requestId, payload)
+                    }
+                  />
+                )
+              : undefined
+          }
         />
       </div>
 
@@ -252,7 +283,7 @@ function ChatContent() {
             value={prompt}
             onValueChange={setPrompt}
             onSubmit={handleSubmit}
-            className="border-input bg-popover relative z-10 w-full rounded-3xl border p-0 pt-1 shadow-xs"
+            className="border-input bg-popover dark:bg-neutral-800/90 dark:border-neutral-700 relative z-10 w-full rounded-3xl border p-0 pt-1 shadow-xs"
           >
             <div className="flex flex-col">
               <PromptInputTextarea
@@ -260,7 +291,135 @@ function ChatContent() {
                 className="min-h-11 pt-3 pl-4 text-base leading-[1.3] sm:text-base md:text-base"
               />
 
-              <PromptInputActions className="mt-5 flex w-full items-center justify-end gap-2 px-3 pb-3">
+              <PromptInputActions className="mt-5 flex w-full items-end justify-between gap-2 px-3 pb-3">
+                <div className="flex shrink-0 items-center gap-1">
+                  <PromptInputAction
+                    tooltip={
+                      <div className="flex flex-col gap-1">
+                        <div className="font-medium">Execution Mode</div>
+                        <div className="text-xs text-muted-foreground">
+                          {executionMode === "auto" && "Auto: Smart routing"}
+                          {executionMode === "fast" && "Fast: Fast path only"}
+                          {executionMode === "standard" &&
+                            "Standard: Full workflow"}
+                        </div>
+                      </div>
+                    }
+                  >
+                    <Select
+                      value={executionMode}
+                      onValueChange={(value: "auto" | "fast" | "standard") => {
+                        setExecutionMode(value);
+                      }}
+                    >
+                      <SelectTrigger
+                        className="h-8 gap-1.5 px-2.5 rounded-full bg-secondary text-secondary-foreground hover:bg-secondary/80 border-0 shadow-none focus:ring-2 focus:ring-ring focus:ring-offset-2 w-auto"
+                        aria-label={`Execution mode: ${executionMode}`}
+                        title={`Execution mode: ${executionMode}`}
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        <span className="flex items-center gap-1.5">
+                          {executionMode === "auto" && (
+                            <Settings className="size-3.5" />
+                          )}
+                          {executionMode === "fast" && (
+                            <Zap className="size-3.5" />
+                          )}
+                          <SelectValue className="text-xs font-medium capitalize" />
+                        </span>
+                      </SelectTrigger>
+                      <SelectContent side="top" className="min-w-32">
+                        <SelectItem value="auto">
+                          <span className="flex items-center gap-2">
+                            <Settings className="size-3.5" />
+                            <span>Auto</span>
+                          </span>
+                        </SelectItem>
+                        <SelectItem value="fast">
+                          <span className="flex items-center gap-2">
+                            <Zap className="size-3.5" />
+                            <span>Fast</span>
+                          </span>
+                        </SelectItem>
+                        <SelectItem value="standard">
+                          <span className="flex items-center gap-2">
+                            <ListTree className="size-3.5" />
+                            <span>Standard</span>
+                          </span>
+                        </SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </PromptInputAction>
+                  <PromptInputAction
+                    tooltip={
+                      <div className="flex flex-col gap-1">
+                        <div className="font-medium">GEPA Optimization</div>
+                        <div className="text-xs text-muted-foreground">
+                          {enableGepa
+                            ? "Enabled: Gradient-based prompt adaptation"
+                            : "Disabled: Standard optimization"}
+                        </div>
+                      </div>
+                    }
+                  >
+                    <Button
+                      variant={enableGepa ? "secondary" : "ghost"}
+                      size="sm"
+                      className="h-8 gap-1.5 px-2.5 rounded-full text-[var(--color-primary)]"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setEnableGepa(!enableGepa);
+                      }}
+                      aria-label={enableGepa ? "Disable GEPA" : "Enable GEPA"}
+                      aria-pressed={enableGepa}
+                      title={enableGepa ? "Disable GEPA" : "Enable GEPA"}
+                      style={
+                        enableGepa
+                          ? {
+                              backgroundColor:
+                                "var(--color-background-secondary-soft-active)",
+                            }
+                          : undefined
+                      }
+                    >
+                      <Sparkles className="size-3.5" />
+                      <span className="text-xs font-medium">
+                        {enableGepa ? "GEPA" : "GEPA"}
+                      </span>
+                    </Button>
+                  </PromptInputAction>
+                  <Button
+                    variant={showTrace ? "secondary" : "ghost"}
+                    size="icon-sm"
+                    className="rounded-full"
+                    onClick={() => setShowTrace(!showTrace)}
+                    aria-label={showTrace ? "Hide process" : "Show process"}
+                    aria-pressed={showTrace}
+                    title={showTrace ? "Hide process" : "Show process"}
+                  >
+                    <ListTree className="size-4" />
+                  </Button>
+                  <Button
+                    variant={showRawReasoning ? "secondary" : "ghost"}
+                    size="icon-sm"
+                    className="rounded-full"
+                    onClick={() => setShowRawReasoning(!showRawReasoning)}
+                    aria-label={
+                      showRawReasoning
+                        ? "Hide raw reasoning"
+                        : "Show raw reasoning"
+                    }
+                    aria-pressed={showRawReasoning}
+                    title={
+                      showRawReasoning
+                        ? "Hide raw reasoning"
+                        : "Show raw reasoning"
+                    }
+                    disabled={!showTrace}
+                  >
+                    <BrainCircuit className="size-4" />
+                  </Button>
+                </div>
                 {isLoading ? (
                   <PromptInputAction tooltip="Stop">
                     <Button

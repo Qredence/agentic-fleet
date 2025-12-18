@@ -1,3 +1,15 @@
+/**
+ * Step data types - more specific than Record<string, unknown>
+ */
+export interface ConversationStepData {
+  request_id?: string;
+  agent_id?: string;
+  author?: string;
+  output?: string;
+  phase?: string;
+  [key: string]: unknown; // Allow additional fields from backend
+}
+
 export interface ConversationStep {
   id: string;
   type:
@@ -20,7 +32,7 @@ export interface ConversationStep {
   content: string;
   timestamp: string;
   kind?: string; // e.g., 'routing', 'analysis', 'quality'
-  data?: Record<string, unknown>;
+  data?: ConversationStepData;
   isExpanded?: boolean;
   category?:
     | "step"
@@ -148,7 +160,7 @@ export interface StreamEvent {
   error?: string;
   reasoning?: string;
   kind?: string;
-  data?: Record<string, unknown>;
+  data?: ConversationStepData;
   timestamp?: string;
   /** True if reasoning was interrupted mid-stream (on error events) */
   reasoning_partial?: boolean;
@@ -232,6 +244,25 @@ export interface OptimizationRequest {
   min_quality?: number;
 }
 
+/**
+ * Optimization details - metrics and configuration from DSPy optimization
+ */
+export interface OptimizationDetails {
+  optimizer?: string;
+  metrics?: {
+    accuracy?: number;
+    latency?: number;
+    cost?: number;
+    [key: string]: unknown;
+  };
+  config?: {
+    max_bootstrapped_demos?: number;
+    max_labeled_demos?: number;
+    [key: string]: unknown;
+  };
+  [key: string]: unknown; // Allow additional fields from backend
+}
+
 export interface OptimizationResult {
   status: "started" | "running" | "completed" | "cached" | "failed";
   job_id?: string | null;
@@ -241,13 +272,35 @@ export interface OptimizationResult {
   completed_at?: string;
   error?: string;
   progress?: number;
-  details?: Record<string, unknown>;
+  details?: OptimizationDetails;
 }
 
 export interface HistoryQualityMetrics {
   score?: number;
   flag?: string;
   improvements?: string;
+}
+
+/**
+ * Routing information for workflow execution
+ */
+export interface RoutingInfo {
+  selected_agents?: string[];
+  execution_mode?: "delegated" | "sequential" | "parallel";
+  confidence?: number;
+  reasoning?: string;
+  [key: string]: unknown; // Allow additional fields from backend
+}
+
+/**
+ * Execution metadata
+ */
+export interface ExecutionMetadata {
+  environment?: string;
+  version?: string;
+  user_id?: string;
+  tags?: string[];
+  [key: string]: unknown; // Allow additional fields from backend
 }
 
 export interface HistoryExecutionEntry {
@@ -260,9 +313,9 @@ export interface HistoryExecutionEntry {
   completed_at?: string;
   latency?: string | number;
   mode?: string;
-  routing?: Record<string, unknown>;
+  routing?: RoutingInfo;
   quality?: HistoryQualityMetrics;
-  metadata?: Record<string, unknown>;
+  metadata?: ExecutionMetadata;
   [key: string]: unknown;
 }
 
@@ -282,12 +335,23 @@ export interface SelfImproveStats {
   [key: string]: unknown;
 }
 
+/**
+ * Self-improve operation details
+ */
+export interface SelfImproveDetails {
+  examples_generated?: number;
+  examples_filtered?: number;
+  filter_reasons?: string[];
+  processing_time?: number;
+  [key: string]: unknown; // Allow additional fields from backend
+}
+
 export interface SelfImproveResponse {
   status: "completed" | "no_op" | "failed";
   message: string;
   new_examples_added?: number;
   stats?: SelfImproveStats;
-  details?: Record<string, unknown>;
+  details?: SelfImproveDetails;
 }
 
 // =============================================================================
@@ -378,17 +442,31 @@ export interface UIHint {
 // API Error Types
 // =============================================================================
 
+/**
+ * API error details - validation errors, stack traces, etc.
+ */
+export interface ApiErrorDetails {
+  field?: string;
+  validation_errors?: Array<{
+    field: string;
+    message: string;
+  }>;
+  stack_trace?: string;
+  request_id?: string;
+  [key: string]: unknown; // Allow additional fields from backend
+}
+
 export interface ApiError {
   message: string;
   status: number;
   code?: string;
-  details?: Record<string, unknown>;
+  details?: ApiErrorDetails;
 }
 
 export class ApiRequestError extends Error {
   status: number;
   code?: string;
-  details?: Record<string, unknown>;
+  details?: ApiErrorDetails;
 
   constructor(error: ApiError) {
     super(error.message);

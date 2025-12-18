@@ -1,23 +1,18 @@
 import { useCallback, useMemo, useState } from "react";
 import { motion, AnimatePresence } from "motion/react";
-import { Button } from "@/shared/components/ui/button";
-import { Input } from "@/shared/components/ui/input";
-import { Separator } from "@/shared/components/ui/separator";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Separator } from "@/components/ui/separator";
 import {
   Card,
   CardContent,
   CardDescription,
   CardHeader,
   CardTitle,
-} from "@/shared/components/ui/card";
-import { Progress } from "@/shared/components/ui/progress";
-import { Badge } from "@/shared/components/ui/badge";
-import {
-  Tabs,
-  TabsContent,
-  TabsList,
-  TabsTrigger,
-} from "@/shared/components/ui/tabs";
+} from "@/components/ui/card";
+import { Progress } from "@/components/ui/progress";
+import { Badge } from "@/components/ui/badge";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { TextShimmer } from "@/features/chat/components/text-shimmer";
 import {
   useEvaluationHistory,
@@ -32,7 +27,7 @@ import {
   useClearRoutingCache,
 } from "@/api/hooks";
 import type { SelfImproveStats, HistoryExecutionEntry } from "@/api/types";
-import { cn } from "@/shared/lib/utils";
+import { cn } from "@/lib/utils";
 import {
   Activity,
   Zap,
@@ -167,7 +162,7 @@ function StatCard({ label, value, icon, description }: StatCardProps) {
           </div>
         </CardContent>
         {/* Decorative gradient */}
-        <div className="from-primary/5 pointer-events-none absolute inset-0 bg-gradient-to-br to-transparent" />
+        <div className="from-primary/5 pointer-events-none absolute inset-0 bg-linear-to-br to-transparent" />
       </Card>
     </motion.div>
   );
@@ -192,9 +187,9 @@ function ProgressRing({ progress, status }: ProgressRingProps) {
   const statusColors = useMemo(
     () => ({
       idle: { stroke: "stroke-muted", fill: "text-muted-foreground" },
-      running: { stroke: "stroke-blue-500", fill: "text-blue-500" },
-      completed: { stroke: "stroke-green-500", fill: "text-green-500" },
-      failed: { stroke: "stroke-red-500", fill: "text-red-500" },
+      running: { stroke: "stroke-primary", fill: "text-primary" },
+      completed: { stroke: "stroke-primary", fill: "text-primary" },
+      failed: { stroke: "stroke-destructive", fill: "text-destructive" },
     }),
     [],
   );
@@ -258,10 +253,10 @@ function QualityChart({ distribution }: QualityChartProps) {
   const maxValue = Math.max(...entries.map(([, v]) => v), 1);
 
   const barColors = [
-    "bg-green-500",
-    "bg-blue-500",
-    "bg-orange-500",
-    "bg-red-500",
+    "bg-primary",
+    "bg-secondary",
+    "bg-muted-foreground",
+    "bg-destructive",
   ];
 
   return (
@@ -329,11 +324,11 @@ function HistoryEntry({ entry, index }: HistoryEntryProps) {
         className={cn(
           "mt-1.5 h-2 w-2 shrink-0 rounded-full",
           status === "completed"
-            ? "bg-green-500"
+            ? "bg-primary"
             : status === "failed"
-              ? "bg-red-500"
+              ? "bg-destructive"
               : status === "running"
-                ? "animate-pulse bg-blue-500"
+                ? "animate-pulse bg-primary"
                 : "bg-muted-foreground",
         )}
       />
@@ -466,6 +461,41 @@ export function OptimizationDashboard() {
   const [maxExamples, setMaxExamples] = useState("20");
   const [harvestHistory, setHarvestHistory] = useState(true);
 
+  // Validation errors
+  const [minQualityError, setMinQualityError] = useState<string | null>(null);
+  const [maxExamplesError, setMaxExamplesError] = useState<string | null>(null);
+
+  // Validation function
+  const validateInputs = useCallback((): boolean => {
+    let isValid = true;
+
+    // Validate minQuality (should be a number between 0 and 10)
+    const minQualityNum = Number(minQuality);
+    if (isNaN(minQualityNum) || minQuality.trim() === "") {
+      setMinQualityError("Must be a valid number");
+      isValid = false;
+    } else if (minQualityNum < 0 || minQualityNum > 10) {
+      setMinQualityError("Must be between 0 and 10");
+      isValid = false;
+    } else {
+      setMinQualityError(null);
+    }
+
+    // Validate maxExamples (should be a positive integer)
+    const maxExamplesNum = Number(maxExamples);
+    if (isNaN(maxExamplesNum) || maxExamples.trim() === "") {
+      setMaxExamplesError("Must be a valid number");
+      isValid = false;
+    } else if (!Number.isInteger(maxExamplesNum) || maxExamplesNum < 1) {
+      setMaxExamplesError("Must be a positive integer");
+      isValid = false;
+    } else {
+      setMaxExamplesError(null);
+    }
+
+    return isValid;
+  }, [minQuality, maxExamples]);
+
   // ----- Hooks -----
   const optimizationRun = useOptimizationRun({
     onSuccess: (result) => {
@@ -518,24 +548,37 @@ export function OptimizationDashboard() {
 
   // ----- Handlers -----
   const handleStartOptimization = useCallback(() => {
+    if (!validateInputs()) {
+      return; // Don't submit if validation fails
+    }
     optimizationRun.mutate({
       optimizer,
       use_cache: true,
       gepa_auto: optimizer === "gepa" ? gepaPreset : null,
       harvest_history: harvestHistory,
-      min_quality: Number(minQuality) || 8.0,
+      min_quality: Number(minQuality),
     });
-  }, [optimizer, gepaPreset, harvestHistory, minQuality, optimizationRun]);
+  }, [
+    optimizer,
+    gepaPreset,
+    harvestHistory,
+    minQuality,
+    optimizationRun,
+    validateInputs,
+  ]);
 
   const handleTriggerSelfImprove = useCallback(
     (statsOnly: boolean) => {
+      if (!validateInputs()) {
+        return; // Don't submit if validation fails
+      }
       selfImprove.mutate({
-        min_quality: Number(minQuality) || 8.0,
-        max_examples: Number(maxExamples) || 20,
+        min_quality: Number(minQuality),
+        max_examples: Number(maxExamples),
         stats_only: statsOnly,
       });
     },
-    [minQuality, maxExamples, selfImprove],
+    [minQuality, maxExamples, selfImprove, validateInputs],
   );
 
   const handleClearCache = useCallback(() => {
@@ -736,10 +779,19 @@ export function OptimizationDashboard() {
                           <Input
                             inputMode="decimal"
                             value={minQuality}
-                            onChange={(e) => setMinQuality(e.target.value)}
+                            onChange={(e) => {
+                              setMinQuality(e.target.value);
+                              setMinQualityError(null); // Clear error on change
+                            }}
                             disabled={isOptimizing}
                             placeholder="8.0"
+                            className={minQualityError ? "border-red-500" : ""}
                           />
+                          {minQualityError && (
+                            <p className="mt-1 text-xs text-red-500">
+                              {minQualityError}
+                            </p>
+                          )}
                         </div>
                         <div>
                           <label className="text-muted-foreground mb-2 block text-sm font-medium">
@@ -785,7 +837,7 @@ export function OptimizationDashboard() {
                       </Button>
 
                       {optimizationRun.isError && (
-                        <div className="flex items-center gap-2 rounded-lg bg-red-500/10 px-3 py-2 text-sm text-red-500">
+                        <div className="bg-destructive/10 border-destructive/20 text-destructive flex items-center gap-2 rounded-lg border px-3 py-2 text-sm">
                           <XCircle className="size-4" />
                           Failed to start optimization
                         </div>
@@ -896,9 +948,19 @@ export function OptimizationDashboard() {
                           <Input
                             inputMode="decimal"
                             value={minQuality}
-                            onChange={(e) => setMinQuality(e.target.value)}
+                            onChange={(e) => {
+                              setMinQuality(e.target.value);
+                              setMinQualityError(null); // Clear error on change
+                            }}
                             disabled={selfImprove.isPending}
+                            placeholder="8.0"
+                            className={minQualityError ? "border-red-500" : ""}
                           />
+                          {minQualityError && (
+                            <p className="mt-1 text-xs text-red-500">
+                              {minQualityError}
+                            </p>
+                          )}
                         </div>
                         <div>
                           <label className="text-muted-foreground mb-2 block text-sm font-medium">
@@ -907,9 +969,19 @@ export function OptimizationDashboard() {
                           <Input
                             inputMode="numeric"
                             value={maxExamples}
-                            onChange={(e) => setMaxExamples(e.target.value)}
+                            onChange={(e) => {
+                              setMaxExamples(e.target.value);
+                              setMaxExamplesError(null); // Clear error on change
+                            }}
                             disabled={selfImprove.isPending}
+                            placeholder="20"
+                            className={maxExamplesError ? "border-red-500" : ""}
                           />
+                          {maxExamplesError && (
+                            <p className="mt-1 text-xs text-red-500">
+                              {maxExamplesError}
+                            </p>
+                          )}
                         </div>
                       </div>
 
@@ -953,12 +1025,12 @@ export function OptimizationDashboard() {
                             animate={{ opacity: 1, y: 0 }}
                             exit={{ opacity: 0, y: -10 }}
                             className={cn(
-                              "flex items-start gap-2 rounded-lg p-3 text-sm",
+                              "flex items-start gap-2 rounded-lg border p-3 text-sm",
                               selfImprove.data.status === "completed"
-                                ? "bg-green-500/10 text-green-500"
+                                ? "bg-primary/10 border-primary/20 text-primary"
                                 : selfImprove.data.status === "no_op"
-                                  ? "bg-orange-500/10 text-orange-500"
-                                  : "bg-red-500/10 text-red-500",
+                                  ? "bg-muted border-border text-muted-foreground"
+                                  : "bg-destructive/10 border-destructive/20 text-destructive",
                             )}
                           >
                             {selfImprove.data.status === "completed" ? (
@@ -974,7 +1046,7 @@ export function OptimizationDashboard() {
                       </AnimatePresence>
 
                       {selfImprove.isError && (
-                        <div className="flex items-center gap-2 rounded-lg bg-red-500/10 px-3 py-2 text-sm text-red-500">
+                        <div className="bg-destructive/10 border-destructive/20 text-destructive flex items-center gap-2 rounded-lg border px-3 py-2 text-sm">
                           <XCircle className="size-4" />
                           Self-improvement failed
                         </div>
@@ -1040,7 +1112,7 @@ export function OptimizationDashboard() {
                               Loading config...
                             </div>
                           ) : dspyConfig.isError ? (
-                            <div className="flex items-center gap-2 text-sm text-red-500">
+                            <div className="text-destructive flex items-center gap-2 text-sm">
                               <AlertTriangle className="size-4" />
                               Failed to load config
                             </div>
@@ -1077,7 +1149,7 @@ export function OptimizationDashboard() {
                               Loading...
                             </div>
                           ) : reasonerSummary.isError ? (
-                            <div className="flex items-center gap-2 text-sm text-red-500">
+                            <div className="text-destructive flex items-center gap-2 text-sm">
                               <AlertTriangle className="size-4" />
                               Failed to load reasoner
                             </div>
@@ -1158,7 +1230,7 @@ export function OptimizationDashboard() {
                       </Button>
 
                       {clearRoutingCache.isSuccess && (
-                        <div className="flex items-center gap-2 rounded-lg bg-green-500/10 px-3 py-2 text-sm text-green-500">
+                        <div className="bg-primary/10 border-primary/20 text-primary flex items-center gap-2 rounded-lg border px-3 py-2 text-sm">
                           <CheckCircle2 className="size-4" />
                           Routing cache cleared
                         </div>
@@ -1186,7 +1258,7 @@ export function OptimizationDashboard() {
                           Loading cache info...
                         </div>
                       ) : dspyCacheInfo.isError ? (
-                        <div className="flex items-center justify-center py-8 text-red-500">
+                        <div className="text-destructive flex items-center justify-center py-8">
                           <AlertTriangle className="mr-2 size-4" />
                           Failed to load cache info
                         </div>
@@ -1201,7 +1273,7 @@ export function OptimizationDashboard() {
                       ) : (
                         <div className="space-y-3">
                           <div className="bg-muted/50 rounded-lg border p-4">
-                            <div className="flex items-center gap-2 text-green-500">
+                            <div className="text-primary flex items-center gap-2">
                               <CheckCircle2 className="size-5" />
                               <span className="font-medium">
                                 Cache Available
@@ -1270,7 +1342,7 @@ export function OptimizationDashboard() {
                           </Button>
 
                           {clearCache.isSuccess && (
-                            <div className="flex items-center gap-2 rounded-lg bg-green-500/10 px-3 py-2 text-sm text-green-500">
+                            <div className="bg-primary/10 border-primary/20 text-primary flex items-center gap-2 rounded-lg border px-3 py-2 text-sm">
                               <CheckCircle2 className="size-4" />
                               Cache cleared successfully
                             </div>
@@ -1301,7 +1373,7 @@ export function OptimizationDashboard() {
                           Loading signatures...
                         </div>
                       ) : dspySignatures.isError ? (
-                        <div className="flex items-center justify-center py-8 text-red-500">
+                        <div className="text-destructive flex items-center justify-center py-8">
                           <AlertTriangle className="mr-2 size-4" />
                           Failed to load signatures
                         </div>
@@ -1477,7 +1549,7 @@ export function OptimizationDashboard() {
                         Loading history...
                       </div>
                     ) : historyQuery.isError ? (
-                      <div className="flex items-center justify-center py-8 text-red-500">
+                      <div className="text-destructive flex items-center justify-center py-8">
                         <XCircle className="mr-2 size-4" />
                         Failed to load history
                       </div>
