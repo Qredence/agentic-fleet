@@ -98,6 +98,7 @@ def _sanitize_log_input(value: str) -> str:
     # Remove all other characters, including control codes and non-ASCII.
     # Truncate excessively long input for logging.
     import re
+
     if not isinstance(value, str):
         value = str(value)
     sanitized = re.sub(r"[^a-zA-Z0-9._-]", "", value)

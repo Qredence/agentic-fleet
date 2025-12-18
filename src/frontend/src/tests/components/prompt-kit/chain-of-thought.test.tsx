@@ -1,4 +1,4 @@
-import { render, screen, within } from "@testing-library/react";
+import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 import type { Message as ChatMessage, ConversationStep } from "@/api/types";
@@ -82,6 +82,7 @@ describe("ChainOfThoughtTrace", () => {
         isStreaming={false}
         onWorkflowResponse={mockOnWorkflowResponse}
         isLoading={false}
+        showRawReasoning={true}
       />,
     );
     expect(screen.getByText("Reasoning")).toBeInTheDocument();

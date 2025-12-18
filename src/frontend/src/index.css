@@ -15,6 +15,10 @@
 @import "./styles/utilities.css";
 
 /* =============================================
+   Tailwind v4 Theme Configuration
+ ============================================= */
+
+/* =============================================
   Tailwind v4 Theme Configuration
 ============================================= */
 @theme {
@@ -162,8 +166,8 @@
   --color-black: var(--black);
 
   /* Semantic Theme Colors */
-  --color-border: var(--color-border);
-  --color-ring: var(--color-ring);
+  --color-border: var(--alpha-12);
+  --color-ring: var(--blue-400);
   --color-input: var(--gray-800);
   --color-background: var(--gray-1000);
   --color-foreground: var(--gray-0);
@@ -173,8 +177,8 @@
   --color-secondary-foreground: var(--gray-100);
   --color-muted: var(--gray-800);
   --color-muted-foreground: var(--gray-400);
-  --color-accent: var(--color-background-secondary-soft-hover);
-  --color-accent-foreground: var(--color-text-secondary-ghost-hover);
+  --color-accent: var(--gray-600);
+  --color-accent-foreground: var(--gray-0);
   --color-destructive: var(--red-500);
   --color-card: var(--gray-900);
   --color-card-foreground: var(--gray-0);
@@ -198,6 +202,7 @@
   --radius-full: var(--radius-full);
 
   /* Shadows */
+  --shadow-xs: var(--shadow-100);
   --shadow-sm: var(--shadow-100);
   --shadow-md: var(--shadow-200);
   --shadow-lg: var(--shadow-300);

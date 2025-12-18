@@ -11,11 +11,9 @@
     "preview": "vite preview",
     "test": "vitest",
     "test:ui": "vitest --ui",
-    "test:coverage": "vitest --coverage",
+    "test:coverage": "vitest run --coverage",
     "test:run": "vitest run",
-    "test:watch": "vitest --watch",
-    "test:unit": "vitest run src/tests --exclude src/tests/hooks/useStreamingChat.integration.test.ts",
-    "test:integration": "RUN_LIVE_CHAT=1 vitest run src/tests/hooks/useStreamingChat.integration.test.ts"
+    "test:watch": "vitest --watch"
   },
   "dependencies": {
     "@openai/apps-sdk-ui": "^0.2.0",
@@ -24,6 +22,7 @@
     "@radix-ui/react-dialog": "^1.1.15",
     "@radix-ui/react-hover-card": "^1.1.5",
     "@radix-ui/react-scroll-area": "^1.2.10",
+    "@radix-ui/react-select": "^2.2.6",
     "@radix-ui/react-separator": "^1.1.7",
     "@radix-ui/react-slot": "^1.2.4",
     "@radix-ui/react-tooltip": "^1.2.8",
