@@ -90,6 +90,7 @@ class AgentFactory:
         self._foundry_clients: list[
             Any
         ] = []  # Track AIProjectClient and AzureAIAgentClient instances for cleanup
+        self._shared_foundry_clients: dict[str, Any] = {}  # Cache shared AIProjectClient by endpoint
 
         # Check if DSPy enhancement should be enabled globally
         self.enable_dspy = env_config.enable_dspy_agents
@@ -130,6 +131,7 @@ class AgentFactory:
                 logger.warning(f"Failed to close Foundry client {i + 1}: {e}")
 
         self._foundry_clients.clear()
+        self._shared_foundry_clients.clear()
 
     def create_agent(
         self,
@@ -415,17 +417,24 @@ class AgentFactory:
             # Use the legacy FoundryAgentAdapter
             # FoundryAgentAdapter shares the project_client (does not take ownership).
             # Sharing is safe: the adapter just uses the client for API calls.
-            # For now, create a new client per agent (future: refactor to accept shared_project_client)
-            # TODO: Integrate shared_project_client parameter once coordinator manages lifecycle
             from azure.ai.projects.aio import AIProjectClient
             from azure.identity import DefaultAzureCredential
 
             from agentic_fleet.agents.foundry import FoundryAgentAdapter
 
-            project_client = AIProjectClient.from_connection_string(  # type: ignore[attr-defined]
-                credential=DefaultAzureCredential(),
-                conn_str=endpoint,
-            )
+            # Check if we already have a shared client for this endpoint
+            project_client = self._shared_foundry_clients.get(endpoint)
+            client_reused = False
+
+            if project_client is None:
+                project_client = AIProjectClient.from_connection_string(  # type: ignore[attr-defined]
+                    credential=DefaultAzureCredential(),
+                    conn_str=endpoint,
+                )
+                self._shared_foundry_clients[endpoint] = project_client
+            else:
+                client_reused = True
+                logger.debug(f"Reusing existing Foundry client for endpoint: {endpoint}")
 
             instructions = agent_config.get("instructions", "")
 
@@ -447,10 +456,11 @@ class AgentFactory:
             )
             logger.debug(f"Created FoundryAgentAdapter '{name}' (ID: {agent_id})")
 
-            # Store client for later cleanup during shutdown
-            if not hasattr(self, "_foundry_clients"):
-                self._foundry_clients: list[Any] = []
-            self._foundry_clients.append(project_client)
+            # Store client for later cleanup during shutdown if it's new
+            if not client_reused:
+                if not hasattr(self, "_foundry_clients"):
+                    self._foundry_clients: list[Any] = []
+                self._foundry_clients.append(project_client)
 
         return agent
 
