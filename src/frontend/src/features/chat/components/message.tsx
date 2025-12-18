@@ -1,15 +1,10 @@
-import {
-  Avatar,
-  AvatarFallback,
-  AvatarImage,
-} from "@/shared/components/ui/avatar";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
   Tooltip,
   TooltipContent,
-  TooltipProvider,
   TooltipTrigger,
-} from "@/shared/components/ui/tooltip";
-import { cn } from "@/shared/lib/utils";
+} from "@/components/ui/tooltip";
+import { cn } from "@/lib/utils";
 import { Markdown } from "./markdown";
 import type { MarkdownProps } from "./markdown";
 
@@ -114,14 +109,12 @@ const MessageAction = ({
   ...props
 }: MessageActionProps) => {
   return (
-    <TooltipProvider>
-      <Tooltip {...props}>
-        <TooltipTrigger asChild>{children}</TooltipTrigger>
-        <TooltipContent side={side} className={className}>
-          {tooltip}
-        </TooltipContent>
-      </Tooltip>
-    </TooltipProvider>
+    <Tooltip {...props}>
+      <TooltipTrigger asChild>{children}</TooltipTrigger>
+      <TooltipContent side={side} className={className}>
+        {tooltip}
+      </TooltipContent>
+    </Tooltip>
   );
 };
 

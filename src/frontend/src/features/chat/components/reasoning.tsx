@@ -1,4 +1,4 @@
-import { cn } from "@/shared/lib/utils";
+import { cn } from "@/lib/utils";
 import { ChevronDownIcon } from "lucide-react";
 import React, {
   createContext,

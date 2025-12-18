@@ -7,6 +7,8 @@ type MockChatStoreState = {
   conversations: unknown[];
   conversationId: string | null;
   activeView: "chat" | "dashboard";
+  showTrace: boolean;
+  showRawReasoning: boolean;
   isLoading: boolean;
   isInitializing: boolean;
   isConversationsLoading: boolean;
@@ -21,6 +23,8 @@ type MockChatStoreState = {
   selectConversation: ReturnType<typeof vi.fn>;
   loadConversations: ReturnType<typeof vi.fn>;
   setActiveView: ReturnType<typeof vi.fn>;
+  setShowTrace: ReturnType<typeof vi.fn>;
+  setShowRawReasoning: ReturnType<typeof vi.fn>;
 };
 
 let mockStoreState: MockChatStoreState | null = null;
@@ -45,6 +49,8 @@ beforeEach(() => {
     conversations: [],
     conversationId: null,
     activeView: "chat",
+    showTrace: true,
+    showRawReasoning: false,
     isLoading: false,
     isInitializing: false,
     isConversationsLoading: false,
@@ -59,6 +65,8 @@ beforeEach(() => {
     selectConversation: vi.fn(),
     loadConversations: vi.fn(),
     setActiveView: vi.fn(),
+    setShowTrace: vi.fn(),
+    setShowRawReasoning: vi.fn(),
   };
 });
 
