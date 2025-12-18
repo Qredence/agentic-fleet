@@ -784,6 +784,13 @@ def get_default_agent_metadata() -> tuple[dict[str, Any], ...]:
             "status": "active",
             "model": "default (gpt-5-mini)",
         },
+        {
+            "name": "GeminiDeepResearcher",
+            "description": "Advanced research agent for comprehensive multi-source investigation and synthesis",
+            "capabilities": ["deep_research", "multi_source_search", "synthesis", "web_search", "browser"],
+            "status": "active",
+            "model": "gpt-5.2",
+        },
     )
 
 
