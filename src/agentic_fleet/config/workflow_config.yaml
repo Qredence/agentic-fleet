@@ -70,6 +70,7 @@ api:
       - executor
       - coder
       - verifier
+      - gemini_deep_researcher
 
 # Workflow Configuration
 workflow:
@@ -212,6 +213,19 @@ agents:
     enable_dspy: true
     cache_ttl: 300
     timeout: 120
+
+  gemini_deep_researcher:
+    model: gpt-5.2 # High-capacity model for deep research tasks
+    tools:
+      - TavilySearchTool
+      - BrowserTool
+    temperature: 0.6 # Balance between creativity and accuracy
+    instructions: prompts.gemini_deep_researcher
+    description: "Advanced research agent for comprehensive multi-source investigation and synthesis"
+    enable_dspy: true
+    cache_ttl: 600 # Cache longer for deep research results
+    timeout: 180 # Longer timeout for comprehensive research
+    reasoning_strategy: "chain_of_thought" # Use CoT for structured research
 
   # Microsoft Foundry Hosted Agent - Code Interpreter
   # This agent is hosted on Microsoft Foundry with Code Interpreter enabled in the portal

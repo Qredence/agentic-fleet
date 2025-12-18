@@ -50,6 +50,19 @@
 - **NLU module**: A DSPy-backed NLU stack (`dspy_modules/nlu.py`, `api/routes/nlu.py`) exposes intent classification and entity extraction endpoints. Update signatures and compiled caches together when changing NLU behaviour.
 - **Typed Signatures & Assertions** (v0.6.9): All DSPy outputs now use Pydantic models (`dspy_modules/typed_models.py`) for strict validation. Routing decisions are guarded by `dspy.Assert` and `dspy.Suggest` in `dspy_modules/assertions.py`.
 - **Routing Cache**: Routing decisions are cached (TTL 5m) to reduce latency and cost. Configure via `enable_routing_cache` in `workflow_config.yaml`.
+- **Available Agents**:
+  - `researcher`: Information gathering with TavilySearchTool (timeout: 60s)
+  - `analyst`: Data analysis with HostedCodeInterpreterTool (timeout: 90s)
+  - `writer`: Content creation specialist (timeout: 60s)
+  - `reviewer`: Quality assurance and validation (timeout: 45s)
+  - `planner`: Creates execution plans and strategies (timeout: 60s)
+  - `executor`: Executes tasks and commands (timeout: 60s)
+  - `coder`: Code writing and review with interpreter (timeout: 90s)
+  - `verifier`: Output validation and verification (timeout: 60s)
+  - `generator`: Final response assembly (timeout: 60s)
+  - `copilot_researcher`: Deep codebase research with multiple MCP tools (timeout: 120s)
+  - `gemini_deep_researcher`: **NEW** - Advanced multi-source research with comprehensive synthesis (timeout: 180s)
+  - `codex_agent`: Foundry-hosted Python execution agent with Code Interpreter (timeout: 120s)
 - For multi-agent expansion with OpenAI Agents SDK, treat Codex CLI as an MCP server and mirror roles from `.github/agents/agent-framework-spec.md`; document new roles/prompts here and in `docs/` as needed.
 
 ## Conventions & Notes
