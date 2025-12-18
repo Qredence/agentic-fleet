@@ -1,5 +1,5 @@
-import { cn } from "@/shared/lib/utils";
-import { useIsMobile } from "@/shared/hooks/useMobile";
+import { cn } from "@/lib/utils";
+import { useIsMobile } from "@/hooks/useMobile";
 import { Button } from "./button";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "./sheet";
 import { Slot } from "@radix-ui/react-slot";
@@ -96,7 +96,7 @@ export function Sidebar({
   return (
     <aside
       className={cn(
-        "hidden md:flex h-svh flex-col border-r border-border bg-background text-foreground transition-[width] duration-200 ease-linear",
+        "hidden md:flex h-svh flex-col border-r border-border text-foreground transition-[width] duration-200 ease-linear",
         open ? "w-64" : "w-14",
         className,
       )}
@@ -127,7 +127,7 @@ export function SidebarTrigger({
     <Button
       variant="ghost"
       size="icon"
-      className={cn("h-8 w-8", className)}
+      className={cn("h-8 w-8 absolute", className)}
       onClick={(event) => {
         onClick?.(event);
         toggleSidebar();
@@ -151,7 +151,16 @@ export function SidebarContent({
   className,
   ...props
 }: React.ComponentProps<"div">) {
-  return <div className={cn("flex-1 overflow-y-auto", className)} {...props} />;
+  return (
+    <div className={cn("flex-1 overflow-y-auto px-3", className)} {...props} />
+  );
+}
+
+export function SidebarFooter({
+  className,
+  ...props
+}: React.ComponentProps<"div">) {
+  return <div className={cn("border-t border-border", className)} {...props} />;
 }
 
 export function SidebarGroup({
@@ -195,7 +204,7 @@ export function SidebarMenuButton({
     <Comp
       data-active={isActive}
       className={cn(
-        "flex w-full items-center gap-2 rounded-md px-2 py-2 text-left text-sm text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/30",
+        "flex w-full items-start gap-2 rounded-md px-[17px] py-2 text-left text-sm text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/30",
         isActive && "bg-muted text-foreground font-medium",
         className,
       )}

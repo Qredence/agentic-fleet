@@ -1,4 +1,4 @@
-import { cn } from "@/shared/lib/utils";
+import { cn } from "@/lib/utils";
 import { Check, Copy } from "lucide-react";
 import React, { useEffect, useState, useCallback } from "react";
 import { codeToHtml } from "shiki";

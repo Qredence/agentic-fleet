@@ -8,6 +8,7 @@ export {
   CardDescription,
   CardFooter,
   CardHeader,
+  CardAction,
   CardTitle,
 } from "./card";
 export {
@@ -18,6 +19,18 @@ export {
 export { Input } from "./input";
 export { Progress } from "./progress";
 export { Separator } from "./separator";
+export {
+  Select,
+  SelectGroup,
+  SelectValue,
+  SelectTrigger,
+  SelectContent,
+  SelectLabel,
+  SelectItem,
+  SelectSeparator,
+  SelectScrollUpButton,
+  SelectScrollDownButton,
+} from "./select";
 export {
   Sheet,
   SheetClose,
@@ -33,6 +46,7 @@ export {
 export {
   Sidebar,
   SidebarContent,
+  SidebarFooter,
   SidebarGroup,
   SidebarGroupLabel,
   SidebarHeader,

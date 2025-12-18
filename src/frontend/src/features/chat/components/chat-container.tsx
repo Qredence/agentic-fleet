@@ -1,5 +1,5 @@
 import React from "react";
-import { cn } from "@/shared/lib/utils";
+import { cn } from "@/lib/utils";
 import { StickToBottom } from "use-stick-to-bottom";
 
 export type ChatContainerRootProps = {
@@ -43,6 +43,7 @@ function ChatContainerContent({
   return (
     <StickToBottom.Content
       className={cn("flex w-full flex-col", className)}
+      style={{ backgroundColor: "var(--color-surface)" }}
       {...props}
     >
       {children}

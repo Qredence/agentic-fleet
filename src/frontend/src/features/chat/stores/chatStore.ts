@@ -30,6 +30,59 @@ import type {
 let stepIdCounter = 0;
 let messageIdCounter = 0;
 
+const UI_PREFERENCE_KEYS = {
+  showTrace: "agenticfleet:ui:showTrace",
+  showRawReasoning: "agenticfleet:ui:showRawReasoning",
+  executionMode: "agenticfleet:ui:executionMode",
+  enableGepa: "agenticfleet:ui:enableGepa",
+} as const;
+
+function getStorage(): Storage | null {
+  if (typeof window === "undefined") return null;
+  try {
+    return window.localStorage;
+  } catch {
+    return null;
+  }
+}
+
+function readBoolPreference(key: string, fallback: boolean): boolean {
+  const storage = getStorage();
+  if (!storage) return fallback;
+  const raw = storage.getItem(key);
+  if (raw === null) return fallback;
+  if (raw === "1" || raw === "true") return true;
+  if (raw === "0" || raw === "false") return false;
+  return fallback;
+}
+
+function writeBoolPreference(key: string, value: boolean): void {
+  const storage = getStorage();
+  if (!storage) return;
+  try {
+    storage.setItem(key, value ? "1" : "0");
+  } catch {
+    // Ignore quota / privacy mode errors
+  }
+}
+
+function readStringPreference(key: string, fallback: string): string {
+  const storage = getStorage();
+  if (!storage) return fallback;
+  const raw = storage.getItem(key);
+  return raw ?? fallback;
+}
+
+function writeStringPreference(key: string, value: string): void {
+  const storage = getStorage();
+  if (!storage) return;
+  try {
+    storage.setItem(key, value);
+  } catch {
+    // Ignore quota / privacy mode errors
+  }
+}
+
 function generateStepId(): string {
   return `step-${Date.now()}-${++stepIdCounter}-${Math.random().toString(36).substring(2, 9)}`;
 }
@@ -90,6 +143,12 @@ interface ChatState {
   conversationId: string | null;
   activeView: "chat" | "dashboard";
 
+  // UI preferences
+  showTrace: boolean;
+  showRawReasoning: boolean;
+  executionMode: "auto" | "fast" | "standard";
+  enableGepa: boolean;
+
   // Loading states
   isLoading: boolean;
   isInitializing: boolean;
@@ -111,6 +170,10 @@ interface ChatState {
   cancelStreaming: () => void;
   setMessages: (messages: Message[]) => void;
   setActiveView: (view: "chat" | "dashboard") => void;
+  setShowTrace: (show: boolean) => void;
+  setShowRawReasoning: (show: boolean) => void;
+  setExecutionMode: (mode: "auto" | "fast" | "standard") => void;
+  setEnableGepa: (enable: boolean) => void;
   reset: () => void;
 }
 
@@ -118,30 +181,126 @@ interface ChatState {
 // SSE Client Instance (outside store for serialization)
 // =============================================================================
 
-// Message-scoped accumulated content map to prevent race conditions
-// Each message ID maps to its accumulated content
+// Message-scoped accumulated content map to prevent race conditions.
+// Keyed by assistant message ID so the store stays correct even if multiple streams overlap.
 const messageContentMap = new Map<string, string>();
-let currentStreamingMessageId: string | null = null;
 
-function appendToContent(delta: string): string {
-  if (!currentStreamingMessageId) return delta;
-  const current = messageContentMap.get(currentStreamingMessageId) || "";
+function appendToContent(messageId: string, delta: string): string {
+  const current = messageContentMap.get(messageId) || "";
   const updated = current + delta;
-  messageContentMap.set(currentStreamingMessageId, updated);
+  messageContentMap.set(messageId, updated);
   return updated;
 }
 
 function clearMessageContent(messageId: string | undefined): void {
-  if (messageId) {
-    messageContentMap.delete(messageId);
-  }
+  if (messageId) messageContentMap.delete(messageId);
 }
 
 function startNewMessage(messageId: string | undefined): void {
-  currentStreamingMessageId = messageId ?? null;
-  if (messageId) {
-    messageContentMap.set(messageId, "");
+  if (messageId) messageContentMap.set(messageId, "");
+}
+
+// =============================================================================
+// Message Update Helpers (reduce duplication)
+// =============================================================================
+
+/**
+ * Helper to update the last assistant message with a transformation function.
+ * Reduces ~150 lines of duplicated message update logic throughout the store.
+ */
+function updateLastAssistantMessage(
+  state: ChatState,
+  updater: (msg: Message) => Partial<Message>,
+): Partial<ChatState> {
+  const newMessages = [...state.messages];
+  const lastIdx = newMessages.length - 1;
+  if (lastIdx >= 0 && newMessages[lastIdx]?.role === "assistant") {
+    newMessages[lastIdx] = {
+      ...newMessages[lastIdx],
+      ...updater(newMessages[lastIdx]),
+    };
   }
+  return { messages: newMessages };
+}
+
+/**
+ * Helper to add a step to the last assistant message.
+ */
+function addStepToLastMessage(
+  state: ChatState,
+  step: ConversationStep,
+  checkDuplicate = true,
+): Partial<ChatState> {
+  const newMessages = [...state.messages];
+  const lastIdx = newMessages.length - 1;
+  if (lastIdx >= 0 && newMessages[lastIdx]?.role === "assistant") {
+    const steps = newMessages[lastIdx].steps || [];
+    if (!checkDuplicate || !isDuplicateStep(steps, step)) {
+      newMessages[lastIdx] = {
+        ...newMessages[lastIdx],
+        steps: [...steps, step],
+      };
+    }
+  }
+  return { messages: newMessages };
+}
+
+/**
+ * Factory function to create error steps with consistent structure.
+ */
+function createErrorStep(
+  content: string,
+  data?: Record<string, unknown>,
+): ConversationStep {
+  return {
+    id: generateStepId(),
+    type: "error",
+    content,
+    timestamp: new Date().toISOString(),
+    data,
+  };
+}
+
+/**
+ * Factory function to create status steps with consistent structure.
+ */
+function createStatusStep(
+  content: string,
+  kind?: string,
+  data?: Record<string, unknown>,
+  options?: {
+    category?: ConversationStep["category"];
+    uiHint?: ConversationStep["uiHint"];
+  },
+): ConversationStep {
+  return {
+    id: generateStepId(),
+    type: "status",
+    content,
+    timestamp: new Date().toISOString(),
+    kind,
+    data,
+    category: options?.category,
+    uiHint: options?.uiHint,
+  };
+}
+
+/**
+ * Factory function to create progress steps with consistent structure.
+ */
+function createProgressStep(
+  content: string,
+  kind: string,
+  data?: Record<string, unknown>,
+): ConversationStep {
+  return {
+    id: generateStepId(),
+    type: "progress",
+    content,
+    timestamp: new Date().toISOString(),
+    kind,
+    data,
+  };
 }
 
 // =============================================================================
@@ -160,6 +319,16 @@ const storeImpl = (set: ZustandSet, get: () => ChatState): ChatState => ({
   conversations: [],
   conversationId: null,
   activeView: "chat",
+  showTrace: readBoolPreference(UI_PREFERENCE_KEYS.showTrace, true),
+  showRawReasoning: readBoolPreference(
+    UI_PREFERENCE_KEYS.showRawReasoning,
+    false,
+  ),
+  executionMode: readStringPreference(
+    UI_PREFERENCE_KEYS.executionMode,
+    "auto",
+  ) as "auto" | "fast" | "standard",
+  enableGepa: readBoolPreference(UI_PREFERENCE_KEYS.enableGepa, false),
   isLoading: false,
   isInitializing: true,
   isConversationsLoading: false,
@@ -248,6 +417,17 @@ const storeImpl = (set: ZustandSet, get: () => ChatState): ChatState => ({
   cancelStreaming: () => {
     const sseClient = getSSEClient();
     void sseClient.cancel();
+
+    // Clear any accumulated content for the currently streaming assistant message.
+    const lastAssistantId = (() => {
+      const msgs = get().messages;
+      for (let i = msgs.length - 1; i >= 0; i -= 1) {
+        if (msgs[i]?.role === "assistant" && msgs[i].id) return msgs[i].id;
+      }
+      return undefined;
+    })();
+    clearMessageContent(lastAssistantId);
+
     set({
       isLoading: false,
       isReasoningStreaming: false,
@@ -259,85 +439,60 @@ const storeImpl = (set: ZustandSet, get: () => ChatState): ChatState => ({
   sendWorkflowResponse: (requestId: string, response: unknown) => {
     const sseClient = getSSEClient();
     if (!sseClient.isConnected) {
-      const errorStep: ConversationStep = {
-        id: generateStepId(),
-        type: "error",
-        content: "Cannot send workflow response: not connected to stream",
-        timestamp: new Date().toISOString(),
-        data: { request_id: requestId },
-      };
-      set((state) => {
-        const newMessages = [...state.messages];
-        const lastIdx = newMessages.length - 1;
-        if (newMessages[lastIdx]?.role === "assistant") {
-          newMessages[lastIdx] = {
-            ...newMessages[lastIdx],
-            steps: [...(newMessages[lastIdx].steps || []), errorStep],
-          };
-        }
-        return { messages: newMessages };
-      });
+      const errorStep = createErrorStep(
+        "Cannot send workflow response: not connected to stream",
+        { request_id: requestId },
+      );
+      set((state) => addStepToLastMessage(state, errorStep, false));
       return;
     }
 
     // Submit response via HTTP POST (SSE is read-only, so we use REST for sends)
     void sseClient.submitResponse(requestId, response).catch((err) => {
       console.error("Failed to submit workflow response:", err);
-      const errorStep: ConversationStep = {
-        id: generateStepId(),
-        type: "error",
-        content: `Failed to send response: ${err instanceof Error ? err.message : "Unknown error"}`,
-        timestamp: new Date().toISOString(),
-        data: { request_id: requestId },
-      };
-      set((state) => {
-        const newMessages = [...state.messages];
-        const lastIdx = newMessages.length - 1;
-        if (newMessages[lastIdx]?.role === "assistant") {
-          newMessages[lastIdx] = {
-            ...newMessages[lastIdx],
-            steps: [...(newMessages[lastIdx].steps || []), errorStep],
-          };
-        }
-        return { messages: newMessages };
-      });
+      const errorStep = createErrorStep(
+        `Failed to send response: ${err instanceof Error ? err.message : "Unknown error"}`,
+        { request_id: requestId },
+      );
+      set((state) => addStepToLastMessage(state, errorStep, false));
     });
 
-    const statusStep: ConversationStep = {
-      id: generateStepId(),
-      type: "status",
-      content: "Sent workflow response",
-      timestamp: new Date().toISOString(),
-      kind: "request",
-      data: { request_id: requestId },
-    };
-
-    set((state) => {
-      const newMessages = [...state.messages];
-      const lastIdx = newMessages.length - 1;
-      if (newMessages[lastIdx]?.role === "assistant") {
-        const steps = newMessages[lastIdx].steps || [];
-        if (!isDuplicateStep(steps, statusStep)) {
-          newMessages[lastIdx] = {
-            ...newMessages[lastIdx],
-            steps: [...steps, statusStep],
-          };
-        }
-      }
-      return { messages: newMessages };
+    const statusStep = createStatusStep("Sent workflow response", "request", {
+      request_id: requestId,
     });
+
+    set((state) => addStepToLastMessage(state, statusStep));
   },
 
   setMessages: (messages) => set({ messages }),
 
   setActiveView: (view) => set({ activeView: view }),
 
+  setShowTrace: (show) => {
+    writeBoolPreference(UI_PREFERENCE_KEYS.showTrace, show);
+    set({ showTrace: show });
+  },
+
+  setShowRawReasoning: (show) => {
+    writeBoolPreference(UI_PREFERENCE_KEYS.showRawReasoning, show);
+    set({ showRawReasoning: show });
+  },
+
+  setExecutionMode: (mode) => {
+    writeStringPreference(UI_PREFERENCE_KEYS.executionMode, mode);
+    set({ executionMode: mode });
+  },
+
+  setEnableGepa: (enable) => {
+    writeBoolPreference(UI_PREFERENCE_KEYS.enableGepa, enable);
+    set({ enableGepa: enable });
+  },
+
   reset: () => {
     // Disconnect and reset the SSE client singleton
     resetSSEClient();
     // Clear any accumulated message content
     messageContentMap.clear();
-    currentStreamingMessageId = null;
     set({
       messages: [],
       conversationId: null,
@@ -416,19 +571,14 @@ const storeImpl = (set: ZustandSet, get: () => ChatState): ChatState => ({
     sseClient.setCallbacks({
       onStatusChange: (status) => {
         if (status === "error") {
-          set((state) => {
-            const newMessages = [...state.messages];
-            const lastIdx = newMessages.length - 1;
-            if (newMessages[lastIdx]?.role === "assistant") {
-              newMessages[lastIdx] = {
-                ...newMessages[lastIdx],
-                isWorkflowPlaceholder: false,
-                content: "Connection failed. Please try again.",
-                workflowPhase: "",
-              };
-            }
-            return { messages: newMessages, isLoading: false };
-          });
+          set((state) => ({
+            ...updateLastAssistantMessage(state, () => ({
+              isWorkflowPlaceholder: false,
+              content: "Connection failed. Please try again.",
+              workflowPhase: "",
+            })),
+            isLoading: false,
+          }));
         }
       },
 
@@ -439,7 +589,6 @@ const storeImpl = (set: ZustandSet, get: () => ChatState): ChatState => ({
       onComplete: () => {
         // Clean up message content tracking
         clearMessageContent(assistantMessage.id);
-        currentStreamingMessageId = null;
 
         set({
           isLoading: false,
@@ -456,27 +605,12 @@ const storeImpl = (set: ZustandSet, get: () => ChatState): ChatState => ({
 
       onError: (error) => {
         console.error("Stream error:", error);
-        const errorStep: ConversationStep = {
-          id: generateStepId(),
-          type: "error",
-          content: error.message || "Unknown error",
-          timestamp: new Date().toISOString(),
-        };
-        set((state) => {
-          const newMessages = [...state.messages];
-          const lastIdx = newMessages.length - 1;
-          if (newMessages[lastIdx]?.role === "assistant") {
-            newMessages[lastIdx] = {
-              ...newMessages[lastIdx],
-              steps: [...(newMessages[lastIdx].steps || []), errorStep],
-            };
-          }
-          return {
-            messages: newMessages,
-            isLoading: false,
-            isReasoningStreaming: false,
-          };
-        });
+        const errorStep = createErrorStep(error.message || "Unknown error");
+        set((state) => ({
+          ...addStepToLastMessage(state, errorStep, false),
+          isLoading: false,
+          isReasoningStreaming: false,
+        }));
       },
     });
 
@@ -502,7 +636,7 @@ function handleStreamEvent(
   event: StreamEvent,
   set: ZustandSet,
   _get: () => ChatState,
-  _messageId?: string, // Message ID for scoped content tracking
+  messageId?: string, // Message ID for scoped content tracking
 ): void {
   // Debug logging for all events (uncomment to troubleshoot)
   console.debug("[chatStore] Event:", event.type, event.kind || "", {
@@ -522,54 +656,35 @@ function handleStreamEvent(
   // Handle workflow.status events (fallback if mapping doesn't convert)
   if (event.type === "workflow.status") {
     if (event.status === "failed") {
-      const errorStep: ConversationStep = {
-        id: generateStepId(),
-        type: "error",
-        content: event.message || event.error || "Workflow failed",
-        timestamp: new Date().toISOString(),
-        data: event.data,
-      };
+      const errorStep = createErrorStep(
+        event.message || event.error || "Workflow failed",
+        event.data,
+      );
       set((state) => {
-        const newMessages = [...state.messages];
-        const lastIdx = newMessages.length - 1;
-        if (newMessages[lastIdx]?.role === "assistant") {
-          newMessages[lastIdx] = {
-            ...newMessages[lastIdx],
-            steps: [...(newMessages[lastIdx].steps || []), errorStep],
-            isWorkflowPlaceholder: false,
-          };
-        }
+        const withStep = addStepToLastMessage(state, errorStep, false);
+        const withUpdate = updateLastAssistantMessage(
+          { ...state, ...withStep },
+          () => ({ isWorkflowPlaceholder: false }),
+        );
         return {
-          messages: newMessages,
+          ...withUpdate,
           isLoading: false,
           isReasoningStreaming: false,
         };
       });
       return;
     } else if (event.status === "in_progress") {
-      const progressStep: ConversationStep = {
-        id: generateStepId(),
-        type: "progress",
-        content: event.message || "Workflow started",
-        timestamp: new Date().toISOString(),
-        kind: "progress",
-        data: event.data,
-      };
-      set((state) => {
-        const newMessages = [...state.messages];
-        const lastIdx = newMessages.length - 1;
-        if (newMessages[lastIdx]?.role === "assistant") {
-          const steps = newMessages[lastIdx].steps || [];
-          if (!isDuplicateStep(steps, progressStep)) {
-            newMessages[lastIdx] = {
-              ...newMessages[lastIdx],
-              steps: [...steps, progressStep],
-              workflowPhase: phase,
-            };
-          }
-        }
-        return { messages: newMessages };
-      });
+      const progressStep = createProgressStep(
+        event.message || "Workflow started",
+        "progress",
+        event.data,
+      );
+      set((state) => ({
+        ...addStepToLastMessage(state, progressStep),
+        ...updateLastAssistantMessage(state, () => ({
+          workflowPhase: phase,
+        })),
+      }));
       return;
     }
     // Skip other statuses
@@ -580,54 +695,40 @@ function handleStreamEvent(
   if (event.type === "response.delta" && event.delta) {
     if (event.kind || event.agent_id) {
       // Status/batched update
-      const statusStep: ConversationStep = {
-        id: generateStepId(),
-        type: "status",
-        content: `${event.agent_id ? `${event.agent_id}: ` : ""}${event.delta}`,
-        timestamp: new Date().toISOString(),
-        kind: event.kind,
-        data: event.data,
-        category: event.category as ConversationStep["category"],
-        uiHint: event.ui_hint
-          ? {
-              component: event.ui_hint.component,
-              priority: event.ui_hint.priority,
-              collapsible: event.ui_hint.collapsible,
-              iconHint: event.ui_hint.icon_hint,
-            }
-          : undefined,
-      };
+      const statusStep = createStatusStep(
+        `${event.agent_id ? `${event.agent_id}: ` : ""}${event.delta}`,
+        event.kind,
+        event.data,
+        {
+          category: event.category as ConversationStep["category"],
+          uiHint: event.ui_hint
+            ? {
+                component: event.ui_hint.component,
+                priority: event.ui_hint.priority,
+                collapsible: event.ui_hint.collapsible,
+                iconHint: event.ui_hint.icon_hint,
+              }
+            : undefined,
+        },
+      );
 
-      set((state) => {
-        const newMessages = [...state.messages];
-        const lastIdx = newMessages.length - 1;
-        if (newMessages[lastIdx]?.role === "assistant") {
-          const steps = newMessages[lastIdx].steps || [];
-          if (!isDuplicateStep(steps, statusStep)) {
-            newMessages[lastIdx] = {
-              ...newMessages[lastIdx],
-              steps: [...steps, statusStep],
-              workflowPhase: phase,
-            };
-          }
-        }
-        return { messages: newMessages };
-      });
+      set((state) => ({
+        ...addStepToLastMessage(state, statusStep),
+        ...updateLastAssistantMessage(state, () => ({
+          workflowPhase: phase,
+        })),
+      }));
     } else {
       // Direct text delta - use message-scoped tracking to prevent race conditions
-      const updatedContent = appendToContent(event.delta);
-      set((state) => {
-        const newMessages = [...state.messages];
-        const lastIdx = newMessages.length - 1;
-        if (newMessages[lastIdx]?.role === "assistant") {
-          newMessages[lastIdx] = {
-            ...newMessages[lastIdx],
-            content: updatedContent,
-            isWorkflowPlaceholder: false,
-          };
-        }
-        return { messages: newMessages };
-      });
+      const updatedContent = messageId
+        ? appendToContent(messageId, event.delta)
+        : event.delta;
+      set((state) =>
+        updateLastAssistantMessage(state, () => ({
+          content: updatedContent,
+          isWorkflowPlaceholder: false,
+        })),
+      );
     }
   }
 
@@ -636,14 +737,16 @@ function handleStreamEvent(
     event.type === "orchestrator.message" ||
     event.type === "orchestrator.thought"
   ) {
+    const stepType: ConversationStep["type"] =
+      event.type === "orchestrator.thought"
+        ? "thought"
+        : event.kind === "request"
+          ? "request"
+          : "status";
+
     const newStep: ConversationStep = {
       id: generateStepId(),
-      type:
-        event.type === "orchestrator.thought"
-          ? "thought"
-          : event.kind === "request"
-            ? "request"
-            : "status",
+      type: stepType,
       content: event.message || "",
       timestamp: new Date().toISOString(),
       kind: event.kind,
@@ -668,35 +771,21 @@ function handleStreamEvent(
       quality: "Quality",
     };
 
-    set((state) => {
-      const newMessages = [...state.messages];
-      const lastIdx = newMessages.length - 1;
+    const newCompletedPhases =
+      event.type === "orchestrator.thought" &&
+      event.kind &&
+      phaseMap[event.kind]
+        ? [...new Set([..._get().completedPhases, phaseMap[event.kind]])]
+        : _get().completedPhases;
 
-      // Update completed phases if this is a phase completion event
-      let newCompletedPhases = state.completedPhases;
-      if (
-        event.type === "orchestrator.thought" &&
-        event.kind &&
-        phaseMap[event.kind]
-      ) {
-        newCompletedPhases = [
-          ...new Set([...state.completedPhases, phaseMap[event.kind]]),
-        ];
-      }
-
-      if (newMessages[lastIdx]?.role === "assistant") {
-        const steps = newMessages[lastIdx].steps || [];
-        if (!isDuplicateStep(steps, newStep)) {
-          newMessages[lastIdx] = {
-            ...newMessages[lastIdx],
-            steps: [...steps, newStep],
-            workflowPhase: phase,
-            completedPhases: newCompletedPhases,
-          };
-        }
-      }
-      return { messages: newMessages, completedPhases: newCompletedPhases };
-    });
+    set((state) => ({
+      ...addStepToLastMessage(state, newStep),
+      ...updateLastAssistantMessage(state, () => ({
+        workflowPhase: phase,
+        completedPhases: newCompletedPhases,
+      })),
+      completedPhases: newCompletedPhases,
+    }));
   }
 
   // Agent Events
@@ -744,48 +833,30 @@ function handleStreamEvent(
       category: event.category as ConversationStep["category"],
     };
 
-    set((state) => {
-      const newMessages = [...state.messages];
-      const lastIdx = newMessages.length - 1;
-      if (newMessages[lastIdx]?.role === "assistant") {
-        const steps = newMessages[lastIdx].steps || [];
-        if (!isDuplicateStep(steps, newStep)) {
-          const updatedMsg = {
-            ...newMessages[lastIdx],
-            steps: [...steps, newStep],
-            workflowPhase: phase,
-          };
-          newMessages[lastIdx] = updatedMsg;
-        }
-      }
-      return { messages: newMessages };
-    });
+    set((state) => ({
+      ...addStepToLastMessage(state, newStep),
+      ...updateLastAssistantMessage(state, () => ({
+        workflowPhase: phase,
+      })),
+    }));
   }
 
   // Response Completed
   else if (event.type === "response.completed") {
     const finalContent = event.message || "";
-    set((state) => {
-      const newMessages = [...state.messages];
-      const lastIdx = newMessages.length - 1;
-      if (newMessages[lastIdx]?.role === "assistant") {
-        newMessages[lastIdx] = {
-          ...newMessages[lastIdx],
-          content: finalContent || newMessages[lastIdx].content,
-          author: finalContent ? "Final Answer" : newMessages[lastIdx].author,
-          isWorkflowPlaceholder: false,
-          workflowPhase: "",
-          qualityFlag: event.quality_flag,
-          qualityScore: event.quality_score,
-          completedPhases: state.completedPhases,
-        };
-      }
-      return {
-        messages: newMessages,
-        currentWorkflowPhase: "",
-        currentAgent: null,
-      };
-    });
+    set((state) => ({
+      ...updateLastAssistantMessage(state, (msg) => ({
+        content: finalContent || msg.content,
+        author: finalContent ? "Final Answer" : msg.author,
+        isWorkflowPlaceholder: false,
+        workflowPhase: "",
+        qualityFlag: event.quality_flag,
+        qualityScore: event.quality_score,
+        completedPhases: state.completedPhases,
+      })),
+      currentWorkflowPhase: "",
+      currentAgent: null,
+    }));
   }
 
   // Reasoning
@@ -796,7 +867,7 @@ function handleStreamEvent(
       const newContent = state.currentReasoning + reasoningDelta;
       const newMessages = [...state.messages];
       const lastIdx = newMessages.length - 1;
-      if (newMessages[lastIdx]?.role === "assistant") {
+      if (lastIdx >= 0 && newMessages[lastIdx]?.role === "assistant") {
         // Update existing reasoning step or create one
         const steps = newMessages[lastIdx].steps || [];
         const existingReasoningIdx = steps.findIndex(
@@ -843,26 +914,11 @@ function handleStreamEvent(
   // Error
   else if (event.type === "error") {
     console.error("Stream error:", event.error);
-    const errorStep: ConversationStep = {
-      id: generateStepId(),
-      type: "error",
-      content: event.error || "Unknown error",
-      timestamp: new Date().toISOString(),
-    };
-    set((state) => {
-      const newMessages = [...state.messages];
-      const lastIdx = newMessages.length - 1;
-      if (newMessages[lastIdx]?.role === "assistant") {
-        newMessages[lastIdx] = {
-          ...newMessages[lastIdx],
-          steps: [...(newMessages[lastIdx].steps || []), errorStep],
-        };
-      }
-      return {
-        messages: newMessages,
-        isLoading: false,
-        isReasoningStreaming: false,
-      };
-    });
+    const errorStep = createErrorStep(event.error || "Unknown error");
+    set((state) => ({
+      ...addStepToLastMessage(state, errorStep, false),
+      isLoading: false,
+      isReasoningStreaming: false,
+    }));
   }
 }

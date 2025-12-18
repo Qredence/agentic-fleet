@@ -1,7 +1,7 @@
 import type { Message as ChatMessage } from "@/api/types";
-import { cn } from "@/shared/lib/utils";
+import { cn } from "@/lib/utils";
 import { Copy } from "lucide-react";
-import { Button } from "@/shared/components/ui/button";
+import { Button } from "@/components/ui/button";
 import { ScrollButton } from "./scroll-button";
 import { ChatContainerContent, ChatContainerRoot } from "./chat-container";
 import { TextShimmer } from "./text-shimmer";
