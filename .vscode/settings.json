@@ -2,7 +2,7 @@
   "editor.formatOnSave": true,
   // ---------- Python: Ruff + Black + Pylance ----------
   // Use Pylance as the language server
-  "python.languageServer": "Pylance",
+  "python.languageServer": "None",
   // Pylance: balanced strictness
   "python.analysis.typeCheckingMode": "basic",
   "python.analysis.diagnosticMode": "workspace",
@@ -57,7 +57,7 @@
   "python-envs.defaultPackageManager": "ms-python.python:pip",
   "python-envs.pythonProjects": [],
   "[jsonc]": {
-    "editor.defaultFormatter": "esbenp.prettier-vscode"
+    "editor.defaultFormatter": "vscode.json-language-features"
   },
   "[json]": {
     "editor.defaultFormatter": "vscode.json-language-features"

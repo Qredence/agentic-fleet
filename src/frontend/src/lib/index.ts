@@ -1,4 +1,4 @@
-// Shared utilities - barrel export
+// Utility exports - barrel export
 export { cn } from "./utils";
 export {
   detectLanguage,

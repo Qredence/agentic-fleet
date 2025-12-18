@@ -82,6 +82,7 @@ describe("ChainOfThoughtTrace", () => {
         isStreaming={false}
         onWorkflowResponse={mockOnWorkflowResponse}
         isLoading={false}
+        showRawReasoning={true}
       />,
     );
     expect(screen.getByText("Reasoning")).toBeInTheDocument();

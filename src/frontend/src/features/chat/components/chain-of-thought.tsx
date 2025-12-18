@@ -2,7 +2,7 @@ import {
   Collapsible,
   CollapsibleContent,
   CollapsibleTrigger,
-} from "./collapsible";
+} from "@/components/ui/collapsible";
 import { Markdown } from "./markdown";
 import { TextShimmer } from "./text-shimmer";
 import { WorkflowRequestResponder } from "./workflow-request-responder";
@@ -14,9 +14,9 @@ import {
   splitSteps,
 } from "./utils";
 import type { Message as ChatMessage } from "@/api/types";
-import { cn } from "@/shared/lib/utils";
+import { cn } from "@/lib/utils";
 import { ChevronDown, Circle } from "lucide-react";
-import React, { useMemo } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 
 export type ChainOfThoughtItemProps = React.ComponentProps<"div">;
 
@@ -161,6 +161,7 @@ export type ChainOfThoughtTraceProps = {
   isStreaming?: boolean;
   onWorkflowResponse: (requestId: string, payload: unknown) => void;
   isLoading: boolean;
+  showRawReasoning?: boolean;
 };
 
 function extractCapability(
@@ -222,13 +223,29 @@ export function ChainOfThoughtTrace({
   isStreaming = false,
   onWorkflowResponse,
   isLoading,
+  showRawReasoning = false,
 }: ChainOfThoughtTraceProps) {
   const steps = useMemo(() => message.steps ?? [], [message.steps]);
   const phase = (message.workflowPhase || "").trim();
 
-  if (steps.length === 0 && !phase) return null;
+  const { reasoning, trace } = useMemo(() => splitSteps(steps), [steps]);
+  const lastTraceId = trace[trace.length - 1]?.id;
 
-  const { reasoning, trace } = splitSteps(steps);
+  const [openStepId, setOpenStepId] = useState<string | null>(null);
+  const lastAutoOpenedRef = useRef<string | undefined>(undefined);
+
+  // Advanced reasoning steps: auto-open the newest step while streaming,
+  // collapsing the previously open one (accordion behavior).
+  useEffect(() => {
+    if (!isStreaming) return;
+    if (!lastTraceId) return;
+    if (lastAutoOpenedRef.current === lastTraceId) return;
+
+    setOpenStepId(lastTraceId);
+    lastAutoOpenedRef.current = lastTraceId;
+  }, [isStreaming, lastTraceId]);
+
+  if (steps.length === 0 && !phase) return null;
 
   return (
     <div className="w-full space-y-3">
@@ -238,7 +255,7 @@ export function ChainOfThoughtTrace({
         </div>
       ) : null}
 
-      {reasoning.trim() ? (
+      {showRawReasoning && reasoning.trim() ? (
         <Collapsible className="w-full">
           <CollapsibleTrigger className="text-muted-foreground hover:text-foreground flex cursor-pointer items-center justify-start gap-1 text-left text-xs transition-colors">
             <span>Reasoning</span>
@@ -309,7 +326,11 @@ export function ChainOfThoughtTrace({
               const triggerLabel = formatTriggerLabel(label, capability, time);
 
               return (
-                <ChainOfThoughtStep key={step.id} defaultOpen={false}>
+                <ChainOfThoughtStep
+                  key={step.id}
+                  open={openStepId === step.id}
+                  onOpenChange={(open) => setOpenStepId(open ? step.id : null)}
+                >
                   <ChainOfThoughtTrigger
                     className={cn(
                       step.type === "error" &&

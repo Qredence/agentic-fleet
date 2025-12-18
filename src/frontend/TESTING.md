@@ -2,12 +2,9 @@
 
 ## Overview
 
-The frontend uses a **hybrid testing approach**:
+The frontend uses **Vitest + Testing Library** for fast unit-style tests under `src/tests/`.
 
-- **Unit Tests**: Fast, isolated tests with mocked dependencies for rapid CI feedback
-- **Integration Tests**: Tests that connect to the real backend API to verify end-to-end behavior
-
-This approach balances speed and reliability—unit tests catch regressions quickly, while integration tests validate actual API behavior.
+Today, tests run in `jsdom` and mock `fetch` globally in `src/tests/setup.ts` to keep the suite fast and deterministic.
 
 ## Test Types
 
@@ -18,16 +15,10 @@ Unit tests run in isolation with mocked dependencies. They:
 - Execute quickly without external dependencies
 - Provide fast feedback in CI/CD pipelines
 - Test component logic, state management, and utilities
-- Use mocked API clients and responses
 
-### Integration Tests
+### Integration Tests (future)
 
-Integration tests connect to a real backend API. They:
-
-- Verify actual API behavior and contracts
-- Test end-to-end workflows
-- Require a running backend server
-- Run in separate CI jobs or on-demand
+If/when you add live-backend integration tests, keep them in a separate suite and avoid sharing global fetch mocks. (The current suite does **not** run against a live backend.)
 
 ## Prerequisites
 
@@ -35,66 +26,22 @@ Integration tests connect to a real backend API. They:
 
 No prerequisites—unit tests run independently with mocks.
 
-### For Integration Tests
-
-**IMPORTANT**: The backend server must be running before executing integration tests.
-
-### Start the Backend
-
-From the project root:
-
-```bash
-# Option 1: Start full stack
-make dev
-
-# Option 2: Start backend only
-make backend
-```
-
-The backend should be available at `http://localhost:8000` (the API is served under the `/api`
-prefix).
-
 ## Running Tests
 
 ### All Tests (Default)
 
-By default, all tests (both unit and integration) run:
+From `src/frontend`:
 
 ```bash
 cd src/frontend
 npm run test
 ```
 
-### Unit Tests Only
-
-Run fast unit tests without backend dependencies:
+### Run Once (CI Mode)
 
 ```bash
-npm run test:unit
-```
-
-Or use filtering:
-
-```bash
-npm run test -- --grep "Unit Tests"
-```
-
-### Integration Tests Only
-
-Run integration tests with a live backend:
-
-```bash
-# Ensure backend is running first
-make backend
-
-# Then run integration tests
-npm run test:integration
-```
-
-Or use filtering:
-
-```bash
-npm run test -- --grep "Integration Tests"
+cd src/frontend
+npm run test:run
 ```
 
 ### Watch Mode
@@ -125,7 +72,7 @@ npm run test:run
 
 ### Environment Variables
 
-Tests use the following environment variables:
+Tests use the following environment variables (primarily for app runtime; most tests mock `fetch`):
 
 - `VITE_API_URL`: Backend API origin (default: `http://localhost:8000`; the frontend appends `/api` automatically)
 
@@ -205,7 +152,7 @@ describe("useChatController - Integration Tests", () => {
 1. **Mock external dependencies**: Use `vi.mock()` to mock API clients and external services
 2. **Test in isolation**: Focus on component/hook logic without network calls
 3. **Fast execution**: Unit tests should complete in milliseconds
-4. **Name convention**: Suffix describe blocks with "- Unit Tests"
+4. Prefer asserting **user-visible behavior** (roles/labels) over implementation details
 
 Example:
 
@@ -224,28 +171,6 @@ vi.mock("./useChatClient", () => ({
 describe("ChatComponent - Unit Tests", () => {
   it("displays loading state while sending message", async () => {
     // Test component behavior with mocked API
-  });
-});
-```
-
-### Integration Test Guidelines
-
-1. **Real backend required**: Ensure backend is running before tests
-2. **Test API contracts**: Verify actual response structures and behavior
-3. **Generous timeouts**: Allow time for real network calls
-4. **Name convention**: Suffix describe blocks with "- Integration Tests"
-5. **Cleanup**: Backend should handle cleanup between test runs
-
-Example:
-
-```typescript
-describe("useChatClient - Integration Tests", () => {
-  it("creates conversation and sends message", async () => {
-    const conversation = await createConversation();
-    const result = await sendChat(conversation.id, "Test message");
-
-    expect(result.conversation_id).toBe(conversation.id);
-    expect(result.messages.length).toBeGreaterThan(0);
   });
 });
 ```

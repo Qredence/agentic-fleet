@@ -36,6 +36,10 @@ Object.defineProperty(window, "matchMedia", {
   }),
 });
 
+// scrollTo polyfill for jsdom (used by motion during keyframe measurement)
+// jsdom defines scrollTo but throws "Not implemented", so we override.
+Object.defineProperty(window, "scrollTo", { value: () => {}, writable: true });
+
 beforeAll(() => {
   console.log("🧪 Setting up frontend test environment with fetch mocks");
 
