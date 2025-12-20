@@ -90,7 +90,7 @@ class AgentFactory:
         self._foundry_clients: list[
             Any
         ] = []  # Track AIProjectClient and AzureAIAgentClient instances for cleanup
-        self._shared_foundry_clients: dict[str, Any] = {}  # Cache shared AIProjectClient by endpoint
+        self._shared_foundry_clients: dict[str, Any] = {}  # Cache shared AIProjectClient instances keyed by endpoint for reuse across multiple agents targeting the same project
 
         # Check if DSPy enhancement should be enabled globally
         self.enable_dspy = env_config.enable_dspy_agents
