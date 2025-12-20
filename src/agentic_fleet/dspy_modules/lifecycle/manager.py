@@ -81,6 +81,11 @@ def get_dspy_lm(model: str, enable_cache: bool = True, **kwargs: Any) -> dspy.LM
                 f"Using Azure OpenAI Responses API: deployment={deployment}, "
                 f"endpoint={env_config.azure_openai_endpoint}"
             )
+        elif "/" in model:
+            # Model already has a provider prefix (e.g., "gemini/gemini-1.5-pro", "anthropic/claude-3")
+            model_path = model
+            merged_kwargs = kwargs
+            logger.debug(f"Using provider-prefixed model: {model}")
         else:
             # Use standard OpenAI Chat Completions API
             model_path = f"openai/{model}"

@@ -8,7 +8,8 @@ from __future__ import annotations
 
 import dspy
 
-from ..utils.logger import setup_logger
+from agentic_fleet.utils.infra.logging import setup_logger
+
 from .nlu import DSPyNLU, get_nlu_module
 from .signatures import (
     EnhancedTaskRouting,
