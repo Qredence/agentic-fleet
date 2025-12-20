@@ -46,7 +46,10 @@ env/
 .trae/
 .gemini/
 .kilocode/
-
+.factory/
+.claude/
+.github/mcp.json
+.github/skills/
 # Generated reports
 report/
 

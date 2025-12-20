@@ -39,7 +39,6 @@ export {
   useOptimizationRun,
   useOptimizationStatus,
   useEvaluationHistory,
-  useTriggerSelfImprove,
   useInvalidateConversations,
 } from "./hooks";
 

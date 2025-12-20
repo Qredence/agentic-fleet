@@ -237,11 +237,11 @@ export interface EntityResponse {
 // =============================================================================
 
 export interface OptimizationRequest {
-  optimizer?: "bootstrap" | "gepa";
-  use_cache?: boolean;
-  gepa_auto?: "light" | "medium" | "heavy" | null;
-  harvest_history?: boolean;
-  min_quality?: number;
+  module_name: string;
+  auto_mode?: "light" | "medium" | "heavy";
+  examples_path?: string;
+  user_id: string;
+  options?: Record<string, unknown>;
 }
 
 /**
@@ -264,15 +264,14 @@ export interface OptimizationDetails {
 }
 
 export interface OptimizationResult {
-  status: "started" | "running" | "completed" | "cached" | "failed";
-  job_id?: string | null;
-  message: string;
-  cache_path?: string | null;
-  started_at?: string;
-  completed_at?: string;
-  error?: string;
-  progress?: number;
-  details?: OptimizationDetails;
+  job_id: string;
+  status: string;
+  created_at: string;
+  started_at?: string | null;
+  completed_at?: string | null;
+  error?: string | null;
+  result_artifact?: string | null;
+  message?: string; // Kept for UI compatibility if needed
 }
 
 export interface HistoryQualityMetrics {
