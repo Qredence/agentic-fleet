@@ -249,6 +249,14 @@ function addStepToLastMessage(
   return { messages: newMessages };
 }
 
+function lastAssistantHasSteps(state: ChatState): boolean {
+  const lastIdx = state.messages.length - 1;
+  if (lastIdx < 0) return false;
+  const last = state.messages[lastIdx];
+  if (!last || last.role !== "assistant") return false;
+  return (last.steps?.length ?? 0) > 0;
+}
+
 /**
  * Factory function to create error steps with consistent structure.
  */
@@ -674,14 +682,15 @@ function handleStreamEvent(
   _get: () => ChatState,
   messageId?: string, // Message ID for scoped content tracking
 ): void {
-  // Debug logging for all events (uncomment to troubleshoot)
-  console.debug("[chatStore] Event:", event.type, event.kind || "", {
-    message: event.message?.substring(0, 100),
-    error: event.error,
-    status: event.status,
-    workflow_id: event.workflow_id,
-  });
-
+  // Debug logging for all events (development only)
+  if (import.meta.env.DEV) {
+    console.debug("[chatStore] Event:", event.type, event.kind || "", {
+      message: event.message?.substring(0, 100),
+      error: event.error,
+      status: event.status,
+      workflow_id: event.workflow_id,
+    });
+  }
   const phase = getWorkflowPhase(event);
   set(() => ({ currentWorkflowPhase: phase }));
 
@@ -729,6 +738,52 @@ function handleStreamEvent(
 
   // Response Delta
   if (event.type === "response.delta" && event.delta) {
+    const isResponseCategory =
+      event.category === "response" ||
+      event.ui_hint?.component === "MessageBubble";
+    const logLine = event.log_line?.trim();
+
+    // Always stream response text to the assistant message when the event is a response.
+    if (isResponseCategory) {
+      const updatedContent = messageId
+        ? appendToContent(messageId, event.delta)
+        : event.delta;
+      set((state) => {
+        const withContent = updateLastAssistantMessage(state, () => ({
+          content: updatedContent,
+          isWorkflowPlaceholder: false,
+          workflowPhase: phase,
+        }));
+
+        // If no trace steps are available yet, surface the backend log line once
+        // so Chain of Thought has at least one visible step.
+        if (logLine && !lastAssistantHasSteps(state)) {
+          const logStep = createStatusStep(
+            logLine,
+            event.kind ?? "response",
+            event.data,
+            {
+              category: event.category as ConversationStep["category"],
+              uiHint: event.ui_hint
+                ? {
+                    component: event.ui_hint.component,
+                    priority: event.ui_hint.priority,
+                    collapsible: event.ui_hint.collapsible,
+                    iconHint: event.ui_hint.icon_hint,
+                  }
+                : undefined,
+            },
+          );
+          const mergedState = { ...state, ...withContent };
+          const withStep = addStepToLastMessage(mergedState, logStep);
+          return { ...withContent, ...withStep };
+        }
+
+        return withContent;
+      });
+      return;
+    }
+
     if (event.kind || event.agent_id) {
       // Status/batched update
       const statusStep = createStatusStep(
@@ -763,6 +818,7 @@ function handleStreamEvent(
         updateLastAssistantMessage(state, () => ({
           content: updatedContent,
           isWorkflowPlaceholder: false,
+          workflowPhase: phase,
         })),
       );
     }

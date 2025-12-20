@@ -261,7 +261,7 @@ export function ChainOfThoughtTrace({
       ) : null}
 
       {showRawReasoning && reasoning.trim() ? (
-        <Reasoning>
+        <Reasoning isStreaming={isStreaming}>
           <ReasoningTrigger className="text-muted-foreground hover:text-foreground flex cursor-pointer items-center justify-start gap-1 text-left text-xs transition-colors">
             <span>Reasoning</span>
           </ReasoningTrigger>

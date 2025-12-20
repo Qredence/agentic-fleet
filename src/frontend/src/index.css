@@ -17,6 +17,9 @@
 /* Tailwind CSS v4 */
 @import "tailwindcss";
 
+/* Streamdown styles (AI-optimized markdown renderer) */
+@source "../node_modules/streamdown/dist/*.js";
+
 /* Design System Variables (load order matters) */
 @import "./styles/base.css";
 @import "./styles/variables-primitive.css";

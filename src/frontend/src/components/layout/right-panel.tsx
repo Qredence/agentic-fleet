@@ -4,20 +4,17 @@ import { Button } from "@/components/ui/button";
 
 type RightPanelProps = {
   open: boolean;
-  onOpenChange: (open: boolean) => void;
   children: React.ReactNode;
+  onOpenChange?: (open: boolean) => void;
 };
 
 /**
  * A simple collapsible right panel with floating style.
  * Uses CSS transitions for smooth open/close animations.
  * Matches the sidebar's floating variant styling.
+ * Panel is fully externally controlled via the open prop.
  */
-export function RightPanel({
-  open,
-  onOpenChange: _onOpenChange,
-  children,
-}: RightPanelProps) {
+export function RightPanel({ open, children }: RightPanelProps) {
   return (
     <aside
       data-state={open ? "open" : "closed"}

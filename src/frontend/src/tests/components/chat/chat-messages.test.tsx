@@ -83,10 +83,10 @@ describe("ChatMessages", () => {
 
     render(<ChatMessages messages={messages} isLoading={true} />);
 
-    // Last message should show streaming indicator
+    // Last message should show streaming content with whitespace-pre-wrap
     const lastMessage = screen.getByText("Streaming response");
     expect(lastMessage.parentElement).toHaveClass("whitespace-pre-wrap");
-    expect(screen.getByText("▍")).toBeInTheDocument();
+    // Note: streamdown handles cursor rendering internally, so we don't manually add "▍"
   });
 
   it("calls onCopy when copy button is clicked", async () => {

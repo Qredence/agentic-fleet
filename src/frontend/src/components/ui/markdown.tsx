@@ -1,8 +1,9 @@
 import { cn } from "@/lib/utils";
 import { memo } from "react";
-import { Streamdown } from "streamdown";
 import type { Components } from "react-markdown";
-import { CodeBlock, CodeBlockCode } from "./code-block";
+import remarkBreaks from "remark-breaks";
+import { Streamdown } from "streamdown";
+import { CodeBlock, CodeBlockCode } from "@/components/message/code-block";
 
 export type MarkdownProps = {
   children: string;
@@ -39,29 +40,9 @@ const INITIAL_COMPONENTS: Partial<Components> = {
 
     const language = extractLanguage(className);
 
-    // For plaintext or empty language, render as simple preformatted text
-    if (!language || language === "plaintext") {
-      return (
-        <pre
-          className={cn(
-            "overflow-x-auto rounded-md bg-muted/20 p-4 text-sm",
-            className,
-          )}
-        >
-          <code className="font-mono whitespace-pre">{children}</code>
-        </pre>
-      );
-    }
-
-    // For code blocks with a specified language, use CodeBlock component
     return (
       <CodeBlock className={className}>
-        <CodeBlockCode
-          code={
-            Array.isArray(children) ? children.join("") : String(children ?? "")
-          }
-          language={language}
-        />
+        <CodeBlockCode code={children as string} language={language} />
       </CodeBlock>
     );
   },
@@ -72,13 +53,16 @@ const INITIAL_COMPONENTS: Partial<Components> = {
 
 function MarkdownComponent({
   children,
+  id,
   className,
   components = INITIAL_COMPONENTS,
 }: MarkdownProps) {
   return (
-    <Streamdown className={className} components={components}>
-      {children}
-    </Streamdown>
+    <div className={className} id={id}>
+      <Streamdown components={components} remarkPlugins={[remarkBreaks]}>
+        {children}
+      </Streamdown>
+    </div>
   );
 }
 

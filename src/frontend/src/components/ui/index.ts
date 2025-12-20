@@ -77,3 +77,9 @@ export {
   TooltipProvider,
   TooltipTrigger,
 } from "./tooltip";
+
+// prompt-kit components
+export { Reasoning, ReasoningTrigger, ReasoningContent } from "./reasoning";
+export { Markdown as PromptKitMarkdown } from "./markdown";
+export { ResponseStream } from "./response-stream";
+export { TextShimmer as PromptKitTextShimmer } from "./text-shimmer";

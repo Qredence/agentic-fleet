@@ -183,7 +183,7 @@ const Sidebar = React.forwardRef<
       return (
         <div
           className={cn(
-            "flex h-full w-(--sidebar-width) flex-col bg-sidebar text-sidebar-foreground",
+            "flex h-full w-[var(--sidebar-width)] flex-col bg-sidebar text-sidebar-foreground",
             className,
           )}
           ref={ref}
@@ -230,15 +230,15 @@ const Sidebar = React.forwardRef<
         {/* This is what handles the sidebar gap on desktop */}
         <div
           className={cn(
-            "hidden h-svh w-(--sidebar-width) transition-[width] duration-200 ease-linear md:flex",
+            "hidden h-svh w-[var(--sidebar-width)] transition-[width] duration-200 ease-linear md:flex",
             "group-data-[collapsible=offcanvas]:w-0",
             "group-data-[side=right]:rotate-180",
             side === "left"
-              ? "group-data-[collapsible=offcanvas]:-ml-(--sidebar-width)"
-              : "group-data-[collapsible=offcanvas]:-mr-(--sidebar-width)",
+              ? "group-data-[collapsible=offcanvas]:-ml-[var(--sidebar-width)]"
+              : "group-data-[collapsible=offcanvas]:-mr-[var(--sidebar-width)]",
             variant === "floating" || variant === "inset"
               ? "p-2 group-data-[collapsible=icon]:w-[calc(var(--sidebar-width-icon)+1rem+2px)]"
-              : "group-data-[collapsible=icon]:w-(--sidebar-width-icon) group-data-[side=left]:border-r group-data-[side=right]:border-l",
+              : "group-data-[collapsible=icon]:w-[var(--sidebar-width-icon)] group-data-[side=left]:border-r group-data-[side=right]:border-l",
             className,
           )}
           {...props}

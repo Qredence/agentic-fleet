@@ -1,6 +1,6 @@
 import { cn } from "@/lib/utils";
 import { Check, Copy } from "lucide-react";
-import React, { useEffect, useState, useCallback } from "react";
+import React, { useEffect, useState, useCallback, useRef } from "react";
 import { codeToHtml } from "shiki";
 
 export type CodeBlockProps = {
@@ -36,17 +36,34 @@ function CodeBlockHeader({
   ...props
 }: CodeBlockHeaderProps) {
   const [copied, setCopied] = useState(false);
+  const timeoutRef = useRef<number | null>(null);
 
   const handleCopy = useCallback(async () => {
     if (!code) return;
     try {
       await navigator.clipboard.writeText(code);
       setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
+      // Clear any existing timeout before setting a new one
+      if (timeoutRef.current !== null) {
+        clearTimeout(timeoutRef.current);
+      }
+      timeoutRef.current = window.setTimeout(() => {
+        setCopied(false);
+        timeoutRef.current = null;
+      }, 2000);
     } catch (err) {
       console.error("Failed to copy code:", err);
     }
   }, [code]);
+
+  // Cleanup timeout on unmount
+  useEffect(() => {
+    return () => {
+      if (timeoutRef.current !== null) {
+        clearTimeout(timeoutRef.current);
+      }
+    };
+  }, []);
 
   return (
     <div
