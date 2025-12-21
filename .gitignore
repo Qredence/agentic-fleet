@@ -52,7 +52,7 @@ env/
 # Generated reports
 report/
 .fleet/
-
+.letta/
 # Environment variables
 .env
 .env.local
