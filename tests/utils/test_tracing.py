@@ -8,7 +8,7 @@ from unittest.mock import patch
 
 import pytest
 
-from agentic_fleet.utils.tracing import initialize_tracing, reset_tracing
+from agentic_fleet.utils.infra.tracing import initialize_tracing, reset_tracing
 
 
 @pytest.fixture(autouse=True)

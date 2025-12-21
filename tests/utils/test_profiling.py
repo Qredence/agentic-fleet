@@ -8,7 +8,7 @@ import time
 
 import pytest
 
-from agentic_fleet.utils.profiling import (
+from agentic_fleet.utils.infra.profiling import (
     PerformanceTracker,
     get_performance_stats,
     log_performance_summary,

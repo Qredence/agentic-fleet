@@ -1,7 +1,7 @@
 from datetime import datetime, timedelta
 
-from agentic_fleet.core.conversation_store import ConversationStore
 from agentic_fleet.models import Conversation, Message, MessageRole
+from agentic_fleet.utils.storage.conversation import ConversationStore
 
 
 def test_conversation_store_persists(tmp_path):
