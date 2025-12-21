@@ -8,7 +8,8 @@ import typer
 from rich.console import Console
 from rich.panel import Panel
 
-from ...utils.logger import setup_logger
+from agentic_fleet.utils.infra.logging import setup_logger
+
 from ..runner import WorkflowRunner
 from ..utils import init_tracing
 

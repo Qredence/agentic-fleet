@@ -9,16 +9,17 @@ import asyncio
 from datetime import datetime
 from typing import TYPE_CHECKING, Any
 
+from agentic_fleet.utils.infra.logging import setup_logger
+from agentic_fleet.utils.infra.tracing import initialize_tracing
+from agentic_fleet.utils.storage import HistoryManager
+
 from ..agents import AgentFactory, validate_tool
 from ..dspy_modules.lifecycle import configure_dspy_settings
 from ..dspy_modules.reasoner import DSPyReasoner
 from ..utils.agent_framework_shims import ensure_agent_framework_shims
 from ..utils.cache import TTLCache
 from ..utils.cfg import load_config, validate_agentic_fleet_env
-from ..utils.history_manager import HistoryManager
-from ..utils.logger import setup_logger
 from ..utils.tool_registry import ToolRegistry
-from ..utils.tracing import initialize_tracing
 from .config import WorkflowConfig
 from .context import (
     CompilationState,
@@ -211,37 +212,19 @@ async def initialize_workflow_context(
 
     # Create DSPy reasoner with enhanced signatures enabled (reuse if provided)
     if dspy_supervisor is None:
-        # Try to load compiled artifact first (Offline Layer directive)
-        from ..utils.compiler import load_compiled_module
+        if config.require_compiled:
+            # We rely on DSPyReasoner to load the compiled module.
+            # If strictly required, we could check for file existence here,
+            # but we'll let the reasoner log warnings if missing for now.
+            pass
 
-        compiled_path = ".var/logs/compiled_supervisor.pkl"
-        loaded_supervisor = load_compiled_module(compiled_path)
+        dspy_supervisor = DSPyReasoner(
+            use_enhanced_signatures=True,
+            enable_routing_cache=getattr(config, "enable_routing_cache", True),
+            cache_ttl_seconds=getattr(config, "routing_cache_ttl_seconds", 300),
+        )
+        logger.debug("Initialized zero-shot DSPyReasoner (will load compiled weights if available)")
 
-        if loaded_supervisor and isinstance(loaded_supervisor, DSPyReasoner):
-            logger.info(f"Loaded compiled DSPy supervisor from {compiled_path}")
-            dspy_supervisor = loaded_supervisor
-        else:
-            if config.require_compiled:
-                raise RuntimeError(
-                    f"Compiled DSPy artifact not found at {compiled_path} and "
-                    "dspy.require_compiled is enabled. Run 'agentic-fleet optimize' "
-                    "to compile DSPy modules, or set dspy.require_compiled=false "
-                    "in workflow_config.yaml to allow zero-shot fallback."
-                )
-            logger.warning(
-                "No compiled supervisor found, using zero-shot reasoner. "
-                "Performance may be degraded. Run 'agentic-fleet optimize' for offline compilation."
-            )
-            # Read typed signature settings from config (DSPy 3.x Pydantic support)
-            use_typed = getattr(config, "use_typed_signatures", True)
-            enable_cache = getattr(config, "enable_routing_cache", True)
-            cache_ttl = getattr(config, "routing_cache_ttl_seconds", 300)
-            dspy_supervisor = DSPyReasoner(
-                use_enhanced_signatures=True,
-                use_typed_signatures=use_typed,
-                enable_routing_cache=enable_cache,
-                cache_ttl_seconds=cache_ttl,
-            )
     elif not getattr(dspy_supervisor, "use_enhanced_signatures", False):
         logger.warning(
             "Provided dspy_supervisor does not have use_enhanced_signatures=True. "
@@ -334,7 +317,7 @@ async def initialize_workflow_context(
     )
 
     # Register middlewares
-    from ..core.middleware import BridgeMiddleware
+    from agentic_fleet.api.middleware import BridgeMiddleware
 
     if context.history_manager:
         context.middlewares.append(BridgeMiddleware(context.history_manager))

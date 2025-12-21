@@ -8,8 +8,9 @@ from __future__ import annotations
 
 from typing import Any
 
+from agentic_fleet.utils.infra.logging import setup_logger
+
 from ...dspy_modules.reasoner_utils import is_time_sensitive_task
-from ...utils.logger import setup_logger
 from ...utils.models import ExecutionMode, RoutingDecision, ensure_routing_decision
 
 logger = setup_logger(__name__)

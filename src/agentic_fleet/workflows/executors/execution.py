@@ -10,9 +10,10 @@ from time import perf_counter
 from agent_framework._types import ChatMessage
 from agent_framework._workflows import Executor, WorkflowContext, WorkflowOutputEvent
 
-from ...utils.logger import setup_logger
+from agentic_fleet.utils.infra.logging import setup_logger
+from agentic_fleet.utils.infra.telemetry import optional_span
+
 from ...utils.memory import get_process_rss_mb
-from ...utils.telemetry import optional_span
 from ..context import SupervisorContext
 from ..models import ExecutionMessage, ExecutionOutcome, MagenticAgentMessageEvent, RoutingMessage
 from ..strategies import run_execution_phase_streaming

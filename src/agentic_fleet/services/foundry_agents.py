@@ -30,8 +30,9 @@ from typing import Any
 
 from agent_framework._types import AgentRunResponse, AgentRunResponseUpdate
 
+from agentic_fleet.utils.infra.logging import setup_logger
+
 from ..agents.foundry import FoundryAgentConfig, FoundryHostedAgent
-from ..utils.logger import setup_logger
 
 logger = setup_logger(__name__)
 

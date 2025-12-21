@@ -73,8 +73,9 @@ except ImportError:
     HandoffBuilder: type[Any] = _HandoffBuilderStub  # type: ignore[no-redef]
 
 
-from ..utils.logger import setup_logger
-from ..utils.telemetry import optional_span
+from agentic_fleet.utils.infra.logging import setup_logger
+from agentic_fleet.utils.infra.telemetry import optional_span
+
 from .executors import (
     AnalysisExecutor,
     ExecutionExecutor,
