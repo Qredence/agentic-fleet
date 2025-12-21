@@ -212,12 +212,8 @@ async def initialize_workflow_context(
 
     # Create DSPy reasoner with enhanced signatures enabled (reuse if provided)
     if dspy_supervisor is None:
-        if config.require_compiled:
-            # We rely on DSPyReasoner to load the compiled module.
-            # If strictly required, we could check for file existence here,
-            # but we'll let the reasoner log warnings if missing for now.
-            pass
-
+        # Compiled artifact enforcement happens during API lifespan startup via
+        # the compiled registry; initialization keeps a zero-shot fallback.
         dspy_supervisor = DSPyReasoner(
             use_enhanced_signatures=True,
             enable_routing_cache=getattr(config, "enable_routing_cache", True),

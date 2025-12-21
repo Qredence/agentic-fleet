@@ -66,8 +66,6 @@ def compile_reasoner(
         progress_callback.on_error("Failed to load training data", exc)
         return module
 
-    compiled = module
-
     if optimizer == "gepa" and allow_gepa_optimization:
         gepa_options = gepa_options or {}
         extra_examples: list[dict[str, Any]] = list(gepa_options.get("extra_examples", []))
@@ -156,6 +154,11 @@ def compile_answer_quality(
     progress_callback: ProgressCallback | None = None,
 ) -> Any:
     """Compile quality assessment module (Simplified stub)."""
+    if module is None:
+        logger.warning("No module provided for answer quality compilation; skipping.")
+        if progress_callback:
+            progress_callback.on_error("No module provided for answer quality compilation")
+        return None
     if progress_callback:
         progress_callback.on_start("Compiling Answer Quality Module")
         progress_callback.on_complete("Skipping detailed compilation for simplified mode")
@@ -170,6 +173,11 @@ def compile_nlu(
     progress_callback: ProgressCallback | None = None,
 ) -> Any:
     """Compile NLU module (Simplified stub)."""
+    if module is None:
+        logger.warning("No module provided for NLU compilation; skipping.")
+        if progress_callback:
+            progress_callback.on_error("No module provided for NLU compilation")
+        return None
     if progress_callback:
         progress_callback.on_start("Compiling NLU Module")
         progress_callback.on_complete("Skipping detailed compilation for simplified mode")

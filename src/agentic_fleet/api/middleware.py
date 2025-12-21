@@ -21,12 +21,6 @@ from agentic_fleet.utils.types import MessageLike
 
 logger = setup_logger(__name__)
 
-# Try to import Azure AI Agents types, but fail gracefully if not available
-try:  # pragma: no cover - optional dependency
-    from azure.ai.agents.models import ThreadMessage
-except ImportError:  # pragma: no cover - optional dependency
-    ThreadMessage = None  # type: ignore[misc,assignment]
-
 # Type alias for message types - union of known message types
 type _MessageType = ChatMessage | MessageLike | dict[str, Any]
 

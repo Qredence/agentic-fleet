@@ -68,6 +68,7 @@ if TYPE_CHECKING:
         create_supervisor_workflow,
     )
     from agentic_fleet.tools import BrowserTool, TavilyMCPTool, TavilySearchTool
+    from agentic_fleet.utils.cache import TTLCache
     from agentic_fleet.utils.cfg import (
         AppSettings,
         get_settings,
@@ -80,7 +81,6 @@ if TYPE_CHECKING:
     from agentic_fleet.utils.storage import (
         ConversationStore,
         HistoryManager,
-        TTLCache,
     )
     from agentic_fleet.utils.tool_registry import ToolMetadata, ToolRegistry
     from agentic_fleet.workflows import WorkflowConfig
