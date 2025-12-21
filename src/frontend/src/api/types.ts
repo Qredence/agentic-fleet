@@ -265,7 +265,7 @@ export interface OptimizationDetails {
 
 export interface OptimizationResult {
   job_id: string;
-  status: string;
+  status: "pending" | "running" | "started" | "completed" | "failed";
   created_at: string;
   started_at?: string | null;
   completed_at?: string | null;
