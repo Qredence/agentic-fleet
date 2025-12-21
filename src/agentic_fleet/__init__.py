@@ -147,7 +147,7 @@ def __getattr__(name: str) -> object:
 
             return HistoryManager
         if name == "TTLCache":
-            from agentic_fleet.utils.cache import TTLCache
+            from agentic_fleet.utils.ttl_cache import TTLCache
 
             return TTLCache
 
