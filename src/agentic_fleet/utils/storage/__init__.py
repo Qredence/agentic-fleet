@@ -12,8 +12,6 @@ Usage:
 
 from __future__ import annotations
 
-from agentic_fleet.utils.cache import TTLCache
-
 from .conversation import ConversationStore
 from .cosmos import (
     get_default_user_id,
@@ -43,7 +41,6 @@ __all__ = [
     "InMemoryJobStore",
     "JobStore",
     "PersistenceSettings",
-    "TTLCache",
     "get_default_user_id",
     "get_execution",
     "is_cosmos_enabled",
