@@ -360,7 +360,7 @@ def load_required_compiled_modules(
                     )
 
         try:
-            module = load_compiled_module(str(artifact.path))
+            module = load_compiled_module(str(artifact.path), module_type=artifact.name)
             if module is not None:
                 artifact.module = module
                 setattr(registry, artifact.name, module)

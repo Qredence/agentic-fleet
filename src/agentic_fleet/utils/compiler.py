@@ -196,11 +196,11 @@ def get_cache_info() -> dict[str, Any]:
     return {"enabled": True, "size": 0, "items": 0, "location": "native_dspy_cache"}
 
 
-def load_compiled_module(path: str) -> Any | None:
+def load_compiled_module(path: str, module_type: str | None = None) -> Any | None:
     """Load a compiled DSPy module from a JSON path.
 
-    This function attempts to determine the module type from the filename
-    and instantiates the appropriate class before loading weights.
+    This function loads a module using an explicit module_type when provided,
+    falling back to a filename-based heuristic if needed.
     """
     if not os.path.exists(path):
         logger.warning(f"Compiled artifact not found at {path}")
@@ -208,29 +208,51 @@ def load_compiled_module(path: str) -> Any | None:
 
     filename = os.path.basename(path).lower()
 
-    # Import modules lazily to avoid circular imports
-    try:
-        if "routing" in filename:
-            from agentic_fleet.dspy_modules.decisions.routing import RoutingDecisionModule
-
-            module = RoutingDecisionModule()
-        elif "tool_planning" in filename:
-            from agentic_fleet.dspy_modules.decisions.tool_planning import (
-                ToolPlanningModule,
-            )
-
-            module = ToolPlanningModule()
-        elif "quality" in filename or "answer_quality" in filename:
-            from agentic_fleet.dspy_modules.decisions.quality import QualityDecisionModule
-
-            module = QualityDecisionModule()
+    if module_type is None:
+        if "tool_planning" in filename:
+            module_type = "tool_planning"
+        elif "answer_quality" in filename or "quality" in filename:
+            module_type = "answer_quality"
+        elif "routing" in filename:
+            module_type = "routing"
         elif "reasoner" in filename:
-            from agentic_fleet.dspy_modules.reasoner import DSPyReasoner
+            module_type = "reasoner"
+        elif "nlu" in filename:
+            module_type = "nlu"
 
-            module = DSPyReasoner()
-        else:
-            logger.error(f"Unknown module type for path: {path}")
+    module_factories: dict[str, Any] = {
+        "routing": lambda: __import__(
+            "agentic_fleet.dspy_modules.decisions.routing",
+            fromlist=["RoutingDecisionModule"],
+        ).RoutingDecisionModule(),
+        "tool_planning": lambda: __import__(
+            "agentic_fleet.dspy_modules.decisions.tool_planning",
+            fromlist=["ToolPlanningModule"],
+        ).ToolPlanningModule(),
+        "answer_quality": lambda: __import__(
+            "agentic_fleet.dspy_modules.answer_quality",
+            fromlist=["AnswerQualityModule"],
+        ).AnswerQualityModule(),
+        "reasoner": lambda: __import__(
+            "agentic_fleet.dspy_modules.reasoner",
+            fromlist=["DSPyReasoner"],
+        ).DSPyReasoner(),
+        "nlu": lambda: __import__(
+            "agentic_fleet.dspy_modules.nlu",
+            fromlist=["DSPyNLU"],
+        ).DSPyNLU(),
+    }
+
+    try:
+        if not module_type or module_type not in module_factories:
+            logger.error(
+                "Unknown module type for path: %s (module_type=%s)",
+                path,
+                module_type,
+            )
             return None
+
+        module = module_factories[module_type]()
 
         # Load weights using DSPy native load
         if path.endswith(".pkl"):

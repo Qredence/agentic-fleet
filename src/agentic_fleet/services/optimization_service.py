@@ -51,7 +51,6 @@ class OptimizationService:
         job_id = str(uuid.uuid4())
         job_data = {
             "job_id": job_id,
-            "id": job_id,
             "status": "pending",
             "user_id": user_id,
             "created_at": datetime.now(UTC).isoformat(),

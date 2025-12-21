@@ -23,7 +23,9 @@ class ScorerProtocol(Protocol):
 
     def __call__(self, task: str, candidate: str) -> float:
         """Score a candidate answer for the given task."""
-        raise NotImplementedError("ScorerProtocol.__call__ must be implemented by subclasses")
+        raise NotImplementedError(
+            "ScorerProtocol.__call__ must be implemented by protocol implementations"
+        )
 
 
 @dataclass
