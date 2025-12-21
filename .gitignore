@@ -48,7 +48,7 @@ env/
 .kilocode/
 .factory/
 .claude/
-.github/skills/
+
 # Generated reports
 report/
 .fleet/
