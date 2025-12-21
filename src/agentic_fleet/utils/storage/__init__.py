@@ -12,7 +12,10 @@ Usage:
 
 from __future__ import annotations
 
-from agentic_fleet.utils.cosmos import (
+from agentic_fleet.utils.cache import TTLCache
+
+from .conversation import ConversationStore
+from .cosmos import (
     get_default_user_id,
     get_execution,
     is_cosmos_enabled,
@@ -24,9 +27,9 @@ from agentic_fleet.utils.cosmos import (
     record_dspy_optimization_run,
     save_agent_memory_item,
 )
-from agentic_fleet.utils.history_manager import HistoryManager
-from agentic_fleet.utils.job_store import InMemoryJobStore, JobStore
-from agentic_fleet.utils.persistence import (
+from .history import HistoryManager
+from .job_store import InMemoryJobStore, JobStore
+from .persistence import (
     ConversationPersistenceService,
     DatabaseManager,
     PersistenceSettings,
@@ -34,11 +37,13 @@ from agentic_fleet.utils.persistence import (
 
 __all__ = [
     "ConversationPersistenceService",
+    "ConversationStore",
     "DatabaseManager",
     "HistoryManager",
     "InMemoryJobStore",
     "JobStore",
     "PersistenceSettings",
+    "TTLCache",
     "get_default_user_id",
     "get_execution",
     "is_cosmos_enabled",

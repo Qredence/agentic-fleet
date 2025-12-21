@@ -23,14 +23,13 @@ from agent_framework._types import (
     AgentRunResponseUpdate,
     ChatMessage,
     ChatResponse,
-    ChatResponseUpdate,
     HostedFileContent,
     Role,
 )
 from agent_framework.azure import AzureAIAgentClient
 
-from ..utils.logger import setup_logger
-from ..utils.telemetry import optional_span
+from agentic_fleet.utils.infra.logging import setup_logger
+from agentic_fleet.utils.infra.telemetry import optional_span
 
 if TYPE_CHECKING:
     from agent_framework._threads import AgentThread
@@ -282,7 +281,6 @@ class FoundryHostedAgent:
                 async for update in self._client.get_streaming_response(
                     [ChatMessage(role=Role.USER, text=query)]
                 ):
-                    update = cast(ChatResponseUpdate, update)
                     for content in update.contents:
                         if isinstance(content, HostedFileContent):
                             file_ids.append(content.file_id)

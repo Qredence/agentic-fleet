@@ -319,4 +319,7 @@ __all__ = [
     "AsyncTTLCache",
     "CacheStats",
     "SyncTTLCache",
+    "TTLCache",
 ]
+
+TTLCache = SyncTTLCache

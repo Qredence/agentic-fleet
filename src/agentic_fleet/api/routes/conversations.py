@@ -32,9 +32,15 @@ async def create_conversation(
     response_model=list[Conversation],
     summary="List all conversations",
 )
-async def list_conversations(manager: ConversationManagerDep) -> list[Conversation]:
+async def list_conversations(
+    manager: ConversationManagerDep,
+    limit: int = 25,
+    offset: int = 0,
+) -> list[Conversation]:
     """List all available conversations."""
-    return manager.list_conversations()
+    conversations = manager.list_conversations()
+    # Apply pagination (slicing)
+    return conversations[offset : offset + limit]
 
 
 @router.get(

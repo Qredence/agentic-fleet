@@ -12,7 +12,7 @@ from fastapi import APIRouter, HTTPException, status
 
 from agentic_fleet.api.deps import SessionManagerDep
 from agentic_fleet.models import WorkflowSession, WorkflowStatus
-from agentic_fleet.utils.logger import setup_logger
+from agentic_fleet.utils.infra.logging import setup_logger
 
 router = APIRouter()
 logger = setup_logger(__name__)

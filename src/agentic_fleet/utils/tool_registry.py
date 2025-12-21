@@ -12,7 +12,8 @@ import logging
 from dataclasses import dataclass, field
 from typing import Any, Protocol, cast, runtime_checkable
 
-from ..utils.cache import CacheStats, TTLCache  # type: ignore
+from agentic_fleet.utils.cache import CacheStats, TTLCache  # type: ignore
+
 from ..workflows.exceptions import ToolError
 
 logger = logging.getLogger(__name__)
