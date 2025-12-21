@@ -1,5 +1,5 @@
 import { describe, expect, it, vi, beforeEach } from "vitest";
-import { screen, waitFor } from "@testing-library/react";
+import { screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { renderWithProviders as render } from "@/tests/utils/render";
 import { ChatPage } from "@/pages/chat-page";
@@ -45,8 +45,14 @@ vi.mock("@/stores", () => ({
 }));
 
 // Mock sidebar components
+type MockChatHeaderProps = {
+  title: string;
+  sidebarTrigger?: React.ReactNode;
+  actions?: React.ReactNode;
+};
+
 vi.mock("@/components/layout/chat-header", () => ({
-  ChatHeader: ({ title, sidebarTrigger, actions }: any) => (
+  ChatHeader: ({ title, sidebarTrigger, actions }: MockChatHeaderProps) => (
     <div data-testid="chat-header">
       <div data-testid="header-title">{title}</div>
       <div data-testid="sidebar-trigger">{sidebarTrigger}</div>
@@ -59,13 +65,19 @@ vi.mock("@/components/layout/sidebar-left", () => ({
   SidebarLeft: () => <div data-testid="sidebar-left">Sidebar Left</div>,
 }));
 
+type MockRightPanelProps = {
+  open: boolean;
+  onOpenChange: (next: boolean) => void;
+  children?: React.ReactNode;
+};
+
 vi.mock("@/components/layout/right-panel", () => ({
-  RightPanel: ({ open, onOpenChange, children }: any) => (
+  RightPanel: ({ open, children }: MockRightPanelProps) => (
     <div data-testid={`right-panel-${open ? "open" : "closed"}`}>
       {children}
     </div>
   ),
-  RightPanelTrigger: ({ open, onOpenChange }: any) => (
+  RightPanelTrigger: ({ open, onOpenChange }: MockRightPanelProps) => (
     <button
       data-testid="right-panel-trigger"
       onClick={() => onOpenChange(!open)}
@@ -76,8 +88,19 @@ vi.mock("@/components/layout/right-panel", () => ({
 }));
 
 // Mock UI components
+type MockSidebarProviderProps = {
+  open: boolean;
+  onOpenChange?: (next: boolean) => void;
+  children?: React.ReactNode;
+};
+
+type MockSidebarInsetProps = {
+  className?: string;
+  children?: React.ReactNode;
+};
+
 vi.mock("@/components/ui/sidebar", () => ({
-  SidebarProvider: ({ children, open, onOpenChange }: any) => (
+  SidebarProvider: ({ children, open }: MockSidebarProviderProps) => (
     <div data-testid={`sidebar-provider-${open ? "open" : "closed"}`}>
       {children}
     </div>
@@ -85,7 +108,7 @@ vi.mock("@/components/ui/sidebar", () => ({
   SidebarTrigger: () => (
     <button data-testid="sidebar-trigger-btn">Toggle Sidebar</button>
   ),
-  SidebarInset: ({ children, className }: any) => (
+  SidebarInset: ({ children, className }: MockSidebarInsetProps) => (
     <div data-testid="sidebar-inset" className={className}>
       {children}
     </div>
@@ -159,7 +182,6 @@ describe("ChatPage", () => {
   });
 
   it("changes prompt input and submits message", async () => {
-    const user = userEvent.setup();
     render(<ChatPage />);
 
     const textarea = screen.getByPlaceholderText("Ask anything...");
@@ -176,7 +198,6 @@ describe("ChatPage", () => {
   });
 
   it("does not submit empty message", async () => {
-    const user = userEvent.setup();
     render(<ChatPage />);
 
     const textarea = screen.getByPlaceholderText("Ask anything...");
@@ -194,7 +215,6 @@ describe("ChatPage", () => {
 
   it("does not submit when loading", async () => {
     mockChatStore.isLoading = true;
-    const user = userEvent.setup();
     render(<ChatPage />);
 
     const textarea = screen.getByPlaceholderText("Ask anything...");
@@ -235,7 +255,6 @@ describe("ChatPage", () => {
 
   it("calls cancelStreaming when stop button is clicked", async () => {
     mockChatStore.isLoading = true;
-    const user = userEvent.setup();
     render(<ChatPage />);
 
     // In the actual UI, there would be a stop button when isLoading is true
@@ -245,7 +264,6 @@ describe("ChatPage", () => {
   });
 
   it("toggles right panel", async () => {
-    const user = userEvent.setup();
     render(<ChatPage />);
 
     const panelTrigger = screen.getByTestId("right-panel-trigger");
