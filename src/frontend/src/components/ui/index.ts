@@ -1,6 +1,7 @@
 // shadcn/ui primitives - barrel export
 export { Avatar, AvatarFallback, AvatarImage } from "./avatar";
-export { Button, buttonVariants } from "./button";
+export { Button } from "./button";
+export { buttonVariants } from "./button-variants";
 export { Badge, badgeVariants } from "./badge";
 export {
   Card,

@@ -107,33 +107,36 @@ function useTextStream({
     return Math.max(1, Math.round(100 / Math.sqrt(normalizedSpeed)));
   }, []);
 
-  const updateSegments = useCallback((text: string) => {
-    if (modeRef.current === "fade") {
-      try {
-        const segmenter = new Intl.Segmenter(navigator.language, {
-          granularity: "word",
-        });
-        const segmentIterator = segmenter.segment(text);
-        const newSegments = Array.from(segmentIterator).map(
-          (segment, index) => ({
-            text: segment.segment,
-            index,
-          }),
-        );
-        setSegments(newSegments);
-      } catch (error) {
-        const newSegments = text
-          .split(/(\s+)/)
-          .filter(Boolean)
-          .map((word, index) => ({
-            text: word,
-            index,
-          }));
-        setSegments(newSegments);
-        onError?.(error);
+  const updateSegments = useCallback(
+    (text: string) => {
+      if (modeRef.current === "fade") {
+        try {
+          const segmenter = new Intl.Segmenter(navigator.language, {
+            granularity: "word",
+          });
+          const segmentIterator = segmenter.segment(text);
+          const newSegments = Array.from(segmentIterator).map(
+            (segment, index) => ({
+              text: segment.segment,
+              index,
+            }),
+          );
+          setSegments(newSegments);
+        } catch (error) {
+          const newSegments = text
+            .split(/(\s+)/)
+            .filter(Boolean)
+            .map((word, index) => ({
+              text: word,
+              index,
+            }));
+          setSegments(newSegments);
+          onError?.(error);
+        }
       }
-    }
-  }, []);
+    },
+    [onError],
+  );
 
   const markComplete = useCallback(() => {
     if (!completedRef.current) {
@@ -389,4 +392,4 @@ function ResponseStream({
   return <Container className={className}>{renderContent()}</Container>;
 }
 
-export { useTextStream, ResponseStream };
+export { ResponseStream };
