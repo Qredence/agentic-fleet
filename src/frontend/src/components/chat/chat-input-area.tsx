@@ -46,7 +46,7 @@ export function ChatInputArea({
           <div className="flex flex-col">
             <PromptInputTextarea
               placeholder="Ask anything..."
-              className="min-h-12 pt-4 pl-4 pr-12 text-base leading-normal sm:text-base md:text-base bg-transparent border-0 shadow-none focus-visible:ring-0"
+              className="min-h-12 pt-4 pl-4 pr-12 text-base leading-normal bg-transparent border-0 shadow-none focus-visible:ring-0"
             />
 
             <ChatInputControls

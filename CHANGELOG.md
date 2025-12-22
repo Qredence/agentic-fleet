@@ -1,5 +1,55 @@
 # Changelog
 
+## Unreleased (2025-12-21)
+
+### Highlights
+
+- Execution history management utilities and background quality evaluation for richer workflow telemetry.
+- Frontend architecture restructure (pages/stores) plus new design tokens and UI components.
+- New docs-sync automation and expanded internal workflow documentation.
+
+### Changes
+
+#### Backend
+
+- Added new history utilities under `src/agentic_fleet/utils/storage/` (conversation, history, persistence, job_store) plus `utils/storage/cosmos.py` for Cosmos-backed history storage.
+- Added history management API surface in `src/agentic_fleet/api/routes/history.py` and integrated it into `api/api_v1/api.py` routing.
+- Added new optimization endpoints and rewired optimization routes (`api/routes/optimization.py`), replacing older optimize route wiring.
+- Expanded workflow event mapping in `src/agentic_fleet/api/events/mapping.py` to reflect new event categories.
+- Introduced background quality evaluation runner in `src/agentic_fleet/evaluation/background.py` and updated `scripts/self_improve.py`/`scripts/evaluate_history.py` to use the new evaluation flow.
+- Restructured DSPy module layout into subpackages (`dspy_modules/gepa`, `dspy_modules/lifecycle`) and refreshed signatures in `dspy_modules/signatures.py`.
+- Added new DSPy optimizer utilities in `dspy_modules/optimizer.py` and program wrappers in `dspy_modules/programs.py`.
+- Refactored workflow execution plumbing (`workflows/builder.py`, `workflows/context.py`, executors/_, strategies/_, `workflows/supervisor.py`) to align with the new module structure.
+- Added `utils/infra/` layer (logging, profiling, resilience, telemetry, tracing) and updated imports to use the new infra package.
+- Added `utils/cfg/` configuration helpers (loader, env, settings) and shifted config usage away from deprecated core modules.
+- Removed deprecated core modules under `src/agentic_fleet/core/` and replaced usage across services/CLI.
+- Cleaned service layer imports and added `services/optimization_service.py` plus supporting changes in `services/dspy_programs.py`, `services/chat_sse.py`, and `services/chat_websocket.py`.
+- Added tool registry updates (`utils/tool_registry.py`) and MCP tooling adjustments in `tools/mcp_tools.py`.
+- Added dependencies for OpenInference and Langfuse in `pyproject.toml` and updated wiring where needed.
+
+#### Frontend
+
+- Restructured UI into pages/stores pattern with new chat/layout components and sidebar workflows.
+- Introduced design tokens and a refreshed component set (tabs, tooltip, textarea, etc.).
+- Removed unused shared UI components and legacy styles.
+
+#### Docs
+
+- Added docs-sync workflow docs plus new agentic workflow optimization guide and internal plans.
+
+#### Tests
+
+- Added optimization API tests plus new frontend chat/dashboard tests.
+- Removed obsolete optimization/self-improvement tests.
+
+#### CI/Infra
+
+- Added docs-sync workflow automation and Q agentic workflow optimizer workflow.
+
+### Migration Notes
+
+- Deprecated `agentic_fleet.core.*` modules removed; update external imports to new service/utility equivalents.
+
 ## v0.6.95 (2025-12-16) – Package Reorganization & Security Defaults
 
 ### Highlights

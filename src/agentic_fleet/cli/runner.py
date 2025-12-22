@@ -19,6 +19,8 @@ from rich.markdown import Markdown
 from rich.panel import Panel
 from rich.text import Text
 
+from agentic_fleet.utils.infra.logging import setup_logger
+
 from ..utils.cfg import (
     DEFAULT_GEPA_LOG_DIR,
     DEFAULT_HISTORY_PATH,
@@ -26,7 +28,6 @@ from ..utils.cfg import (
     load_config,
 )
 from ..utils.error_utils import sanitize_error_message
-from ..utils.logger import setup_logger
 from ..utils.progress import RichProgressCallback
 from ..workflows.config import WorkflowConfig
 from ..workflows.models import (

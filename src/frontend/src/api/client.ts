@@ -155,10 +155,15 @@ export const evaluationApi = {
 // Self-Improvement logic is now consolidated into Optimization API.
 export const improvementApi = {
   /**
-   * @deprecated Consolidated into optimizationApi.run
+   * @deprecated Consolidated into optimizationApi.run - Use `optimizationApi.run({ module_name, auto_mode, user_id })` instead.
+   * This method was removed in v2.0 when self-improvement and optimization were unified under the GEPA optimization service.
+   * See migration guide: https://github.com/Qredence/agentic-fleet/blob/main/docs/migration/optimization-api.md
    */
   trigger: (_request: unknown) => {
-    throw new Error("Use optimizationApi.run instead");
+    throw new Error(
+      "improvementApi.trigger() has been removed. Use optimizationApi.run() instead. " +
+        "Example: optimizationApi.run({ module_name: 'supervisor', auto_mode: 'medium', user_id: 'user-123' })",
+    );
   },
 };
 

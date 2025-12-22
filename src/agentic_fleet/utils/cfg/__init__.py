@@ -189,6 +189,11 @@ from .schemas import (
     validate_config,
 )
 
+# =============================================================================
+# Settings
+# =============================================================================
+from .settings import AppSettings, get_settings
+
 __all__ = [
     "AGENT_ANALYST",
     "AGENT_CODER",
@@ -311,6 +316,7 @@ __all__ = [
     "TOOL_TAVILY_SEARCH",
     "AgentConfig",
     "AgentsConfig",
+    "AppSettings",
     "DSPyConfig",
     # Schemas
     "DSPyOptimizationConfig",
@@ -337,6 +343,7 @@ __all__ = [
     "get_env_int",
     # Environment utilities
     "get_env_var",
+    "get_settings",
     "load_config",
     "validate_agentic_fleet_env",
     "validate_config",

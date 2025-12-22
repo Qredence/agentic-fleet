@@ -8,8 +8,9 @@ from __future__ import annotations
 
 from typing import Any
 
-from ..utils.logger import setup_logger
-from ..utils.telemetry import optional_span
+from agentic_fleet.utils.infra.logging import setup_logger
+from agentic_fleet.utils.infra.telemetry import optional_span
+
 from .reasoner_utils import (
     _format_team_description,
     is_simple_task,

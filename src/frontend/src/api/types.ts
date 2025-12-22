@@ -236,6 +236,18 @@ export interface EntityResponse {
 // Optimization / Evaluation / Self-Improvement Types
 // =============================================================================
 
+/**
+ * Request payload for triggering DSPy module optimization via GEPA.
+ *
+ * @property module_name - The name of the DSPy module to optimize (e.g., "supervisor", "reasoner")
+ * @property auto_mode - Automatic optimization preset controlling training intensity:
+ *   - "light": Fast optimization with minimal examples
+ *   - "medium": Balanced optimization (default)
+ *   - "heavy": Extensive optimization with larger training sets
+ * @property examples_path - Optional path to custom training examples (JSON/JSONL format)
+ * @property user_id - User identifier for tracking optimization jobs
+ * @property options - Additional optimizer configuration (e.g., seed, max_iterations, learning_rate)
+ */
 export interface OptimizationRequest {
   module_name: string;
   auto_mode?: "light" | "medium" | "heavy";
@@ -264,14 +276,17 @@ export interface OptimizationDetails {
 }
 
 export interface OptimizationResult {
-  job_id: string;
-  status: "pending" | "running" | "started" | "completed" | "failed";
-  created_at: string;
+  job_id?: string | null;
+  status: "pending" | "running" | "started" | "completed" | "cached" | "failed";
+  created_at?: string;
   started_at?: string | null;
   completed_at?: string | null;
   error?: string | null;
   result_artifact?: string | null;
-  message?: string; // Kept for UI compatibility if needed
+  message?: string;
+  cache_path?: string | null;
+  progress?: number;
+  details?: OptimizationDetails;
 }
 
 export interface HistoryQualityMetrics {

@@ -17,7 +17,7 @@ from agent_framework._tools import ToolProtocol
 
 from agentic_fleet.tools.base import SchemaToolMixin
 from agentic_fleet.utils.cfg import env_config
-from agentic_fleet.utils.resilience import external_api_retry
+from agentic_fleet.utils.infra.resilience import external_api_retry
 
 try:  # Optional dependency — keep import non-fatal at module load time
     from tavily import TavilyClient  # type: ignore[import]

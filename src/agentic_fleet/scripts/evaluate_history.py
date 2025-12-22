@@ -8,8 +8,8 @@ from pathlib import Path
 
 from agentic_fleet.dspy_modules.lifecycle import configure_dspy_settings
 from agentic_fleet.dspy_modules.reasoner import DSPyReasoner
-from agentic_fleet.utils.history_manager import HistoryManager
-from agentic_fleet.utils.logger import setup_logger
+from agentic_fleet.utils.infra.logging import setup_logger
+from agentic_fleet.utils.storage import HistoryManager
 
 logger = setup_logger(__name__)
 

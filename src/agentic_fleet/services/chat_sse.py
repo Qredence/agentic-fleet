@@ -21,6 +21,7 @@ from datetime import datetime
 from typing import TYPE_CHECKING, Any
 
 from agentic_fleet.api.events.mapping import classify_event, map_workflow_event
+from agentic_fleet.evaluation.background import schedule_quality_evaluation
 from agentic_fleet.models import (
     MessageRole,
     StreamEvent,
@@ -28,7 +29,6 @@ from agentic_fleet.models import (
     WorkflowSession,
     WorkflowStatus,
 )
-from agentic_fleet.services.background_evaluation import schedule_quality_evaluation
 from agentic_fleet.services.chat_websocket import (
     _get_or_create_thread,
     _hydrate_thread_from_conversation,
@@ -37,7 +37,7 @@ from agentic_fleet.services.chat_websocket import (
     _prefer_service_thread_mode,
     _thread_has_any_messages,
 )
-from agentic_fleet.utils.logger import setup_logger
+from agentic_fleet.utils.infra.logging import setup_logger
 
 if TYPE_CHECKING:
     pass
