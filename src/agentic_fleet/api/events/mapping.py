@@ -6,6 +6,7 @@ This module centralizes the logic for transforming various internal workflow eve
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from dataclasses import dataclass, field
 from typing import Any, Literal, TypedDict
 
