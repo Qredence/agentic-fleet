@@ -12,7 +12,7 @@ import { SidebarProvider } from "@/components/ui/sidebar";
 import { ThemeProvider } from "@/contexts";
 import { TooltipProvider } from "@/components/ui/tooltip";
 /**
- * Creates a new QueryClient for each  est
+ * Creates a new QueryClient for each test
  */
 const createTestQueryClient = (): QueryClient => {
   return new QueryClient({
@@ -25,8 +25,10 @@ const createTestQueryClient = (): QueryClient => {
   });
 };
 /**
- * Wrapper component that provides all necessary providers for tes ing
+ * Wrapper component that provides all necessary providers for testing
+ * WITH SidebarProvider (use for full app/page tests)
  */
+// eslint-disable-next-line react-refresh/only-export-components
 function AllTheProviders({ children }: { children: React.ReactNode }) {
   const queryClient = createTestQueryClient();
 
@@ -41,7 +43,23 @@ function AllTheProviders({ children }: { children: React.ReactNode }) {
   );
 }
 /**
- * Custom render function that includes all provi ers
+ * Wrapper component that provides essential providers WITHOUT SidebarProvider
+ * (use for isolated component tests)
+ */
+// eslint-disable-next-line react-refresh/only-export-components
+function EssentialProviders({ children }: { children: React.ReactNode }) {
+  const queryClient = createTestQueryClient();
+
+  return (
+    <ThemeProvider defaultTheme="light">
+      <QueryClientProvider client={queryClient}>
+        <TooltipProvider>{children}</TooltipProvider>
+      </QueryClientProvider>
+    </ThemeProvider>
+  );
+}
+/**
+ * Custom render function that includes all providers
  */
 export function renderWithProviders(
   ui: ReactElement,
@@ -50,7 +68,17 @@ export function renderWithProviders(
   return render(ui, { wrapper: AllTheProviders, ...options });
 }
 /**
- * Custom render function that only includes QueryClientProv der
+ * Custom render function for isolated component tests
+ * (no SidebarProvider wrapper)
+ */
+export function renderComponent(
+  ui: ReactElement,
+  options?: Omit<RenderOptions, "wrapper">,
+) {
+  return render(ui, { wrapper: EssentialProviders, ...options });
+}
+/**
+ * Custom render function that only includes QueryClientProvider
  */
 export function renderWithQueryClient(
   ui: ReactElement,
@@ -64,7 +92,7 @@ export function renderWithQueryClient(
   return render(ui, { wrapper: Wrapper, ...options });
 }
 /**
- * Custom render function for components that only need ThemeProv der
+ * Custom render function for components that only need ThemeProvider
  */
 export function renderWithTheme(
   ui: ReactElement,
@@ -77,7 +105,7 @@ export function renderWithTheme(
   return render(ui, { wrapper: Wrapper, ...options });
 }
 /**
- * Custom render function for bare components without provi ers
+ * Custom render function for bare components without providers
  */
 export function bareRender(
   ui: ReactElement,
@@ -86,5 +114,6 @@ export function bareRender(
   return render(ui, options);
 }
 
+// eslint-disable-next-line react-refresh/only-export-components
 export * from "@testing-library/react";
 export { userEvent } from "@testing-library/user-event";

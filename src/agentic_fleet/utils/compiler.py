@@ -53,6 +53,8 @@ def compile_reasoner(
             return module
         except Exception as exc:
             logger.warning(f"Failed to load cache, recompiling: {exc}")
+            # Note: on_complete was already called in try block if load succeeded,
+            # so we don't call on_error here - we'll continue with compilation below
 
     if not os.path.exists(examples_path):
         progress_callback.on_error(f"No training data found at {examples_path}")

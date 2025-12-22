@@ -21,11 +21,11 @@ permissions:
 network: defaults
 
 steps:
-  - name: Ensure logs directory
+  - name: Ensure log directory and file
     run: |
-      mkdir -p /tmp/gh-aw/sandbox/agent/logs
-      echo "Initializing logs" > /tmp/gh-aw/sandbox/agent/logs/init.log
-      echo "Contents of /tmp/gh-aw/sandbox/agent/logs:"
+      mkdir -p /tmp/gh-aw/sandbox/agent/logs/
+      touch /tmp/gh-aw/sandbox/agent/logs/empty.log
+      echo "Contents of /tmp/gh-aw/sandbox/agent/logs/:"
       ls -la /tmp/gh-aw/sandbox/agent/logs/
 
 safe-outputs:

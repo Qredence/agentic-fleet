@@ -40,11 +40,11 @@
 #   id: copilot
 #
 # steps:
-#   - name: Ensure logs directory
+#   - name: Ensure log directory and file
 #     run: |
-#       mkdir -p /tmp/gh-aw/sandbox/agent/logs
-#       echo "Initializing logs" > /tmp/gh-aw/sandbox/agent/logs/init.log
-#       echo "Contents of /tmp/gh-aw/sandbox/agent/logs:"
+#       mkdir -p /tmp/gh-aw/sandbox/agent/logs/
+#       touch /tmp/gh-aw/sandbox/agent/logs/empty.log
+#       echo "Contents of /tmp/gh-aw/sandbox/agent/logs/:"
 #       ls -la /tmp/gh-aw/sandbox/agent/logs/
 #
 # timeout-minutes: 20
@@ -355,6 +355,9 @@ jobs:
         run: |
           mkdir -p /tmp/gh-aw/safeoutputs/
           find "/tmp/gh-aw/safeoutputs/" -type f -print
+          if [ ! -s /tmp/gh-aw/safeoutputs/agent_output.json ]; then
+            echo '{"items":[]}' > /tmp/gh-aw/safeoutputs/agent_output.json
+          fi
           echo "GH_AW_AGENT_OUTPUT=/tmp/gh-aw/safeoutputs/agent_output.json" >> "$GITHUB_ENV"
       - name: Add Issue Comment
         id: add_comment
@@ -1110,11 +1113,11 @@ jobs:
           mkdir -p /tmp/gh-aw/agent
           mkdir -p /tmp/gh-aw/sandbox/agent/logs
           echo "Created /tmp/gh-aw/agent directory for agentic workflow temporary files"
-      - name: Ensure logs directory
+      - name: Ensure log directory and file
         run: |-
-          mkdir -p /tmp/gh-aw/sandbox/agent/logs
-          echo "Initializing logs" > /tmp/gh-aw/sandbox/agent/logs/init.log
-          echo "Contents of /tmp/gh-aw/sandbox/agent/logs:"
+          mkdir -p /tmp/gh-aw/sandbox/agent/logs/
+          touch /tmp/gh-aw/sandbox/agent/logs/empty.log
+          echo "Contents of /tmp/gh-aw/sandbox/agent/logs/:"
           ls -la /tmp/gh-aw/sandbox/agent/logs/
 
       - name: Configure Git credentials

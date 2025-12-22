@@ -45,7 +45,7 @@ def basic_agent(mock_chat_client):
 @pytest.fixture
 def dspy_enabled_agent(mock_chat_client):
     """Create a DSPyEnhancedAgent with DSPy enabled."""
-    with patch("agentic_fleet.agents.base.FleetReAct"), patch("agentic_fleet.agents.base.FleetPoT"):
+    with patch("dspy.ReAct"), patch("dspy.ProgramOfThought"):
         return DSPyEnhancedAgent(
             name="DSPyAgent",
             chat_client=mock_chat_client,
@@ -59,7 +59,7 @@ def dspy_enabled_agent(mock_chat_client):
 @pytest.fixture
 def pot_agent(mock_chat_client):
     """Create a DSPyEnhancedAgent with Program of Thought strategy."""
-    with patch("agentic_fleet.agents.base.FleetReAct"), patch("agentic_fleet.agents.base.FleetPoT"):
+    with patch("dspy.ReAct"), patch("dspy.ProgramOfThought"):
         return DSPyEnhancedAgent(
             name="PoTAgent",
             chat_client=mock_chat_client,
@@ -108,7 +108,7 @@ class TestDSPyEnhancedAgentInit:
 
     def test_initializes_react_module_for_react_strategy(self, mock_chat_client):
         """Test that ReAct module is initialized for react strategy."""
-        with patch("agentic_fleet.agents.base.FleetReAct") as mock_react:
+        with patch("dspy.ReAct") as mock_react:
             agent = DSPyEnhancedAgent(
                 name="ReactAgent",
                 chat_client=mock_chat_client,
@@ -121,7 +121,7 @@ class TestDSPyEnhancedAgentInit:
 
     def test_initializes_pot_module_for_pot_strategy(self, mock_chat_client):
         """Test that PoT module is initialized for program_of_thought strategy."""
-        with patch("agentic_fleet.agents.base.FleetPoT") as mock_pot:
+        with patch("dspy.ProgramOfThought") as mock_pot:
             agent = DSPyEnhancedAgent(
                 name="PoTAgent",
                 chat_client=mock_chat_client,

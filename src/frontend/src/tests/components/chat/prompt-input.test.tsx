@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 import { screen, fireEvent } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { renderWithProviders as render } from "@/tests/utils/render";
+import { renderComponent as render } from "@/tests/utils/render";
 import {
   PromptInput,
   PromptInputTextarea,
@@ -91,18 +91,16 @@ describe("PromptInputTextarea", () => {
     const handleValueChange = vi.fn();
 
     render(
-      <PromptInput>
-        <PromptInputTextarea
-          placeholder="Type something..."
-          onValueChange={handleValueChange}
-        />
+      <PromptInput onValueChange={handleValueChange}>
+        <PromptInputTextarea placeholder="Type something..." />
       </PromptInput>,
     );
 
     const textarea = screen.getByPlaceholderText("Type something...");
     await user.type(textarea, "Hello World");
 
-    expect(handleValueChange).toHaveBeenCalledWith("Hello World");
+    // onValueChange gets called after each character, check final value
+    expect(handleValueChange).toHaveBeenLastCalledWith("Hello World");
   });
 
   it("calls onSubmit on Enter without Shift", async () => {
@@ -120,7 +118,8 @@ describe("PromptInputTextarea", () => {
     await user.type(textarea, "Test message{Enter}");
 
     expect(handleSubmit).toHaveBeenCalledTimes(1);
-    expect(handleKeyDown).toHaveBeenCalledTimes(2); // Once for each character, plus Enter
+    // "Test message" = 12 characters + {Enter} = 13 keydown events total
+    expect(handleKeyDown).toHaveBeenCalledTimes(13);
   });
 
   it("does not call onSubmit on Shift+Enter", async () => {
@@ -242,10 +241,9 @@ describe("PromptInputAction", () => {
     );
 
     const button = screen.getByRole("button");
-    expect(button).toBeEnabled(); // Button itself isn't disabled
-    // Tooltip trigger should be disabled
-    const tooltipTrigger = button.parentElement;
-    expect(tooltipTrigger).toHaveAttribute("disabled");
+    // When PromptInput is disabled, the tooltip trigger is disabled
+    // which disables the button via asChild
+    expect(button).toBeDisabled();
   });
 
   it("handles click events on children", async () => {

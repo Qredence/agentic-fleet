@@ -393,7 +393,7 @@ def validate_agentic_fleet_env() -> None:
     Raises:
         ConfigurationError: If no AI provider key is found or if required Cosmos DB variables are missing; the error uses config_key="environment".
     """
-    from ...workflows.exceptions import ConfigurationError
+    from ..exceptions import ConfigurationError
 
     env_config = EnvConfig()
     has_openai = bool(env_config.openai_api_key)

@@ -117,10 +117,25 @@ class OptimizationService:
             )
 
             # Run optimization
-            # Note: This is CPU intensive. In a real production app, this should run
-            # in a separate process or worker (Celery/Ray) instead of asyncio.to_thread().
-            # Consider adding a configuration option to switch between thread and
-            # process execution modes for production deployments.
+            # ⚠️ PERFORMANCE WARNING: CPU-intensive GEPA optimization
+            # 
+            # Current implementation uses asyncio.to_thread() which runs in the default
+            # thread pool executor. This has limitations:
+            # 
+            # 1. Thread pool has a default size limit (typically 32 threads on most systems)
+            # 2. CPU-bound work in threads still competes for GIL, degrading performance
+            # 3. Multiple concurrent optimizations will starve other async operations
+            # 4. No built-in rate limiting or resource control
+            # 
+            # PRODUCTION RECOMMENDATION: Use a proper task queue system:
+            # - Celery with Redis/RabbitMQ for distributed task execution
+            # - Ray for Python-native distributed computing
+            # - Azure Container Jobs for serverless batch processing
+            # 
+            # For now, consider adding:
+            # - Semaphore to limit concurrent optimizations (e.g., max 2-3)
+            # - ProcessPoolExecutor instead of ThreadPoolExecutor
+            # - Job queue with priority levels
             await asyncio.to_thread(
                 optimize_with_gepa,
                 module=module,

@@ -9,6 +9,8 @@ from __future__ import annotations
 
 from typing import Any
 
+from ..utils.exceptions import ConfigurationError as _SharedConfigurationError
+
 
 class WorkflowError(Exception):
     """Base exception for workflow-related errors.
@@ -93,8 +95,12 @@ class RoutingError(WorkflowError):
         super().__init__(message, context=error_context)
 
 
-class ConfigurationError(WorkflowError):
-    """Raised when configuration is invalid or missing."""
+class ConfigurationError(WorkflowError, _SharedConfigurationError):
+    """Raised when configuration is invalid or missing.
+    
+    This class inherits from both WorkflowError (for workflow-specific error handling)
+    and the shared ConfigurationError (to avoid circular dependencies with utils modules).
+    """
 
     def __init__(
         self,
@@ -111,14 +117,14 @@ class ConfigurationError(WorkflowError):
             config_value: The invalid configuration value
             context: Optional additional context
         """
+        # Initialize Exception base class
+        Exception.__init__(self, message)
+        
+        # Set all attributes needed by both parent classes
+        self.message = message
         self.config_key = config_key
         self.config_value = config_value
-        error_context = {
-            "config_key": config_key,
-            "config_value": str(config_value) if config_value is not None else None,
-            **(context or {}),
-        }
-        super().__init__(message, context=error_context)
+        self.context = context or {}
 
 
 class HistoryError(WorkflowError):

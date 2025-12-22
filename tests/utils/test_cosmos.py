@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import os
+import importlib
 from unittest.mock import patch
 
 # Import the actual public functions from the module
@@ -254,7 +255,7 @@ class TestCosmosModuleBehavior:
 
     def test_module_imports_successfully(self):
         """Test that the cosmos module imports without errors."""
-        import agentic_fleet.utils.storage.cosmos as cosmos_module
+        cosmos_module = importlib.import_module("agentic_fleet.utils.storage.cosmos")
 
         assert cosmos_module is not None
 

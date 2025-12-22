@@ -65,6 +65,10 @@ const MessageContent = ({
     className,
   );
 
+  if (markdown && typeof children !== "string") {
+    console.warn("MessageContent: markdown mode requires string children");
+  }
+
   return markdown ? (
     <Markdown className={classNames} id={id} components={components}>
       {typeof children === "string" ? children : String(children ?? "")}

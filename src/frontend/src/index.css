@@ -32,6 +32,9 @@
 @import "./styles/globals.css";
 @import "./styles/utilities.css";
 
+/* Streamdown styles (AI-optimized markdown renderer) */
+@source "../node_modules/streamdown/dist/*.js";
+
 /* Dark mode variant */
 @custom-variant dark (&:is(.dark *));
 
