@@ -259,7 +259,7 @@ describe("ChatPage", () => {
     ).toBeInTheDocument();
   });
 
-  it("calls cancelStreaming when stop button is clicked", async () => {
+  it("calls cancelStreaming when stop button is clicked", () => {
     mockChatStore.isLoading = true;
     render(<ChatPage />);
 
@@ -300,7 +300,7 @@ describe("ChatPage", () => {
     expect(screen.getByText("How are you?")).toBeInTheDocument();
   });
 
-  it("toggles trace visibility", async () => {
+  it("toggles trace visibility", () => {
     render(<ChatPage />);
 
     // Initially showTrace should be true based on default mock
@@ -311,7 +311,7 @@ describe("ChatPage", () => {
     expect(mockChatStore.setShowTrace).toBeDefined();
   });
 
-  it("changes execution mode", async () => {
+  it("changes execution mode", () => {
     render(<ChatPage />);
 
     // Default mode should be auto
@@ -322,7 +322,7 @@ describe("ChatPage", () => {
     expect(mockChatStore.setExecutionMode).toBeDefined();
   });
 
-  it("toggles GEPA optimization", async () => {
+  it("toggles GEPA optimization", () => {
     render(<ChatPage />);
 
     // Default should be false
