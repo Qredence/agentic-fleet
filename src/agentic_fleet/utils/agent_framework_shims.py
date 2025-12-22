@@ -76,10 +76,8 @@ def _maybe_define(module: types.ModuleType, attr: str, factory: Any) -> None:
         setattr(module, attr, factory)
 
 
-def ensure_agent_framework_shims() -> None:
-    """Ensure ``agent_framework`` symbols exist even when dependency is absent."""
-
-    root = cast(Any, _import_or_stub("agent_framework"))
+def _patch_root_attributes(root: Any) -> None:
+    """Patch basic root module attributes."""
     if not hasattr(root, "__version__"):
         # Some installed versions ship an empty `agent_framework/__init__.py`, but
         # internal modules (e.g., `observability`) expect `__version__` to exist.
@@ -90,6 +88,9 @@ def ensure_agent_framework_shims() -> None:
         version = getattr(root, "__version__", "0.0.0")
         root.AGENT_FRAMEWORK_USER_AGENT = f"agentic-fleet/{version}"  # type: ignore[attr-defined]
 
+
+def _patch_exceptions_module(root: Any) -> type[Exception]:
+    """Patch exceptions module and return base exception class."""
     exceptions = cast(Any, _ensure_submodule("agent_framework.exceptions"))
     root.exceptions = exceptions  # type: ignore[attr-defined]
 
@@ -116,7 +117,12 @@ def ensure_agent_framework_shims() -> None:
             {"__doc__": "Fallback tool execution exception shim."},
         )
 
-    # -- Prefer real agent-framework implementations when available --
+    return base_exception
+
+
+def _reexport_known_apis(root: Any) -> None:
+    """Re-export known public APIs from submodules to root."""
+    # Prefer real agent-framework implementations when available
     # Some distributions ship an empty `agent_framework/__init__.py` and rely on consumers
     # importing from internal modules. The workflows package, however, imports many symbols
     # from the root package. Re-exporting known public APIs keeps those imports working.
@@ -130,8 +136,9 @@ def ensure_agent_framework_shims() -> None:
     _reexport_public_api(root, "agent_framework._logging")  # get_logger
     _reexport_public_api(root, "agent_framework._middleware")  # use_chat_middleware
 
-    # -- Core agent-framework symbols (used heavily across the codebase) --
 
+def _patch_core_types(root: Any) -> None:
+    """Patch core agent-framework type classes."""
     if not hasattr(root, "Role"):
 
         class Role:  # pragma: no cover - shim
@@ -199,6 +206,9 @@ def ensure_agent_framework_shims() -> None:
 
         root.MagenticBuilder = MagenticBuilder  # type: ignore[attr-defined]
 
+
+def _patch_tool_types(root: Any) -> None:
+    """Patch tool-related types."""
     if not hasattr(root, "ToolProtocol"):
 
         class ToolProtocol:  # pragma: no cover - shim
@@ -218,8 +228,9 @@ def ensure_agent_framework_shims() -> None:
 
         root.HostedCodeInterpreterTool = HostedCodeInterpreterTool  # type: ignore[attr-defined]
 
-    # -- Serialization + tools helpers (used by tool registry and adapters) --
 
+def _patch_serialization_module() -> None:
+    """Patch serialization module helpers."""
     serialization = cast(Any, _ensure_submodule("agent_framework._serialization"))
     if not hasattr(serialization, "SerializationMixin"):
 
@@ -254,6 +265,9 @@ def ensure_agent_framework_shims() -> None:
 
         tools_mod._tools_to_dict = _tools_to_dict
 
+
+def _patch_agent_classes(root: Any) -> None:
+    """Patch ChatAgent and related agent builder classes."""
     if not hasattr(root, "ChatAgent"):
 
         class ChatAgent:  # pragma: no cover - shim
@@ -313,7 +327,9 @@ def ensure_agent_framework_shims() -> None:
 
         root.GroupChatBuilder = GroupChatBuilder  # type: ignore[attr-defined]
 
-    # -- OpenAI submodule stub (needed for agent factory) --
+
+def _patch_openai_module() -> None:
+    """Patch OpenAI client classes."""
     openai_module = _ensure_submodule("agent_framework.openai")
 
     if not hasattr(openai_module, "OpenAIChatClient"):
@@ -373,3 +389,23 @@ def ensure_agent_framework_shims() -> None:
                 return SimpleNamespace(messages=[SimpleNamespace(text=f"{self.model_id}:response")])
 
         openai_module.OpenAIResponsesClient = OpenAIResponsesClient  # type: ignore[attr-defined]
+
+
+def ensure_agent_framework_shims() -> None:
+    """Ensure ``agent_framework`` symbols exist even when dependency is absent.
+    
+    This function patches the agent_framework module to ensure all required
+    symbols are available, even when the package is not installed. The patching
+    is organized into focused helper functions for better maintainability.
+    """
+    root = cast(Any, _import_or_stub("agent_framework"))
+
+    # Apply patches in logical order
+    _patch_root_attributes(root)
+    _patch_exceptions_module(root)
+    _reexport_known_apis(root)
+    _patch_core_types(root)
+    _patch_tool_types(root)
+    _patch_serialization_module()
+    _patch_agent_classes(root)
+    _patch_openai_module()
