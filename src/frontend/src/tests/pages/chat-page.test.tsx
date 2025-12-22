@@ -229,9 +229,9 @@ describe("ChatPage", () => {
     const submitButton = buttons.find((b) =>
       b.textContent?.match(/send|submit/i),
     );
-    
+
     // If submit button exists, verify it's disabled or doesn't trigger sendMessage
-    if (submitButton && !submitButton.hasAttribute('disabled')) {
+    if (submitButton && !submitButton.hasAttribute("disabled")) {
       await user.click(submitButton);
     }
 
