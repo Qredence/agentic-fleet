@@ -87,7 +87,21 @@ class OptimizationService:
         auto_mode: OptimizationMode,
         **kwargs: Any,
     ) -> None:
-        """Internal background task runner."""
+        """
+        Execute a GEPA optimization job in the background while updating and persisting job state.
+        
+        Prepares training and validation datasets, runs the optimization using the provided module and mode, and updates the job record with status transitions ("running", "completed", "failed"), timestamps, result artifact path, and any error message.
+        
+        Parameters:
+            job_id (str): Identifier of the job to update and persist.
+            module (Any): The model/module to optimize.
+            base_examples_path (str): Filesystem path containing example data used to build datasets.
+            auto_mode (OptimizationMode): Optimization mode to apply ("light", "medium", or "heavy").
+            **kwargs: Additional options passed to dataset preparation or the optimizer (commonly includes `seed` and optimizer-specific flags).
+        
+        Returns:
+            None
+        """
         try:
             # Update status to running
             job = await self.job_store.get_job(job_id)
