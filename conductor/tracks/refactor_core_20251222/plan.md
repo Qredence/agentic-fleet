@@ -5,7 +5,7 @@
     - [ ] Subtask: Delete the file.
     - [ ] Subtask: Scan codebase for imports and replace/remove them.
     - [ ] Subtask: Verify project builds.
-- [~] Task: Clean up deprecated `utils/agent_framework/` directory.
+- [x] Task: Clean up deprecated `utils/agent_framework/` directory. [4c8a922]
     - [ ] Subtask: Identify unused modules in `src/agentic_fleet/utils/agent_framework/`.
     - [ ] Subtask: Delete confirmed deprecated files.
     - [ ] Subtask: Update `src/agentic_fleet/utils/__init__.py` exports.
