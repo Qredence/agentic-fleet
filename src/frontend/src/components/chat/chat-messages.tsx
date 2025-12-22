@@ -49,9 +49,11 @@ export function ChatMessages({
                   key={messageKey}
                   className="mx-auto w-full max-w-3xl justify-end px-4"
                 >
-                  <MessageContent className="bg-secondary/80 text-foreground border-border/50 max-w-[85%] rounded-2xl border px-4 py-2.5 backdrop-blur-sm sm:max-w-[75%] whitespace-pre-wrap break-normal">
-                    {message.content}
-                  </MessageContent>
+                  <div className="flex w-full justify-end">
+                    <MessageContent className="bg-secondary/80 text-foreground border-border/50 max-w-[85%] rounded-2xl border px-4 py-2.5 backdrop-blur-sm sm:max-w-[75%] whitespace-pre-wrap break-normal">
+                      {message.content}
+                    </MessageContent>
+                  </div>
                 </Message>
               );
             }

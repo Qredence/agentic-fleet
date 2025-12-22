@@ -26,7 +26,9 @@ const createTestQueryClient = (): QueryClient => {
 };
 /**
  * Wrapper component that provides all necessary providers for testing
+ * WITH SidebarProvider (use for full app/page tests)
  */
+// eslint-disable-next-line react-refresh/only-export-components
 function AllTheProviders({ children }: { children: React.ReactNode }) {
   const queryClient = createTestQueryClient();
 
@@ -41,6 +43,22 @@ function AllTheProviders({ children }: { children: React.ReactNode }) {
   );
 }
 /**
+ * Wrapper component that provides essential providers WITHOUT SidebarProvider
+ * (use for isolated component tests)
+ */
+// eslint-disable-next-line react-refresh/only-export-components
+function EssentialProviders({ children }: { children: React.ReactNode }) {
+  const queryClient = createTestQueryClient();
+
+  return (
+    <ThemeProvider defaultTheme="light">
+      <QueryClientProvider client={queryClient}>
+        <TooltipProvider>{children}</TooltipProvider>
+      </QueryClientProvider>
+    </ThemeProvider>
+  );
+}
+/**
  * Custom render function that includes all providers
  */
 export function renderWithProviders(
@@ -48,6 +66,16 @@ export function renderWithProviders(
   options?: Omit<RenderOptions, "wrapper">,
 ) {
   return render(ui, { wrapper: AllTheProviders, ...options });
+}
+/**
+ * Custom render function for isolated component tests
+ * (no SidebarProvider wrapper)
+ */
+export function renderComponent(
+  ui: ReactElement,
+  options?: Omit<RenderOptions, "wrapper">,
+) {
+  return render(ui, { wrapper: EssentialProviders, ...options });
 }
 /**
  * Custom render function that only includes QueryClientProvider
@@ -86,5 +114,6 @@ export function bareRender(
   return render(ui, options);
 }
 
+// eslint-disable-next-line react-refresh/only-export-components
 export * from "@testing-library/react";
 export { userEvent } from "@testing-library/user-event";

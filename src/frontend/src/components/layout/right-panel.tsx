@@ -1,6 +1,7 @@
 import { cn } from "@/lib/utils";
 import { PanelRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { motion } from "motion/react";
 
 type RightPanelProps = {
   open: boolean;
@@ -16,22 +17,30 @@ type RightPanelProps = {
  */
 export function RightPanel({ open, children }: RightPanelProps) {
   return (
-    <aside
+    <motion.aside
       data-state={open ? "open" : "closed"}
       className={cn(
-        "hidden md:flex flex-col transition-all duration-200 ease-linear overflow-hidden shrink-0 p-2",
+        "hidden md:flex flex-col overflow-hidden shrink-0 p-2",
         open ? "w-48" : "w-0 p-0",
       )}
+      initial={false}
+      animate={{
+        width: open ? "12rem" : "0rem",
+        padding: open ? "0.5rem" : "0rem",
+      }}
+      transition={{ duration: 0.2, ease: "linear" }}
     >
-      <div
+      <motion.div
         className={cn(
-          "flex h-full w-full flex-col rounded-lg border border-sidebar-border bg-sidebar shadow transition-opacity duration-200",
+          "flex h-full w-full flex-col rounded-lg border border-sidebar-border bg-sidebar shadow",
           open ? "opacity-100" : "opacity-0",
         )}
+        animate={{ opacity: open ? 1 : 0 }}
+        transition={{ duration: 0.2 }}
       >
         <div className="flex-1 overflow-auto">{children}</div>
-      </div>
-    </aside>
+      </motion.div>
+    </motion.aside>
   );
 }
 
@@ -56,9 +65,12 @@ export function RightPanelTrigger({
       aria-label={open ? "Close right panel" : "Open right panel"}
       aria-pressed={open}
     >
-      <PanelRight
-        className={cn("h-4 w-4 transition-transform", open && "rotate-180")}
-      />
+      <motion.div
+        animate={{ rotate: open ? 180 : 0 }}
+        transition={{ duration: 0.15 }}
+      >
+        <PanelRight className="h-4 w-4" />
+      </motion.div>
       <span className="sr-only">Toggle Right Panel</span>
     </Button>
   );

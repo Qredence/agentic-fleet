@@ -19,6 +19,13 @@ function extractLanguage(className?: string): string {
 }
 
 const INITIAL_COMPONENTS: Partial<Components> = {
+  strong: function StrongComponent({ className, children, ...props }) {
+    return (
+      <strong className={cn("font-semibold", className)} {...props}>
+        {children}
+      </strong>
+    );
+  },
   code: function CodeComponent({ className, children, ...props }) {
     const isInline =
       !props.node?.position?.start.line ||

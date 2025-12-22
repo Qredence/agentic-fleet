@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 import { screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { renderWithProviders as render } from "@/tests/utils/render";
+import { renderComponent as render } from "@/tests/utils/render";
 import { ChatMessages } from "@/components/chat/chat-messages";
 import type { Message as ChatMessage } from "@/api/types";
 
@@ -37,18 +37,15 @@ describe("ChatMessages", () => {
 
   it("renders user messages correctly", () => {
     const userMessages = mockMessages.filter((msg) => msg.role === "user");
-    const { container } = render(
-      <ChatMessages messages={userMessages} rootClassName="test-root" />,
-    );
+    render(<ChatMessages messages={userMessages} rootClassName="test-root" />);
 
     // Should render user messages
-    expect(screen.getByText("Hello there!")).toBeInTheDocument();
+    const message = screen.getByText("Hello there!");
+    expect(message).toBeInTheDocument();
 
-    // User messages should have the right styling (justified-end)
-    const messageElements = container.querySelectorAll(
-      '[data-testid="message"]',
-    );
-    expect(messageElements[0]).toHaveClass("justify-end");
+    // User messages are right-aligned (wrapped in a div with justify-end)
+    const messageWrapper = message.parentElement?.parentElement;
+    expect(messageWrapper).toHaveClass("justify-end");
   });
 
   it("renders assistant messages correctly", () => {
@@ -170,9 +167,10 @@ describe("ChatMessages", () => {
       />,
     );
 
-    const contentElement = container.querySelector(
-      '[class*="ChatContainerContent"]',
-    );
+    // The contentClassName is applied to ChatContainerContent
+    // which renders a StickToBottom.Content component
+    const contentElement = container.querySelector(".custom-content-class");
+    expect(contentElement).toBeInTheDocument();
     expect(contentElement).toHaveClass("custom-content-class");
   });
 

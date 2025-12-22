@@ -7,7 +7,7 @@
 import { describe, expect, it, vi } from "vitest";
 import { screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { renderWithProviders as render } from "@/tests/utils/render";
+import { renderComponent as render } from "@/tests/utils/render";
 import {
   Reasoning,
   ReasoningTrigger,
@@ -108,7 +108,7 @@ describe("Reasoning", () => {
   });
 
   describe("controlled mode", () => {
-    it("respects controlled open state", () => {
+    it("respects controlled open state", async () => {
       render(
         <Reasoning open={true}>
           <ReasoningTrigger>Trigger</ReasoningTrigger>
@@ -118,8 +118,10 @@ describe("Reasoning", () => {
 
       const content = screen.getByText("Visible content");
       const parent = content.closest('[class*="overflow-hidden"]');
-      // Should have non-zero max-height when open
-      expect(parent).not.toHaveStyle({ maxHeight: "0px" });
+      // Should have non-zero max-height when open (wait for useEffect)
+      await waitFor(() => {
+        expect(parent).not.toHaveStyle({ maxHeight: "0px" });
+      });
     });
 
     it("calls onOpenChange when toggled in controlled mode", async () => {
@@ -192,10 +194,13 @@ describe("Reasoning", () => {
         </Reasoning>,
       );
 
-      // Should auto-close
-      await waitFor(() => {
-        expect(parent).toHaveStyle({ maxHeight: "0px" });
-      });
+      // Should auto-close (wait for useEffect to update both isOpen and maxHeight)
+      await waitFor(
+        () => {
+          expect(parent).toHaveStyle({ maxHeight: "0px" });
+        },
+        { timeout: 2000 },
+      );
     });
   });
 

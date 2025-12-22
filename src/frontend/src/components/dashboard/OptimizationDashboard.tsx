@@ -559,8 +559,7 @@ export function OptimizationDashboard() {
   const ringStatus = useMemo(() => {
     if (currentStatus === "started" || currentStatus === "running")
       return "running";
-    if (currentStatus === "completed" || currentStatus === "cached")
-      return "completed";
+    if (currentStatus === "completed") return "completed";
     if (currentStatus === "failed") return "failed";
     return "idle";
   }, [currentStatus]);

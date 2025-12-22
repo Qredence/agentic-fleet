@@ -133,18 +133,27 @@ function ReasoningContent({
 
     const observer = new ResizeObserver(() => {
       if (contentRef.current && innerRef.current && isOpen) {
-        contentRef.current.style.maxHeight = `${innerRef.current.scrollHeight}px`;
+        const height = innerRef.current.scrollHeight;
+        contentRef.current.style.maxHeight =
+          height > 0 ? `${height}px` : "9999px";
       }
     });
 
     observer.observe(innerRef.current);
 
     if (isOpen) {
-      contentRef.current.style.maxHeight = `${innerRef.current.scrollHeight}px`;
+      const height = innerRef.current.scrollHeight;
+      contentRef.current.style.maxHeight =
+        height > 0 ? `${height}px` : "9999px";
     }
 
     return () => observer.disconnect();
   }, [isOpen]);
+
+  const expandedMaxHeight = (() => {
+    const height = innerRef.current?.scrollHeight ?? 0;
+    return height > 0 ? `${height}px` : "9999px";
+  })();
 
   const content = markdown ? (
     <Markdown>{children as string}</Markdown>
@@ -160,7 +169,7 @@ function ReasoningContent({
         className,
       )}
       style={{
-        maxHeight: isOpen ? contentRef.current?.scrollHeight : "0px",
+        maxHeight: isOpen ? expandedMaxHeight : "0px",
       }}
       {...props}
     >

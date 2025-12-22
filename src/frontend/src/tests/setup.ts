@@ -1,7 +1,36 @@
-import "@testing-library/jest-dom";
+import "@testing-library/jest-dom/vitest";
 import { afterAll, beforeAll, vi } from "vitest";
 
 // Polyfill for browser APIs that don't exist in jsdom but don't need mocking
+
+// localStorage/sessionStorage mock for jsdom
+// Many components (chatStore, ThemeContext) depend on storage APIs
+const createStorageMock = () => {
+  const store = new Map<string, string>();
+  return {
+    getItem: (key: string) => store.get(key) ?? null,
+    setItem: (key: string, value: string) => store.set(key, value),
+    removeItem: (key: string) => store.delete(key),
+    clear: () => store.clear(),
+    get length() {
+      return store.size;
+    },
+    key: (index: number) => {
+      const keys = Array.from(store.keys());
+      return keys[index] ?? null;
+    },
+  };
+};
+
+Object.defineProperty(window, "localStorage", {
+  value: createStorageMock(),
+  writable: true,
+});
+
+Object.defineProperty(window, "sessionStorage", {
+  value: createStorageMock(),
+  writable: true,
+});
 
 // ResizeObserver polyfill for DOM tests
 globalThis.ResizeObserver =

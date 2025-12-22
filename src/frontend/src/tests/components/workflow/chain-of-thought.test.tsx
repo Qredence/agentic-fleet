@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { renderComponent as render, screen } from "@/tests/utils/render";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 import type { Message as ChatMessage, ConversationStep } from "@/api/types";
@@ -173,6 +173,9 @@ describe("ChainOfThoughtTrace", () => {
       await user.click(trigger);
 
       // Markdown should render bold text
+      // Wait for content to be visible after expansion
+      const content = await screen.findByText(/This is/);
+      expect(content).toBeInTheDocument();
       expect(container.querySelector("strong")).toBeInTheDocument();
     });
 

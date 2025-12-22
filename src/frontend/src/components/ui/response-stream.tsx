@@ -1,5 +1,6 @@
 import { cn } from "@/lib/utils";
 import React, { useCallback, useEffect, useRef, useState } from "react";
+import { motion } from "motion/react";
 
 export type Mode = "typewriter" | "fade";
 
@@ -328,24 +329,6 @@ function ResponseStream({
     }
   }, [isComplete]);
 
-  // fadeStyle is the style for the fade animation
-  const fadeStyle = `
-    @keyframes fadeIn {
-      from { opacity: 0; }
-      to { opacity: 1; }
-    }
-
-    .fade-segment {
-      display: inline-block;
-      opacity: 0;
-      animation: fadeIn ${getFadeDuration()}ms ease-out forwards;
-    }
-
-    .fade-segment-space {
-      white-space: pre;
-    }
-  `;
-
   const renderContent = () => {
     switch (mode) {
       case "typewriter":
@@ -353,33 +336,34 @@ function ResponseStream({
 
       case "fade":
         return (
-          <>
-            <style>{fadeStyle}</style>
-            <div className="relative">
-              {segments.map((segment, idx) => {
-                const isWhitespace = /^\s+$/.test(segment.text);
-                const isLastSegment = idx === segments.length - 1;
+          <div className="relative">
+            {segments.map((segment, idx) => {
+              const isWhitespace = /^\s+$/.test(segment.text);
+              const isLastSegment = idx === segments.length - 1;
 
-                return (
-                  <span
-                    key={`${segment.text}-${idx}`}
-                    className={cn(
-                      "fade-segment",
-                      isWhitespace && "fade-segment-space",
-                    )}
-                    style={{
-                      animationDelay: `${idx * getSegmentDelay()}ms`,
-                    }}
-                    onAnimationEnd={
-                      isLastSegment ? handleLastSegmentAnimationEnd : undefined
-                    }
-                  >
-                    {segment.text}
-                  </span>
-                );
-              })}
-            </div>
-          </>
+              return (
+                <motion.span
+                  key={`${segment.text}-${idx}`}
+                  className={cn(
+                    "inline-block",
+                    isWhitespace && "whitespace-pre",
+                  )}
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  transition={{
+                    duration: getFadeDuration() / 1000,
+                    delay: (idx * getSegmentDelay()) / 1000,
+                    ease: "easeOut",
+                  }}
+                  onAnimationComplete={
+                    isLastSegment ? handleLastSegmentAnimationEnd : undefined
+                  }
+                >
+                  {segment.text}
+                </motion.span>
+              );
+            })}
+          </div>
         );
 
       default:

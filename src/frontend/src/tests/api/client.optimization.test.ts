@@ -53,8 +53,8 @@ describe("api client: optimization/evaluation/improvement", () => {
     expect(httpMock.get).toHaveBeenCalledWith("/history?limit=10&offset=20");
   });
 
-  it("improvementApi.trigger throws error (deprecated)", async () => {
-    await expect(improvementApi.trigger({})).rejects.toThrow(
+  it("improvementApi.trigger throws error (deprecated)", () => {
+    expect(() => improvementApi.trigger({})).toThrow(
       "Use optimizationApi.run instead",
     );
   });
