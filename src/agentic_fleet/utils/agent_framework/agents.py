@@ -60,7 +60,7 @@ def patch_agent_classes(root: Any) -> None:
             def __init__(self) -> None:
                 self.agents: list[Any] = []
 
-            def add_agent(self, agent: Any) -> "GroupChatBuilder":
+            def add_agent(self, agent: Any) -> GroupChatBuilder:
                 self.agents.append(agent)
                 return self
 

@@ -314,6 +314,6 @@ __all__ = [
     "_log_stream_event",
     "_message_role_value",
     "_prefer_service_thread_mode",
-    "_thread_has_any_messages",
     "_sanitize_log_input",
+    "_thread_has_any_messages",
 ]

@@ -11,9 +11,11 @@ Routes should stay thin and delegate to this service for:
 from __future__ import annotations
 
 import asyncio
+import contextlib
+import re
 from collections.abc import AsyncIterator
 from datetime import datetime
-from typing import TYPE_CHECKING, Any, cast
+from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
     from agent_framework._threads import AgentThread
@@ -649,7 +651,7 @@ class ChatWebSocketService:
             workflow_id=session.workflow_id,
         )
         await websocket.send_json(cancelled_event.to_sse_dict())
-        
+
         done_type = StreamEventType.DONE
         done_category, done_ui_hint = classify_event(done_type)
         done_event = StreamEvent(

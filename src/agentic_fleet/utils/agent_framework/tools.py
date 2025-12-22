@@ -7,7 +7,7 @@ from typing import Any, cast
 
 from .utils import _ensure_submodule
 
-__all__ = ["patch_tool_types", "patch_serialization_module"]
+__all__ = ["patch_serialization_module", "patch_tool_types"]
 
 
 def patch_tool_types(root: Any) -> None:

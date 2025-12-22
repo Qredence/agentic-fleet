@@ -211,7 +211,7 @@ class BridgeMiddleware(ChatMiddleware):
         if execution_data is None:
             logger.warning("on_end called but no execution_data in context")
             return
-        
+
         execution_data["end_time"] = datetime.now().isoformat()
 
         if isinstance(result, dict):
@@ -231,7 +231,7 @@ class BridgeMiddleware(ChatMiddleware):
         if execution_data is None:
             logger.warning("on_error called but no execution_data in context")
             return
-        
+
         execution_data["end_time"] = datetime.now().isoformat()
         execution_data["error"] = str(error)
         execution_data["status"] = "failed"

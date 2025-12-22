@@ -4,7 +4,6 @@ This test file demonstrates the improved testability of the refactored event map
 Each handler can now be tested independently without going through the main dispatcher.
 """
 
-from agent_framework._types import ChatMessage, Role
 from agent_framework._workflows import (
     RequestInfoEvent,
     WorkflowStartedEvent,
@@ -12,11 +11,10 @@ from agent_framework._workflows import (
 )
 
 from agentic_fleet.api.events.mapping import (
-    _handle_request_info,
+    _get_request_message,
     _handle_workflow_started,
     _handle_workflow_status,
     _serialize_request_payload,
-    _get_request_message,
 )
 from agentic_fleet.models import StreamEventType
 
@@ -25,7 +23,7 @@ def test_handle_workflow_started():
     """Test that WorkflowStartedEvent is always skipped."""
     event = WorkflowStartedEvent(data=None)
     result, reasoning = _handle_workflow_started(event, "previous")
-    
+
     assert result is None
     assert reasoning == "previous"
 
@@ -37,7 +35,7 @@ def test_handle_workflow_status_failed():
         data={"message": "Test failure", "workflow_id": "test-123"}
     )
     result, reasoning = _handle_workflow_status(event, "")
-    
+
     assert result is not None
     assert result.type == StreamEventType.ERROR
     assert result.error == "Test failure"
@@ -51,7 +49,7 @@ def test_handle_workflow_status_in_progress():
         data={"message": "Starting", "workflow_id": "test-456"}
     )
     result, reasoning = _handle_workflow_status(event, "")
-    
+
     assert result is not None
     assert result.type == StreamEventType.ORCHESTRATOR_MESSAGE
     assert result.kind == "progress"
@@ -62,7 +60,7 @@ def test_handle_workflow_status_idle_skipped():
     """Test that IDLE and other states are skipped."""
     event = WorkflowStatusEvent(state="IDLE", data={})
     result, reasoning = _handle_workflow_status(event, "")
-    
+
     assert result is None
 
 
@@ -71,7 +69,7 @@ def test_serialize_request_payload_with_model_dump():
     class MockRequest:
         def model_dump(self):
             return {"foo": "bar"}
-    
+
     result = _serialize_request_payload(MockRequest())
     assert result == {"foo": "bar"}
 
@@ -115,14 +113,14 @@ def test_get_request_message_default():
 def test_dispatch_table_completeness():
     """Verify all expected event types are in the dispatch table."""
     from agentic_fleet.api.events.mapping import _EVENT_HANDLERS
-    
+
     # Core event types that should be handled
     expected_types = [
         WorkflowStartedEvent,
         WorkflowStatusEvent,
         RequestInfoEvent,
     ]
-    
+
     for event_type in expected_types:
         assert event_type in _EVENT_HANDLERS, f"Missing handler for {event_type.__name__}"
 
@@ -132,11 +130,11 @@ def test_handler_isolation():
     # Create two events
     event1 = WorkflowStatusEvent(state="FAILED", data={"message": "Error 1"})
     event2 = WorkflowStatusEvent(state="FAILED", data={"message": "Error 2"})
-    
+
     # Call handlers independently
     result1, _ = _handle_workflow_status(event1, "")
     result2, _ = _handle_workflow_status(event2, "")
-    
+
     # Verify independence
     assert result1.error == "Error 1"
     assert result2.error == "Error 2"

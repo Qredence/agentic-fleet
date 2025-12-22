@@ -8,10 +8,10 @@ import types
 from typing import Any
 
 __all__ = [
-    "_reexport_public_api",
-    "_import_or_stub",
     "_ensure_submodule",
+    "_import_or_stub",
     "_maybe_define",
+    "_reexport_public_api",
 ]
 
 
