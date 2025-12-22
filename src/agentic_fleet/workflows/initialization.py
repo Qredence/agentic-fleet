@@ -16,7 +16,7 @@ from agentic_fleet.utils.storage import HistoryManager
 from ..agents import AgentFactory, validate_tool
 from ..dspy_modules.lifecycle import configure_dspy_settings
 from ..dspy_modules.reasoner import DSPyReasoner
-from ..utils.agent_framework_shims import ensure_agent_framework_shims
+from ..utils.agent_framework import ensure_agent_framework_shims
 from ..utils.cache import TTLCache
 from ..utils.cfg import load_config, validate_agentic_fleet_env
 from ..utils.tool_registry import ToolRegistry
