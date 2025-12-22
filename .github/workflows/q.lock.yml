@@ -47,6 +47,14 @@
 #
 # network: defaults
 #
+# steps:
+#   - name: Ensure logs directory
+#     run: |
+#       mkdir -p /tmp/gh-aw/sandbox/agent/logs
+#       echo "Initializing logs" > /tmp/gh-aw/sandbox/agent/logs/init.log
+#       echo "Contents of /tmp/gh-aw/sandbox/agent/logs:"
+#       ls -la /tmp/gh-aw/sandbox/agent/logs/
+#
 # safe-outputs:
 #   add-comment:
 #     max: 1
@@ -2177,6 +2185,13 @@ jobs:
           mkdir -p /tmp/gh-aw/agent
           mkdir -p /tmp/gh-aw/sandbox/agent/logs
           echo "Created /tmp/gh-aw/agent directory for agentic workflow temporary files"
+      - name: Ensure logs directory
+        run: |-
+          mkdir -p /tmp/gh-aw/sandbox/agent/logs
+          echo "Initializing logs" > /tmp/gh-aw/sandbox/agent/logs/init.log
+          echo "Contents of /tmp/gh-aw/sandbox/agent/logs:"
+          ls -la /tmp/gh-aw/sandbox/agent/logs/
+
       - name: Configure Git credentials
         env:
           REPO_NAME: ${{ github.repository }}
