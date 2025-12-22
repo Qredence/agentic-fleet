@@ -55,7 +55,7 @@ describe("api client: optimization/evaluation/improvement", () => {
 
   it("improvementApi.trigger throws error (deprecated)", () => {
     expect(() => improvementApi.trigger({})).toThrow(
-      "Use optimizationApi.run instead",
+      "Use optimizationApi.run() instead",
     );
   });
 });
