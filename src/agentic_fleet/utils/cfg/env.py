@@ -392,7 +392,7 @@ def validate_agentic_fleet_env() -> None:
     Raises:
         ConfigurationError: If no valid AI provider key is found
     """
-    from ...workflows.exceptions import ConfigurationError
+    from ..exceptions import ConfigurationError
 
     has_openai = bool(os.getenv("OPENAI_API_KEY"))
     has_azure = bool(os.getenv("AZURE_OPENAI_API_KEY") or os.getenv("AZURE_AI_PROJECT_ENDPOINT"))
