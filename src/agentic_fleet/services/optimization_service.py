@@ -89,16 +89,16 @@ class OptimizationService:
     ) -> None:
         """
         Execute a GEPA optimization job in the background while updating and persisting job state.
-        
+
         Prepares training and validation datasets, runs the optimization using the provided module and mode, and updates the job record with status transitions ("running", "completed", "failed"), timestamps, result artifact path, and any error message.
-        
+
         Parameters:
             job_id (str): Identifier of the job to update and persist.
             module (Any): The model/module to optimize.
             base_examples_path (str): Filesystem path containing example data used to build datasets.
             auto_mode (OptimizationMode): Optimization mode to apply ("light", "medium", or "heavy").
             **kwargs: Additional options passed to dataset preparation or the optimizer (commonly includes `seed` and optimizer-specific flags).
-        
+
         Returns:
             None
         """
@@ -118,20 +118,20 @@ class OptimizationService:
 
             # Run optimization
             # ⚠️ PERFORMANCE WARNING: CPU-intensive GEPA optimization
-            # 
+            #
             # Current implementation uses asyncio.to_thread() which runs in the default
             # thread pool executor. This has limitations:
-            # 
+            #
             # 1. Thread pool has a default size limit (typically 32 threads on most systems)
             # 2. CPU-bound work in threads still competes for GIL, degrading performance
             # 3. Multiple concurrent optimizations will starve other async operations
             # 4. No built-in rate limiting or resource control
-            # 
+            #
             # PRODUCTION RECOMMENDATION: Use a proper task queue system:
             # - Celery with Redis/RabbitMQ for distributed task execution
             # - Ray for Python-native distributed computing
             # - Azure Container Jobs for serverless batch processing
-            # 
+            #
             # For now, consider adding:
             # - Semaphore to limit concurrent optimizations (e.g., max 2-3)
             # - ProcessPoolExecutor instead of ThreadPoolExecutor

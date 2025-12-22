@@ -384,12 +384,12 @@ def validate_required_env_vars(
 def validate_agentic_fleet_env() -> None:
     """
     Validate that required environment configuration for AgenticFleet is present.
-    
+
     Performs these checks:
     - Confirms at least one AI provider key is set: OPENAI_API_KEY, AZURE_OPENAI_API_KEY, or GEMINI_API_KEY.
     - Checks optional environment variables: TAVILY_API_KEY, OPENAI_BASE_URL, HOST, PORT, ENVIRONMENT.
     - If AGENTICFLEET_USE_COSMOS is enabled, requires AZURE_COSMOS_ENDPOINT and AZURE_COSMOS_DATABASE; also requires AZURE_COSMOS_KEY when managed identity is not used.
-    
+
     Raises:
         ConfigurationError: If no AI provider key is found or if required Cosmos DB variables are missing; the error uses config_key="environment".
     """

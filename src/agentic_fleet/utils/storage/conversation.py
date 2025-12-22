@@ -45,7 +45,7 @@ class ConversationStore:
     def list_conversations(self) -> list[Conversation]:
         """
         Return all Conversation objects currently stored in the backend.
-        
+
         Returns:
             list[Conversation]: A list of Conversation instances present in storage.
         """
@@ -59,7 +59,7 @@ class ConversationStore:
     def delete(self, conversation_id: str) -> None:
         """
         Remove the conversation with the given ID from storage.
-        
+
         Parameters:
             conversation_id (str): Identifier of the conversation to remove.
         """

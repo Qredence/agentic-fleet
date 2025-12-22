@@ -167,9 +167,9 @@ class AsyncTTLCache[K, V]:
     async def cleanup_expired(self) -> int:
         """
         Remove all cache entries whose TTL has expired.
-        
+
         Also increments the cache's eviction counter for each removed entry and updates the stored size metric.
-        
+
         Returns:
             The number of entries removed.
         """
@@ -187,17 +187,13 @@ class AsyncTTLCache[K, V]:
     async def values(self) -> list[V]:
         """
         Return all non-expired values currently stored in the cache.
-        
+
         Returns:
             list[V]: Values whose entries have not expired (expires_at > current time).
         """
         async with self._lock:
             now = time.time()
-            return [
-                entry.value
-                for entry in self._cache.values()
-                if now < entry.expires_at
-            ]
+            return [entry.value for entry in self._cache.values() if now < entry.expires_at]
 
 
 class SyncTTLCache[K, V]:
@@ -318,7 +314,7 @@ class SyncTTLCache[K, V]:
     def cleanup_expired(self) -> int:
         """
         Remove all entries whose TTL has expired and update cache metrics.
-        
+
         Returns:
             int: The number of entries removed.
         """
@@ -336,17 +332,13 @@ class SyncTTLCache[K, V]:
     def values(self) -> list[V]:
         """
         Retrieve all non-expired values stored in the cache.
-        
+
         Returns:
             list[V]: Cached values that have not expired.
         """
         with self._lock:
             now = time.time()
-            return [
-                entry.value
-                for entry in self._cache.values()
-                if now < entry.expires_at
-            ]
+            return [entry.value for entry in self._cache.values() if now < entry.expires_at]
 
 
 __all__ = [

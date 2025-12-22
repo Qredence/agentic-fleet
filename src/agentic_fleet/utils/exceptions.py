@@ -12,7 +12,7 @@ from typing import Any
 
 class ConfigurationError(Exception):
     """Raised when configuration is invalid or missing.
-    
+
     This is a shared exception type used across the application to avoid
     circular dependencies between utils and workflows modules.
     """
@@ -48,7 +48,7 @@ class ConfigurationError(Exception):
         if self.context:
             context_str = ", ".join(f"{k}={v}" for k, v in self.context.items())
             parts.append(context_str)
-        
+
         if len(parts) > 1:
             return f"{parts[0]} ({', '.join(parts[1:])})"
         return parts[0]

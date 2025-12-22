@@ -2,8 +2,8 @@
 
 from __future__ import annotations
 
-import os
 import importlib
+import os
 from unittest.mock import patch
 
 # Import the actual public functions from the module

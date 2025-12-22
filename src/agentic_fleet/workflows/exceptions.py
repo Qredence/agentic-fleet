@@ -97,7 +97,7 @@ class RoutingError(WorkflowError):
 
 class ConfigurationError(WorkflowError, _SharedConfigurationError):
     """Raised when configuration is invalid or missing.
-    
+
     This class inherits from both WorkflowError (for workflow-specific error handling)
     and the shared ConfigurationError (to avoid circular dependencies with utils modules).
     """
@@ -119,7 +119,7 @@ class ConfigurationError(WorkflowError, _SharedConfigurationError):
         """
         # Initialize Exception base class
         Exception.__init__(self, message)
-        
+
         # Set all attributes needed by both parent classes
         self.message = message
         self.config_key = config_key
