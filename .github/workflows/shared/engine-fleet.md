@@ -8,7 +8,9 @@ engine:
         python-version: "3.12"
 
     - name: Install uv
-      run: curl -LsSf https://astral.sh/uv/install.sh | sh
+      uses: astral-sh/setup-uv@681c641aba71e4a1c380be3ab5e12ad51f415867 # v5
+      with:
+        enable-cache: true
 
     - name: Install dependencies
       run: uv sync
