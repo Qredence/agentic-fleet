@@ -1,5 +1,152 @@
+# AgenticFleet
+
 <p align="center">
   <img src="assets/banner.png" alt="AgenticFleet" width="100%"/>
+</p>
+
+<p align="center">
+  <a href="./LICENSE"><img src="https://img.shields.io/badge/License-MIT-yellow.svg" alt="License: MIT"/></a>
+  <a href="https://pypi.org/project/agentic-fleet/"><img src="https://img.shields.io/pypi/v/agentic-fleet?color=blue" alt="PyPI Version"/></a>
+  <a href="https://pypi.org/project/agentic-fleet/"><img src="https://img.shields.io/pypi/pyversions/agentic-fleet" alt="Python Versions"/></a>
+  <a href="https://pepy.tech/projects/agentic-fleet"><img src="https://static.pepy.tech/personalized-badge/agentic-fleet?period=total&units=INTERNATIONAL_SYSTEM&left_color=GREY&right_color=BLUE&left_text=downloads" alt="PyPI Downloads"/></a>
+  <a href="https://deepwiki.com/qredence/agentic-fleet"><img src="https://deepwiki.com/badge.svg" alt="Ask DeepWiki"/></a>
+  <a href="https://coderabbit.ai"><img src="https://img.shields.io/coderabbit/prs/github/Qredence/agentic-fleet?label=CodeRabbit+Reviews&labelColor=171717&color=FF570A" alt="CodeRabbit Pull Request Reviews"/></a>
+</p>
+
+<p align="center"><b>Self-optimizing multi-agent orchestration powered by DSPy + Microsoft Agent Framework.</b></p>
+
+---
+
+## Project Name and Description
+
+**AgenticFleet** is a production-ready multi-agent orchestration runtime that routes tasks to specialized agents through a five-phase pipeline (analysis → routing → execution → progress → quality). It combines DSPy for structured reasoning with the Microsoft Agent Framework for reliable execution, streaming rich events to both CLI and web clients.
+
+## Technology Stack
+
+- **Backend:** Python 3.12+, FastAPI, Typer CLI, DSPy, Microsoft Agent Framework (Magentic Fleet pattern), Pydantic v2
+- **Orchestration & Tools:** ToolRegistry adapters (Tavily search, browser automation, code execution, MCP), offline-compiled DSPy modules
+- **Frontend:** React 19, TypeScript, Vite, Tailwind CSS, Radix UI, Shadcn UI, Lucide Icons; real-time SSE/WebSocket streaming
+- **Infrastructure & Storage:** Azure Cosmos DB (primary store), SQLite/local persistence, Docker + Docker Compose
+- **Observability & Evaluation:** OpenTelemetry (Jaeger, Azure Monitor), Azure AI Evaluation, Langfuse; retries via Tenacity; async concurrency with AnyIO/Asyncer
+
+## Project Architecture
+
+- **Supervisor Workflow:** Core orchestrator (`SupervisorWorkflow`) runs the five-phase pipeline and emits structured events for UI streaming.
+- **DSPy Intelligence Layer:** Offline-compiled `DSPyReasoner` with typed signatures and assertions handles task analysis, routing, and quality assessment.
+- **Agents & Tools:** `AgentFactory` builds specialized `ChatAgent` instances backed by `OpenAIResponsesClient`, pulling tools from `ToolRegistry` and `agentic_fleet.tools`.
+- **API & UI:** FastAPI backend exposes REST + WebSocket/SSE; React/Vite frontend renders live orchestration timelines and chat history.
+- **State & Tracing:** Execution history, checkpoints, and conversation state persist under `.var/`; OpenTelemetry traces feed Jaeger/Azure Monitor.
+
+```
+┌─────────┐    ┌─────────┐    ┌───────────┐    ┌──────────┐    ┌─────────┐
+│ANALYSIS │───►│ ROUTING │───►│ EXECUTION │───►│ PROGRESS │───►│ QUALITY │
+└─────────┘    └─────────┘    └───────────┘    └──────────┘    └─────────┘
+     DSPy           DSPy           Agents           DSPy           DSPy
+```
+
+## Getting Started
+
+### Prerequisites
+
+- Python 3.12+, `uv` (dependency manager)
+- Node.js 18+ for the frontend
+- Optional: Docker + Docker Compose, Azure credentials for Cosmos/monitoring
+
+### Installation
+
+```bash
+git clone https://github.com/Qredence/agentic-fleet.git
+cd agentic-fleet
+make install            # Python deps via uv
+make frontend-install   # Frontend deps via npm
+cp .env.example .env
+# Set OPENAI_API_KEY (required); optionally TAVILY_API_KEY, Cosmos, tracing vars
+```
+
+### Run
+
+```bash
+make dev          # Backend :8000 + frontend :5173
+make backend      # Backend only
+make frontend-dev # Frontend only
+
+# CLI entrypoints
+uv run agentic-fleet --help
+uv run agentic-fleet run -m "Summarize the transformer architecture"
+uv run agentic-fleet dev  # Start dev servers via CLI
+```
+
+## Project Structure
+
+```
+src/agentic_fleet/
+├── workflows/        # SupervisorWorkflow, executors, strategies
+├── agents/           # AgentFactory and agent definitions
+├── tools/            # Tool adapters (Tavily, browser, MCP, code exec)
+├── dspy_modules/     # DSPy signatures, reasoner, assertions, typed models
+├── api/              # FastAPI routes, middleware, SSE/WebSocket services
+├── services/         # Chat/workflow/optimization services
+├── config/           # workflow_config.yaml (source of truth)
+├── utils/            # cfg/, infra/, storage/, logging, telemetry
+└── cli/              # Typer-based CLI commands
+
+src/frontend/         # React 19 + Vite + Tailwind UI
+tests/                # Pytest suites (unit, integration, comprehensive)
+scripts/              # Helper scripts (tracing, benchmarking, provisioning)
+.var/                 # Runtime artifacts (history, logs, caches) — gitignored
+```
+
+## Key Features
+
+- DSPy-powered task analysis, routing, and quality scoring with typed Pydantic outputs
+- Six execution modes (auto, delegated, sequential, parallel, handoff, discussion)
+- Specialized agents (researcher, coder, planner, reviewer, verifier, etc.) with tool access
+- Smart fast-path for simple first-turn queries; full workflow for multi-turn conversations
+- Human-in-the-loop checkpoints and resume semantics via agent-framework
+- Rich observability: OpenTelemetry traces, structured workflow events, history JSONL
+- Built-in evaluation hooks (Azure AI Evaluation, Langfuse) and cache-aware routing
+
+## Development Workflow
+
+- **Config-driven:** Adjust models/agents/tools in `src/agentic_fleet/config/workflow_config.yaml`; avoid hardcoding.
+- **Tooling:** Use `make dev` for local servers; `make clear-cache` after DSPy changes; tracing via `make tracing-start/stop`.
+- **Branch & PR hygiene:** Run `make check` (Ruff + ty) and `make test` before pushing; update docs when behavior changes.
+- **Environments:** Use `.env` for API keys; reuse a single `CosmosClient` when enabling Cosmos storage.
+
+## Coding Standards
+
+- Formatter/linter: **Ruff** (line length 100); type checks via **ty**.
+- Follow existing patterns (config-driven, typed functions, structured logging).
+- Python style: type hints, docstrings for public APIs, PEP 8 import order; prefer simple, maintainable code.
+- Refer to `conductor/code_styleguides/python.md` and `conductor/code_styleguides/general.md` for additional guidelines.
+
+## Testing
+
+- Test runner: **pytest** (async-first) executed with `uv`.
+- Suites: unit tests (`tests/dspy_modules`, `tests/utils`), integration (`tests/workflows`), comprehensive edge cases (`tests/workflows/test_supervisor_workflow_comprehensive.py`).
+- Common commands:
+
+```bash
+PYTHONPATH=. uv run pytest -v tests/
+PYTHONPATH=. uv run pytest --cov=src --cov-report=term-missing tests/
+PYTHONPATH=. uv run pytest tests/workflows/test_supervisor_workflow.py::test_run_falls_back_to_available_agent
+```
+
+- CI runs on pushes/PRs across Python 3.10–3.12 (see `.github/workflows/ci.yml`).
+
+## Contributing
+
+We welcome contributions! Start with `make install` (and `make frontend-install` if touching UI), then create a feature branch. Before opening a PR, run `make format`, `make check`, and `make test`. Keep changes config-driven, add tests, and update relevant docs (`README.md`, `docs/developers/architecture.md`, etc.). See `docs/developers/contributing.md` for full guidelines.
+
+## License
+
+Licensed under the **MIT License**. See [LICENSE](LICENSE) for details.
+
+---
+
+Helpful links: [copilot instructions](.github/copilot-instructions.md) · [prompts](.github/prompts/README.md) · [system overview](docs/developers/system-overview.md)<p align="center">
+<img src="assets/banner.png" alt="AgenticFleet" width="100%"/>
+
 </p>
 
 <p align="center">
@@ -67,7 +214,8 @@ Every task flows through intelligent orchestration:
 ```bash
 # Clone and install
 git clone https://github.com/Qredence/agentic-fleet.git && cd agentic-fleet
-uv sync  # or: pip install agentic-fleet
+make install            # installs Python deps via uv
+make frontend-install   # installs frontend deps via npm
 
 # Configure environment
 cp .env.example .env
@@ -79,13 +227,13 @@ cp .env.example .env
 
 ```bash
 # Interactive CLI
-agentic-fleet
+make run
 
 # Single task
 agentic-fleet run -m "Research the latest advances in AI agents" --verbose
 
 # Development server (backend + frontend)
-agentic-fleet dev
+make dev
 ```
 
 ## 📖 Usage
@@ -183,7 +331,7 @@ All runtime settings are in `src/agentic_fleet/config/workflow_config.yaml`:
 ```yaml
 dspy:
   model: gpt-5.2 # Primary model for DSPy tasks
-  routing_model: grok-4-fast # Fast model for routing decisions
+  routing_model: gpt-5-mini # Fast model for routing decisions
   use_typed_signatures: true # Pydantic-validated outputs
   enable_routing_cache: true # Cache routing decisions
   routing_cache_ttl_seconds: 300 # Cache TTL (5 minutes)
@@ -237,7 +385,7 @@ agents:
 
 ```
 src/agentic_fleet/
-├── workflows/        # Orchestration: supervisor.py (entry), executors.py (5 phases)
+├── workflows/        # Orchestration: supervisor.py (entry), executors/ (5 phases)
 │   ├── supervisor.py # Main workflow entry + fast-path detection
 │   ├── executors.py  # AnalysisExecutor, RoutingExecutor, ExecutionExecutor, etc.
 │   └── strategies.py # Execution modes (delegated/sequential/parallel)
@@ -248,7 +396,7 @@ src/agentic_fleet/
 │   └── assertions.py # DSPy assertions for validation
 ├── agents/           # Agent definitions & AgentFactory (coordinator.py)
 ├── tools/            # Tavily, browser, MCP bridges, code interpreter
-├── app/              # FastAPI backend, WebSocket streaming
+├── api/              # FastAPI backend, WebSocket/SSE streaming
 ├── config/           # workflow_config.yaml (source of truth)
 ├── utils/            # Organized into subpackages:
 │   ├── cfg/          # Configuration loading
