@@ -67,6 +67,184 @@ class ChatSSEService:
         self._cancel_events: dict[str, asyncio.Event] = {}
         self._pending_responses: dict[str, asyncio.Queue[dict[str, Any]]] = {}
 
+    async def _setup_stream_context(
+        self,
+        conversation_id: str,
+        message: str,
+        enable_checkpointing: bool,
+    ) -> tuple[list[Any], Any, Any]:
+        """Setup streaming context with history, thread, and checkpointing.
+        
+        Returns:
+            Tuple of (conversation_history, conversation_thread, checkpoint_storage)
+        """
+        # Load conversation history
+        conversation_history: list[Any] = []
+        existing = self.conversation_manager.get_conversation(conversation_id)
+        if existing is not None and getattr(existing, "messages", None):
+            conversation_history = list(existing.messages)
+
+        # Avoid duplicate if last message matches
+        if (
+            conversation_history
+            and _message_role_value(getattr(conversation_history[-1], "role", ""))
+            == MessageRole.USER.value
+            and str(getattr(conversation_history[-1], "content", "")).strip() == message.strip()
+        ):
+            conversation_history = conversation_history[:-1]
+
+        # Setup checkpointing
+        checkpoint_storage: Any | None = None
+        if enable_checkpointing:
+            checkpoint_storage = await self._create_checkpoint_storage()
+
+        # Get or create conversation thread
+        conversation_thread = await _get_or_create_thread(conversation_id)
+        _prefer_service_thread_mode(conversation_thread)
+
+        # Hydrate thread if needed
+        if conversation_history and not _thread_has_any_messages(conversation_thread):
+            await _hydrate_thread_from_conversation(conversation_thread, conversation_history)
+
+        return conversation_history, conversation_thread, checkpoint_storage
+
+    async def _create_checkpoint_storage(self) -> Any | None:
+        """Create checkpoint storage if possible."""
+        try:
+            from pathlib import Path
+
+            from agent_framework._workflows import FileCheckpointStorage
+
+            checkpoint_dir = ".var/checkpoints"
+            Path(checkpoint_dir).mkdir(parents=True, exist_ok=True)
+            return FileCheckpointStorage(checkpoint_dir)
+        except Exception:
+            return None
+
+    async def _create_and_setup_session(
+        self,
+        message: str,
+        reasoning_effort: str | None,
+        cancel_event: asyncio.Event,
+    ) -> WorkflowSession:
+        """Create session and register cancellation tracking."""
+        # Persist user message happens before this in stream_chat
+        
+        # Create session
+        session = await self.session_manager.create_session(
+            task=message,
+            reasoning_effort=reasoning_effort,
+        )
+        assert session is not None, "Session creation failed"
+        
+        # Store cancel event for this workflow
+        workflow_id = session.workflow_id
+        self._cancel_events[workflow_id] = cancel_event
+        self._pending_responses[workflow_id] = asyncio.Queue()
+        
+        return session
+
+    def _emit_sse_event(self, event: StreamEvent) -> str:
+        """Convert StreamEvent to SSE format string."""
+        return f"data: {json.dumps(event.to_sse_dict())}\n\n"
+
+    def _update_response_tracking(
+        self,
+        event_data: dict[str, Any],
+        response_text: str,
+        last_agent_text: str,
+        last_author: str | None,
+        last_agent_id: str | None,
+        response_completed_emitted: bool,
+    ) -> tuple[str, str, str | None, str | None, bool]:
+        """Update response tracking state based on event.
+        
+        Returns:
+            Updated tuple of (response_text, last_agent_text, last_author, last_agent_id, response_completed_emitted)
+        """
+        event_type = event_data.get("type")
+        
+        # Track response content
+        author = event_data.get("author") or event_data.get("agent_id")
+        if author:
+            last_author = event_data.get("author") or last_author or author
+            last_agent_id = event_data.get("agent_id") or last_agent_id
+
+        if event_type == StreamEventType.RESPONSE_DELTA.value:
+            response_text += event_data.get("delta", "")
+        elif event_type == StreamEventType.RESPONSE_COMPLETED.value:
+            completed_msg = event_data.get("message", "")
+            if completed_msg:
+                response_text = completed_msg
+            last_author = event_data.get("author") or last_author
+            response_completed_emitted = True
+        elif event_type in (
+            StreamEventType.AGENT_OUTPUT.value,
+            StreamEventType.AGENT_MESSAGE.value,
+        ):
+            agent_msg = event_data.get("message", "")
+            if agent_msg:
+                last_agent_text = agent_msg
+        
+        return response_text, last_agent_text, last_author, last_agent_id, response_completed_emitted
+
+    async def _finalize_stream(
+        self,
+        workflow_id: str,
+        conversation_id: str,
+        message: str,
+        response_text: str,
+        last_agent_text: str,
+        last_author: str | None,
+        last_agent_id: str | None,
+        cancel_event: asyncio.Event,
+    ) -> None:
+        """Finalize stream by persisting message, scheduling evaluation, and updating status."""
+        final_text = (
+            response_text.strip()
+            or last_agent_text.strip()
+            or "Sorry, I couldn't produce a final answer this time."
+        )
+
+        # Persist assistant message
+        assistant_message = None
+        if final_text:
+            assistant_message = self.conversation_manager.add_message(
+                conversation_id,
+                MessageRole.ASSISTANT,
+                final_text,
+                author=last_author,
+                agent_id=last_agent_id,
+                workflow_id=workflow_id,
+                quality_pending=True,
+            )
+
+        # Schedule background quality evaluation
+        if (
+            final_text
+            and hasattr(self.workflow, "history_manager")
+            and self.workflow.history_manager is not None
+        ):
+            schedule_quality_evaluation(
+                workflow_id=workflow_id,
+                task=message,
+                answer=final_text,
+                history_manager=self.workflow.history_manager,
+                conversation_manager=self.conversation_manager,
+                conversation_id=conversation_id,
+                message_id=getattr(assistant_message, "id", None),
+            )
+
+        # Update session status
+        final_status = (
+            WorkflowStatus.CANCELLED if cancel_event.is_set() else WorkflowStatus.COMPLETED
+        )
+        await self.session_manager.update_status(
+            workflow_id,
+            final_status,
+            completed_at=datetime.now(),
+        )
+
     async def stream_chat(
         self,
         conversation_id: str,
@@ -90,42 +268,10 @@ class ChatSSEService:
         cancel_event = asyncio.Event()
 
         try:
-            # Load conversation history
-            conversation_history: list[Any] = []
-            existing = self.conversation_manager.get_conversation(conversation_id)
-            if existing is not None and getattr(existing, "messages", None):
-                conversation_history = list(existing.messages)
-
-            # Avoid duplicate if last message matches
-            if (
-                conversation_history
-                and _message_role_value(getattr(conversation_history[-1], "role", ""))
-                == MessageRole.USER.value
-                and str(getattr(conversation_history[-1], "content", "")).strip() == message.strip()
-            ):
-                conversation_history = conversation_history[:-1]
-
-            # Setup checkpointing
-            checkpoint_storage: Any | None = None
-            if enable_checkpointing:
-                try:
-                    from pathlib import Path
-
-                    from agent_framework._workflows import FileCheckpointStorage
-
-                    checkpoint_dir = ".var/checkpoints"
-                    Path(checkpoint_dir).mkdir(parents=True, exist_ok=True)
-                    checkpoint_storage = FileCheckpointStorage(checkpoint_dir)
-                except Exception:
-                    checkpoint_storage = None
-
-            # Get or create conversation thread
-            conversation_thread = await _get_or_create_thread(conversation_id)
-            _prefer_service_thread_mode(conversation_thread)
-
-            # Hydrate thread if needed
-            if conversation_history and not _thread_has_any_messages(conversation_thread):
-                await _hydrate_thread_from_conversation(conversation_thread, conversation_history)
+            # Setup phase: load history, create thread, setup checkpointing
+            conversation_history, conversation_thread, checkpoint_storage = (
+                await self._setup_stream_context(conversation_id, message, enable_checkpointing)
+            )
 
             # Persist user message
             self.conversation_manager.add_message(
@@ -135,18 +281,9 @@ class ChatSSEService:
                 author="User",
             )
 
-            # Create session
-            session = await self.session_manager.create_session(
-                task=message,
-                reasoning_effort=reasoning_effort,
-            )
-            # Type narrowing: session is guaranteed non-None after create_session
-            assert session is not None, "Session creation failed"
+            # Create session and setup tracking
+            session = await self._create_and_setup_session(message, reasoning_effort, cancel_event)
             workflow_id = session.workflow_id
-
-            # Store cancel event for this workflow
-            self._cancel_events[workflow_id] = cancel_event
-            self._pending_responses[workflow_id] = asyncio.Queue()
 
             # Emit connected event
             connected_type = StreamEventType.CONNECTED
@@ -162,9 +299,9 @@ class ChatSSEService:
                 ui_hint=connected_ui_hint,
                 workflow_id=workflow_id,
             )
-            yield f"data: {json.dumps(connected_event.to_sse_dict())}\n\n"
+            yield self._emit_sse_event(connected_event)
 
-            # Stream workflow events
+            # Streaming phase: process workflow events
             accumulated_reasoning = ""
             response_text = ""
             last_agent_text = ""
@@ -208,31 +345,24 @@ class ChatSSEService:
                         se.log_line = log_line
 
                     event_data = se.to_sse_dict()
-                    event_type = event_data.get("type")
 
-                    # Track response content
-                    author = event_data.get("author") or event_data.get("agent_id")
-                    if author:
-                        last_author = event_data.get("author") or last_author or author
-                        last_agent_id = event_data.get("agent_id") or last_agent_id
+                    # Update response tracking
+                    (
+                        response_text,
+                        last_agent_text,
+                        last_author,
+                        last_agent_id,
+                        response_completed_emitted,
+                    ) = self._update_response_tracking(
+                        event_data,
+                        response_text,
+                        last_agent_text,
+                        last_author,
+                        last_agent_id,
+                        response_completed_emitted,
+                    )
 
-                    if event_type == StreamEventType.RESPONSE_DELTA.value:
-                        response_text += event_data.get("delta", "")
-                    elif event_type == StreamEventType.RESPONSE_COMPLETED.value:
-                        completed_msg = event_data.get("message", "")
-                        if completed_msg:
-                            response_text = completed_msg
-                        last_author = event_data.get("author") or last_author
-                        response_completed_emitted = True
-                    elif event_type in (
-                        StreamEventType.AGENT_OUTPUT.value,
-                        StreamEventType.AGENT_MESSAGE.value,
-                    ):
-                        agent_msg = event_data.get("message", "")
-                        if agent_msg:
-                            last_agent_text = agent_msg
-
-                    yield f"data: {json.dumps(event_data)}\n\n"
+                    yield self._emit_sse_event(se)
 
             # Emit final response if not already emitted
             final_text = (
@@ -255,45 +385,18 @@ class ChatSSEService:
                     workflow_id=workflow_id,
                 )
                 completed_event.log_line = _log_stream_event(completed_event, workflow_id)
-                yield f"data: {json.dumps(completed_event.to_sse_dict())}\n\n"
+                yield self._emit_sse_event(completed_event)
 
-            # Persist assistant message
-            assistant_message = None
-            if final_text:
-                assistant_message = self.conversation_manager.add_message(
-                    conversation_id,
-                    MessageRole.ASSISTANT,
-                    final_text,
-                    author=last_author,
-                    agent_id=last_agent_id,
-                    workflow_id=workflow_id,
-                    quality_pending=True,
-                )
-
-            # Schedule background quality evaluation
-            if (
-                final_text
-                and hasattr(self.workflow, "history_manager")
-                and self.workflow.history_manager is not None
-            ):
-                schedule_quality_evaluation(
-                    workflow_id=workflow_id,
-                    task=message,
-                    answer=final_text,
-                    history_manager=self.workflow.history_manager,
-                    conversation_manager=self.conversation_manager,
-                    conversation_id=conversation_id,
-                    message_id=getattr(assistant_message, "id", None),
-                )
-
-            # Update session status
-            final_status = (
-                WorkflowStatus.CANCELLED if cancel_event.is_set() else WorkflowStatus.COMPLETED
-            )
-            await self.session_manager.update_status(
+            # Finalization phase: persist message, schedule evaluation, update status
+            await self._finalize_stream(
                 workflow_id,
-                final_status,
-                completed_at=datetime.now(),
+                conversation_id,
+                message,
+                response_text,
+                last_agent_text,
+                last_author,
+                last_agent_id,
+                cancel_event,
             )
 
             # Emit done event
@@ -305,7 +408,7 @@ class ChatSSEService:
                 ui_hint=done_ui_hint,
                 workflow_id=workflow_id,
             )
-            yield f"data: {json.dumps(done_event.to_sse_dict())}\n\n"
+            yield self._emit_sse_event(done_event)
 
         except Exception as exc:
             logger.error("SSE stream error: %s", exc, exc_info=True)
@@ -319,7 +422,7 @@ class ChatSSEService:
                 ui_hint=error_ui_hint,
                 workflow_id=session.workflow_id if session else None,
             )
-            yield f"data: {json.dumps(error_event.to_sse_dict())}\n\n"
+            yield self._emit_sse_event(error_event)
 
             if session:
                 await self.session_manager.update_status(
