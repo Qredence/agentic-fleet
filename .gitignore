@@ -138,3 +138,5 @@ memory-bank/
 .claude/skills/python-backend-reviewer/scripts/concurrency_analyzer.py
 .claude/skills/python-backend-reviewer/scripts/detect_duplicates.py
 .claude/python-backend-reviewer.skill
+conductor/tech-stack.md
+conductor/tracks.md
