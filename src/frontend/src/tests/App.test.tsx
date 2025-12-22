@@ -1,6 +1,6 @@
 import { render, screen, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import App from "@/app/App";
+import App from "@/root/App";
 
 type MockChatStoreState = {
   messages: unknown[];
@@ -29,7 +29,7 @@ type MockChatStoreState = {
 
 let mockStoreState: MockChatStoreState | null = null;
 
-vi.mock("@/features/chat/stores", () => ({
+vi.mock("@/stores", () => ({
   useChatStore: (
     selector?: (state: MockChatStoreState) => unknown,
     _equalityFn?: unknown,
@@ -75,7 +75,7 @@ describe("App", () => {
     render(<App />);
 
     expect(
-      screen.getByRole("button", { name: /start new chat/i }),
+      screen.getByRole("button", { name: /(start new chat|new chat)/i }),
     ).toBeInTheDocument();
     expect(screen.getByPlaceholderText("Ask anything...")).toBeInTheDocument();
   });

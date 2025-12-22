@@ -165,10 +165,13 @@ class AsyncTTLCache[K, V]:
             )
 
     async def cleanup_expired(self) -> int:
-        """Remove all expired entries.
+        """
+        Remove all cache entries whose TTL has expired.
+
+        Also increments the cache's eviction counter for each removed entry and updates the stored size metric.
 
         Returns:
-            Number of entries removed
+            The number of entries removed.
         """
         async with self._lock:
             now = time.time()
@@ -180,6 +183,17 @@ class AsyncTTLCache[K, V]:
 
             self._stats.size = len(self._cache)
             return len(expired_keys)
+
+    async def values(self) -> list[V]:
+        """
+        Return all non-expired values currently stored in the cache.
+
+        Returns:
+            list[V]: Values whose entries have not expired (expires_at > current time).
+        """
+        async with self._lock:
+            now = time.time()
+            return [entry.value for entry in self._cache.values() if now < entry.expires_at]
 
 
 class SyncTTLCache[K, V]:
@@ -298,10 +312,11 @@ class SyncTTLCache[K, V]:
             )
 
     def cleanup_expired(self) -> int:
-        """Remove all expired entries.
+        """
+        Remove all entries whose TTL has expired and update cache metrics.
 
         Returns:
-            Number of entries removed
+            int: The number of entries removed.
         """
         with self._lock:
             now = time.time()
@@ -314,9 +329,23 @@ class SyncTTLCache[K, V]:
             self._stats.size = len(self._cache)
             return len(expired_keys)
 
+    def values(self) -> list[V]:
+        """
+        Retrieve all non-expired values stored in the cache.
+
+        Returns:
+            list[V]: Cached values that have not expired.
+        """
+        with self._lock:
+            now = time.time()
+            return [entry.value for entry in self._cache.values() if now < entry.expires_at]
+
 
 __all__ = [
     "AsyncTTLCache",
     "CacheStats",
     "SyncTTLCache",
+    "TTLCache",
 ]
+
+TTLCache = SyncTTLCache

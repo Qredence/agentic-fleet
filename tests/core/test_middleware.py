@@ -8,7 +8,7 @@ from unittest.mock import AsyncMock
 import dspy
 import pytest
 
-from agentic_fleet.core.middleware import BridgeConverter, BridgeMiddleware, ChatMiddleware
+from agentic_fleet.api.middleware import BridgeConverter, BridgeMiddleware, ChatMiddleware
 from agentic_fleet.utils.types import MessageLike
 
 

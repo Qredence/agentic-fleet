@@ -24,7 +24,7 @@ Added three new fields to hold preloaded decision modules:
 @dataclass
 class SupervisorContext:
     # ... existing fields ...
-    
+
     # Phase 2: Preloaded DSPy decision modules from app.state
     dspy_routing_module: Any | None = None
     dspy_quality_module: Any | None = None
@@ -80,12 +80,12 @@ async def create_supervisor_workflow(
     dspy_tool_planning_module: Any | None = None,
 ) -> SupervisorWorkflow:
     # ... initialization ...
-    
+
     # Phase 2: Attach decision modules to context if provided
     if dspy_routing_module is not None:
         context.dspy_routing_module = dspy_routing_module
     # ... (similar for other modules)
-    
+
     # Phase 2: Inject preloaded decision modules into DSPy reasoner
     if context.dspy_routing_module is not None or ...:
         context.dspy_supervisor.set_decision_modules(
@@ -109,7 +109,7 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     quality_module = get_quality_module(artifact_registry.quality)
     routing_module = get_routing_module(artifact_registry.routing)
     tool_planning_module = get_tool_planning_module(artifact_registry.tool_planning)
-    
+
     # Phase 2: Create workflow with preloaded decision modules
     workflow = await create_supervisor_workflow(
         dspy_routing_module=routing_module,
@@ -131,7 +131,7 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
 ### After Phase 2
 
 1. API startup: Load compiled artifacts into `app.state.dspy_*_module`
-2. Workflow creation: 
+2. Workflow creation:
    - Creates DSPyReasoner
    - Injects preloaded modules via `set_decision_modules()`
 3. Execution: RoutingExecutor/QualityExecutor call `reasoner.route_task()` / `reasoner.assess_quality()`
@@ -140,11 +140,13 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
 ## Behavior Changes
 
 ### Before Phase 2
+
 - Decision modules loaded at startup but not used by workflow
 - Workflow used reasoner's internal modules (potentially zero-shot)
 - Disconnect between preloaded modules and execution
 
 ### After Phase 2
+
 - Decision modules loaded at startup **and** injected into workflow
 - Workflow uses preloaded, compiled modules for decisions
 - Consistent use of compiled artifacts throughout execution
@@ -172,6 +174,7 @@ Phase 2 is fully backward compatible:
 **File**: `tests/workflows/test_phase2_integration.py`
 
 Tests cover:
+
 - ✅ DSPyReasoner accepts and stores injected modules
 - ✅ SupervisorContext holds decision module references
 - ✅ `create_supervisor_workflow()` accepts module parameters
@@ -225,11 +228,13 @@ workflow = await create_supervisor_workflow(
 ## Performance Considerations
 
 ### Latency
+
 - ✅ No additional latency added - modules were already loaded in Phase 1
 - ✅ Eliminates lazy initialization overhead during first execution
 - ✅ Consistent performance across all requests
 
 ### Memory
+
 - ✅ No additional memory - modules already in app.state from Phase 1
 - ✅ Single instance per module shared across all requests
 - ✅ Reduced memory compared to per-request module creation

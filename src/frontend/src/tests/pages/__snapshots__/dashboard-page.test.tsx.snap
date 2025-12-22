@@ -1,0 +1,23 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`DashboardPage > matches snapshot 1`] = `
+<div>
+  <div
+    data-testid="optimization-dashboard"
+  >
+    <h1>
+      Optimization Dashboard
+    </h1>
+    <button
+      data-testid="start-optimization"
+    >
+      Start Optimization
+    </button>
+    <div
+      data-testid="status"
+    >
+      Status: Completed
+    </div>
+  </div>
+</div>
+`;

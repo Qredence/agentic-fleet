@@ -2,7 +2,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
-from agentic_fleet.core.middleware import ChatMiddleware
+from agentic_fleet.api.middleware import ChatMiddleware
 from agentic_fleet.utils.models import ExecutionMode, RoutingDecision
 from agentic_fleet.workflows.context import SupervisorContext
 from agentic_fleet.workflows.models import FinalResultMessage, QualityReport
@@ -38,7 +38,7 @@ async def test_run_schedules_background_quality_eval_for_group_chat_mode():
     )
     supervisor._should_fast_path = MagicMock(return_value=False)
 
-    with patch("agentic_fleet.services.background_evaluation.schedule_quality_evaluation") as sched:
+    with patch("agentic_fleet.evaluation.background.schedule_quality_evaluation") as sched:
         result = await supervisor.run("Test task")
 
     assert result["quality"]["pending"] is True
@@ -84,7 +84,7 @@ async def test_run_schedules_background_quality_eval_for_standard_placeholder_sc
     )
     supervisor._should_fast_path = MagicMock(return_value=False)
 
-    with patch("agentic_fleet.services.background_evaluation.schedule_quality_evaluation") as sched:
+    with patch("agentic_fleet.evaluation.background.schedule_quality_evaluation") as sched:
         result = await supervisor.run("Test task")
 
     assert result["quality"]["pending"] is True

@@ -2,11 +2,12 @@
 
 from __future__ import annotations
 
+import importlib
 import os
 from unittest.mock import patch
 
 # Import the actual public functions from the module
-from agentic_fleet.utils.cosmos import (
+from agentic_fleet.utils.storage.cosmos import (
     get_default_user_id,
     is_cosmos_enabled,
     load_execution_history,
@@ -101,13 +102,13 @@ class TestMirrorExecutionHistory:
 
     def test_mirror_execution_history_when_disabled(self):
         """Test that mirroring is skipped when Cosmos is disabled."""
-        with patch("agentic_fleet.utils.cosmos.is_cosmos_enabled", return_value=False):
+        with patch("agentic_fleet.utils.storage.cosmos.is_cosmos_enabled", return_value=False):
             # Should not raise, just skip
             mirror_execution_history({"task": "test", "result": "done"})
 
     def test_mirror_execution_history_with_valid_data(self):
         """Test mirroring execution history with valid data."""
-        with patch("agentic_fleet.utils.cosmos.is_cosmos_enabled", return_value=False):
+        with patch("agentic_fleet.utils.storage.cosmos.is_cosmos_enabled", return_value=False):
             # When disabled, should silently skip
             execution = {
                 "workflow_id": "wf-123",
@@ -120,7 +121,7 @@ class TestMirrorExecutionHistory:
 
     def test_mirror_execution_history_with_empty_dict(self):
         """Test mirroring with empty execution dict."""
-        with patch("agentic_fleet.utils.cosmos.is_cosmos_enabled", return_value=False):
+        with patch("agentic_fleet.utils.storage.cosmos.is_cosmos_enabled", return_value=False):
             # Should handle gracefully
             mirror_execution_history({})
 
@@ -135,13 +136,13 @@ class TestSaveAgentMemoryItem:
 
     def test_save_memory_when_disabled(self):
         """Test saving memory item when Cosmos is disabled."""
-        with patch("agentic_fleet.utils.cosmos.is_cosmos_enabled", return_value=False):
+        with patch("agentic_fleet.utils.storage.cosmos.is_cosmos_enabled", return_value=False):
             # Should not raise when disabled
             save_agent_memory_item({"key": "value"})
 
     def test_save_memory_with_user_id(self):
         """Test saving memory item with explicit user ID."""
-        with patch("agentic_fleet.utils.cosmos.is_cosmos_enabled", return_value=False):
+        with patch("agentic_fleet.utils.storage.cosmos.is_cosmos_enabled", return_value=False):
             save_agent_memory_item({"memory": "data"}, user_id="user-456")
 
 
@@ -155,13 +156,13 @@ class TestQueryAgentMemory:
 
     def test_query_memory_when_disabled(self):
         """Test querying memory when Cosmos is disabled."""
-        with patch("agentic_fleet.utils.cosmos.is_cosmos_enabled", return_value=False):
+        with patch("agentic_fleet.utils.storage.cosmos.is_cosmos_enabled", return_value=False):
             result = query_agent_memory(user_id="user-123")
             assert result == []
 
     def test_query_memory_with_agent_filter(self):
         """Test querying memory with agent ID filter."""
-        with patch("agentic_fleet.utils.cosmos.is_cosmos_enabled", return_value=False):
+        with patch("agentic_fleet.utils.storage.cosmos.is_cosmos_enabled", return_value=False):
             result = query_agent_memory(user_id="user-123", agent_id="researcher")
             assert result == []
 
@@ -176,14 +177,14 @@ class TestMirrorDspyExamples:
 
     def test_mirror_examples_when_disabled(self):
         """Test mirroring DSPy examples when Cosmos is disabled."""
-        with patch("agentic_fleet.utils.cosmos.is_cosmos_enabled", return_value=False):
+        with patch("agentic_fleet.utils.storage.cosmos.is_cosmos_enabled", return_value=False):
             examples = [{"input": "test", "output": "result"}]
             # Should not raise
             mirror_dspy_examples(examples, dataset="test_dataset")
 
     def test_mirror_empty_examples(self):
         """Test mirroring empty examples list."""
-        with patch("agentic_fleet.utils.cosmos.is_cosmos_enabled", return_value=False):
+        with patch("agentic_fleet.utils.storage.cosmos.is_cosmos_enabled", return_value=False):
             mirror_dspy_examples([], dataset="empty_dataset")
 
 
@@ -197,7 +198,7 @@ class TestRecordDspyOptimizationRun:
 
     def test_record_optimization_when_disabled(self):
         """Test recording optimization run when Cosmos is disabled."""
-        with patch("agentic_fleet.utils.cosmos.is_cosmos_enabled", return_value=False):
+        with patch("agentic_fleet.utils.storage.cosmos.is_cosmos_enabled", return_value=False):
             # Should not raise - pass the run dict directly
             record_dspy_optimization_run(
                 run={
@@ -218,7 +219,7 @@ class TestMirrorCacheEntry:
 
     def test_mirror_cache_when_disabled(self):
         """Test mirroring cache entry when Cosmos is disabled."""
-        with patch("agentic_fleet.utils.cosmos.is_cosmos_enabled", return_value=False):
+        with patch("agentic_fleet.utils.storage.cosmos.is_cosmos_enabled", return_value=False):
             # Should not raise
             mirror_cache_entry("cache_key_123", {"data": "cached"})
 
@@ -233,13 +234,13 @@ class TestLoadExecutionHistory:
 
     def test_load_history_when_disabled(self):
         """Test loading history when Cosmos is disabled."""
-        with patch("agentic_fleet.utils.cosmos.is_cosmos_enabled", return_value=False):
+        with patch("agentic_fleet.utils.storage.cosmos.is_cosmos_enabled", return_value=False):
             result = load_execution_history()
             assert result == []
 
     def test_load_history_with_limit(self):
         """Test loading history with custom limit."""
-        with patch("agentic_fleet.utils.cosmos.is_cosmos_enabled", return_value=False):
+        with patch("agentic_fleet.utils.storage.cosmos.is_cosmos_enabled", return_value=False):
             result = load_execution_history(limit=5)
             assert result == []
 
@@ -254,7 +255,7 @@ class TestCosmosModuleBehavior:
 
     def test_module_imports_successfully(self):
         """Test that the cosmos module imports without errors."""
-        import agentic_fleet.utils.cosmos as cosmos_module
+        cosmos_module = importlib.import_module("agentic_fleet.utils.storage.cosmos")
 
         assert cosmos_module is not None
 

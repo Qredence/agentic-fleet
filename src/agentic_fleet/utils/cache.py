@@ -12,9 +12,10 @@ from dataclasses import dataclass, field
 from functools import wraps
 from typing import Any, TypeVar
 
+from agentic_fleet.utils.infra.logging import setup_logger
+from agentic_fleet.utils.storage.cosmos import mirror_cache_entry
+
 from .cfg import DEFAULT_CACHE_TTL
-from .cosmos import mirror_cache_entry
-from .logger import setup_logger
 
 logger = setup_logger(__name__)
 

@@ -154,6 +154,10 @@ def load_config(config_path: str | None = None, validate: bool = True) -> dict[s
     return _load_config_cached_lru(str(config_file.resolve()), mtime, validate)
 
 
+# Alias for backward compatibility or clearer intent
+load_yaml_config = load_config
+
+
 # =============================================================================
 # Default Configuration
 # =============================================================================

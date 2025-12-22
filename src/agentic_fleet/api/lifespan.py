@@ -6,13 +6,13 @@ from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 
-from agentic_fleet.core.conversation_store import ConversationStore
-from agentic_fleet.core.settings import get_settings
 from agentic_fleet.dspy_modules.compiled_registry import load_required_compiled_modules
 from agentic_fleet.services.conversation import ConversationManager, WorkflowSessionManager
-from agentic_fleet.services.optimization_jobs import OptimizationJobManager
+from agentic_fleet.services.optimization_service import get_optimization_service
 from agentic_fleet.utils.cfg import load_config
-from agentic_fleet.utils.tracing import initialize_tracing
+from agentic_fleet.utils.cfg.settings import get_settings
+from agentic_fleet.utils.infra.tracing import initialize_tracing
+from agentic_fleet.utils.storage.conversation import ConversationStore
 from agentic_fleet.workflows.supervisor import create_supervisor_workflow
 
 logger = logging.getLogger(__name__)
@@ -150,7 +150,7 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     app.state.conversation_manager = ConversationManager(
         ConversationStore(settings.conversations_path)
     )
-    app.state.optimization_jobs = OptimizationJobManager()
+    app.state.optimization_service = get_optimization_service()
 
     logger.info(
         "AgenticFleet API ready: max_concurrent_workflows=%s, conversations_path=%s",
@@ -163,7 +163,7 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     logger.info("Shutting down AgenticFleet API...")
     app.state.session_manager = None
     app.state.conversation_manager = None
-    app.state.optimization_jobs = None
+    app.state.optimization_service = None
     app.state.dspy_artifacts = None
     app.state.dspy_quality_module = None
     app.state.dspy_routing_module = None

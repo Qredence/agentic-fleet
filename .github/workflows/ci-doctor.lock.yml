@@ -39,6 +39,14 @@
 # engine:
 #   id: copilot
 #
+# steps:
+#   - name: Ensure log directory and file
+#     run: |
+#       mkdir -p /tmp/gh-aw/sandbox/agent/logs/
+#       touch /tmp/gh-aw/sandbox/agent/logs/empty.log
+#       echo "Contents of /tmp/gh-aw/sandbox/agent/logs/:"
+#       ls -la /tmp/gh-aw/sandbox/agent/logs/
+#
 # timeout-minutes: 20
 #
 # # No web access needed; we only inspect GitHub checks/logs and run local commands.
@@ -347,6 +355,9 @@ jobs:
         run: |
           mkdir -p /tmp/gh-aw/safeoutputs/
           find "/tmp/gh-aw/safeoutputs/" -type f -print
+          if [ ! -s /tmp/gh-aw/safeoutputs/agent_output.json ]; then
+            echo '{"items":[]}' > /tmp/gh-aw/safeoutputs/agent_output.json
+          fi
           echo "GH_AW_AGENT_OUTPUT=/tmp/gh-aw/safeoutputs/agent_output.json" >> "$GITHUB_ENV"
       - name: Add Issue Comment
         id: add_comment
@@ -1102,6 +1113,13 @@ jobs:
           mkdir -p /tmp/gh-aw/agent
           mkdir -p /tmp/gh-aw/sandbox/agent/logs
           echo "Created /tmp/gh-aw/agent directory for agentic workflow temporary files"
+      - name: Ensure log directory and file
+        run: |-
+          mkdir -p /tmp/gh-aw/sandbox/agent/logs/
+          touch /tmp/gh-aw/sandbox/agent/logs/empty.log
+          echo "Contents of /tmp/gh-aw/sandbox/agent/logs/:"
+          ls -la /tmp/gh-aw/sandbox/agent/logs/
+
       - name: Configure Git credentials
         env:
           REPO_NAME: ${{ github.repository }}
@@ -2978,7 +2996,7 @@ jobs:
 
           PROMPT_EOF
       - name: Substitute placeholders
-        uses: actions/github-script@60a0d83039c74a4aee543508d2ffcb1c3799cdea # v7.0.1
+        uses: actions/github-script@ed597411d8f924073f98dfc5c65a23a2325f34cd # v8.0.0
         env:
           GH_AW_PROMPT: /tmp/gh-aw/aw-prompts/prompt.txt
           GH_AW_GITHUB_EVENT_PULL_REQUEST_NUMBER: ${{ github.event.pull_request.number }}
@@ -3154,7 +3172,7 @@ jobs:
 
           PROMPT_EOF
       - name: Substitute placeholders
-        uses: actions/github-script@60a0d83039c74a4aee543508d2ffcb1c3799cdea # v7.0.1
+        uses: actions/github-script@ed597411d8f924073f98dfc5c65a23a2325f34cd # v8.0.0
         env:
           GH_AW_PROMPT: /tmp/gh-aw/aw-prompts/prompt.txt
           GH_AW_GITHUB_ACTOR: ${{ github.actor }}

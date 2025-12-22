@@ -10,7 +10,7 @@ from typing import Any, cast
 from fastapi import APIRouter, HTTPException, Query, status
 
 from agentic_fleet.api.deps import WorkflowDep
-from agentic_fleet.core.storage import HistoryManager
+from agentic_fleet.utils.storage.history import HistoryManager
 
 router = APIRouter()
 

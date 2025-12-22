@@ -1,8 +1,8 @@
 import logging
 from contextlib import contextmanager
 
-from agentic_fleet.core.settings import get_settings
 from agentic_fleet.main import _configure_logging
+from agentic_fleet.utils.cfg.settings import get_settings
 
 
 @contextmanager

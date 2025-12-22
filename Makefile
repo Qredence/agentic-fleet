@@ -56,7 +56,7 @@ help:
 
 # Setup commands
 install:
-	GIT_LFS_SKIP_SMUDGE=1 uv sync --all-extras --upgrade
+	GIT_LFS_SKIP_SMUDGE=1 uv sync --all-extras
 	@echo "✓ Python dependencies installed"
 	@echo ""
 	@echo "Next: Run 'make frontend-install' to install frontend dependencies"
@@ -126,7 +126,7 @@ test-all: test test-frontend
 	@echo "✓ All tests passed (backend + frontend)"
 
 test-config:
-	$(PYTHON) -c "from agentic_fleet.utils.factory import WorkflowFactory; factory = WorkflowFactory(); print(f'✓ Loaded {len(factory.list_available_workflows())} workflows from config')"
+	$(PYTHON) -c "from agentic_fleet.utils.cfg import load_config; cfg = load_config(); agent_count = len(cfg.get('agents', {})); print(f'✓ Loaded workflow_config.yaml ({agent_count} agents)')"
 
 test-e2e:
 	@echo "Running E2E tests (requires backend + frontend running)..."

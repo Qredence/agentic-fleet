@@ -8,7 +8,6 @@ Public API:
     - DSPyReasoner: Main reasoner class with DSPy integration
     - Signature classes: TaskAnalysis, TaskRouting, QualityAssessment, etc.
     - Handoff signatures: HandoffDecision, HandoffProtocol, etc.
-    - Reasoning modules: FleetReAct, FleetPoT
     - Lifecycle management: configure_dspy_settings, get_dspy_lm, etc.
 """
 
@@ -29,14 +28,11 @@ if TYPE_CHECKING:
     from agentic_fleet.dspy_modules.signatures import (
         AgentInstructionSignature,
         EnhancedTaskRouting,
-        FleetPoT,
-        FleetReAct,
         PlannerInstructionSignature,
         ProgressEvaluation,
         QualityAssessment,
         TaskAnalysis,
         TaskRouting,
-        ToolAwareTaskAnalysis,
         WorkflowStrategy,
     )
 
@@ -46,8 +42,6 @@ __all__ = [
     # Reasoner
     "DSPyReasoner",
     "EnhancedTaskRouting",
-    "FleetPoT",
-    "FleetReAct",
     "HandoffDecision",
     "HandoffProtocol",
     "PlannerInstructionSignature",
@@ -55,7 +49,6 @@ __all__ = [
     "QualityAssessment",
     "TaskAnalysis",
     "TaskRouting",
-    "ToolAwareTaskAnalysis",
     "WorkflowStrategy",
     # Lifecycle management
     "configure_dspy_settings",
@@ -100,41 +93,32 @@ def __getattr__(name: str) -> object:
     if name in (
         "AgentInstructionSignature",
         "EnhancedTaskRouting",
-        "FleetPoT",
-        "FleetReAct",
         "PlannerInstructionSignature",
         "ProgressEvaluation",
         "QualityAssessment",
         "TaskAnalysis",
         "TaskRouting",
-        "ToolAwareTaskAnalysis",
         "WorkflowStrategy",
     ):
         from agentic_fleet.dspy_modules.signatures import (
             AgentInstructionSignature,
             EnhancedTaskRouting,
-            FleetPoT,
-            FleetReAct,
             PlannerInstructionSignature,
             ProgressEvaluation,
             QualityAssessment,
             TaskAnalysis,
             TaskRouting,
-            ToolAwareTaskAnalysis,
             WorkflowStrategy,
         )
 
         return {
             "AgentInstructionSignature": AgentInstructionSignature,
             "EnhancedTaskRouting": EnhancedTaskRouting,
-            "FleetPoT": FleetPoT,
-            "FleetReAct": FleetReAct,
             "PlannerInstructionSignature": PlannerInstructionSignature,
             "ProgressEvaluation": ProgressEvaluation,
             "QualityAssessment": QualityAssessment,
             "TaskAnalysis": TaskAnalysis,
             "TaskRouting": TaskRouting,
-            "ToolAwareTaskAnalysis": ToolAwareTaskAnalysis,
             "WorkflowStrategy": WorkflowStrategy,
         }[name]
 

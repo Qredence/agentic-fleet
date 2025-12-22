@@ -143,17 +143,60 @@ src/frontend/         # React/Vite UI with React Query
 
 ```
 src/frontend/src/
-├── api/               # API layer (React Query integration)
+├── api/          # API client + React Query (server state)
 │   ├── QueryProvider.tsx  # React Query provider
 │   ├── hooks.ts       # Custom API hooks (useChat, useWorkflow, etc.)
 │   ├── http.ts        # HTTP client (axios-based)
 │   ├── websocket.ts   # WebSocket client for streaming
 │   └── config.ts      # API configuration
-├── features/          # Feature modules (chat, workflow, etc.)
-├── stores/            # State management (Zustand)
-└── components/
-    ├── layout/        # Layout components (Sidebar, Header)
-    └── ui/            # UI atoms (shadcn/ui)
+├── components/   # Reusable UI organized by domain
+│   ├── ui/      # shadcn/ui design system primitives
+│   ├── chat/    # Chat interface (messages, input, container)
+│   ├── message/ # Message rendering (markdown, code, reasoning)
+│   ├── workflow/# Workflow visualization
+│   ├── dashboard/# Dashboard components
+│   └── layout/  # Layout shells (headers, sidebars, panels)
+├── pages/        # Page-level views (composition & orchestration)
+│   ├── chat-page.tsx      # Main chat interface
+│   └── dashboard-page.tsx # Optimization dashboard
+├── stores/       # Zustand stores (client state, UI preferences)
+├── hooks/        # Custom React hooks
+├── lib/          # Utility functions
+├── contexts/     # React contexts
+├── styles/       # CSS organization
+├── root/         # App shell and view routing
+│   └── app.tsx
+└── main.tsx      # Entry point
+```
+
+**Component Organization Rules:**
+
+1. UI Primitives (`components/ui/`): shadcn/ui only, no business logic
+2. Domain Components (`components/[domain]/`): Reusable UI for specific domains
+   - Chat: All chat interface components including PromptInput
+   - Message: Message rendering and formatting
+   - Workflow: Workflow visualization components
+   - Layout: App structure (headers, sidebars, panels)
+3. Pages (`pages/`): Top-level views that compose components and manage view-level state
+4. Hooks always in `hooks/` directory (never in `components/`)
+5. Organize by technical concern, not features
+
+**Import Patterns:**
+
+```typescript
+// Pages
+import { ChatPage } from "@/pages/chat-page";
+
+// Domain components
+import { ChatMessages, PromptInput } from "@/components/chat";
+import { Message, Markdown } from "@/components/message";
+
+// UI primitives
+import { Button, Sidebar } from "@/components/ui";
+
+// Hooks, stores
+import { useSidebar, useIsMobile } from "@/hooks";
+import { useChatStore } from "@/stores";
 ```
 
 - API calls: Always through `api/hooks.ts` (never direct fetch)
