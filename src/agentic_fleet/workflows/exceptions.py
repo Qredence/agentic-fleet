@@ -117,11 +117,14 @@ class ConfigurationError(WorkflowError, _SharedConfigurationError):
             config_value: The invalid configuration value
             context: Optional additional context
         """
-        # Call both parent __init__ methods
-        WorkflowError.__init__(self, message, context)
-        _SharedConfigurationError.__init__(self, message, config_key, config_value, context)
+        # Initialize Exception base class
+        Exception.__init__(self, message)
+        
+        # Set all attributes needed by both parent classes
+        self.message = message
         self.config_key = config_key
         self.config_value = config_value
+        self.context = context or {}
 
 
 class HistoryError(WorkflowError):
