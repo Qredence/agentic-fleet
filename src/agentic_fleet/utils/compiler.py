@@ -187,9 +187,17 @@ def compile_nlu(
 
 
 def clear_cache() -> None:
-    """Clear compiled module cache (Helper for API)."""
+    """Clear compiled module cache (Helper for API).
+
+    .. deprecated::
+        This function is deprecated and now a no-op. With the migration to DSPy native
+        saving/loading, cache management should be done through manual file operations
+        or by using DSPy's built-in cache clearing mechanisms. Consider removing calls
+        to this function and managing compiled artifacts directly via the file system.
+    """
     # Since we now rely on dspy native saving/loading or manual file management,
-    # this acts as a no-op or could delete the known cache files if needed.
+    # this acts as a no-op. For cache clearing, delete files in .var/cache/dspy/
+    # or .var/logs/ directories as needed.
     pass
 
 
