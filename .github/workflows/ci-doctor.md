@@ -16,6 +16,14 @@ permissions:
 engine:
   id: copilot
 
+steps:
+  - name: Ensure logs directory
+    run: |
+      mkdir -p /tmp/gh-aw/sandbox/agent/logs
+      echo "Initializing logs" > /tmp/gh-aw/sandbox/agent/logs/init.log
+      echo "Contents of /tmp/gh-aw/sandbox/agent/logs:"
+      ls -la /tmp/gh-aw/sandbox/agent/logs/
+
 timeout-minutes: 20
 
 # No web access needed; we only inspect GitHub checks/logs and run local commands.
