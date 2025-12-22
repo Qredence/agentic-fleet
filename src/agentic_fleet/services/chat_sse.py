@@ -109,7 +109,12 @@ class ChatSSEService:
         return conversation_history, conversation_thread, checkpoint_storage
 
     async def _create_checkpoint_storage(self) -> Any | None:
-        """Create checkpoint storage if possible."""
+        """Create checkpoint storage with fallback to in-memory.
+        
+        Attempts to create FileCheckpointStorage at .var/checkpoints.
+        Falls back to InMemoryCheckpointStorage if file storage unavailable.
+        Returns None only if both methods fail.
+        """
         try:
             from pathlib import Path
 
@@ -118,8 +123,14 @@ class ChatSSEService:
             checkpoint_dir = ".var/checkpoints"
             Path(checkpoint_dir).mkdir(parents=True, exist_ok=True)
             return FileCheckpointStorage(checkpoint_dir)
-        except Exception:
-            return None
+        except Exception as exc:
+            logger.warning("Failed to create file checkpoint storage: %s. Trying in-memory fallback.", exc)
+            try:
+                from agent_framework._workflows import InMemoryCheckpointStorage
+                return InMemoryCheckpointStorage()
+            except Exception as fallback_exc:
+                logger.error("Failed to create any checkpoint storage: %s", fallback_exc)
+                return None
 
     async def _create_and_setup_session(
         self,
@@ -127,7 +138,11 @@ class ChatSSEService:
         reasoning_effort: str | None,
         cancel_event: asyncio.Event,
     ) -> WorkflowSession:
-        """Create session and register cancellation tracking."""
+        """Create session and register cancellation tracking.
+        
+        Raises:
+            RuntimeError: If session creation fails.
+        """
         # Persist user message happens before this in stream_chat
         
         # Create session
@@ -135,7 +150,12 @@ class ChatSSEService:
             task=message,
             reasoning_effort=reasoning_effort,
         )
-        assert session is not None, "Session creation failed"
+        
+        if session is None:
+            raise RuntimeError(
+                f"Session creation failed for task={message[:50]}..., "
+                f"reasoning_effort={reasoning_effort}"
+            )
         
         # Store cancel event for this workflow
         workflow_id = session.workflow_id
