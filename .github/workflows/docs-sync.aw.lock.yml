@@ -137,9 +137,11 @@
 # You are the Documentation Sync Agent. Your mission is to ensure that the project documentation in `docs/` remains accurate and up-to-date with the source code in `src/`.
 #
 # ## Context
+#
 # The latest changes in `src/` may have introduced new features, changed APIs, or modified workflows that need to be reflected in the documentation.
 #
 # ## Instructions
+#
 # 1. **Analyze Changes**: Review the recent commits to identify changes in `src/` that impact documentation.
 # 2. **Update Docs**: Use your expertise as a technical writer to update existing markdown files in `docs/` or create new ones if necessary.
 # 3. **Validate**:
@@ -149,6 +151,7 @@
 # 5. **Report**: Add a comment to the workflow run (or the triggering PR if applicable) summarizing what was updated.
 #
 # ## Guidelines
+#
 # - Be concise and developer-focused.
 # - Follow the existing documentation style.
 # - Do not modify code in `src/`.
@@ -2737,7 +2740,7 @@ jobs:
             const awInfo = {
               engine_id: "custom",
               engine_name: "Custom Steps",
-              model: process.env.GH_AW_ENGINE_MODEL || "",
+              model: process.env. || "",
               version: "",
               agent_version: "",
               workflow_name: "Documentation Sync",
@@ -2861,9 +2864,11 @@ jobs:
           You are the Documentation Sync Agent. Your mission is to ensure that the project documentation in `docs/` remains accurate and up-to-date with the source code in `src/`.
 
           ## Context
+
           The latest changes in `src/` may have introduced new features, changed APIs, or modified workflows that need to be reflected in the documentation.
 
           ## Instructions
+
           1. **Analyze Changes**: Review the recent commits to identify changes in `src/` that impact documentation.
           2. **Update Docs**: Use your expertise as a technical writer to update existing markdown files in `docs/` or create new ones if necessary.
           3. **Validate**:
@@ -2873,6 +2878,7 @@ jobs:
           5. **Report**: Add a comment to the workflow run (or the triggering PR if applicable) summarizing what was updated.
 
           ## Guidelines
+
           - Be concise and developer-focused.
           - Follow the existing documentation style.
           - Do not modify code in `src/`.
@@ -3275,10 +3281,48 @@ jobs:
           GH_AW_SAFE_OUTPUTS: ${{ env.GH_AW_SAFE_OUTPUTS }}
       - name: Run AgenticFleet
         run: |-
+          set -e  # Exit on error
+
+          # Validate required environment variables
+          if [ -z "$GH_AW_PROMPT" ]; then
+            echo "Error: GH_AW_PROMPT environment variable is not set" >&2
+            exit 1
+          fi
+
+          if [ -z "$GH_AW_SAFE_OUTPUTS" ]; then
+            echo "Error: GH_AW_SAFE_OUTPUTS environment variable is not set" >&2
+            exit 1
+          fi
+
+          # Verify prompt file exists and is readable
+          if [ ! -f "$GH_AW_PROMPT" ]; then
+            echo "Error: Prompt file does not exist: $GH_AW_PROMPT" >&2
+            exit 1
+          fi
+
+          if [ ! -r "$GH_AW_PROMPT" ]; then
+            echo "Error: Prompt file is not readable: $GH_AW_PROMPT" >&2
+            exit 1
+          fi
+
+          # Ensure output directory exists and is writable
+          OUTPUT_DIR=$(dirname "$GH_AW_SAFE_OUTPUTS")
+          if [ ! -d "$OUTPUT_DIR" ]; then
+            mkdir -p "$OUTPUT_DIR" || {
+              echo "Error: Failed to create output directory: $OUTPUT_DIR" >&2
+              exit 1
+            }
+          fi
+
+          if [ ! -w "$OUTPUT_DIR" ]; then
+            echo "Error: Output directory is not writable: $OUTPUT_DIR" >&2
+            exit 1
+          fi
+
           # Read the prompt from the file provided by gh-aw
           PROMPT_CONTENT=$(cat "$GH_AW_PROMPT")
 
-          # Run the fleet with JSON output
+          # Run the fleet with JSON output (exit code propagates)
           uv run agentic-fleet run --json --no-stream "$PROMPT_CONTENT" > "$GH_AW_SAFE_OUTPUTS"
         env:
           GH_AW_MCP_CONFIG: /tmp/gh-aw/mcp-config/mcp-servers.json
@@ -6242,10 +6286,48 @@ jobs:
           GH_AW_PROMPT: /tmp/gh-aw/aw-prompts/prompt.txt
       - name: Run AgenticFleet
         run: |-
+          set -e  # Exit on error
+
+          # Validate required environment variables
+          if [ -z "$GH_AW_PROMPT" ]; then
+            echo "Error: GH_AW_PROMPT environment variable is not set" >&2
+            exit 1
+          fi
+
+          if [ -z "$GH_AW_SAFE_OUTPUTS" ]; then
+            echo "Error: GH_AW_SAFE_OUTPUTS environment variable is not set" >&2
+            exit 1
+          fi
+
+          # Verify prompt file exists and is readable
+          if [ ! -f "$GH_AW_PROMPT" ]; then
+            echo "Error: Prompt file does not exist: $GH_AW_PROMPT" >&2
+            exit 1
+          fi
+
+          if [ ! -r "$GH_AW_PROMPT" ]; then
+            echo "Error: Prompt file is not readable: $GH_AW_PROMPT" >&2
+            exit 1
+          fi
+
+          # Ensure output directory exists and is writable
+          OUTPUT_DIR=$(dirname "$GH_AW_SAFE_OUTPUTS")
+          if [ ! -d "$OUTPUT_DIR" ]; then
+            mkdir -p "$OUTPUT_DIR" || {
+              echo "Error: Failed to create output directory: $OUTPUT_DIR" >&2
+              exit 1
+            }
+          fi
+
+          if [ ! -w "$OUTPUT_DIR" ]; then
+            echo "Error: Output directory is not writable: $OUTPUT_DIR" >&2
+            exit 1
+          fi
+
           # Read the prompt from the file provided by gh-aw
           PROMPT_CONTENT=$(cat "$GH_AW_PROMPT")
 
-          # Run the fleet with JSON output
+          # Run the fleet with JSON output (exit code propagates)
           uv run agentic-fleet run --json --no-stream "$PROMPT_CONTENT" > "$GH_AW_SAFE_OUTPUTS"
         env:
           GH_AW_MCP_CONFIG: /tmp/gh-aw/mcp-config/mcp-servers.json
