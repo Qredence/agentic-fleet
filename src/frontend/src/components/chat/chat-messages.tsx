@@ -49,9 +49,11 @@ export function ChatMessages({
                   key={messageKey}
                   className="mx-auto w-full max-w-3xl justify-end px-4"
                 >
-                  <MessageContent className="bg-secondary/80 text-foreground border-border/50 max-w-[85%] rounded-2xl border px-4 py-2.5 backdrop-blur-sm sm:max-w-[75%] whitespace-pre-wrap break-normal">
-                    {message.content}
-                  </MessageContent>
+                  <div className="flex w-full justify-end">
+                    <MessageContent className="bg-secondary/80 text-foreground border-border/50 max-w-[85%] rounded-2xl border px-4 py-2.5 backdrop-blur-sm sm:max-w-[75%] whitespace-pre-wrap break-normal">
+                      {message.content}
+                    </MessageContent>
+                  </div>
                 </Message>
               );
             }
@@ -71,13 +73,9 @@ export function ChatMessages({
                     )}
                     markdown={true}
                   >
-                    {isStreaming
-                      ? (typeof message.content === "string"
-                          ? message.content
-                          : JSON.stringify(message.content)) + " ▍"
-                      : typeof message.content === "string"
-                        ? message.content
-                        : JSON.stringify(message.content)}
+                    {typeof message.content === "string"
+                      ? message.content
+                      : JSON.stringify(message.content)}
                   </MessageContent>
 
                   {!isStreaming && (
@@ -88,12 +86,14 @@ export function ChatMessages({
                           size="icon"
                           className="rounded-full"
                           onClick={() => {
+                            const contentStr =
+                              typeof message.content === "string"
+                                ? message.content
+                                : JSON.stringify(message.content);
                             if (onCopy) {
-                              onCopy(message.content);
+                              onCopy(contentStr);
                             } else {
-                              void navigator.clipboard.writeText(
-                                message.content,
-                              );
+                              void navigator.clipboard.writeText(contentStr);
                             }
                           }}
                           aria-label="Copy response"

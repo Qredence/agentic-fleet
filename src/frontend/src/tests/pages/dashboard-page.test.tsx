@@ -1,7 +1,7 @@
 import { describe, expect, it, vi, beforeEach } from "vitest";
 import { render, screen } from "@testing-library/react";
-import userEvent from "@testing-library/user-event";
-import { DashboardPage } from "@/pages/dashboard-page";
+
+import { DashboardPage } from "../../pages";
 
 // Mock the OptimizationDashboard component
 vi.mock("@/components/dashboard", () => ({

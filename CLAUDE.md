@@ -6,15 +6,13 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 AgenticFleet is a multi-agent orchestration system combining DSPy + Microsoft Agent Framework. Tasks flow through a 5-phase pipeline: **Analysis → Routing → Execution → Progress → Quality**. Supports delegated, sequential, parallel, handoff, and discussion execution modes.
 
-**Current version highlights (v0.7.0 – FastAPI-First Architecture)**:
+**Current version highlights (v0.6.95)**:
 
-- **Layered Architecture**: API → Services → Workflows → DSPy → Agents
 - Typed DSPy Signatures with Pydantic validation
 - DSPy Assertions for routing validation
 - Routing Cache (TTL 5m) for latency reduction
 - Smart Fast-Path for simple queries (<1s)
 - Secure-by-default tracing (`capture_sensitive` defaults to false)
-- Services layer for async business logic
 
 ## Development Commands
 
@@ -51,112 +49,33 @@ AgenticFleet is a multi-agent orchestration system combining DSPy + Microsoft Ag
 
 ```
 src/agentic_fleet/
-├── api/                      # FASTAPI WEB LAYER
-│   ├── deps.py               # Dependency injection (DB sessions, Auth, Clients)
-│   ├── lifespan.py           # Startup/Shutdown events (e.g., initializing DSPy)
-│   ├── middleware.py         # FastAPI-level middleware (CORS, Auth, Logging)
-│   ├── main.py               # FastAPI app entry + router mounting
-│   ├── routes/               # Primary API endpoints
-│   │   ├── chat.py           # Chat and streaming agent interactions
-│   │   ├── optimization.py   # GEPA/DSPy optimization job management
-│   │   ├── workflows.py      # Workflow status and management
-│   │   └── nlu.py            # Intent classification + entity extraction
-│   └── v1/events/            # Versioned event mapping
-│       └── mapping.py        # Event routing (maps workflow events → UI)
-│
-├── services/                 # ASYNC BUSINESS LOGIC LAYER
-│   ├── agent_service.py      # Factory for creating and managing agents
-│   ├── chat_service.py       # Manages conversation logic and agent routing
-│   ├── chat_sse.py           # Logic for Server-Sent Events (SSE) streaming
-│   ├── chat_websocket.py     # Logic for real-time WebSocket communication
-│   ├── optimization_service.py # Bridges API to GEPA optimization loops
-│   └── workflow_service.py   # Orchestrates complex multi-agent workflows
-│
-├── workflows/                # THE ORCHESTRATION LAYER (5-Phase Pipeline)
-│   ├── supervisor.py         # Main entry point + fast-path detection
-│   ├── executors.py          # 5 executors (Analysis, Routing, Execution, Progress, Quality)
-│   ├── strategies.py         # Execution modes (delegated/sequential/parallel)
-│   ├── builder.py            # Graph construction for Agent Framework
-│   ├── context.py            # SupervisorContext for state management
-│   ├── handoff.py            # Structured agent handoff management
-│   ├── models.py             # Workflow data models and events
-│   ├── narrator.py           # DSPy-based event narration for UX messages
-│   └── initialization.py     # Bootstraps contexts, agent catalogs, caches
-│
-├── dspy_modules/             # THE INTELLIGENCE LAYER (DSPy + GEPA)
-│   ├── reasoner.py           # DSPyReasoner (manages all DSPy modules)
-│   ├── signatures.py         # DSPy signatures for all phases
-│   ├── typed_models.py       # Pydantic models for structured outputs
-│   ├── assertions.py         # DSPy assertions for validation
-│   ├── nlu.py                # Intent classification + entity extraction
-│   ├── optimizer.py          # GEPA loop for reflective prompt evolution
-│   └── refinement.py         # BestOfN and iterative improvement
-│
-├── agents/                   # THE RUNTIME LAYER (MS Agent Framework)
-│   ├── coordinator.py        # AgentFactory (creates agents from YAML)
-│   ├── base.py               # DSPyEnhancedAgent mixin
-│   ├── foundry.py            # Azure AI Foundry integration
-│   └── prompts.py            # Centralized prompt modules
-│
-├── tools/                    # THE CAPABILITY LAYER
-│   ├── tavily_tool.py        # Tavily search integration
-│   ├── browser_tool.py       # Browser automation for page capture
-│   ├── mcp_tools.py          # MCP tool bridges
-│   └── hosted_code_adapter.py # Hosted code interpreter
-│
-├── utils/                    # THE INFRASTRUCTURE LAYER
-│   ├── cfg/                  # Configuration loading
-│   ├── infra/                # Tracing, resilience, telemetry, logging
-│   └── storage/              # Cosmos, persistence, history management
-│
-├── models/                   # SHARED DATA MODELS (Pydantic)
-│   ├── conversations.py      # Persistence-ready conversation models
-│   ├── requests.py           # API Request schemas
-│   ├── responses.py          # API Response schemas
-│   └── workflows.py          # Workflow-specific models
-│
-├── evaluation/               # BATCH EVALUATION
-│   ├── evaluator.py          # Evaluation engine
-│   └── metrics.py            # Evaluation metrics
-│
-└── config/                   # SYSTEM CONFIGURATION
-    └── workflow_config.yaml  # Source of truth for models, tools, thresholds
+├── agents/           # Agent definitions, AgentFactory (coordinator.py)
+├── workflows/        # Orchestration: supervisor.py (entry), executors.py (phases)
+│   ├── supervisor.py # Main workflow entry + fast-path detection
+│   ├── executors.py  # 5 executors (Analysis, Routing, Execution, Progress, Quality)
+│   ├── strategies.py # Execution modes (delegated/sequential/parallel)
+│   ├── models.py     # Workflow data models and events
+│   └── narrator.py   # DSPy-based event narration for user-friendly messages
+├── dspy_modules/     # DSPy signatures, reasoner, typed models, assertions
+│   ├── reasoner.py   # DSPyReasoner (manages all DSPy modules)
+│   ├── signatures.py # DSPy signatures for all phases
+│   ├── typed_models.py # Pydantic models for structured outputs
+│   └── assertions.py # DSPy assertions for validation
+├── tools/            # Tool adapters (Tavily, browser, MCP, code interpreter)
+├── app/              # FastAPI backend + SSE streaming
+│   ├── main.py       # FastAPI app entry
+│   └── routers/      # API routes (chat, workflow, nlu, dspy_management)
+├── config/           # workflow_config.yaml - source of truth for all settings
+├── core/             # Middleware (ChatMiddleware, BridgeMiddleware)
+├── data/             # Training data (golden_dataset.json, supervisor_examples.json)
+└── utils/            # Shared helpers, organized into submodules
+    ├── infra/        # Tracing, resilience, telemetry, logging
+    ├── storage/      # Cosmos, persistence, history management
+    └── cfg/          # Configuration utilities
+src/frontend/         # React/Vite UI with React Query
 ```
 
 **Config-Driven**: Models, agents, thresholds, and tools are declared in `src/agentic_fleet/config/workflow_config.yaml`. Reference YAML values—don't hardcode.
-
-### Layered Architecture Flow
-
-```
-┌──────────┐     ┌─────────────────────────────────────────────────────┐
-│   User   │────▶│                  API LAYER                         │
-│ (WS/SSE) │     │  routes/chat.py → middleware.py → deps.py          │
-└──────────┘     └─────────────────────────────────────────────────────┘
-                                    │
-                                    ▼
-┌─────────────────────────────────────────────────────────────────────┐
-│                        SERVICES LAYER                                │
-│  chat_service.py → chat_websocket.py / chat_sse.py                  │
-│  workflow_service.py ← optimization_service.py                       │
-└─────────────────────────────────────────────────────────────────────┘
-                                    │
-                                    ▼
-┌─────────────────────────────────────────────────────────────────────┐
-│                    WORKFLOWS LAYER (5-Phase Pipeline)                │
-│  ┌─────────┐  ┌─────────┐  ┌───────────┐  ┌──────────┐  ┌─────────┐│
-│  │ANALYSIS │→ │ ROUTING │→ │ EXECUTION │→ │ PROGRESS │→ │ QUALITY ││
-│  └─────────┘  └─────────┘  └───────────┘  └──────────┘  └─────────┘│
-│       ↓            ↓              ↓             ↓            ↓      │
-│    DSPy NLU    DSPy Route   Agent Framework  Event Stream  Assert  │
-└─────────────────────────────────────────────────────────────────────┘
-                                    │
-                    ┌───────────────┼───────────────┐
-                    ▼               ▼               ▼
-              ┌──────────┐   ┌──────────┐    ┌──────────┐
-              │ DSPy     │   │ Agents   │    │  Tools   │
-              │ Modules  │   │ (AF)     │    │          │
-              └──────────┘   └──────────┘    └──────────┘
-```
 
 ### 5-Phase Pipeline
 
@@ -172,14 +91,14 @@ src/agentic_fleet/
 
 - WebSocket/SSE streaming via `run_stream()` in `supervisor.py`
 - Event types: `WorkflowStatusEvent`, `ExecutorCompletedEvent`, `MagenticAgentMessageEvent`, `ReasoningStreamEvent`
-- Event mapping: `api/v1/events/mapping.py` routes events to UI components
+- Event mapping: `api/events/mapping.py` routes events to UI components
 
 **Adding new events**: When adding streaming event types:
 
-1. Update backend mapping in `src/agentic_fleet/api/v1/events/mapping.py`
+1. Update backend mapping in `src/agentic_fleet/api/events/mapping.py`
 2. Add `ui_routing:` entry in `workflow_config.yaml`
 3. Update frontend types in `src/frontend/src/api/types.ts`
-4. Handle in `src/frontend/src/features/chat/stores/chatStore.ts`
+4. Handle in `src/frontend/src/stores/chatStore.ts`
 
 **Human-in-the-loop + resume protocol (WebSocket)**:
 
@@ -199,18 +118,6 @@ src/agentic_fleet/
 - Line length: 100 chars (Ruff enforced)
 - Run quality checks before commits: `make check`
 - Pre-commit hooks available: `make pre-commit-install`
-
-### Services Layer (New in v0.7.0)
-
-The services layer provides **async business logic** between API routes and the workflow orchestration:
-
-- **`chat_service.py`**: Conversation management, agent routing decisions
-- **`chat_sse.py`**: Server-Sent Events streaming implementation
-- **`chat_websocket.py`**: Real-time WebSocket for bidirectional communication
-- **`workflow_service.py`**: Entry point for multi-agent workflow orchestration
-- **`optimization_service.py`**: Bridges API to GEPA optimization loops
-
-**Key principle**: Long-running agentic tasks are async—services ensure FastAPI remains responsive while agents think.
 
 ### DSPy Integration
 
@@ -237,16 +144,59 @@ The services layer provides **async business logic** between API routes and the 
 ```
 src/frontend/src/
 ├── api/          # API client + React Query (server state)
-├── features/     # Feature-based organization
-│   ├── chat/     # Chat interface (UI + store + streaming)
-│   └── dashboard/# Optimization dashboard
+│   ├── QueryProvider.tsx  # React Query provider
+│   ├── hooks.ts       # Custom API hooks (useChat, useWorkflow, etc.)
+│   ├── http.ts        # HTTP client (axios-based)
+│   ├── websocket.ts   # WebSocket client for streaming
+│   └── config.ts      # API configuration
 ├── components/   # Reusable UI organized by domain
-│   └── ui/       # shadcn/ui design system primitives
+│   ├── ui/      # shadcn/ui design system primitives
+│   ├── chat/    # Chat interface (messages, input, container)
+│   ├── message/ # Message rendering (markdown, code, reasoning)
+│   ├── workflow/# Workflow visualization
+│   ├── dashboard/# Dashboard components
+│   └── layout/  # Layout shells (headers, sidebars, panels)
+├── pages/        # Page-level views (composition & orchestration)
+│   ├── chat-page.tsx      # Main chat interface
+│   └── dashboard-page.tsx # Optimization dashboard
+├── stores/       # Zustand stores (client state, UI preferences)
 ├── hooks/        # Custom React hooks
 ├── lib/          # Utility functions
 ├── contexts/     # React contexts
 ├── styles/       # CSS organization
+├── root/         # App shell and view routing
+│   └── app.tsx
 └── main.tsx      # Entry point
+```
+
+**Component Organization Rules:**
+
+1. UI Primitives (`components/ui/`): shadcn/ui only, no business logic
+2. Domain Components (`components/[domain]/`): Reusable UI for specific domains
+   - Chat: All chat interface components including PromptInput
+   - Message: Message rendering and formatting
+   - Workflow: Workflow visualization components
+   - Layout: App structure (headers, sidebars, panels)
+3. Pages (`pages/`): Top-level views that compose components and manage view-level state
+4. Hooks always in `hooks/` directory (never in `components/`)
+5. Organize by technical concern, not features
+
+**Import Patterns:**
+
+```typescript
+// Pages
+import { ChatPage } from "@/pages/chat-page";
+
+// Domain components
+import { ChatMessages, PromptInput } from "@/components/chat";
+import { Message, Markdown } from "@/components/message";
+
+// UI primitives
+import { Button, Sidebar } from "@/components/ui";
+
+// Hooks, stores
+import { useSidebar, useIsMobile } from "@/hooks";
+import { useChatStore } from "@/stores";
 ```
 
 - API calls: Always through `api/hooks.ts` (never direct fetch)
@@ -273,13 +223,6 @@ src/frontend/src/
 - Executors: `workflows/executors.py` (AnalysisExecutor, RoutingExecutor, etc.)
 - Strategies: `workflows/strategies.py` (delegated/sequential/parallel)
 - Models: `workflows/models.py` (workflow data models and events)
-
-### Adding API Endpoints
-
-1. Create route in `src/agentic_fleet/api/routes/`
-2. Add business logic to `src/agentic_fleet/services/`
-3. Register route in `api/main.py`
-4. Add request/response models to `models/requests.py` / `models/responses.py`
 
 ### Testing
 
@@ -335,7 +278,7 @@ npx playwright install chromium     # Install browser (first time)
 
 ### TTL Cache
 
-- Generic TTL cache in `utils/cache.py` with hit rate tracking
+- Generic TTL cache in `utils/cache_impl.py` with hit rate tracking
 - Agent response caching decorator for expensive operations
 - Cosmos DB mirroring for distributed caching
 
@@ -351,13 +294,13 @@ npx playwright install chromium     # Install browser (first time)
 
 - **ChatMiddleware**: Cross-cutting concerns (logging, tracing)
 - **BridgeMiddleware**: Captures runtime history for offline learning
-- Location: `src/agentic_fleet/api/middleware.py`
+- Location: `src/agentic_fleet/core/middleware.py`
 
 ### NLU Module
 
 - Intent classification and entity extraction
 - DSPy-backed: `dspy_modules/nlu.py`
-- API endpoints: `api/routes/nlu.py`
+- API endpoints: `app/routers/nlu.py`
 - Update signatures and compiled caches together
 
 ### Dynamic Prompts
@@ -440,12 +383,11 @@ Initialize: `make init-var`
 
 1. `src/agentic_fleet/config/workflow_config.yaml` — All runtime settings
 2. `src/agentic_fleet/workflows/supervisor.py` — Main orchestration entry
-3. `src/agentic_fleet/services/workflow_service.py` — Service layer entry point
-4. `src/agentic_fleet/agents/coordinator.py` — AgentFactory (creates agents from YAML)
-5. `src/agentic_fleet/dspy_modules/reasoner.py` — DSPy module manager
-6. `src/agentic_fleet/api/v1/events/mapping.py` — Event routing (maps workflow events → UI)
-7. `AGENTS.md` (root) — Toolchain defaults and working agreements
-8. `.github/copilot-instructions.md` — Additional AI assistant context
+3. `src/agentic_fleet/agents/coordinator.py` — AgentFactory (creates agents from YAML)
+4. `src/agentic_fleet/dspy_modules/reasoner.py` — DSPy module manager
+5. `src/agentic_fleet/api/events/mapping.py` — Event routing (maps workflow events → UI)
+6. `AGENTS.md` (root) — Toolchain defaults and working agreements
+7. `.github/copilot-instructions.md` — Additional AI assistant context
 
 ## Deployment
 

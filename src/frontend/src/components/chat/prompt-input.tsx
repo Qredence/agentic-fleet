@@ -41,6 +41,7 @@ function PromptInput({
     }
   }, [value]);
 
+  // Always update internal state first, then call onValueChange
   const handleChange = (newValue: string) => {
     setInternalValue(newValue);
     onValueChange?.(newValue);
@@ -56,7 +57,7 @@ function PromptInput({
       value={{
         isLoading,
         value: value ?? internalValue,
-        setValue: onValueChange ?? handleChange,
+        setValue: handleChange,
         maxHeight,
         onSubmit,
         disabled,

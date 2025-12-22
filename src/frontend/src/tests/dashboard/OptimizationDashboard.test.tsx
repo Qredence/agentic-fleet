@@ -135,7 +135,7 @@ describe("OptimizationDashboard", () => {
   });
 
   it("renders self-improvement error state", async () => {
-    selfImprove = { mutate: vi.fn(), isPending: false, isError: true };
+    optimizationRun = { mutate: vi.fn(), isPending: false, isError: true };
     const user = userEvent.setup();
     render(
       <SidebarProvider>

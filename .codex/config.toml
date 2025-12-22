@@ -1,0 +1,5 @@
+forced_login_method = "chatgpt"
+
+[shell_environment_policy]
+exclude = ["OPENAI_*"]
+inherit = "core"

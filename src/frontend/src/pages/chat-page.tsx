@@ -70,6 +70,8 @@ function ChatContent({
     })),
   );
 
+  const shouldShowTrace = showTrace || isLoading;
+
   const [prompt, setPrompt] = useState("");
 
   const headerTitle = useMemo(() => {
@@ -132,7 +134,7 @@ function ChatContent({
         <ChatMessages
           messages={messages}
           isLoading={isLoading}
-          renderTrace={showTrace ? renderTraceContent : undefined}
+          renderTrace={shouldShowTrace ? renderTraceContent : undefined}
         />
       </div>
 
@@ -169,6 +171,21 @@ export function ChatPage() {
   const [leftSidebarOpen, setLeftSidebarOpen] = useState(true);
   const [rightPanelOpen, setRightPanelOpen] = useState(false);
 
+  const { messages, isLoading, sendWorkflowResponse } = useChatStore(
+    useShallow((state) => ({
+      messages: state.messages,
+      isLoading: state.isLoading,
+      sendWorkflowResponse: state.sendWorkflowResponse,
+    })),
+  );
+
+  const latestAssistantMessage = useMemo(() => {
+    for (let i = messages.length - 1; i >= 0; i -= 1) {
+      if (messages[i]?.role === "assistant") return messages[i];
+    }
+    return null;
+  }, [messages]);
+
   return (
     <SidebarProvider open={leftSidebarOpen} onOpenChange={setLeftSidebarOpen}>
       <SidebarLeft />
@@ -181,11 +198,29 @@ export function ChatPage() {
 
       {/* Right Panel - simple CSS-based collapsible panel with floating style */}
       <RightPanel open={rightPanelOpen} onOpenChange={setRightPanelOpen}>
-        <div className="p-4">
-          <h3 className="text-sm font-medium mb-2">Details</h3>
-          <p className="text-sm text-muted-foreground">
-            Select an item to view details.
-          </p>
+        <div className="flex h-full flex-col gap-3 p-4">
+          <div className="flex items-center justify-between">
+            <h3 className="text-sm font-medium">Chain of Thought</h3>
+            <span className="text-xs text-muted-foreground">
+              {isLoading ? "Streaming" : "Idle"}
+            </span>
+          </div>
+
+          {latestAssistantMessage ? (
+            <ChainOfThoughtTrace
+              message={latestAssistantMessage}
+              isStreaming={isLoading}
+              isLoading={isLoading}
+              showRawReasoning={true}
+              onWorkflowResponse={(requestId, payload) =>
+                sendWorkflowResponse(requestId, payload)
+              }
+            />
+          ) : (
+            <p className="text-sm text-muted-foreground">
+              No workflow events yet.
+            </p>
+          )}
         </div>
       </RightPanel>
     </SidebarProvider>

@@ -264,14 +264,17 @@ export interface OptimizationDetails {
 }
 
 export interface OptimizationResult {
-  job_id: string;
-  status: string;
-  created_at: string;
+  job_id?: string | null;
+  status: "pending" | "running" | "started" | "completed" | "cached" | "failed";
+  created_at?: string;
   started_at?: string | null;
   completed_at?: string | null;
   error?: string | null;
   result_artifact?: string | null;
-  message?: string; // Kept for UI compatibility if needed
+  message?: string;
+  cache_path?: string | null;
+  progress?: number;
+  details?: OptimizationDetails;
 }
 
 export interface HistoryQualityMetrics {
