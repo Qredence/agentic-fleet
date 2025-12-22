@@ -29,7 +29,7 @@ from agentic_fleet.models import (
     WorkflowSession,
     WorkflowStatus,
 )
-from agentic_fleet.services.chat_websocket import (
+from agentic_fleet.services.chat_helpers import (
     _get_or_create_thread,
     _hydrate_thread_from_conversation,
     _log_stream_event,

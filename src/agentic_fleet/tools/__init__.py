@@ -1,6 +1,6 @@
 """Tools package for agent framework integration."""
 
-from agentic_fleet.utils.agent_framework_shims import ensure_agent_framework_shims
+from agentic_fleet.utils.agent_framework import ensure_agent_framework_shims
 
 ensure_agent_framework_shims()
 
