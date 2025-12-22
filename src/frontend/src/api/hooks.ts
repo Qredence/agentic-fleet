@@ -19,7 +19,6 @@ import {
   healthApi,
   optimizationApi,
   evaluationApi,
-  improvementApi,
   dspyApi,
 } from "./client";
 import type {
@@ -30,8 +29,6 @@ import type {
   OptimizationResult,
   OptimizationRequest,
   HistoryExecutionEntry,
-  SelfImproveRequest,
-  SelfImproveResponse,
   DSPyConfig,
   DSPyStats,
   CacheInfo,
@@ -97,7 +94,7 @@ export function useConversations(
 ) {
   return useQuery({
     queryKey: queryKeys.conversations.list(),
-    queryFn: conversationsApi.list,
+    queryFn: () => conversationsApi.list(),
     staleTime: 30_000, // 30 seconds
     ...options,
   });
@@ -167,7 +164,7 @@ export function useSessions(
 ) {
   return useQuery({
     queryKey: queryKeys.sessions.list(),
-    queryFn: sessionsApi.list,
+    queryFn: () => sessionsApi.list(),
     staleTime: 10_000, // 10 seconds
     ...options,
   });
@@ -222,7 +219,7 @@ export function useAgents(
 ) {
   return useQuery({
     queryKey: queryKeys.agents.list(),
-    queryFn: agentsApi.list,
+    queryFn: () => agentsApi.list(),
     staleTime: 5 * 60_000, // 5 minutes - agents don't change often
     ...options,
   });
@@ -237,7 +234,7 @@ export function useHealthCheck(
 ) {
   return useQuery({
     queryKey: queryKeys.health.check,
-    queryFn: healthApi.check,
+    queryFn: () => healthApi.check(),
     staleTime: 30_000,
     retry: false,
     ...options,
@@ -249,7 +246,7 @@ export function useReadinessCheck(
 ) {
   return useQuery({
     queryKey: queryKeys.health.ready,
-    queryFn: healthApi.ready,
+    queryFn: () => healthApi.ready(),
     staleTime: 10_000,
     retry: false,
     ...options,
@@ -283,7 +280,11 @@ export function useOptimizationStatus(
     refetchInterval: (query) => {
       const status = query.state.data?.status;
       if (!status) return 2000;
-      return status === "started" || status === "running" ? 2000 : false;
+      return status === "pending" ||
+        status === "running" ||
+        status === "started"
+        ? 2000
+        : false;
     },
     ...options,
   });
@@ -304,14 +305,8 @@ export function useEvaluationHistory(
   });
 }
 
-export function useTriggerSelfImprove(
-  options?: UseMutationOptions<SelfImproveResponse, Error, SelfImproveRequest>,
-) {
-  return useMutation({
-    mutationFn: improvementApi.trigger,
-    ...options,
-  });
-}
+// Self-Improvement logic combined with Optimization
+// useTriggerSelfImprove removed in favor of useOptimizationRun
 
 // =============================================================================
 // DSPy Management Hooks
@@ -322,7 +317,7 @@ export function useDSPyConfig(
 ) {
   return useQuery({
     queryKey: queryKeys.dspy.config(),
-    queryFn: dspyApi.getConfig,
+    queryFn: () => dspyApi.getConfig(),
     staleTime: 60_000, // 1 minute
     ...options,
   });
@@ -333,7 +328,7 @@ export function useDSPyStats(
 ) {
   return useQuery({
     queryKey: queryKeys.dspy.stats(),
-    queryFn: dspyApi.getStats,
+    queryFn: () => dspyApi.getStats(),
     staleTime: 10_000, // 10 seconds
     ...options,
   });
@@ -344,7 +339,7 @@ export function useDSPyCacheInfo(
 ) {
   return useQuery({
     queryKey: queryKeys.dspy.cache(),
-    queryFn: dspyApi.getCacheInfo,
+    queryFn: () => dspyApi.getCacheInfo(),
     staleTime: 30_000, // 30 seconds
     ...options,
   });
@@ -355,7 +350,7 @@ export function useReasonerSummary(
 ) {
   return useQuery({
     queryKey: queryKeys.dspy.reasonerSummary(),
-    queryFn: dspyApi.getReasonerSummary,
+    queryFn: () => dspyApi.getReasonerSummary(),
     staleTime: 10_000, // 10 seconds
     ...options,
   });
@@ -366,7 +361,7 @@ export function useDSPySignatures(
 ) {
   return useQuery({
     queryKey: queryKeys.dspy.signatures(),
-    queryFn: dspyApi.getSignatures,
+    queryFn: () => dspyApi.getSignatures(),
     staleTime: 5 * 60_000, // 5 minutes - signatures rarely change
     ...options,
   });
@@ -377,7 +372,7 @@ export function useDSPyPrompts(
 ) {
   return useQuery({
     queryKey: queryKeys.dspy.prompts(),
-    queryFn: dspyApi.getPrompts,
+    queryFn: () => dspyApi.getPrompts(),
     staleTime: 60_000, // 1 minute
     ...options,
   });

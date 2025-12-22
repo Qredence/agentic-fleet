@@ -155,7 +155,7 @@ def get_nlu_module() -> DSPyNLU:
     cache_path = DEFAULT_NLU_CACHE_PATH
     if os.path.exists(cache_path):
         try:
-            module = load_compiled_module(cache_path)
+            module = load_compiled_module(cache_path, module_type="nlu")
             if module is not None and isinstance(module, DSPyNLU):
                 logger.info("Loaded compiled DSPyNLU from %s", cache_path)
                 return module

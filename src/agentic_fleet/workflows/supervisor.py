@@ -28,10 +28,11 @@ from agent_framework._workflows import (
     WorkflowStatusEvent,
 )
 
-from ..utils.history_manager import HistoryManager
-from ..utils.logger import setup_logger
+from agentic_fleet.utils.infra.logging import setup_logger
+from agentic_fleet.utils.infra.telemetry import optional_span
+from agentic_fleet.utils.storage import HistoryManager
+
 from ..utils.models import ExecutionMode, RoutingDecision, ensure_routing_decision
-from ..utils.telemetry import optional_span
 from ..utils.tool_registry import ToolRegistry
 from ..utils.ttl_cache import SyncTTLCache
 from .builder import build_fleet_workflow
@@ -498,7 +499,7 @@ class SupervisorWorkflow:
 
                 if schedule_quality_eval and result_text.strip():
                     try:
-                        from agentic_fleet.services.background_evaluation import (
+                        from agentic_fleet.evaluation.background import (
                             schedule_quality_evaluation,
                         )
 
@@ -566,7 +567,7 @@ class SupervisorWorkflow:
                 and result_dict.get("result", "").strip()
             ):
                 try:
-                    from agentic_fleet.services.background_evaluation import (
+                    from agentic_fleet.evaluation.background import (
                         schedule_quality_evaluation,
                     )
 
@@ -1340,7 +1341,7 @@ class SupervisorWorkflow:
 
             if should_schedule_quality_eval and final_msg is not None:
                 try:
-                    from agentic_fleet.services.background_evaluation import (
+                    from agentic_fleet.evaluation.background import (
                         schedule_quality_evaluation,
                     )
 

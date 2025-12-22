@@ -53,8 +53,7 @@ class DSPyConfig(BaseModel):
     max_tokens: int = Field(default=2000, ge=1, le=32000)
     compiled_reasoner_path: str = ".var/cache/dspy/compiled_reasoner.json"
     require_compiled: bool = False
-    # DSPy 3.x TypedPredictor settings for structured outputs
-    use_typed_signatures: bool = True  # Enable Pydantic-based typed signatures
+    # Routing/cache configuration for DSPy-based supervisors and agents
     enable_routing_cache: bool = True  # Cache routing decisions
     routing_cache_ttl_seconds: int = Field(default=300, ge=0)  # Cache TTL in seconds
     optimization: DSPyOptimizationConfig = DSPyOptimizationConfig()

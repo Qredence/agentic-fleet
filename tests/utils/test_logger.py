@@ -3,7 +3,7 @@ import os
 from unittest.mock import patch
 
 from agentic_fleet.utils.cfg import env_config
-from agentic_fleet.utils.logger import setup_logger
+from agentic_fleet.utils.infra.logging import setup_logger
 
 
 def test_setup_logger_defaults():

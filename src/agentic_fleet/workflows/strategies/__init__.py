@@ -15,7 +15,8 @@ from typing import TYPE_CHECKING, Any
 
 from agent_framework._workflows import WorkflowOutputEvent
 
-from ...utils.logger import setup_logger
+from agentic_fleet.utils.infra.logging import setup_logger
+
 from ...utils.models import ExecutionMode, RoutingDecision
 from ..models import ExecutionOutcome, MagenticAgentMessageEvent
 from .base import ExecutionPhaseError, _extract_tool_usage

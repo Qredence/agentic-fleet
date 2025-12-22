@@ -4,10 +4,14 @@
       "description": "prompt-kit registry",
       "type": "stdio",
       "command": "npx",
-      "args": ["-y", "shadcn@canary", "registry:mcp"],
+      "args": ["-y", "shadcn@latest", "registry:mcp"],
       "env": {
         "REGISTRY_URL": "https://www.prompt-kit.com/c/registry.json"
       }
+    },
+    "shadcn": {
+      "command": "npx",
+      "args": ["shadcn@latest", "mcp"]
     }
   }
 }

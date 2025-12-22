@@ -12,14 +12,15 @@ import time
 from collections.abc import AsyncIterable
 from typing import TYPE_CHECKING, Any, cast
 
+import dspy
 from agent_framework._agents import ChatAgent
 from agent_framework._threads import AgentThread
 from agent_framework._types import AgentRunResponse, AgentRunResponseUpdate, ChatMessage, Role
 
-from ..dspy_modules.signatures import FleetPoT, FleetReAct
+from agentic_fleet.utils.infra.logging import setup_logger
+from agentic_fleet.utils.infra.telemetry import PerformanceTracker, optional_span
+
 from ..utils.cache import TTLCache
-from ..utils.logger import setup_logger
-from ..utils.telemetry import PerformanceTracker, optional_span
 
 if TYPE_CHECKING:
     from agent_framework.openai import OpenAIChatClient, OpenAIResponsesClient
@@ -82,8 +83,16 @@ class DSPyEnhancedAgent(ChatAgent):
         self.task_enhancer: Any | None = None
 
         # Initialize reasoning modules using the agent's tools
-        self.react_module = FleetReAct(tools=self.tools) if reasoning_strategy == "react" else None
-        self.pot_module = FleetPoT() if reasoning_strategy == "program_of_thought" else None
+        self.react_module = (
+            dspy.ReAct("question -> answer", tools=self.tools)
+            if reasoning_strategy == "react"
+            else None
+        )
+        self.pot_module = (
+            dspy.ProgramOfThought("question -> answer")
+            if reasoning_strategy == "program_of_thought"
+            else None
+        )
 
     @property
     def tools(self) -> Any:

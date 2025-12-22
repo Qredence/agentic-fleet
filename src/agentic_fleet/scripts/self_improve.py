@@ -16,9 +16,8 @@ from rich.console import Console
 from rich.panel import Panel
 from rich.table import Table
 
+from agentic_fleet.dspy_modules.gepa import SelfImprovementEngine
 from agentic_fleet.utils.cfg import DEFAULT_EXAMPLES_PATH
-
-from ..utils.self_improvement import SelfImprovementEngine
 
 # Add project root to path
 sys.path.insert(0, str(Path(__file__).parent.parent))
@@ -84,68 +83,50 @@ def main():
     stats_table.add_column("Metric", style="cyan")
     stats_table.add_column("Value", style="green")
 
-    stats_table.add_row("Total Executions", str(stats["total_executions"]))
+    total: int = stats.get("total_executions", 0)
+    hq_count: int = stats.get("high_quality_executions", 0)
+    hq_pct: float = hq_count / max(total, 1) * 100
+
+    stats_table.add_row("Total Executions", str(total))
     stats_table.add_row(
         "High-Quality Executions",
-        f"{stats['high_quality_executions']} ({stats['high_quality_executions'] / max(stats['total_executions'], 1) * 100:.1f}%)",
+        f"{hq_count} ({hq_pct:.1f}%)",
     )
-    stats_table.add_row("Potential New Examples", str(stats["potential_new_examples"]))
-    stats_table.add_row("Quality Threshold", f"{stats['min_quality_threshold']}/10")
-    stats_table.add_row("Average Quality Score", f"{stats['average_quality_score']:.2f}/10")
+    stats_table.add_row("Potential New Examples", str(stats.get("potential_new_examples", 0)))
+    stats_table.add_row(
+        "Quality Threshold", f"{stats.get('min_quality_threshold', args.min_quality)}/10"
+    )
+    stats_table.add_row("Average Quality Score", f"{stats.get('average_quality_score', 0):.2f}/10")
 
     console.print(stats_table)
 
     # Show quality distribution
     console.print("\n[bold]Quality Score Distribution:[/bold]")
-    dist = stats["quality_score_distribution"]
-    for category, count in dist.items():
-        console.print(f"  • {category}: {count}")
+    dist = stats.get("quality_score_distribution", {})
+    if not dist:
+        console.print("[dim]No quality data available[/dim]")
+    else:
+        dist_table = Table()
+        dist_table.add_column("Range", style="yellow")
+        dist_table.add_column("Count", style="white")
+
+        for k, v in dist.items():
+            dist_table.add_row(k, str(v))
+        console.print(dist_table)
 
     if args.stats_only:
-        console.print("\n[dim]Run without --stats-only to add examples[/dim]")
         return
 
-    # Perform self-improvement
-    if stats["high_quality_executions"] == 0:
-        console.print("\n[yellow]⚠ No high-quality executions found to learn from[/yellow]")
-        console.print(
-            f"[dim]Tip: Lower --min-quality threshold (current: {args.min_quality})[/dim]"
+    # Proceed with improvement if there are potential examples
+    if stats.get("potential_new_examples", 0) > 0:
+        console.print("\n[bold green]🚀 Running Improvement Process...[/bold green]")
+        _added, message = engine.auto_improve(
+            examples_file=args.examples_file,
+            force_recompile=not args.no_recompile,
         )
-        return
-
-    console.print("\n[bold cyan]🔄 Generating Training Examples...[/bold cyan]")
-
-    added, status = engine.auto_improve(
-        examples_file=args.examples_file, force_recompile=not args.no_recompile
-    )
-
-    if added > 0:
-        console.print(
-            Panel(
-                f"[bold green]✓ Success![/bold green]\n\n"
-                f"{status}\n\n"
-                f"Added {added} new training examples from high-quality executions.\n"
-                f"Next execution will use the improved routing model.",
-                title="Self-Improvement Complete",
-                border_style="green",
-            )
-        )
-
-        console.print(
-            "\n[bold]Next steps:[/bold]\n"
-            f"  1. Review new examples: [cyan]cat {DEFAULT_EXAMPLES_PATH} | tail -50[/cyan]\n"
-            '  2. Test improved routing: [cyan]python console.py run -m "Test task"[/cyan]\n'
-            "  3. Monitor quality scores in future executions"
-        )
+        console.print(Panel(message, title="Result", border_style="green"))
     else:
-        console.print(
-            Panel(
-                "[yellow]No new examples added[/yellow]\n\n"
-                "All high-quality executions are already in training set.",
-                title="Self-Improvement",
-                border_style="yellow",
-            )
-        )
+        console.print("\n[yellow]No additional high-quality examples found to add.[/yellow]")
 
 
 if __name__ == "__main__":

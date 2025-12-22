@@ -110,7 +110,7 @@ def _get_answer_quality_module() -> Any | None:
         # Import here to avoid circular imports
         from ..utils.compiler import load_compiled_module
 
-        module = load_compiled_module(cache_path)
+        module = load_compiled_module(cache_path, module_type="answer_quality")
         if module is not None:
             _MODULE_CACHE[cache_key] = module
             logger.info("Loaded compiled AnswerQualityModule from %s", cache_path)

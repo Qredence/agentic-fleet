@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import pytest
 
-from agentic_fleet.utils.resilience import (
+from agentic_fleet.utils.infra.resilience import (
     async_call_with_retry,
     create_circuit_breaker,
     log_retry_attempt,

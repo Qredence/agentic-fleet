@@ -15,23 +15,34 @@ beforeEach(() => {
 });
 
 describe("api client: optimization/evaluation/improvement", () => {
-  it("optimizationApi.run posts to /optimize", async () => {
-    httpMock.post.mockResolvedValueOnce({ status: "started", message: "ok" });
+  it("optimizationApi.run posts to /optimization/jobs", async () => {
+    httpMock.post.mockResolvedValueOnce({
+      job_id: "job-123",
+      status: "pending",
+    });
 
-    await optimizationApi.run({ optimizer: "gepa", use_cache: true });
+    await optimizationApi.run({
+      module_name: "DSPyReasoner",
+      user_id: "user-1",
+      auto_mode: "light",
+    });
 
-    expect(httpMock.post).toHaveBeenCalledWith("/optimize", {
-      optimizer: "gepa",
-      use_cache: true,
+    expect(httpMock.post).toHaveBeenCalledWith("/optimization/jobs", {
+      module_name: "DSPyReasoner",
+      user_id: "user-1",
+      auto_mode: "light",
     });
   });
 
-  it("optimizationApi.status gets /optimize/{jobId}", async () => {
-    httpMock.get.mockResolvedValueOnce({ status: "running", message: "ok" });
+  it("optimizationApi.status gets /optimization/jobs/{jobId}", async () => {
+    httpMock.get.mockResolvedValueOnce({
+      job_id: "job-123",
+      status: "running",
+    });
 
     await optimizationApi.status("job-123");
 
-    expect(httpMock.get).toHaveBeenCalledWith("/optimize/job-123");
+    expect(httpMock.get).toHaveBeenCalledWith("/optimization/jobs/job-123");
   });
 
   it("evaluationApi.history gets /history with limit/offset", async () => {
@@ -42,14 +53,9 @@ describe("api client: optimization/evaluation/improvement", () => {
     expect(httpMock.get).toHaveBeenCalledWith("/history?limit=10&offset=20");
   });
 
-  it("improvementApi.trigger posts to /self-improve", async () => {
-    httpMock.post.mockResolvedValueOnce({ status: "completed", message: "ok" });
-
-    await improvementApi.trigger({ min_quality: 8.5, max_examples: 5 });
-
-    expect(httpMock.post).toHaveBeenCalledWith("/self-improve", {
-      min_quality: 8.5,
-      max_examples: 5,
-    });
+  it("improvementApi.trigger throws error (deprecated)", () => {
+    expect(() => improvementApi.trigger({})).toThrow(
+      "Use optimizationApi.run() instead",
+    );
   });
 });

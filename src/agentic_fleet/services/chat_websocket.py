@@ -35,7 +35,7 @@ else:
 from fastapi import HTTPException, WebSocket, WebSocketDisconnect, status
 
 from agentic_fleet.api.events.mapping import classify_event, map_workflow_event
-from agentic_fleet.core.settings import get_settings
+from agentic_fleet.evaluation.background import schedule_quality_evaluation
 from agentic_fleet.models import (
     ChatRequest,
     MessageRole,
@@ -45,9 +45,9 @@ from agentic_fleet.models import (
     WorkflowSession,
     WorkflowStatus,
 )
-from agentic_fleet.services.background_evaluation import schedule_quality_evaluation
 from agentic_fleet.utils.cfg import load_config
-from agentic_fleet.utils.logger import setup_logger
+from agentic_fleet.utils.cfg.settings import get_settings
+from agentic_fleet.utils.infra.logging import setup_logger
 from agentic_fleet.workflows.config import build_workflow_config_from_yaml
 from agentic_fleet.workflows.supervisor import create_supervisor_workflow
 

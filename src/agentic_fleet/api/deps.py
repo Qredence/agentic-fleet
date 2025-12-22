@@ -10,8 +10,8 @@ from typing import Annotated
 
 from fastapi import Depends, HTTPException, Request, status
 
-from agentic_fleet.core.settings import AppSettings, get_settings
 from agentic_fleet.services.conversation import ConversationManager, WorkflowSessionManager
+from agentic_fleet.utils.cfg.settings import AppSettings, get_settings
 from agentic_fleet.workflows.supervisor import SupervisorWorkflow
 
 

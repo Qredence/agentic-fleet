@@ -97,13 +97,11 @@ class ReasonerSummary(BaseModel):
     Attributes:
         history_count: Number of history entries.
         routing_cache_size: Size of routing decision cache.
-        use_typed_signatures: Whether typed signatures are enabled.
         modules_initialized: Whether DSPy modules are initialized.
     """
 
     history_count: int
     routing_cache_size: int
-    use_typed_signatures: bool
     modules_initialized: bool = False
 
 

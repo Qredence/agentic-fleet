@@ -14,7 +14,6 @@ from uuid import uuid4
 
 from fastapi import HTTPException, status
 
-from agentic_fleet.core.conversation_store import ConversationStore
 from agentic_fleet.models import (
     Conversation,
     Message,
@@ -22,6 +21,7 @@ from agentic_fleet.models import (
     WorkflowSession,
     WorkflowStatus,
 )
+from agentic_fleet.utils.storage.conversation import ConversationStore
 
 logger = logging.getLogger(__name__)
 
