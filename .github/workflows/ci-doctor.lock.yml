@@ -355,6 +355,9 @@ jobs:
         run: |
           mkdir -p /tmp/gh-aw/safeoutputs/
           find "/tmp/gh-aw/safeoutputs/" -type f -print
+          if [ ! -s /tmp/gh-aw/safeoutputs/agent_output.json ]; then
+            echo '{"items":[]}' > /tmp/gh-aw/safeoutputs/agent_output.json
+          fi
           echo "GH_AW_AGENT_OUTPUT=/tmp/gh-aw/safeoutputs/agent_output.json" >> "$GITHUB_ENV"
       - name: Add Issue Comment
         id: add_comment
