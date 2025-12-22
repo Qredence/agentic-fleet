@@ -12,11 +12,11 @@
 
 | # | Issue | File | Priority | Effort |
 |---|-------|------|----------|--------|
-| 1 | Concurrency bug | `api/middleware.py:186` | 🔴 Critical | 2-3h |
-| 2 | WebSocket complexity | `services/chat_websocket.py:526` | 🔴 Critical | 4-6h |
-| 3 | Event mapping length | `api/events/mapping.py:385` | 🟠 High | 6-8h |
-| 4 | SSE complexity | `services/chat_sse.py:70` | 🟠 High | 2-3h |
-| 5 | Agent shims | `utils/agent_framework_shims.py:79` | 🟡 Medium | 2h |
+| 1 | Concurrency bug | `src/agentic_fleet/api/middleware.py:186` | 🔴 Critical | 2-3h |
+| 2 | WebSocket complexity | `src/agentic_fleet/services/chat_websocket.py:526` | 🔴 Critical | 4-6h |
+| 3 | Event mapping length | `src/agentic_fleet/api/events/mapping.py:385` | 🟠 High | 6-8h |
+| 4 | SSE complexity | `src/agentic_fleet/services/chat_sse.py:70` | 🟠 High | 2-3h |
+| 5 | Agent shims | `src/agentic_fleet/utils/agent_framework_shims.py:79` | 🟡 Medium | 2h |
 
 ## ✅ Implementation Checklist
 

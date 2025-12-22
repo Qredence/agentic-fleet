@@ -179,11 +179,11 @@ def _patch_async_client():
 ### 5. Workflow Executors - All > 100 Lines
 
 **Files**:
-- `workflows/executors/analysis.py:89` - `handle_task()` - 167 lines
-- `workflows/executors/routing.py:45` - `handle_analysis()` - 231 lines  
-- `workflows/executors/execution.py:34` - `handle_routing()` - 138 lines
-- `workflows/executors/progress.py:42` - `handle_execution()` - 100 lines
-- `workflows/executors/quality.py:42` - `handle_progress()` - 140 lines
+- `src/agentic_fleet/workflows/executors/analysis.py:89` - `handle_task()` - 167 lines
+- `src/agentic_fleet/workflows/executors/routing.py:45` - `handle_analysis()` - 231 lines  
+- `src/agentic_fleet/workflows/executors/execution.py:34` - `handle_routing()` - 138 lines
+- `src/agentic_fleet/workflows/executors/progress.py:42` - `handle_execution()` - 100 lines
+- `src/agentic_fleet/workflows/executors/quality.py:42` - `handle_progress()` - 140 lines
 
 **Impact**: Medium - Core workflow orchestration (called per workflow execution)
 
@@ -231,9 +231,9 @@ def _extract_prompts_recursive(obj, depth, max_depth):
 ### 7. Long Initialization Functions
 
 **Files**:
-- `agents/coordinator.py:633` - `_resolve_instructions()` - 70 lines
-- `agents/base.py:41` - `__init__()` - 55 lines
-- `utils/infra/tracing.py:69` - `initialize_tracing()` - 177 lines
+- `src/agentic_fleet/agents/coordinator.py:633` - `_resolve_instructions()` - 70 lines
+- `src/agentic_fleet/agents/base.py:41` - `__init__()` - 55 lines
+- `src/agentic_fleet/utils/infra/tracing.py:69` - `initialize_tracing()` - 177 lines
 
 **Impact**: Low - Called during startup only
 
@@ -255,9 +255,9 @@ def initialize_tracing():
 ### 8. CLI Commands - Long Functions
 
 **Files**:
-- `cli/commands/run.py:73` - `run()` - 195 lines
-- `cli/commands/optimize.py:27` - `gepa_optimize()` - 183 lines
-- `cli/commands/handoff.py:19` - `handoff()` - 121 lines
+- `src/agentic_fleet/cli/commands/run.py:73` - `run()` - 195 lines
+- `src/agentic_fleet/cli/commands/optimize.py:27` - `gepa_optimize()` - 183 lines
+- `src/agentic_fleet/cli/commands/handoff.py:19` - `handoff()` - 121 lines
 
 **Impact**: Very Low - CLI only, not performance-critical
 
