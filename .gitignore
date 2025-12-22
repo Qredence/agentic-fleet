@@ -46,7 +46,10 @@ env/
 .trae/
 .gemini/
 .kilocode/
-
+.factory/
+.claude/
+.github/mcp.json
+.fleet/
 # Generated reports
 report/
 
@@ -137,3 +140,4 @@ memory-bank/
 .claude/skills/python-backend-reviewer/scripts/concurrency_analyzer.py
 .claude/skills/python-backend-reviewer/scripts/detect_duplicates.py
 .claude/python-backend-reviewer.skill
+.letta/settings.local.json

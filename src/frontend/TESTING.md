@@ -2,71 +2,302 @@
 
 ## Overview
 
-The frontend uses **Vitest + Testing Library** for fast unit-style tests under `src/tests/`.
+The frontend uses **Vitest + Testing Library** for fast unit-style tests under `src/tests/`. All tests run in `jsdom` with `fetch` globally mocked in `src/tests/setup.ts` to keep the test suite fast and deterministic.
 
-Today, tests run in `jsdom` and mock `fetch` globally in `src/tests/setup.ts` to keep the suite fast and deterministic.
+## Test Commands
 
-## Test Types
-
-### Unit Tests
-
-Unit tests run in isolation with mocked dependencies. They:
-
-- Execute quickly without external dependencies
-- Provide fast feedback in CI/CD pipelines
-- Test component logic, state management, and utilities
-
-### Integration Tests (future)
-
-If/when you add live-backend integration tests, keep them in a separate suite and avoid sharing global fetch mocks. (The current suite does **not** run against a live backend.)
-
-## Prerequisites
-
-### For Unit Tests
-
-No prerequisites—unit tests run independently with mocks.
-
-## Running Tests
-
-### All Tests (Default)
-
-From `src/frontend`:
+From `src/frontend` directory:
 
 ```bash
-cd src/frontend
+# Run all tests (default)
 npm run test
-```
 
-### Run Once (CI Mode)
-
-```bash
-cd src/frontend
+# Run tests once without watch mode (CI)
 npm run test:run
-```
 
-### Watch Mode
+# Watch mode with UI
+npm run test:ui
 
-```bash
+# Watch mode (headless)
 npm run test:watch
-```
 
-### With Coverage
-
-```bash
+# Run tests with coverage report
 npm run test:coverage
 ```
 
-### UI Mode
+See `package.json` for the full command list.
+
+## Test Configuration
+
+### Environment Variables
+
+Tests use `VITE_API_URL` environment variable, but most tests mock the API calls via global `fetch` mock in `src/tests/setup.ts`. The mock handles endpoints:
+
+- `GET /api/health` - Health check
+- `POST /conversations` - Create conversation
+- `GET /api/conversations/:id` - Get conversation
+- `POST /api/chat` - Send chat message
+
+### Timeouts
+
+Test timeouts are configured in `vitest.config.ts`:
+
+- **Global timeout**: 15 seconds
+- **Hook timeout**: 15 seconds
+
+## Available Test Scripts
+
+From package.json:
 
 ```bash
-npm run test:ui
+# Development
+npm run test          # Run tests in watch mode
+npm run test:watch    # Run tests in watch mode (alternative)
+npm run test:ui      # Interactive UI mode
+
+# CI/Production
+npm run test:run     # Run once without watch mode
+npm run test:coverage # Run coverage report
+
+# Linting & Formatting
+npm run lint          # Run ESLint
+npm run format        # Run Prettier formatting
 ```
 
-### Run Once (CI Mode)
+## Test Structure
 
-```bash
-npm run test:run
+### Component Tests (`src/tests/`)
+
+Tests are organized by component domain:
+
 ```
+src/tests/
+├── api/                    # API client tests
+│   └── client.optimization.test.ts
+├── components/
+│   └── prompt-kit/         # Chain of Thought tests
+│       └── chain-of-thought.test.tsx
+├── dashboard/              # Dashboard component tests
+│   └── OptimizationDashboard.test.tsx
+├── utils/                  # Shared test utilities
+│   ├── render.ts
+│   ├── factories.ts
+│   └── queries.ts
+└── App.test.tsx           # Main app tests
+```
+
+### Test Utilities
+
+- **`src/tests/setup.ts`** - Global test setup with fetch mocking
+- **`@testing-library/react`** - UI testing utilities
+- **`@testing-library/user-event`** - User interaction simulation
+- **`nanoid`** - For generating unique IDs in mock data
+
+## Writing Component Tests
+
+### Basic Pattern
+
+```typescript
+import { render, screen } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
+import { describe, expect, it, vi } from "vitest";
+import { YourComponent } from "@/components/path";
+
+// Mock external dependencies
+vi.mock("@/stores", () => ({
+  useChatStore: () => ({
+    messages: [],
+    sendMessage: vi.fn(),
+  }),
+}));
+
+describe("YourComponent", () => {
+  it("renders correctly", () => {
+    render(<YourComponent />);
+    expect(screen.getByText("Expected Text")).toBeInTheDocument();
+  });
+
+  it("handles user interactions", async () => {
+    const user = userEvent.setup();
+    const mockSend = vi.fn();
+    vi.mocked(useChatStore).mockReturnValue({ sendMessage: mockSend });
+
+    render(<YourComponent />);
+    await user.click(screen.getByRole("button"));
+    expect(mockSend).toHaveBeenCalled();
+  });
+});
+```
+
+### React Query Mock Pattern
+
+When testing components using React Query hooks:
+
+```typescript
+// 1. Create mutable mock state
+let mockData: YourHookReturnType = {
+  data: undefined,
+  isLoading: false,
+  isError: false,
+};
+
+// 2. Mock the hook with access to mutable state
+vi.mock("@/api/hooks", () => ({
+  useYourHook: () => mockData,
+  // Add other hooks as needed
+}));
+
+// 3. Reset mock state before each test
+beforeEach(() => {
+  mockData = {
+    data: undefined,
+    isLoading: false,
+    isError: false,
+  };
+});
+
+// 4. Update mock state to test different scenarios
+it("shows loading state", () => {
+  mockData.isLoading = true;
+  render(<YourComponent />);
+  expect(screen.getByText(/loading/i)).toBeInTheDocument();
+});
+```
+
+## Mock Data Patterns
+
+### Conversation Factory
+
+```typescript
+import { Conversation } from "@/api/types";
+import { faker } from "@faker-js/faker";
+
+export function createMockConversation(
+  overrides?: Partial<Conversation>,
+): Conversation {
+  return {
+    id: faker.string.uuid(),
+    title: faker.lorem.words(3),
+    created_at: Date.now(),
+    messages: [],
+    ...overrides,
+  };
+}
+```
+
+### Message Factory
+
+```typescript
+import { Message } from "@/api/types";
+import { faker } from "@faker-js/faker";
+
+export function createMockMessage(overrides?: Partial<Message>): Message {
+  return {
+    id: faker.string.uuid(),
+    role: faker.helpers.arrayElement(["user", "assistant"]),
+    content: faker.lorem.paragraph(),
+    created_at: Date.now(),
+    ...overrides,
+  };
+}
+```
+
+## Best Practices
+
+### Testing React Components
+
+1. **Test user-facing behavior**: Prefer queries like `getByRole`, `getByText`, `getByLabelText` over implementation details
+2. **Use `userEvent` for interactions**: Simulate real user interactions instead of `fireEvent`
+3. **Mock external dependencies**: Mock API calls, stores, and contexts for isolation
+4. **Keep tests focused**: Each test should verify one specific behavior
+
+### Testing React Query Hooks
+
+1. **Mock with mutable state**: Use mutable mock objects to test different states
+2. **Test loading/error states**: Verify UI responds correctly to async states
+3. **Test mutations**: Verify side effects and cache updates
+
+### Performance Tips
+
+1. **Use `vi.mock()` at module level**: Mock heavy dependencies at the top of test files
+2. **Mock expensive operations**: Mock API calls, localStorage, timers
+3. **Use `beforeEach` for setup**: Reset mocks and state between tests
+4. **Avoid complex arrangements**: Keep test setup simple and focused
+
+## Troubleshooting
+
+### Tests Failing with Fetch Errors
+
+**Cause**: Unmocked fetch calls in tests.
+
+**Solution**:
+
+1. Check `src/tests/setup.ts` has mock for your endpoint
+2. Add new endpoint mock if needed
+3. Or use `vi.spyOn(globalThis, "fetch")` in specific test
+
+### React Query State Not Updating
+
+**Cause**: Mock not returning updated state.
+
+**Solution**:
+Use mutable mock pattern shown above, updating mock state before rendering.
+
+### Component Not Rendering
+
+**Cause**: Missing provider or context.
+
+**Solution**:
+Wrap component with necessary providers:
+
+```typescript
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { SidebarProvider } from "@/components/ui/sidebar";
+
+const queryClient = new QueryClient();
+
+render(
+  <QueryClientProvider client={queryClient}>
+    <SidebarProvider>
+      <YourComponent />
+    </SidebarProvider>
+  </QueryClientProvider>
+);
+```
+
+### TypeScript Errors in Mocks
+
+**Cause**: Incorrect mock typing.
+
+**Solution**:
+Use TypeScript casting or utility types:
+
+```typescript
+vi.mocked(useChatStore).mockReturnValue(mockStore as any);
+// or
+vi.mock("@/stores", () => ({
+  useChatStore: vi.fn(() => mockStore),
+}));
+```
+
+## Coverage Thresholds
+
+Coverage thresholds are configured in `vitest.config.ts`:
+
+```typescript
+coverage: {
+  thresholds: {
+    global: {
+      branches: 70,
+      functions: 70,
+      lines: 70,
+      statements: 70,
+    },
+  },
+}
+```
+
+Run `npm run test:coverage` to generate coverage report.
 
 ## Test Configuration
 
