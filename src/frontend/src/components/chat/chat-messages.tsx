@@ -13,12 +13,11 @@ import {
 } from "@/components/message";
 
 /**
- * Formats message content for display, handling both string and non-string content.
- * Adds streaming cursor indicator when message is actively streaming.
+ * Prepare message content for display.
  *
- * @param content - The message content (string or structured data)
- * @param isStreaming - Whether the message is currently being streamed
- * @returns Formatted string content with optional cursor indicator
+ * @param content - Message content to display; non-string values will be serialized
+ * @param isStreaming - Whether to append a trailing streaming cursor
+ * @returns The formatted message string; includes a trailing ` ▍` when `isStreaming` is true
  */
 function formatMessageContent(content: unknown, isStreaming: boolean): string {
   const baseContent = typeof content === "string" ? content : JSON.stringify(content);
@@ -34,6 +33,20 @@ export type ChatMessagesProps = {
   contentClassName?: string;
 };
 
+/**
+ * Render the chat message list with distinct layouts for assistant and user messages, optional trace rendering, per-message copy actions, and a bottom-centered scroll button.
+ *
+ * - Assistant messages are left-aligned, support markdown rendering, and show a streaming cursor when the last assistant message is streaming.
+ * - User messages are right-aligned and shown in a compact bubble.
+ *
+ * @param messages - Array of chat messages to render.
+ * @param isLoading - When true, the last assistant message is treated as streaming and displays a streaming cursor.
+ * @param renderTrace - Optional function to render trace UI for an assistant message: called with (message, isStreaming).
+ * @param onCopy - Optional handler called with a message's content when the copy action is invoked; if omitted, the browser clipboard is used.
+ * @param rootClassName - Optional additional class name applied to the root chat container.
+ * @param contentClassName - Optional additional class name applied to the content container.
+ * @returns A React element containing the rendered messages and scroll control.
+ */
 export function ChatMessages({
   messages,
   isLoading = false,

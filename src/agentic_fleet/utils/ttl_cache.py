@@ -165,10 +165,13 @@ class AsyncTTLCache[K, V]:
             )
 
     async def cleanup_expired(self) -> int:
-        """Remove all expired entries.
-
+        """
+        Remove all cache entries whose TTL has expired.
+        
+        Also increments the cache's eviction counter for each removed entry and updates the stored size metric.
+        
         Returns:
-            Number of entries removed
+            The number of entries removed.
         """
         async with self._lock:
             now = time.time()
@@ -182,14 +185,11 @@ class AsyncTTLCache[K, V]:
             return len(expired_keys)
 
     async def values(self) -> list[V]:
-        """Get all non-expired values from cache.
-
-        Note: This method creates a new list and filters all entries on each call.
-        For large caches with frequent reads, consider using get() for individual
-        lookups or implementing a lazy iterator if needed.
-
+        """
+        Return all non-expired values currently stored in the cache.
+        
         Returns:
-            List of all valid (non-expired) cached values
+            list[V]: Values whose entries have not expired (expires_at > current time).
         """
         async with self._lock:
             now = time.time()
@@ -316,10 +316,11 @@ class SyncTTLCache[K, V]:
             )
 
     def cleanup_expired(self) -> int:
-        """Remove all expired entries.
-
+        """
+        Remove all entries whose TTL has expired and update cache metrics.
+        
         Returns:
-            Number of entries removed
+            int: The number of entries removed.
         """
         with self._lock:
             now = time.time()
@@ -333,14 +334,11 @@ class SyncTTLCache[K, V]:
             return len(expired_keys)
 
     def values(self) -> list[V]:
-        """Get all non-expired values from cache.
-
-        Note: This method creates a new list and filters all entries on each call.
-        For large caches with frequent reads, consider using get() for individual
-        lookups or implementing a lazy iterator if needed.
-
+        """
+        Retrieve all non-expired values stored in the cache.
+        
         Returns:
-            List of all valid (non-expired) cached values
+            list[V]: Cached values that have not expired.
         """
         with self._lock:
             now = time.time()
