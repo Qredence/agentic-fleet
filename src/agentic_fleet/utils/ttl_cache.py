@@ -184,6 +184,10 @@ class AsyncTTLCache[K, V]:
     async def values(self) -> list[V]:
         """Get all non-expired values from cache.
 
+        Note: This method creates a new list and filters all entries on each call.
+        For large caches with frequent reads, consider using get() for individual
+        lookups or implementing a lazy iterator if needed.
+
         Returns:
             List of all valid (non-expired) cached values
         """
@@ -330,6 +334,10 @@ class SyncTTLCache[K, V]:
 
     def values(self) -> list[V]:
         """Get all non-expired values from cache.
+
+        Note: This method creates a new list and filters all entries on each call.
+        For large caches with frequent reads, consider using get() for individual
+        lookups or implementing a lazy iterator if needed.
 
         Returns:
             List of all valid (non-expired) cached values

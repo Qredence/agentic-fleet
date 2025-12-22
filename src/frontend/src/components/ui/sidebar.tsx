@@ -78,7 +78,12 @@ const SidebarProvider = React.forwardRef<
         }
 
         // This sets the cookie to keep the sidebar state.
-        document.cookie = `${SIDEBAR_COOKIE_NAME}=${openState}; path=/; max-age=${SIDEBAR_COOKIE_MAX_AGE}; Secure; SameSite=Strict`;
+        // Use Secure attribute only in HTTPS environments to prevent dev issues
+        const secureAttr =
+          typeof window !== "undefined" && window.location.protocol === "https:"
+            ? "; Secure"
+            : "";
+        document.cookie = `${SIDEBAR_COOKIE_NAME}=${openState}; path=/; max-age=${SIDEBAR_COOKIE_MAX_AGE}${secureAttr}; SameSite=Strict`;
       },
       [setOpenProp, open],
     );
