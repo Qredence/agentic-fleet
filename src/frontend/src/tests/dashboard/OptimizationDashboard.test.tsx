@@ -1,7 +1,8 @@
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { OptimizationDashboard } from "@/features/dashboard";
+import { OptimizationDashboard } from "@/components/dashboard";
+import { SidebarProvider } from "@/components/ui/sidebar";
 
 type MockMutation<TData = unknown, TVariables = unknown> = {
   mutate: (variables: TVariables) => void;
@@ -103,7 +104,11 @@ beforeEach(() => {
 describe("OptimizationDashboard", () => {
   it("renders and starts optimization when clicking Start Optimization", async () => {
     const user = userEvent.setup();
-    render(<OptimizationDashboard />);
+    render(
+      <SidebarProvider>
+        <OptimizationDashboard />
+      </SidebarProvider>,
+    );
 
     // Button text is "Start Optimization" in the current UI
     await user.click(
@@ -116,7 +121,11 @@ describe("OptimizationDashboard", () => {
   it("renders history loading state", async () => {
     historyQuery = { isLoading: true, isError: false, data: undefined };
     const user = userEvent.setup();
-    render(<OptimizationDashboard />);
+    render(
+      <SidebarProvider>
+        <OptimizationDashboard />
+      </SidebarProvider>,
+    );
 
     // Click the History tab to see the loading state
     await user.click(screen.getByRole("tab", { name: /history/i }));
@@ -126,9 +135,13 @@ describe("OptimizationDashboard", () => {
   });
 
   it("renders self-improvement error state", async () => {
-    selfImprove = { mutate: vi.fn(), isPending: false, isError: true };
+    optimizationRun = { mutate: vi.fn(), isPending: false, isError: true };
     const user = userEvent.setup();
-    render(<OptimizationDashboard />);
+    render(
+      <SidebarProvider>
+        <OptimizationDashboard />
+      </SidebarProvider>,
+    );
 
     // Click the Self-Improve tab to see the error state
     await user.click(screen.getByRole("tab", { name: /self-improve/i }));

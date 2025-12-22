@@ -142,7 +142,6 @@ class DSPyService:
             return {
                 "history_count": 0,
                 "routing_cache_size": 0,
-                "use_typed_signatures": False,
                 "modules_initialized": False,
             }
 
@@ -150,7 +149,6 @@ class DSPyService:
         return {
             "history_count": summary.get("history_count", 0),
             "routing_cache_size": summary.get("routing_cache_size", 0),
-            "use_typed_signatures": summary.get("use_typed_signatures", False),
             "modules_initialized": True,
         }
 

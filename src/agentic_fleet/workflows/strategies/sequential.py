@@ -9,7 +9,8 @@ from agent_framework._threads import AgentThread
 from agent_framework._types import ChatMessage, Role
 from agent_framework._workflows import WorkflowOutputEvent
 
-from ...utils.logger import setup_logger
+from agentic_fleet.utils.infra.logging import setup_logger
+
 from ...utils.models import ExecutionMode, RoutingDecision
 from ..exceptions import AgentExecutionError
 from ..handoff import HandoffContext, HandoffManager

@@ -8,12 +8,6 @@ programming capabilities to perform high-level cognitive tasks:
 - Progress Tracking: Monitoring execution state
 - Tool Planning: Deciding which tools to use
 
-DSPy 3.x Note:
-When `use_typed_signatures=True`, the reasoner uses Pydantic-based typed
-signatures for structured outputs. This provides:
-- Better output parsing reliability
-- Automatic validation and type coercion
-- Clear error messages on parse failures
 """
 
 from __future__ import annotations
@@ -30,9 +24,9 @@ from typing import Any
 import dspy
 
 from agentic_fleet.utils.cfg import load_config
+from agentic_fleet.utils.infra.logging import setup_logger
+from agentic_fleet.utils.infra.telemetry import optional_span
 
-from ..utils.logger import setup_logger
-from ..utils.telemetry import optional_span
 from ..workflows.exceptions import ToolError
 from .nlu import DSPyNLU, get_nlu_module
 from .reasoner_utils import get_reasoner_source_hash, is_simple_task, is_time_sensitive_task
@@ -45,13 +39,6 @@ from .signatures import (
     TaskAnalysis,
     TaskRouting,
     ToolPlan,
-    # Typed signatures (DSPy 3.x with Pydantic)
-    TypedEnhancedRouting,
-    TypedProgressEvaluation,
-    TypedQualityAssessment,
-    TypedTaskAnalysis,
-    TypedToolPlan,
-    TypedWorkflowStrategy,
     WorkflowStrategy,
 )
 
@@ -141,7 +128,6 @@ class DSPyReasoner(dspy.Module):
     def __init__(
         self,
         use_enhanced_signatures: bool = True,
-        use_typed_signatures: bool = True,
         enable_routing_cache: bool = True,
         cache_ttl_seconds: int = 300,
         cache_max_entries: int = 1024,
@@ -151,14 +137,12 @@ class DSPyReasoner(dspy.Module):
 
         Parameters:
             use_enhanced_signatures (bool): Enable enhanced routing that includes tool planning and richer outputs.
-            use_typed_signatures (bool): Use Pydantic-typed signatures for structured/typed module outputs.
             enable_routing_cache (bool): Enable in-memory caching of routing decisions to reduce repeated model calls.
             cache_ttl_seconds (int): Time-to-live for cached routing entries in seconds.
             cache_max_entries (int): Maximum number of cached routing entries to retain in memory.
         """
         super().__init__()
         self.use_enhanced_signatures = use_enhanced_signatures
-        self.use_typed_signatures = use_typed_signatures
         self.enable_routing_cache = enable_routing_cache
         self.cache_ttl_seconds = cache_ttl_seconds
         self.cache_max_entries = max(1, int(cache_max_entries))
@@ -180,158 +164,60 @@ class DSPyReasoner(dspy.Module):
         self._simple_responder: dspy.Module | None = None
         self._group_chat_selector: dspy.Module | None = None
         self._nlu: DSPyNLU | None = None
+        self._event_narrator: Any | None = None
 
     def _ensure_modules_initialized(self) -> None:
         """
-        Lazily initialize DSPy modules and related runtime defaults on first use.
-
-        Ensures module placeholders and backward-compatible defaults (execution history,
-        typed-signature flag, routing cache settings and TTL) exist, then initializes any
-        DSPy modules that have not been manually provided. Honors the instance's
-        use_enhanced_signatures and use_typed_signatures configuration when selecting
-        which signature variants to create. After this returns, the reasoner has all
-        predictor/chain placeholders populated or left as explicitly overridden for testing.
+        Lazily initialize DSPy modules using unified typed signatures.
         """
-        # Backward compatibility: compiled supervisors pickled before these fields
-        # existed won't have them set on load.
-        if not hasattr(self, "_modules_initialized"):
-            self._modules_initialized = False
-        if not hasattr(self, "_execution_history"):
-            self._execution_history = []
-        if not hasattr(self, "use_typed_signatures"):
-            self.use_typed_signatures = False
-        if not hasattr(self, "enable_routing_cache"):
-            self.enable_routing_cache = True
-        if not hasattr(self, "cache_ttl_seconds"):
-            self.cache_ttl_seconds = 300
-        if not hasattr(self, "_routing_cache"):
-            self._routing_cache = OrderedDict()
-        if not hasattr(self, "cache_max_entries"):
-            self.cache_max_entries = 1024
-
-        # Ensure lazy module placeholders exist for deserialized objects
-        for attr in (
-            "_analyzer",
-            "_router",
-            "_strategy_selector",
-            "_quality_assessor",
-            "_progress_evaluator",
-            "_tool_planner",
-            "_simple_responder",
-            "_group_chat_selector",
-            "_nlu",
-            "_event_narrator",
-        ):
-            if not hasattr(self, attr):
-                setattr(self, attr, None)
-
         if self._modules_initialized:
             return
 
-        global _MODULE_CACHE
-
-        # Build cache key prefix based on configuration
-        typed_suffix = "_typed" if self.use_typed_signatures else ""
-        cache_key_prefix = (
-            f"enhanced{typed_suffix}" if self.use_enhanced_signatures else f"standard{typed_suffix}"
-        )
-
-        # Only initialize if not already set (allows mocking in tests)
         # NLU
         if self._nlu is None:
             self._nlu = get_nlu_module()
 
-        # Analyzer - use typed signature if enabled
+        # Analyzer
         if self._analyzer is None:
-            analyzer_key = f"{cache_key_prefix}_analyzer"
-            if analyzer_key not in _MODULE_CACHE:
-                if self.use_typed_signatures:
-                    _MODULE_CACHE[analyzer_key] = dspy.ChainOfThought(TypedTaskAnalysis)
-                else:
-                    _MODULE_CACHE[analyzer_key] = dspy.ChainOfThought(TaskAnalysis)
-            self._analyzer = _MODULE_CACHE[analyzer_key]
+            self._analyzer = dspy.ChainOfThought(TaskAnalysis)
 
-        # Router and strategy selector - use typed signatures if enabled
+        # Router and strategy selector
         if self._router is None:
             if self.use_enhanced_signatures:
-                router_key = f"{cache_key_prefix}_router"
-                if router_key not in _MODULE_CACHE:
-                    if self.use_typed_signatures:
-                        _MODULE_CACHE[router_key] = dspy.Predict(TypedEnhancedRouting)
-                    else:
-                        _MODULE_CACHE[router_key] = dspy.Predict(EnhancedTaskRouting)
-                self._router = _MODULE_CACHE[router_key]
-
+                self._router = dspy.Predict(EnhancedTaskRouting)
                 if self._strategy_selector is None:
-                    strategy_key = f"{cache_key_prefix}_strategy"
-                    if strategy_key not in _MODULE_CACHE:
-                        if self.use_typed_signatures:
-                            _MODULE_CACHE[strategy_key] = dspy.ChainOfThought(TypedWorkflowStrategy)
-                        else:
-                            _MODULE_CACHE[strategy_key] = dspy.ChainOfThought(WorkflowStrategy)
-                    self._strategy_selector = _MODULE_CACHE[strategy_key]
+                    self._strategy_selector = dspy.ChainOfThought(WorkflowStrategy)
             else:
-                router_key = f"{cache_key_prefix}_router"
-                if router_key not in _MODULE_CACHE:
-                    _MODULE_CACHE[router_key] = dspy.Predict(TaskRouting)
-                self._router = _MODULE_CACHE[router_key]
+                self._router = dspy.Predict(TaskRouting)
 
-        # Quality assessor - use typed signature if enabled
+        # Quality assessor
         if self._quality_assessor is None:
-            qa_key = f"quality_assessor{typed_suffix}"
-            if qa_key not in _MODULE_CACHE:
-                if self.use_typed_signatures:
-                    _MODULE_CACHE[qa_key] = dspy.ChainOfThought(TypedQualityAssessment)
-                else:
-                    _MODULE_CACHE[qa_key] = dspy.ChainOfThought(QualityAssessment)
-            self._quality_assessor = _MODULE_CACHE[qa_key]
+            self._quality_assessor = dspy.ChainOfThought(QualityAssessment)
 
-        # Progress evaluator - use typed signature if enabled
+        # Progress evaluator
         if self._progress_evaluator is None:
-            pe_key = f"progress_evaluator{typed_suffix}"
-            if pe_key not in _MODULE_CACHE:
-                if self.use_typed_signatures:
-                    _MODULE_CACHE[pe_key] = dspy.ChainOfThought(TypedProgressEvaluation)
-                else:
-                    _MODULE_CACHE[pe_key] = dspy.ChainOfThought(ProgressEvaluation)
-            self._progress_evaluator = _MODULE_CACHE[pe_key]
+            self._progress_evaluator = dspy.ChainOfThought(ProgressEvaluation)
 
-        # Tool planner - use typed signature if enabled
+        # Tool planner
         if self._tool_planner is None:
-            tp_key = f"tool_planner{typed_suffix}"
-            if tp_key not in _MODULE_CACHE:
-                if self.use_typed_signatures:
-                    _MODULE_CACHE[tp_key] = dspy.ChainOfThought(TypedToolPlan)
-                else:
-                    _MODULE_CACHE[tp_key] = dspy.ChainOfThought(ToolPlan)
-            self._tool_planner = _MODULE_CACHE[tp_key]
+            self._tool_planner = dspy.ChainOfThought(ToolPlan)
 
-        # Simple responder - use Predict for faster response (no CoT needed)
+        # Simple responder
         if self._simple_responder is None:
-            sr_key = "simple_responder"
-            if sr_key not in _MODULE_CACHE:
-                _MODULE_CACHE[sr_key] = dspy.Predict(SimpleResponse)
-            self._simple_responder = _MODULE_CACHE[sr_key]
+            self._simple_responder = dspy.Predict(SimpleResponse)
 
         # Group chat selector
         if self._group_chat_selector is None:
-            gc_key = "group_chat_selector"
-            if gc_key not in _MODULE_CACHE:
-                _MODULE_CACHE[gc_key] = dspy.ChainOfThought(GroupChatSpeakerSelection)
-            self._group_chat_selector = _MODULE_CACHE[gc_key]
+            self._group_chat_selector = dspy.ChainOfThought(GroupChatSpeakerSelection)
 
         # Event Narrator
         if self._event_narrator is None:
-            en_key = "event_narrator"
-            if en_key not in _MODULE_CACHE:
-                from agentic_fleet.workflows.narrator import EventNarrator
+            from agentic_fleet.workflows.narrator import EventNarrator
 
-                _MODULE_CACHE[en_key] = EventNarrator()
-            self._event_narrator = _MODULE_CACHE[en_key]
+            self._event_narrator = EventNarrator()
 
         self._modules_initialized = True
-        mode_str = "typed" if self.use_typed_signatures else "standard"
-        logger.debug(f"DSPy modules initialized (lazy, mode={mode_str})")
+        logger.debug("DSPy modules initialized (unified typed mode)")
 
         # Load compiled optimization if available
         self._load_compiled_module()
@@ -1148,12 +1034,10 @@ class DSPyReasoner(dspy.Module):
             summary (dict): A dictionary with keys:
                 history_count (int): Number of recorded execution events.
                 routing_cache_size (int): Number of entries currently stored in the routing cache.
-                use_typed_signatures (bool): Whether typed (Pydantic) signatures are enabled.
         """
         return {
             "history_count": len(self._execution_history),
             "routing_cache_size": len(self._routing_cache),
-            "use_typed_signatures": self.use_typed_signatures,
         }
 
     # --- Cache management ---

@@ -17,8 +17,8 @@ from rich.table import Table
 
 from agentic_fleet.cli.runner import WorkflowRunner
 from agentic_fleet.cli.utils import init_tracing
+from agentic_fleet.dspy_modules.gepa.self_improvement import SelfImprovementEngine
 from agentic_fleet.utils.cfg import env_config
-from agentic_fleet.utils.self_improvement import SelfImprovementEngine
 
 console = Console()
 

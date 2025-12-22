@@ -236,12 +236,24 @@ export interface EntityResponse {
 // Optimization / Evaluation / Self-Improvement Types
 // =============================================================================
 
+/**
+ * Request payload for triggering DSPy module optimization via GEPA.
+ *
+ * @property module_name - The name of the DSPy module to optimize (e.g., "supervisor", "reasoner")
+ * @property auto_mode - Automatic optimization preset controlling training intensity:
+ *   - "light": Fast optimization with minimal examples
+ *   - "medium": Balanced optimization (default)
+ *   - "heavy": Extensive optimization with larger training sets
+ * @property examples_path - Optional path to custom training examples (JSON/JSONL format)
+ * @property user_id - User identifier for tracking optimization jobs
+ * @property options - Additional optimizer configuration (e.g., seed, max_iterations, learning_rate)
+ */
 export interface OptimizationRequest {
-  optimizer?: "bootstrap" | "gepa";
-  use_cache?: boolean;
-  gepa_auto?: "light" | "medium" | "heavy" | null;
-  harvest_history?: boolean;
-  min_quality?: number;
+  module_name: string;
+  auto_mode?: "light" | "medium" | "heavy";
+  examples_path?: string;
+  user_id: string;
+  options?: Record<string, unknown>;
 }
 
 /**
@@ -264,13 +276,15 @@ export interface OptimizationDetails {
 }
 
 export interface OptimizationResult {
-  status: "started" | "running" | "completed" | "cached" | "failed";
   job_id?: string | null;
-  message: string;
+  status: "pending" | "running" | "started" | "completed" | "cached" | "failed";
+  created_at?: string;
+  started_at?: string | null;
+  completed_at?: string | null;
+  error?: string | null;
+  result_artifact?: string | null;
+  message?: string;
   cache_path?: string | null;
-  started_at?: string;
-  completed_at?: string;
-  error?: string;
   progress?: number;
   details?: OptimizationDetails;
 }

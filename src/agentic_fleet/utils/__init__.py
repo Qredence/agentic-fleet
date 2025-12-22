@@ -36,6 +36,7 @@ if TYPE_CHECKING:
         validate_agentic_fleet_env,
     )
     from agentic_fleet.utils.compiler import compile_reasoner
+    from agentic_fleet.utils.infra.tracing import get_meter, get_tracer, initialize_tracing
     from agentic_fleet.utils.models import ExecutionMode, RoutingDecision
     from agentic_fleet.utils.profiling import (
         PerformanceTracker,
@@ -47,7 +48,6 @@ if TYPE_CHECKING:
         track_operation,
     )
     from agentic_fleet.utils.tool_registry import ToolMetadata, ToolRegistry
-    from agentic_fleet.utils.tracing import get_meter, get_tracer, initialize_tracing
 
 __all__ = [
     "ExecutionMode",
@@ -124,7 +124,7 @@ def __getattr__(name: str) -> object:
         return TTLCache
 
     if name in ("initialize_tracing", "get_tracer", "get_meter"):
-        from agentic_fleet.utils.tracing import get_meter, get_tracer, initialize_tracing
+        from agentic_fleet.utils.infra.tracing import get_meter, get_tracer, initialize_tracing
 
         if name == "initialize_tracing":
             return initialize_tracing

@@ -11,8 +11,9 @@ from typing import Any
 
 from agent_framework._types import ChatMessage, Role
 
+from agentic_fleet.utils.infra.logging import setup_logger
+
 from ...dspy_modules.reasoner import DSPyReasoner
-from ...utils.logger import setup_logger
 
 logger = setup_logger(__name__)
 

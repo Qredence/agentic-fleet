@@ -19,8 +19,6 @@ import type {
   OptimizationRequest,
   OptimizationResult,
   HistoryExecutionEntry,
-  SelfImproveRequest,
-  SelfImproveResponse,
   DSPyConfig,
   DSPyStats,
   CacheInfo,
@@ -50,7 +48,13 @@ export const conversationsApi = {
   /**
    * List all conversations.
    */
-  list: () => http.get<Conversation[]>("/conversations"),
+  list: (params?: { limit?: number; offset?: number }) => {
+    const query = new URLSearchParams();
+    if (params?.limit !== undefined) query.set("limit", String(params.limit));
+    if (params?.offset !== undefined)
+      query.set("offset", String(params.offset));
+    return http.get<Conversation[]>(`/conversations?${query.toString()}`);
+  },
 
   /**
    * Get messages for a conversation.
@@ -120,13 +124,15 @@ export const optimizationApi = {
    * Start an optimization/compilation run.
    */
   run: (request: OptimizationRequest) =>
-    http.post<OptimizationResult>("/optimize", request),
+    http.post<OptimizationResult>("/optimization/jobs", request),
 
   /**
    * Get status for an optimization job.
    */
   status: (jobId: string) =>
-    http.get<OptimizationResult>(`/optimize/${encodeURIComponent(jobId)}`),
+    http.get<OptimizationResult>(
+      `/optimization/jobs/${encodeURIComponent(jobId)}`,
+    ),
 };
 
 // =============================================================================
@@ -146,16 +152,19 @@ export const evaluationApi = {
   },
 };
 
-// =============================================================================
-// Self-Improvement API
-// =============================================================================
-
+// Self-Improvement logic is now consolidated into Optimization API.
 export const improvementApi = {
   /**
-   * Trigger a self-improvement run based on history.
+   * @deprecated Consolidated into optimizationApi.run - Use `optimizationApi.run({ module_name, auto_mode, user_id })` instead.
+   * This method was removed in v2.0 when self-improvement and optimization were unified under the GEPA optimization service.
+   * See migration guide: https://github.com/Qredence/agentic-fleet/blob/main/docs/migration/optimization-api.md
    */
-  trigger: (request: SelfImproveRequest) =>
-    http.post<SelfImproveResponse>("/self-improve", request),
+  trigger: (_request: unknown) => {
+    throw new Error(
+      "improvementApi.trigger() has been removed. Use optimizationApi.run() instead. " +
+        "Example: optimizationApi.run({ module_name: 'supervisor', auto_mode: 'medium', user_id: 'user-123' })",
+    );
+  },
 };
 
 // =============================================================================
@@ -270,7 +279,7 @@ export const api = {
   optimize: optimizationApi.run,
   optimizeStatus: optimizationApi.status,
   history: evaluationApi.history,
-  selfImprove: improvementApi.trigger,
+  // selfImprove: improvementApi.trigger, // Removed as it's now consolidated
 
   // DSPy Management
   dspyPrompts: dspyApi.getPrompts,

@@ -151,6 +151,18 @@ class EnvConfig:
         return self._get_cached("openai_base_url", _load)
 
     # -------------------------------------------------------------------------
+    # Gemini / Google Configuration
+    # -------------------------------------------------------------------------
+
+    @property
+    def gemini_api_key(self) -> str:
+        """Gemini API key (GEMINI_API_KEY or GOOGLE_API_KEY)."""
+        return self._get_cached(
+            "gemini_api_key",
+            lambda: get_env_var("GEMINI_API_KEY", "") or get_env_var("GOOGLE_API_KEY", ""),
+        )
+
+    # -------------------------------------------------------------------------
     # External Service Keys
     # -------------------------------------------------------------------------
 
@@ -370,19 +382,34 @@ def validate_required_env_vars(
 
 
 def validate_agentic_fleet_env() -> None:
-    """Validate environment variables required for AgenticFleet.
+    """
+    Validate that required environment configuration for AgenticFleet is present.
 
-    Checks:
-    - Required: OPENAI_API_KEY
-    - Optional: TAVILY_API_KEY, OPENAI_BASE_URL, HOST, PORT, ENVIRONMENT
-    - Cosmos DB vars if AGENTICFLEET_USE_COSMOS is enabled
+    Performs these checks:
+    - Confirms at least one AI provider key is set: OPENAI_API_KEY, AZURE_OPENAI_API_KEY, or GEMINI_API_KEY.
+    - Checks optional environment variables: TAVILY_API_KEY, OPENAI_BASE_URL, HOST, PORT, ENVIRONMENT.
+    - If AGENTICFLEET_USE_COSMOS is enabled, requires AZURE_COSMOS_ENDPOINT and AZURE_COSMOS_DATABASE; also requires AZURE_COSMOS_KEY when managed identity is not used.
 
     Raises:
-        ConfigurationError: If required variables are missing
+        ConfigurationError: If no AI provider key is found or if required Cosmos DB variables are missing; the error uses config_key="environment".
     """
-    required = ["OPENAI_API_KEY"]
+    from ..exceptions import ConfigurationError
+
+    env_config = EnvConfig()
+    has_openai = bool(env_config.openai_api_key)
+    has_azure = bool(env_config.azure_openai_api_key)
+    has_gemini = bool(env_config.gemini_api_key)
+
+    if not (has_openai or has_azure or has_gemini):
+        error_msg = (
+            "No valid AI provider API key found. "
+            "Please set OPENAI_API_KEY, AZURE_OPENAI_API_KEY, or GEMINI_API_KEY"
+        )
+        logger.error(error_msg)
+        raise ConfigurationError(error_msg, config_key="environment")
+
     optional = ["TAVILY_API_KEY", "OPENAI_BASE_URL", "HOST", "PORT", "ENVIRONMENT"]
-    validate_required_env_vars(required, optional)
+    validate_required_env_vars([], optional)
 
     if env_config.use_cosmos:
         cosmos_required = ["AZURE_COSMOS_ENDPOINT", "AZURE_COSMOS_DATABASE"]

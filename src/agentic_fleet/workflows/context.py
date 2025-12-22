@@ -12,10 +12,11 @@ from typing import TYPE_CHECKING, Any
 
 import openai
 
+from agentic_fleet.utils.storage import HistoryManager
+
 from ..dspy_modules.reasoner import DSPyReasoner
 from ..utils.cache import TTLCache
 from ..utils.compiler import compile_reasoner
-from ..utils.history_manager import HistoryManager
 from ..utils.progress import LoggingProgressCallback, NullProgressCallback, ProgressCallback
 from ..utils.tool_registry import ToolRegistry
 from .config import WorkflowConfig

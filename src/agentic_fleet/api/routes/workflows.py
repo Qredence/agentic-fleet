@@ -14,6 +14,12 @@ logger = logging.getLogger(__name__)
 router = APIRouter()
 
 
+@router.get("/types")
+async def list_workflow_types() -> list[str]:
+    """List available workflow types supported by the system."""
+    return ["SupervisorWorkflow"]
+
+
 @router.post(
     "/run",
     response_model=RunResponse,
