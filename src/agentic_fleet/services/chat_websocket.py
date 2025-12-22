@@ -1296,8 +1296,7 @@ class ChatWebSocketService:
             cancel_task.cancel()
             heartbeat_task.cancel()
             with contextlib.suppress(asyncio.CancelledError):
-                await cancel_task
-                await heartbeat_task
+                await asyncio.gather(cancel_task, heartbeat_task)
 
             # Session status update
             if session and cancel_event.is_set():
