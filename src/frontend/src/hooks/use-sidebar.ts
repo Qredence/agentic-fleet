@@ -32,7 +32,12 @@ function getInitialOpenState(defaultOpen: boolean): boolean {
     return defaultOpen;
   }
 
-  const value = cookie.split("=")[1];
+  const parts = cookie.split("=");
+  if (parts.length < 2) {
+    return defaultOpen;
+  }
+
+  const value = parts[1];
   return value === "true";
 }
 

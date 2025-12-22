@@ -236,6 +236,18 @@ export interface EntityResponse {
 // Optimization / Evaluation / Self-Improvement Types
 // =============================================================================
 
+/**
+ * Request payload for triggering DSPy module optimization via GEPA.
+ *
+ * @property module_name - The name of the DSPy module to optimize (e.g., "supervisor", "reasoner")
+ * @property auto_mode - Automatic optimization preset controlling training intensity:
+ *   - "light": Fast optimization with minimal examples
+ *   - "medium": Balanced optimization (default)
+ *   - "heavy": Extensive optimization with larger training sets
+ * @property examples_path - Optional path to custom training examples (JSON/JSONL format)
+ * @property user_id - User identifier for tracking optimization jobs
+ * @property options - Additional optimizer configuration (e.g., seed, max_iterations, learning_rate)
+ */
 export interface OptimizationRequest {
   module_name: string;
   auto_mode?: "light" | "medium" | "heavy";
