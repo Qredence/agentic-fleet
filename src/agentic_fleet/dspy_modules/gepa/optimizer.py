@@ -195,8 +195,8 @@ def optimize_with_gepa(
     valset: Sequence[dspy.Example] | None = None,
     *,
     auto: Literal["light", "medium", "heavy"] | None = "light",
-    max_full_evals: int | None = 50,
-    max_metric_calls: int | None = 150,
+    max_full_evals: int | None = None,
+    max_metric_calls: int | None = None,
     reflection_model: str | None = None,
     perfect_score: float = 1.0,
     log_dir: str = ".var/logs/gepa",
@@ -207,13 +207,16 @@ def optimize_with_gepa(
     """
     Compile the DSPy module using dspy.GEPA with routing-aware feedback.
 
+    Note: Exactly ONE of auto, max_full_evals, or max_metric_calls must be set.
+    If none are explicitly set, defaults to auto="light".
+
     Args:
         module: DSPy module to optimize
         trainset: Training examples
         valset: Validation examples (optional)
-        auto: Auto mode for GEPA ("light", "medium", "heavy")
-        max_full_evals: Maximum full evaluations
-        max_metric_calls: Maximum metric calls
+        auto: Auto mode for GEPA ("light", "medium", "heavy"). Mutually exclusive with max_full_evals and max_metric_calls.
+        max_full_evals: Maximum full evaluations. Mutually exclusive with auto and max_metric_calls.
+        max_metric_calls: Maximum metric calls. Mutually exclusive with auto and max_full_evals.
         reflection_model: Model for reflection
         perfect_score: Perfect score threshold
         log_dir: Directory for logs

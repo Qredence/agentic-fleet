@@ -7,14 +7,28 @@ from fastapi import status
 from fastapi.testclient import TestClient
 
 from agentic_fleet.main import app
+from agentic_fleet.services.optimization_service import (
+    OptimizationService,
+    get_optimization_service,
+)
 
 
 @pytest.fixture
-def client():
+def mock_optimization_service():
+    """Create a mock optimization service."""
+    service = AsyncMock(spec=OptimizationService)
+    return service
+
+
+@pytest.fixture
+def client(mock_optimization_service):
     """Create a test client with mocked lifespan dependencies."""
     mock_settings = MagicMock()
     mock_settings.max_concurrent_workflows = 10
     mock_settings.conversations_path = ".var/data/conversations.json"
+
+    # Override the FastAPI dependency
+    app.dependency_overrides[get_optimization_service] = lambda: mock_optimization_service
 
     with (
         patch(
@@ -29,14 +43,8 @@ def client():
         with TestClient(app) as client:
             yield client
 
-
-@pytest.fixture
-def mock_optimization_service():
-    """Mock the optimization service."""
-    with patch("agentic_fleet.api.routes.optimization.get_optimization_service") as mock_get:
-        service = AsyncMock()
-        mock_get.return_value = service
-        yield service
+    # Clean up the override
+    app.dependency_overrides.clear()
 
 
 class TestOptimizationEndpoints:
