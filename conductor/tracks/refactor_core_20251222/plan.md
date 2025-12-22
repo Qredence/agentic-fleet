@@ -1,7 +1,7 @@
 # Plan: Refactor and Stabilize Core Orchestration
 
 ## Phase 1: Legacy Code Removal and Cleanup
-- [~] Task: Remove `utils/agent_framework_shims.py` and fix immediate import errors.
+- [x] Task: Remove `utils/agent_framework_shims.py` and fix immediate import errors. [ef4728b]
     - [ ] Subtask: Delete the file.
     - [ ] Subtask: Scan codebase for imports and replace/remove them.
     - [ ] Subtask: Verify project builds.
