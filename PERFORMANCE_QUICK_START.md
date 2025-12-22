@@ -16,7 +16,7 @@
 | 2 | WebSocket complexity | `src/agentic_fleet/services/chat_websocket.py:526` | 🔴 Critical | 4-6h |
 | 3 | Event mapping length | `src/agentic_fleet/api/events/mapping.py:385` | 🟠 High | 6-8h |
 | 4 | SSE complexity | `src/agentic_fleet/services/chat_sse.py:70` | 🟠 High | 2-3h |
-| 5 | Agent shims | `src/agentic_fleet/utils/agent_framework_shims.py:79` | 🟡 Medium | 2h |
+| 5 | Agent shims | `src/agentic_fleet/utils/agent_framework_shims.py:79` | 🟢 FIXED | 2h |
 
 ## ✅ Implementation Checklist
 
@@ -39,9 +39,9 @@
 - [ ] Test WebSocket flows (connect, send, receive, disconnect)
 - [ ] Complexity reduced from 76 to < 15
 
-### Week 4: Polish
+### Week 4: Polish ✅ COMPLETED (Partial)
+- [x] Split agent shims into focused patchers
 - [ ] Extract SSE `_setup_stream_context()`
-- [ ] Split agent shims into focused patchers
 - [ ] Run full test suite
 - [ ] Final performance validation (p50/p99 latency)
 
@@ -62,10 +62,11 @@ python3 .github/skills/python-backend-reviewer/scripts/detect_duplicates.py src/
 
 | Metric | Before | After | Improvement |
 |--------|--------|-------|-------------|
-| WebSocket complexity | 76 | < 15 | 80% reduction |
-| Event mapping lines | 580 | < 100 | 83% reduction |
-| SSE complexity | 37 | < 15 | 59% reduction |
-| Concurrency bugs | 1 | 0 | 100% fixed |
+| WebSocket complexity | 76 | Pending | Week 3 |
+| Event mapping lines | 580 | Pending | Week 2 |
+| SSE complexity | 37 | Pending | Week 4 |
+| Concurrency bugs | 1 | 0 | ✅ 100% fixed |
+| Agent shims complexity | 34 | ~5 | ✅ 85% reduction |
 | Code duplicates | 0 | 0 | ✅ Maintained |
 
 ## 📖 Full Documentation
@@ -82,6 +83,7 @@ python3 .github/skills/python-backend-reviewer/scripts/detect_duplicates.py src/
 
 ---
 
-**Status**: ✅ Week 1 Complete - Critical concurrency bug fixed!  
-**Next**: Continue with Week 2-4 (Event mapping, WebSocket, SSE)  
-**Timeline**: 2-3 weeks remaining for full implementation
+**Status**: ✅ Week 1 & Week 4 (Partial) Complete  
+**Fixed**: Critical concurrency bug + Agent shims refactored  
+**Next**: Week 2-3 (Event mapping, WebSocket) - Can continue in follow-up PRs  
+**Timeline**: Remaining 2 weeks for full implementation
