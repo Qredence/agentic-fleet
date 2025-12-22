@@ -181,6 +181,20 @@ class AsyncTTLCache[K, V]:
             self._stats.size = len(self._cache)
             return len(expired_keys)
 
+    async def values(self) -> list[V]:
+        """Get all non-expired values from cache.
+
+        Returns:
+            List of all valid (non-expired) cached values
+        """
+        async with self._lock:
+            now = time.time()
+            return [
+                entry.value
+                for entry in self._cache.values()
+                if now < entry.expires_at
+            ]
+
 
 class SyncTTLCache[K, V]:
     """Synchronous TTL+LRU cache with metrics.
@@ -313,6 +327,20 @@ class SyncTTLCache[K, V]:
 
             self._stats.size = len(self._cache)
             return len(expired_keys)
+
+    def values(self) -> list[V]:
+        """Get all non-expired values from cache.
+
+        Returns:
+            List of all valid (non-expired) cached values
+        """
+        with self._lock:
+            now = time.time()
+            return [
+                entry.value
+                for entry in self._cache.values()
+                if now < entry.expires_at
+            ]
 
 
 __all__ = [

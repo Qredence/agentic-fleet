@@ -219,7 +219,10 @@ async def initialize_workflow_context(
             enable_routing_cache=getattr(config, "enable_routing_cache", True),
             cache_ttl_seconds=getattr(config, "routing_cache_ttl_seconds", 300),
         )
-        logger.debug("Initialized zero-shot DSPyReasoner (will load compiled weights if available)")
+        logger.debug(
+            "Initialized zero-shot DSPyReasoner; compiled weights, if any, are loaded "
+            "separately during API startup via the compiled registry"
+        )
 
     elif not getattr(dspy_supervisor, "use_enhanced_signatures", False):
         logger.warning(

@@ -394,9 +394,10 @@ def validate_agentic_fleet_env() -> None:
     """
     from ...workflows.exceptions import ConfigurationError
 
-    has_openai = bool(os.getenv("OPENAI_API_KEY"))
-    has_azure = bool(os.getenv("AZURE_OPENAI_API_KEY") or os.getenv("AZURE_AI_PROJECT_ENDPOINT"))
-    has_gemini = bool(os.getenv("GEMINI_API_KEY") or os.getenv("GOOGLE_API_KEY"))
+    env_config = EnvConfig()
+    has_openai = bool(env_config.openai_api_key)
+    has_azure = bool(env_config.azure_openai_api_key)
+    has_gemini = bool(env_config.gemini_api_key)
 
     if not (has_openai or has_azure or has_gemini):
         error_msg = (

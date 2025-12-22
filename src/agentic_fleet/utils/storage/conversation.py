@@ -44,15 +44,12 @@ class ConversationStore:
 
     def list_conversations(self) -> list[Conversation]:
         """List all stored conversations."""
-        # Access internal cache directly for iteration (SyncTTLCache uses OrderedDict)
-        # Note: This relies on internal implementation detail but acceptable for utilities.
-        # Alternatively SyncTTLCache should expose values()
-        # Using private _cache attribute of SyncTTLCache
-        return [
-            entry.value
-            for entry in self._cache._cache.values()
-            if isinstance(entry.value, Conversation)
-        ]
+        # Use the public values() interface of TTLCache to retrieve all conversations
+        conversations: list[Conversation] = []
+        for value in self._cache.values():
+            if isinstance(value, Conversation):
+                conversations.append(value)
+        return conversations
 
     def delete(self, conversation_id: str) -> None:
         """Delete a conversation."""

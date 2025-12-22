@@ -236,6 +236,16 @@ export interface EntityResponse {
 // Optimization / Evaluation / Self-Improvement Types
 // =============================================================================
 
+/**
+ * Request payload for starting a GEPA optimization job.
+ *
+ * @property module_name - Name of the DSPy module to optimize (e.g., "supervisor", "reasoner")
+ * @property auto_mode - Optimization intensity level: "light" (quick, basic metrics),
+ *                       "medium" (balanced), or "heavy" (thorough, resource-intensive)
+ * @property examples_path - Optional path to training examples for optimization
+ * @property user_id - User identifier for tracking optimization requests
+ * @property options - Additional configuration options passed to the GEPA optimizer
+ */
 export interface OptimizationRequest {
   module_name: string;
   auto_mode?: "light" | "medium" | "heavy";

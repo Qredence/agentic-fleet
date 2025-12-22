@@ -104,8 +104,9 @@ class OptimizationService:
 
             # Run optimization
             # Note: This is CPU intensive. In a real production app, this should run
-            # in a separate process or worker (Celery/Ray). For now, we run it in
-            # a thread executor to avoid blocking the event loop.
+            # in a separate process or worker (Celery/Ray) instead of asyncio.to_thread().
+            # Consider adding a configuration option to switch between thread and
+            # process execution modes for production deployments.
             await asyncio.to_thread(
                 optimize_with_gepa,
                 module=module,

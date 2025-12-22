@@ -243,7 +243,7 @@ export const SidebarLeft = ({
                 </SidebarGroupContent>
               </SidebarGroup>
             ))}
-            <div ref={setObserverRef} className="h-2 w-full" />
+            <div ref={setObserverRef} className="h-2 w-full" aria-hidden="true" />
             {isConversationsLoading && (
               <div className="px-4 py-2 text-xs text-muted-foreground animate-pulse">
                 Loading more...

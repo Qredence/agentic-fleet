@@ -12,6 +12,19 @@ import {
   MessageContent,
 } from "@/components/message";
 
+/**
+ * Formats message content for display, handling both string and non-string content.
+ * Adds streaming cursor indicator when message is actively streaming.
+ *
+ * @param content - The message content (string or structured data)
+ * @param isStreaming - Whether the message is currently being streamed
+ * @returns Formatted string content with optional cursor indicator
+ */
+function formatMessageContent(content: unknown, isStreaming: boolean): string {
+  const baseContent = typeof content === "string" ? content : JSON.stringify(content);
+  return isStreaming ? baseContent + " ▍" : baseContent;
+}
+
 export type ChatMessagesProps = {
   messages: ChatMessage[];
   isLoading?: boolean;
@@ -71,13 +84,7 @@ export function ChatMessages({
                     )}
                     markdown={true}
                   >
-                    {isStreaming
-                      ? (typeof message.content === "string"
-                          ? message.content
-                          : JSON.stringify(message.content)) + " ▍"
-                      : typeof message.content === "string"
-                        ? message.content
-                        : JSON.stringify(message.content)}
+                    {formatMessageContent(message.content, isStreaming)}
                   </MessageContent>
 
                   {!isStreaming && (
