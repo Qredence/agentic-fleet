@@ -49,7 +49,7 @@ env/
 .factory/
 .claude/
 .github/mcp.json
-.github/skills/
+.fleet/
 # Generated reports
 report/
 
