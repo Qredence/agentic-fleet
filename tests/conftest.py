@@ -13,7 +13,7 @@ if str(SRC) not in sys.path:
 
 # Ensure agent-framework shims are applied before any tests import `agent_framework`
 # internals directly (some upstream distributions ship an empty root module).
-from agentic_fleet.utils.agent_framework_shims import ensure_agent_framework_shims  # noqa: E402
+from agentic_fleet.utils.agent_framework import ensure_agent_framework_shims  # noqa: E402
 
 ensure_agent_framework_shims()
 
