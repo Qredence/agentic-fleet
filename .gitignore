@@ -46,6 +46,8 @@ env/
 .trae/
 .gemini/
 .kilocode/
+.factory/
+.fleet/
 
 # Generated reports
 report/
@@ -138,5 +140,7 @@ memory-bank/
 .claude/skills/python-backend-reviewer/scripts/concurrency_analyzer.py
 .claude/skills/python-backend-reviewer/scripts/detect_duplicates.py
 .claude/python-backend-reviewer.skill
+conductor/tech-stack.md
+conductor/tracks.md
 conductor/tech-stack.md
 conductor/tracks.md
