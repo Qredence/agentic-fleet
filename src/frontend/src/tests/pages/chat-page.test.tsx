@@ -182,6 +182,7 @@ describe("ChatPage", () => {
   });
 
   it("changes prompt input and submits message", async () => {
+    const user = userEvent.setup();
     render(<ChatPage />);
 
     const textarea = screen.getByPlaceholderText("Ask anything...");
@@ -198,6 +199,7 @@ describe("ChatPage", () => {
   });
 
   it("does not submit empty message", async () => {
+    const user = userEvent.setup();
     render(<ChatPage />);
 
     const textarea = screen.getByPlaceholderText("Ask anything...");
@@ -214,22 +216,26 @@ describe("ChatPage", () => {
   });
 
   it("does not submit when loading", async () => {
+    const user = userEvent.setup();
     mockChatStore.isLoading = true;
     render(<ChatPage />);
 
     const textarea = screen.getByPlaceholderText("Ask anything...");
     await user.type(textarea, "Test message");
 
-    // When loading, the submit button should be disabled or replaced with stop button
-    // Check that sendMessage is not called
+    // When loading, the submit button should be disabled or not present
+    // Verify that sendMessage is not called even if we try to submit
     const buttons = screen.getAllByRole("button");
     const submitButton = buttons.find((b) =>
       b.textContent?.match(/send|submit/i),
     );
-    if (submitButton) {
+    
+    // If submit button exists, verify it's disabled or doesn't trigger sendMessage
+    if (submitButton && !submitButton.hasAttribute('disabled')) {
       await user.click(submitButton);
     }
 
+    // Explicitly verify sendMessage was never called
     expect(mockChatStore.sendMessage).not.toHaveBeenCalled();
   });
 
@@ -264,6 +270,7 @@ describe("ChatPage", () => {
   });
 
   it("toggles right panel", async () => {
+    const user = userEvent.setup();
     render(<ChatPage />);
 
     const panelTrigger = screen.getByTestId("right-panel-trigger");
@@ -294,7 +301,6 @@ describe("ChatPage", () => {
   });
 
   it("toggles trace visibility", async () => {
-    const user = userEvent.setup();
     render(<ChatPage />);
 
     // Initially showTrace should be true based on default mock
@@ -306,7 +312,6 @@ describe("ChatPage", () => {
   });
 
   it("changes execution mode", async () => {
-    const user = userEvent.setup();
     render(<ChatPage />);
 
     // Default mode should be auto
@@ -318,7 +323,6 @@ describe("ChatPage", () => {
   });
 
   it("toggles GEPA optimization", async () => {
-    const user = userEvent.setup();
     render(<ChatPage />);
 
     // Default should be false

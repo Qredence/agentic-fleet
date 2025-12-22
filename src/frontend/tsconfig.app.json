@@ -8,6 +8,7 @@
     "types": ["vite/client", "vitest/globals"],
     "skipLibCheck": true,
     "noEmit": true,
+    "baseUrl": ".",
     "paths": {
       "@/*": ["./src/*"]
     },
