@@ -11,7 +11,7 @@ from agentic_fleet.api.middleware import BridgeMiddleware
 @pytest.mark.asyncio
 async def test_bridge_middleware_concurrent_execution():
     """Test that concurrent requests don't share execution data.
-    
+
     This test verifies that the BridgeMiddleware correctly uses contextvars
     to isolate execution data across concurrent requests, preventing race
     conditions when the same middleware instance is shared.
@@ -23,7 +23,7 @@ async def test_bridge_middleware_concurrent_execution():
     # Create single middleware instance (shared across "requests")
     middleware = BridgeMiddleware(
         history_manager=mock_history_manager,
-        dspy_examples_path=None  # Disable DSPy example saving for this test
+        dspy_examples_path=None,  # Disable DSPy example saving for this test
     )
 
     # Track saved execution data
@@ -42,7 +42,7 @@ async def test_bridge_middleware_concurrent_execution():
         context = {
             "workflowId": f"workflow_{task_id}",
             "mode": "standard",
-            "metadata": {"request_id": task_id}
+            "metadata": {"request_id": task_id},
         }
 
         # Start the request
@@ -91,10 +91,7 @@ async def test_bridge_middleware_error_handling():
     mock_history_manager = MagicMock()
     mock_history_manager.save_execution_async = AsyncMock()
 
-    middleware = BridgeMiddleware(
-        history_manager=mock_history_manager,
-        dspy_examples_path=None
-    )
+    middleware = BridgeMiddleware(history_manager=mock_history_manager, dspy_examples_path=None)
 
     saved_executions = []
 
@@ -124,10 +121,7 @@ async def test_bridge_middleware_no_context_warning():
     mock_history_manager = MagicMock()
     mock_history_manager.save_execution_async = AsyncMock()
 
-    middleware = BridgeMiddleware(
-        history_manager=mock_history_manager,
-        dspy_examples_path=None
-    )
+    middleware = BridgeMiddleware(history_manager=mock_history_manager, dspy_examples_path=None)
 
     # Call on_end without on_start
     await middleware.on_end({"result": "test"})

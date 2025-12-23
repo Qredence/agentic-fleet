@@ -38,9 +38,8 @@ async def test_initialize_workflow_context_uses_yaml_tracing_config(
 
     monkeypatch.setattr(init_mod, "initialize_tracing", fake_initialize_tracing)
 
-    # Avoid environment validation and Agent Framework shim side-effects.
+    # Avoid environment validation side-effects.
     monkeypatch.setattr(init_mod, "_validate_environment", lambda: None)
-    monkeypatch.setattr(init_mod, "ensure_agent_framework_shims", lambda: None)
 
     # Stop right after tracing initialization.
     def stop_create_shared_components(*args, **kwargs):

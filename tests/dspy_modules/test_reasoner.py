@@ -6,7 +6,6 @@ the reasoner's routing logic, fallback behavior, and response parsing.
 
 from __future__ import annotations
 
-import time
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -481,7 +480,9 @@ class TestTypedSignatures:
     def test_routing_cache_initialized(self, typed_reasoner):
         """Verify routing cache is initialized."""
         assert hasattr(typed_reasoner, "_routing_cache")
-        assert isinstance(typed_reasoner._routing_cache, dict)
+        from agentic_fleet.dspy_modules.reasoner_cache import RoutingCache
+
+        assert isinstance(typed_reasoner._routing_cache, RoutingCache)
 
     def test_cache_settings_stored(self, typed_reasoner):
         """Verify cache settings are stored."""
@@ -531,11 +532,8 @@ class TestRoutingCache:
 
     def test_cache_hit_returns_result(self, cached_reasoner):
         """Verify cache hit returns cached result."""
-        # Manually populate cache
-        cached_reasoner._routing_cache["test_key"] = {
-            "result": {"assigned_to": ["Writer"]},
-            "timestamp": time.time(),
-        }
+        # Use the cache API to store
+        cached_reasoner._routing_cache.set("test_key", {"assigned_to": ["Writer"]})
 
         result = cached_reasoner._get_cached_routing("test_key")
 
@@ -547,13 +545,13 @@ class TestRoutingCache:
         # Set TTL to 1 second for this test
         cached_reasoner.cache_ttl_seconds = 1
 
-        # Add expired entry
-        cached_reasoner._routing_cache["expired_key"] = {
-            "result": {"assigned_to": ["Writer"]},
-            "timestamp": time.time() - 10,  # 10 seconds ago
-        }
+        # Add entry using the cache API at a fixed "current" time
+        with patch("time.time", return_value=1000.0):
+            cached_reasoner._routing_cache.set("expired_key", {"assigned_to": ["Writer"]})
 
-        result = cached_reasoner._get_cached_routing("expired_key")
+        # Advance "current" time beyond the TTL so the entry is considered expired
+        with patch("time.time", return_value=1002.0):
+            result = cached_reasoner._get_cached_routing("expired_key")
 
         assert result is None
 
@@ -563,18 +561,22 @@ class TestRoutingCache:
 
         cached_reasoner._cache_routing("new_key", result)
 
-        assert "new_key" in cached_reasoner._routing_cache
-        assert cached_reasoner._routing_cache["new_key"]["result"] == result
+        # Verify via get method (RoutingCache API)
+        cached_result = cached_reasoner._routing_cache.get("new_key")
+        assert cached_result is not None
+        assert cached_result == result
 
     def test_clear_routing_cache(self, cached_reasoner):
         """Verify clear_routing_cache empties the cache."""
-        # Add some entries
-        cached_reasoner._routing_cache["key1"] = {"result": {}, "timestamp": time.time()}
-        cached_reasoner._routing_cache["key2"] = {"result": {}, "timestamp": time.time()}
+        # Add some entries using the cache API
+        cached_reasoner._routing_cache.set("key1", {})
+        cached_reasoner._routing_cache.set("key2", {})
 
         cached_reasoner.clear_routing_cache()
 
-        assert len(cached_reasoner._routing_cache) == 0
+        # Verify cache is empty via stats
+        stats = cached_reasoner._routing_cache.get_stats()
+        assert stats["size"] == 0
 
 
 class TestTypedRoutingExtraction:
@@ -677,7 +679,7 @@ class TestBackwardCompatibility:
         # Verify the reasoner has the expected attributes after initialization
         assert hasattr(r, "enable_routing_cache")
         assert hasattr(r, "_routing_cache")
-        assert hasattr(r, "_modules_initialized")
+        assert hasattr(r, "_module_manager")  # ModuleManager replaces _modules_initialized
 
     def test_legacy_reasoner_defaults_for_cache(self):
         """Verify legacy reasoner defaults for routing cache."""
