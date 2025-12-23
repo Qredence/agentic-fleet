@@ -12,7 +12,7 @@ import re
 import time
 from collections import OrderedDict
 from dataclasses import dataclass
-from typing import TYPE_CHECKING, Any, cast
+from typing import TYPE_CHECKING, Any, Iterable, cast
 
 if TYPE_CHECKING:
     from agent_framework._threads import AgentThread
@@ -144,6 +144,26 @@ def _message_role_value(role: Any) -> str:
     return str(value)
 
 
+def _has_messages(container: Any, attrs: Iterable[str]) -> bool:
+    if container is None:
+        return False
+
+    for attr in attrs:
+        candidate = getattr(container, attr, None)
+        if candidate is None:
+            continue
+        try:
+            if len(candidate) > 0:  # type: ignore[arg-type]
+                return True
+        except Exception:
+            continue
+
+    try:
+        return len(container) > 0  # type: ignore[arg-type]
+    except Exception:
+        return False
+
+
 def _thread_has_any_messages(thread: Any | None) -> bool:
     if thread is None:
         return False
@@ -158,34 +178,12 @@ def _thread_has_any_messages(thread: Any | None) -> bool:
         # Conservatively treat initialized threads as potentially holding context.
         return True
 
-    try:
-        return len(thread) > 0  # type: ignore[arg-type]
-    except Exception:
-        pass
-
     store = getattr(thread, "message_store", None) or getattr(thread, "_message_store", None)
-    if store is not None:
-        for attr in ("messages", "_messages", "history"):
-            msgs = getattr(store, attr, None)
-            if msgs is None:
-                continue
-            try:
-                return len(msgs) > 0  # type: ignore[arg-type]
-            except Exception:
-                continue
-        try:
-            return len(store) > 0  # type: ignore[arg-type]
-        except Exception:
-            pass
+    if _has_messages(store, ("messages", "_messages", "history")):
+        return True
 
-    for attr in ("messages", "history", "_messages"):
-        msgs = getattr(thread, attr, None)
-        if msgs is None:
-            continue
-        try:
-            return len(msgs) > 0  # type: ignore[arg-type]
-        except Exception:
-            continue
+    if _has_messages(thread, ("messages", "history", "_messages")):
+        return True
 
     return False
 
