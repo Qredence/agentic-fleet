@@ -13,106 +13,30 @@ programming capabilities to perform high-level cognitive tasks:
 from __future__ import annotations
 
 import asyncio
-import hashlib
 import json
-import time
-from collections import OrderedDict
-from functools import lru_cache
 from pathlib import Path
 from typing import Any
 
 import dspy
 
-from agentic_fleet.utils.cfg import load_config
+from agentic_fleet.utils.infra.langfuse import create_dspy_span
 from agentic_fleet.utils.infra.logging import setup_logger
 from agentic_fleet.utils.infra.telemetry import optional_span
 
 from ..workflows.exceptions import ToolError
-from .nlu import DSPyNLU, get_nlu_module
-from .reasoner_utils import get_reasoner_source_hash, is_simple_task, is_time_sensitive_task
-from .signatures import (
-    EnhancedTaskRouting,
-    GroupChatSpeakerSelection,
-    ProgressEvaluation,
-    QualityAssessment,
-    SimpleResponse,
-    TaskAnalysis,
-    TaskRouting,
-    ToolPlan,
-    WorkflowStrategy,
+from .reasoner_cache import RoutingCache
+from .reasoner_modules import ModuleManager
+from .reasoner_predictions import PredictionMethods
+from .reasoner_utils import (
+    _format_team_description,
+    _generate_cache_key,
+    get_configured_compiled_reasoner_path,
+    get_reasoner_source_hash,
+    is_simple_task,
+    is_time_sensitive_task,
 )
 
 logger = setup_logger(__name__)
-
-
-def _find_upwards(start: Path, marker: str) -> Path | None:
-    """Search upward from start for a file or directory named marker. Return the containing directory, or None."""
-    current = start
-    while True:
-        candidate = current / marker
-        if candidate.exists():
-            return current
-        if current.parent == current:
-            break
-        current = current.parent
-    return None
-
-
-def _search_bases() -> list[Path]:
-    resolved = Path(__file__).resolve()
-    # Find repo root by searching for pyproject.toml
-    repo_root = _find_upwards(resolved.parent, "pyproject.toml")
-    if repo_root is None:
-        repo_root = resolved.parents[-1]
-    # Find package root by searching for the topmost __init__.py
-    package_root = None
-    current = resolved.parent
-    last_with_init = None
-    while True:
-        if (current / "__init__.py").exists():
-            last_with_init = current
-        else:
-            break
-        if current.parent == current:
-            break
-        current = current.parent
-    package_root = last_with_init if last_with_init is not None else resolved.parents[-1]
-    module_dir = resolved.parent
-    return [repo_root, package_root, module_dir, Path.cwd()]
-
-
-@lru_cache(maxsize=1)
-def _resolve_compiled_reasoner_path() -> Path:
-    config: dict[str, Any] = {}
-    try:
-        config = load_config(validate=False)
-    except Exception as exc:  # pragma: no cover - best-effort fallback
-        logger.debug("Failed to load workflow config for compiled reasoner path: %s", exc)
-
-    dspy_config = config.get("dspy", {})
-    relative_path = Path(
-        dspy_config.get("compiled_reasoner_path", ".var/cache/dspy/compiled_reasoner.json")
-    ).expanduser()
-    if relative_path.is_absolute():
-        return relative_path
-
-    bases = _search_bases()
-    for base in bases:
-        candidate = (base / relative_path).resolve()
-        if candidate.exists():
-            return candidate
-
-    return (bases[0] / relative_path).resolve()
-
-
-def get_configured_compiled_reasoner_path() -> Path:
-    """Return the configured path to the compiled DSPy reasoner artifact."""
-
-    return _resolve_compiled_reasoner_path()
-
-
-# Module-level cache for DSPy module instances (stateless, can be shared)
-_MODULE_CACHE: dict[str, dspy.Module] = {}
 
 
 class DSPyReasoner(dspy.Module):
@@ -128,6 +52,7 @@ class DSPyReasoner(dspy.Module):
     def __init__(
         self,
         use_enhanced_signatures: bool = True,
+        use_typed_signatures: bool = True,
         enable_routing_cache: bool = True,
         cache_ttl_seconds: int = 300,
         cache_max_entries: int = 1024,
@@ -137,88 +62,37 @@ class DSPyReasoner(dspy.Module):
 
         Parameters:
             use_enhanced_signatures (bool): Enable enhanced routing that includes tool planning and richer outputs.
+            use_typed_signatures (bool): Use Pydantic-typed signatures for structured outputs (DSPy 3.x).
             enable_routing_cache (bool): Enable in-memory caching of routing decisions to reduce repeated model calls.
             cache_ttl_seconds (int): Time-to-live for cached routing entries in seconds.
             cache_max_entries (int): Maximum number of cached routing entries to retain in memory.
         """
         super().__init__()
         self.use_enhanced_signatures = use_enhanced_signatures
+        self.use_typed_signatures = use_typed_signatures
         self.enable_routing_cache = enable_routing_cache
-        self.cache_ttl_seconds = cache_ttl_seconds
-        self.cache_max_entries = max(1, int(cache_max_entries))
 
         self._execution_history: list[dict[str, Any]] = []
-        self._modules_initialized = False
         self.tool_registry: Any | None = None
 
-        # Routing cache for performance optimization (OrderedDict for O(1) LRU eviction)
-        self._routing_cache: OrderedDict[str, dict[str, Any]] = OrderedDict()
+        # Initialize ModuleManager for module initialization and caching
+        self._module_manager = ModuleManager(
+            use_enhanced_signatures=use_enhanced_signatures,
+            use_typed_signatures=use_typed_signatures,
+        )
 
-        # Placeholders for lazy-initialized modules
-        self._analyzer: dspy.Module | None = None
-        self._router: dspy.Module | None = None
-        self._strategy_selector: dspy.Module | None = None
-        self._quality_assessor: dspy.Module | None = None
-        self._progress_evaluator: dspy.Module | None = None
-        self._tool_planner: dspy.Module | None = None
-        self._simple_responder: dspy.Module | None = None
-        self._group_chat_selector: dspy.Module | None = None
-        self._nlu: DSPyNLU | None = None
-        self._event_narrator: Any | None = None
+        # Initialize RoutingCache for routing decisions
+        self._routing_cache = RoutingCache(
+            ttl_seconds=cache_ttl_seconds,
+            max_size=max(1, int(cache_max_entries)),
+        )
+
+        # Initialize PredictionMethods for prediction delegation
+        self._predictions = PredictionMethods(self)
 
     def _ensure_modules_initialized(self) -> None:
-        """
-        Lazily initialize DSPy modules using unified typed signatures.
-        """
-        if self._modules_initialized:
-            return
-
-        # NLU
-        if self._nlu is None:
-            self._nlu = get_nlu_module()
-
-        # Analyzer
-        if self._analyzer is None:
-            self._analyzer = dspy.ChainOfThought(TaskAnalysis)
-
-        # Router and strategy selector
-        if self._router is None:
-            if self.use_enhanced_signatures:
-                self._router = dspy.Predict(EnhancedTaskRouting)
-                if self._strategy_selector is None:
-                    self._strategy_selector = dspy.ChainOfThought(WorkflowStrategy)
-            else:
-                self._router = dspy.Predict(TaskRouting)
-
-        # Quality assessor
-        if self._quality_assessor is None:
-            self._quality_assessor = dspy.ChainOfThought(QualityAssessment)
-
-        # Progress evaluator
-        if self._progress_evaluator is None:
-            self._progress_evaluator = dspy.ChainOfThought(ProgressEvaluation)
-
-        # Tool planner
-        if self._tool_planner is None:
-            self._tool_planner = dspy.ChainOfThought(ToolPlan)
-
-        # Simple responder
-        if self._simple_responder is None:
-            self._simple_responder = dspy.Predict(SimpleResponse)
-
-        # Group chat selector
-        if self._group_chat_selector is None:
-            self._group_chat_selector = dspy.ChainOfThought(GroupChatSpeakerSelection)
-
-        # Event Narrator
-        if self._event_narrator is None:
-            from agentic_fleet.workflows.narrator import EventNarrator
-
-            self._event_narrator = EventNarrator()
-
-        self._modules_initialized = True
-        logger.debug("DSPy modules initialized (unified typed mode)")
-
+        """Lazily initialize DSPy modules via ModuleManager."""
+        self._module_manager.ensure_modules_initialized()
         # Load compiled optimization if available
         self._load_compiled_module()
 
@@ -259,12 +133,12 @@ class DSPyReasoner(dspy.Module):
     def event_narrator(self) -> dspy.Module:
         """Lazily initialized event narrator."""
         self._ensure_modules_initialized()
-        return self._event_narrator  # type: ignore[return-value]
+        return self._module_manager.event_narrator
 
     @event_narrator.setter
     def event_narrator(self, value: dspy.Module) -> None:
         """Allow setting event narrator."""
-        self._event_narrator = value
+        self._module_manager.event_narrator = value
 
     def narrate_events(self, events: list[dict[str, Any]]) -> str:
         """Generate a narrative summary from workflow events.
@@ -275,7 +149,10 @@ class DSPyReasoner(dspy.Module):
         Returns:
             Narrative string.
         """
-        with optional_span("DSPyReasoner.narrate_events"):
+        with (
+            create_dspy_span("narrate_events", module_name="event_narrator"),
+            optional_span("DSPyReasoner.narrate_events"),
+        ):
             if not events:
                 return "No events to narrate."
 
@@ -289,113 +166,109 @@ class DSPyReasoner(dspy.Module):
 
     @property
     def analyzer(self) -> dspy.Module:
-        """
-        Provide lazy access to the task analyzer module.
-
-        Returns:
-            dspy.Module: The analyzer module used for task analysis; initialized on first access.
-        """
+        """Provide lazy access to the task analyzer module."""
         self._ensure_modules_initialized()
-        return self._analyzer  # type: ignore[return-value]
+        return self._module_manager.analyzer
 
     @analyzer.setter
     def analyzer(self, value: dspy.Module) -> None:
         """Allow setting analyzer (for compiled module loading)."""
-        self._analyzer = value
+        self._module_manager.analyzer = value
 
     @property
     def router(self) -> dspy.Module:
         """Lazily initialized task router."""
         self._ensure_modules_initialized()
-        return self._router  # type: ignore[return-value]
+        return self._module_manager.router
 
     @router.setter
     def router(self, value: dspy.Module) -> None:
         """Allow setting router (for compiled module loading)."""
-        self._router = value
+        self._module_manager.router = value
 
     @property
     def strategy_selector(self) -> dspy.Module | None:
         """Lazily initialized strategy selector."""
         self._ensure_modules_initialized()
-        return self._strategy_selector
+        return self._module_manager.strategy_selector
 
     @strategy_selector.setter
     def strategy_selector(self, value: dspy.Module | None) -> None:
         """Allow setting strategy selector (for compiled module loading)."""
-        self._strategy_selector = value
+        self._module_manager.strategy_selector = value
 
     @property
     def quality_assessor(self) -> dspy.Module:
         """Lazily initialized quality assessor."""
         self._ensure_modules_initialized()
-        return self._quality_assessor  # type: ignore[return-value]
+        return self._module_manager.quality_assessor
 
     @quality_assessor.setter
     def quality_assessor(self, value: dspy.Module) -> None:
         """Allow setting quality assessor (for compiled module loading)."""
-        self._quality_assessor = value
+        self._module_manager.quality_assessor = value
 
     @property
     def progress_evaluator(self) -> dspy.Module:
         """Lazily initialized progress evaluator."""
         self._ensure_modules_initialized()
-        return self._progress_evaluator  # type: ignore[return-value]
+        return self._module_manager.progress_evaluator
 
     @progress_evaluator.setter
     def progress_evaluator(self, value: dspy.Module) -> None:
         """Allow setting progress evaluator (for compiled module loading)."""
-        self._progress_evaluator = value
+        self._module_manager.progress_evaluator = value
 
     @property
     def tool_planner(self) -> dspy.Module:
         """Lazily initialized tool planner."""
         self._ensure_modules_initialized()
-        return self._tool_planner  # type: ignore[return-value]
+        return self._module_manager.tool_planner
 
     @tool_planner.setter
     def tool_planner(self, value: dspy.Module) -> None:
         """Allow setting tool planner (for compiled module loading)."""
-        self._tool_planner = value
+        self._module_manager.tool_planner = value
 
     @property
     def simple_responder(self) -> dspy.Module:
         """Lazily initialized simple responder."""
         self._ensure_modules_initialized()
-        return self._simple_responder  # type: ignore[return-value]
+        return self._module_manager.simple_responder
 
     @simple_responder.setter
     def simple_responder(self, value: dspy.Module) -> None:
         """Allow setting simple responder (for compiled module loading)."""
-        self._simple_responder = value
+        self._module_manager.simple_responder = value
 
     @property
     def group_chat_selector(self) -> dspy.Module:
         """Lazily initialized group chat selector."""
         self._ensure_modules_initialized()
-        return self._group_chat_selector  # type: ignore[return-value]
+        return self._module_manager.group_chat_selector
 
     @group_chat_selector.setter
     def group_chat_selector(self, value: dspy.Module) -> None:
         """Allow setting group chat selector (for compiled module loading)."""
-        self._group_chat_selector = value
+        self._module_manager.group_chat_selector = value
 
     @property
-    def nlu(self) -> DSPyNLU:
+    def nlu(self):
         """Lazily initialized NLU module."""
         self._ensure_modules_initialized()
-        return self._nlu  # type: ignore[return-value]
+        return self._module_manager.nlu
 
     @nlu.setter
-    def nlu(self, value: DSPyNLU) -> None:
+    def nlu(self, value) -> None:
         """Allow setting NLU module."""
-        self._nlu = value
+        self._module_manager.nlu = value
 
     def _robust_route(self, max_backtracks: int = 2, **kwargs) -> dspy.Prediction:
         """Execute routing with DSPy assertions."""
         # Call the router directly
         # We preserve the max_backtracks arg for interface compatibility
-        prediction = self.router(**kwargs)
+        with create_dspy_span("route_robustly", module_name="router"):
+            prediction = self.router(**kwargs)
 
         # Basic assertion to ensure at least one agent is assigned
         if self.use_enhanced_signatures:
@@ -464,50 +337,13 @@ class DSPyReasoner(dspy.Module):
                 current_date=kwargs.get("current_date", ""),
             )
 
-    def _get_predictor(self, module: dspy.Module) -> dspy.Module:
-        """Extract the underlying Predict module from a ChainOfThought or similar wrapper."""
-        if hasattr(module, "predictors"):
-            preds = module.predictors()
-            if preds:
-                return preds[0]
-        return module
-
     def predictors(self) -> list[dspy.Module]:
-        """Return list of predictors for GEPA optimization.
-
-        Note: GEPA expects ``predictors()`` to be callable; returning a
-        list property breaks optimizer introspection.
-        """
-        preds = [
-            self._get_predictor(self.analyzer),
-            self._get_predictor(self.router),
-            self._get_predictor(self.quality_assessor),
-            self._get_predictor(self.progress_evaluator),
-            self._get_predictor(self.tool_planner),
-            # NOTE: self.judge removed in Plan #4 optimization
-            self._get_predictor(self.simple_responder),
-            self._get_predictor(self.group_chat_selector),
-        ]
-        if self.strategy_selector:
-            preds.append(self._get_predictor(self.strategy_selector))
-        return preds
+        """Return list of predictors for GEPA optimization."""
+        return self._module_manager.get_predictors()
 
     def named_predictors(self) -> list[tuple[str, dspy.Module]]:
         """Return predictor modules with stable names for GEPA."""
-
-        preds = [
-            ("analyzer", self._get_predictor(self.analyzer)),
-            ("router", self._get_predictor(self.router)),
-            ("quality_assessor", self._get_predictor(self.quality_assessor)),
-            ("progress_evaluator", self._get_predictor(self.progress_evaluator)),
-            ("tool_planner", self._get_predictor(self.tool_planner)),
-            # NOTE: ("judge", ...) removed in Plan #4 optimization
-            ("simple_responder", self._get_predictor(self.simple_responder)),
-            ("group_chat_selector", self._get_predictor(self.group_chat_selector)),
-        ]
-        if self.strategy_selector:
-            preds.append(("strategy_selector", self._get_predictor(self.strategy_selector)))
-        return preds
+        return self._module_manager.get_named_predictors()
 
     def set_tool_registry(self, tool_registry: Any) -> None:
         """Attach a tool registry to the supervisor."""
@@ -530,129 +366,36 @@ class DSPyReasoner(dspy.Module):
             tool_planning_module: Preloaded tool planning module
         """
         if routing_module is not None:
-            self._router = routing_module
+            self._module_manager.router = routing_module
             logger.debug("Injected external routing decision module")
         if quality_module is not None:
-            self._quality_assessor = quality_module
+            self._module_manager.quality_assessor = quality_module
             logger.debug("Injected external quality assessment module")
         if tool_planning_module is not None:
-            self._tool_planner = tool_planning_module
+            self._module_manager.tool_planner = tool_planning_module
             logger.debug("Injected external tool planning module")
 
     def select_workflow_mode(self, task: str) -> dict[str, str]:
-        """Select the optimal workflow architecture for a task.
-
-        Args:
-            task: The user's task description
-
-        Returns:
-            Dictionary containing:
-            - mode: 'handoff', 'standard', or 'fast_path'
-            - reasoning: Why this mode was chosen
-        """
-        with optional_span("DSPyReasoner.select_workflow_mode", attributes={"task": task}):
-            logger.info(f"Selecting workflow mode for task: {task[:100]}...")
-
-            # Fast check for trivial tasks to avoid DSPy overhead
-            if is_simple_task(task):
-                return {
-                    "mode": "fast_path",
-                    "reasoning": "Trivial task detected via keyword matching.",
-                }
-
-            if not self.strategy_selector:
-                return {
-                    "mode": "standard",
-                    "reasoning": "Strategy selector not initialized (legacy mode).",
-                }
-
-            # Analyze complexity first
-            analysis = self.analyze_task(task)
-            complexity_desc = (
-                f"Complexity: {analysis['complexity']}, "
-                f"Steps: {analysis['estimated_steps']}, "
-                f"Time Sensitive: {analysis['time_sensitive']}"
-            )
-
-            prediction = self.strategy_selector(task=task, complexity_analysis=complexity_desc)
-
-            return {
-                "mode": getattr(prediction, "workflow_mode", "standard"),
-                "reasoning": getattr(prediction, "reasoning", ""),
-            }
+        """Select the optimal workflow architecture for a task."""
+        return self._predictions.select_workflow_mode(task)
 
     def analyze_task(
         self, task: str, use_tools: bool = False, perform_search: bool = False
     ) -> dict[str, Any]:
-        """Analyze a task to understand its requirements and complexity.
-
-        Args:
-            task: The user's task description
-            use_tools: Whether to allow tool usage during analysis (default: False)
-            perform_search: Whether to perform web search during analysis (default: False)
-
-        Returns:
-            Dictionary containing analysis results (complexity, capabilities, etc.)
-        """
-        with optional_span("DSPyReasoner.analyze_task", attributes={"task": task}):
-            logger.info(f"Analyzing task: {task[:100]}...")
-
-            # Perform NLU analysis first
-            intent_data = self.nlu.classify_intent(
-                task,
-                possible_intents=[
-                    "information_retrieval",
-                    "content_creation",
-                    "code_generation",
-                    "data_analysis",
-                    "planning",
-                    "chat",
-                ],
-            )
-            logger.info(f"NLU Intent: {intent_data['intent']} ({intent_data['confidence']})")
-
-            # Extract common entities
-            entities_data = self.nlu.extract_entities(
-                task,
-                entity_types=[
-                    "Person",
-                    "Organization",
-                    "Location",
-                    "Date",
-                    "Time",
-                    "Technology",
-                    "Quantity",
-                ],
-            )
-
-            prediction = self.analyzer(task=task)
-
-            # Extract fields from prediction and align with AnalysisResult schema
-            predicted_needs_web = getattr(prediction, "needs_web_search", None)
-            time_sensitive = is_time_sensitive_task(task)
-            needs_web_search = (
-                bool(predicted_needs_web) if predicted_needs_web is not None else time_sensitive
-            )
-
-            capabilities = getattr(prediction, "required_capabilities", [])
-            estimated_steps = getattr(prediction, "estimated_steps", 1)
-
-            return {
-                "complexity": getattr(prediction, "complexity", "medium"),
-                "capabilities": capabilities,
-                "required_capabilities": capabilities,
-                "tool_requirements": getattr(prediction, "preferred_tools", []),
-                "steps": estimated_steps,
-                "estimated_steps": estimated_steps,
-                "search_context": getattr(prediction, "search_context", ""),
-                "needs_web_search": needs_web_search,
-                "search_query": getattr(prediction, "search_query", ""),
-                "urgency": getattr(prediction, "urgency", "medium"),
-                "reasoning": getattr(prediction, "reasoning", ""),
-                "time_sensitive": time_sensitive,
-                "intent": intent_data,
-                "entities": entities_data["entities"],
-            }
+        """Analyze a task to understand its requirements and complexity."""
+        result = self._predictions.analyze_task(
+            task, use_tools=use_tools, perform_search=perform_search
+        )
+        # Map result to expected format (add missing fields for backward compatibility)
+        if "capabilities" not in result:
+            result["capabilities"] = result.get("required_capabilities", [])
+        if "steps" not in result:
+            result["steps"] = result.get("estimated_steps", 1)
+        if "search_context" not in result:
+            result["search_context"] = result.get("search_query", "")
+        if "urgency" not in result:
+            result["urgency"] = "medium"
+        return result
 
     def route_task(
         self,
@@ -696,16 +439,19 @@ class DSPyReasoner(dspy.Module):
             - Time-sensitive tasks prefer the configured web-search tool (e.g., Tavily); when used, the "Researcher" role is prioritized and the tool is inserted into the tool plan.
             - When routing cache is enabled, results may be returned from or stored in the cache unless `skip_cache` is true.
         """
-        with optional_span("DSPyReasoner.route_task", attributes={"task": task}):
+        with (
+            create_dspy_span("route_task", module_name="router"),
+            optional_span("DSPyReasoner.route_task", attributes={"task": task}),
+        ):
             from datetime import datetime
 
             logger.info(f"Routing task: {task[:100]}...")
 
             # Check cache first (unless skipped or simple task)
             if not skip_cache and self.enable_routing_cache:
-                team_key = str(sorted(team.keys()))
-                cache_key = self._get_cache_key(task, team_key)
-                cached_result = self._get_cached_routing(cache_key)
+                team_desc = _format_team_description(team)
+                cache_key = _generate_cache_key(task, team_desc)
+                cached_result = self._routing_cache.get(cache_key)
                 if cached_result is not None:
                     return cached_result
 
@@ -732,8 +478,8 @@ class DSPyReasoner(dspy.Module):
                         "Simple/heartbeat task detected, but 'Writer' agent is not present in the team. Falling back to standard routing."
                     )
 
-            # Format team description
-            team_str = "\n".join([f"- {name}: {desc}" for name, desc in team.items()])
+            # Format team description using utility function
+            team_str = _format_team_description(team)
 
             # Prefer real tool registry descriptions over generic team info
             available_tools = team_str
@@ -834,9 +580,10 @@ class DSPyReasoner(dspy.Module):
 
                 # Cache the result
                 if self.enable_routing_cache and not skip_cache:
-                    team_key = str(sorted(team.keys()))
-                    cache_key = self._get_cache_key(task, team_key)
-                    self._cache_routing(cache_key, result)
+                    # Format team description for cache key (consistent with PredictionMethods)
+                    team_desc = _format_team_description(team)
+                    cache_key = _generate_cache_key(task, team_desc)
+                    self._routing_cache.set(cache_key, result)
 
                 return result
 
@@ -892,7 +639,10 @@ class DSPyReasoner(dspy.Module):
         Returns:
             Dictionary containing next_speaker and reasoning
         """
-        with optional_span("DSPyReasoner.select_next_speaker"):
+        with (
+            create_dspy_span("select_next_speaker", module_name="group_chat_selector"),
+            optional_span("DSPyReasoner.select_next_speaker"),
+        ):
             logger.info("Selecting next speaker...")
             prediction = self.group_chat_selector(
                 history=history, participants=participants, last_speaker=last_speaker
@@ -903,95 +653,47 @@ class DSPyReasoner(dspy.Module):
             }
 
     def generate_simple_response(self, task: str) -> str:
-        """Generate a direct response for a simple task.
-
-        Args:
-            task: The simple task or question
-
-        Returns:
-            The generated answer string
-        """
-        with optional_span("DSPyReasoner.generate_simple_response", attributes={"task": task}):
-            logger.info(f"Generating direct response for simple task: {task[:100]}...")
-            prediction = self.simple_responder(task=task)
-            answer = getattr(prediction, "answer", "I could not generate a simple response.")
-            logger.info(f"Generated answer: {answer[:100]}...")
-            return answer
+        """Generate a direct response for a simple task."""
+        return self._predictions.generate_simple_response(task)
 
     def assess_quality(self, task: str = "", result: str = "", **kwargs: Any) -> dict[str, Any]:
-        """Assess the quality of a task result.
-
-        Args:
-            task: The original task
-            result: The result produced by the agent
-            **kwargs: Compatibility arguments (requirements, results, etc.)
-
-        Returns:
-            Dictionary containing quality assessment (score, missing, improvements)
-        """
-        with optional_span("DSPyReasoner.assess_quality", attributes={"task": task}):
-            actual_task = task or kwargs.get("requirements", "")
-            actual_result = result or kwargs.get("results", "")
-
-            logger.info("Assessing result quality...")
-            prediction = self.quality_assessor(task=actual_task, result=actual_result)
-
-            return {
-                "score": getattr(prediction, "score", 0.0),
-                "missing": getattr(prediction, "missing_elements", ""),
-                "improvements": getattr(prediction, "required_improvements", ""),
-                "reasoning": getattr(prediction, "reasoning", ""),
-            }
+        """Assess the quality of a task result."""
+        result_dict = self._predictions.assess_quality(task=task, result=result, **kwargs)
+        # Map to expected format for backward compatibility
+        return {
+            "score": result_dict.get("score", 0.0),
+            "missing": result_dict.get("missing_elements", ""),
+            "improvements": result_dict.get("required_improvements", ""),
+            "reasoning": result_dict.get("reasoning", ""),
+        }
 
     def evaluate_progress(self, task: str = "", result: str = "", **kwargs: Any) -> dict[str, Any]:
-        """Evaluate progress and decide next steps (complete or refine).
-
-        Args:
-            task: The original task
-            result: The current result
-            **kwargs: Compatibility arguments (original_task, completed, etc.)
-
-        Returns:
-            Dictionary containing progress evaluation (action, feedback)
-        """
-        with optional_span("DSPyReasoner.evaluate_progress", attributes={"task": task}):
-            # Handle parameter aliases from different executors
-            actual_task = task or kwargs.get("original_task", "")
-            actual_result = result or kwargs.get("completed", "")
-
-            logger.info("Evaluating progress...")
-            prediction = self.progress_evaluator(task=actual_task, result=actual_result)
-
-            return {
-                "action": getattr(prediction, "action", "complete"),
-                "feedback": getattr(prediction, "feedback", ""),
-                "reasoning": getattr(prediction, "reasoning", ""),
-            }
+        """Evaluate progress and decide next steps (complete or refine)."""
+        result_dict = self._predictions.evaluate_progress(task=task, result=result, **kwargs)
+        # Map to expected format for backward compatibility
+        # Map "state" to "action" and "remaining_work" to "feedback"
+        state = result_dict.get("state", "complete")
+        # Convert state to action format if needed
+        action = state if state in ("complete", "refine", "continue") else "complete"
+        return {
+            "action": action,
+            "feedback": result_dict.get("remaining_work", ""),
+            "reasoning": result_dict.get("reasoning", ""),
+        }
 
     def decide_tools(
         self, task: str, team: dict[str, str], current_context: str = ""
     ) -> dict[str, Any]:
-        """Decide which tools to use for a task (ReAct-style planning).
-
-        Args:
-            task: The task to execute
-            team: Available agents/tools description
-            current_context: Current execution context
-
-        Returns:
-            Dictionary containing tool plan
-        """
-        with optional_span("DSPyReasoner.decide_tools", attributes={"task": task}):
-            logger.info("Deciding tools...")
-
-            team_str = "\n".join([f"- {name}: {desc}" for name, desc in team.items()])
-
-            prediction = self.tool_planner(task=task, available_tools=team_str)
-
-            return {
-                "tool_plan": getattr(prediction, "tool_plan", []),
-                "reasoning": getattr(prediction, "reasoning", ""),
-            }
+        """Decide which tools to use for a task (ReAct-style planning)."""
+        agents_list = list(team.keys())
+        result = self._predictions.decide_tools(
+            task=task, context=current_context, agents=agents_list
+        )
+        # Map to expected format for backward compatibility
+        return {
+            "tool_plan": result.get("selected_tools", []),
+            "reasoning": result.get("reasoning", ""),
+        }
 
     async def perform_web_search_async(self, query: str, timeout: float = 12.0) -> str:
         """Execute the preferred web-search tool asynchronously."""
@@ -1027,96 +729,68 @@ class DSPyReasoner(dspy.Module):
         return str(result)
 
     def get_execution_summary(self) -> dict[str, Any]:
-        """
-        Provide a brief summary of the reasoner's execution state.
-
-        Returns:
-            summary (dict): A dictionary with keys:
-                history_count (int): Number of recorded execution events.
-                routing_cache_size (int): Number of entries currently stored in the routing cache.
-        """
+        """Provide a brief summary of the reasoner's execution state."""
+        cache_stats = self._routing_cache.get_stats()
         return {
             "history_count": len(self._execution_history),
-            "routing_cache_size": len(self._routing_cache),
+            "routing_cache_size": cache_stats.get("size", 0),
+            "cache_hits": cache_stats.get("hits", 0),
+            "cache_misses": cache_stats.get("misses", 0),
+            "cache_hit_rate": cache_stats.get("hit_rate", 0.0),
         }
 
     # --- Cache management ---
 
     def _get_cache_key(self, task: str, team_key: str) -> str:
         """
-        Create a stable 16-hex-character cache key derived from `task` and `team_key`.
+        Create a cache key from task and team key.
 
-        Parameters:
-            task (str): The task description used to derive the key.
-            team_key (str): String representing the team configuration or capabilities.
+        DEPRECATED: Use _generate_cache_key from reasoner_utils instead.
+        Kept for backward compatibility with tests.
 
-        Returns:
-            cache_key (str): 16-character hex MD5 digest of the combined `task` and `team_key`.
+        Note: Returns full MD5 hash, not truncated to 16 chars like old implementation.
         """
-        combined = f"{task}|{team_key}"
-        # MD5 used for cache key generation, not security
-        return hashlib.md5(combined.encode(), usedforsecurity=False).hexdigest()[:16]
+        key = _generate_cache_key(task, team_key)
+        # Truncate to 16 chars for backward compatibility with tests
+        return key[:16] if len(key) > 16 else key
 
     def _get_cached_routing(self, cache_key: str) -> dict[str, Any] | None:
         """
-        Return a previously stored routing decision for `cache_key` if routing cache is enabled and the entry exists and is not expired.
+        Get cached routing decision.
 
-        Parameters:
-            cache_key (str): Key identifying the cached routing decision.
-
-        Returns:
-            dict[str, Any] | None: The cached routing decision if present and fresh; `None` if caching is disabled, the key is absent, or the entry has expired.
+        DEPRECATED: Use self._routing_cache.get() directly.
+        Kept for backward compatibility with tests.
         """
         if not self.enable_routing_cache:
             return None
-
-        if cache_key not in self._routing_cache:
-            return None
-
-        cached = self._routing_cache[cache_key]
-        if time.time() - cached["timestamp"] > self.cache_ttl_seconds:
-            # Expired - remove from cache
-            del self._routing_cache[cache_key]
-            return None
-
-        # Move to end to maintain LRU order (mark as most recently used)
-        self._routing_cache.move_to_end(cache_key)
-        logger.debug(f"Cache hit for routing key {cache_key[:8]}...")
-        return cached["result"]
+        return self._routing_cache.get(cache_key)
 
     def _cache_routing(self, cache_key: str, result: dict[str, Any]) -> None:
         """
-        Store a routing decision in the routing cache with a timestamp.
+        Store routing decision in cache.
 
-        If routing cache is disabled, this is a no-op.
-
-        Parameters:
-            cache_key (str): Key under which to store the routing decision.
-            result (dict[str, Any]): Routing decision data to cache.
+        DEPRECATED: Use self._routing_cache.set() directly.
+        Kept for backward compatibility with tests.
         """
         if not self.enable_routing_cache:
             return
-
-        # Bound memory usage: evict oldest entries when exceeding the cap.
-        # OrderedDict maintains insertion order, enabling O(1) eviction of the oldest entry.
-        if len(self._routing_cache) >= self.cache_max_entries:
-            try:
-                # Remove the oldest entry (first item in OrderedDict)
-                self._routing_cache.popitem(last=False)
-            except Exception:
-                # If eviction fails for any reason, fall back to clearing to avoid unbounded growth.
-                self._routing_cache.clear()
-
-        # Store the new entry (OrderedDict automatically places it at the end)
-        self._routing_cache[cache_key] = {
-            "result": result,
-            "timestamp": time.time(),
-        }
+        self._routing_cache.set(cache_key, result)
 
     def clear_routing_cache(self) -> None:
         """Clear the routing cache."""
         self._routing_cache.clear()
         logger.debug("Routing cache cleared")
+
+    @property
+    def cache_ttl_seconds(self) -> int:
+        """Get cache TTL in seconds."""
+        return self._routing_cache.ttl_seconds
+
+    @cache_ttl_seconds.setter
+    def cache_ttl_seconds(self, value: int) -> None:
+        """Set cache TTL in seconds (creates new cache instance)."""
+        max_size = self._routing_cache.max_size
+        self._routing_cache = RoutingCache(ttl_seconds=value, max_size=max_size)
 
     def _extract_typed_routing_decision(self, prediction: Any) -> dict[str, Any]:
         """
