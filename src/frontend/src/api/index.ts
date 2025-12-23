@@ -5,10 +5,16 @@
  */
 
 // Configuration
-export { API_BASE_URL, API_PREFIX, getWebSocketUrl } from "./config";
+export {
+  API_BASE_URL,
+  API_PREFIX,
+  STREAM_API_PREFIX,
+  getStreamApiBase,
+  getWebSocketUrl,
+} from "./config";
 
 // HTTP client
-export { http, request } from "./http";
+export { http, request, requestWithPrefix } from "./http";
 
 // API clients
 export {
@@ -20,6 +26,7 @@ export {
   optimizationApi,
   evaluationApi,
   improvementApi,
+  sseApi,
   healthApi,
 } from "./client";
 

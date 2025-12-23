@@ -217,7 +217,7 @@ agents:
     tools: [HostedCodeInterpreterTool]
 ```
 
-**Location**: `src/agentic_fleet/src/agentic_fleet/config/workflow_config.yaml`
+**Location**: `src/agentic_fleet/config/workflow_config.yaml`
 
 #### 2. Environment Variables (.env)
 
@@ -1361,13 +1361,13 @@ Response
 
 ### File Locations Reference
 
-| File                                                              | Purpose                |
-| ----------------------------------------------------------------- | ---------------------- |
-| `src/agentic_fleet/src/agentic_fleet/config/workflow_config.yaml` | All runtime settings   |
-| `.var/logs/execution_history.jsonl`                               | Execution history      |
-| `.var/logs/compiled_supervisor.pkl`                               | DSPy compiled cache    |
-| `.var/logs/gepa/`                                                 | GEPA optimization logs |
-| `src/agentic_fleet/data/supervisor_examples.json`                 | Training examples      |
+| File                                              | Purpose                |
+| ------------------------------------------------- | ---------------------- |
+| `src/agentic_fleet/config/workflow_config.yaml`   | All runtime settings   |
+| `.var/logs/execution_history.jsonl`               | Execution history      |
+| `.var/logs/compiled_supervisor.pkl`               | DSPy compiled cache    |
+| `.var/logs/gepa/`                                 | GEPA optimization logs |
+| `src/agentic_fleet/data/supervisor_examples.json` | Training examples      |
 
 ### Common Commands Reference
 

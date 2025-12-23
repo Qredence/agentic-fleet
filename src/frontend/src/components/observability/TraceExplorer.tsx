@@ -1,5 +1,4 @@
 import React, { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -14,8 +13,8 @@ import {
   Code2,
   Brain,
 } from "lucide-react";
-import { observabilityApi } from "@/api/client";
-import type { TraceDetails, Observation } from "@/api/types";
+import { useTrace } from "@/api/hooks";
+import type { Observation } from "@/api/types";
 import { formatDistanceToNow } from "date-fns";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
@@ -144,11 +143,7 @@ export const TraceExplorer: React.FC<TraceExplorerProps> = ({
   workflowId,
   onClose,
 }) => {
-  const { data, isLoading, error } = useQuery<TraceDetails>({
-    queryKey: ["trace", workflowId],
-    queryFn: () => observabilityApi.getTrace(workflowId),
-    retry: 1,
-  });
+  const { data, isLoading, error } = useTrace(workflowId);
 
   if (isLoading) {
     return (

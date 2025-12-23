@@ -209,10 +209,11 @@ class OptimizationService:
             # Get the current event loop to pass to the callback
             try:
                 loop = asyncio.get_running_loop()
-            except RuntimeError:
-                # If no loop is running, create a new one (shouldn't happen in normal flow)
-                loop = asyncio.new_event_loop()
-                logger.warning("No running event loop found, created new one for progress updates")
+            except RuntimeError as e:
+                # _run_optimization is async and must have a running loop
+                raise RuntimeError(
+                    "No running event loop found. _run_optimization requires an active async context."
+                ) from e
 
             progress_callback = JobProgressCallback(self.job_store, job_id, loop)
 

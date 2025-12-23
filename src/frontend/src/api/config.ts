@@ -17,6 +17,19 @@ export const API_BASE_URL = import.meta.env.VITE_API_URL || "";
 export const API_PREFIX = "/api/v1";
 
 /**
+ * API prefix for streaming endpoints.
+ */
+export const STREAM_API_PREFIX = "/api";
+
+/**
+ * Get the base URL for streaming endpoints (handles VITE_API_URL overrides).
+ */
+export function getStreamApiBase(): string {
+  const baseUrl = API_BASE_URL ? API_BASE_URL.replace(/\/$/, "") : "";
+  return `${baseUrl}${STREAM_API_PREFIX}`;
+}
+
+/**
  * WebSocket base URL - computed from window.location for proper protocol handling.
  */
 export function getWebSocketUrl(path: string): string {
