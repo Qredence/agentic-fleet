@@ -5,7 +5,8 @@
  * Uses the typed HTTP layer with retry logic and error handling.
  */
 
-import { http } from "@/api/http";
+import { http, requestWithPrefix } from "@/api/http";
+import { getStreamApiBase } from "./config";
 import type {
   Conversation,
   WorkflowSession,
@@ -171,6 +172,47 @@ export const improvementApi = {
         "Example: optimizationApi.run({ module_name: 'supervisor', auto_mode: 'medium', user_id: 'user-123' })",
     );
   },
+};
+
+// =============================================================================
+// SSE API
+// =============================================================================
+
+export const sseApi = {
+  /**
+   * Cancel a running SSE workflow.
+   */
+  cancel: (conversationId: string, workflowId: string) =>
+    requestWithPrefix<void>(
+      getStreamApiBase(),
+      `/chat/${encodeURIComponent(conversationId)}/cancel?workflow_id=${encodeURIComponent(
+        workflowId,
+      )}`,
+      { method: "POST" },
+    ),
+
+  /**
+   * Submit a human-in-the-loop response.
+   */
+  submitResponse: (
+    conversationId: string,
+    workflowId: string,
+    requestId: string,
+    response: unknown,
+  ) =>
+    requestWithPrefix<void>(
+      getStreamApiBase(),
+      `/chat/${encodeURIComponent(conversationId)}/respond?workflow_id=${encodeURIComponent(
+        workflowId,
+      )}`,
+      {
+        method: "POST",
+        body: {
+          request_id: requestId,
+          response,
+        },
+      },
+    ),
 };
 
 // =============================================================================
