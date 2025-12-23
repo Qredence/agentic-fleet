@@ -106,7 +106,7 @@ export function startChatTransport({
         });
         set({ isConcurrentError: true, isLoading: false });
       } else {
-        const errorMessage = error.message || "Unknown error";
+        const { message: errorMessage } = formatApiError(error);
         toast?.toast({
           title: "Stream Error",
           description: errorMessage,
