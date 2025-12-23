@@ -35,7 +35,7 @@ class ConversationManager:
     def create_conversation(self, title: str = "New Chat") -> Conversation:
         """Create a new conversation."""
         conversation_id = str(uuid4())
-        conversation = Conversation(id=conversation_id, title=title)
+        conversation = Conversation(conversation_id=conversation_id, title=title)
         saved = self._store.upsert(conversation)
         logger.info("Created conversation: %s", conversation_id)
         return saved
@@ -132,6 +132,23 @@ class ConversationManager:
 
         self._store.upsert(conversation)
         return updated
+
+    def delete_conversation(self, conversation_id: str) -> bool:
+        """Delete a conversation by ID.
+
+        Args:
+            conversation_id: The conversation ID to delete
+
+        Returns:
+            True if the conversation was deleted, False if it wasn't found
+        """
+        conversation = self._store.get(str(conversation_id))
+        if not conversation:
+            return False
+
+        self._store.delete(str(conversation_id))
+        logger.info("Deleted conversation: %s", conversation_id)
+        return True
 
 
 class WorkflowSessionManager:

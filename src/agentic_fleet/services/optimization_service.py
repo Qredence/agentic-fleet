@@ -11,7 +11,7 @@ import uuid
 from datetime import UTC, datetime
 from typing import Any, Literal
 
-from agentic_fleet.dspy_modules.optimizer import optimize_with_gepa, prepare_gepa_datasets
+from agentic_fleet.utils.compiler import compile_reasoner
 from agentic_fleet.utils.storage.job_store import InMemoryJobStore, JobStore
 
 logger = logging.getLogger(__name__)
@@ -32,6 +32,7 @@ class OptimizationService:
         base_examples_path: str,
         user_id: str,
         auto_mode: OptimizationMode = "light",
+        gepa_options: dict[str, Any] | None = None,
         **kwargs: Any,
     ) -> str:
         """
@@ -56,6 +57,7 @@ class OptimizationService:
             "config": {
                 "auto_mode": auto_mode,
                 "base_examples_path": base_examples_path,
+                "gepa_options": gepa_options or {},
                 **kwargs,
             },
         }
@@ -63,7 +65,9 @@ class OptimizationService:
 
         # Start background task
         task = asyncio.create_task(
-            self._run_optimization(job_id, module, base_examples_path, auto_mode, **kwargs)
+            self._run_optimization(
+                job_id, module, base_examples_path, auto_mode, gepa_options=gepa_options, **kwargs
+            )
         )
         self._background_tasks.add(task)
         task.add_done_callback(self._background_tasks.discard)
@@ -85,6 +89,7 @@ class OptimizationService:
         module: Any,
         base_examples_path: str,
         auto_mode: OptimizationMode,
+        gepa_options: dict[str, Any] | None = None,
         **kwargs: Any,
     ) -> None:
         """
@@ -110,13 +115,108 @@ class OptimizationService:
                 job["started_at"] = datetime.now(UTC).isoformat()
                 await self.job_store.save_job(job_id, job)
 
-            # Prepare data
-            trainset, valset = prepare_gepa_datasets(
-                base_examples_path=base_examples_path,
-                seed=kwargs.get("seed", 42),
-            )
+            # Build gepa_options from kwargs and provided options
+            effective_gepa_options = {
+                "auto": auto_mode,
+                **(gepa_options or {}),
+                **kwargs,  # Allow kwargs to override gepa_options
+            }
 
-            # Run optimization
+            # Create progress callback that updates job status
+            # Note: This callback runs in a thread, so we use asyncio.run_coroutine_threadsafe
+            # to safely update the async job store from the thread
+            class JobProgressCallback:
+                """Progress callback that updates job status in the store."""
+
+                def __init__(
+                    self, job_store: JobStore, job_id: str, loop: asyncio.AbstractEventLoop
+                ):
+                    self.job_store = job_store
+                    self.job_id = job_id
+                    self.loop = loop
+                    self.last_update_time = datetime.now(UTC)
+                    self._update_lock = asyncio.Lock()
+
+                def _schedule_update(self, status_update: dict[str, Any]) -> None:
+                    """Schedule an async job update from the thread."""
+
+                    async def _update_job() -> None:
+                        job = await self.job_store.get_job(self.job_id)
+                        if job:
+                            job.update(status_update)
+                            await self.job_store.save_job(self.job_id, job)
+
+                    # Schedule the coroutine in the event loop
+                    if self.loop.is_running():
+                        asyncio.run_coroutine_threadsafe(_update_job(), self.loop)
+                    else:
+                        # If loop is not running, we can't update (shouldn't happen in normal flow)
+                        logger.warning("Event loop not running, cannot update job progress")
+
+                def on_start(self, message: str) -> None:
+                    """Called when optimization starts."""
+                    self._schedule_update(
+                        {
+                            "progress_message": message,
+                            "progress_updated_at": datetime.now(UTC).isoformat(),
+                        }
+                    )
+
+                def on_progress(
+                    self, message: str, current: int | None = None, total: int | None = None
+                ) -> None:
+                    """Called to report progress during optimization."""
+                    # Throttle updates to avoid too frequent writes (max once per 5 seconds)
+                    now = datetime.now(UTC)
+                    if (now - self.last_update_time).total_seconds() < 5:
+                        return
+                    self.last_update_time = now
+
+                    progress_data: dict[str, Any] = {
+                        "progress_message": message,
+                        "progress_updated_at": now.isoformat(),
+                    }
+                    if current is not None and total is not None:
+                        progress_data["progress_current"] = current
+                        progress_data["progress_total"] = total
+                        progress_data["progress_percent"] = (
+                            int((current / total) * 100) if total > 0 else 0
+                        )
+
+                    self._schedule_update(progress_data)
+
+                def on_complete(self, message: str, duration: float | None = None) -> None:
+                    """Called when optimization completes."""
+                    progress_data: dict[str, Any] = {
+                        "progress_message": message,
+                        "progress_updated_at": datetime.now(UTC).isoformat(),
+                        "progress_completed": True,
+                    }
+                    if duration is not None:
+                        progress_data["progress_duration"] = duration
+                    self._schedule_update(progress_data)
+
+                def on_error(self, message: str, error: Exception | None = None) -> None:
+                    """Called when optimization encounters an error."""
+                    self._schedule_update(
+                        {
+                            "progress_message": message,
+                            "progress_updated_at": datetime.now(UTC).isoformat(),
+                            "progress_error": str(error) if error else message,
+                        }
+                    )
+
+            # Get the current event loop to pass to the callback
+            try:
+                loop = asyncio.get_running_loop()
+            except RuntimeError:
+                # If no loop is running, create a new one (shouldn't happen in normal flow)
+                loop = asyncio.new_event_loop()
+                logger.warning("No running event loop found, created new one for progress updates")
+
+            progress_callback = JobProgressCallback(self.job_store, job_id, loop)
+
+            # Run optimization using compile_reasoner which handles history harvesting
             # ⚠️ PERFORMANCE WARNING: CPU-intensive GEPA optimization
             #
             # Current implementation uses asyncio.to_thread() which runs in the default
@@ -137,13 +237,14 @@ class OptimizationService:
             # - ProcessPoolExecutor instead of ThreadPoolExecutor
             # - Job queue with priority levels
             await asyncio.to_thread(
-                optimize_with_gepa,
+                compile_reasoner,
                 module=module,
-                trainset=trainset,
-                valset=valset,
-                auto=auto_mode,
-                log_dir=f".var/logs/gepa/{job_id}",
-                **kwargs,
+                examples_path=base_examples_path,
+                use_cache=False,  # Don't use cache for API-triggered optimizations
+                optimizer="gepa",
+                gepa_options=effective_gepa_options,
+                progress_callback=progress_callback,
+                allow_gepa_optimization=True,
             )
 
             # Save result (in a real app, we'd save the weights/artifact path)

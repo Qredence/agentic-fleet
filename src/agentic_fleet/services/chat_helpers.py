@@ -11,6 +11,7 @@ import contextlib
 import re
 import time
 from collections import OrderedDict
+from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any, cast
 
 if TYPE_CHECKING:
@@ -26,6 +27,7 @@ else:
             pass
 
 
+from agentic_fleet.api.events.mapping import classify_event
 from agentic_fleet.models import StreamEvent, StreamEventType
 from agentic_fleet.utils.infra.logging import setup_logger
 
@@ -308,7 +310,158 @@ def _log_stream_event(event: StreamEvent, workflow_id: str) -> str | None:
     return log_line
 
 
+def create_stream_event(
+    event_type: StreamEventType,
+    workflow_id: str | None = None,
+    *,
+    kind: str | None = None,
+    message: str | None = None,
+    error: str | None = None,
+    delta: str | None = None,
+    reasoning: str | None = None,
+    agent_id: str | None = None,
+    author: str | None = None,
+    role: str | None = None,
+    data: dict[str, Any] | None = None,
+    reasoning_partial: bool | None = None,
+    quality_score: float | None = None,
+    quality_flag: str | None = None,
+) -> StreamEvent:
+    """Create a StreamEvent with automatic classification and logging.
+
+    Args:
+        event_type: The type of stream event.
+        workflow_id: Optional workflow identifier.
+        kind: Optional event kind (analysis, routing, quality, etc.).
+        message: Optional message content.
+        error: Optional error message.
+        delta: Optional incremental text.
+        reasoning: Optional reasoning text.
+        agent_id: Optional agent identifier.
+        author: Optional author name.
+        role: Optional role (user/assistant/system).
+        data: Optional additional data dictionary.
+        reasoning_partial: Optional flag for partial reasoning.
+        quality_score: Optional quality score.
+        quality_flag: Optional quality flag.
+
+    Returns:
+        StreamEvent instance with category, ui_hint, and log_line set.
+    """
+    category, ui_hint = classify_event(event_type, kind)
+    event = StreamEvent(
+        type=event_type,
+        workflow_id=workflow_id,
+        kind=kind,
+        message=message,
+        error=error,
+        delta=delta,
+        reasoning=reasoning,
+        agent_id=agent_id,
+        author=author,
+        role=role,
+        data=data,
+        reasoning_partial=reasoning_partial,
+        quality_score=quality_score,
+        quality_flag=quality_flag,
+        category=category,
+        ui_hint=ui_hint,
+    )
+    if workflow_id:
+        event.log_line = _log_stream_event(event, workflow_id)
+    return event
+
+
+@dataclass
+class ResponseState:
+    """State tracking for response accumulation during streaming."""
+
+    response_text: str = ""
+    response_delta_text: str = ""
+    last_agent_text: str = ""
+    last_author: str | None = None
+    last_agent_id: str | None = None
+    response_completed_emitted: bool = False
+    saw_done: bool = False
+
+    def update_from_event(self, event_data: dict[str, Any]) -> None:
+        """Update state from a stream event dictionary."""
+        event_type = event_data.get("type")
+        author = event_data.get("author") or event_data.get("agent_id")
+        if author:
+            self.last_author = event_data.get("author") or self.last_author or author
+            self.last_agent_id = event_data.get("agent_id") or self.last_agent_id
+
+        if event_type == StreamEventType.RESPONSE_DELTA.value:
+            self.response_delta_text += event_data.get("delta", "")
+            self.response_text = self.response_delta_text
+        elif event_type == StreamEventType.RESPONSE_COMPLETED.value:
+            completed_msg = event_data.get("message", "")
+            if completed_msg:
+                self.response_text = completed_msg
+            self.last_author = event_data.get("author") or self.last_author
+            self.response_completed_emitted = True
+        elif event_type in (
+            StreamEventType.AGENT_OUTPUT.value,
+            StreamEventType.AGENT_MESSAGE.value,
+        ):
+            agent_msg = event_data.get("message", "")
+            if agent_msg:
+                self.last_agent_text = agent_msg
+
+        if event_type == StreamEventType.DONE.value:
+            self.saw_done = True
+
+    def get_final_text(self) -> str:
+        """Get final response text with fallback."""
+        return (
+            self.response_text.strip()
+            or self.last_agent_text.strip()
+            or "Sorry, I couldn't produce a final answer this time."
+        )
+
+
+def create_checkpoint_storage(
+    enable_checkpointing: bool, is_resume: bool, checkpoint_dir: str | None = None
+) -> Any | None:
+    """Create checkpoint storage if needed.
+
+    Args:
+        enable_checkpointing: Whether checkpointing is enabled.
+        is_resume: Whether this is a resume operation.
+        checkpoint_dir: Optional checkpoint directory path. Defaults to ".var/checkpoints" if not provided.
+
+    Returns:
+        CheckpointStorage instance or None.
+    """
+    if not (enable_checkpointing or is_resume):
+        return None
+
+    try:
+        from agent_framework._workflows import (
+            FileCheckpointStorage,
+            InMemoryCheckpointStorage,
+        )
+
+        # Use provided checkpoint_dir or default to ".var/checkpoints"
+        storage_dir = checkpoint_dir or ".var/checkpoints"
+        try:
+            from pathlib import Path
+
+            Path(storage_dir).mkdir(parents=True, exist_ok=True)
+        except Exception:
+            storage_dir = ""
+
+        if storage_dir:
+            return FileCheckpointStorage(storage_dir)
+        else:
+            return InMemoryCheckpointStorage()
+    except Exception:
+        return None
+
+
 __all__ = [
+    "ResponseState",
     "_get_or_create_thread",
     "_hydrate_thread_from_conversation",
     "_log_stream_event",
@@ -316,4 +469,6 @@ __all__ = [
     "_prefer_service_thread_mode",
     "_sanitize_log_input",
     "_thread_has_any_messages",
+    "create_checkpoint_storage",
+    "create_stream_event",
 ]
