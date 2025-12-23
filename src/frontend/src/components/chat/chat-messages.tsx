@@ -1,9 +1,12 @@
+import { useRef, useState } from "react";
+import { Virtuoso, type VirtuosoHandle } from "react-virtuoso";
 import type { Message as ChatMessage } from "@/api/types";
 import { cn } from "@/lib/utils";
-import { Copy } from "lucide-react";
+import { Copy, Terminal } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ScrollButton } from "./scroll-button";
-import { ChatContainerContent, ChatContainerRoot } from "./chat-container";
+import { Sheet, SheetContent } from "@/components/ui/sheet";
+import { TraceExplorer } from "../observability/TraceExplorer";
 
 import {
   Message,
@@ -11,18 +14,6 @@ import {
   MessageActions,
   MessageContent,
 } from "@/components/message";
-
-/**
- * Prepare message content for display.
- *
- * @param content - Message content to display; non-string values will be serialized
- * @param isStreaming - Whether to append a trailing streaming cursor
- * @returns The formatted message string; includes a trailing ` ▍` when `isStreaming` is true
- */
-function formatMessageContent(content: unknown, isStreaming: boolean): string {
-  const baseContent = typeof content === "string" ? content : JSON.stringify(content);
-  return isStreaming ? baseContent + " ▍" : baseContent;
-}
 
 export type ChatMessagesProps = {
   messages: ChatMessage[];
@@ -55,41 +46,63 @@ export function ChatMessages({
   rootClassName,
   contentClassName,
 }: ChatMessagesProps) {
-  return (
-    <ChatContainerRoot className={cn("h-full", rootClassName)}>
-      <ChatContainerContent className={cn("px-4 py-8", contentClassName)}>
-        <div className="flex flex-col gap-6">
-          {messages.map((message, index) => {
-            const isAssistant = message.role === "assistant";
-            const isLastMessage = index === messages.length - 1;
-            const isStreaming = isAssistant && isLastMessage && isLoading;
-            // Use message ID if available, fallback to content-based key for stability
-            // Avoid pure index keys which cause reconciliation issues
-            const messageKey =
-              message.id ||
-              `${message.role}-${message.created_at || index}-${String(message.content).slice(0, 20)}`;
+  const virtuosoRef = useRef<VirtuosoHandle>(null);
+  const [atBottom, setAtBottom] = useState(true);
+  const [selectedWorkflowId, setSelectedWorkflowId] = useState<string | null>(
+    null,
+  );
 
-            if (!isAssistant) {
-              return (
+  return (
+    <div className={cn("h-full w-full relative flex flex-col", rootClassName)}>
+      <Virtuoso
+        ref={virtuosoRef}
+        data={messages}
+        style={{ height: "100%", width: "100%" }}
+        className={cn("px-4 py-8", contentClassName)}
+        followOutput={atBottom ? "auto" : false}
+        atBottomStateChange={setAtBottom}
+        itemContent={(index, message) => {
+          const isAssistant = message.role === "assistant";
+          const isLastMessage = index === messages.length - 1;
+          const isStreaming = isAssistant && isLastMessage && isLoading;
+          // Use message ID if available, fallback to content-based key for stability
+          // Avoid pure index keys which cause reconciliation issues
+          const messageKey =
+            message.id ||
+            `${message.role}-${message.created_at || index}-${String(message.content).slice(0, 20)}`;
+
+          if (!isAssistant) {
+            return (
+              <div className="flex flex-col pb-6">
                 <Message
                   key={messageKey}
                   className="mx-auto w-full max-w-3xl justify-end px-4"
                 >
                   <div className="flex w-full justify-end">
-                    <MessageContent className="bg-secondary/80 text-foreground border-border/50 max-w-[85%] rounded-2xl border px-4 py-2.5 backdrop-blur-sm sm:max-w-[75%] whitespace-pre-wrap break-normal">
+                    <MessageContent
+                      className="text-foreground border-border/50 max-w-[85%] rounded-2xl border px-4 py-2.5 backdrop-blur-sm sm:max-w-[75%] whitespace-pre-wrap break-normal"
+                      style={{
+                        backgroundColor: "var(--color-background-primary-soft)",
+                      }}
+                    >
                       {message.content}
                     </MessageContent>
                   </div>
                 </Message>
-              );
-            }
+              </div>
+            );
+          }
 
-            return (
+          return (
+            <div className="flex flex-col pb-6">
               <Message
                 key={messageKey}
                 className="mx-auto w-full max-w-3xl flex-col gap-2 px-4 items-start"
               >
-                {renderTrace ? renderTrace(message, isStreaming) : null}
+                {renderTrace &&
+                ((message.steps?.length ?? 0) > 0 || isStreaming)
+                  ? renderTrace(message, isStreaming)
+                  : null}
 
                 <div className="group flex w-full flex-col gap-0">
                   <MessageContent
@@ -106,6 +119,24 @@ export function ChatMessages({
 
                   {!isStreaming && (
                     <MessageActions className="-ml-2.5 flex gap-0 opacity-0 transition-opacity duration-150 group-hover:opacity-100">
+                      {message.workflow_id && (
+                        <MessageAction
+                          tooltip="Debug Trace"
+                          delayDuration={100}
+                        >
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="rounded-full text-blue-500 hover:text-blue-600 hover:bg-blue-50/50"
+                            onClick={() =>
+                              setSelectedWorkflowId(message.workflow_id!)
+                            }
+                            aria-label="View trace"
+                          >
+                            <Terminal className="size-4" />
+                          </Button>
+                        </MessageAction>
+                      )}
                       <MessageAction tooltip="Copy" delayDuration={100}>
                         <Button
                           variant="ghost"
@@ -131,14 +162,42 @@ export function ChatMessages({
                   )}
                 </div>
               </Message>
-            );
-          })}
-        </div>
-      </ChatContainerContent>
+            </div>
+          );
+        }}
+      />
 
-      <div className="absolute bottom-4 left-1/2 flex w-full max-w-3xl -translate-x-1/2 justify-end px-4">
-        <ScrollButton className="shadow-sm" />
+      <div className="absolute bottom-4 left-1/2 flex w-full max-w-3xl -translate-x-1/2 justify-end px-4 pointer-events-none">
+        <div className="pointer-events-auto">
+          <ScrollButton
+            className="shadow-sm"
+            isAtBottom={atBottom}
+            onClick={() =>
+              virtuosoRef.current?.scrollToIndex({
+                index: messages.length - 1,
+                behavior: "smooth",
+              })
+            }
+          />
+        </div>
       </div>
-    </ChatContainerRoot>
+
+      <Sheet
+        open={!!selectedWorkflowId}
+        onOpenChange={(open) => !open && setSelectedWorkflowId(null)}
+      >
+        <SheetContent
+          side="right"
+          className="sm:max-w-150 p-0 overflow-hidden border-l border-border/40 shadow-2xl"
+        >
+          {selectedWorkflowId && (
+            <TraceExplorer
+              workflowId={selectedWorkflowId}
+              onClose={() => setSelectedWorkflowId(null)}
+            />
+          )}
+        </SheetContent>
+      </Sheet>
+    </div>
   );
 }

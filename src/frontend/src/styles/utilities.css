@@ -416,3 +416,25 @@
   background-color: rgba(255, 255, 255, 0.1);
   border-color: rgba(255, 255, 255, 0.1);
 }
+
+/* =============================================
+  Virtuoso Component Styles
+============================================= */
+/* Virtuoso scroller - needs flex column layout */
+[data-virtuoso-scroller] {
+  display: flex !important;
+  flex-direction: column !important;
+}
+
+/* Virtuoso viewport - needs flex column layout */
+[data-viewport-type="element"] {
+  display: flex !important;
+  flex-direction: column !important;
+}
+
+/* Virtuoso item list - needs flex column layout and full width */
+[data-testid="virtuoso-item-list"] {
+  display: flex !important;
+  flex-direction: column !important;
+  width: 100% !important;
+}

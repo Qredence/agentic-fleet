@@ -1,6 +1,7 @@
 import { useRef, useEffect, useMemo } from "react";
 import { useShallow } from "zustand/shallow";
-import { PlusIcon, Search, Gauge, Settings } from "lucide-react";
+import { PlusIcon, Search, Gauge, Settings, Trash2 } from "lucide-react";
+import { useNavigate, useLocation } from "react-router-dom";
 import {
   Button,
   Sidebar,
@@ -11,11 +12,18 @@ import {
   SidebarGroupLabel,
   SidebarHeader,
   SidebarMenu,
+  SidebarMenuAction,
   SidebarMenuButton,
   SidebarMenuItem,
 } from "@/components/ui";
 import { useChatStore } from "@/stores";
+import {
+  useInfiniteConversations,
+  useCreateConversation,
+  useDeleteConversation,
+} from "@/api/hooks";
 import type { Conversation } from "@/api/types";
+import { getGlobalToastInstance } from "@/hooks/use-toast";
 
 type ConversationGroup = {
   period: string;
@@ -74,41 +82,90 @@ function getConversationTitle(conversation: Conversation | undefined): string {
 export const SidebarLeft = ({
   ...props
 }: React.ComponentProps<typeof Sidebar>) => {
-  const {
-    conversations,
-    conversationId,
-    createConversation,
-    selectConversation,
-    isConversationsLoading,
-    activeView,
-    setActiveView,
-    loadMoreConversations,
-    hasMoreConversations,
-  } = useChatStore(
+  const navigate = useNavigate();
+  const location = useLocation();
+
+  const { conversationId } = useChatStore(
     useShallow((state) => ({
-      conversations: state.conversations,
       conversationId: state.conversationId,
-      createConversation: state.createConversation,
-      selectConversation: state.selectConversation,
-      isConversationsLoading: state.isConversationsLoading,
-      activeView: state.activeView,
-      setActiveView: state.setActiveView,
-      loadMoreConversations: state.loadMoreConversations,
-      hasMoreConversations: state.hasMoreConversations,
     })),
   );
 
+  // Use React Query for conversations
+  const { data, fetchNextPage, hasNextPage, isFetching, isFetchingNextPage } =
+    useInfiniteConversations();
+
+  const createConversationMutation = useCreateConversation({
+    onSuccess: (newConversation) => {
+      // Navigate to the newly created conversation
+      navigate(`/chat/${newConversation.conversation_id}`);
+    },
+  });
+
+  const deleteConversationMutation = useDeleteConversation({
+    onSuccess: () => {
+      const toast = getGlobalToastInstance();
+      toast?.toast({
+        title: "Conversation Deleted",
+        description: "The conversation has been deleted successfully.",
+      });
+      // If we were on the deleted conversation, go to root
+      // Note: We can't easily check if we were on it because conversationId might be cleared already
+      // But if we are on a chat route, and that ID is gone, we should probably go home.
+      // For now, let's just let the user stay or navigate manually.
+      // Actually, if the current URL matches the deleted ID, we should navigate home.
+    },
+    onError: (error) => {
+      const toast = getGlobalToastInstance();
+      toast?.toast({
+        title: "Failed to Delete Conversation",
+        description:
+          error.message || "An error occurred while deleting the conversation.",
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Flatten all pages into a single array
+  const conversations = useMemo(() => {
+    if (!data) return [];
+    // Infinite query data has a .pages property which is an array of arrays
+    const allConversations = data.pages.flat();
+    return [...allConversations].sort(
+      (a, b) =>
+        new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime(),
+    );
+  }, [data]);
+
+  const handleCreateConversation = () => {
+    createConversationMutation.mutate("New Chat");
+  };
+
+  const handleDeleteConversation = (e: React.MouseEvent, id: string) => {
+    e.stopPropagation(); // Prevent selecting the conversation when clicking delete
+    const confirmed = window.confirm(
+      "Are you sure you want to delete this conversation? This action cannot be undone.",
+    );
+    if (confirmed) {
+      deleteConversationMutation.mutate(id);
+      // If we are currently viewing this conversation, navigate home
+      if (location.pathname === `/chat/${id}`) {
+        navigate("/");
+      }
+    }
+  };
+
   const observerInstanceRef = useRef<IntersectionObserver | null>(null);
-  const hasMoreRef = useRef(hasMoreConversations);
-  const isLoadingRef = useRef(isConversationsLoading);
-  const loadMoreRef = useRef(loadMoreConversations);
+  const hasMoreRef = useRef(hasNextPage);
+  const isLoadingRef = useRef(isFetchingNextPage);
+  const loadMoreRef = useRef(fetchNextPage);
 
   // Keep refs in sync with latest values
   useEffect(() => {
-    hasMoreRef.current = hasMoreConversations;
-    isLoadingRef.current = isConversationsLoading;
-    loadMoreRef.current = loadMoreConversations;
-  }, [hasMoreConversations, isConversationsLoading, loadMoreConversations]);
+    hasMoreRef.current = hasNextPage ?? false;
+    isLoadingRef.current = isFetchingNextPage;
+    loadMoreRef.current = fetchNextPage;
+  }, [hasNextPage, isFetchingNextPage, fetchNextPage]);
 
   const setObserverRef = (el: HTMLDivElement | null) => {
     // Clean up existing observer if element changes
@@ -179,38 +236,38 @@ export const SidebarLeft = ({
         </div>
       </SidebarHeader>
 
-      <SidebarContent className="scrollbar-none">
-        {/* Actions Group */}
-        <SidebarGroup>
-          <SidebarGroupContent>
-            <SidebarMenu>
-              <SidebarMenuItem>
-                <SidebarMenuButton
-                  onClick={() => void createConversation()}
-                  disabled={isConversationsLoading}
-                  tooltip="Start new chat"
-                  className="bg-secondary/80 text-foreground hover:bg-secondary font-medium"
-                >
-                  <PlusIcon className="size-4" />
-                  <span>New Chat</span>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
-              <SidebarMenuItem>
-                <SidebarMenuButton
-                  isActive={activeView === "dashboard"}
-                  onClick={() => setActiveView("dashboard")}
-                  tooltip="Optimization Dashboard"
-                >
-                  <Gauge className="size-4" />
-                  <span>Optimization</span>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
-            </SidebarMenu>
-          </SidebarGroupContent>
-        </SidebarGroup>
+      {/* Actions Group */}
+      <SidebarGroup>
+        <SidebarGroupContent>
+          <SidebarMenu>
+            <SidebarMenuItem>
+              <SidebarMenuButton
+                onClick={handleCreateConversation}
+                disabled={createConversationMutation.isPending}
+                tooltip="Start new chat"
+                className="bg-secondary/80 text-foreground hover:bg-secondary font-medium"
+              >
+                <PlusIcon className="size-4" />
+                <span>New Chat</span>
+              </SidebarMenuButton>
+            </SidebarMenuItem>
+            <SidebarMenuItem>
+              <SidebarMenuButton
+                isActive={location.pathname === "/dashboard"}
+                onClick={() => navigate("/dashboard")}
+                tooltip="Optimization Dashboard"
+              >
+                <Gauge className="size-4" />
+                <span>Optimization</span>
+              </SidebarMenuButton>
+            </SidebarMenuItem>
+          </SidebarMenu>
+        </SidebarGroupContent>
+      </SidebarGroup>
 
+      <SidebarContent className="scrollbar-none">
         {/* Conversations */}
-        {conversations.length === 0 && isConversationsLoading ? (
+        {conversations.length === 0 && isFetching ? (
           <div className="px-4 py-2 text-sm text-muted-foreground">
             Loading…
           </div>
@@ -226,25 +283,44 @@ export const SidebarLeft = ({
                 <SidebarGroupContent>
                   <SidebarMenu>
                     {group.conversations.map((conversation) => (
-                      <SidebarMenuItem key={conversation.id}>
+                      <SidebarMenuItem key={conversation.conversation_id}>
                         <SidebarMenuButton
-                          isActive={conversation.id === conversationId}
+                          isActive={
+                            conversation.conversation_id === conversationId
+                          }
                           onClick={() =>
-                            void selectConversation(conversation.id)
+                            navigate(`/chat/${conversation.conversation_id}`)
                           }
                         >
                           <span className="truncate">
                             {getConversationTitle(conversation)}
                           </span>
                         </SidebarMenuButton>
+                        <SidebarMenuAction
+                          onClick={(e) =>
+                            handleDeleteConversation(
+                              e,
+                              conversation.conversation_id,
+                            )
+                          }
+                          disabled={deleteConversationMutation.isPending}
+                          showOnHover
+                        >
+                          <Trash2 className="size-3.5" />
+                          <span className="sr-only">Delete conversation</span>
+                        </SidebarMenuAction>
                       </SidebarMenuItem>
                     ))}
                   </SidebarMenu>
                 </SidebarGroupContent>
               </SidebarGroup>
             ))}
-            <div ref={setObserverRef} className="h-2 w-full" aria-hidden="true" />
-            {isConversationsLoading && (
+            <div
+              ref={setObserverRef}
+              className="h-2 w-full"
+              aria-hidden="true"
+            />
+            {isFetchingNextPage && (
               <div className="px-4 py-2 text-xs text-muted-foreground animate-pulse">
                 Loading more...
               </div>

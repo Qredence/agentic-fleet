@@ -61,6 +61,7 @@ export function RightPanelTrigger({
       variant="ghost"
       size="icon"
       className={cn("h-7 w-7", className)}
+      style={{ backgroundColor: "var(--color-background-secondary-soft)" }}
       onClick={() => onOpenChange(!open)}
       aria-label={open ? "Close right panel" : "Open right panel"}
       aria-pressed={open}

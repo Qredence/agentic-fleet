@@ -3,21 +3,14 @@ import {
   CollapsibleContent,
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
-import { Markdown } from "@/components/message";
 import {
   Reasoning,
   ReasoningTrigger,
   ReasoningContent,
 } from "@/components/message/reasoning";
 import { TextShimmer } from "@/components/chat";
-import { WorkflowRequestResponder } from "./workflow-request-responder";
-import {
-  coerceString,
-  formatExtraDataMarkdown,
-  formatStepTime,
-  getStepLabel,
-  splitSteps,
-} from "./utils";
+import { formatStepTime, getStepLabel, splitSteps } from "./utils";
+import { resolveComponent, shouldBeCollapsible } from "./component-registry";
 import type { Message as ChatMessage } from "@/api/types";
 import { cn } from "@/lib/utils";
 import { ChevronDown, Circle } from "lucide-react";
@@ -181,31 +174,6 @@ function extractCapability(
   return undefined;
 }
 
-function extractReasoningSummary(
-  data: Record<string, unknown> | undefined,
-): Record<string, unknown> | undefined {
-  if (!data) return undefined;
-  const summaryFields = [
-    "complexity",
-    "capabilities",
-    "steps",
-    "intent",
-    "intent_confidence",
-    "reasoning",
-  ];
-  const summary: Record<string, unknown> = {};
-  let hasSummary = false;
-
-  for (const field of summaryFields) {
-    if (field in data) {
-      summary[field] = data[field];
-      hasSummary = true;
-    }
-  }
-
-  return hasSummary ? summary : undefined;
-}
-
 function formatTriggerLabel(
   label: string,
   capability: string | undefined,
@@ -250,10 +218,46 @@ export function ChainOfThoughtTrace({
     lastAutoOpenedRef.current = lastTraceId;
   }, [isStreaming, lastTraceId]);
 
-  if (steps.length === 0 && !phase) return null;
+  // Show chain of thought if there are steps OR completed phases OR phase info
+  const hasSteps = steps.length > 0;
+  const completedPhases = message.completedPhases || [];
+  const hasCompletedPhases = completedPhases.length > 0;
+  if (!hasSteps && !phase && !hasCompletedPhases) return null;
+
+  // Build phase progress indicator
+  const allPhases = ["Analysis", "Routing", "Execution", "Progress", "Quality"];
+  const currentPhaseIndex = allPhases.findIndex((p) => phase.includes(p));
+  const phaseProgress = allPhases.map((p, idx) => ({
+    name: p,
+    completed: completedPhases.includes(p),
+    current: idx === currentPhaseIndex && isStreaming,
+  }));
 
   return (
     <div className="w-full space-y-3">
+      {/* Phase Progress Indicator */}
+      {phaseProgress.some((p) => p.completed || p.current) ? (
+        <div className="flex items-center gap-2 text-xs text-muted-foreground">
+          {phaseProgress.map((p, idx) => (
+            <React.Fragment key={p.name}>
+              <span
+                className={cn(
+                  "transition-colors",
+                  p.completed && "text-foreground font-medium",
+                  p.current && "text-primary font-semibold",
+                )}
+              >
+                {p.completed ? "✓" : p.current ? "→" : "○"} {p.name}
+              </span>
+              {idx < phaseProgress.length - 1 && (
+                <span className="text-muted-foreground/50">→</span>
+              )}
+            </React.Fragment>
+          ))}
+        </div>
+      ) : null}
+
+      {/* Current Phase Display */}
       {phase && isStreaming && !message.content ? (
         <div className="text-sm text-muted-foreground">
           <TextShimmer as="span">{phase}</TextShimmer>
@@ -264,6 +268,11 @@ export function ChainOfThoughtTrace({
         <Reasoning isStreaming={isStreaming}>
           <ReasoningTrigger className="text-muted-foreground hover:text-foreground flex cursor-pointer items-center justify-start gap-1 text-left text-xs transition-colors">
             <span>Reasoning</span>
+            {isStreaming && (
+              <span className="ml-2 text-xs text-muted-foreground">
+                (streaming...)
+              </span>
+            )}
           </ReasoningTrigger>
           <ReasoningContent className="mt-2 overflow-hidden">
             <div className="whitespace-pre-wrap wrap-break-word text-sm text-foreground">
@@ -276,124 +285,44 @@ export function ChainOfThoughtTrace({
       {trace.length ? (
         <div className="rounded-lg border border-border bg-card/40 px-3 py-2">
           <div className="flex items-center justify-between gap-3">
-            {isStreaming ? (
-              <TextShimmer as="span" className="text-sm">
-                Events
-              </TextShimmer>
-            ) : (
-              <span className="text-sm text-muted-foreground">Events</span>
-            )}
+            <span className="text-sm text-muted-foreground">Events</span>
             <span className="text-xs text-muted-foreground">
               {trace.length}
             </span>
           </div>
 
           <ChainOfThought className="mt-2">
-            {trace.map((step) => {
+            {trace.map((step, index) => {
               const { label } = getStepLabel(step);
               const time = formatStepTime(step.timestamp);
               const capability = extractCapability(step.data);
-              const output =
-                typeof step.data?.output === "string"
-                  ? step.data.output
-                  : undefined;
-              const requestId =
-                coerceString(step.data?.request_id) ||
-                coerceString(
-                  (step.data as Record<string, unknown> | undefined)?.requestId,
-                );
-              const requestType = coerceString(step.data?.request_type);
-
-              // Extract reasoning summary fields
-              const reasoningSummary = extractReasoningSummary(step.data);
-
-              // Create extra data excluding reasoning summary fields and output
-              const extraData = step.data ? { ...step.data } : undefined;
-              if (extraData) {
-                delete (extraData as Record<string, unknown>).output;
-                delete (extraData as Record<string, unknown>).request_id;
-                delete (extraData as Record<string, unknown>).requestId;
-                delete (extraData as Record<string, unknown>).request_type;
-                delete (extraData as Record<string, unknown>).author;
-                delete (extraData as Record<string, unknown>).agent_id;
-                // Remove reasoning summary fields
-                if (reasoningSummary) {
-                  Object.keys(reasoningSummary).forEach((key) => {
-                    delete (extraData as Record<string, unknown>)[key];
-                  });
-                }
-              }
-              const hasExtraData =
-                !!extraData && Object.keys(extraData).length > 0;
 
               // Format trigger label
               const triggerLabel = formatTriggerLabel(label, capability, time);
 
+              // Resolve component based on backend hint or type heuristics
+              const StepComponent = resolveComponent(step);
+              const isCollapsible = shouldBeCollapsible(step);
+              const isLast = index === trace.length - 1;
+
+              // Determine if this step should be open
+              // For collapsible steps, use state; for non-collapsible, always true
+              const isOpen = isCollapsible ? openStepId === step.id : true;
+              const handleOpenChange = isCollapsible
+                ? (open: boolean) => setOpenStepId(open ? step.id : null)
+                : () => {}; // No-op for non-collapsible
+
               return (
-                <ChainOfThoughtStep
+                <StepComponent
                   key={step.id}
-                  open={openStepId === step.id}
-                  onOpenChange={(open) => setOpenStepId(open ? step.id : null)}
-                >
-                  <ChainOfThoughtTrigger
-                    className={cn(
-                      step.type === "error" &&
-                        "text-destructive hover:text-destructive",
-                    )}
-                  >
-                    {triggerLabel}
-                  </ChainOfThoughtTrigger>
-
-                  <ChainOfThoughtContent>
-                    {step.content.trim() ? (
-                      <ChainOfThoughtItem className="text-foreground">
-                        <Markdown className="prose prose-sm max-w-none whitespace-pre-wrap wrap-break-word">
-                          {step.content}
-                        </Markdown>
-                      </ChainOfThoughtItem>
-                    ) : null}
-
-                    {reasoningSummary ? (
-                      <ChainOfThoughtItem>
-                        <div className="mt-2 space-y-1">
-                          <div className="text-xs font-medium text-muted-foreground">
-                            Reasoning summary
-                          </div>
-                          <Markdown className="rounded-md bg-muted/20 p-2 text-xs text-muted-foreground prose prose-sm max-w-none">
-                            {formatExtraDataMarkdown(reasoningSummary)}
-                          </Markdown>
-                        </div>
-                      </ChainOfThoughtItem>
-                    ) : null}
-
-                    {step.type === "request" && requestId ? (
-                      <ChainOfThoughtItem>
-                        <WorkflowRequestResponder
-                          requestId={requestId}
-                          requestType={requestType}
-                          isLoading={isLoading}
-                          onSubmit={onWorkflowResponse}
-                        />
-                      </ChainOfThoughtItem>
-                    ) : null}
-
-                    {output ? (
-                      <ChainOfThoughtItem className="whitespace-pre-wrap wrap-break-word text-foreground">
-                        {output}
-                      </ChainOfThoughtItem>
-                    ) : null}
-
-                    {hasExtraData ? (
-                      <ChainOfThoughtItem>
-                        <Markdown className="mt-2 rounded-md bg-muted/20 p-2 text-xs text-muted-foreground prose prose-sm max-w-none">
-                          {formatExtraDataMarkdown(
-                            extraData as Record<string, unknown>,
-                          )}
-                        </Markdown>
-                      </ChainOfThoughtItem>
-                    ) : null}
-                  </ChainOfThoughtContent>
-                </ChainOfThoughtStep>
+                  step={step}
+                  isOpen={isOpen}
+                  onOpenChange={handleOpenChange}
+                  triggerLabel={triggerLabel}
+                  isLast={isLast}
+                  onWorkflowResponse={onWorkflowResponse}
+                  isLoading={isLoading}
+                />
               );
             })}
           </ChainOfThought>

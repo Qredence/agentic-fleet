@@ -382,7 +382,8 @@ describe("ChainOfThoughtTrace", () => {
       const trigger = screen.getByRole("button", { name: /Event · Analysis/ });
       await user.click(trigger);
 
-      expect(screen.getByText(/custom_field/i)).toBeInTheDocument();
+      // Field names are converted from snake_case to Title Case
+      expect(screen.getByText(/Custom Field/i)).toBeInTheDocument();
       expect(screen.getByText(/custom_value/i)).toBeInTheDocument();
     });
 
@@ -413,7 +414,8 @@ describe("ChainOfThoughtTrace", () => {
       // Complexity should be in reasoning summary, not extra data
       expect(screen.getByText("Reasoning summary")).toBeInTheDocument();
       // Custom field should still appear somewhere (either in summary or extra)
-      expect(screen.getByText(/custom_field/i)).toBeInTheDocument();
+      // Field names are converted from snake_case to Title Case
+      expect(screen.getByText(/Custom Field/i)).toBeInTheDocument();
     });
   });
 

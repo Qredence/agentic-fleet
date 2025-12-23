@@ -11,14 +11,12 @@ import {
 // Mock the stores
 const mockChatStore = {
   messages: [],
-  conversations: [],
   conversationId: null,
   activeView: "chat",
   showTrace: true,
   showRawReasoning: false,
   isLoading: false,
   isInitializing: false,
-  isConversationsLoading: false,
   currentReasoning: "",
   isReasoningStreaming: false,
   currentWorkflowPhase: "",
@@ -31,7 +29,7 @@ const mockChatStore = {
   createConversation: vi.fn(),
   cancelStreaming: vi.fn(),
   selectConversation: vi.fn(),
-  loadConversations: vi.fn(),
+  reset: vi.fn(),
   setActiveView: vi.fn(),
   setShowTrace: vi.fn(),
   setShowRawReasoning: vi.fn(),
@@ -42,6 +40,18 @@ const mockChatStore = {
 
 vi.mock("@/stores", () => ({
   useChatStore: vi.fn(() => mockChatStore),
+}));
+
+// Mock useConversation hook
+let mockCurrentConversation: ReturnType<typeof createMockConversation> | null =
+  null;
+
+vi.mock("@/api/hooks", () => ({
+  useConversation: vi.fn(() => ({
+    data: mockCurrentConversation,
+    isLoading: false,
+    error: null,
+  })),
 }));
 
 // Mock sidebar components
@@ -121,14 +131,12 @@ describe("ChatPage", () => {
     // Reset mock store to default values
     Object.assign(mockChatStore, {
       messages: [],
-      conversations: [],
       conversationId: null,
       activeView: "chat",
       showTrace: true,
       showRawReasoning: false,
       isLoading: false,
       isInitializing: false,
-      isConversationsLoading: false,
       currentReasoning: "",
       isReasoningStreaming: false,
       currentWorkflowPhase: "",
@@ -141,7 +149,7 @@ describe("ChatPage", () => {
       createConversation: vi.fn(),
       cancelStreaming: vi.fn(),
       selectConversation: vi.fn(),
-      loadConversations: vi.fn(),
+      reset: vi.fn(),
       setActiveView: vi.fn(),
       setShowTrace: vi.fn(),
       setShowRawReasoning: vi.fn(),
@@ -149,6 +157,8 @@ describe("ChatPage", () => {
       setEnableGepa: vi.fn(),
       sendWorkflowResponse: vi.fn(),
     });
+    // Reset mockCurrentConversation
+    mockCurrentConversation = null;
   });
 
   it("renders without crashing", () => {
@@ -171,8 +181,8 @@ describe("ChatPage", () => {
       id: "conv-123",
       title: "Test Conversation",
     });
-    mockChatStore.conversations = [mockConversation];
     mockChatStore.conversationId = "conv-123";
+    mockCurrentConversation = mockConversation;
 
     render(<ChatPage />);
 

@@ -9,8 +9,12 @@ import {
   useQuery,
   useMutation,
   useQueryClient,
+  useInfiniteQuery,
+  type InfiniteData,
   type UseQueryOptions,
   type UseMutationOptions,
+  type UseInfiniteQueryOptions,
+  type QueryKey,
 } from "@tanstack/react-query";
 import {
   conversationsApi,
@@ -46,6 +50,8 @@ export const queryKeys = {
   conversations: {
     all: ["conversations"] as const,
     list: () => [...queryKeys.conversations.all, "list"] as const,
+    listInfinite: () =>
+      [...queryKeys.conversations.all, "listInfinite"] as const,
     detail: (id: string) =>
       [...queryKeys.conversations.all, "detail", id] as const,
     messages: (id: string) =>
@@ -100,6 +106,38 @@ export function useConversations(
   });
 }
 
+/**
+ * Infinite query hook for conversations with pagination support.
+ * Use this for components that need to load conversations in pages.
+ */
+export function useInfiniteConversations(
+  options?: Omit<
+    UseInfiniteQueryOptions<
+      Conversation[],
+      Error,
+      InfiniteData<Conversation[]>,
+      QueryKey,
+      number
+    >,
+    "queryKey" | "queryFn" | "getNextPageParam" | "initialPageParam"
+  >,
+) {
+  return useInfiniteQuery({
+    queryKey: queryKeys.conversations.listInfinite(),
+    queryFn: ({ pageParam = 0 }) =>
+      conversationsApi.list({ limit: 25, offset: pageParam as number }),
+    getNextPageParam: (lastPage, allPages) => {
+      if (lastPage.length < 25) {
+        return undefined;
+      }
+      return allPages.length * 25;
+    },
+    initialPageParam: 0,
+    staleTime: 30_000,
+    ...options,
+  });
+}
+
 export function useConversation(
   id: string | null,
   options?: Omit<
@@ -147,9 +185,38 @@ export function useCreateConversation(
       );
       // Set detail cache
       queryClient.setQueryData(
-        queryKeys.conversations.detail(newConversation.id),
+        queryKeys.conversations.detail(newConversation.conversation_id),
         newConversation,
       );
+    },
+    ...options,
+  });
+}
+
+export function useDeleteConversation(
+  options?: UseMutationOptions<void, Error, string>,
+) {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (id: string) => {
+      await conversationsApi.delete(id);
+    },
+    onSuccess: (_data, deletedId) => {
+      // Remove from list cache
+      queryClient.setQueryData<Conversation[]>(
+        queryKeys.conversations.list(),
+        (old) =>
+          old?.filter((conv) => conv.conversation_id !== deletedId) ?? [],
+      );
+      // Remove detail cache
+      queryClient.removeQueries({
+        queryKey: queryKeys.conversations.detail(deletedId),
+      });
+      // Invalidate list to refetch
+      void queryClient.invalidateQueries({
+        queryKey: queryKeys.conversations.list(),
+      });
     },
     ...options,
   });
@@ -277,14 +344,35 @@ export function useOptimizationStatus(
     queryKey: queryKeys.optimization.status(jobId ?? ""),
     queryFn: () => optimizationApi.status(jobId!),
     enabled: !!jobId,
+    retry: (failureCount, error: any) => {
+      // Don't retry on 404 (job not found) - stop polling immediately
+      if (error?.response?.status === 404) {
+        return false;
+      }
+      // Retry other errors up to 2 times
+      return failureCount < 2;
+    },
     refetchInterval: (query) => {
+      // Stop polling if we got a 404 error (job not found)
+      if (
+        query.state.error &&
+        (query.state.error as any)?.response?.status === 404
+      ) {
+        return false;
+      }
+
       const status = query.state.data?.status;
-      if (!status) return 2000;
-      return status === "pending" ||
-        status === "running" ||
-        status === "started"
-        ? 2000
-        : false;
+      if (!status) return 5000; // Poll every 5s when no status yet
+
+      // Only poll for active jobs - stop polling for terminal states
+      const isActive =
+        status === "pending" || status === "running" || status === "started";
+      if (isActive) {
+        return 2000; // Poll every 2s for active jobs
+      }
+
+      // Stop polling for completed, failed, cached, or any other terminal state
+      return false;
     },
     ...options,
   });

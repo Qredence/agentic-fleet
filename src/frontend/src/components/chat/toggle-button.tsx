@@ -50,13 +50,13 @@ export function ToggleButton({
       }
     >
       <Button
-        variant="ghost"
+        variant="secondary"
         size={size}
         className={cn(
           buttonClassName,
           value
-            ? "text-foreground bg-secondary"
-            : "text-muted-foreground hover:text-foreground hover:bg-secondary/80",
+            ? "text-[var(--link-primary-text-color)] bg-secondary"
+            : "text-[var(--input-text-color)] hover:text-foreground hover:bg-secondary/80",
           className,
         )}
         onClick={handleClick}

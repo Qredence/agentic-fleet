@@ -42,7 +42,8 @@ export interface ConversationStep {
     | "output"
     | "response"
     | "status"
-    | "error";
+    | "error"
+    | "analysis";
   uiHint?: {
     component: string;
     priority: "low" | "medium" | "high";
@@ -75,10 +76,12 @@ export interface Message {
   latency?: string;
   /** Completed workflow phases for this message */
   completedPhases?: string[];
+  /** Langfuse/Workflow identifier for tracing */
+  workflow_id?: string;
 }
 
 export interface Conversation {
-  id: string;
+  conversation_id: string;
   title: string;
   created_at: string;
   updated_at: string;
@@ -253,6 +256,9 @@ export interface OptimizationRequest {
   auto_mode?: "light" | "medium" | "heavy";
   examples_path?: string;
   user_id: string;
+  use_history_examples?: boolean;
+  history_min_quality?: number;
+  history_limit?: number;
   options?: Record<string, unknown>;
 }
 
@@ -287,6 +293,14 @@ export interface OptimizationResult {
   cache_path?: string | null;
   progress?: number;
   details?: OptimizationDetails;
+  // Progress fields from backend
+  progress_message?: string | null;
+  progress_updated_at?: string | null;
+  progress_current?: number | null;
+  progress_total?: number | null;
+  progress_percent?: number | null;
+  progress_completed?: boolean;
+  progress_duration?: number | null;
 }
 
 export interface HistoryQualityMetrics {
@@ -420,6 +434,50 @@ export interface PredictorPromptInfo {
 
 export type DSPySignatures = Record<string, SignatureInfo>;
 export type DSPyPrompts = Record<string, PredictorPromptInfo>;
+
+// =============================================================================
+// Tracing and Observability Types
+// =============================================================================
+
+export interface Observation {
+  id: string;
+  traceId: string;
+  type: "span" | "event" | "log";
+  name: string;
+  startTime: string;
+  endTime?: string;
+  completionStartTime?: string;
+  model?: string;
+  modelParameters?: Record<string, unknown>;
+  input?: unknown;
+  output?: unknown;
+  statusMessage?: string;
+  metadata?: Record<string, unknown>;
+  level?: "DEBUG" | "DEFAULT" | "WARNING" | "ERROR";
+  parentObservationId?: string;
+  usage?: {
+    promptTokens?: number;
+    completionTokens?: number;
+    totalTokens?: number;
+  };
+}
+
+export interface TraceDetails {
+  id: string;
+  timestamp: string;
+  name?: string;
+  userId?: string;
+  sessionId?: string;
+  metadata?: Record<string, unknown>;
+  input?: unknown;
+  output?: unknown;
+  observations: Observation[];
+  scores?: Array<{
+    name: string;
+    value: number;
+    comment?: string;
+  }>;
+}
 
 // =============================================================================
 // Exported Type Aliases for Convenience

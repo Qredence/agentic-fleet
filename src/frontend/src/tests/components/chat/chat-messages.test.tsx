@@ -81,8 +81,10 @@ describe("ChatMessages", () => {
     render(<ChatMessages messages={messages} isLoading={true} />);
 
     // Last message should show streaming content with whitespace-pre-wrap
+    // The text is inside a <p> rendered by Markdown, so we need to check its container
     const lastMessage = screen.getByText("Streaming response");
-    expect(lastMessage.parentElement).toHaveClass("whitespace-pre-wrap");
+    const messageContainer = lastMessage.closest(".whitespace-pre-wrap");
+    expect(messageContainer).toBeInTheDocument();
     // Note: streamdown handles cursor rendering internally, so we don't manually add "▍"
   });
 
@@ -179,12 +181,20 @@ describe("ChatMessages", () => {
       <div data-testid="trace">Trace Info</div>
     ));
 
+    // Add steps to messages so renderTrace gets called
+    const messagesWithSteps = mockMessages.map((msg) =>
+      msg.role === "assistant" ? { ...msg, steps: [{ id: "1" }] } : msg,
+    );
+
     render(
-      <ChatMessages messages={mockMessages} renderTrace={mockRenderTrace} />,
+      <ChatMessages
+        messages={messagesWithSteps}
+        renderTrace={mockRenderTrace}
+      />,
     );
 
     expect(mockRenderTrace).toHaveBeenCalledTimes(
-      mockMessages.filter((m) => m.role === "assistant").length,
+      messagesWithSteps.filter((m) => m.role === "assistant").length,
     );
     expect(screen.getAllByTestId("trace")).toHaveLength(2); // Two assistant messages
   });

@@ -1,5 +1,6 @@
 import { describe, expect, it, vi, beforeEach } from "vitest";
-import { render, screen } from "@testing-library/react";
+import { screen } from "@testing-library/react";
+import { renderWithProviders as render } from "@/tests/utils/render";
 
 import { DashboardPage } from "../../pages";
 
@@ -26,13 +27,13 @@ describe("DashboardPage", () => {
     expect(screen.getByText("Optimization Dashboard")).toBeInTheDocument();
   });
 
-  it("is a simple wrapper with no additional functionality", () => {
+  it("renders dashboard with sidebar", () => {
     const { container } = render(<DashboardPage />);
 
-    // Should render exactly what OptimizationDashboard renders
-    expect(container.firstChild).toBe(
-      screen.getByTestId("optimization-dashboard"),
-    );
+    // Should render dashboard component
+    expect(screen.getByTestId("optimization-dashboard")).toBeInTheDocument();
+    // Container should have the dashboard content
+    expect(container.querySelector("main")).toBeInTheDocument();
   });
 
   it("matches snapshot", () => {

@@ -24,7 +24,7 @@ export function createMockConversation(
   const timestamp = new Date().toISOString();
 
   return {
-    id,
+    conversation_id: id,
     title: `Test Conversation ${Math.floor(Math.random() * 1000)}`,
     created_at: timestamp,
     updated_at: timestamp,

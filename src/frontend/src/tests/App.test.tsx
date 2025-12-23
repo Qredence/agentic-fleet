@@ -1,17 +1,16 @@
-import { render, screen, waitFor } from "@testing-library/react";
+import { screen, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { renderWithProviders as render } from "@/tests/utils/render";
 import App from "@/root/App";
 
 type MockChatStoreState = {
   messages: unknown[];
-  conversations: unknown[];
   conversationId: string | null;
   activeView: "chat" | "dashboard";
   showTrace: boolean;
   showRawReasoning: boolean;
   isLoading: boolean;
   isInitializing: boolean;
-  isConversationsLoading: boolean;
   currentReasoning: string;
   isReasoningStreaming: boolean;
   currentWorkflowPhase: string;
@@ -21,7 +20,6 @@ type MockChatStoreState = {
   createConversation: ReturnType<typeof vi.fn>;
   cancelStreaming: ReturnType<typeof vi.fn>;
   selectConversation: ReturnType<typeof vi.fn>;
-  loadConversations: ReturnType<typeof vi.fn>;
   setActiveView: ReturnType<typeof vi.fn>;
   setShowTrace: ReturnType<typeof vi.fn>;
   setShowRawReasoning: ReturnType<typeof vi.fn>;
@@ -46,14 +44,12 @@ vi.mock("@/stores", () => ({
 beforeEach(() => {
   mockStoreState = {
     messages: [],
-    conversations: [],
     conversationId: null,
     activeView: "chat",
     showTrace: true,
     showRawReasoning: false,
     isLoading: false,
     isInitializing: false,
-    isConversationsLoading: false,
     currentReasoning: "",
     isReasoningStreaming: false,
     currentWorkflowPhase: "",
@@ -63,7 +59,6 @@ beforeEach(() => {
     createConversation: vi.fn(),
     cancelStreaming: vi.fn(),
     selectConversation: vi.fn(),
-    loadConversations: vi.fn(),
     setActiveView: vi.fn(),
     setShowTrace: vi.fn(),
     setShowRawReasoning: vi.fn(),
@@ -80,13 +75,10 @@ describe("App", () => {
     expect(screen.getByPlaceholderText("Ask anything...")).toBeInTheDocument();
   });
 
-  it("calls loadConversations on mount", async () => {
+  it("mounts the app with proper structure", () => {
     const { container } = render(<App />);
 
-    const loadConversations = mockStoreState?.loadConversations;
-    await waitFor(() => expect(loadConversations).toHaveBeenCalledTimes(1));
-
-    // Also assert the UI mounted (sanity check).
+    // Assert the UI mounted with proper structure
     expect(container.querySelector("main.flex.h-screen")).toBeTruthy();
   });
 });

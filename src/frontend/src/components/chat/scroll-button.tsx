@@ -3,22 +3,23 @@ import { buttonVariants } from "@/components/ui/button-variants";
 import { cn } from "@/lib/utils";
 import { type VariantProps } from "class-variance-authority";
 import { ChevronDown } from "lucide-react";
-import { useStickToBottomContext } from "use-stick-to-bottom";
 
 export type ScrollButtonProps = {
   className?: string;
   variant?: VariantProps<typeof buttonVariants>["variant"];
   size?: VariantProps<typeof buttonVariants>["size"];
-} & React.ButtonHTMLAttributes<HTMLButtonElement>;
+  isAtBottom: boolean;
+  onClick: () => void;
+} & Omit<React.ButtonHTMLAttributes<HTMLButtonElement>, "onClick">;
 
 function ScrollButton({
   className,
   variant = "outline",
   size = "sm",
+  isAtBottom,
+  onClick,
   ...props
 }: ScrollButtonProps) {
-  const { isAtBottom, scrollToBottom } = useStickToBottomContext();
-
   return (
     <Button
       variant={variant}
@@ -30,7 +31,7 @@ function ScrollButton({
           : "pointer-events-none translate-y-4 scale-95 opacity-0",
         className,
       )}
-      onClick={() => scrollToBottom()}
+      onClick={onClick}
       aria-label="Scroll to bottom"
       aria-hidden={isAtBottom}
       tabIndex={isAtBottom ? -1 : 0}

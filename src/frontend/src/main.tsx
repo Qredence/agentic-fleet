@@ -1,5 +1,6 @@
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
+import { BrowserRouter } from "react-router-dom";
 import "./index.css";
 import App from "./root/App";
 import { ThemeProvider } from "@/contexts";
@@ -11,7 +12,9 @@ createRoot(document.getElementById("root")!).render(
     <QueryProvider>
       <ThemeProvider defaultTheme="dark">
         <TooltipProvider>
-          <App />
+          <BrowserRouter>
+            <App />
+          </BrowserRouter>
         </TooltipProvider>
       </ThemeProvider>
     </QueryProvider>

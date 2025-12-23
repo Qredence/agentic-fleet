@@ -10,12 +10,14 @@ import {
   RightPanel,
   RightPanelTrigger,
 } from "@/components/layout";
-import { SidebarInset, SidebarProvider, SidebarTrigger } from "@/components/ui";
+import { SidebarInset, SidebarTrigger } from "@/components/ui";
 import type { Message as ChatMessage } from "@/api/types";
 import { useChatStore } from "@/stores";
-import { useState, useMemo, useCallback } from "react";
+import { useConversation } from "@/api/hooks";
+import { useState, useMemo, useCallback, useEffect } from "react";
 import { useShallow } from "zustand/shallow";
 import { DEFAULT_CONVERSATION_TITLE } from "@/lib/constants";
+import { useParams } from "react-router-dom";
 
 /**
  * ChatContent - The main chat interface component
@@ -28,15 +30,45 @@ function ChatContent({
   rightPanelOpen: boolean;
   onRightPanelToggle: (open: boolean) => void;
 }) {
+  const { id } = useParams<{ id: string }>();
+
   // Split state selectors by concern for better performance
-  const { messages, isLoading, conversationId, conversations } = useChatStore(
+  const { messages, isLoading, conversationId } = useChatStore(
     useShallow((state) => ({
       messages: state.messages,
       isLoading: state.isLoading,
       conversationId: state.conversationId,
-      conversations: state.conversations,
     })),
   );
+
+  const { selectConversation, reset } = useChatStore(
+    useShallow((state) => ({
+      selectConversation: state.selectConversation,
+      reset: state.reset,
+    })),
+  );
+
+  // Handle routing-based conversation selection
+  useEffect(() => {
+    if (id) {
+      if (id !== conversationId) {
+        void selectConversation(id);
+      }
+    } else {
+      // If no ID in URL but we have one in store, it means we navigated to root
+      // We should reset to new chat state unless we just created one (which would have redirected)
+      // For now, simple reset if we are at root
+      if (conversationId) {
+        // reset may be undefined in some test mocks; guard call
+        if (typeof reset === "function") {
+          reset();
+        }
+      }
+    }
+  }, [id, conversationId, selectConversation, reset]);
+
+  // Use React Query for current conversation
+  const { data: currentConversation } = useConversation(conversationId);
 
   const { sendMessage, cancelStreaming, sendWorkflowResponse } = useChatStore(
     useShallow((state) => ({
@@ -70,14 +102,19 @@ function ChatContent({
     })),
   );
 
-  const shouldShowTrace = showTrace || isLoading;
+  // Always show trace if there are steps in any message, or if explicitly enabled, or while loading
+  const hasStepsInMessages = messages.some(
+    (msg) => msg.role === "assistant" && (msg.steps?.length ?? 0) > 0,
+  );
+  const shouldShowTrace = showTrace || isLoading || hasStepsInMessages;
 
   const [prompt, setPrompt] = useState("");
 
   const headerTitle = useMemo(() => {
-    const current = conversations.find((c) => c.id === conversationId);
-    return current?.title?.trim() ? current.title : DEFAULT_CONVERSATION_TITLE;
-  }, [conversations, conversationId]);
+    return currentConversation?.title?.trim()
+      ? currentConversation.title
+      : DEFAULT_CONVERSATION_TITLE;
+  }, [currentConversation]);
 
   const handleSubmit = useCallback(() => {
     const text = prompt.trim();
@@ -130,7 +167,7 @@ function ChatContent({
         <ConcurrentErrorAlert onTerminate={cancelStreaming} />
       )}
 
-      <div className="relative flex-1 overflow-y-auto">
+      <div className="relative flex-1 overflow-y-auto w-full">
         <ChatMessages
           messages={messages}
           isLoading={isLoading}
@@ -167,8 +204,7 @@ function ChatContent({
  * The main content area automatically adapts its width based on which panels are open.
  */
 export function ChatPage() {
-  // Controlled state for both panels
-  const [leftSidebarOpen, setLeftSidebarOpen] = useState(true);
+  // Right panel state (sidebar is controlled by App.tsx)
   const [rightPanelOpen, setRightPanelOpen] = useState(false);
 
   const { messages, isLoading, sendWorkflowResponse } = useChatStore(
@@ -187,7 +223,7 @@ export function ChatPage() {
   }, [messages]);
 
   return (
-    <SidebarProvider open={leftSidebarOpen} onOpenChange={setLeftSidebarOpen}>
+    <>
       <SidebarLeft />
       <SidebarInset className="flex flex-col h-screen overflow-hidden transition-all duration-200">
         <ChatContent
@@ -202,7 +238,11 @@ export function ChatPage() {
           <div className="flex items-center justify-between">
             <h3 className="text-sm font-medium">Chain of Thought</h3>
             <span className="text-xs text-muted-foreground">
-              {isLoading ? "Streaming" : "Idle"}
+              {isLoading
+                ? "Streaming"
+                : latestAssistantMessage?.steps?.length
+                  ? "Complete"
+                  : "Idle"}
             </span>
           </div>
 
@@ -223,6 +263,6 @@ export function ChatPage() {
           )}
         </div>
       </RightPanel>
-    </SidebarProvider>
+    </>
   );
 }

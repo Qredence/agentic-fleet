@@ -92,6 +92,9 @@ export type {
   SelfImproveStats,
   // Error types
   ApiError,
+  // Tracing and Observability types
+  Observation,
+  TraceDetails,
 } from "./types";
 
 export { ApiRequestError } from "./types";

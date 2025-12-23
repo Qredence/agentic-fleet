@@ -25,6 +25,7 @@ import type {
   ReasonerSummary,
   DSPySignatures,
   DSPyPrompts,
+  TraceDetails,
 } from "./types";
 
 // =============================================================================
@@ -63,6 +64,11 @@ export const conversationsApi = {
     const conversation = await conversationsApi.get(id);
     return conversation.messages || [];
   },
+
+  /**
+   * Delete a conversation by ID.
+   */
+  delete: (id: string) => http.delete(`/conversations/${id}`),
 };
 
 // =============================================================================
@@ -214,6 +220,33 @@ export const dspyApi = {
 };
 
 // =============================================================================
+// Observability API
+// =============================================================================
+
+export const observabilityApi = {
+  /**
+   * Fetch full trace details for a workflow.
+   */
+  getTrace: (workflowId: string) =>
+    http.get<TraceDetails>(
+      `/observability/trace/${encodeURIComponent(workflowId)}`,
+    ),
+
+  /**
+   * List recent workflow traces.
+   */
+  listTraces: (params?: { limit?: number; offset?: number }) => {
+    const query = new URLSearchParams();
+    if (params?.limit !== undefined) query.set("limit", String(params.limit));
+    if (params?.offset !== undefined)
+      query.set("offset", String(params.offset));
+    return http.get<TraceDetails[]>(
+      `/observability/traces?${query.toString()}`,
+    );
+  },
+};
+
+// =============================================================================
 // Health API
 // Note: Health endpoints are at root level, not under /api/v1
 // =============================================================================
@@ -290,4 +323,8 @@ export const api = {
   dspyReasonerSummary: dspyApi.getReasonerSummary,
   dspyClearRoutingCache: dspyApi.clearRoutingCache,
   dspySignatures: dspyApi.getSignatures,
+
+  // Observability
+  getTrace: observabilityApi.getTrace,
+  listTraces: observabilityApi.listTraces,
 };
