@@ -105,3 +105,4 @@ export type {
 } from "./types";
 
 export { ApiRequestError } from "./types";
+export { formatApiError, type FormattedApiError } from "./error";
