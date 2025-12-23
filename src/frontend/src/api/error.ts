@@ -36,10 +36,10 @@ export function formatApiError(error: unknown): FormattedApiError {
     };
     return {
       message:
-        errorObj.message ||
-        errorObj.detail ||
-        errorObj.error ||
-        "Unknown error occurred",
+        errorObj.message ??
+        errorObj.detail ??
+        errorObj.error ??
+        "Unknown error occurred"
     };
   }
 
