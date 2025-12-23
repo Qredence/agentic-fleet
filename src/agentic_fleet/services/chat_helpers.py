@@ -257,15 +257,21 @@ async def _hydrate_thread_from_conversation(
 
 def _format_response_delta(event: StreamEvent, short_id: str) -> str | None:
     # Only log first 80 chars of deltas to avoid flooding.
-    delta_preview = (event.delta or "")[:80]
+    delta = event.delta or ""
+    delta_preview = delta[:80]
     if not delta_preview:
         return None
-    return f"[{short_id}] ✏️  delta: {delta_preview}..."
+    # Only add ellipsis if truncation actually occurred
+    suffix = "..." if len(delta) > 80 else ""
+    return f"[{short_id}] ✏️  delta: {delta_preview}{suffix}"
 
 
 def _format_response_completed(event: StreamEvent, short_id: str) -> str:
-    result_preview = (event.message or "")[:100]
-    return f"[{short_id}] ✅ Response: {result_preview}..."
+    message = event.message or ""
+    result_preview = message[:100]
+    # Only add ellipsis if truncation actually occurred
+    suffix = "..." if len(message) > 100 else ""
+    return f"[{short_id}] ✅ Response: {result_preview}{suffix}"
 
 
 def _format_orchestrator_thought(event: StreamEvent, short_id: str) -> str:
