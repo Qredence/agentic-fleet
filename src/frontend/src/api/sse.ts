@@ -12,16 +12,10 @@
  * - Native keep-alive support
  */
 
-import { API_BASE_URL } from "./config";
+import { getStreamApiBase } from "./config";
+import { sseApi } from "./client";
 import type { StreamEvent } from "./types";
 import { StreamEventSchema } from "./validation";
-
-/**
- * Chat API prefix - uses /api (no version) for streaming endpoints.
- * This is intentionally different from API_PREFIX (/api/v1) used for REST endpoints.
- * The backend registers streaming routes at /api for frontend compatibility.
- */
-const CHAT_API_PREFIX = "/api";
 
 // =============================================================================
 // Types
@@ -117,9 +111,8 @@ export class ChatSSEClient {
     this.setStatus("connecting");
 
     // Build SSE URL with query parameters
-    const baseUrl = API_BASE_URL || "";
     const url = new URL(
-      `${baseUrl}${CHAT_API_PREFIX}/chat/${conversationId}/stream`,
+      `${getStreamApiBase()}/chat/${conversationId}/stream`,
       window.location.origin,
     );
     url.searchParams.set("message", message);
@@ -357,18 +350,7 @@ export class ChatSSEClient {
     }
 
     try {
-      // Use direct fetch to bypass /api/v1 prefix - streaming endpoints are at /api
-      const baseUrl = API_BASE_URL || "";
-      const url = `${baseUrl}${CHAT_API_PREFIX}/chat/${this.currentConversationId}/cancel?workflow_id=${this.currentWorkflowId}`;
-      const response = await fetch(url, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-      });
-      if (!response.ok) {
-        throw new Error(
-          `Cancel failed: ${response.status} ${response.statusText}`,
-        );
-      }
+      await sseApi.cancel(this.currentConversationId, this.currentWorkflowId);
     } catch (err) {
       console.error("Failed to cancel stream:", err);
     }
@@ -387,24 +369,12 @@ export class ChatSSEClient {
       throw new Error("No active stream to respond to");
     }
 
-    // Use direct fetch to bypass /api/v1 prefix - streaming endpoints are at /api
-    const baseUrl = API_BASE_URL || "";
-    const url = `${baseUrl}${CHAT_API_PREFIX}/chat/${this.currentConversationId}/respond?workflow_id=${this.currentWorkflowId}`;
-    const fetchResponse = await fetch(url, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        request_id: requestId,
-        response,
-      }),
-    });
-
-    if (!fetchResponse.ok) {
-      const errorText = await fetchResponse.text().catch(() => "Unknown error");
-      throw new Error(
-        `HITL response failed: ${fetchResponse.status} ${errorText}`,
-      );
-    }
+    await sseApi.submitResponse(
+      this.currentConversationId,
+      this.currentWorkflowId,
+      requestId,
+      response,
+    );
   }
 
   /**

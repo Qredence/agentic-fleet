@@ -134,7 +134,7 @@ tail -n 50 .var/logs/execution_history.jsonl | uv run python -c "import json,sys
 
 ```bash
 # Edit workflow config
-code src/agentic_fleet/src/agentic_fleet/config/workflow_config.yaml
+code src/agentic_fleet/config/workflow_config.yaml
 
 # Key settings:
 # - dspy.optimization.enabled: true/false

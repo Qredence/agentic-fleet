@@ -15,7 +15,7 @@ import { create } from "zustand";
 import { devtools } from "zustand/middleware";
 import { conversationsApi } from "@/api/client";
 import { getSSEClient, resetSSEClient } from "@/api/sse";
-import { ApiRequestError } from "@/api";
+import { formatApiError } from "@/api/error";
 import type { Message } from "@/api/types";
 import { getGlobalToastInstance } from "@/hooks/use-toast";
 import {
@@ -28,12 +28,11 @@ import {
 import { createErrorStep, createStatusStep } from "@/lib/step-helpers";
 import type { ChatState } from "./types";
 import {
-  handleStreamEvent,
   clearMessageContent,
   startNewMessage,
   addStepToLastMessage,
-  updateLastAssistantMessage,
 } from "./chat-event-handler";
+import { startChatTransport } from "./chat-transport";
 
 // =============================================================================
 // Helpers
@@ -233,31 +232,11 @@ const storeImpl = (set: ZustandSet, get: () => ChatState): ChatState => ({
         console.error("Failed to create conversation:", e);
         const toast = getGlobalToastInstance();
 
-        // Extract error message from ApiRequestError or standard Error
-        let errorMessage = "Unknown error occurred";
-        if (e instanceof ApiRequestError) {
-          errorMessage = e.message;
-          // Extract validation errors from FastAPI 422 responses
-          if (
-            e.details?.validation_errors &&
-            e.details.validation_errors.length > 0
-          ) {
-            errorMessage = e.details.validation_errors
-              .map((err) => `${err.field}: ${err.message}`)
-              .join(", ");
-          }
-        } else if (e instanceof Error) {
-          errorMessage = e.message;
-        } else if (typeof e === "object" && e !== null) {
-          // Fallback for non-Error objects
-          const errorObj = e as {
-            message?: string;
-            detail?: string;
-            error?: string;
-          };
-          errorMessage =
-            errorObj.message || errorObj.detail || errorObj.error || String(e);
-        }
+        const { message, validationErrors } = formatApiError(e);
+        const errorMessage =
+          validationErrors && validationErrors.length > 0
+            ? validationErrors.join(", ")
+            : message;
 
         toast?.toast({
           title: "Failed to Create Conversation",
@@ -300,110 +279,13 @@ const storeImpl = (set: ZustandSet, get: () => ChatState): ChatState => ({
       completedPhases: [],
     }));
 
-    // Setup SSE client callbacks
-    const sseClient = getSSEClient();
-    sseClient.setCallbacks({
-      onStatusChange: (status) => {
-        if (status === "error") {
-          const toast = getGlobalToastInstance();
-          toast?.toast({
-            title: "Connection Error",
-            description:
-              "Failed to connect to the server. Please check your connection and try again.",
-            variant: "destructive",
-            duration: 7000,
-          });
-
-          set((state) => ({
-            ...updateLastAssistantMessage(state, () => ({
-              isWorkflowPlaceholder: false,
-              content: "Connection failed. Please try again.",
-              workflowPhase: "",
-            })),
-            isLoading: false,
-          }));
-        }
-      },
-
-      onEvent: (event) => {
-        handleStreamEvent(event, set, get, assistantMessage.id);
-      },
-
-      onComplete: () => {
-        // Clean up message content tracking
-        clearMessageContent(assistantMessage.id);
-
-        set({
-          isLoading: false,
-          isReasoningStreaming: false,
-          currentReasoning: "",
-        });
-
-        // Refresh messages after a short delay to pick up quality scores
-        // Background evaluation completes asynchronously, so we poll for updates
-        setTimeout(() => {
-          const { conversationId } = get();
-          if (conversationId) {
-            // Use React Query to refetch messages if available
-            // Otherwise, manually reload from API
-            void conversationsApi
-              .getMessages(conversationId)
-              .then((updatedMessages) => {
-                set({ messages: updatedMessages });
-              })
-              .catch((err) => {
-                console.debug(
-                  "Failed to refresh messages for quality scores:",
-                  err,
-                );
-              });
-          }
-        }, 2000); // Wait 2 seconds for background evaluation to complete
-      },
-
-      onError: (error) => {
-        console.error("Stream error:", error);
-
-        const toast = getGlobalToastInstance();
-
-        // Detect concurrent execution error
-        const isConcurrent =
-          error.message.includes("Concurrent executions") ||
-          error.message.includes("lock");
-
-        if (isConcurrent) {
-          toast?.toast({
-            title: "Concurrent Execution",
-            description:
-              "Another workflow is already running. Please wait for it to complete or cancel it first.",
-            variant: "warning",
-            duration: 8000,
-          });
-          set({ isConcurrentError: true, isLoading: false });
-        } else {
-          // Show toast for non-concurrent errors
-          const errorMessage = error.message || "Unknown error";
-          toast?.toast({
-            title: "Stream Error",
-            description: errorMessage,
-            variant: "destructive",
-            duration: 7000,
-          });
-
-          const errorStep = createErrorStep(errorMessage);
-          set((state) => ({
-            ...addStepToLastMessage(state, errorStep, false),
-            isLoading: false,
-            isReasoningStreaming: false,
-          }));
-        }
-      },
-    });
-
-    // Connect via SSE (simpler than WebSocket - just GET with query params)
-    sseClient.connect(currentConvId!, content, {
-      reasoningEffort: options?.reasoning_effort,
-      enableCheckpointing: options?.enable_checkpointing,
+    startChatTransport({
+      conversationId: currentConvId!,
+      content,
+      assistantMessageId: assistantMessage.id,
+      options,
+      set,
+      get,
     });
   },
 });

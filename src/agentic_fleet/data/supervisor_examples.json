@@ -1104,7 +1104,7 @@
     "tool_requirements": []
   },
   {
-    "task": "how to greatly setup obsevability to open telemetry for complex agentic system",
+    "task": "how to greatly setup observability to open telemetry for complex agentic system",
     "team": "Writer: Content creation",
     "available_tools": "- TavilySearchTool/TavilyMCPTool (available to Researcher): Search the web for real-time information using Tavily. Provides accurate, up-to-date results with source citations. [Capabilities: web_search, real_time, citations]",
     "context": "Self-improvement: Quality score 8.4/10",
@@ -1134,7 +1134,7 @@
     ]
   },
   {
-    "task": "Anayze the way GEPA works VS other kind of training",
+    "task": "Analyze the way GEPA works VS other kind of training",
     "team": "Writer: Content creation",
     "available_tools": "- TavilySearchTool/TavilyMCPTool (available to Researcher): Search the web for real-time information using Tavily. Provides accurate, up-to-date results with source citations. [Capabilities: web_search, real_time, citations]",
     "context": "Self-improvement: Quality score 7.8/10",

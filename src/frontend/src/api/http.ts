@@ -4,12 +4,7 @@
  * A typed fetch wrapper with retry logic, error handling, and AbortController support.
  */
 
-import {
-  API_PREFIX,
-  API_TIMEOUT,
-  MAX_RETRIES,
-  RETRY_BASE_DELAY,
-} from "./config";
+import { API_PREFIX, API_TIMEOUT, MAX_RETRIES, RETRY_BASE_DELAY } from "./config";
 import { ApiRequestError, type ApiError } from "./types";
 
 interface RequestOptions extends Omit<RequestInit, "body"> {
@@ -64,10 +59,26 @@ function isRetryableError(status: number): boolean {
   return status === 0 || status === 429 || (status >= 500 && status < 600);
 }
 
+function buildUrl(prefix: string, endpoint: string): string {
+  if (endpoint.startsWith("http")) {
+    return endpoint;
+  }
+
+  const normalizedPrefix = prefix.endsWith("/")
+    ? prefix.slice(0, -1)
+    : prefix;
+  const normalizedEndpoint = endpoint.startsWith("/")
+    ? endpoint
+    : `/${endpoint}`;
+
+  return `${normalizedPrefix}${normalizedEndpoint}`;
+}
+
 /**
  * Make an HTTP request with retry logic and error handling.
  */
-export async function request<T>(
+export async function requestWithPrefix<T>(
+  prefix: string,
   endpoint: string,
   options: RequestOptions = {},
 ): Promise<T> {
@@ -79,9 +90,7 @@ export async function request<T>(
     ...fetchOptions
   } = options;
 
-  const url = endpoint.startsWith("http")
-    ? endpoint
-    : `${API_PREFIX}${endpoint.startsWith("/") ? "" : "/"}${endpoint}`;
+  const url = buildUrl(prefix, endpoint);
 
   // Create a timeout controller that can be combined with external signal
   const timeoutController = new AbortController();
@@ -178,6 +187,16 @@ export async function request<T>(
   throw new ApiRequestError(
     lastError || { message: "Request failed", status: 0 },
   );
+}
+
+/**
+ * Make an HTTP request with the default API prefix.
+ */
+export async function request<T>(
+  endpoint: string,
+  options: RequestOptions = {},
+): Promise<T> {
+  return requestWithPrefix(API_PREFIX, endpoint, options);
 }
 
 /**

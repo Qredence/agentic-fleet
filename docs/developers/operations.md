@@ -6,7 +6,7 @@ This document captures **operational** guidance for running AgenticFleet in prod
 
 - **DSPy artifacts**
   - Run `agentic-fleet optimize` during build/release.
-  - Set `dspy.require_compiled: true` in `src/agentic_fleet/src/agentic_fleet/config/workflow_config.yaml` so startup fails fast if artifacts are missing.
+  - Set `dspy.require_compiled: true` in `src/agentic_fleet/config/workflow_config.yaml` so startup fails fast if artifacts are missing.
 - **Runtime compilation**
   - Avoid runtime/background compilation for production deployments (initialize workflows with `compile_dspy=False`).
 - **Secrets / env**

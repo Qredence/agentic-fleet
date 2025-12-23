@@ -12,6 +12,7 @@ import logging
 import re
 import time
 from collections import OrderedDict
+from collections.abc import Callable
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any, Callable, cast
 
@@ -256,15 +257,21 @@ async def _hydrate_thread_from_conversation(
 
 def _format_response_delta(event: StreamEvent, short_id: str) -> str | None:
     # Only log first 80 chars of deltas to avoid flooding.
-    delta_preview = (event.delta or "")[:80]
+    delta = event.delta or ""
+    delta_preview = delta[:80]
     if not delta_preview:
         return None
-    return f"[{short_id}] ✏️  delta: {delta_preview}..."
+    # Only add ellipsis if truncation actually occurred
+    suffix = "..." if len(delta) > 80 else ""
+    return f"[{short_id}] ✏️  delta: {delta_preview}{suffix}"
 
 
 def _format_response_completed(event: StreamEvent, short_id: str) -> str:
-    result_preview = (event.message or "")[:100]
-    return f"[{short_id}] ✅ Response: {result_preview}..."
+    message = event.message or ""
+    result_preview = message[:100]
+    # Only add ellipsis if truncation actually occurred
+    suffix = "..." if len(message) > 100 else ""
+    return f"[{short_id}] ✅ Response: {result_preview}{suffix}"
 
 
 def _format_orchestrator_thought(event: StreamEvent, short_id: str) -> str:
@@ -278,32 +285,31 @@ def _format_log_line(
 ) -> str | None:
     if callable(formatter):
         return formatter(event, short_id)
-    return formatter.format(short_id=short_id, event=event)
+    return formatter.format(short_id=short_id)
+
+
+# Mapping from StreamEventType to (formatter, log_level)
+log_specs: dict[StreamEventType, tuple[str | Callable[[StreamEvent, str], str | None], int]] = {
+    StreamEventType.RESPONSE_DELTA: (_format_response_delta, logging.DEBUG),
+    StreamEventType.RESPONSE_COMPLETED: (_format_response_completed, logging.INFO),
+    StreamEventType.REASONING_DELTA: ("[{short_id}] 🧠 reasoning delta", logging.DEBUG),
+    StreamEventType.REASONING_COMPLETED: ("[{short_id}] 🧠 reasoning completed", logging.INFO),
+    StreamEventType.ORCHESTRATOR_THOUGHT: (_format_orchestrator_thought, logging.INFO),
+    StreamEventType.AGENT_OUTPUT: (
+        "[{short_id}] 🤖 agent output",
+        logging.INFO,
+    ),
+    StreamEventType.WORKFLOW_EVENT: (
+        "[{short_id}] 🔄 workflow event",
+        logging.INFO,
+    ),
+}
 
 
 def _log_stream_event(event: StreamEvent, workflow_id: str) -> str | None:
     """Log a stream event to the console in real-time and return the log line."""
     event_type = event.type.value
     short_id = workflow_id[-8:] if len(workflow_id) > 8 else workflow_id
-
-    log_specs: dict[
-        StreamEventType,
-        tuple[str | Callable[[StreamEvent, str], str | None], int],
-    ] = {
-        StreamEventType.ORCHESTRATOR_MESSAGE: ("[{short_id}] 📢 {event.message}", logging.INFO),
-        StreamEventType.ORCHESTRATOR_THOUGHT: (_format_orchestrator_thought, logging.INFO),
-        StreamEventType.RESPONSE_DELTA: (_format_response_delta, logging.DEBUG),
-        StreamEventType.RESPONSE_COMPLETED: (_format_response_completed, logging.INFO),
-        StreamEventType.REASONING_DELTA: ("[{short_id}] 🧠 reasoning delta", logging.DEBUG),
-        StreamEventType.REASONING_COMPLETED: ("[{short_id}] 🧠 Reasoning complete", logging.INFO),
-        StreamEventType.ERROR: ("[{short_id}] ❌ Error: {event.error}", logging.ERROR),
-        StreamEventType.AGENT_START: ("[{short_id}] 🤖 Agent started: {event.agent_id}", logging.INFO),
-        StreamEventType.AGENT_COMPLETE: ("[{short_id}] 🤖 Agent complete: {event.agent_id}", logging.INFO),
-        StreamEventType.CANCELLED: ("[{short_id}] ⏹️ Cancelled by client", logging.INFO),
-        StreamEventType.DONE: ("[{short_id}] 🏁 Stream completed", logging.INFO),
-        StreamEventType.CONNECTED: ("[{short_id}] 🔌 WebSocket connected", logging.DEBUG),
-        StreamEventType.HEARTBEAT: ("[{short_id}] ♥ heartbeat", logging.DEBUG),
-    }
 
     log_line: str | None = None
     log_spec = log_specs.get(event.type)

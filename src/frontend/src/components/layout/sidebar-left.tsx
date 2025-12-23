@@ -103,17 +103,16 @@ export const SidebarLeft = ({
   });
 
   const deleteConversationMutation = useDeleteConversation({
-    onSuccess: () => {
+    onSuccess: (_data, deletedId) => {
       const toast = getGlobalToastInstance();
       toast?.toast({
         title: "Conversation Deleted",
         description: "The conversation has been deleted successfully.",
       });
-      // If we were on the deleted conversation, go to root
-      // Note: We can't easily check if we were on it because conversationId might be cleared already
-      // But if we are on a chat route, and that ID is gone, we should probably go home.
-      // For now, let's just let the user stay or navigate manually.
-      // Actually, if the current URL matches the deleted ID, we should navigate home.
+      // If we are currently viewing this conversation, navigate home
+      if (location.pathname === `/chat/${deletedId}`) {
+        navigate("/");
+      }
     },
     onError: (error) => {
       const toast = getGlobalToastInstance();
@@ -148,10 +147,6 @@ export const SidebarLeft = ({
     );
     if (confirmed) {
       deleteConversationMutation.mutate(id);
-      // If we are currently viewing this conversation, navigate home
-      if (location.pathname === `/chat/${id}`) {
-        navigate("/");
-      }
     }
   };
 
