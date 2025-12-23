@@ -144,29 +144,7 @@ Licensed under the **MIT License**. See [LICENSE](LICENSE) for details.
 
 ---
 
-Helpful links: [copilot instructions](.github/copilot-instructions.md) · [prompts](.github/prompts/README.md) · [system overview](docs/developers/system-overview.md)<p align="center">
-<img src="assets/banner.png" alt="AgenticFleet" width="100%"/>
-
-</p>
-
-<p align="center">
-  <a href="./LICENSE"><img src="https://img.shields.io/badge/License-MIT-yellow.svg" alt="License: MIT"/></a>
-  <a href="https://pepy.tech/projects/agentic-fleet"><img src="https://static.pepy.tech/personalized-badge/agentic-fleet?period=total&units=INTERNATIONAL_SYSTEM&left_color=GREY&right_color=BLUE&left_text=downloads" alt="PyPI Downloads"/></a>
-  <a href="https://deepwiki.com/qredence/agentic-fleet"><img src="https://deepwiki.com/badge.svg" alt="Ask DeepWiki"/></a>
-  <a href="https://pypi.org/project/agentic-fleet/"><img src="https://img.shields.io/pypi/v/agentic-fleet?color=blue" alt="PyPI Version"/></a>
-  <a href="https://pypi.org/project/agentic-fleet/"><img src="https://img.shields.io/pypi/pyversions/agentic-fleet" alt="Python Versions"/></a>
-  <a href="https://coderabbit.ai"><img src="https://img.shields.io/coderabbit/prs/github/Qredence/agentic-fleet?utm_source=oss&utm_medium=github&utm_campaign=Qredence%2Fagentic-fleet&labelColor=171717&color=FF570A&link=https%3A%2F%2Fcoderabbit.ai&label=CodeRabbit+Reviews" alt="CodeRabbit Pull Request Reviews"/></a>
-</p>
-
-<h3 align="center">
-  <b>Self-Optimizing Multi-Agent Orchestration</b>
-</h3>
-
-<p align="center">
-  Intelligent task routing with <a href="https://github.com/stanfordnlp/dspy">DSPy</a> • Robust execution with <a href="https://github.com/microsoft/agent-framework">Microsoft Agent Framework</a>
-</p>
-
----
+Helpful links: [copilot instructions](.github/copilot-instructions.md) · [prompts](.github/prompts/README.md) · [system overview](docs/developers/system-overview.md)
 
 ## ✨ What is AgenticFleet?
 
