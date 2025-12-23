@@ -4,12 +4,7 @@
  * A typed fetch wrapper with retry logic, error handling, and AbortController support.
  */
 
-import {
-  API_PREFIX,
-  API_TIMEOUT,
-  MAX_RETRIES,
-  RETRY_BASE_DELAY,
-} from "./config";
+import { API_PREFIX, API_TIMEOUT, MAX_RETRIES, RETRY_BASE_DELAY } from "./config";
 import { ApiRequestError, type ApiError } from "./types";
 
 interface RequestOptions extends Omit<RequestInit, "body"> {
@@ -69,7 +64,9 @@ function buildUrl(prefix: string, endpoint: string): string {
     return endpoint;
   }
 
-  const normalizedPrefix = prefix.endsWith("/") ? prefix.slice(0, -1) : prefix;
+  const normalizedPrefix = prefix.endsWith("/")
+    ? prefix.slice(0, -1)
+    : prefix;
   const normalizedEndpoint = endpoint.startsWith("/")
     ? endpoint
     : `/${endpoint}`;

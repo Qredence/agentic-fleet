@@ -182,14 +182,14 @@ export const sseApi = {
   /**
    * Cancel a running SSE workflow.
    */
-  cancel: (conversationId: string, workflowId: string) =>
-    requestWithPrefix<void>(
+  cancel: (conversationId: string, workflowId: string) => {
+    const params = new URLSearchParams({ workflow_id: workflowId });
+    return requestWithPrefix<void>(
       getStreamApiBase(),
-      `/chat/${encodeURIComponent(conversationId)}/cancel?workflow_id=${encodeURIComponent(
-        workflowId,
-      )}`,
+      `/chat/${encodeURIComponent(conversationId)}/cancel?${params.toString()}`,
       { method: "POST" },
-    ),
+    );
+  },
 
   /**
    * Submit a human-in-the-loop response.
@@ -199,12 +199,11 @@ export const sseApi = {
     workflowId: string,
     requestId: string,
     response: unknown,
-  ) =>
-    requestWithPrefix<void>(
+  ) => {
+    const params = new URLSearchParams({ workflow_id: workflowId });
+    return requestWithPrefix<void>(
       getStreamApiBase(),
-      `/chat/${encodeURIComponent(conversationId)}/respond?workflow_id=${encodeURIComponent(
-        workflowId,
-      )}`,
+      `/chat/${encodeURIComponent(conversationId)}/respond?${params.toString()}`,
       {
         method: "POST",
         body: {
@@ -212,7 +211,8 @@ export const sseApi = {
           response,
         },
       },
-    ),
+    );
+  }
 };
 
 // =============================================================================
