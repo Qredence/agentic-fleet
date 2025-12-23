@@ -15,6 +15,31 @@ from fastapi import APIRouter, Body, HTTPException, Query, Request, WebSocket
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 
+# Langfuse integration for FastAPI route tracing
+try:
+    from langfuse.decorators import observe as langfuse_observe  # type: ignore[import-untyped]
+
+    _LANGFUSE_AVAILABLE = True
+
+    def observe(func=None, **kwargs):  # type: ignore
+        """Langfuse observe decorator wrapper."""
+        if func is None:
+            # Called with @observe() - return a decorator
+            return lambda f: langfuse_observe(f, **kwargs)
+        # Called with @observe - apply directly
+        return langfuse_observe(func, **kwargs)
+except ImportError:
+    _LANGFUSE_AVAILABLE = False
+
+    def observe(func=None, **_kwargs):  # type: ignore
+        """No-op decorator when Langfuse is not available."""
+        if func is None:
+            # Called with @observe() - return identity
+            return lambda f: f
+        # Called with @observe - return function as-is
+        return func
+
+
 router = APIRouter()
 
 
@@ -50,6 +75,7 @@ class HITLResponse(BaseModel):
 
 
 @router.get("/chat/{conversation_id}/stream")
+@observe
 async def stream_chat_sse(
     request: Request,
     conversation_id: str,
@@ -82,40 +108,19 @@ async def stream_chat_sse(
         StreamingResponse with text/event-stream content type
     """
     # Lazy imports to avoid circular dependencies
+    from agentic_fleet.api.deps import (
+        get_conversation_manager,
+        get_or_create_workflow,
+        get_session_manager,
+    )
     from agentic_fleet.services.chat_sse import ChatSSEService
-    from agentic_fleet.utils.cfg import load_config
-    from agentic_fleet.workflows.config import build_workflow_config_from_yaml
-    from agentic_fleet.workflows.supervisor import create_supervisor_workflow
 
-    app = request.app
-    session_manager = getattr(app.state, "session_manager", None)
-    conversation_manager = getattr(app.state, "conversation_manager", None)
-
-    if session_manager is None or conversation_manager is None:
-        raise HTTPException(status_code=503, detail="Server not initialized")
-
-    # Get or create shared workflow (same pattern as WebSocket)
-    workflow = getattr(app.state, "supervisor_workflow", None)
-    if workflow is None:
-        yaml_config = getattr(app.state, "yaml_config", None)
-        if yaml_config is None:
-            yaml_config = load_config(validate=False)
-
-        workflow_config = build_workflow_config_from_yaml(
-            yaml_config,
-            compile_dspy=False,
-        )
-
-        workflow = await create_supervisor_workflow(
-            compile_dspy=False,
-            config=workflow_config,
-            dspy_routing_module=getattr(app.state, "dspy_routing_module", None),
-            dspy_quality_module=getattr(app.state, "dspy_quality_module", None),
-            dspy_tool_planning_module=getattr(app.state, "dspy_tool_planning_module", None),
-        )
-        app.state.supervisor_workflow = workflow
+    session_manager = get_session_manager(request)
+    conversation_manager = get_conversation_manager(request)
+    workflow = await get_or_create_workflow(request)
 
     # Get or create SSE service (cached per app for cancel/response tracking)
+    app = request.app
     sse_service = getattr(app.state, "sse_service", None)
     if sse_service is None:
         sse_service = ChatSSEService(
@@ -142,6 +147,7 @@ async def stream_chat_sse(
 
 
 @router.post("/chat/{conversation_id}/respond")
+@observe()
 async def submit_hitl_response(
     request: Request,
     conversation_id: str,  # noqa: ARG001 - part of REST path
@@ -180,6 +186,7 @@ async def submit_hitl_response(
 
 
 @router.post("/chat/{conversation_id}/cancel")
+@observe()
 async def cancel_stream(
     request: Request,
     conversation_id: str,  # noqa: ARG001 - part of REST path
@@ -214,6 +221,7 @@ async def cancel_stream(
 
 
 @router.websocket("/ws/chat")
+@observe()
 async def websocket_chat(websocket: WebSocket) -> None:
     """WebSocket endpoint for streaming chat responses.
 

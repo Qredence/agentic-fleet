@@ -9,12 +9,38 @@ from fastapi import APIRouter, HTTPException, status
 from agentic_fleet.api.deps import WorkflowDep
 from agentic_fleet.models import RunRequest, RunResponse
 
+# Langfuse integration for FastAPI route tracing
+try:
+    from langfuse.decorators import observe as langfuse_observe  # type: ignore[import-untyped]
+
+    _LANGFUSE_AVAILABLE = True
+
+    def observe(func=None, **kwargs):  # type: ignore
+        """Langfuse observe decorator wrapper."""
+        if func is None:
+            # Called with @observe() - return a decorator
+            return lambda f: langfuse_observe(f, **kwargs)
+        # Called with @observe - apply directly
+        return langfuse_observe(func, **kwargs)
+except ImportError:
+    _LANGFUSE_AVAILABLE = False
+
+    def observe(func=None, **_kwargs):  # type: ignore
+        """No-op decorator when Langfuse is not available."""
+        if func is None:
+            # Called with @observe() - return identity
+            return lambda f: f
+        # Called with @observe - return function as-is
+        return func
+
+
 logger = logging.getLogger(__name__)
 
 router = APIRouter()
 
 
 @router.get("/types")
+@observe()
 async def list_workflow_types() -> list[str]:
     """List available workflow types supported by the system."""
     return ["SupervisorWorkflow"]
@@ -30,6 +56,7 @@ async def list_workflow_types() -> list[str]:
         500: {"description": "Workflow execution failed"},
     },
 )
+@observe
 async def run_workflow(request: RunRequest, workflow: WorkflowDep) -> RunResponse:
     """Execute a workflow task."""
     try:

@@ -28,6 +28,19 @@ class OptimizationRequest(BaseModel):
         default=DEFAULT_EXAMPLES_PATH, description="Path to training examples"
     )
     user_id: str = Field(..., description="User ID for the job")
+    # History options
+    use_history_examples: bool = Field(
+        default=False, description="Use execution history as training data"
+    )
+    history_min_quality: float = Field(
+        default=8.0,
+        ge=0.0,
+        le=10.0,
+        description="Minimum quality score (0-10) for history examples",
+    )
+    history_limit: int = Field(
+        default=200, ge=1, description="Maximum number of history entries to harvest"
+    )
     options: dict[str, Any] = Field(default_factory=dict, description="Additional options")
 
 
@@ -41,6 +54,14 @@ class JobStatusResponse(BaseModel):
     completed_at: str | None = None
     error: str | None = None
     result_artifact: str | None = None
+    # Progress fields
+    progress_message: str | None = None
+    progress_updated_at: str | None = None
+    progress_current: int | None = None
+    progress_total: int | None = None
+    progress_percent: int | None = None
+    progress_completed: bool = False
+    progress_duration: float | None = None
 
 
 @router.post("/jobs", response_model=JobStatusResponse)
@@ -67,12 +88,24 @@ async def create_optimization_job(
     # In a real scenario, we might want to load a specific version or configuration.
     module_instance = DSPyReasoner()
 
+    # Ensure modules are initialized before optimization
+    # This is critical for GEPA to access predictor signatures correctly
+    module_instance._ensure_modules_initialized()
+
+    # Build gepa_options from request
+    gepa_options = {
+        **request.options,
+        "use_history_examples": request.use_history_examples,
+        "history_min_quality": request.history_min_quality,
+        "history_limit": request.history_limit,
+    }
+
     job_id = await service.submit_job(
         module=module_instance,
         base_examples_path=request.examples_path,
         user_id=request.user_id,
         auto_mode=request.auto_mode,
-        **request.options,
+        gepa_options=gepa_options,
     )
 
     # Return initial status
