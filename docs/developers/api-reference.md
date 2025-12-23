@@ -388,7 +388,7 @@ Load configuration from YAML file.
 
 **Parameters**:
 
-- `config_path`: Path to config file (defaults to config/workflow_config.yaml)
+- `config_path`: Path to config file (defaults to src/agentic_fleet/config/workflow_config.yaml)
 
 **Returns**: Configuration dictionary
 

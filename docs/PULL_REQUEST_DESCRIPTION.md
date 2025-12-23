@@ -172,8 +172,8 @@ The codebase is production-ready with:
 ## 🔗 References
 
 - [CODE_REVIEW_SUMMARY.md](./CODE_REVIEW_SUMMARY.md) - Detailed review report
-- [README.md](./README.md) - Project documentation
-- [Makefile](./Makefile) - Development commands
+- [README.md](../README.md) - Project documentation
+- [Makefile](../Makefile) - Development commands
 
 ## 💬 Reviewer Notes
 

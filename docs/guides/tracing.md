@@ -29,7 +29,7 @@ AgenticFleet supports multiple trace export destinations:
 
 ### YAML (Preferred)
 
-Add a `tracing` section to `config/workflow_config.yaml`:
+Add a `tracing` section to `src/agentic_fleet/config/workflow_config.yaml`:
 
 ```yaml
 tracing:

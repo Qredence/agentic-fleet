@@ -10,7 +10,10 @@ Welcome to AgenticFleet documentation. This index organizes documentation by aud
 # Clone and setup
 git clone https://github.com/Qredence/agentic-fleet.git
 cd agentic-fleet
-make dev-setup
+make dev-setup  # installs backend deps + frontend deps + pre-commit
+# or minimal:
+#   make install
+#   make frontend-install
 
 # Configure
 cp .env.example .env
@@ -48,7 +51,7 @@ User-facing documentation for using the framework:
    - Starting the frontend
    - Chat interface features
    - Workflow visualization
-   - WebSocket protocol + message flow diagrams (new run, HITL, resume)
+   - SSE protocol + legacy WebSocket flows (new run, HITL, resume)
    - Configuration and development
 5. **[Configuration](users/configuration.md)** - Configuration guide
    - All configuration options
@@ -95,7 +98,7 @@ Developer-facing documentation for extending and contributing:
 3. **[Operations Runbook](developers/operations.md)** - Production operations
    - Backpressure / concurrency limits
    - Rate limiting guidance
-   - Scaling considerations (WebSocket + state)
+   - Scaling considerations (SSE + legacy WebSocket)
    - Production checklist
 4. **[API Reference](developers/api-reference.md)** - API documentation
    - Core classes and methods
@@ -124,11 +127,11 @@ Developer-facing documentation for extending and contributing:
 The React/Vite frontend lives in `src/frontend/`:
 
 - **[Frontend AGENTS.md](../src/frontend/AGENTS.md)** - Frontend architecture and development guide
-  - Directory structure
-  - State management (hooks/useChat.ts)
-  - WebSocket streaming
-  - Component patterns
-  - Testing
+- Directory structure
+- State management (`stores/chatStore.ts`)
+- SSE streaming
+- Component patterns
+- Testing
 
 ### Internal Documentation
 

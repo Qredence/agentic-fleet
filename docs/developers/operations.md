@@ -1,12 +1,12 @@
 # Operations Runbook (Production)
 
-This document captures **operational** guidance for running AgenticFleet in production-like environments (API + WebSocket).
+This document captures **operational** guidance for running AgenticFleet in production-like environments (API + SSE, legacy WebSocket).
 
 ## Production checklist
 
 - **DSPy artifacts**
   - Run `agentic-fleet optimize` during build/release.
-  - Set `dspy.require_compiled: true` in `src/agentic_fleet/config/workflow_config.yaml` so startup fails fast if artifacts are missing.
+  - Set `dspy.require_compiled: true` in `src/agentic_fleet/src/agentic_fleet/config/workflow_config.yaml` so startup fails fast if artifacts are missing.
 - **Runtime compilation**
   - Avoid runtime/background compilation for production deployments (initialize workflows with `compile_dspy=False`).
 - **Secrets / env**
@@ -25,9 +25,9 @@ The API applies a coarse concurrency cap via `WorkflowSessionManager(max_concurr
 - When the limit is reached, new workflow sessions are rejected with **HTTP 429**.
 - Tune via settings (`AppSettings.max_concurrent_workflows`).
 
-### WebSocket runtime guardrails
+### Streaming runtime guardrails
 
-The WebSocket chat service enforces basic runtime bounds (timeouts, heartbeats) to prevent idle connections from consuming resources indefinitely.
+The SSE chat service enforces basic runtime bounds (timeouts, heartbeats) to prevent idle connections from consuming resources indefinitely. The legacy WebSocket service applies similar guardrails.
 
 ## Rate limiting & quotas
 
@@ -51,14 +51,14 @@ To run multiple replicas safely:
 - Avoid relying on local `.var/` state for anything correctness-critical unless it is on shared storage.
 - Ensure checkpoint storage is compatible with your scaling model (local disk checkpoints are per-replica unless shared).
 
-### WebSocket considerations
+### WebSocket considerations (legacy)
 
 WebSocket sessions are stateful. If you run multiple replicas:
 
 - Use sticky sessions (same client → same replica) **or**
 - Store required state (threads/checkpoints) in shared backends so reconnects can land on any replica.
 
-## Concurrency note: per-request reasoning effort
+## Concurrency note: per-request reasoning effort (legacy WebSocket)
 
 `SupervisorWorkflow._apply_reasoning_effort` may mutate agent client state when applying a per-request override. To prevent cross-request interference under concurrent WebSocket load, the WebSocket service initializes a **fresh SupervisorWorkflow per socket session**.
 

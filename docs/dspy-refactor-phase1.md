@@ -121,7 +121,7 @@ The lifespan context manager now:
 
 ## Configuration
 
-**Location**: `src/agentic_fleet/config/workflow_config.yaml`
+**Location**: `src/agentic_fleet/src/agentic_fleet/config/workflow_config.yaml`
 
 New configuration keys added under `dspy:`:
 

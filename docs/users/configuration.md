@@ -4,7 +4,7 @@
 
 The DSPy-Enhanced Agent Framework uses a hierarchical configuration system that combines:
 
-- YAML configuration files (`config/workflow_config.yaml`)
+- YAML configuration files (`src/agentic_fleet/config/workflow_config.yaml`)
 - Environment variables (`.env`)
 - Programmatic configuration (Python code)
 
@@ -23,7 +23,7 @@ Configuration values are resolved in this order (highest priority first):
 
 ### Source of Truth
 
-The canonical configuration lives in `config/workflow_config.yaml` and is kept in sync with the runtime
+The canonical configuration lives in `src/agentic_fleet/config/workflow_config.yaml` and is kept in sync with the runtime
 schema. Use that file as the definitive reference when keys drift over time.
 
 ### Common Path Defaults
@@ -32,7 +32,7 @@ AgenticFleet writes runtime artifacts under `.var/` by default (gitignored). The
 paths:
 
 ```yaml
-# config/workflow_config.yaml (excerpt)
+# src/agentic_fleet/config/workflow_config.yaml (excerpt)
 
 dspy:
   optimization:
@@ -92,7 +92,7 @@ Controls DSPy reasoner behavior and optimization.
 
 - When `true`, the API **fails fast at startup** if compiled DSPy artifacts are missing
 - Recommended for production to avoid silent zero-shot fallback
-- Set in `src/agentic_fleet/config/workflow_config.yaml` as `dspy.require_compiled: true`
+- Set in `src/agentic_fleet/src/agentic_fleet/config/workflow_config.yaml` as `dspy.require_compiled: true`
 
 **Runtime compilation note (dev vs prod)**
 
@@ -124,9 +124,9 @@ Controls DSPy reasoner behavior and optimization.
 - `optimization.gepa_reflection_model` (`str|None`): optional LM ID dedicated to reflective feedback (defaults to `dspy.model`).
 - `optimization.gepa_log_dir` (`str`, default: `.var/logs/dspy/gepa`): directory for GEPA traces/stats.
 - `optimization.gepa_perfect_score` (`float`, default: `1.0`): max score reported by the metric.
-- `optimization.gepa_use_history_examples` (`bool`, default: `false`): merge high-quality executions from `.var/logs/execution_history.*` into the training set.
-- `optimization.gepa_history_min_quality` (`float`, default: `8.0`): minimum quality score for harvested executions.
-- `optimization.gepa_history_limit` (`int`, default: `200`): lookback window when harvesting history.
+- `optimization.gepa_use_history_examples` (`bool`, default: `false`): merge high-quality executions from `.var/logs/execution_history.*` into the training set. **Automatically enabled in bootstrap mode** (when no initial training data exists).
+- `optimization.gepa_history_min_quality` (`float`, default: `8.0`): minimum quality score (0-10) for harvested executions. Only executions with quality ≥ this threshold are used.
+- `optimization.gepa_history_limit` (`int`, default: `200`): maximum number of history entries to scan when harvesting examples.
 - `optimization.gepa_val_split` (`float`, default: `0.2`): fraction of routing examples held out for validation.
 - `optimization.gepa_seed` (`int`, default: `13`): RNG seed for deterministic shuffles.
 
@@ -370,7 +370,7 @@ AgenticFleet can mirror workflow runs, long-term agent memory, DSPy datasets, op
 | `AZURE_COSMOS_CACHE_CONTAINER`                  | No                                  | `cache`                | Override for TTL cache metadata (partition key `/cacheKey`).                                                                                          |
 | `AGENTICFLEET_DEFAULT_USER_ID`                  | Recommended                         | _empty_                | High-cardinality identifier (tenant/workspace/developer) used when mirroring agent memory or DSPy artifacts that need a partition key.                |
 
-Best practices (aligned with [Cosmos DB data modeling guidance](../../cosmosdb_requirements.md)):
+Best practices (aligned with [Cosmos DB data modeling guidance](../developers/cosmosdb_requirements.md)):
 
 - Use **high-cardinality partition keys** (`workflowId`, `userId`, `cacheKey`) to avoid hot partitions and stay below the 20 GB logical partition limit. When mirroring agent memory, summarize or prune old entries so each document remains well under Cosmos’s 2 MB item cap.
 - Provision the database and containers up front (see `cosmosdb_data_model.md` for schemas). The helper intentionally avoids creating resources automatically so you retain control of RU/throughput settings.
@@ -632,10 +632,10 @@ Use the `manage_cache.py` helper to inspect or reset the DSPy compilation cache:
 
 ```bash
 # Show the current cache metadata (path, size, age)
-uv run python src/agentic_fleet/scripts/manage_cache.py --info
+uv run python -m agentic_fleet.scripts.manage_cache --info
 
 # Clear the compiled reasoner cache to force recompilation
-uv run python src/agentic_fleet/scripts/manage_cache.py --clear
+uv run python -m agentic_fleet.scripts.manage_cache --clear
 ```
 
 Clearing the cache is recommended whenever you update `src/agentic_fleet/data/supervisor_examples.json` or switch models.
@@ -732,13 +732,13 @@ logging:
 
 ### Config file not loading
 
-- Ensure `config/workflow_config.yaml` exists and contains valid YAML (use `uv run python -m yaml lint` if unsure).
+- Ensure `src/agentic_fleet/config/workflow_config.yaml` exists and contains valid YAML (use `uv run python -m yaml lint` if unsure).
 - When the file is missing, defaults kick in—check the active config by running `uv run agentic-fleet run --show-config`.
 
 ### Cached module feels stale
 
-- Run `uv run python src/agentic_fleet/scripts/manage_cache.py --clear` after updating `src/agentic_fleet/data/supervisor_examples.json` or switching models.
-- Verify cache health with `uv run python src/agentic_fleet/scripts/manage_cache.py --info`; stale timestamps usually indicate a restart is needed.
+- Run `uv run python -m agentic_fleet.scripts.manage_cache --clear` after updating `src/agentic_fleet/data/supervisor_examples.json` or switching models.
+- Verify cache health with `uv run python -m agentic_fleet.scripts.manage_cache --info`; stale timestamps usually indicate a restart is needed.
 
 ## Operational Best Practices
 

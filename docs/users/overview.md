@@ -358,14 +358,14 @@ Best for: Complex problems requiring multiple perspectives.
 
 ```bash
 agentic-fleet run -m "Your task here"     # Run a task
-agentic-fleet dev                          # Start dev servers
+make dev                                   # Start dev servers
 agentic-fleet list-agents                  # See available agents
 ```
 
 ### Web Interface
 
 ```bash
-agentic-fleet dev
+make dev
 # Opens at http://localhost:5173
 ```
 
@@ -378,16 +378,18 @@ Features:
 
 ### Configuration
 
-All settings in one place: `config/workflow_config.yaml`
+All settings in one place: `src/agentic_fleet/src/agentic_fleet/config/workflow_config.yaml`
 
 ```yaml
 dspy:
-  model: gpt-4.1 # Model for routing decisions
+  model: gpt-5.2 # Primary DSPy model
+  routing_model: gpt-5-mini # Fast model for routing decisions
   enable_routing_cache: true # Cache routing for speed
 
 workflow:
-  max_rounds: 15 # Prevent infinite loops
-  enable_streaming: true # Real-time updates
+  supervisor:
+    max_rounds: 15 # Prevent infinite loops
+    enable_streaming: true # Real-time updates
 
 agents:
   researcher:

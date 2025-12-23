@@ -192,8 +192,8 @@ OpenTelemetry Collector (port 4319 on host, 4317 in container)
 ## Next Steps
 
 - **[Full Tracing Guide](./tracing.md)** – Comprehensive configuration, Azure Monitor setup, troubleshooting
-- **[Agent Architecture](../../developers/architecture.md)** – Understand workflow phases & agent responsibilities
-- **[CLI Reference](../../users/getting-started.md#command-line-interface)** – How to run tasks via CLI
+- **[Agent Architecture](../developers/architecture.md)** – Understand workflow phases & agent responsibilities
+- **[CLI Reference](../users/getting-started.md)** – How to run tasks via CLI
 
 ## Security Reminder
 

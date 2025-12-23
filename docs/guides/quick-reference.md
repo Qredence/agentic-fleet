@@ -84,18 +84,18 @@ uv run agentic-fleet run -m "Your question" --verbose 2>&1 | tee .var/logs/outpu
 
 ```bash
 # Quick overview
-uv run python src/agentic_fleet/scripts/analyze_history.py
+uv run python -m agentic_fleet.scripts.analyze_history
 
 # All statistics
-uv run python src/agentic_fleet/scripts/analyze_history.py --all
+uv run python -m agentic_fleet.scripts.analyze_history --all
 
 # Specific views
-uv run python src/agentic_fleet/scripts/analyze_history.py --summary        # Overall stats
-uv run python src/agentic_fleet/scripts/analyze_history.py --executions     # List all
-uv run python src/agentic_fleet/scripts/analyze_history.py --last 5         # Last 5 only
-uv run python src/agentic_fleet/scripts/analyze_history.py --routing        # Mode distribution
-uv run python src/agentic_fleet/scripts/analyze_history.py --agents         # Agent usage
-uv run python src/agentic_fleet/scripts/analyze_history.py --timing         # Time breakdown
+uv run python -m agentic_fleet.scripts.analyze_history --summary        # Overall stats
+uv run python -m agentic_fleet.scripts.analyze_history --executions     # List all
+uv run python -m agentic_fleet.scripts.analyze_history --last 5         # Last 5 only
+uv run python -m agentic_fleet.scripts.analyze_history --routing        # Mode distribution
+uv run python -m agentic_fleet.scripts.analyze_history --agents         # Agent usage
+uv run python -m agentic_fleet.scripts.analyze_history --timing         # Time breakdown
 ```
 
 ## Viewing Logs
@@ -134,7 +134,7 @@ tail -n 50 .var/logs/execution_history.jsonl | uv run python -c "import json,sys
 
 ```bash
 # Edit workflow config
-code config/workflow_config.yaml
+code src/agentic_fleet/src/agentic_fleet/config/workflow_config.yaml
 
 # Key settings:
 # - dspy.optimization.enabled: true/false
@@ -162,13 +162,13 @@ uv run agentic-fleet run -m "Research quantum computing and write a summary" --v
 ### Check last 10 executions
 
 ```bash
-uv run python src/agentic_fleet/scripts/analyze_history.py --executions --last 10
+uv run python -m agentic_fleet.scripts.analyze_history --executions --last 10
 ```
 
 ### View routing statistics
 
 ```bash
-uv run python src/agentic_fleet/scripts/analyze_history.py --routing --agents
+uv run python -m agentic_fleet.scripts.analyze_history --routing --agents
 ```
 
 ### Monitor execution in real-time
@@ -184,7 +184,7 @@ tail -f .var/logs/workflow.log
 ### No output showing
 
 - Check if `--verbose` flag is used
-- Verify `logging.verbose: true` in config/workflow_config.yaml
+- Verify `logging.verbose: true` in src/agentic_fleet/config/workflow_config.yaml
 - Check `.var/logs/workflow.log` for errors
 
 ### History not saving
@@ -196,8 +196,8 @@ tail -f .var/logs/workflow.log
 ### Slow execution
 
 - Check network connectivity (OpenAI API, Tavily API)
-- Review timing breakdown: `uv run python src/agentic_fleet/scripts/analyze_history.py --timing`
-- Clear DSPy cache after config changes: `make clear-cache` or `uv run python src/agentic_fleet/scripts/manage_cache.py --clear`
+- Review timing breakdown: `uv run python -m agentic_fleet.scripts.analyze_history --timing`
+- Clear DSPy cache after config changes: `make clear-cache` or `uv run python -m agentic_fleet.scripts.manage_cache --clear`
 - The 5-phase pipeline (v0.6.6) should complete in ~2 minutes for complex queries
 - Consider using `gpt-5-mini` for routing via `routing_model` config
 
