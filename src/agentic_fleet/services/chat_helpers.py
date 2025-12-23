@@ -8,9 +8,11 @@ from __future__ import annotations
 
 import asyncio
 import contextlib
+import logging
 import re
 import time
 from collections import OrderedDict
+from collections.abc import Callable
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any, cast
 
@@ -253,60 +255,74 @@ async def _hydrate_thread_from_conversation(
         return
 
 
+def _format_response_delta(event: StreamEvent, short_id: str) -> str | None:
+    # Only log first 80 chars of deltas to avoid flooding.
+    delta_preview = (event.delta or "")[:80]
+    if not delta_preview:
+        return None
+    return f"[{short_id}] ✏️  delta: {delta_preview}..."
+
+
+def _format_response_completed(event: StreamEvent, short_id: str) -> str:
+    result_preview = (event.message or "")[:100]
+    return f"[{short_id}] ✅ Response: {result_preview}..."
+
+
+def _format_orchestrator_thought(event: StreamEvent, short_id: str) -> str:
+    return f"[{short_id}] 💭 {event.kind}: {event.message}"
+
+
+def _format_log_line(
+    formatter: str | Callable[[StreamEvent, str], str | None],
+    event: StreamEvent,
+    short_id: str,
+) -> str | None:
+    if callable(formatter):
+        return formatter(event, short_id)
+    return formatter.format(short_id=short_id, event=event)
+
+
 def _log_stream_event(event: StreamEvent, workflow_id: str) -> str | None:
     """Log a stream event to the console in real-time and return the log line."""
     event_type = event.type.value
     short_id = workflow_id[-8:] if len(workflow_id) > 8 else workflow_id
 
-    log_line: str | None = None
+    log_specs: dict[
+        StreamEventType,
+        tuple[str | Callable[[StreamEvent, str], str | None], int],
+    ] = {
+        StreamEventType.ORCHESTRATOR_MESSAGE: ("[{short_id}] 📢 {event.message}", logging.INFO),
+        StreamEventType.ORCHESTRATOR_THOUGHT: (_format_orchestrator_thought, logging.INFO),
+        StreamEventType.RESPONSE_DELTA: (_format_response_delta, logging.DEBUG),
+        StreamEventType.RESPONSE_COMPLETED: (_format_response_completed, logging.INFO),
+        StreamEventType.REASONING_DELTA: ("[{short_id}] 🧠 reasoning delta", logging.DEBUG),
+        StreamEventType.REASONING_COMPLETED: ("[{short_id}] 🧠 Reasoning complete", logging.INFO),
+        StreamEventType.ERROR: ("[{short_id}] ❌ Error: {event.error}", logging.ERROR),
+        StreamEventType.AGENT_START: (
+            "[{short_id}] 🤖 Agent started: {event.agent_id}",
+            logging.INFO,
+        ),
+        StreamEventType.AGENT_COMPLETE: (
+            "[{short_id}] 🤖 Agent complete: {event.agent_id}",
+            logging.INFO,
+        ),
+        StreamEventType.CANCELLED: ("[{short_id}] ⏹️ Cancelled by client", logging.INFO),
+        StreamEventType.DONE: ("[{short_id}] 🏁 Stream completed", logging.INFO),
+        StreamEventType.CONNECTED: ("[{short_id}] 🔌 WebSocket connected", logging.DEBUG),
+        StreamEventType.HEARTBEAT: ("[{short_id}] ♥ heartbeat", logging.DEBUG),
+    }
 
-    if event.type == StreamEventType.ORCHESTRATOR_MESSAGE:
-        log_line = f"[{short_id}] 📢 {event.message}"
-        logger.info(log_line)
-    elif event.type == StreamEventType.ORCHESTRATOR_THOUGHT:
-        log_line = f"[{short_id}] 💭 {event.kind}: {event.message}"
-        logger.info(log_line)
-    elif event.type == StreamEventType.RESPONSE_DELTA:
-        # Only log first 80 chars of deltas to avoid flooding.
-        delta_preview = (event.delta or "")[:80]
-        if delta_preview:
-            log_line = f"[{short_id}] ✏️  delta: {delta_preview}..."
-            logger.debug(log_line)
-    elif event.type == StreamEventType.RESPONSE_COMPLETED:
-        result_preview = (event.message or "")[:100]
-        log_line = f"[{short_id}] ✅ Response: {result_preview}..."
-        logger.info(log_line)
-    elif event.type == StreamEventType.REASONING_DELTA:
-        log_line = f"[{short_id}] 🧠 reasoning delta"
-        logger.debug(log_line)
-    elif event.type == StreamEventType.REASONING_COMPLETED:
-        log_line = f"[{short_id}] 🧠 Reasoning complete"
-        logger.info(log_line)
-    elif event.type == StreamEventType.ERROR:
-        log_line = f"[{short_id}] ❌ Error: {event.error}"
-        logger.error(log_line)
-    elif event.type == StreamEventType.AGENT_START:
-        log_line = f"[{short_id}] 🤖 Agent started: {event.agent_id}"
-        logger.info(log_line)
-    elif event.type == StreamEventType.AGENT_COMPLETE:
-        log_line = f"[{short_id}] 🤖 Agent complete: {event.agent_id}"
-        logger.info(log_line)
-    elif event.type == StreamEventType.CANCELLED:
-        log_line = f"[{short_id}] ⏹️ Cancelled by client"
-        logger.info(log_line)
-    elif event.type == StreamEventType.DONE:
-        log_line = f"[{short_id}] 🏁 Stream completed"
-        logger.info(log_line)
-    elif event.type == StreamEventType.CONNECTED:
-        log_line = f"[{short_id}] 🔌 WebSocket connected"
-        logger.debug(log_line)
-    elif event.type == StreamEventType.HEARTBEAT:
-        log_line = f"[{short_id}] ♥ heartbeat"
-        logger.debug(log_line)
-    else:
+    log_line: str | None = None
+    log_spec = log_specs.get(event.type)
+    if log_spec is None:
         log_line = f"[{short_id}] {event_type}"
         logger.debug(log_line)
+        return log_line
 
+    formatter, level = log_spec
+    log_line = _format_log_line(formatter, event, short_id)
+    if log_line:
+        logger.log(level, log_line)
     return log_line
 
 
