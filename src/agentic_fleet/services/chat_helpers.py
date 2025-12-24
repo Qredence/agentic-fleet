@@ -155,12 +155,12 @@ def _has_messages(container: Any, attrs: Iterable[str]) -> bool:
         try:
             if len(candidate) > 0:  # type: ignore[arg-type]
                 return True
-        except Exception:
+        except TypeError:
             continue
 
     try:
         return len(container) > 0  # type: ignore[arg-type]
-    except Exception:
+    except TypeError:
         return False
 
 
