@@ -329,6 +329,6 @@ except ImportError:
         """Placeholder for score_trace when Langfuse is unavailable."""
         pass
 
-    def llm_as_judge(*args: Any, **kwargs: Any) -> None:
+    async def llm_as_judge(*args: Any, **kwargs: Any) -> float:
         """Placeholder for llm_as_judge when Langfuse is unavailable."""
-        pass
+        return 0.0

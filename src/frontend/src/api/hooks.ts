@@ -24,6 +24,7 @@ import {
   optimizationApi,
   evaluationApi,
   dspyApi,
+  observabilityApi,
 } from "./client";
 import type {
   Conversation,
@@ -39,6 +40,7 @@ import type {
   ReasonerSummary,
   DSPySignatures,
   DSPyPrompts,
+  TraceDetails,
 } from "./types";
 import type { HealthResponse, ReadinessResponse } from "./client";
 
@@ -524,4 +526,20 @@ export function useInvalidateConversations() {
         queryKey: queryKeys.conversations.messages(id),
       }),
   };
+}
+
+/**
+ * Hook to fetch trace details for a workflow.
+ * Provides real-time observability for orchestration events.
+ */
+export function useTrace(
+  workflowId: string,
+  options?: Omit<UseQueryOptions<TraceDetails>, "queryKey" | "queryFn">,
+) {
+  return useQuery({
+    queryKey: ["trace", workflowId],
+    queryFn: () => observabilityApi.getTrace(workflowId),
+    retry: 1,
+    ...options,
+  });
 }

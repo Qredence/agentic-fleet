@@ -58,7 +58,7 @@ from agentic_fleet.workflows import SupervisorWorkflow
 
 ### Adding a New Agent
 
-1. Add config in `src/agentic_fleet/src/agentic_fleet/config/workflow_config.yaml` under `agents:`
+1. Add config in `src/agentic_fleet/config/workflow_config.yaml` under `agents:`
 2. Instantiate in `agents/coordinator.py:_create_agent()` using factory method
 3. Add to team description in `reasoner.py:get_execution_summary()`
 4. Add training examples in `src/agentic_fleet/data/supervisor_examples.json`

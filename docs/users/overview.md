@@ -378,7 +378,7 @@ Features:
 
 ### Configuration
 
-All settings in one place: `src/agentic_fleet/src/agentic_fleet/config/workflow_config.yaml`
+All settings in one place: `src/agentic_fleet/config/workflow_config.yaml`
 
 ```yaml
 dspy:
