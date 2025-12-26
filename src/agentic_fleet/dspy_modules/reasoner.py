@@ -822,8 +822,8 @@ class DSPyReasoner(dspy.Module):
                 return decision.model_dump()
             elif hasattr(decision, "dict"):
                 return decision.dict()
-            else:
-                # Fallback: try to get attributes
+            if self.use_typed_signatures:
+                # Typed signatures should provide structured outputs; avoid silent fallbacks.
                 return {
                     "assigned_to": getattr(decision, "assigned_to", []),
                     "execution_mode": getattr(decision, "execution_mode", "delegated"),

@@ -68,6 +68,14 @@ def _get_predictor_signature(pred: dspy.Module) -> Any | None:
     return None
 
 
+def _get_predictor_factory(use_typed_signatures: bool) -> Any:
+    """Return TypedPredictor when available, falling back to Predict."""
+    if not use_typed_signatures:
+        return dspy.Predict
+    typed_predictor = getattr(dspy, "TypedPredictor", None)
+    return typed_predictor or dspy.Predict
+
+
 class ModuleManager:
     """Manages DSPy module initialization and caching."""
 
@@ -124,8 +132,9 @@ class ModuleManager:
             if self.use_enhanced_signatures:
                 router_key = f"{cache_key_prefix}_router"
                 if router_key not in _MODULE_CACHE:
+                    predictor_factory = _get_predictor_factory(self.use_typed_signatures)
                     if self.use_typed_signatures:
-                        _MODULE_CACHE[router_key] = dspy.Predict(TypedEnhancedRouting)
+                        _MODULE_CACHE[router_key] = predictor_factory(TypedEnhancedRouting)
                     else:
                         _MODULE_CACHE[router_key] = dspy.Predict(EnhancedTaskRouting)
                 self._router = _MODULE_CACHE[router_key]
@@ -134,7 +143,9 @@ class ModuleManager:
                     strategy_key = f"{cache_key_prefix}_strategy"
                     if strategy_key not in _MODULE_CACHE:
                         if self.use_typed_signatures:
-                            _MODULE_CACHE[strategy_key] = dspy.ChainOfThought(TypedWorkflowStrategy)
+                            _MODULE_CACHE[strategy_key] = dspy.ChainOfThought(
+                                TypedWorkflowStrategy
+                            )
                         else:
                             _MODULE_CACHE[strategy_key] = dspy.ChainOfThought(WorkflowStrategy)
                     self._strategy_selector = _MODULE_CACHE[strategy_key]
