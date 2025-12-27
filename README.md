@@ -354,9 +354,11 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for detailed guidelines.
 
 Thanks to all the amazing people who have contributed to AgenticFleet! 💜
 
-<a href="https://github.com/Qredence/agentic-fleet/graphs/contributors">
-  <img src="https://contrib.rocks/image?repo=Qredence/agentic-fleet" alt="Contributors" />
-</a>
+<p align="center">
+  <a href="https://github.com/Qredence/agentic-fleet/graphs/contributors">
+    <img src="https://contrib.rocks/image?repo=Qredence/agentic-fleet" alt="Contributors" />
+  </a>
+</p>
 
 ## 📄 License
 
