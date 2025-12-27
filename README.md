@@ -88,6 +88,19 @@ agentic-fleet run -m "Research the latest advances in AI agents" --verbose
 agentic-fleet dev
 ```
 
+### 🐳 Docker
+
+```bash
+# Quick start with Docker Compose
+git clone https://github.com/Qredence/agentic-fleet.git && cd agentic-fleet
+cp .env.example .env  # Add your OPENAI_API_KEY
+docker compose up -d
+
+# Access: Frontend http://localhost:3000, API http://localhost:8000
+```
+
+See [Docker Deployment Guide](docs/guides/docker-deployment.md) for production setup.
+
 ## 📖 Usage
 
 ### CLI
