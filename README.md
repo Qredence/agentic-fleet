@@ -350,6 +350,14 @@ make test               # Run tests
 
 See [CONTRIBUTING.md](CONTRIBUTING.md) for detailed guidelines.
 
+## 👥 Contributors
+
+Thanks to all the amazing people who have contributed to AgenticFleet! 💜
+
+<a href="https://github.com/Qredence/agentic-fleet/graphs/contributors">
+  <img src="https://contrib.rocks/image?repo=Qredence/agentic-fleet" alt="Contributors" />
+</a>
+
 ## 📄 License
 
 This project is licensed under the **MIT License** – you're free to use, modify, and distribute this software for any purpose.
