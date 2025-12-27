@@ -823,7 +823,7 @@ class DSPyReasoner(dspy.Module):
             elif hasattr(decision, "dict"):
                 return decision.dict()
             else:
-                # Fallback: try to get attributes
+                # Fallback for other decision objects.
                 return {
                     "assigned_to": getattr(decision, "assigned_to", []),
                     "execution_mode": getattr(decision, "execution_mode", "delegated"),
