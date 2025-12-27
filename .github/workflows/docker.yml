@@ -33,12 +33,15 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
+      - name: Set lowercase image name
+        run: echo "IMAGE_NAME=$(echo ${{ github.repository }} | tr '[:upper:]' '[:lower:]')" >> $GITHUB_ENV
+
       - name: Build backend
         uses: docker/build-push-action@v6
         with:
           context: .
           push: ${{ github.event_name != 'pull_request' }}
-          tags: ${{ env.REGISTRY }}/${{ github.repository }}:${{ github.sha }},${{ env.REGISTRY }}/${{ github.repository }}:latest
+          tags: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.sha }},${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
@@ -47,6 +50,6 @@ jobs:
         with:
           context: ./src/frontend
           push: ${{ github.event_name != 'pull_request' }}
-          tags: ${{ env.REGISTRY }}/${{ github.repository }}-ui:${{ github.sha }},${{ env.REGISTRY }}/${{ github.repository }}-ui:latest
+          tags: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}-ui:${{ github.sha }},${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}-ui:latest
           cache-from: type=gha
           cache-to: type=gha,mode=max
