@@ -12,18 +12,6 @@ import {
   MessageContent,
 } from "@/components/message";
 
-/**
- * Prepare message content for display.
- *
- * @param content - Message content to display; non-string values will be serialized
- * @param isStreaming - Whether to append a trailing streaming cursor
- * @returns The formatted message string; includes a trailing ` ▍` when `isStreaming` is true
- */
-function formatMessageContent(content: unknown, isStreaming: boolean): string {
-  const baseContent = typeof content === "string" ? content : JSON.stringify(content);
-  return isStreaming ? baseContent + " ▍" : baseContent;
-}
-
 export type ChatMessagesProps = {
   messages: ChatMessage[];
   isLoading?: boolean;

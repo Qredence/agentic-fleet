@@ -1,0 +1,41 @@
+# Git
+.git
+.gitignore
+
+# Docs (except README)
+docs/
+notebooks/
+assets/
+CHANGELOG.md
+CONTRIBUTING.md
+SECURITY.md
+*.md
+!README.md
+
+# Dev files
+.vscode/
+.github/
+.env
+.env.*
+!.env.example
+
+# Python cache
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.ruff_cache/
+.coverage
+*.egg-info/
+dist/
+.venv/
+
+# Frontend (built separately)
+src/frontend/
+
+# Tests
+tests/
+
+# Logs/data
+*.log
+logs/
+.var/

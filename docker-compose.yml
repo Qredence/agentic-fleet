@@ -1,0 +1,91 @@
+# ============================================================================
+# AgenticFleet Docker Compose
+# Production-ready setup matching the project architecture
+# ============================================================================
+#
+# The project uses:
+# - Backend (FastAPI) on port 8000 for API endpoints
+# - Frontend (Vite/React) proxied through nginx on port 3000
+#
+# Usage:
+#   docker compose up -d                    # Start full stack
+#   docker compose up -d backend            # Backend only
+#   docker compose --profile tracing up -d  # With Jaeger
+#
+# ============================================================================
+
+services:
+  # --------------------------------------------------------------------------
+  # Backend API (FastAPI + uvicorn)
+  # --------------------------------------------------------------------------
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: ghcr.io/qredence/agentic-fleet:latest
+    container_name: agentic-fleet-backend
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    environment:
+      # Required
+      - OPENAI_API_KEY=${OPENAI_API_KEY:-}
+      # Optional API keys
+      - TAVILY_API_KEY=${TAVILY_API_KEY:-}
+      - AZURE_OPENAI_ENDPOINT=${AZURE_OPENAI_ENDPOINT:-}
+      - AZURE_OPENAI_API_KEY=${AZURE_OPENAI_API_KEY:-}
+      # Settings
+      - LOG_LEVEL=${LOG_LEVEL:-INFO}
+      # Tracing
+      - ENABLE_OTEL=${ENABLE_OTEL:-false}
+      - OTLP_ENDPOINT=http://jaeger:4317
+    volumes:
+      - backend-data:/app/.var
+    networks:
+      - agentic-net
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      start_period: 20s
+      retries: 3
+
+  # --------------------------------------------------------------------------
+  # Frontend (Vite production build served by nginx)
+  # --------------------------------------------------------------------------
+  frontend:
+    build:
+      context: ./src/frontend
+      dockerfile: Dockerfile
+    image: ghcr.io/qredence/agentic-fleet-ui:latest
+    container_name: agentic-fleet-frontend
+    restart: unless-stopped
+    ports:
+      - "3000:80"
+    depends_on:
+      backend:
+        condition: service_healthy
+    networks:
+      - agentic-net
+
+  # --------------------------------------------------------------------------
+  # Jaeger Tracing
+  # --------------------------------------------------------------------------
+  jaeger:
+    image: jaegertracing/jaeger:2.13.0
+    container_name: agentic-fleet-jaeger
+    profiles: [tracing]
+    environment:
+      - COLLECTOR_OTLP_ENABLED=true
+    ports:
+      - "4317:4317"
+      - "16686:16686"
+    networks:
+      - agentic-net
+
+networks:
+  agentic-net:
+    driver: bridge
+
+volumes:
+  backend-data:
