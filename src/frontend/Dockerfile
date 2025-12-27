@@ -16,8 +16,8 @@ RUN npm run build
 # -----------------------------------------------------------------------------
 FROM nginx:alpine
 
-# Custom nginx config for SPA + API proxy
-RUN rm /etc/nginx/conf.d/default.conf
+# Install wget for healthcheck and remove default config
+RUN apk add --no-cache wget && rm /etc/nginx/conf.d/default.conf
 COPY nginx.conf /etc/nginx/conf.d/default.conf
 
 # Copy built assets

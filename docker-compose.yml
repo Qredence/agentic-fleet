@@ -43,12 +43,7 @@ services:
       - backend-data:/app/.var
     networks:
       - agentic-net
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
-      interval: 30s
-      timeout: 10s
-      start_period: 20s
-      retries: 3
+    # Healthcheck defined in Dockerfile
 
   # --------------------------------------------------------------------------
   # Frontend (Vite production build served by nginx)
@@ -72,11 +67,9 @@ services:
   # Jaeger Tracing
   # --------------------------------------------------------------------------
   jaeger:
-    image: jaegertracing/jaeger:2.13.0
+    image: jaegertracing/all-in-one:1.59
     container_name: agentic-fleet-jaeger
     profiles: [tracing]
-    environment:
-      - COLLECTOR_OTLP_ENABLED=true
     ports:
       - "4317:4317"
       - "16686:16686"

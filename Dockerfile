@@ -6,8 +6,8 @@
 
 FROM python:3.12-slim AS builder
 
-# Install uv
-COPY --from=ghcr.io/astral-sh/uv:latest /uv /usr/local/bin/uv
+# Install uv (pinned version for reproducibility)
+COPY --from=ghcr.io/astral-sh/uv:0.5.14 /uv /usr/local/bin/uv
 
 WORKDIR /app
 
@@ -34,9 +34,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends curl \
 
 WORKDIR /app
 
-# Copy only the virtual environment and source
+# Copy only the virtual environment (source is installed in venv)
 COPY --from=builder --chown=app:app /app/.venv ./.venv
-COPY --from=builder --chown=app:app /app/src ./src
 
 # Create data directories with correct permissions
 RUN mkdir -p .var/logs .var/cache .var/data && chown -R app:app .var
