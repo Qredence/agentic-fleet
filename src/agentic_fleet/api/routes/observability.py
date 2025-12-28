@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import logging
+import re
 from typing import Any
 
 from fastapi import APIRouter, HTTPException
@@ -13,6 +14,18 @@ from agentic_fleet.utils.infra.langfuse import get_langfuse_client
 logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/observability", tags=["observability"])
+
+
+def sanitize_for_logging(text: str) -> str:
+    """Remove control characters and newlines to prevent log injection.
+    
+    Args:
+        text: Text to sanitize
+        
+    Returns:
+        Sanitized text with control characters replaced by spaces
+    """
+    return re.sub(r'[\x00-\x1f\x7f-\x9f]', ' ', text)
 
 
 class TraceDetails(BaseModel):
@@ -56,7 +69,7 @@ async def get_workflow_trace(workflow_id: str) -> dict[str, Any]:
         trace = langfuse.fetch_trace(workflow_id)
 
         if not trace:
-            safe_workflow_id = workflow_id.replace("\r", "").replace("\n", "")
+            safe_workflow_id = sanitize_for_logging(workflow_id)
             raise HTTPException(status_code=404, detail=f"Trace {safe_workflow_id} not found.")
 
         # Convert to a stable response format
@@ -82,9 +95,10 @@ async def get_workflow_trace(workflow_id: str) -> dict[str, Any]:
     except HTTPException:
         raise
     except Exception as e:
-        safe_workflow_id = workflow_id.replace("\r", "").replace("\n", "")
-        logger.error(f"Failed to fetch trace {safe_workflow_id}: {e}")
-        raise HTTPException(status_code=500, detail=f"Error fetching trace: {e!s}") from e
+        safe_workflow_id = sanitize_for_logging(workflow_id)
+        safe_error_msg = sanitize_for_logging(str(e))
+        logger.error(f"Failed to fetch trace {safe_workflow_id}: {safe_error_msg}")
+        raise HTTPException(status_code=500, detail=f"Error fetching trace: {safe_error_msg}") from e
 
 
 @router.get("/traces")
