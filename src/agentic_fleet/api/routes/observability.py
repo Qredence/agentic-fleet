@@ -39,6 +39,64 @@ def sanitize_for_logging(text: str | None) -> str:
     return re.sub(r"[^\w\-\.@:/ ]", "", cleaned)
 
 
+def _convert_langfuse_object_to_dict(obj: Any) -> dict[str, Any]:
+    """
+    Convert a Langfuse SDK object to a dictionary with proper serialization.
+
+    This handles different SDK versions by checking for known serialization methods
+    and falls back to a limited set of safe attributes rather than exposing all
+    internal implementation details via vars().
+
+    Args:
+        obj: Langfuse SDK object (e.g., Trace, Observation, Score)
+
+    Returns:
+        Dictionary representation of the object
+
+    Raises:
+        ValueError: If the object cannot be safely serialized
+    """
+    # Try standard serialization methods first
+    if hasattr(obj, "dict") and callable(obj.dict):
+        return obj.dict()
+    if hasattr(obj, "model_dump") and callable(obj.model_dump):
+        return obj.model_dump()
+
+    # Fallback: extract only known safe attributes
+    # These are common public fields across Langfuse SDK versions
+    safe_attrs = {
+        "id",
+        "name",
+        "user_id",
+        "session_id",
+        "metadata",
+        "input",
+        "output",
+        "start_time",
+        "end_time",
+        "status_message",
+        "version",
+        "release",
+        "tags",
+        "public",
+        "bookmarked",
+    }
+
+    result = {}
+    for attr in safe_attrs:
+        if hasattr(obj, attr):
+            result[attr] = getattr(obj, attr)
+
+    if not result:
+        logger.warning(
+            "Unable to serialize Langfuse object of type %s - no known serialization methods found",
+            type(obj).__name__,
+        )
+        raise ValueError(f"Cannot serialize Langfuse object of type {type(obj).__name__}")
+
+    return result
+
+
 class TraceDetails(BaseModel):
     """Trace details response model."""
 

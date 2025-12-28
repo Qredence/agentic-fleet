@@ -7,6 +7,7 @@ work estimation, and OpenAI client configuration.
 from __future__ import annotations
 
 import os
+import threading
 from typing import Any
 
 import openai
@@ -24,8 +25,9 @@ except ImportError:
     _LANGFUSE_AVAILABLE = False
     LangfuseAsyncOpenAI = None  # type: ignore[assignment]
 
-# Cache for Langfuse authentication check to avoid repeated checks
+# Cache auth check result to avoid repeated authentication checks
 _langfuse_auth_checked: bool | None = None
+_langfuse_auth_lock = threading.Lock()
 
 
 def synthesize_results(results: list[Any]) -> str:
@@ -135,18 +137,19 @@ def create_openai_client_with_store(
         global _langfuse_auth_checked
         
         try:
-            # Check cached authentication status or perform check if not cached
+            # Check if Langfuse is properly initialized (with thread-safe caching)
+            global _langfuse_auth_checked
             if _langfuse_auth_checked is None:
-                from langfuse import get_client
+                with _langfuse_auth_lock:
+                    # Double-check pattern to avoid race condition
+                    if _langfuse_auth_checked is None:
+                        from langfuse import get_client
 
-                langfuse_client = get_client()
-                _langfuse_auth_checked = bool(
-                    langfuse_client and langfuse_client.auth_check()
-                )
-                logger.debug(
-                    f"Langfuse auth check completed: {_langfuse_auth_checked}"
-                )
-            
+                        langfuse_client = get_client()
+                        _langfuse_auth_checked = bool(
+                            langfuse_client and langfuse_client.auth_check()
+                        )
+
             if _langfuse_auth_checked:
                 # Create Langfuse-wrapped client with framework metadata
                 wrapped_client = LangfuseAsyncOpenAI(**kwargs)
@@ -169,6 +172,9 @@ def create_openai_client_with_store(
                 )
         except Exception as e:
             logger.debug("Failed to wrap OpenAI client with Langfuse: %s", e)
+            # Cache the failure to avoid repeated attempts
+            with _langfuse_auth_lock:
+                _langfuse_auth_checked = False
 
     # Fallback to standard client
     if reasoning_effort is not None:

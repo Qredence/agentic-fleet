@@ -269,6 +269,10 @@ def _format_response_completed(event: StreamEvent, short_id: str) -> str:
     return f"[{short_id}] ✅ Response: {result_preview}{suffix}"
 
 
+def _format_orchestrator_message(event: StreamEvent, short_id: str) -> str:
+    return f"[{short_id}] 📢 {event.message}"
+
+
 def _format_orchestrator_thought(event: StreamEvent, short_id: str) -> str:
     return f"[{short_id}] 💭 {event.kind}: {event.message}"
 
