@@ -39,7 +39,7 @@ export function formatApiError(error: unknown): FormattedApiError {
         errorObj.message ??
         errorObj.detail ??
         errorObj.error ??
-        "Unknown error occurred"
+        "Unknown error occurred",
     };
   }
 
