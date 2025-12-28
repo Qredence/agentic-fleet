@@ -156,14 +156,13 @@ APPLICATIONINSIGHTS_CONNECTION_STRING=<...>  # Azure Monitor
 
 ## Files Reference
 
-| File                                         | Purpose                                                    |
-| -------------------------------------------- | ---------------------------------------------------------- |
-| `.env`                                       | Tracing configuration (OTLP endpoint, sensitive data flag) |
-| `docker/docker-compose.tracing.yml`          | Docker setup for Jaeger                                    |
-| `scripts/start_tracing.sh`                   | Launch Jaeger (runs `make tracing-start`)                  |
-| `scripts/stop_tracing.sh`                    | Stop Jaeger (runs `make tracing-stop`)                     |
-| `docs/guides/tracing.md`                     | Full tracing documentation                                 |
-| `docs/guides/tracing-visualization-setup.md` | Setup & visualization guide                                |
+| File                                | Purpose                                                    |
+| ----------------------------------- | ---------------------------------------------------------- |
+| `.env`                              | Tracing configuration (OTLP endpoint, sensitive data flag) |
+| `docker/docker-compose.tracing.yml` | Docker setup for Jaeger                                    |
+| `scripts/start_tracing.sh`          | Launch Jaeger (runs `make tracing-start`)                  |
+| `scripts/stop_tracing.sh`           | Stop Jaeger (runs `make tracing-stop`)                     |
+| `docs/guides/tracing.md`            | Full tracing documentation                                 |
 
 ---
 
@@ -199,4 +198,4 @@ agentic-fleet run -m "task" --verbose
 
 ---
 
-_For detailed info, see `docs/guides/tracing-visualization-setup.md`_
+_For detailed info, see [`docs/guides/tracing.md`](./tracing.md)_

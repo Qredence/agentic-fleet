@@ -203,7 +203,7 @@ src/agentic_fleet/utils/
 ## Docs Refactor Pass (Top-Level + Index + Tech Stack)
 
 **Status**: In Progress
-**Date**: 2025-12-22
+**Date**: 2025-12-22 (started), 2025-12-28 (updated)
 
 ### Goal
 
@@ -228,6 +228,7 @@ Align top-level docs and navigation with the current repository structure, Makef
 5. Refresh developer docs for path/command drift (api/ vs app/, executors/).
 6. Refresh user docs for setup/feature flow and streaming transport (SSE-first).
 7. Validate references against Makefile and streaming routes.
+8. Consolidate tracing documentation into a single source of truth.
 
 ### Progress
 
@@ -238,12 +239,13 @@ Align top-level docs and navigation with the current repository structure, Makef
 - Updated developer docs (system overview, architecture, internals, contributing) for api/ and executors/ paths.
 - Refreshed user docs (getting started, frontend, user guide) for make-based setup and SSE-first streaming.
 - Normalized config/script paths across docs (`src/agentic_fleet/config/workflow_config.yaml`, `python -m agentic_fleet.scripts.*`).
+- Consolidated tracing guides into `docs/guides/tracing.md` and `docs/guides/tracing-quick-reference.md`.
 
 ---
 
 ## Frontend Restructure Design
 
-**Status**: ✅ Partially Completed
+**Status**: ✅ Mostly Completed
 **Date**: 2025-12-15 (started), 2025-12-17 (updated)
 **Document**: `docs/plans/2025-12-15-frontend-restructure-design.md`
 
@@ -275,14 +277,14 @@ Feature-based structure with:
 - Created `features/dashboard/` with components subdirectory
 - Added barrel exports (`index.ts`) for each feature
 - Migrated chat-related components to feature structure
+- Enabled code splitting with `React.lazy()` (App.tsx)
+- Performance optimization (bundle splitting via lazy loading)
 
 #### ⚠️ Remaining Work
 
 - Add `shared/` directory for reusable components
 - Update path aliases in Vite config
-- Enable code splitting with `React.lazy()`
 - Consolidate duplicate test folders
-- Performance optimization (bundle splitting)
 
 ---
 

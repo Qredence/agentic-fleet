@@ -139,6 +139,7 @@ Advanced topics for framework developers:
 
 - **[Tool Awareness](developers/internals/tool-awareness.md)** - Tool registry system and web search detection
 - **[Handoffs](developers/internals/handoffs.md)** - Structured agent handoff system
+- **[Historical Docs](developers/internals/historical/)** - Archived documentation (e.g. DSPy Refactoring Phases)
 
 ## Guides
 
@@ -158,25 +159,22 @@ Detailed guides for specific features and workflows:
    - Configuration
    - Viewing traces
    - Troubleshooting
-4. **[Logging and History](guides/logging-history.md)** - Logging system
+4. **[Tracing Quick Reference](guides/tracing-quick-reference.md)** - Cheat sheet for tracing
+   - One-minute setup
+   - Architecture diagram
+   - Common tasks
+5. **[Logging and History](guides/logging-history.md)** - Logging system
    - Four-phase logging
    - Execution history
    - Analysis tools
-5. **[Quick Reference](guides/quick-reference.md)** - Quick command reference
+6. **[Quick Reference](guides/quick-reference.md)** - Quick command reference
    - Common commands
    - History analysis
    - Configuration snippets
-6. **[DSPy Integration Guide](guides/dspy-agent-framework-integration.md)** - DSPy + Agent Framework patterns
+7. **[DSPy Integration Guide](guides/dspy-agent-framework-integration.md)** - DSPy + Agent Framework patterns
    - Integration architecture
    - Signature design patterns
    - Compilation workflows
-
-## DSPy Refactoring Documentation
-
-Historical documentation from DSPy integration phases:
-
-- **[Phase 1 - DSPy Refactor](dspy-refactor-phase1.md)** - Initial DSPy integration planning
-- **[Phase 2 - DSPy Refactor](dspy-refactor-phase2.md)** - Advanced DSPy implementation
 
 ## Project Information
 
@@ -215,7 +213,7 @@ docs/
 │   ├── troubleshooting.md
 │   └── self-improvement.md
 ├── developers/                 # Developer documentation
-│   ├── system-overview.md      # Comprehensive technical guide (NEW)
+│   ├── system-overview.md      # Comprehensive technical guide
 │   ├── architecture.md
 │   ├── api-reference.md
 │   ├── testing.md
@@ -225,6 +223,9 @@ docs/
 │   └── internals/             # Internal documentation
 │       ├── tool-awareness.md
 │       ├── handoffs.md
+│       ├── historical/         # Archived documentation
+│       │   ├── dspy-refactor-phase1.md
+│       │   └── dspy-refactor-phase2.md
 │       ├── AGENTS.md
 │       ├── ARCHITECTURE.md
 │       └── SYNERGY.md
@@ -233,10 +234,10 @@ docs/
 │   ├── dspy-agent-framework-integration.md
 │   ├── evaluation.md
 │   ├── tracing.md
+│   ├── tracing-quick-reference.md
 │   ├── logging-history.md
 │   └── quick-reference.md
-├── dspy-refactor-phase1.md     # Historical DSPy integration
-├── dspy-refactor-phase2.md     # Advanced DSPy implementation
 └── plans/                      # Implementation plans
-    └── current.md              # Active/completed work
+    ├── current.md              # Active/completed work
+    └── completed/              # Archived plans
 ```
