@@ -15,4 +15,4 @@ export {
   getRegisteredComponents,
 } from "./components/component-registry";
 export { WorkflowRequestResponder } from "./components/workflow-request-responder";
-export * from "./lib";
+export * from "./lib/index";
