@@ -66,10 +66,10 @@ class Conversation(BaseModel):
         messages: List of messages in the conversation.
     """
 
-    conversation_id: str
+    conversation_id: str = Field(alias="id")
     title: str
     created_at: datetime = Field(default_factory=datetime.now)
     updated_at: datetime = Field(default_factory=datetime.now)
     messages: list[Message] = Field(default_factory=list)
 
-    model_config = ConfigDict(from_attributes=True)
+    model_config = ConfigDict(from_attributes=True, populate_by_name=True)
