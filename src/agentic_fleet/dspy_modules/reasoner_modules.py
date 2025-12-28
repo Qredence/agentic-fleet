@@ -62,8 +62,9 @@ def _get_predictor_signature(pred: dspy.Module) -> Any | None:
             if inner_preds:
                 inner_pred = inner_preds[0][1]
                 return getattr(inner_pred, "signature", None)
-        except Exception:
-            pass
+        except Exception as exc:
+            # Best-effort: if inner predictor inspection fails, treat as no signature
+            logger.debug("Failed to extract inner predictor signature from %r: %s", pred, exc)
 
     return None
 
