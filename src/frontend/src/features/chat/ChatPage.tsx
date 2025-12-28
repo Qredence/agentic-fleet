@@ -236,7 +236,7 @@ export function ChatPage() {
       </SidebarInset>
 
       {/* Right Panel - simple CSS-based collapsible panel with floating style */}
-      <RightPanel open={rightPanelOpen} onOpenChange={setRightPanelOpen}>
+      <RightPanel open={rightPanelOpen}>
         <TracePanel
           message={latestAssistantMessage}
           isLoading={isLoading}

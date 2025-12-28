@@ -1,7 +1,9 @@
 import { ResponseStream } from "@/components/ui/response-stream";
 import { Markdown } from "@/features/chat/components";
 import { cn } from "@/lib/utils";
-import type { Components } from "streamdown";
+import type { StreamdownProps } from "streamdown";
+
+type Components = NonNullable<StreamdownProps["components"]>;
 
 export type StreamingMarkdownProps = {
   content: string;

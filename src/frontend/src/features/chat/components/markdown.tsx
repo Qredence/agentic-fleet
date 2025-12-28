@@ -1,8 +1,10 @@
 import { cn } from "@/lib/utils";
-import { memo } from "react";
+import { memo, type ComponentPropsWithoutRef } from "react";
 import { Streamdown } from "streamdown";
-import type { Components } from "streamdown";
+import type { StreamdownProps } from "streamdown";
 import { CodeBlock, CodeBlockCode } from "./code-block";
+
+type Components = NonNullable<StreamdownProps["components"]>;
 
 export type MarkdownProps = {
   children: string;
@@ -18,14 +20,22 @@ function extractLanguage(className?: string): string {
 }
 
 const INITIAL_COMPONENTS: Partial<Components> = {
-  strong: function StrongComponent({ className, children, ...props }) {
+  strong: function StrongComponent({
+    className,
+    children,
+    ...props
+  }: ComponentPropsWithoutRef<"strong"> & { node?: any }) {
     return (
       <strong className={cn("font-semibold", className)} {...props}>
         {children}
       </strong>
     );
   },
-  code: function CodeComponent({ className, children, ...props }) {
+  code: function CodeComponent({
+    className,
+    children,
+    ...props
+  }: ComponentPropsWithoutRef<"code"> & { node?: any }) {
     const isInline =
       !props.node?.position?.start.line ||
       props.node?.position?.start.line === props.node?.position?.end.line;
@@ -72,7 +82,9 @@ const INITIAL_COMPONENTS: Partial<Components> = {
       </CodeBlock>
     );
   },
-  pre: function PreComponent({ children }) {
+  pre: function PreComponent({
+    children,
+  }: ComponentPropsWithoutRef<"pre"> & { node?: any }) {
     return <>{children}</>;
   },
 };
