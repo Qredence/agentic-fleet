@@ -10,6 +10,7 @@ Provides helper functions for:
 
 from __future__ import annotations
 
+import contextlib
 import json
 import logging
 import random
@@ -30,9 +31,6 @@ from .feedback import RoutingFeedbackMetric, normalize_agents
 from .self_improvement import SelfImprovementEngine
 
 logger = logging.getLogger(__name__)
-
-
-import contextlib
 
 
 class MaxWarningFilter(logging.Filter):
@@ -561,7 +559,7 @@ def optimize_with_gepa(
     # Use context manager to ensure filter is removed even if exception occurs
     warning_filter = MaxWarningFilter(max_count=5, message_pattern="No valid predictions found")
     dspy_logger = logging.getLogger("dspy")
-    
+
     try:
         with warning_filter_context(dspy_logger, warning_filter):
             # GEPA.compile() accepts module as first positional arg or as 'student' keyword

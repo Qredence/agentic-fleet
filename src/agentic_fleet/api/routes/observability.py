@@ -138,7 +138,9 @@ async def get_workflow_trace(workflow_id: str) -> dict[str, Any]:
 
         # Convert to stable response format with explicit field extraction
         # This approach is more maintainable than relying on dict() or vars()
-        trace_dict = {
+        observations: list[dict[str, Any]] = []
+        scores: list[dict[str, Any]] = []
+        trace_dict: dict[str, Any] = {
             "id": getattr(trace, "id", workflow_id),
             "timestamp": getattr(trace, "timestamp", ""),
             "name": getattr(trace, "name", None),
@@ -147,8 +149,8 @@ async def get_workflow_trace(workflow_id: str) -> dict[str, Any]:
             "metadata": getattr(trace, "metadata", None),
             "input": getattr(trace, "input", None),
             "output": getattr(trace, "output", None),
-            "observations": [],
-            "scores": [],
+            "observations": observations,
+            "scores": scores,
         }
 
         # Extract observations if present
@@ -165,7 +167,7 @@ async def get_workflow_trace(workflow_id: str) -> dict[str, Any]:
                 for field in ["input", "output", "metadata", "level", "status_message"]:
                     if hasattr(obs, field):
                         obs_dict[field] = getattr(obs, field)
-                trace_dict["observations"].append(obs_dict)
+                observations.append(obs_dict)
 
         # Extract scores if present
         if hasattr(trace, "scores") and trace.scores:
@@ -179,7 +181,7 @@ async def get_workflow_trace(workflow_id: str) -> dict[str, Any]:
                 for field in ["timestamp", "comment"]:
                     if hasattr(score, field):
                         score_dict[field] = getattr(score, field)
-                trace_dict["scores"].append(score_dict)
+                scores.append(score_dict)
 
         return trace_dict
 

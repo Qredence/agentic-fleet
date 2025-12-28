@@ -135,7 +135,7 @@ def create_openai_client_with_store(
     # Wrap with Langfuse if available and properly initialized
     if _LANGFUSE_AVAILABLE and LangfuseAsyncOpenAI:
         global _langfuse_auth_checked
-        
+
         try:
             # Check if Langfuse is properly initialized (with thread-safe caching)
             global _langfuse_auth_checked

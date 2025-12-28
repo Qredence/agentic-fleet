@@ -281,11 +281,11 @@ def _format_orchestrator_message(event: StreamEvent, short_id: str) -> str:
     return f"[{short_id}] 📢 {event.message}"
 
 
-def _format_reasoning_delta(event: StreamEvent, short_id: str) -> str:
+def _format_reasoning_delta(_event: StreamEvent, short_id: str) -> str:
     return f"[{short_id}] 🧠 reasoning delta"
 
 
-def _format_reasoning_completed(event: StreamEvent, short_id: str) -> str:
+def _format_reasoning_completed(_event: StreamEvent, short_id: str) -> str:
     return f"[{short_id}] 🧠 Reasoning complete"
 
 
@@ -301,19 +301,19 @@ def _format_agent_complete(event: StreamEvent, short_id: str) -> str:
     return f"[{short_id}] 🤖 Agent complete: {event.agent_id}"
 
 
-def _format_cancelled(event: StreamEvent, short_id: str) -> str:
+def _format_cancelled(_event: StreamEvent, short_id: str) -> str:
     return f"[{short_id}] ⏹️ Cancelled by client"
 
 
-def _format_done(event: StreamEvent, short_id: str) -> str:
+def _format_done(_event: StreamEvent, short_id: str) -> str:
     return f"[{short_id}] 🏁 Stream completed"
 
 
-def _format_connected(event: StreamEvent, short_id: str) -> str:
+def _format_connected(_event: StreamEvent, short_id: str) -> str:
     return f"[{short_id}] 🔌 WebSocket connected"
 
 
-def _format_heartbeat(event: StreamEvent, short_id: str) -> str:
+def _format_heartbeat(_event: StreamEvent, short_id: str) -> str:
     return f"[{short_id}] ♥ heartbeat"
 
 

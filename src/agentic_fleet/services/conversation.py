@@ -35,7 +35,7 @@ class ConversationManager:
     def create_conversation(self, title: str = "New Chat") -> Conversation:
         """Create a new conversation."""
         conversation_id = str(uuid4())
-        conversation = Conversation(conversation_id=conversation_id, title=title)
+        conversation = Conversation(id=conversation_id, title=title)
         saved = self._store.upsert(conversation)
         logger.info("Created conversation: %s", conversation_id)
         return saved
