@@ -16,15 +16,18 @@ logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/observability", tags=["observability"])
 
 
-def sanitize_for_logging(text: str) -> str:
+def sanitize_for_logging(text: str | None) -> str:
     """Remove control characters and newlines to prevent log injection.
     
     Args:
-        text: Text to sanitize
+        text: Text to sanitize (may be None)
         
     Returns:
-        Sanitized text with control characters replaced by spaces
+        Sanitized text with control characters replaced by spaces, or empty string if None
     """
+    if text is None:
+        return ""
+    # Remove all control characters (0x00-0x1f includes CR, LF, tabs) and extended control (0x7f-0x9f)
     return re.sub(r'[\x00-\x1f\x7f-\x9f]', ' ', text)
 
 
