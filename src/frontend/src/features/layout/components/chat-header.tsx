@@ -24,7 +24,7 @@ export function ChatHeader({
       {sidebarTrigger}
       <div className="flex flex-col justify-start items-center flex-1 min-w-0 ml-2">
         <h1
-          className="text-sm font-medium text-foreground truncate w-fit max-w-[264px] py-2 px-3 rounded-2xl"
+          className="text-sm font-medium text-foreground truncate w-fit max-w-66 py-2 px-3 rounded-2xl"
           style={{ backgroundColor: "var(--color-background-secondary-soft)" }}
         >
           {title}
