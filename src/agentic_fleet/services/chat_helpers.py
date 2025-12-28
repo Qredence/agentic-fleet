@@ -280,7 +280,7 @@ def _format_log_line(
 ) -> str | None:
     if callable(formatter):
         return formatter(event, short_id)
-    return formatter.format(short_id=short_id, event=event)
+    return cast(str, formatter).format(short_id=short_id, event=event)
 
 
 def _log_stream_event(event: StreamEvent, workflow_id: str) -> str | None:
