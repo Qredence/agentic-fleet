@@ -7,7 +7,7 @@ import re
 from typing import Any
 
 from fastapi import APIRouter, HTTPException
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 from agentic_fleet.utils.infra.langfuse import get_langfuse_client
 
@@ -42,6 +42,8 @@ def sanitize_for_logging(text: str | None) -> str:
 class TraceDetails(BaseModel):
     """Trace details response model."""
 
+    model_config = ConfigDict(populate_by_name=True)
+
     id: str
     timestamp: str
     name: str | None = None
@@ -52,11 +54,6 @@ class TraceDetails(BaseModel):
     output: Any | None = None
     observations: list[dict[str, Any]] = []
     scores: list[dict[str, Any]] = []
-
-    class Config:
-        """Pydantic config."""
-
-        allow_population_by_field_name = True
 
 
 @router.get("/trace/{workflow_id}", response_model=TraceDetails)
