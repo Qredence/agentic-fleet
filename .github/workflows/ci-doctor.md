@@ -13,7 +13,7 @@ permissions:
   issues: read
   checks: read
 
-engine: copilot
+engine: openai
 
 steps:
   - name: Fix workspace permissions
