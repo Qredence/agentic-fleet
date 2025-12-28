@@ -7,6 +7,7 @@ import json
 import os
 import uuid
 from collections.abc import Callable
+from contextvars import ContextVar
 from datetime import datetime
 from typing import Any, cast
 
@@ -23,6 +24,10 @@ logger = setup_logger(__name__)
 
 # Type alias for message types - union of known message types
 type _MessageType = ChatMessage | MessageLike | dict[str, Any]
+
+# Context variable for request-scoped execution data
+# This prevents race conditions when BridgeMiddleware is shared across concurrent requests
+_execution_data_var: ContextVar[dict[str, Any]] = ContextVar("execution_data", default=None)
 
 
 class RequestIDMiddleware(BaseHTTPMiddleware):
@@ -170,7 +175,11 @@ class BridgeConverter:
 
 
 class BridgeMiddleware(ChatMiddleware):
-    """Middleware that captures workflow execution for offline learning."""
+    """Middleware that captures workflow execution for offline learning.
+    
+    Uses contextvars for request-scoped storage to prevent race conditions
+    when the same middleware instance is shared across concurrent requests.
+    """
 
     def __init__(
         self,
@@ -179,17 +188,18 @@ class BridgeMiddleware(ChatMiddleware):
     ):
         self.history_manager = history_manager
         self.dspy_examples_path = dspy_examples_path
-        self.execution_data: dict[str, Any] = {}
+        # Removed: self.execution_data (was shared across requests)
 
     async def on_start(self, task: str, context: dict[str, Any]) -> None:
         """Initialize execution data when workflow starts."""
-        self.execution_data = {
+        execution_data = {
             "workflowId": context.get("workflowId"),
             "task": task,
             "start_time": datetime.now().isoformat(),
             "mode": context.get("mode", "standard"),
             "metadata": context.get("metadata", {}),
         }
+        _execution_data_var.set(execution_data)
 
     async def on_event(self, event: Any) -> None:  # noqa: ARG002
         """Handle intermediate workflow events (currently a no-op)."""
@@ -197,43 +207,53 @@ class BridgeMiddleware(ChatMiddleware):
 
     async def on_end(self, result: Any) -> None:
         """Persist execution data and DSPy example when workflow completes."""
-        self.execution_data["end_time"] = datetime.now().isoformat()
+        execution_data = _execution_data_var.get()
+        if execution_data is None:
+            logger.warning("on_end called but no execution_data in context")
+            return
+
+        execution_data["end_time"] = datetime.now().isoformat()
 
         if isinstance(result, dict):
-            self.execution_data.update(result)
+            execution_data.update(result)
         else:
-            self.execution_data["result"] = str(result)
+            execution_data["result"] = str(result)
 
         try:
-            await self.history_manager.save_execution_async(self.execution_data)
-            await self._save_dspy_example()
+            await self.history_manager.save_execution_async(execution_data)
+            await self._save_dspy_example(execution_data)
         except Exception as exc:
             logger.error("Failed to save execution history in middleware: %s", exc)
 
     async def on_error(self, error: Exception) -> None:
         """Record error details and persist execution data on workflow failure."""
-        self.execution_data["end_time"] = datetime.now().isoformat()
-        self.execution_data["error"] = str(error)
-        self.execution_data["status"] = "failed"
+        execution_data = _execution_data_var.get()
+        if execution_data is None:
+            logger.warning("on_error called but no execution_data in context")
+            return
+
+        execution_data["end_time"] = datetime.now().isoformat()
+        execution_data["error"] = str(error)
+        execution_data["status"] = "failed"
 
         try:
-            await self.history_manager.save_execution_async(self.execution_data)
+            await self.history_manager.save_execution_async(execution_data)
         except Exception as exc:
             logger.error("Failed to save error history in middleware: %s", exc)
 
-    async def _save_dspy_example(self) -> None:
+    async def _save_dspy_example(self, execution_data: dict[str, Any]) -> None:
         if not self.dspy_examples_path:
             return
 
-        task = self.execution_data.get("task")
-        output = self.execution_data.get("result")
+        task = execution_data.get("task")
+        output = execution_data.get("result")
 
         if not task or not output:
             logger.warning(
                 "Skipping DSPy example: missing task (%s) or output (%s) for workflowId %s.",
                 task,
                 output,
-                self.execution_data.get("workflowId"),
+                execution_data.get("workflowId"),
             )
             return
 

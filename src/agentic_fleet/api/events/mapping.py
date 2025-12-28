@@ -6,6 +6,7 @@ This module centralizes the logic for transforming various internal workflow eve
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from dataclasses import dataclass, field
 from typing import Any, Literal, TypedDict
 
@@ -382,180 +383,178 @@ def classify_event(
     return entry.to_event_category(), UIHint(**entry.to_ui_hint_data())
 
 
-def map_workflow_event(
-    event: Any,
-    accumulated_reasoning: str,
-) -> tuple[StreamEvent | list[StreamEvent] | None, str]:
-    """
-    Convert an internal workflow event into one or more StreamEvent objects for SSE streaming.
+# =============================================================================
+# Event Handler Functions (Dispatch Table Pattern)
+# =============================================================================
 
-    This function maps a variety of internal event shapes (reasoning deltas/completions, agent messages/outputs,
-    executor phase messages, and final workflow output) to standardized StreamEvent instances used by the UI.
-    It may return a single StreamEvent, a list of StreamEvent objects when multiple UI events are appropriate,
-    or None when the input event should not produce any UI emission. It also returns an updated accumulated
-    reasoning string used to aggregate reasoning stream content across events.
+# Type alias for handler signature
+EventHandler = Callable[
+    [Any, str], tuple[StreamEvent | list[StreamEvent] | None, str]
+]
 
-    Parameters:
-        event: The workflow event to map. Supported inputs include framework event objects, dict-based events,
-            and executor/message wrapper objects; the mapper performs safe extraction and duck-typing to
-            recognize different event payloads.
-        accumulated_reasoning: Running concatenation of reasoning text used to accumulate partial reasoning
-            across ReasoningStreamEvent occurrences.
 
-    Returns:
-        A tuple where the first element is either a StreamEvent, a list of StreamEvent, or None if no event
-        should be emitted, and the second element is the updated accumulated_reasoning string.
-    """
-    # Skip generic WorkflowStartedEvent - covered by IN_PROGRESS status event
-    if isinstance(event, WorkflowStartedEvent):
+def _handle_workflow_started(
+    event: WorkflowStartedEvent, accumulated_reasoning: str
+) -> tuple[None, str]:
+    """Skip generic WorkflowStartedEvent - covered by IN_PROGRESS status event."""
+    return None, accumulated_reasoning
+
+
+def _handle_workflow_status(
+    event: WorkflowStatusEvent, accumulated_reasoning: str
+) -> tuple[StreamEvent | None, str]:
+    """Handle WorkflowStatusEvent - convert FAILED to error, IN_PROGRESS to progress."""
+    state = event.state
+    data = event.data or {}
+    message = data.get("message", "")
+    workflow_id = data.get("workflow_id", "")
+
+    # Convert state to a valid state name (enum or string), else skip with warning
+    if hasattr(state, "name"):
+        state_name = state.name
+    elif isinstance(state, str):
+        state_name = state.upper()
+    else:
+        logger.warning(
+            f"Unrecognized workflow state type: {type(state)} ({state!r}) in WorkflowStatusEvent; skipping event."
+        )
         return None, accumulated_reasoning
 
-    # Handle WorkflowStatusEvent - convert FAILED to error, IN_PROGRESS to progress status
-    if isinstance(event, WorkflowStatusEvent):
-        state = event.state
-        data = event.data or {}
-        message = data.get("message", "")
-        workflow_id = data.get("workflow_id", "")
-
-        # Convert state to a valid state name (enum or string), else skip with warning
-        if hasattr(state, "name"):
-            state_name = state.name
-        elif isinstance(state, str):
-            state_name = state.upper()
-        else:
-            logger.warning(
-                f"Unrecognized workflow state type: {type(state)} ({state!r}) in WorkflowStatusEvent; skipping event."
-            )
-            return None, accumulated_reasoning
-
-        if state_name not in VALID_WORKFLOW_STATES:
-            logger.warning(
-                f"Unrecognized workflow state value: {state_name!r} in WorkflowStatusEvent; skipping event."
-            )
-            return None, accumulated_reasoning
-        if state_name == "FAILED":
-            # Convert FAILED status to error event
-            event_type = StreamEventType.ERROR
-            category, ui_hint = classify_event(event_type)
-            return (
-                StreamEvent(
-                    type=event_type,
-                    error=message or "Workflow failed",
-                    data={"workflow_id": workflow_id, **data},
-                    category=category,
-                    ui_hint=ui_hint,
-                ),
-                accumulated_reasoning,
-            )
-        elif state_name == "IN_PROGRESS":
-            # Convert IN_PROGRESS to orchestrator message with progress kind
-            event_type = StreamEventType.ORCHESTRATOR_MESSAGE
-            kind = "progress"
-            category, ui_hint = classify_event(event_type, kind)
-            return (
-                StreamEvent(
-                    type=event_type,
-                    message=message or "Workflow started",
-                    kind=kind,
-                    data={"workflow_id": workflow_id, **data},
-                    category=category,
-                    ui_hint=ui_hint,
-                ),
-                accumulated_reasoning,
-            )
-        # Skip IDLE and other states
+    if state_name not in VALID_WORKFLOW_STATES:
+        logger.warning(
+            f"Unrecognized workflow state value: {state_name!r} in WorkflowStatusEvent; skipping event."
+        )
         return None, accumulated_reasoning
 
-    # Handle agent-framework workflow request events (HITL).
-    # These pause workflow execution until the host sends responses keyed by request_id.
-    if isinstance(event, RequestInfoEvent):
-        data = getattr(event, "data", None)
-        request_id = None
-        request_obj = None
-
-        if data is not None:
-            request_id = getattr(data, "request_id", None)
-            request_obj = getattr(data, "request", None)
-            if request_id is None and isinstance(data, dict):
-                request_id = data.get("request_id")
-                request_obj = data.get("request")
-
-        if request_id is None:
-            # Best-effort extraction for older shapes
-            request_id = getattr(event, "request_id", None)
-
-        request_type_name = type(request_obj).__name__ if request_obj is not None else None
-        if request_type_name is None and data is not None:
-            request_type_name = type(data).__name__
-
-        # Best-effort serialization of the payload for the frontend.
-        payload: Any | None = None
-        if request_obj is not None:
-            if hasattr(request_obj, "model_dump"):
-                try:
-                    payload = request_obj.model_dump()
-                except Exception:
-                    payload = None
-            elif hasattr(request_obj, "to_dict"):
-                try:
-                    payload = request_obj.to_dict()
-                except Exception:
-                    payload = None
-            elif isinstance(request_obj, dict):
-                payload = request_obj
-            else:
-                payload = {
-                    "type": request_type_name,
-                    "repr": repr(request_obj),
-                }
-
-        # Pick a UI message based on the request kind.
-        msg = "Action required"
-        lowered = (request_type_name or "").lower()
-        if "approval" in lowered:
-            msg = "Tool approval required"
-        elif "user" in lowered and "input" in lowered:
-            msg = "User input required"
-        elif "intervention" in lowered or "plan" in lowered:
-            msg = "Human intervention required"
-
+    if state_name == "FAILED":
+        # Convert FAILED status to error event
+        event_type = StreamEventType.ERROR
+        category, ui_hint = classify_event(event_type)
+        return (
+            StreamEvent(
+                type=event_type,
+                error=message or "Workflow failed",
+                data={"workflow_id": workflow_id, **data},
+                category=category,
+                ui_hint=ui_hint,
+            ),
+            accumulated_reasoning,
+        )
+    elif state_name == "IN_PROGRESS":
+        # Convert IN_PROGRESS to orchestrator message with progress kind
         event_type = StreamEventType.ORCHESTRATOR_MESSAGE
-        kind = "request"
+        kind = "progress"
         category, ui_hint = classify_event(event_type, kind)
         return (
             StreamEvent(
                 type=event_type,
-                message=msg,
-                agent_id="orchestrator",
+                message=message or "Workflow started",
                 kind=kind,
-                data={
-                    "request_id": request_id,
-                    "request_type": request_type_name,
-                    "request": payload,
-                },
+                data={"workflow_id": workflow_id, **data},
                 category=category,
                 ui_hint=ui_hint,
             ),
             accumulated_reasoning,
         )
 
-    if isinstance(event, ReasoningStreamEvent):
-        # GPT-5 reasoning token
-        new_accumulated = accumulated_reasoning + event.reasoning
-        if event.is_complete:
-            event_type = StreamEventType.REASONING_COMPLETED
-            category, ui_hint = classify_event(event_type)
-            return (
-                StreamEvent(
-                    type=event_type,
-                    reasoning=event.reasoning,
-                    agent_id=event.agent_id,
-                    category=category,
-                    ui_hint=ui_hint,
-                ),
-                new_accumulated,
-            )
-        event_type = StreamEventType.REASONING_DELTA
+    # Skip IDLE and other states
+    return None, accumulated_reasoning
+
+
+def _handle_request_info(
+    event: RequestInfoEvent, accumulated_reasoning: str
+) -> tuple[StreamEvent, str]:
+    """Handle agent-framework workflow request events (HITL)."""
+    data = getattr(event, "data", None)
+    request_id = None
+    request_obj = None
+
+    if data is not None:
+        request_id = getattr(data, "request_id", None)
+        request_obj = getattr(data, "request", None)
+        if request_id is None and isinstance(data, dict):
+            request_id = data.get("request_id")
+            request_obj = data.get("request")
+
+    if request_id is None:
+        # Best-effort extraction for older shapes
+        request_id = getattr(event, "request_id", None)
+
+    request_type_name = type(request_obj).__name__ if request_obj is not None else None
+    if request_type_name is None and data is not None:
+        request_type_name = type(data).__name__
+
+    # Best-effort serialization of the payload for the frontend
+    payload = _serialize_request_payload(request_obj)
+
+    # Pick a UI message based on the request kind
+    msg = _get_request_message(request_type_name)
+
+    event_type = StreamEventType.ORCHESTRATOR_MESSAGE
+    kind = "request"
+    category, ui_hint = classify_event(event_type, kind)
+    return (
+        StreamEvent(
+            type=event_type,
+            message=msg,
+            agent_id="orchestrator",
+            kind=kind,
+            data={
+                "request_id": request_id,
+                "request_type": request_type_name,
+                "request": payload,
+            },
+            category=category,
+            ui_hint=ui_hint,
+        ),
+        accumulated_reasoning,
+    )
+
+
+def _serialize_request_payload(request_obj: Any) -> Any:
+    """Best-effort serialization of request payload."""
+    if request_obj is None:
+        return None
+
+    if hasattr(request_obj, "model_dump"):
+        try:
+            return request_obj.model_dump()
+        except Exception:
+            pass
+    elif hasattr(request_obj, "to_dict"):
+        try:
+            return request_obj.to_dict()
+        except Exception:
+            pass
+    elif isinstance(request_obj, dict):
+        return request_obj
+
+    return {
+        "type": type(request_obj).__name__,
+        "repr": repr(request_obj),
+    }
+
+
+def _get_request_message(request_type_name: str | None) -> str:
+    """Get UI message based on request type."""
+    lowered = (request_type_name or "").lower()
+    if "approval" in lowered:
+        return "Tool approval required"
+    elif "user" in lowered and "input" in lowered:
+        return "User input required"
+    elif "intervention" in lowered or "plan" in lowered:
+        return "Human intervention required"
+    return "Action required"
+
+
+def _handle_reasoning_stream(
+    event: ReasoningStreamEvent, accumulated_reasoning: str
+) -> tuple[StreamEvent, str]:
+    """Handle GPT-5 reasoning tokens."""
+    new_accumulated = accumulated_reasoning + event.reasoning
+
+    if event.is_complete:
+        event_type = StreamEventType.REASONING_COMPLETED
         category, ui_hint = classify_event(event_type)
         return (
             StreamEvent(
@@ -568,396 +567,511 @@ def map_workflow_event(
             new_accumulated,
         )
 
-    if isinstance(event, MagenticAgentMessageEvent):
-        # Agent-level message (could be streaming or final). Surface explicitly so the frontend
-        # can render per-agent thoughts/output instead of concatenated deltas.
+    event_type = StreamEventType.REASONING_DELTA
+    category, ui_hint = classify_event(event_type)
+    return (
+        StreamEvent(
+            type=event_type,
+            reasoning=event.reasoning,
+            agent_id=event.agent_id,
+            category=category,
+            ui_hint=ui_hint,
+        ),
+        new_accumulated,
+    )
+
+
+def _handle_agent_message(
+    event: MagenticAgentMessageEvent, accumulated_reasoning: str
+) -> tuple[StreamEvent | None, str]:
+    """Handle agent-level message events."""
+    text = ""
+    if hasattr(event, "message") and event.message:
+        text = getattr(event.message, "text", "") or ""
+
+    if not text:
+        return None, accumulated_reasoning
+
+    # Check for metadata to determine event kind/stage
+    kind = None
+    if hasattr(event, "stage"):
+        kind = getattr(event, "stage", None)
+
+    # Map the internal event type to the StreamEventType
+    event_type = StreamEventType.AGENT_MESSAGE
+    event_name = None
+    if hasattr(event, "event"):
+        event_name = getattr(event, "event", None)
+        if event_name == "agent.start":
+            event_type = StreamEventType.AGENT_START
+        elif event_name == "agent.output":
+            event_type = StreamEventType.AGENT_OUTPUT
+        elif event_name == "agent.complete" or event_name == "agent.completed":
+            event_type = StreamEventType.AGENT_COMPLETE
+        elif event_name == "handoff.created":
+            # Handoff events should be surfaced as orchestrator thoughts
+            event_type = StreamEventType.ORCHESTRATOR_THOUGHT
+            kind = "handoff"  # Override kind for handoff events
+
+    # Get author name - prefer message.author_name, fall back to agent_id
+    author_name = None
+    if hasattr(event, "message") and hasattr(event.message, "author_name"):
+        author_name = getattr(event.message, "author_name", None)
+    if not author_name:
+        author_name = event.agent_id
+
+    # Extract payload data for rich events (handoffs, tool calls, etc.)
+    event_data = None
+    if hasattr(event, "payload"):
+        payload = getattr(event, "payload", None)
+        if payload and isinstance(payload, dict):
+            event_data = payload
+
+    # Classify the event for UI routing
+    category, ui_hint = classify_event(event_type, kind)
+
+    return (
+        StreamEvent(
+            type=event_type,
+            message=text,
+            agent_id=event.agent_id,
+            kind=kind,
+            author=author_name,
+            role="assistant",
+            category=category,
+            ui_hint=ui_hint,
+            data=event_data,
+        ),
+        accumulated_reasoning,
+    )
+
+
+def _handle_chat_message_with_contents(
+    event: Any, accumulated_reasoning: str
+) -> tuple[StreamEvent | None, str]:
+    """Handle generic chat message events with role and contents."""
+    try:
+        # event.contents is likely a list of dicts with type/text
+        text_parts = []
+        for c in getattr(event, "contents", []):
+            if isinstance(c, dict):
+                text_parts.append(c.get("text", ""))
+            elif hasattr(c, "text"):
+                text_parts.append(getattr(c, "text", ""))
+        text = "\n".join(t for t in text_parts if t)
+    except (KeyError, IndexError, TypeError, ValueError, AttributeError) as exc:
+        logger.warning(
+            "Failed to extract text from chat message contents: %s", exc, exc_info=True
+        )
         text = ""
-        if hasattr(event, "message") and event.message:
-            text = getattr(event.message, "text", "") or ""
 
-        if not text:
-            return None, accumulated_reasoning
+    if text:
+        author_name = getattr(event, "author_name", None) or getattr(event, "author", None)
+        role = getattr(event, "role", None)
+        role_value = role.value if role is not None and hasattr(role, "value") else role
 
-        # Check for metadata to determine event kind/stage
-        kind = None
-        if hasattr(event, "stage"):
-            kind = getattr(event, "stage", None)
-
-        # Map the internal event type to the StreamEventType
+        # Emit agent messages as agent-level stream events only
         event_type = StreamEventType.AGENT_MESSAGE
-        event_name = None
-        if hasattr(event, "event"):
-            event_name = getattr(event, "event", None)
-            if event_name == "agent.start":
-                event_type = StreamEventType.AGENT_START
-            elif event_name == "agent.output":
-                event_type = StreamEventType.AGENT_OUTPUT
-            elif event_name == "agent.complete" or event_name == "agent.completed":
-                event_type = StreamEventType.AGENT_COMPLETE
-            elif event_name == "handoff.created":
-                # Handoff events should be surfaced as orchestrator thoughts
-                event_type = StreamEventType.ORCHESTRATOR_THOUGHT
-                kind = "handoff"  # Override kind for handoff events
-
-        # Get author name - prefer message.author_name, fall back to agent_id
-        author_name = None
-        if hasattr(event, "message") and hasattr(event.message, "author_name"):
-            author_name = getattr(event.message, "author_name", None)
-        if not author_name:
-            author_name = event.agent_id
-
-        # Extract payload data for rich events (handoffs, tool calls, etc.)
-        event_data = None
-        if hasattr(event, "payload"):
-            payload = getattr(event, "payload", None)
-            if payload and isinstance(payload, dict):
-                event_data = payload
-
-        # Classify the event for UI routing
-        category, ui_hint = classify_event(event_type, kind)
-
+        category, ui_hint = classify_event(event_type)
         return (
             StreamEvent(
                 type=event_type,
                 message=text,
-                agent_id=event.agent_id,
-                kind=kind,
+                agent_id=getattr(event, "agent_id", None),
                 author=author_name,
-                role="assistant",
+                role=role_value,
+                kind=None,
                 category=category,
                 ui_hint=ui_hint,
-                data=event_data,
             ),
             accumulated_reasoning,
         )
 
-    # Generic chat message events (agent_framework chat_message objects)
-    if hasattr(event, "role") and hasattr(event, "contents"):
-        try:
-            # event.contents is likely a list of dicts with type/text
-            text_parts = []
-            for c in getattr(event, "contents", []):
-                if isinstance(c, dict):
-                    text_parts.append(c.get("text", ""))
-                elif hasattr(c, "text"):
-                    text_parts.append(getattr(c, "text", ""))
-            text = "\n".join(t for t in text_parts if t)
-        except (KeyError, IndexError, TypeError, ValueError, AttributeError) as exc:
-            logger.warning(
-                "Failed to extract text from chat message contents: %s", exc, exc_info=True
-            )
-            text = ""
+    return None, accumulated_reasoning
 
-        if text:
-            author_name = getattr(event, "author_name", None) or getattr(event, "author", None)
-            role = getattr(event, "role", None)
-            role_value = role.value if role is not None and hasattr(role, "value") else role
 
-            # Emit agent messages as agent-level stream events only.
-            # The authoritative final answer is emitted via WorkflowOutputEvent mapping.
-            event_type = StreamEventType.AGENT_MESSAGE
-            category, ui_hint = classify_event(event_type)
-            return (
-                StreamEvent(
-                    type=event_type,
-                    message=text,
-                    agent_id=getattr(event, "agent_id", None),
-                    author=author_name,
-                    role=role_value,
-                    kind=None,
-                    category=category,
-                    ui_hint=ui_hint,
-                ),
-                accumulated_reasoning,
-            )
+def _handle_chat_message_with_text(
+    event: Any, accumulated_reasoning: str
+) -> tuple[StreamEvent | None, str]:
+    """Handle ChatMessage-like objects with .text and .role."""
+    text = getattr(event, "text", "") or ""
+    if text:
+        role = getattr(event, "role", None)
+        role_value = role.value if role is not None and hasattr(role, "value") else role
+        author_name = getattr(event, "author_name", None) or getattr(event, "author", None)
+        agent_id = getattr(event, "agent_id", None) or author_name
 
-    # ChatMessage-like objects with .text and .role (agent_framework ChatMessage)
-    if hasattr(event, "text") and hasattr(event, "role"):
-        text = getattr(event, "text", "") or ""
-        if text:
-            role = getattr(event, "role", None)
-            role_value = role.value if role is not None and hasattr(role, "value") else role
-            author_name = getattr(event, "author_name", None) or getattr(event, "author", None)
-            agent_id = getattr(event, "agent_id", None) or author_name
-
-            # Emit agent messages as agent-level stream events only.
-            msg_type = StreamEventType.AGENT_MESSAGE
-            msg_category, msg_ui_hint = classify_event(msg_type)
-            return (
-                StreamEvent(
-                    type=msg_type,
-                    message=text,
-                    agent_id=agent_id,
-                    author=author_name,
-                    role=role_value,
-                    kind=None,
-                    category=msg_category,
-                    ui_hint=msg_ui_hint,
-                ),
-                accumulated_reasoning,
-            )
-
-    # Dict-based chat_message events (not objects)
-    if isinstance(event, dict):
-        event_dict: dict[str, Any] = event  # type: ignore
-        if event_dict.get("type") == "chat_message":
-            contents = event_dict.get("contents", [])
-            text_parts: list[str] = []
-            for c in contents:
-                if isinstance(c, dict):
-                    text_parts.append(c.get("text", ""))
-                elif isinstance(c, str):
-                    text_parts.append(c)
-            text = "\n".join(t for t in text_parts if t)
-            if text:
-                author_name = event_dict.get("author_name") or event_dict.get("author")
-                role = event_dict.get("role")
-
-                # Handle role extraction safely
-                role_value = role
-                if isinstance(role, dict):
-                    role_value = role.get("value")
-                elif role is not None and hasattr(role, "value"):
-                    role_value = role.value
-
-                # Determine event type
-                event_type = StreamEventType.AGENT_MESSAGE
-                if event_dict.get("event") == "agent.output":
-                    event_type = StreamEventType.AGENT_OUTPUT
-
-                category, ui_hint = classify_event(event_type)
-                return (
-                    StreamEvent(
-                        type=event_type,
-                        message=text,
-                        agent_id=event_dict.get("agent_id") or author_name,
-                        author=author_name,
-                        role=role_value,
-                        kind=None,
-                        category=category,
-                        ui_hint=ui_hint,
-                    ),
-                    accumulated_reasoning,
-                )
-
-    if isinstance(event, ExecutorCompletedEvent):
-        # Phase completion events with typed messages
-        data = getattr(event, "data", None)
-        if data is None:
-            logger.warning(f"ExecutorCompletedEvent received without data: {event}")
-            return None, accumulated_reasoning
-
-        # agent_framework wraps executor output in a list - unwrap it
-        if isinstance(data, list):
-            if len(data) == 0:
-                return None, accumulated_reasoning
-            data = data[0]  # Get the actual message from the list
-
-        # Map different phase message types to thoughts
-        # Local imports to avoid circular dependency
-        from agentic_fleet.workflows.models import (
-            AnalysisMessage,
-            ProgressMessage,
-            QualityMessage,
-            RoutingMessage,
+        # Emit agent messages as agent-level stream events only
+        msg_type = StreamEventType.AGENT_MESSAGE
+        msg_category, msg_ui_hint = classify_event(msg_type)
+        return (
+            StreamEvent(
+                type=msg_type,
+                message=text,
+                agent_id=agent_id,
+                author=author_name,
+                role=role_value,
+                kind=None,
+                category=msg_category,
+                ui_hint=msg_ui_hint,
+            ),
+            accumulated_reasoning,
         )
 
-        # Use duck-typing as primary check since isinstance may fail due to module path differences
-        is_analysis_duck = hasattr(data, "analysis") and hasattr(data, "task")
-        is_routing_duck = hasattr(data, "routing") and hasattr(data, "task")
-        is_quality_duck = hasattr(data, "quality") and hasattr(data, "result")
-        is_progress_duck = hasattr(data, "progress") and hasattr(data, "result")
+    return None, accumulated_reasoning
 
-        # Log for debugging
-        logger.debug(
-            f"ExecutorCompletedEvent: type={type(data).__name__}, "
-            f"analysis={is_analysis_duck}, routing={is_routing_duck}"
-        )
 
-        if isinstance(data, AnalysisMessage) or is_analysis_duck:
-            event_type = StreamEventType.ORCHESTRATOR_THOUGHT
-            kind = "analysis"
-            category, ui_hint = classify_event(event_type, kind)
-            capabilities = list(data.analysis.capabilities) if data.analysis.capabilities else []
-            # Build a descriptive message based on analysis
-            caps_str = ", ".join(capabilities[:3]) if capabilities else "general reasoning"
-            message = f"Task requires {caps_str} ({data.analysis.complexity} complexity)"
-            # Include reasoning from DSPy if available
-            reasoning = data.metadata.get("reasoning", "") if data.metadata else ""
-            intent_data = data.metadata.get("intent") if data.metadata else None
-            return (
-                StreamEvent(
-                    type=event_type,
-                    message=message,
-                    agent_id="orchestrator",
-                    kind=kind,
-                    data={
-                        "complexity": data.analysis.complexity,
-                        "capabilities": capabilities,
-                        "steps": data.analysis.steps,
-                        "reasoning": reasoning,
-                        "intent": intent_data.get("intent") if intent_data else None,
-                        "intent_confidence": intent_data.get("confidence") if intent_data else None,
-                    },
-                    category=category,
-                    ui_hint=ui_hint,
-                ),
-                accumulated_reasoning,
-            )
-
-        if isinstance(data, RoutingMessage) or is_routing_duck:
-            event_type = StreamEventType.ORCHESTRATOR_THOUGHT
-            kind = "routing"
-            category, ui_hint = classify_event(event_type, kind)
-            routing_data = getattr(data, "routing", None)
-            decision = getattr(routing_data, "decision", routing_data) if routing_data else None
-            if decision is None:
-                return None, accumulated_reasoning
-            agents = list(decision.assigned_to) if decision.assigned_to else []
-            subtasks = list(decision.subtasks) if decision.subtasks else []
-            # Build descriptive message
-            agents_str = " → ".join(agents) if agents else "default"
-            message = f"Routing to {agents_str} ({decision.mode.value} mode)"
-            if subtasks:
-                message += f" with {len(subtasks)} subtask(s)"
-            # Get reasoning from metadata or routing plan
-            reasoning = data.metadata.get("reasoning", "") if data.metadata else ""
-            return (
-                StreamEvent(
-                    type=event_type,
-                    message=message,
-                    agent_id="orchestrator",
-                    kind=kind,
-                    data={
-                        "mode": decision.mode.value,
-                        "assigned_to": agents,
-                        "subtasks": subtasks,
-                        "reasoning": reasoning,
-                    },
-                    category=category,
-                    ui_hint=ui_hint,
-                ),
-                accumulated_reasoning,
-            )
-
-        if isinstance(data, QualityMessage) or is_quality_duck:
-            event_type = StreamEventType.ORCHESTRATOR_THOUGHT
-            kind = "quality"
-            category, ui_hint = classify_event(event_type, kind)
-            quality_data = getattr(data, "quality", None)
-            if quality_data is None:
-                return None, accumulated_reasoning
-            missing = list(getattr(quality_data, "missing", []) or [])
-            improvements = list(getattr(quality_data, "improvements", []) or [])
-            score = getattr(quality_data, "score", 0.0)
-            return (
-                StreamEvent(
-                    type=event_type,
-                    message=f"Quality assessment: score {score:.1f}/10",
-                    agent_id="orchestrator",
-                    kind=kind,
-                    data={
-                        "score": score,
-                        "missing": missing,
-                        "improvements": improvements,
-                    },
-                    category=category,
-                    ui_hint=ui_hint,
-                ),
-                accumulated_reasoning,
-            )
-
-        if isinstance(data, ProgressMessage) or is_progress_duck:
-            event_type = StreamEventType.ORCHESTRATOR_MESSAGE
-            kind = "progress"
-            category, ui_hint = classify_event(event_type, kind)
-            progress_data = getattr(data, "progress", None)
-            if progress_data is None:
-                return None, accumulated_reasoning
-            action = getattr(progress_data, "action", "processing")
-            feedback = getattr(progress_data, "feedback", "")
-            return (
-                StreamEvent(
-                    type=event_type,
-                    message=f"Progress: {action}",
-                    agent_id="orchestrator",
-                    kind=kind,
-                    data={"action": action, "feedback": feedback},
-                    category=category,
-                    ui_hint=ui_hint,
-                ),
-                accumulated_reasoning,
-            )
-
-        # Skip generic phase completion - not useful for UI
-        # Only emit events we can properly categorize
+def _handle_dict_chat_message(
+    event_dict: dict[str, Any], accumulated_reasoning: str
+) -> tuple[StreamEvent | None, str]:
+    """Handle dict-based chat_message events."""
+    if event_dict.get("type") != "chat_message":
         return None, accumulated_reasoning
 
-    if isinstance(event, WorkflowOutputEvent):
-        # Final output event
-        result_text = ""
-        data = getattr(event, "data", None)
+    contents = event_dict.get("contents", [])
+    text_parts: list[str] = []
+    for c in contents:
+        if isinstance(c, dict):
+            text_parts.append(c.get("text", ""))
+        elif isinstance(c, str):
+            text_parts.append(c)
+    text = "\n".join(t for t in text_parts if t)
 
-        # AgentRunResponse compatibility (framework 1.0+): unwrap messages and structured output
-        structured_output = None
-        messages: list[Any] = []
+    if text:
+        author_name = event_dict.get("author_name") or event_dict.get("author")
+        role = event_dict.get("role")
 
-        if data is not None:
-            if hasattr(data, "messages"):
-                messages = list(getattr(data, "messages", []) or [])
-                structured_output = getattr(data, "structured_output", None) or getattr(
-                    data, "additional_properties", {}
-                ).get("structured_output")
-            elif isinstance(data, list):
-                messages = data
+        # Handle role extraction safely
+        role_value = role
+        if isinstance(role, dict):
+            role_value = role.get("value")
+        elif role is not None and hasattr(role, "value"):
+            role_value = role.value
 
-            if messages:
-                last_msg = messages[-1]
-                result_text = getattr(last_msg, "text", str(last_msg)) or str(last_msg)
-            elif not isinstance(data, list) and hasattr(data, "result"):
-                result_text = str(getattr(data, "result", ""))
-            else:
-                result_text = str(data)
+        # Determine event type
+        event_type = StreamEventType.AGENT_MESSAGE
+        if event_dict.get("event") == "agent.output":
+            event_type = StreamEventType.AGENT_OUTPUT
 
-        events: list[StreamEvent] = []
-
-        if messages:
-            for msg in messages:
-                text = getattr(msg, "text", None) or getattr(msg, "content", "") or ""
-                role = getattr(msg, "role", None)
-                author = getattr(msg, "author_name", None) or getattr(msg, "author", None)
-                agent_id = getattr(msg, "author", None)
-                if text:
-                    msg_event_type = StreamEventType.AGENT_MESSAGE
-                    msg_category, msg_ui_hint = classify_event(msg_event_type)
-                    events.append(
-                        StreamEvent(
-                            type=msg_event_type,
-                            message=text,
-                            agent_id=agent_id,
-                            author=author,
-                            role=role.value
-                            if role is not None and hasattr(role, "value")
-                            else role,
-                            category=msg_category,
-                            ui_hint=msg_ui_hint,
-                        )
-                    )
-
-        # Always push a final completion event
-        final_event_type = StreamEventType.RESPONSE_COMPLETED
-        final_category, final_ui_hint = classify_event(final_event_type)
-        events.append(
+        category, ui_hint = classify_event(event_type)
+        return (
             StreamEvent(
-                type=final_event_type,
-                message=result_text,
-                data={"structured_output": structured_output} if structured_output else None,
-                category=final_category,
-                ui_hint=final_ui_hint,
-            )
+                type=event_type,
+                message=text,
+                agent_id=event_dict.get("agent_id") or author_name,
+                author=author_name,
+                role=role_value,
+                kind=None,
+                category=category,
+                ui_hint=ui_hint,
+            ),
+            accumulated_reasoning,
         )
 
-        return events, accumulated_reasoning
+    return None, accumulated_reasoning
+
+
+def _handle_executor_completed(
+    event: ExecutorCompletedEvent, accumulated_reasoning: str
+) -> tuple[StreamEvent | None, str]:
+    """Handle phase completion events with typed messages."""
+    data = getattr(event, "data", None)
+    if data is None:
+        logger.warning(f"ExecutorCompletedEvent received without data: {event}")
+        return None, accumulated_reasoning
+
+    # agent_framework wraps executor output in a list - unwrap it
+    if isinstance(data, list):
+        if len(data) == 0:
+            return None, accumulated_reasoning
+        data = data[0]  # Get the actual message from the list
+
+    # Map different phase message types to thoughts
+    # Local imports to avoid circular dependency
+    from agentic_fleet.workflows.models import (
+        AnalysisMessage,
+        ProgressMessage,
+        QualityMessage,
+        RoutingMessage,
+    )
+
+    # Use duck-typing as primary check
+    is_analysis_duck = hasattr(data, "analysis") and hasattr(data, "task")
+    is_routing_duck = hasattr(data, "routing") and hasattr(data, "task")
+    is_quality_duck = hasattr(data, "quality") and hasattr(data, "result")
+    is_progress_duck = hasattr(data, "progress") and hasattr(data, "result")
+
+    # Log for debugging
+    logger.debug(
+        f"ExecutorCompletedEvent: type={type(data).__name__}, "
+        f"analysis={is_analysis_duck}, routing={is_routing_duck}"
+    )
+
+    if isinstance(data, AnalysisMessage) or is_analysis_duck:
+        return _handle_analysis_message(data, accumulated_reasoning)
+
+    if isinstance(data, RoutingMessage) or is_routing_duck:
+        return _handle_routing_message(data, accumulated_reasoning)
+
+    if isinstance(data, QualityMessage) or is_quality_duck:
+        return _handle_quality_message(data, accumulated_reasoning)
+
+    if isinstance(data, ProgressMessage) or is_progress_duck:
+        return _handle_progress_message(data, accumulated_reasoning)
+
+    # Skip generic phase completion - not useful for UI
+    return None, accumulated_reasoning
+
+
+def _handle_analysis_message(
+    data: Any, accumulated_reasoning: str
+) -> tuple[StreamEvent, str]:
+    """Handle AnalysisMessage events."""
+    event_type = StreamEventType.ORCHESTRATOR_THOUGHT
+    kind = "analysis"
+    category, ui_hint = classify_event(event_type, kind)
+    capabilities = list(data.analysis.capabilities) if data.analysis.capabilities else []
+    # Build a descriptive message based on analysis
+    caps_str = ", ".join(capabilities[:3]) if capabilities else "general reasoning"
+    message = f"Task requires {caps_str} ({data.analysis.complexity} complexity)"
+    # Include reasoning from DSPy if available
+    reasoning = data.metadata.get("reasoning", "") if data.metadata else ""
+    intent_data = data.metadata.get("intent") if data.metadata else None
+    return (
+        StreamEvent(
+            type=event_type,
+            message=message,
+            agent_id="orchestrator",
+            kind=kind,
+            data={
+                "complexity": data.analysis.complexity,
+                "capabilities": capabilities,
+                "steps": data.analysis.steps,
+                "reasoning": reasoning,
+                "intent": intent_data.get("intent") if intent_data else None,
+                "intent_confidence": intent_data.get("confidence") if intent_data else None,
+            },
+            category=category,
+            ui_hint=ui_hint,
+        ),
+        accumulated_reasoning,
+    )
+
+
+def _handle_routing_message(
+    data: Any, accumulated_reasoning: str
+) -> tuple[StreamEvent | None, str]:
+    """Handle RoutingMessage events."""
+    event_type = StreamEventType.ORCHESTRATOR_THOUGHT
+    kind = "routing"
+    category, ui_hint = classify_event(event_type, kind)
+    routing_data = getattr(data, "routing", None)
+    decision = getattr(routing_data, "decision", routing_data) if routing_data else None
+    if decision is None:
+        return None, accumulated_reasoning
+    agents = list(decision.assigned_to) if decision.assigned_to else []
+    subtasks = list(decision.subtasks) if decision.subtasks else []
+    # Build descriptive message
+    agents_str = " → ".join(agents) if agents else "default"
+    message = f"Routing to {agents_str} ({decision.mode.value} mode)"
+    if subtasks:
+        message += f" with {len(subtasks)} subtask(s)"
+    # Get reasoning from metadata or routing plan
+    reasoning = data.metadata.get("reasoning", "") if data.metadata else ""
+    return (
+        StreamEvent(
+            type=event_type,
+            message=message,
+            agent_id="orchestrator",
+            kind=kind,
+            data={
+                "mode": decision.mode.value,
+                "assigned_to": agents,
+                "subtasks": subtasks,
+                "reasoning": reasoning,
+            },
+            category=category,
+            ui_hint=ui_hint,
+        ),
+        accumulated_reasoning,
+    )
+
+
+def _handle_quality_message(
+    data: Any, accumulated_reasoning: str
+) -> tuple[StreamEvent | None, str]:
+    """Handle QualityMessage events."""
+    event_type = StreamEventType.ORCHESTRATOR_THOUGHT
+    kind = "quality"
+    category, ui_hint = classify_event(event_type, kind)
+    quality_data = getattr(data, "quality", None)
+    if quality_data is None:
+        return None, accumulated_reasoning
+    missing = list(getattr(quality_data, "missing", []) or [])
+    improvements = list(getattr(quality_data, "improvements", []) or [])
+    score = getattr(quality_data, "score", 0.0)
+    return (
+        StreamEvent(
+            type=event_type,
+            message=f"Quality assessment: score {score:.1f}/10",
+            agent_id="orchestrator",
+            kind=kind,
+            data={
+                "score": score,
+                "missing": missing,
+                "improvements": improvements,
+            },
+            category=category,
+            ui_hint=ui_hint,
+        ),
+        accumulated_reasoning,
+    )
+
+
+def _handle_progress_message(
+    data: Any, accumulated_reasoning: str
+) -> tuple[StreamEvent, str]:
+    """Handle ProgressMessage events."""
+    event_type = StreamEventType.ORCHESTRATOR_MESSAGE
+    kind = "progress"
+    category, ui_hint = classify_event(event_type, kind)
+    progress_data = getattr(data, "progress", None)
+    if progress_data is None:
+        return None, accumulated_reasoning
+    action = getattr(progress_data, "action", "processing")
+    feedback = getattr(progress_data, "feedback", "")
+    return (
+        StreamEvent(
+            type=event_type,
+            message=f"Progress: {action}",
+            agent_id="orchestrator",
+            kind=kind,
+            data={"action": action, "feedback": feedback},
+            category=category,
+            ui_hint=ui_hint,
+        ),
+        accumulated_reasoning,
+    )
+
+
+def _handle_workflow_output(
+    event: WorkflowOutputEvent, accumulated_reasoning: str
+) -> tuple[list[StreamEvent], str]:
+    """Handle final output event."""
+    result_text = ""
+    data = getattr(event, "data", None)
+
+    # AgentRunResponse compatibility (framework 1.0+): unwrap messages and structured output
+    structured_output = None
+    messages: list[Any] = []
+
+    if data is not None:
+        if hasattr(data, "messages"):
+            messages = list(getattr(data, "messages", []) or [])
+            structured_output = getattr(data, "structured_output", None) or getattr(
+                data, "additional_properties", {}
+            ).get("structured_output")
+        elif isinstance(data, list):
+            messages = data
+
+        if messages:
+            last_msg = messages[-1]
+            result_text = getattr(last_msg, "text", str(last_msg)) or str(last_msg)
+        elif not isinstance(data, list) and hasattr(data, "result"):
+            result_text = str(getattr(data, "result", ""))
+        else:
+            result_text = str(data)
+
+    events: list[StreamEvent] = []
+
+    if messages:
+        for msg in messages:
+            text = getattr(msg, "text", None) or getattr(msg, "content", "") or ""
+            role = getattr(msg, "role", None)
+            author = getattr(msg, "author_name", None) or getattr(msg, "author", None)
+            agent_id = getattr(msg, "author", None)
+            if text:
+                msg_event_type = StreamEventType.AGENT_MESSAGE
+                msg_category, msg_ui_hint = classify_event(msg_event_type)
+                events.append(
+                    StreamEvent(
+                        type=msg_event_type,
+                        message=text,
+                        agent_id=agent_id,
+                        author=author,
+                        role=role.value if role is not None and hasattr(role, "value") else role,
+                        category=msg_category,
+                        ui_hint=msg_ui_hint,
+                    )
+                )
+
+    # Always push a final completion event
+    final_event_type = StreamEventType.RESPONSE_COMPLETED
+    final_category, final_ui_hint = classify_event(final_event_type)
+    events.append(
+        StreamEvent(
+            type=final_event_type,
+            message=result_text,
+            data={"structured_output": structured_output} if structured_output else None,
+            category=final_category,
+            ui_hint=final_ui_hint,
+        )
+    )
+
+    return events, accumulated_reasoning
+
+
+# Dispatch table for O(1) event type lookup
+_EVENT_HANDLERS: dict[type, EventHandler] = {
+    WorkflowStartedEvent: _handle_workflow_started,
+    WorkflowStatusEvent: _handle_workflow_status,
+    RequestInfoEvent: _handle_request_info,
+    ReasoningStreamEvent: _handle_reasoning_stream,
+    MagenticAgentMessageEvent: _handle_agent_message,
+    ExecutorCompletedEvent: _handle_executor_completed,
+    WorkflowOutputEvent: _handle_workflow_output,
+}
+
+
+def map_workflow_event(
+    event: Any,
+    accumulated_reasoning: str,
+) -> tuple[StreamEvent | list[StreamEvent] | None, str]:
+    """
+    Convert an internal workflow event into one or more StreamEvent objects for SSE streaming.
+
+    Uses a dispatch table for O(1) event type lookup instead of linear if/elif chain.
+    This improves performance and maintainability by organizing event handling into focused
+    handler functions that can be tested independently.
+
+    Parameters:
+        event: The workflow event to map. Supported inputs include framework event objects, dict-based events,
+            and executor/message wrapper objects; the mapper performs safe extraction and duck-typing to
+            recognize different event payloads.
+        accumulated_reasoning: Running concatenation of reasoning text used to accumulate partial reasoning
+            across ReasoningStreamEvent occurrences.
+
+    Returns:
+        A tuple where the first element is either a StreamEvent, a list of StreamEvent, or None if no event
+        should be emitted, and the second element is the updated accumulated_reasoning string.
+    """
+    # O(1) dispatch table lookup for typed events
+    event_type = type(event)
+    handler = _EVENT_HANDLERS.get(event_type)
+
+    if handler:
+        return handler(event, accumulated_reasoning)
+
+    # Fallback: check for duck-typed events (objects with role/contents or text/role)
+    if hasattr(event, "role") and hasattr(event, "contents"):
+        return _handle_chat_message_with_contents(event, accumulated_reasoning)
+
+    if hasattr(event, "text") and hasattr(event, "role"):
+        return _handle_chat_message_with_text(event, accumulated_reasoning)
+
+    # Fallback: check for dict-based events
+    if isinstance(event, dict):
+        return _handle_dict_chat_message(event, accumulated_reasoning)
 
     # Unknown event type - skip
     logger.debug(f"Unknown event type skipped: {type(event).__name__}")
