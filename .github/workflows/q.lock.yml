@@ -55,6 +55,11 @@
 #       echo "Contents of /tmp/gh-aw/sandbox/agent/logs/:"
 #       ls -la /tmp/gh-aw/sandbox/agent/logs/
 #
+#   - name: Fix workspace permissions
+#     run: |
+#       # Ensure the workspace is accessible by the agent container (UID 1000)
+#       chmod -R a+rwX .
+#
 # safe-outputs:
 #   add-comment:
 #     max: 1
@@ -2186,11 +2191,13 @@ jobs:
           mkdir -p /tmp/gh-aw/sandbox/agent/logs
           echo "Created /tmp/gh-aw/agent directory for agentic workflow temporary files"
       - name: Ensure log directory and file
-        run: |-
+        run: |
           mkdir -p /tmp/gh-aw/sandbox/agent/logs/
           touch /tmp/gh-aw/sandbox/agent/logs/empty.log
           echo "Contents of /tmp/gh-aw/sandbox/agent/logs/:"
           ls -la /tmp/gh-aw/sandbox/agent/logs/
+      - name: Fix workspace permissions
+        run: "# Ensure the workspace is accessible by the agent container (UID 1000)\nchmod -R a+rwX .\n"
 
       - name: Configure Git credentials
         env:

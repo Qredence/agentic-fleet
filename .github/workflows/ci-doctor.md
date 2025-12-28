@@ -24,6 +24,11 @@ steps:
       echo "Contents of /tmp/gh-aw/sandbox/agent/logs/:"
       ls -la /tmp/gh-aw/sandbox/agent/logs/
 
+  - name: Fix workspace permissions
+    run: |
+      # Ensure the workspace is accessible by the agent container (UID 1000)
+      chmod -R a+rwX .
+
 timeout-minutes: 20
 
 # No web access needed; we only inspect GitHub checks/logs and run local commands.
