@@ -40,7 +40,9 @@ class WorkflowConfig:
     # These can be disabled in "light" profile to reduce LM calls.
     enable_progress_eval: bool = True
     enable_quality_eval: bool = True
-    enable_completion_storage: bool = True
+    # Disable completion storage by default to avoid unnecessary data retention
+    # and large storage usage; enable explicitly via configuration when needed.
+    enable_completion_storage: bool = False
     agent_models: dict[str, str] | None = None
     agent_temperatures: dict[str, float] | None = None
     agent_strategies: dict[str, str] | None = None

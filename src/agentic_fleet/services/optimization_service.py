@@ -141,16 +141,17 @@ class OptimizationService:
                     """Schedule an async job update from the thread."""
 
                     async def _update_job() -> None:
-                        job = await self.job_store.get_job(self.job_id)
-                        if job:
-                            job.update(status_update)
-                            await self.job_store.save_job(self.job_id, job)
+                        async with self._update_lock:
+                            job = await self.job_store.get_job(self.job_id)
+                            if job:
+                                job.update(status_update)
+                                await self.job_store.save_job(self.job_id, job)
 
                     # Schedule the coroutine in the event loop
-                    if self.loop.is_running():
+                    try:
                         asyncio.run_coroutine_threadsafe(_update_job(), self.loop)
-                    else:
-                        # If loop is not running, we can't update (shouldn't happen in normal flow)
+                    except RuntimeError:
+                        # Event loop may have stopped or been closed; cannot update (shutdown path)
                         logger.warning("Event loop not running, cannot update job progress")
 
                 def on_start(self, message: str) -> None:

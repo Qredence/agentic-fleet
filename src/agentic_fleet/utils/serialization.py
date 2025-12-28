@@ -66,6 +66,10 @@ def load_jsonl(
 ) -> list[dict[str, Any]]:
     """Load JSONL (JSON Lines) from a file with error handling.
 
+    Uses an efficient deque with maxlen for memory-bounded processing of large files
+    when a limit is specified. The deque automatically maintains a sliding window of
+    the last N entries as we read through the file.
+
     Args:
         file_path: Path to JSONL file
         limit: Optional limit on number of entries to return (returns last N)
@@ -81,7 +85,9 @@ def load_jsonl(
         logger.warning(f"Negative limit {limit} provided for {file_path}, returning default")
         return default if default is not None else []
 
-    executions: list[dict[str, Any]] | deque[dict[str, Any]]
+    # Use deque with maxlen for memory-efficient sliding window when limiting results
+    # This ensures O(1) append operations and automatic eviction of older entries
+    executions: deque[dict[str, Any]] | list[dict[str, Any]]
     executions = deque(maxlen=limit) if limit is not None else []
     try:
         with file_path.open(encoding="utf-8") as f:
