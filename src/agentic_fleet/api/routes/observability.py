@@ -56,7 +56,8 @@ async def get_workflow_trace(workflow_id: str) -> dict[str, Any]:
         trace = langfuse.fetch_trace(workflow_id)
 
         if not trace:
-            raise HTTPException(status_code=404, detail=f"Trace {workflow_id} not found.")
+            safe_workflow_id = workflow_id.replace("\r", "").replace("\n", "")
+            raise HTTPException(status_code=404, detail=f"Trace {safe_workflow_id} not found.")
 
         # Convert to a stable response format
         # We want to flatten some properties and ensure observations are included

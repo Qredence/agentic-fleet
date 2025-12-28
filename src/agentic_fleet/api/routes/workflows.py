@@ -13,8 +13,6 @@ from agentic_fleet.models import RunRequest, RunResponse
 try:
     from langfuse.decorators import observe as langfuse_observe  # type: ignore[import-untyped]
 
-    _LANGFUSE_AVAILABLE = True
-
     def observe(func=None, **kwargs):  # type: ignore
         """Langfuse observe decorator wrapper."""
         if func is None:
@@ -23,7 +21,6 @@ try:
         # Called with @observe - apply directly
         return langfuse_observe(func, **kwargs)
 except ImportError:
-    _LANGFUSE_AVAILABLE = False
 
     def observe(func=None, **_kwargs):  # type: ignore
         """No-op decorator when Langfuse is not available."""

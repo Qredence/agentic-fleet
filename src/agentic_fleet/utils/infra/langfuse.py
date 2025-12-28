@@ -35,8 +35,6 @@ _langfuse_tags: contextvars.ContextVar[list[str] | None] = contextvars.ContextVa
 try:
     from langfuse import get_client
 
-    _LANGFUSE_AVAILABLE = True
-
     def get_langfuse_client():
         """Get the Langfuse client instance."""
         return get_client()
@@ -292,7 +290,6 @@ try:
             return None
 
 except ImportError:
-    _LANGFUSE_AVAILABLE = False
     logger.debug("Langfuse not available - tracing utilities disabled")
 
     def get_langfuse_client():

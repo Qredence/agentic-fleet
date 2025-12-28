@@ -367,8 +367,8 @@ def load_compiled_module(path: str, module_type: str | None = None) -> Any | Non
             try:
                 os.remove(path)
                 logger.debug(f"Removed corrupted cache file: {path}")
-            except OSError:
-                pass
+            except OSError as remove_error:
+                logger.debug(f"Could not remove corrupted cache file {path}: {remove_error}")
             return None
 
     except Exception as e:

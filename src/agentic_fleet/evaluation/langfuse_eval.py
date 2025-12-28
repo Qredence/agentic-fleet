@@ -16,8 +16,6 @@ logger = logging.getLogger(__name__)
 try:
     from langfuse import get_client
 
-    _LANGFUSE_AVAILABLE = True
-
     def evaluate_with_llm_judge(
         trace_id: str,
         criteria: str,
@@ -156,7 +154,6 @@ Explanation: <your explanation>
             return False
 
 except ImportError:
-    _LANGFUSE_AVAILABLE = False
     logger.debug("Langfuse not available - evaluation utilities disabled")
 
     def evaluate_with_llm_judge(*args: Any, **kwargs: Any) -> dict[str, Any]:  # noqa: ARG001
