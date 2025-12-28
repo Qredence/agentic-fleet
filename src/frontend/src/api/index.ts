@@ -25,7 +25,8 @@ export {
   nluApi,
   optimizationApi,
   evaluationApi,
-  improvementApi,
+  dspyApi,
+  observabilityApi,
   sseApi,
   healthApi,
 } from "./client";
@@ -89,14 +90,11 @@ export type {
   IntentResponse,
   EntityRequest,
   EntityResponse,
-  // Optimization / Evaluation / Improvement types
+  // Optimization / Evaluation types
   OptimizationRequest,
   OptimizationResult,
   HistoryExecutionEntry,
   HistoryQualityMetrics,
-  SelfImproveRequest,
-  SelfImproveResponse,
-  SelfImproveStats,
   // Error types
   ApiError,
   // Tracing and Observability types

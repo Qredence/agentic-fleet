@@ -12,9 +12,9 @@ import logging
 import re
 import time
 from collections import OrderedDict
-from collections.abc import Callable
+from collections.abc import Callable, Iterable
 from dataclasses import dataclass
-from typing import TYPE_CHECKING, Any, Callable, cast
+from typing import TYPE_CHECKING, Any, cast
 
 if TYPE_CHECKING:
     from agent_framework._threads import AgentThread
@@ -184,10 +184,7 @@ def _thread_has_any_messages(thread: Any | None) -> bool:
     if _has_messages(store, ("messages", "_messages", "history")):
         return True
 
-    if _has_messages(thread, ("messages", "history", "_messages")):
-        return True
-
-    return False
+    return _has_messages(thread, ("messages", "history", "_messages"))
 
 
 async def _hydrate_thread_from_conversation(
@@ -283,31 +280,38 @@ def _format_log_line(
 ) -> str | None:
     if callable(formatter):
         return formatter(event, short_id)
-    return formatter.format(short_id=short_id)
-
-
-# Mapping from StreamEventType to (formatter, log_level)
-log_specs: dict[StreamEventType, tuple[str | Callable[[StreamEvent, str], str | None], int]] = {
-    StreamEventType.RESPONSE_DELTA: (_format_response_delta, logging.DEBUG),
-    StreamEventType.RESPONSE_COMPLETED: (_format_response_completed, logging.INFO),
-    StreamEventType.REASONING_DELTA: ("[{short_id}] 🧠 reasoning delta", logging.DEBUG),
-    StreamEventType.REASONING_COMPLETED: ("[{short_id}] 🧠 reasoning completed", logging.INFO),
-    StreamEventType.ORCHESTRATOR_THOUGHT: (_format_orchestrator_thought, logging.INFO),
-    StreamEventType.AGENT_OUTPUT: (
-        "[{short_id}] 🤖 agent output",
-        logging.INFO,
-    ),
-    StreamEventType.WORKFLOW_EVENT: (
-        "[{short_id}] 🔄 workflow event",
-        logging.INFO,
-    ),
-}
+    return formatter.format(short_id=short_id, event=event)
 
 
 def _log_stream_event(event: StreamEvent, workflow_id: str) -> str | None:
     """Log a stream event to the console in real-time and return the log line."""
     event_type = event.type.value
     short_id = workflow_id[-8:] if len(workflow_id) > 8 else workflow_id
+
+    log_specs: dict[
+        StreamEventType,
+        tuple[str | Callable[[StreamEvent, str], str | None], int],
+    ] = {
+        StreamEventType.ORCHESTRATOR_MESSAGE: ("[{short_id}] 📢 {event.message}", logging.INFO),
+        StreamEventType.ORCHESTRATOR_THOUGHT: (_format_orchestrator_thought, logging.INFO),
+        StreamEventType.RESPONSE_DELTA: (_format_response_delta, logging.DEBUG),
+        StreamEventType.RESPONSE_COMPLETED: (_format_response_completed, logging.INFO),
+        StreamEventType.REASONING_DELTA: ("[{short_id}] 🧠 reasoning delta", logging.DEBUG),
+        StreamEventType.REASONING_COMPLETED: ("[{short_id}] 🧠 Reasoning complete", logging.INFO),
+        StreamEventType.ERROR: ("[{short_id}] ❌ Error: {event.error}", logging.ERROR),
+        StreamEventType.AGENT_START: (
+            "[{short_id}] 🤖 Agent started: {event.agent_id}",
+            logging.INFO,
+        ),
+        StreamEventType.AGENT_COMPLETE: (
+            "[{short_id}] 🤖 Agent complete: {event.agent_id}",
+            logging.INFO,
+        ),
+        StreamEventType.CANCELLED: ("[{short_id}] ⏹️ Cancelled by client", logging.INFO),
+        StreamEventType.DONE: ("[{short_id}] 🏁 Stream completed", logging.INFO),
+        StreamEventType.CONNECTED: ("[{short_id}] 🔌 WebSocket connected", logging.DEBUG),
+        StreamEventType.HEARTBEAT: ("[{short_id}] ♥ heartbeat", logging.DEBUG),
+    }
 
     log_line: str | None = None
     log_spec = log_specs.get(event.type)

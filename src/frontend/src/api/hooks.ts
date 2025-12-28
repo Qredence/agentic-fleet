@@ -24,7 +24,6 @@ import {
   optimizationApi,
   evaluationApi,
   dspyApi,
-  observabilityApi,
 } from "./client";
 import type {
   Conversation,
@@ -40,9 +39,18 @@ import type {
   ReasonerSummary,
   DSPySignatures,
   DSPyPrompts,
-  TraceDetails,
 } from "./types";
 import type { HealthResponse, ReadinessResponse } from "./client";
+
+// =============================================================================
+// Error Types
+// =============================================================================
+
+interface ApiError {
+  response?: { status?: number };
+  message?: string;
+  [key: string]: unknown;
+}
 
 // =============================================================================
 // Query Keys
@@ -338,7 +346,7 @@ export function useOptimizationRun(
 export function useOptimizationStatus(
   jobId: string | null,
   options?: Omit<
-    UseQueryOptions<OptimizationResult>,
+    UseQueryOptions<OptimizationResult, Error>,
     "queryKey" | "queryFn" | "enabled" | "refetchInterval"
   >,
 ) {
@@ -346,9 +354,10 @@ export function useOptimizationStatus(
     queryKey: queryKeys.optimization.status(jobId ?? ""),
     queryFn: () => optimizationApi.status(jobId!),
     enabled: !!jobId,
-    retry: (failureCount, error: any) => {
+    retry: (failureCount, error) => {
       // Don't retry on 404 (job not found) - stop polling immediately
-      if (error?.response?.status === 404) {
+      const apiError = error as unknown as ApiError;
+      if (apiError?.response?.status === 404) {
         return false;
       }
       // Retry other errors up to 2 times
@@ -356,11 +365,11 @@ export function useOptimizationStatus(
     },
     refetchInterval: (query) => {
       // Stop polling if we got a 404 error (job not found)
-      if (
-        query.state.error &&
-        (query.state.error as any)?.response?.status === 404
-      ) {
-        return false;
+      if (query.state.error) {
+        const apiError = query.state.error as unknown as ApiError;
+        if (apiError?.response?.status === 404) {
+          return false;
+        }
       }
 
       const status = query.state.data?.status;
@@ -526,20 +535,4 @@ export function useInvalidateConversations() {
         queryKey: queryKeys.conversations.messages(id),
       }),
   };
-}
-
-/**
- * Hook to fetch trace details for a workflow.
- * Provides real-time observability for orchestration events.
- */
-export function useTrace(
-  workflowId: string,
-  options?: Omit<UseQueryOptions<TraceDetails>, "queryKey" | "queryFn">,
-) {
-  return useQuery({
-    queryKey: ["trace", workflowId],
-    queryFn: () => observabilityApi.getTrace(workflowId),
-    retry: 1,
-    ...options,
-  });
 }

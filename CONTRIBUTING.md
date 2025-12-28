@@ -144,6 +144,18 @@ Unsure where to begin? Look for issues labeled:
 - [uv](https://docs.astral.sh/uv/) package manager
 - Node.js 18+ (for frontend development)
 
+### Required Secrets (for Maintainers)
+
+If you're a maintainer or running CI workflows locally, ensure these secrets are configured:
+
+| Secret                      | Used By                | Description                                            |
+| --------------------------- | ---------------------- | ------------------------------------------------------ |
+| `OPENAI_API_KEY`            | Tests, Backend         | OpenAI API access for LLM calls                        |
+| `COPILOT_GITHUB_TOKEN`      | CI Doctor, Q workflows | GitHub token with Copilot access for agentic workflows |
+| `AZURE_AI_PROJECT_ENDPOINT` | Tests                  | Azure AI endpoint (optional)                           |
+
+> **Note:** Contributors don't need these secrets. CI will skip jobs requiring secrets on external PRs.
+
 ### Installation
 
 ```bash

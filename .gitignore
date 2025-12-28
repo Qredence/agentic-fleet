@@ -48,6 +48,8 @@ env/
 .kilocode/
 .factory/
 .fleet/
+.skills/
+
 
 # Generated reports
 report/

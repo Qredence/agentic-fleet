@@ -56,17 +56,18 @@ export class ChatSSEClient {
   private currentWorkflowId: string | null = null;
   private currentConversationId: string | null = null;
   private currentUrl: string | null = null;
-  private reconnectAttempts = 0;
-  private maxReconnectAttempts = 5;
-  private reconnectDelay = 1000; // Start with 1 second
-  private reconnectTimer: ReturnType<typeof setTimeout> | null = null;
+  private lastConversationId: string = "";
+  private lastMessage: string = "";
+  private lastOptions: ChatSSEOptions = {};
   private heartbeatTimer: ReturnType<typeof setTimeout> | null = null;
   private lastHeartbeat: number = Date.now();
   private heartbeatTimeout = 30000; // 30 seconds without heartbeat = dead connection
 
-  /**
-   * Get current connection status.
-   */
+  // Reconnection state
+  private reconnectAttempts = 0;
+  private maxReconnectAttempts = 5;
+  private reconnectDelay = 1000; // Start with 1 second
+  private reconnectTimer: ReturnType<typeof setTimeout> | null = null;
   get connectionStatus(): SSEConnectionStatus {
     return this.status;
   }
@@ -108,6 +109,9 @@ export class ChatSSEClient {
     this.disconnect();
 
     this.currentConversationId = conversationId;
+    this.lastConversationId = conversationId;
+    this.lastMessage = message;
+    this.lastOptions = options;
     this.setStatus("connecting");
 
     // Build SSE URL with query parameters
@@ -127,6 +131,12 @@ export class ChatSSEClient {
     // Store URL for reconnection attempts
     this.currentUrl = url.toString();
 
+    // Store connection parameters for reconnection
+    this.lastMessage = message;
+    this.lastOptions = options;
+    this.reconnectAttempts = 0;
+    this.reconnectDelay = 1000;
+
     // Create EventSource connection
     this.createEventSourceConnection(this.currentUrl);
   }
@@ -139,8 +149,6 @@ export class ChatSSEClient {
 
     this.eventSource.onopen = () => {
       this.setStatus("connected");
-      this.reconnectAttempts = 0;
-      this.reconnectDelay = 1000; // Reset delay on successful connection
       this.lastHeartbeat = Date.now();
       this.startHeartbeatCheck();
     };
@@ -155,13 +163,13 @@ export class ChatSSEClient {
 
       // EventSource.CONNECTING = 0, EventSource.OPEN = 1, EventSource.CLOSED = 2
       if (readyState === EventSource.CLOSED) {
-        // Connection closed unexpectedly - surface error to caller and stop
+        // Connection closed unexpectedly - attempt to reconnect
         this.setStatus("error");
         this.callbacks.onError?.(
           new Error("SSE connection closed unexpectedly"),
         );
-        // Cleanup resources for a closed connection
-        this.cleanup();
+        // Attempt to reconnect with exponential backoff
+        this.handleReconnection();
       } else if (readyState === EventSource.CONNECTING) {
         // Still connecting - this is normal during initial connection
         // Don't treat as error yet
@@ -247,7 +255,7 @@ export class ChatSSEClient {
   /**
    * Handle reconnection with exponential backoff.
    */
-  private handleReconnection(): void {
+  private async handleReconnection(): Promise<void> {
     if (this.reconnectAttempts >= this.maxReconnectAttempts) {
       this.setStatus("error");
       this.callbacks.onError?.(
@@ -267,48 +275,9 @@ export class ChatSSEClient {
 
     this.setStatus("connecting");
 
-    // Clear any existing timer
-    if (this.reconnectTimer) {
-      clearTimeout(this.reconnectTimer);
-    }
-
     this.reconnectTimer = setTimeout(() => {
-      // EventSource will automatically attempt to reconnect
-      // We just track the attempts and delay
-      if (this.eventSource?.readyState === EventSource.CLOSED) {
-        // If still closed, try to reconnect manually
-        this.attemptManualReconnect();
-      }
+      this.connect(this.lastConversationId, this.lastMessage, this.lastOptions);
     }, delay);
-  }
-
-  /**
-   * Attempt manual reconnection by creating a new EventSource.
-   */
-  private attemptManualReconnect(): void {
-    if (!this.currentUrl) {
-      this.setStatus("error");
-      this.callbacks.onError?.(
-        new Error("Cannot reconnect: URL not available"),
-      );
-      return;
-    }
-
-    // Close existing EventSource if still open
-    if (this.eventSource) {
-      try {
-        this.eventSource.close();
-      } catch {
-        // Ignore errors during close
-      }
-      this.eventSource = null;
-    }
-
-    // Set status to connecting before creating new connection
-    this.setStatus("connecting");
-
-    // Create new EventSource with same URL and reattach handlers
-    this.createEventSourceConnection(this.currentUrl);
   }
 
   /**
@@ -391,6 +360,7 @@ export class ChatSSEClient {
   private cleanup(): void {
     this.stopHeartbeatCheck();
 
+    // Clear reconnection timer
     if (this.reconnectTimer) {
       clearTimeout(this.reconnectTimer);
       this.reconnectTimer = null;

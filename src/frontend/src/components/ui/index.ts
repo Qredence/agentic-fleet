@@ -93,4 +93,3 @@ export { Toaster, type ToastVariant, type ToastData } from "./toaster";
 export { Reasoning, ReasoningTrigger, ReasoningContent } from "./reasoning";
 export { Markdown as PromptKitMarkdown } from "./markdown";
 export { ResponseStream } from "./response-stream";
-export { TextShimmer as PromptKitTextShimmer } from "./text-shimmer";

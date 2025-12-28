@@ -68,6 +68,20 @@ def _get_predictor_signature(pred: dspy.Module) -> Any | None:
     return None
 
 
+def _get_typed_predictor_class() -> type[dspy.Module]:
+    """Return DSPy's typed predictor class if available, otherwise Predict."""
+    typed_predictor = getattr(dspy, "TypedPredictor", None)
+    if typed_predictor is None:
+        return dspy.Predict
+    return typed_predictor
+
+
+def _build_typed_predictor(signature: Any) -> dspy.Module:
+    """Instantiate a typed predictor with the given signature."""
+    predictor_cls = _get_typed_predictor_class()
+    return predictor_cls(signature)
+
+
 class ModuleManager:
     """Manages DSPy module initialization and caching."""
 
@@ -114,7 +128,7 @@ class ModuleManager:
             analyzer_key = f"{cache_key_prefix}_analyzer"
             if analyzer_key not in _MODULE_CACHE:
                 if self.use_typed_signatures:
-                    _MODULE_CACHE[analyzer_key] = dspy.ChainOfThought(TypedTaskAnalysis)
+                    _MODULE_CACHE[analyzer_key] = _build_typed_predictor(TypedTaskAnalysis)
                 else:
                     _MODULE_CACHE[analyzer_key] = dspy.ChainOfThought(TaskAnalysis)
             self._analyzer = _MODULE_CACHE[analyzer_key]
@@ -125,7 +139,7 @@ class ModuleManager:
                 router_key = f"{cache_key_prefix}_router"
                 if router_key not in _MODULE_CACHE:
                     if self.use_typed_signatures:
-                        _MODULE_CACHE[router_key] = dspy.Predict(TypedEnhancedRouting)
+                        _MODULE_CACHE[router_key] = _build_typed_predictor(TypedEnhancedRouting)
                     else:
                         _MODULE_CACHE[router_key] = dspy.Predict(EnhancedTaskRouting)
                 self._router = _MODULE_CACHE[router_key]
@@ -134,14 +148,19 @@ class ModuleManager:
                     strategy_key = f"{cache_key_prefix}_strategy"
                     if strategy_key not in _MODULE_CACHE:
                         if self.use_typed_signatures:
-                            _MODULE_CACHE[strategy_key] = dspy.ChainOfThought(TypedWorkflowStrategy)
+                            _MODULE_CACHE[strategy_key] = _build_typed_predictor(
+                                TypedWorkflowStrategy
+                            )
                         else:
                             _MODULE_CACHE[strategy_key] = dspy.ChainOfThought(WorkflowStrategy)
                     self._strategy_selector = _MODULE_CACHE[strategy_key]
             else:
                 router_key = f"{cache_key_prefix}_router"
                 if router_key not in _MODULE_CACHE:
-                    _MODULE_CACHE[router_key] = dspy.Predict(TaskRouting)
+                    if self.use_typed_signatures:
+                        _MODULE_CACHE[router_key] = _build_typed_predictor(TaskRouting)
+                    else:
+                        _MODULE_CACHE[router_key] = dspy.Predict(TaskRouting)
                 self._router = _MODULE_CACHE[router_key]
 
         # Initialize quality assessor
@@ -149,7 +168,7 @@ class ModuleManager:
             qa_key = f"quality_assessor{typed_suffix}"
             if qa_key not in _MODULE_CACHE:
                 if self.use_typed_signatures:
-                    _MODULE_CACHE[qa_key] = dspy.ChainOfThought(TypedQualityAssessment)
+                    _MODULE_CACHE[qa_key] = _build_typed_predictor(TypedQualityAssessment)
                 else:
                     _MODULE_CACHE[qa_key] = dspy.ChainOfThought(QualityAssessment)
             self._quality_assessor = _MODULE_CACHE[qa_key]
@@ -159,7 +178,7 @@ class ModuleManager:
             pe_key = f"progress_evaluator{typed_suffix}"
             if pe_key not in _MODULE_CACHE:
                 if self.use_typed_signatures:
-                    _MODULE_CACHE[pe_key] = dspy.ChainOfThought(TypedProgressEvaluation)
+                    _MODULE_CACHE[pe_key] = _build_typed_predictor(TypedProgressEvaluation)
                 else:
                     _MODULE_CACHE[pe_key] = dspy.ChainOfThought(ProgressEvaluation)
             self._progress_evaluator = _MODULE_CACHE[pe_key]
@@ -169,7 +188,7 @@ class ModuleManager:
             tp_key = f"tool_planner{typed_suffix}"
             if tp_key not in _MODULE_CACHE:
                 if self.use_typed_signatures:
-                    _MODULE_CACHE[tp_key] = dspy.ChainOfThought(TypedToolPlan)
+                    _MODULE_CACHE[tp_key] = _build_typed_predictor(TypedToolPlan)
                 else:
                     _MODULE_CACHE[tp_key] = dspy.ChainOfThought(ToolPlan)
             self._tool_planner = _MODULE_CACHE[tp_key]

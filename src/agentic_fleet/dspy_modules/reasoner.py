@@ -796,7 +796,7 @@ class DSPyReasoner(dspy.Module):
         """
         Extract a plain dict of routing decision fields from a DSPy prediction that may use typed (Pydantic) signatures.
 
-        If the prediction contains a typed `decision` (Pydantic model), this function returns that model serialized to a dict (supports Pydantic v2 `model_dump()` and v1 `dict()`), or falls back to reading common decision attributes. If there is no typed `decision`, the function extracts routing fields directly from the top-level prediction object.
+        If typed signatures are enabled, we expect a typed `decision` (Pydantic model) and serialize it to a dict (supports Pydantic v2 `model_dump()` and v1 `dict()`). If the prediction is legacy/untagged, we fall back to reading routing fields directly from the top-level prediction object.
 
         Parameters:
             prediction (Any): DSPy prediction object which may contain a typed `decision` attribute or top-level routing fields.
@@ -814,30 +814,32 @@ class DSPyReasoner(dspy.Module):
                 - workflow_gates: workflow gate information
                 - reasoning: human-readable reasoning or explanation
         """
-        # Check if we have a typed 'decision' field (Pydantic model)
-        decision = getattr(prediction, "decision", None)
-        if decision is not None:
-            # It's a Pydantic model - extract fields
-            if hasattr(decision, "model_dump"):
-                return decision.model_dump()
-            elif hasattr(decision, "dict"):
-                return decision.dict()
-            else:
-                # Fallback: try to get attributes
-                return {
-                    "assigned_to": getattr(decision, "assigned_to", []),
-                    "execution_mode": getattr(decision, "execution_mode", "delegated"),
-                    "subtasks": getattr(decision, "subtasks", []),
-                    "tool_requirements": getattr(decision, "tool_requirements", []),
-                    "tool_plan": getattr(decision, "tool_plan", []),
-                    "tool_goals": getattr(decision, "tool_goals", ""),
-                    "latency_budget": getattr(decision, "latency_budget", "medium"),
-                    "handoff_strategy": getattr(decision, "handoff_strategy", ""),
-                    "workflow_gates": getattr(decision, "workflow_gates", ""),
-                    "reasoning": getattr(decision, "reasoning", ""),
-                }
 
-        # Not a typed signature - extract fields directly from prediction
+        def _extract_from_decision(decision_obj: Any) -> dict[str, Any]:
+            if isinstance(decision_obj, dict):
+                return decision_obj
+            if hasattr(decision_obj, "model_dump"):
+                return decision_obj.model_dump()
+            if hasattr(decision_obj, "dict"):
+                return decision_obj.dict()
+            return {
+                "assigned_to": getattr(decision_obj, "assigned_to", []),
+                "execution_mode": getattr(decision_obj, "execution_mode", "delegated"),
+                "subtasks": getattr(decision_obj, "subtasks", []),
+                "tool_requirements": getattr(decision_obj, "tool_requirements", []),
+                "tool_plan": getattr(decision_obj, "tool_plan", []),
+                "tool_goals": getattr(decision_obj, "tool_goals", ""),
+                "latency_budget": getattr(decision_obj, "latency_budget", "medium"),
+                "handoff_strategy": getattr(decision_obj, "handoff_strategy", ""),
+                "workflow_gates": getattr(decision_obj, "workflow_gates", ""),
+                "reasoning": getattr(decision_obj, "reasoning", ""),
+            }
+
+        if self.use_typed_signatures:
+            decision = getattr(prediction, "decision", None)
+            if decision is not None:
+                return _extract_from_decision(decision)
+
         return {
             "assigned_to": list(getattr(prediction, "assigned_to", [])),
             "execution_mode": getattr(prediction, "execution_mode", "delegated"),

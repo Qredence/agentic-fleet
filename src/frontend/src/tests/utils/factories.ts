@@ -138,8 +138,10 @@ export function createMockHistoryExecutionEntry(
  * Creates a mock store state for chat store tests
  */
 export function createMockChatStoreState(
-  overrides?: Partial<ReturnType<typeof import("@/stores").useChatStore>>,
-): ReturnType<typeof import("@/stores").useChatStore> {
+  overrides?: Partial<
+    ReturnType<typeof import("@/features/chat/stores").useChatStore>
+  >,
+): ReturnType<typeof import("@/features/chat/stores").useChatStore> {
   return {
     messages: [],
     conversations: [],
@@ -164,7 +166,7 @@ export function createMockChatStoreState(
     setShowTrace: vi.fn(),
     setShowRawReasoning: vi.fn(),
     ...overrides,
-  } as ReturnType<typeof import("@/stores").useChatStore>;
+  } as ReturnType<typeof import("@/features/chat/stores").useChatStore>;
 }
 
 /**

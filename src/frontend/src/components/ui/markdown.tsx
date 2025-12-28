@@ -1,9 +1,20 @@
+/**
+ * Markdown Component
+ *
+ * CUSTOM COMPONENT - Not from shadcn/ui registry.
+ *
+ * A markdown renderer using Streamdown for streaming markdown support.
+ * Integrates with the custom CodeBlock component for syntax highlighting.
+ */
 import { cn } from "@/lib/utils";
 import { memo } from "react";
 import type { Components } from "react-markdown";
 import remarkBreaks from "remark-breaks";
 import { Streamdown } from "streamdown";
-import { CodeBlock, CodeBlockCode } from "@/components/message/code-block";
+import {
+  CodeBlock,
+  CodeBlockCode,
+} from "@/features/chat/components/code-block";
 
 export type MarkdownProps = {
   children: string;
