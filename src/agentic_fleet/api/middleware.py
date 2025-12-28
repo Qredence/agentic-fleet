@@ -27,7 +27,7 @@ type _MessageType = ChatMessage | MessageLike | dict[str, Any]
 
 # Context variable for request-scoped execution data
 # This prevents race conditions when BridgeMiddleware is shared across concurrent requests
-_execution_data_var: ContextVar[dict[str, Any]] = ContextVar("execution_data", default={})
+_execution_data_var: ContextVar[dict[str, Any] | None] = ContextVar("execution_data", default=None)
 
 
 class RequestIDMiddleware(BaseHTTPMiddleware):
