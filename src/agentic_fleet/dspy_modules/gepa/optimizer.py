@@ -214,6 +214,49 @@ def prepare_gepa_datasets(
     return convert_to_dspy_examples(train_records), convert_to_dspy_examples(val_records)
 
 
+def _resolve_optimization_budget(
+    auto: Literal["light", "medium", "heavy"] | None,
+    max_full_evals: int | None,
+    max_metric_calls: int | None,
+    max_iterations: int | None,
+) -> tuple[Literal["light", "medium", "heavy"] | None, int | None, int | None]:
+    """
+    Resolve optimization budget parameters, converting max_iterations if needed.
+
+    GEPA iterations are genetic algorithm generations, while max_full_evals controls
+    the number of full evaluation cycles. When max_iterations is provided, we map it
+    to max_full_evals using a 1:1 heuristic as a conservative upper bound.
+
+    Args:
+        auto: Auto-tuning mode
+        max_full_evals: Maximum full evaluation cycles
+        max_metric_calls: Maximum metric evaluation calls
+        max_iterations: Maximum GEPA generations (converted to max_full_evals)
+
+    Returns:
+        Tuple of (auto, max_full_evals, max_metric_calls) with max_iterations resolved
+    """
+    if max_iterations is not None and max_iterations > 0:
+        if auto is not None and max_full_evals is None and max_metric_calls is None:
+            # Convert max_iterations to max_full_evals when using auto mode
+            # We use a 1:1 mapping as a conservative heuristic
+            estimated_max_evals = max(1, max_iterations)
+            logger.info(
+                f"Converting max_iterations={max_iterations} to max_full_evals={estimated_max_evals} "
+                f"in auto={auto} mode (1:1 heuristic)"
+            )
+            max_full_evals = estimated_max_evals
+            auto = None  # Disable auto mode since we're using explicit limit
+        elif max_full_evals is None and max_metric_calls is None:
+            # If no budget params set, use max_iterations as max_full_evals
+            max_full_evals = max(1, max_iterations)
+            logger.info(
+                f"Using max_iterations={max_iterations} as max_full_evals={max_full_evals} (1:1 heuristic)"
+            )
+
+    return auto, max_full_evals, max_metric_calls
+
+
 def optimize_with_gepa(
     module: Any,
     trainset: Sequence[dspy.Example],
@@ -342,28 +385,10 @@ def optimize_with_gepa(
         progress_callback.on_complete("Skipped GEPA optimization (no training data)")
         return module
 
-    # Handle max_iterations: convert to max_full_evals to limit GEPA generations
-    # GEPA iterations are genetic algorithm generations, not full evaluation cycles.
-    # To limit iterations, we need to set a much lower max_full_evals since each
-    # full eval cycle can contain multiple iterations.
-    if max_iterations is not None and max_iterations > 0:
-        if auto is not None and max_full_evals is None and max_metric_calls is None:
-            # Convert max_iterations to max_full_evals to limit iterations in auto mode
-            # GEPA typically does 1-2 iterations per full eval cycle, so we use a 1:1 ratio
-            # to be conservative and ensure we don't exceed the iteration limit
-            estimated_max_evals = max(1, max_iterations)
-            logger.info(
-                f"Converting max_iterations={max_iterations} to max_full_evals={estimated_max_evals} "
-                f"to limit iterations in auto={auto} mode (1:1 ratio for conservative limit)"
-            )
-            max_full_evals = estimated_max_evals
-            auto = None  # Disable auto mode since we're using explicit limit
-        elif max_full_evals is None and max_metric_calls is None:
-            # If no budget params set, use max_iterations directly as max_full_evals
-            max_full_evals = max(1, max_iterations)
-            logger.info(
-                f"Using max_iterations={max_iterations} as max_full_evals={max_full_evals} (1:1 ratio)"
-            )
+    # Resolve optimization budget, converting max_iterations if provided
+    auto, max_full_evals, max_metric_calls = _resolve_optimization_budget(
+        auto, max_full_evals, max_metric_calls, max_iterations
+    )
 
     # Validate optimization budget parameters (exactly one must be set)
     budget_params = [auto is not None, max_full_evals is not None, max_metric_calls is not None]
