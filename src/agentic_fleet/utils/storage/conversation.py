@@ -103,7 +103,7 @@ class ConversationStore:
                 try:
                     # Handle both 'id' and 'conversation_id' for migration
                     if "conversation_id" in conv_data:
-                        conversation_id = conv_data["conversation_id"]
+                        pass
                     elif "id" in conv_data:
                         conversation_id = conv_data["id"]
                         # Migrate to conversation_id
