@@ -141,10 +141,11 @@ class OptimizationService:
                     """Schedule an async job update from the thread."""
 
                     async def _update_job() -> None:
-                        job = await self.job_store.get_job(self.job_id)
-                        if job:
-                            job.update(status_update)
-                            await self.job_store.save_job(self.job_id, job)
+                        async with self._update_lock:
+                            job = await self.job_store.get_job(self.job_id)
+                            if job:
+                                job.update(status_update)
+                                await self.job_store.save_job(self.job_id, job)
 
                     # Schedule the coroutine in the event loop
                     try:
