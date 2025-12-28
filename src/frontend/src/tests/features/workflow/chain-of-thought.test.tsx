@@ -3,6 +3,20 @@ import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 import type { Message as ChatMessage, ConversationStep } from "@/api/types";
 import { ChainOfThoughtTrace } from "@/features/workflow";
+import React from "react";
+
+// Mock StreamingMarkdown to bypass requestAnimationFrame issues in jsdom
+vi.mock("@/features/chat/components/streaming-markdown", () => ({
+  StreamingMarkdown: ({
+    content,
+    className,
+  }: {
+    content: string;
+    className?: string;
+  }) => {
+    return React.createElement("div", { className }, content);
+  },
+}));
 
 const mockOnWorkflowResponse = vi.fn();
 

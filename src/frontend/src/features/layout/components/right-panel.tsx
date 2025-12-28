@@ -24,7 +24,7 @@ export function RightPanel({ open, children }: RightPanelProps) {
       )}
       initial={false}
       animate={{
-        width: open ? "12rem" : "0rem",
+        width: open ? "14rem" : "0rem",
         padding: open ? "0.5rem" : "0rem",
       }}
       transition={{ duration: 0.2, ease: "linear" }}

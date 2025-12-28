@@ -144,9 +144,10 @@ const MessageContent = ({
   ...props
 }: MessageContentProps) => {
   // For markdown mode, let Streamdown handle whitespace; for plain text, use pre-wrap
+  // Exception: when streaming with markdown, we still need whitespace-pre-wrap
   const classNames = cn(
     "rounded-lg p-2 text-foreground bg-secondary prose break-words",
-    !markdown && "whitespace-pre-wrap", // Only add whitespace-pre-wrap for non-markdown content
+    (!markdown || isStreaming) && "whitespace-pre-wrap", // Apply for non-markdown or streaming markdown
     className,
   );
 

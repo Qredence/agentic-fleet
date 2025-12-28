@@ -150,7 +150,7 @@ export function OptimizationDashboard() {
       <ChatHeader
         title="Optimization Control"
         sidebarTrigger={<SidebarTrigger />}
-        className="bg-background/80 sticky top-0 z-10"
+        className="bg-transparent sticky top-0 z-10"
         actions={<StatusBadge status={currentStatus} />}
       />
 

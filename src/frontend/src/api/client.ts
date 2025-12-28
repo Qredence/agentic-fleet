@@ -160,6 +160,19 @@ export const evaluationApi = {
 };
 
 // =============================================================================
+// Improvement API (Deprecated - Use optimizationApi instead)
+// =============================================================================
+
+export const improvementApi = {
+  /**
+   * @deprecated Use optimizationApi.run() instead
+   */
+  trigger: () => {
+    throw new Error("Use optimizationApi.run() instead");
+  },
+};
+
+// =============================================================================
 // SSE API
 // =============================================================================
 

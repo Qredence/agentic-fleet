@@ -1,7 +1,7 @@
 import { screen } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { renderWithProviders as render } from "@/tests/utils/render";
-import App from "@/root/App";
+import App from "@/app/App";
 
 type MockChatStoreState = {
   messages: unknown[];

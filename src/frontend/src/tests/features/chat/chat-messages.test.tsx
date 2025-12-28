@@ -4,6 +4,7 @@ import userEvent from "@testing-library/user-event";
 import { renderComponent as render } from "@/tests/utils/render";
 import { ChatMessages } from "@/features/chat/components/chat-messages";
 import type { Message as ChatMessage } from "@/api/types";
+import React from "react";
 
 /**
  * Mock scrollIntoView since it's not implemented in jsdom
@@ -12,6 +13,19 @@ Object.defineProperty(window.HTMLElement.prototype, "scrollIntoView", {
   value: vi.fn(),
   writable: true,
 });
+
+// Mock StreamingMarkdown to bypass requestAnimationFrame issues in jsdom
+vi.mock("@/features/chat/components/streaming-markdown", () => ({
+  StreamingMarkdown: ({
+    content,
+    className,
+  }: {
+    content: string;
+    className?: string;
+  }) => {
+    return React.createElement("div", { className }, content);
+  },
+}));
 
 describe("ChatMessages", () => {
   const mockMessages: ChatMessage[] = [

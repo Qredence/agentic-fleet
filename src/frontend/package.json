@@ -40,7 +40,6 @@
     "motion": "^12.23.26",
     "react": "^19.1.1",
     "react-dom": "^19.1.1",
-    "react-markdown": "^10.1.0",
     "react-router-dom": "^7.11.0",
     "react-virtuoso": "^4.17.0",
     "remark-breaks": "^4.0.0",

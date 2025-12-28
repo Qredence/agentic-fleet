@@ -8,7 +8,7 @@
  */
 import { cn } from "@/lib/utils";
 import { memo } from "react";
-import type { Components } from "react-markdown";
+import type { Components } from "streamdown";
 import remarkBreaks from "remark-breaks";
 import { Streamdown } from "streamdown";
 import {

@@ -1,7 +1,7 @@
 import { ResponseStream } from "@/components/ui/response-stream";
 import { Markdown } from "@/features/chat/components";
 import { cn } from "@/lib/utils";
-import type { Components } from "react-markdown";
+import type { Components } from "streamdown";
 
 export type StreamingMarkdownProps = {
   content: string;
