@@ -15,6 +15,12 @@ permissions:
 
 engine: copilot
 
+steps:
+  - name: Fix workspace permissions
+    run: |
+      # Ensure the workspace is accessible by the agent container (UID 1000)
+      sudo chown -R 1000:1000 .
+
 timeout-minutes: 20
 
 # No web access needed; we only inspect GitHub checks/logs and run local commands.
