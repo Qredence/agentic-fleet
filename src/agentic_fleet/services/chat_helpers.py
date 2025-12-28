@@ -418,7 +418,6 @@ class ResponseState:
     """State tracking for response accumulation during streaming."""
 
     response_text: str = ""
-    response_delta_text: str = ""
     last_agent_text: str = ""
     last_author: str | None = None
     last_agent_id: str | None = None
@@ -434,8 +433,8 @@ class ResponseState:
             self.last_agent_id = event_data.get("agent_id") or self.last_agent_id
 
         if event_type == StreamEventType.RESPONSE_DELTA.value:
-            self.response_delta_text += event_data.get("delta", "")
-            self.response_text = self.response_delta_text
+            # Accumulate deltas directly into response_text
+            self.response_text += event_data.get("delta", "")
         elif event_type == StreamEventType.RESPONSE_COMPLETED.value:
             completed_msg = event_data.get("message", "")
             if completed_msg:

@@ -32,6 +32,9 @@ from .self_improvement import SelfImprovementEngine
 logger = logging.getLogger(__name__)
 
 
+import contextlib
+
+
 class MaxWarningFilter(logging.Filter):
     """Filter to limit specific warning messages to max occurrences."""
 
@@ -55,6 +58,29 @@ class MaxWarningFilter(logging.Filter):
                     f"(showed {self.max_count}, these are expected during GEPA reflection)"
                 )
         return True
+
+
+@contextlib.contextmanager
+def warning_filter_context(target_logger: logging.Logger, filter_instance: logging.Filter):
+    """Context manager for temporarily applying a logging filter.
+
+    Ensures the filter is properly removed even if an exception occurs.
+
+    Args:
+        target_logger: Logger to apply filter to
+        filter_instance: Filter instance to add/remove
+
+    Example:
+        >>> with warning_filter_context(logger, MaxWarningFilter(5, "pattern")):
+        ...     # Filter is active here
+        ...     run_noisy_code()
+        # Filter is automatically removed here
+    """
+    target_logger.addFilter(filter_instance)
+    try:
+        yield
+    finally:
+        target_logger.removeFilter(filter_instance)
 
 
 def load_example_dicts(examples_path: str) -> list[dict[str, Any]]:
@@ -510,12 +536,6 @@ def optimize_with_gepa(
         "reflection are expected and don't prevent optimization from completing."
     )
 
-    # Add filter to limit "No valid predictions found" warnings to max 5
-    warning_filter = MaxWarningFilter(max_count=5, message_pattern="No valid predictions found")
-    # Apply to dspy logger (where GEPA logs come from)
-    dspy_logger = logging.getLogger("dspy")
-    dspy_logger.addFilter(warning_filter)
-
     # Track compilation start time and provide periodic updates
     compilation_start = time.time()
     update_interval = 30.0  # Update every 30 seconds
@@ -538,16 +558,21 @@ def optimize_with_gepa(
     progress_thread = threading.Thread(target=periodic_progress_update, daemon=True)
     progress_thread.start()
 
+    # Use context manager to ensure filter is removed even if exception occurs
+    warning_filter = MaxWarningFilter(max_count=5, message_pattern="No valid predictions found")
+    dspy_logger = logging.getLogger("dspy")
+    
     try:
-        # GEPA.compile() accepts module as first positional arg or as 'student' keyword
-        # The "No valid predictions found" messages are INFO logs from GEPA's reflection
-        # mechanism and are expected when reflection can't find suitable predictions.
-        # Optimization continues successfully using other mutation strategies.
-        compiled = optimizer.compile(  # type: ignore[attr-defined]
-            module,
-            trainset=list(trainset),
-            valset=list(valset) if valset else None,
-        )
+        with warning_filter_context(dspy_logger, warning_filter):
+            # GEPA.compile() accepts module as first positional arg or as 'student' keyword
+            # The "No valid predictions found" messages are INFO logs from GEPA's reflection
+            # mechanism and are expected when reflection can't find suitable predictions.
+            # Optimization continues successfully using other mutation strategies.
+            compiled = optimizer.compile(  # type: ignore[attr-defined]
+                module,
+                trainset=list(trainset),
+                valset=list(valset) if valset else None,
+            )
     except Exception as exc:
         error_msg = f"GEPA optimization failed: {exc}"
         progress_callback.on_error(error_msg)
@@ -556,8 +581,6 @@ def optimize_with_gepa(
     finally:
         # Stop periodic updates
         is_compiling.clear()
-        # Remove the filter after optimization completes
-        dspy_logger.removeFilter(warning_filter)
         # Report final elapsed time
         elapsed = time.time() - compilation_start
         minutes = int(elapsed // 60)
