@@ -273,14 +273,44 @@ def _format_orchestrator_thought(event: StreamEvent, short_id: str) -> str:
     return f"[{short_id}] 💭 {event.kind}: {event.message}"
 
 
-def _format_log_line(
-    formatter: str | Callable[[StreamEvent, str], str | None],
-    event: StreamEvent,
-    short_id: str,
-) -> str | None:
-    if callable(formatter):
-        return formatter(event, short_id)
-    return cast(str, formatter).format(short_id=short_id, event=event)
+def _format_orchestrator_message(event: StreamEvent, short_id: str) -> str:
+    return f"[{short_id}] 📢 {event.message}"
+
+
+def _format_reasoning_delta(event: StreamEvent, short_id: str) -> str:
+    return f"[{short_id}] 🧠 reasoning delta"
+
+
+def _format_reasoning_completed(event: StreamEvent, short_id: str) -> str:
+    return f"[{short_id}] 🧠 Reasoning complete"
+
+
+def _format_error(event: StreamEvent, short_id: str) -> str:
+    return f"[{short_id}] ❌ Error: {event.error}"
+
+
+def _format_agent_start(event: StreamEvent, short_id: str) -> str:
+    return f"[{short_id}] 🤖 Agent started: {event.agent_id}"
+
+
+def _format_agent_complete(event: StreamEvent, short_id: str) -> str:
+    return f"[{short_id}] 🤖 Agent complete: {event.agent_id}"
+
+
+def _format_cancelled(event: StreamEvent, short_id: str) -> str:
+    return f"[{short_id}] ⏹️ Cancelled by client"
+
+
+def _format_done(event: StreamEvent, short_id: str) -> str:
+    return f"[{short_id}] 🏁 Stream completed"
+
+
+def _format_connected(event: StreamEvent, short_id: str) -> str:
+    return f"[{short_id}] 🔌 WebSocket connected"
+
+
+def _format_heartbeat(event: StreamEvent, short_id: str) -> str:
+    return f"[{short_id}] ♥ heartbeat"
 
 
 def _log_stream_event(event: StreamEvent, workflow_id: str) -> str | None:
@@ -290,27 +320,21 @@ def _log_stream_event(event: StreamEvent, workflow_id: str) -> str | None:
 
     log_specs: dict[
         StreamEventType,
-        tuple[str | Callable[[StreamEvent, str], str | None], int],
+        tuple[Callable[[StreamEvent, str], str | None], int],
     ] = {
-        StreamEventType.ORCHESTRATOR_MESSAGE: ("[{short_id}] 📢 {event.message}", logging.INFO),
+        StreamEventType.ORCHESTRATOR_MESSAGE: (_format_orchestrator_message, logging.INFO),
         StreamEventType.ORCHESTRATOR_THOUGHT: (_format_orchestrator_thought, logging.INFO),
         StreamEventType.RESPONSE_DELTA: (_format_response_delta, logging.DEBUG),
         StreamEventType.RESPONSE_COMPLETED: (_format_response_completed, logging.INFO),
-        StreamEventType.REASONING_DELTA: ("[{short_id}] 🧠 reasoning delta", logging.DEBUG),
-        StreamEventType.REASONING_COMPLETED: ("[{short_id}] 🧠 Reasoning complete", logging.INFO),
-        StreamEventType.ERROR: ("[{short_id}] ❌ Error: {event.error}", logging.ERROR),
-        StreamEventType.AGENT_START: (
-            "[{short_id}] 🤖 Agent started: {event.agent_id}",
-            logging.INFO,
-        ),
-        StreamEventType.AGENT_COMPLETE: (
-            "[{short_id}] 🤖 Agent complete: {event.agent_id}",
-            logging.INFO,
-        ),
-        StreamEventType.CANCELLED: ("[{short_id}] ⏹️ Cancelled by client", logging.INFO),
-        StreamEventType.DONE: ("[{short_id}] 🏁 Stream completed", logging.INFO),
-        StreamEventType.CONNECTED: ("[{short_id}] 🔌 WebSocket connected", logging.DEBUG),
-        StreamEventType.HEARTBEAT: ("[{short_id}] ♥ heartbeat", logging.DEBUG),
+        StreamEventType.REASONING_DELTA: (_format_reasoning_delta, logging.DEBUG),
+        StreamEventType.REASONING_COMPLETED: (_format_reasoning_completed, logging.INFO),
+        StreamEventType.ERROR: (_format_error, logging.ERROR),
+        StreamEventType.AGENT_START: (_format_agent_start, logging.INFO),
+        StreamEventType.AGENT_COMPLETE: (_format_agent_complete, logging.INFO),
+        StreamEventType.CANCELLED: (_format_cancelled, logging.INFO),
+        StreamEventType.DONE: (_format_done, logging.INFO),
+        StreamEventType.CONNECTED: (_format_connected, logging.DEBUG),
+        StreamEventType.HEARTBEAT: (_format_heartbeat, logging.DEBUG),
     }
 
     log_line: str | None = None
@@ -321,7 +345,7 @@ def _log_stream_event(event: StreamEvent, workflow_id: str) -> str | None:
         return log_line
 
     formatter, level = log_spec
-    log_line = _format_log_line(formatter, event, short_id)
+    log_line = formatter(event, short_id)
     if log_line:
         logger.log(level, log_line)
     return log_line
@@ -394,7 +418,7 @@ class ResponseState:
     """State tracking for response accumulation during streaming."""
 
     response_text: str = ""
-    response_delta_text: str = ""
+    response_delta_text: str = ""  # Used by websocket implementation
     last_agent_text: str = ""
     last_author: str | None = None
     last_agent_id: str | None = None
@@ -410,6 +434,7 @@ class ResponseState:
             self.last_agent_id = event_data.get("agent_id") or self.last_agent_id
 
         if event_type == StreamEventType.RESPONSE_DELTA.value:
+            # Accumulate deltas in both fields for compatibility
             self.response_delta_text += event_data.get("delta", "")
             self.response_text = self.response_delta_text
         elif event_type == StreamEventType.RESPONSE_COMPLETED.value:

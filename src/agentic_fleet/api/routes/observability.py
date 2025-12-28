@@ -75,31 +75,56 @@ async def get_workflow_trace(workflow_id: str) -> dict[str, Any]:
             raise HTTPException(status_code=503, detail="Langfuse integration is not configured.")
 
         # Fetch trace details
-        # Note: Langfuse SDK returns a Pydantic-like object or dict depending on version
-        # The fetch_trace method returns a Trace object which can be converted to dict
         trace = langfuse.fetch_trace(workflow_id)
 
         if not trace:
             safe_workflow_id = sanitize_for_logging(workflow_id)
             raise HTTPException(status_code=404, detail=f"Trace {safe_workflow_id} not found.")
 
-        # Convert to a stable response format
-        # We want to flatten some properties and ensure observations are included
-        # fetch_trace typically includes observations if requested or by default in some versions
-        # If not, we may need to fetch them separately
+        # Convert to stable response format with explicit field extraction
+        # This approach is more maintainable than relying on dict() or vars()
+        trace_dict = {
+            "id": getattr(trace, "id", workflow_id),
+            "timestamp": getattr(trace, "timestamp", ""),
+            "name": getattr(trace, "name", None),
+            "userId": getattr(trace, "user_id", getattr(trace, "userId", None)),
+            "sessionId": getattr(trace, "session_id", getattr(trace, "sessionId", None)),
+            "metadata": getattr(trace, "metadata", None),
+            "input": getattr(trace, "input", None),
+            "output": getattr(trace, "output", None),
+            "observations": [],
+            "scores": [],
+        }
 
-        trace_dict = trace.dict() if hasattr(trace, "dict") else vars(trace)
+        # Extract observations if present
+        if hasattr(trace, "observations") and trace.observations:
+            for obs in trace.observations:
+                obs_dict = {
+                    "id": getattr(obs, "id", None),
+                    "type": getattr(obs, "type", None),
+                    "name": getattr(obs, "name", None),
+                    "start_time": getattr(obs, "start_time", getattr(obs, "startTime", None)),
+                    "end_time": getattr(obs, "end_time", getattr(obs, "endTime", None)),
+                }
+                # Add other common fields if available
+                for field in ["input", "output", "metadata", "level", "status_message"]:
+                    if hasattr(obs, field):
+                        obs_dict[field] = getattr(obs, field)
+                trace_dict["observations"].append(obs_dict)
 
-        # Ensure observations and scores are serialized correctly
-        if hasattr(trace, "observations") and not trace_dict.get("observations"):
-            trace_dict["observations"] = [
-                o.dict() if hasattr(o, "dict") else vars(o) for o in trace.observations
-            ]
-
-        if hasattr(trace, "scores") and not trace_dict.get("scores"):
-            trace_dict["scores"] = [
-                s.dict() if hasattr(s, "dict") else vars(s) for s in trace.scores
-            ]
+        # Extract scores if present
+        if hasattr(trace, "scores") and trace.scores:
+            for score in trace.scores:
+                score_dict = {
+                    "id": getattr(score, "id", None),
+                    "name": getattr(score, "name", None),
+                    "value": getattr(score, "value", None),
+                }
+                # Add timestamp if available
+                for field in ["timestamp", "comment"]:
+                    if hasattr(score, field):
+                        score_dict[field] = getattr(score, field)
+                trace_dict["scores"].append(score_dict)
 
         return trace_dict
 

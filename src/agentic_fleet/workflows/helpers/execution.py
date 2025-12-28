@@ -24,6 +24,9 @@ except ImportError:
     _LANGFUSE_AVAILABLE = False
     LangfuseAsyncOpenAI = None  # type: ignore[assignment]
 
+# Cache for Langfuse authentication check to avoid repeated checks
+_langfuse_auth_checked: bool | None = None
+
 
 def synthesize_results(results: list[Any]) -> str:
     """Combine parallel results into a single string.
@@ -129,12 +132,22 @@ def create_openai_client_with_store(
 
     # Wrap with Langfuse if available and properly initialized
     if _LANGFUSE_AVAILABLE and LangfuseAsyncOpenAI:
+        global _langfuse_auth_checked
+        
         try:
-            # Check if Langfuse is properly initialized
-            from langfuse import get_client
+            # Check cached authentication status or perform check if not cached
+            if _langfuse_auth_checked is None:
+                from langfuse import get_client
 
-            langfuse_client = get_client()
-            if langfuse_client and langfuse_client.auth_check():
+                langfuse_client = get_client()
+                _langfuse_auth_checked = bool(
+                    langfuse_client and langfuse_client.auth_check()
+                )
+                logger.debug(
+                    f"Langfuse auth check completed: {_langfuse_auth_checked}"
+                )
+            
+            if _langfuse_auth_checked:
                 # Create Langfuse-wrapped client with framework metadata
                 wrapped_client = LangfuseAsyncOpenAI(**kwargs)
                 if reasoning_effort is not None:
