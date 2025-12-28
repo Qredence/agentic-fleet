@@ -105,9 +105,8 @@ class ConversationStore:
                     if "conversation_id" in conv_data:
                         pass
                     elif "id" in conv_data:
-                        conversation_id = conv_data["id"]
                         # Migrate to conversation_id
-                        conv_data["conversation_id"] = conversation_id
+                        conv_data["conversation_id"] = conv_data["id"]
                         del conv_data["id"]
                     else:
                         logger.warning("Conversation missing ID field, skipping")

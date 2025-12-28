@@ -23,8 +23,6 @@ except ImportError:
 
     _RESPONSES_CLIENT_AVAILABLE = False
 
-_fallback_warning_emitted = False
-
 
 def prepare_kwargs_for_client(client_cls: type, kwargs: dict[str, Any]) -> dict[str, Any]:
     """Prepare kwargs for OpenAI client initialization by filtering to allowed parameters.
@@ -60,14 +58,14 @@ def create_openai_client(**kwargs: Any) -> Any:
     Returns:
         OpenAI client instance (OpenAIResponsesClient or OpenAIChatClient fallback).
     """
-    global _fallback_warning_emitted
-
     client_kwargs = prepare_kwargs_for_client(_PreferredOpenAIClient, kwargs)
-    if not _RESPONSES_CLIENT_AVAILABLE and not _fallback_warning_emitted:
+    if not _RESPONSES_CLIENT_AVAILABLE and not getattr(
+        create_openai_client, "_fallback_warning_emitted", False
+    ):
         logger.warning(
             "OpenAIResponsesClient is unavailable; falling back to OpenAIChatClient (Responses API features disabled).",
         )
-        _fallback_warning_emitted = True
+        create_openai_client._fallback_warning_emitted = True  # type: ignore[attr-defined]
     return _PreferredOpenAIClient(**client_kwargs)
 
 

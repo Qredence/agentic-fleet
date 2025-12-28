@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import logging
+import re
 from typing import Any
 
 from fastapi import APIRouter, HTTPException
@@ -13,6 +14,21 @@ from agentic_fleet.utils.infra.langfuse import get_langfuse_client
 logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/observability", tags=["observability"])
+
+
+def sanitize_for_logging(text: str | None) -> str:
+    """Remove control characters and newlines to prevent log injection.
+
+    Args:
+        text: Text to sanitize (may be None)
+
+    Returns:
+        Sanitized text with control characters replaced by spaces, or empty string if None
+    """
+    if text is None:
+        return ""
+    # Remove all control characters (0x00-0x1f includes CR, LF, tabs) and extended control (0x7f-0x9f)
+    return re.sub(r"[\x00-\x1f\x7f-\x9f]", " ", text)
 
 
 class TraceDetails(BaseModel):
@@ -56,7 +72,8 @@ async def get_workflow_trace(workflow_id: str) -> dict[str, Any]:
         trace = langfuse.fetch_trace(workflow_id)
 
         if not trace:
-            raise HTTPException(status_code=404, detail=f"Trace {workflow_id} not found.")
+            safe_workflow_id = sanitize_for_logging(workflow_id)
+            raise HTTPException(status_code=404, detail=f"Trace {safe_workflow_id} not found.")
 
         # Convert to a stable response format
         # We want to flatten some properties and ensure observations are included
@@ -81,9 +98,12 @@ async def get_workflow_trace(workflow_id: str) -> dict[str, Any]:
     except HTTPException:
         raise
     except Exception as e:
-        safe_workflow_id = workflow_id.replace("\r", "").replace("\n", "")
-        logger.error(f"Failed to fetch trace {safe_workflow_id}: {e}")
-        raise HTTPException(status_code=500, detail=f"Error fetching trace: {e!s}") from e
+        safe_workflow_id = sanitize_for_logging(workflow_id)
+        safe_error_msg = sanitize_for_logging(str(e))
+        logger.error(f"Failed to fetch trace {safe_workflow_id}: {safe_error_msg}")
+        raise HTTPException(
+            status_code=500, detail=f"Error fetching trace: {safe_error_msg}"
+        ) from e
 
 
 @router.get("/traces")

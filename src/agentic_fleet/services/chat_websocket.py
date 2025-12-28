@@ -269,9 +269,7 @@ class ChatWebSocketService:
         await websocket.send_json(error_event.to_sse_dict())
         await websocket.close()
 
-    async def _initialize_managers(
-        self, websocket: WebSocket
-    ) -> tuple[Any, Any] | None:
+    async def _initialize_managers(self, websocket: WebSocket) -> tuple[Any, Any] | None:
         """Initialize and validate session and conversation managers."""
         app = websocket.app
         session_manager = (
@@ -411,9 +409,7 @@ class ChatWebSocketService:
             enable_checkpointing,
         )
 
-    def _create_checkpoint_storage(
-        self, enable_checkpointing: bool, is_resume: bool
-    ) -> Any | None:
+    def _create_checkpoint_storage(self, enable_checkpointing: bool, is_resume: bool) -> Any | None:
         """Create checkpoint storage if needed."""
         if not (enable_checkpointing or is_resume):
             return None
@@ -637,9 +633,7 @@ class ChatWebSocketService:
 
         return False
 
-    async def _handle_cancellation(
-        self, websocket: WebSocket, session: WorkflowSession
-    ) -> None:
+    async def _handle_cancellation(self, websocket: WebSocket, session: WorkflowSession) -> None:
         """Send cancellation and done events."""
         cancelled_type = StreamEventType.CANCELLED
         cancelled_category, cancelled_ui_hint = classify_event(cancelled_type)
@@ -929,14 +923,16 @@ class ChatWebSocketService:
             enable_checkpointing,
         ) = request_data
 
-        conversation_history, conversation_thread, checkpoint_storage = (
-            await self._setup_conversation_context(
-                conversation_id,
-                message,
-                conversation_manager,
-                is_resume,
-                enable_checkpointing,
-            )
+        (
+            conversation_history,
+            conversation_thread,
+            checkpoint_storage,
+        ) = await self._setup_conversation_context(
+            conversation_id,
+            message,
+            conversation_manager,
+            is_resume,
+            enable_checkpointing,
         )
 
         session = await self._create_session(
