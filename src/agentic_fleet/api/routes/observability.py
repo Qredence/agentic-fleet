@@ -18,17 +18,17 @@ router = APIRouter(prefix="/observability", tags=["observability"])
 
 def sanitize_for_logging(text: str | None) -> str:
     """Remove control characters and newlines to prevent log injection.
-    
+
     Args:
         text: Text to sanitize (may be None)
-        
+
     Returns:
         Sanitized text with control characters replaced by spaces, or empty string if None
     """
     if text is None:
         return ""
     # Remove all control characters (0x00-0x1f includes CR, LF, tabs) and extended control (0x7f-0x9f)
-    return re.sub(r'[\x00-\x1f\x7f-\x9f]', ' ', text)
+    return re.sub(r"[\x00-\x1f\x7f-\x9f]", " ", text)
 
 
 class TraceDetails(BaseModel):
@@ -101,7 +101,9 @@ async def get_workflow_trace(workflow_id: str) -> dict[str, Any]:
         safe_workflow_id = sanitize_for_logging(workflow_id)
         safe_error_msg = sanitize_for_logging(str(e))
         logger.error(f"Failed to fetch trace {safe_workflow_id}: {safe_error_msg}")
-        raise HTTPException(status_code=500, detail=f"Error fetching trace: {safe_error_msg}") from e
+        raise HTTPException(
+            status_code=500, detail=f"Error fetching trace: {safe_error_msg}"
+        ) from e
 
 
 @router.get("/traces")

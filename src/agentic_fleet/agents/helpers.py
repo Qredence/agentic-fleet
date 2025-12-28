@@ -59,11 +59,13 @@ def create_openai_client(**kwargs: Any) -> Any:
         OpenAI client instance (OpenAIResponsesClient or OpenAIChatClient fallback).
     """
     client_kwargs = prepare_kwargs_for_client(_PreferredOpenAIClient, kwargs)
-    if not _RESPONSES_CLIENT_AVAILABLE and not getattr(create_openai_client, "_fallback_warning_emitted", False):
+    if not _RESPONSES_CLIENT_AVAILABLE and not getattr(
+        create_openai_client, "_fallback_warning_emitted", False
+    ):
         logger.warning(
             "OpenAIResponsesClient is unavailable; falling back to OpenAIChatClient (Responses API features disabled).",
         )
-        create_openai_client._fallback_warning_emitted = True
+        create_openai_client._fallback_warning_emitted = True  # type: ignore[attr-defined]
     return _PreferredOpenAIClient(**client_kwargs)
 
 
