@@ -81,7 +81,7 @@ def load_jsonl(
         logger.warning(f"Negative limit {limit} provided for {file_path}, returning default")
         return default if default is not None else []
 
-    executions: list[dict[str, Any]] | deque[dict[str, Any]]
+    executions: deque[dict[str, Any]] | list[dict[str, Any]]
     executions = deque(maxlen=limit) if limit is not None else []
     try:
         with file_path.open(encoding="utf-8") as f:
