@@ -16,6 +16,8 @@ lib/
 !src/frontend/src/lib/**
 !src/frontend/src/shared/lib/
 !src/frontend/src/shared/lib/**
+!src/frontend/src/features/workflow/lib/
+!src/frontend/src/features/workflow/lib/**
 lib64/
 parts/
 sdist/
