@@ -17,18 +17,26 @@ router = APIRouter(prefix="/observability", tags=["observability"])
 
 
 def sanitize_for_logging(text: str | None) -> str:
-    """Remove control characters and newlines to prevent log injection.
+    """Sanitize potentially untrusted text for safe inclusion in log messages.
+
+    This function removes control characters (including newlines) and restricts the
+    remaining characters to a conservative, printable subset to prevent log
+    injection and log forgery.
 
     Args:
         text: Text to sanitize (may be None)
 
     Returns:
-        Sanitized text with control characters replaced by spaces, or empty string if None
+        Sanitized text or empty string if None.
     """
     if text is None:
         return ""
     # Remove all control characters (0x00-0x1f includes CR, LF, tabs) and extended control (0x7f-0x9f)
-    return re.sub(r"[\x00-\x1f\x7f-\x9f]", " ", text)
+    cleaned = re.sub(r"[\x00-\x1f\x7f-\x9f]", " ", text)
+    # Collapse runs of whitespace to a single space
+    cleaned = re.sub(r"\s+", " ", cleaned).strip()
+    # Finally, drop any remaining characters outside a conservative safe set
+    return re.sub(r"[^\w\-\.@:/ ]", "", cleaned)
 
 
 class TraceDetails(BaseModel):
