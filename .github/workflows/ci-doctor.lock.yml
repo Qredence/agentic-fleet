@@ -916,10 +916,10 @@ jobs:
                 return;
               }
               const triggeringIssueNumber =
-                context?.payload?.issue?.number && !context?.payload?.issue?.pull_request ? context.payload.issue.number : undefined;
+                context.payload?.issue?.number && !context.payload?.issue?.pull_request ? context.payload.issue.number : undefined;
               const triggeringPRNumber =
-                context?.payload?.pull_request?.number || (context?.payload?.issue?.pull_request ? context.payload.issue.number : undefined);
-              const triggeringDiscussionNumber = context?.payload?.discussion?.number;
+                context.payload?.pull_request?.number || (context.payload?.issue?.pull_request ? context.payload.issue.number : undefined);
+              const triggeringDiscussionNumber = context.payload?.discussion?.number;
               const createdComments = [];
               for (let i = 0; i < commentItems.length; i++) {
                 const commentItem = commentItems[i];
@@ -7372,13 +7372,6 @@ jobs:
               core.error(`Error processing missing-tool reports: ${error}`);
               core.setFailed(`Error processing missing-tool reports: ${error}`);
             });
-      - name: Ensure agent output file exists
-        shell: bash
-        run: |
-          mkdir -p /tmp/gh-aw/safeoutputs
-          if [ ! -f /tmp/gh-aw/safeoutputs/agent_output.json ]; then
-            echo '{"items":[]}' > /tmp/gh-aw/safeoutputs/agent_output.json
-          fi
       - name: Update reaction comment with completion status
         id: conclusion
         uses: actions/github-script@ed597411d8f924073f98dfc5c65a23a2325f34cd # v8
