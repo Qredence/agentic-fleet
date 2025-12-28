@@ -13,13 +13,14 @@ permissions:
   issues: read
   checks: read
 
-engine: openai
+engine: copilot
 
 steps:
   - name: Fix workspace permissions
     run: |
       # Ensure the workspace is accessible by the agent container (UID 1000)
       sudo chown -R 1000:1000 .
+      sudo chmod -R a+rwX .
 
 timeout-minutes: 20
 
