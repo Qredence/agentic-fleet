@@ -277,6 +277,10 @@ def _format_orchestrator_thought(event: StreamEvent, short_id: str) -> str:
     return f"[{short_id}] 💭 {event.kind}: {event.message}"
 
 
+def _format_orchestrator_message(event: StreamEvent, short_id: str) -> str:
+    return f"[{short_id}] 📢 {event.message}"
+
+
 def _format_reasoning_delta(event: StreamEvent, short_id: str) -> str:
     return f"[{short_id}] 🧠 reasoning delta"
 
@@ -313,14 +317,6 @@ def _format_heartbeat(event: StreamEvent, short_id: str) -> str:
     return f"[{short_id}] ♥ heartbeat"
 
 
-def _format_log_line(
-    formatter: Callable[[StreamEvent, str], str | None],
-    event: StreamEvent,
-    short_id: str,
-) -> str | None:
-    return formatter(event, short_id)
-
-
 def _log_stream_event(event: StreamEvent, workflow_id: str) -> str | None:
     """Log a stream event to the console in real-time and return the log line."""
     event_type = event.type.value
@@ -353,7 +349,7 @@ def _log_stream_event(event: StreamEvent, workflow_id: str) -> str | None:
         return log_line
 
     formatter, level = log_spec
-    log_line = _format_log_line(formatter, event, short_id)
+    log_line = formatter(event, short_id)
     if log_line:
         logger.log(level, log_line)
     return log_line
@@ -426,7 +422,7 @@ class ResponseState:
     """State tracking for response accumulation during streaming."""
 
     response_text: str = ""
-    response_delta_text: str = ""
+    response_delta_text: str = ""  # Used by websocket implementation
     last_agent_text: str = ""
     last_author: str | None = None
     last_agent_id: str | None = None
@@ -442,6 +438,7 @@ class ResponseState:
             self.last_agent_id = event_data.get("agent_id") or self.last_agent_id
 
         if event_type == StreamEventType.RESPONSE_DELTA.value:
+            # Accumulate deltas in both fields for compatibility
             self.response_delta_text += event_data.get("delta", "")
             self.response_text = self.response_delta_text
         elif event_type == StreamEventType.RESPONSE_COMPLETED.value:
