@@ -39,7 +39,8 @@ class ConversationStore:
 
     def upsert(self, conversation: Conversation) -> Conversation:
         """Create or update a conversation."""
-        self._cache.set(conversation.conversation_id, conversation)
+        conversation_key = getattr(conversation, "conversation_id", getattr(conversation, "id"))
+        self._cache.set(conversation_key, conversation)
         # Persist to disk if storage path is configured
         if self.storage_path:
             self._save_to_disk()
