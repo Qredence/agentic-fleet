@@ -92,7 +92,11 @@ Explanation: <your explanation>
                         score = float(score_str)
                         score = max(0.0, min(1.0, score))  # Clamp to [0, 1]
                     except (ValueError, IndexError):
-                        pass
+                        logger.debug(
+                            "Could not parse score from line %r; using default score %s",
+                            line,
+                            score,
+                        )
                 elif line.lower().startswith("explanation:"):
                     explanation = line.split(":", 1)[1].strip()
 
