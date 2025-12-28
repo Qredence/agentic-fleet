@@ -81,7 +81,8 @@ async def get_workflow_trace(workflow_id: str) -> dict[str, Any]:
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"Failed to fetch trace {workflow_id}: {e}")
+        safe_workflow_id = workflow_id.replace("\r", "").replace("\n", "")
+        logger.error(f"Failed to fetch trace {safe_workflow_id}: {e}")
         raise HTTPException(status_code=500, detail=f"Error fetching trace: {e!s}") from e
 
 
