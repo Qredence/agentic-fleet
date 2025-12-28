@@ -6,6 +6,13 @@ import { CodeBlock, CodeBlockCode } from "./code-block";
 
 type Components = NonNullable<StreamdownProps["components"]>;
 
+interface HastNode {
+  position?: {
+    start: { line: number };
+    end: { line: number };
+  };
+}
+
 export type MarkdownProps = {
   children: string;
   id?: string;
@@ -24,7 +31,7 @@ const INITIAL_COMPONENTS: Partial<Components> = {
     className,
     children,
     ...props
-  }: ComponentPropsWithoutRef<"strong"> & { node?: any }) {
+  }: ComponentPropsWithoutRef<"strong"> & { node?: HastNode }) {
     return (
       <strong className={cn("font-semibold", className)} {...props}>
         {children}
@@ -35,7 +42,7 @@ const INITIAL_COMPONENTS: Partial<Components> = {
     className,
     children,
     ...props
-  }: ComponentPropsWithoutRef<"code"> & { node?: any }) {
+  }: ComponentPropsWithoutRef<"code"> & { node?: HastNode }) {
     const isInline =
       !props.node?.position?.start.line ||
       props.node?.position?.start.line === props.node?.position?.end.line;
@@ -84,7 +91,7 @@ const INITIAL_COMPONENTS: Partial<Components> = {
   },
   pre: function PreComponent({
     children,
-  }: ComponentPropsWithoutRef<"pre"> & { node?: any }) {
+  }: ComponentPropsWithoutRef<"pre"> & { node?: HastNode }) {
     return <>{children}</>;
   },
 };

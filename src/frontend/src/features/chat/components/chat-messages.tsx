@@ -1,4 +1,4 @@
-import { useRef, useState } from "react";
+import { useRef, useState, memo } from "react";
 import { Virtuoso, type VirtuosoHandle } from "react-virtuoso";
 import type { Message as ChatMessage } from "@/api/types";
 import { cn } from "@/lib/utils";
@@ -26,6 +26,127 @@ export type ChatMessagesProps = {
   fadeDuration?: number;
   segmentDelay?: number;
 };
+
+// Extracted User Message Component
+const UserMessageItem = memo(
+  ({ message, messageKey }: { message: ChatMessage; messageKey: string }) => (
+    <div className="flex flex-col pb-6">
+      <Message
+        key={messageKey}
+        className="mx-auto w-full max-w-3xl justify-end px-4"
+      >
+        <div className="flex w-full justify-end">
+          <MessageContent
+            className="text-foreground border-border/50 max-w-[85%] rounded-2xl border px-4 py-2.5 backdrop-blur-sm sm:max-w-[75%] whitespace-pre-wrap break-normal"
+            style={{
+              backgroundColor: "var(--color-background-primary-soft)",
+            }}
+          >
+            {message.content}
+          </MessageContent>
+        </div>
+      </Message>
+    </div>
+  ),
+);
+UserMessageItem.displayName = "UserMessageItem";
+
+// Extracted Assistant Message Component
+const AssistantMessageItem = memo(
+  ({
+    message,
+    messageKey,
+    isStreaming,
+    streamSpeed,
+    fadeDuration,
+    segmentDelay,
+    renderTrace,
+    onSelectMessage,
+    onCopy,
+  }: {
+    message: ChatMessage;
+    messageKey: string;
+    isStreaming: boolean;
+    streamSpeed: number;
+    fadeDuration: number;
+    segmentDelay: number;
+    renderTrace?: (
+      message: ChatMessage,
+      isStreaming: boolean,
+    ) => React.ReactNode;
+    onSelectMessage: (message: ChatMessage) => void;
+    onCopy?: (content: string) => void;
+  }) => (
+    <div className="flex flex-col pb-6">
+      <Message
+        key={messageKey}
+        className="mx-auto w-full max-w-3xl flex-col gap-2 px-4 items-start"
+      >
+        {renderTrace && ((message.steps?.length ?? 0) > 0 || isStreaming)
+          ? renderTrace(message, isStreaming)
+          : null}
+
+        <div className="group flex w-full flex-col gap-0">
+          <MessageContent
+            className={cn(
+              "text-foreground prose flex-1 rounded-lg bg-transparent p-0",
+              isStreaming && "whitespace-pre-wrap",
+            )}
+            markdown={true}
+            isStreaming={isStreaming}
+            streamSpeed={streamSpeed}
+            fadeDuration={fadeDuration}
+            segmentDelay={segmentDelay}
+          >
+            {typeof message.content === "string"
+              ? message.content
+              : JSON.stringify(message.content)}
+          </MessageContent>
+
+          {!isStreaming && (
+            <MessageActions className="-ml-2.5 flex gap-0 opacity-0 transition-opacity duration-150 group-hover:opacity-100">
+              {message.workflow_id && (
+                <MessageAction tooltip="Debug Trace" delayDuration={100}>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="rounded-full text-blue-500 hover:text-blue-600 hover:bg-blue-50/50"
+                    onClick={() => onSelectMessage(message)}
+                    aria-label="View trace"
+                  >
+                    <Terminal className="size-4" />
+                  </Button>
+                </MessageAction>
+              )}
+              <MessageAction tooltip="Copy" delayDuration={100}>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="rounded-full"
+                  onClick={() => {
+                    const contentStr =
+                      typeof message.content === "string"
+                        ? message.content
+                        : JSON.stringify(message.content);
+                    if (onCopy) {
+                      onCopy(contentStr);
+                    } else {
+                      void navigator.clipboard.writeText(contentStr);
+                    }
+                  }}
+                  aria-label="Copy response"
+                >
+                  <Copy className="size-4" />
+                </Button>
+              </MessageAction>
+            </MessageActions>
+          )}
+        </div>
+      </Message>
+    </div>
+  ),
+);
+AssistantMessageItem.displayName = "AssistantMessageItem";
 
 /**
  * Render the chat message list with distinct layouts for assistant and user messages, optional trace rendering, per-message copy actions, and a bottom-centered scroll button.
@@ -79,98 +200,27 @@ export function ChatMessages({
 
           if (!isAssistant) {
             return (
-              <div className="flex flex-col pb-6">
-                <Message
-                  key={messageKey}
-                  className="mx-auto w-full max-w-3xl justify-end px-4"
-                >
-                  <div className="flex w-full justify-end">
-                    <MessageContent
-                      className="text-foreground border-border/50 max-w-[85%] rounded-2xl border px-4 py-2.5 backdrop-blur-sm sm:max-w-[75%] whitespace-pre-wrap break-normal"
-                      style={{
-                        backgroundColor: "var(--color-background-primary-soft)",
-                      }}
-                    >
-                      {message.content}
-                    </MessageContent>
-                  </div>
-                </Message>
-              </div>
+              <UserMessageItem
+                key={messageKey}
+                message={message}
+                messageKey={messageKey}
+              />
             );
           }
 
           return (
-            <div className="flex flex-col pb-6">
-              <Message
-                key={messageKey}
-                className="mx-auto w-full max-w-3xl flex-col gap-2 px-4 items-start"
-              >
-                {renderTrace &&
-                ((message.steps?.length ?? 0) > 0 || isStreaming)
-                  ? renderTrace(message, isStreaming)
-                  : null}
-
-                <div className="group flex w-full flex-col gap-0">
-                  <MessageContent
-                    className={cn(
-                      "text-foreground prose flex-1 rounded-lg bg-transparent p-0",
-                      isStreaming && "whitespace-pre-wrap",
-                    )}
-                    markdown={true}
-                    isStreaming={isStreaming}
-                    streamSpeed={streamSpeed}
-                    fadeDuration={fadeDuration}
-                    segmentDelay={segmentDelay}
-                  >
-                    {typeof message.content === "string"
-                      ? message.content
-                      : JSON.stringify(message.content)}
-                  </MessageContent>
-
-                  {!isStreaming && (
-                    <MessageActions className="-ml-2.5 flex gap-0 opacity-0 transition-opacity duration-150 group-hover:opacity-100">
-                      {message.workflow_id && (
-                        <MessageAction
-                          tooltip="Debug Trace"
-                          delayDuration={100}
-                        >
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="rounded-full text-blue-500 hover:text-blue-600 hover:bg-blue-50/50"
-                            onClick={() => setSelectedMessage(message)}
-                            aria-label="View trace"
-                          >
-                            <Terminal className="size-4" />
-                          </Button>
-                        </MessageAction>
-                      )}
-                      <MessageAction tooltip="Copy" delayDuration={100}>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="rounded-full"
-                          onClick={() => {
-                            const contentStr =
-                              typeof message.content === "string"
-                                ? message.content
-                                : JSON.stringify(message.content);
-                            if (onCopy) {
-                              onCopy(contentStr);
-                            } else {
-                              void navigator.clipboard.writeText(contentStr);
-                            }
-                          }}
-                          aria-label="Copy response"
-                        >
-                          <Copy className="size-4" />
-                        </Button>
-                      </MessageAction>
-                    </MessageActions>
-                  )}
-                </div>
-              </Message>
-            </div>
+            <AssistantMessageItem
+              key={messageKey}
+              message={message}
+              messageKey={messageKey}
+              isStreaming={isStreaming}
+              streamSpeed={streamSpeed}
+              fadeDuration={fadeDuration}
+              segmentDelay={segmentDelay}
+              renderTrace={renderTrace}
+              onSelectMessage={setSelectedMessage}
+              onCopy={onCopy}
+            />
           );
         }}
       />
