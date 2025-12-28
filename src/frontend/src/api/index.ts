@@ -33,7 +33,6 @@ export {
 
 // React Query hooks
 export {
-  queryKeys,
   useConversations,
   useConversation,
   useConversationMessages,
@@ -49,6 +48,8 @@ export {
   useEvaluationHistory,
   useInvalidateConversations,
 } from "./hooks";
+
+export { queryKeys } from "./queryKeys";
 
 // Provider
 export { QueryProvider } from "./QueryProvider";

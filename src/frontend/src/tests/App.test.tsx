@@ -1,4 +1,4 @@
-import { screen } from "@testing-library/react";
+import { screen, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { renderWithProviders as render } from "@/tests/utils/render";
 import App from "@/app/App";
@@ -66,19 +66,29 @@ beforeEach(() => {
 });
 
 describe("App", () => {
-  it("renders sidebar and input area", () => {
+  it("renders sidebar and input area", async () => {
     render(<App />);
 
-    expect(
-      screen.getByRole("button", { name: /(start new chat|new chat)/i }),
-    ).toBeInTheDocument();
+    await waitFor(
+      () => {
+        expect(
+          screen.getByRole("button", { name: /(start new chat|new chat)/i }),
+        ).toBeInTheDocument();
+      },
+      { timeout: 5000 },
+    );
     expect(screen.getByPlaceholderText("Ask anything...")).toBeInTheDocument();
   });
 
-  it("mounts the app with proper structure", () => {
+  it("mounts the app with proper structure", async () => {
     const { container } = render(<App />);
 
     // Assert the UI mounted with proper structure
-    expect(container.querySelector("main.flex.h-screen")).toBeTruthy();
+    await waitFor(
+      () => {
+        expect(container.querySelector("main.flex.h-screen")).toBeTruthy();
+      },
+      { timeout: 5000 },
+    );
   });
 });
