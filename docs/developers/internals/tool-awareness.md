@@ -126,7 +126,7 @@ The framework includes training examples for current-event detection:
 
 ## Configuration
 
-Tool awareness can be controlled via `config/workflow_config.yaml`:
+Tool awareness can be controlled via `src/agentic_fleet/config/workflow_config.yaml`:
 
 ```yaml
 tools:
@@ -237,6 +237,6 @@ The `_perform_web_search` method in `reasoner.py` currently tries to execute asy
 
 ## Related Documentation
 
-- [User Guide](../users/user-guide.md) - Tool integration usage patterns
-- [Configuration](../users/configuration.md) - Tool configuration options
+- [User Guide](../../users/user-guide.md) - Tool integration usage patterns
+- [Configuration](../../users/configuration.md) - Tool configuration options
 - [API Reference](../api-reference.md) - ToolRegistry API details

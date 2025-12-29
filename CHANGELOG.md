@@ -1,12 +1,15 @@
 # Changelog
 
-## Unreleased (2025-12-21)
+## Unreleased (2025-12-27)
 
 ### Highlights
 
-- Execution history management utilities and background quality evaluation for richer workflow telemetry.
-- Frontend architecture restructure (pages/stores) plus new design tokens and UI components.
-- New docs-sync automation and expanded internal workflow documentation.
+- Frontend architecture migration to feature-based structure (app/ + features/) for better scalability.
+- SSE API refactoring with centralized HTTP client and improved error handling.
+- E2E testing infrastructure with Playwright integration.
+- Stream event logging enhancements with improved formatting and mapping.
+- New skills: changelog-tracker and codebase-explorer for better project maintenance.
+- MCP configuration support for tool integration.
 
 ### Changes
 
@@ -26,29 +29,68 @@
 - Cleaned service layer imports and added `services/optimization_service.py` plus supporting changes in `services/dspy_programs.py`, `services/chat_sse.py`, and `services/chat_websocket.py`.
 - Added tool registry updates (`utils/tool_registry.py`) and MCP tooling adjustments in `tools/mcp_tools.py`.
 - Added dependencies for OpenInference and Langfuse in `pyproject.toml` and updated wiring where needed.
+- **SSE API Refactoring**: Centralized SSE API requests to shared HTTP client with unified stream prefix handling (#484, #485).
+- **Stream Event Logging**: Refactored stream event logging map with enhanced formatting and improved error handling (#487).
+- **Chat Helpers**: Enhanced response formatting and error handling in chat helpers and optimization service.
+- **Error Formatting**: Introduced dedicated error formatting utility and improved chat transport handling.
+- **Reasoner Modules**: Updated DSPy reasoner modules with improved message handling and thread management (#486).
 
 #### Frontend
 
+- **Major Architecture Migration**: Migrated from component-based to feature-based architecture:
+  - New `src/frontend/src/app/` directory with Next.js-style routing.
+  - New `src/frontend/src/features/` directory for feature-based modules (chat, dashboard, etc.).
+  - New `src/frontend/src/tests/features/` for feature-aligned tests.
+  - Deprecated old `components/` structure (chat/, dashboard/, layout/, message/, workflow/).
+  - See `src/frontend/MIGRATION_SUMMARY.md` for detailed migration guide.
+- **E2E Testing**: Added Playwright infrastructure with `src/frontend/e2e/` and `playwright.config.ts`.
 - Restructured UI into pages/stores pattern with new chat/layout components and sidebar workflows.
 - Introduced design tokens and a refreshed component set (tabs, tooltip, textarea, etc.).
 - Removed unused shared UI components and legacy styles.
+- Updated API hooks and SSE client for improved error handling and type safety.
+- **SSE Client Reconnection**: Restored automatic reconnection logic with exponential backoff (up to 5 attempts, max 30s delay) to handle transient network failures.
+- Enhanced UI components: markdown, reasoning, response-stream, sidebar, and text-shimmer.
 
 #### Docs
 
 - Added docs-sync workflow docs plus new agentic workflow optimization guide and internal plans.
+- Added `src/frontend/MIGRATION_SUMMARY.md` documenting the frontend architecture migration.
+- Added `src/frontend/REGISTRIES.md` for component registry documentation.
+- Fixed file path references for workflow configuration in documentation.
 
 #### Tests
 
 - Added optimization API tests plus new frontend chat/dashboard tests.
 - Removed obsolete optimization/self-improvement tests.
+- Added E2E test infrastructure with Playwright for end-to-end testing.
+- Added feature-aligned tests in `src/frontend/src/tests/features/`.
+- Updated test setup and utilities for better test isolation.
 
 #### CI/Infra
 
 - Added docs-sync workflow automation and Q agentic workflow optimizer workflow.
+- Added new skills for Letta Code:
+  - `changelog-tracker`: Track and summarize repository changes into CHANGELOG.md.
+  - `codebase-explorer`: Systematically explore and analyze codebase architecture.
+- Added `.mcp.json` configuration for Model Context Protocol tool integration.
+- Removed changelog tracker scripts and related documentation (now using skill-based approach).
+- Fixed code quality issues in skills:
+  - `collect_changes.py`: Fixed `_git_log_since` fallback consistency to use `HEAD~1..HEAD` range.
+  - `SKILL.md`: Fixed British/American English inconsistency ("analyses" → "analysis").
+  - `module_boundary_checklist.md`: Fixed typo ("Formatation" → "Formatting").
+  - `dependency_analysis_examples.md`: Fixed file extension (`.pyx` → `.py`).
+  - `find_separation_of_concerns.py`: Added missing `import sys` and fixed invalid rglob brace expansion.
+  - `trace_dependencies.py`: Added missing `import sys` and `import os`, fixed invalid rglob brace expansion, and fixed reverse-dependency logic inversion.
+- Frontend architecture compliance:
+  - Removed duplicate `text-shimmer.tsx` from `components/ui/` (custom component now only in `features/chat/components/`).
+  - Moved `usePromptInput` hook from `components/hooks/` to proper `features/chat/hooks/` location per guidelines.
 
 ### Migration Notes
 
 - Deprecated `agentic_fleet.core.*` modules removed; update external imports to new service/utility equivalents.
+- **Frontend Architecture Migration**: Old component-based structure in `src/frontend/src/components/` is deprecated. New development should use feature-based architecture in `src/frontend/src/features/` with routing in `src/frontend/src/app/`. See `src/frontend/MIGRATION_SUMMARY.md` for detailed migration guide.
+- **SSE API Changes**: SSE API requests now use centralized HTTP client with unified stream prefix. Update custom SSE clients to use `src/frontend/src/api/sse.ts` utilities.
+- **E2E Testing**: New E2E tests require dev servers running (`make dev` first). Tests are in `src/frontend/e2e/`.
 
 ## v0.6.95 (2025-12-16) – Package Reorganization & Security Defaults
 

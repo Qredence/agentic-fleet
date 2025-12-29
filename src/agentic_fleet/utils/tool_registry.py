@@ -334,6 +334,24 @@ class ToolRegistry:
             if name in self._tools and self._tools[name].available
         ]
 
+    def get_all_tools(self) -> list[ToolMetadata]:
+        """
+        Get all registered tools as a list of ToolMetadata objects.
+
+        Returns:
+            List of all ToolMetadata objects (both available and unavailable)
+        """
+        return list(self._tools.values())
+
+    def get_all_available_tools(self) -> list[ToolMetadata]:
+        """
+        Get all available tools as a list of ToolMetadata objects.
+
+        Returns:
+            List of ToolMetadata objects for tools that are currently available
+        """
+        return [tool for tool in self._tools.values() if tool.available]
+
     def can_execute_tool(self, tool_name: str) -> bool:
         """
         Check if a tool can be executed (has instance and is available).

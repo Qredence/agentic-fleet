@@ -257,7 +257,10 @@ describe("ChatSSEClient", () => {
           message: "SSE connection closed unexpectedly",
         }),
       );
-      expect(client.connectionStatus).toBe("error");
+      // After error, the client attempts to reconnect, so status becomes "connecting"
+      expect(client.connectionStatus).toBe("connecting");
+      // Verify that error status was set before reconnection
+      expect(onStatusChange).toHaveBeenCalledWith("error");
     });
 
     it("should gracefully handle malformed JSON", () => {

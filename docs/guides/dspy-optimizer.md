@@ -11,13 +11,28 @@ DSPy optimizers automatically improve your prompts and workflows by learning fro
 
 ### Enable Optimization
 
-Set in `config/workflow_config.yaml`:
+**Option 1: With Initial Training Data**
+
+Set in `src/agentic_fleet/config/workflow_config.yaml`:
 
 ```yaml
 dspy:
   optimization:
     enabled: true # Enable compilation
     examples_path: data/supervisor_examples.json
+```
+
+**Option 2: Bootstrap Mode (No Initial Training Data)**
+
+GEPA can start with no initial training data and use execution history:
+
+```yaml
+dspy:
+  optimization:
+    enabled: true
+    use_gepa: true
+    gepa_use_history_examples: true # Auto-enabled in bootstrap mode
+    # No examples_path needed - uses history only
 ```
 
 ### Using BootstrapFewShot (Default)
@@ -42,6 +57,8 @@ dspy:
     enabled: true
     use_gepa: true # Switch to GEPA
     gepa_auto: light # or 'medium', 'heavy'
+    # Optional: examples_path can be omitted for bootstrap mode
+    # gepa_use_history_examples: true # Auto-enabled in bootstrap mode
 ```
 
 Or use the CLI command:
@@ -50,13 +67,16 @@ Or use the CLI command:
 # Run GEPA optimization once (auto light effort)
 uv run agentic-fleet gepa-optimize --auto light
 
+# Bootstrap mode: Start with no training data, use history only
+uv run agentic-fleet gepa-optimize --auto light --use-history
+
 # Alternate: explicit iteration budget (disables --auto)
 uv run agentic-fleet gepa-optimize --max-full-evals 60
 
 # Alternate: explicit metric call budget (disables --auto)
 uv run agentic-fleet gepa-optimize --max-metric-calls 120
 
-# With history augmentation (still exclusive selection of ONE strategy)
+# With history augmentation (combines initial data + history)
 uv run agentic-fleet gepa-optimize --auto medium --use-history --history-min-quality 9.0
 ```
 
@@ -102,8 +122,9 @@ dspy:
 
 - You want the best possible performance
 - You have time for longer optimization (minutes)
-- You have diverse training examples
+- You have diverse training examples OR execution history with quality ≥8.0
 - BootstrapFewShot results are insufficient
+- **Bootstrap mode**: Starting fresh with no initial training data (uses history)
 
 **Configuration:**
 
@@ -168,23 +189,67 @@ Create `data/supervisor_examples.json`:
 
 ### Using Execution History as Training Data
 
-GEPA can augment training with high-quality runs from your execution history:
+GEPA can use execution history in two ways:
+
+#### 1. Bootstrap Mode: Start with No Training Data
+
+GEPA can start with **zero initial training data** and bootstrap entirely from execution history:
 
 ```yaml
 dspy:
   optimization:
+    enabled: true
     use_gepa: true
-    gepa_use_history_examples: true # Enable history harvesting
+    gepa_use_history_examples: true # Auto-enables in bootstrap mode
     gepa_history_min_quality: 8.0 # Minimum quality score (0-10)
     gepa_history_limit: 200 # Max examples from history
 ```
 
-This automatically:
+**What happens:**
 
-1. Scans `.var/logs/execution_history.jsonl`
-2. Extracts runs with `quality.score >= 8.0`
-3. Converts them to training examples
-4. Adds them to your base examples
+1. System detects no initial training data (`examples_path` missing or empty)
+2. Automatically enables history harvesting (bootstrap mode)
+3. Scans `.var/logs/execution_history.jsonl` for high-quality executions
+4. Extracts runs with `quality.score >= 8.0`
+5. Converts them to training examples
+6. Uses history as the **sole training dataset**
+7. Runs GEPA optimization with history-derived examples
+
+**Benefits:**
+
+- **Cold start**: No need to manually create initial training examples
+- **Self-improvement**: System learns from its own high-quality executions
+- **Incremental**: Improves as more history accumulates over time
+
+#### 2. Augmentation Mode: Enhance Existing Training Data
+
+GEPA can also augment existing training data with history:
+
+```yaml
+dspy:
+  optimization:
+    enabled: true
+    use_gepa: true
+    examples_path: data/supervisor_examples.json # Initial training data
+    gepa_use_history_examples: true # Augment with history
+    gepa_history_min_quality: 8.0
+    gepa_history_limit: 200
+```
+
+**What happens:**
+
+1. Loads initial training examples from `examples_path`
+2. Harvests high-quality executions from history
+3. Merges history examples with initial examples
+4. Deduplicates and shuffles combined dataset
+5. Splits into train/validation sets
+6. Runs GEPA optimization with combined dataset
+
+**Benefits:**
+
+- **Continuous learning**: System improves as it runs
+- **Domain adaptation**: History reflects actual usage patterns
+- **Quality filtering**: Only high-quality executions (≥8.0) are used
 
 ## Optimization Metrics
 
@@ -281,7 +346,7 @@ When you run a workflow, compilation happens automatically during initialization
 ```python
 from agentic_fleet.workflows.supervisor_workflow import create_supervisor_workflow
 
-# Workflow reads config/workflow_config.yaml
+# Workflow reads src/agentic_fleet/config/workflow_config.yaml
 workflow = await create_supervisor_workflow()  # Compiles supervisor here
 
 # Run with optimized module
@@ -406,6 +471,8 @@ Include examples covering:
 
 ### 4. Use GEPA for Fine-Tuning
 
+**Option A: Start with BootstrapFewShot, then upgrade to GEPA**
+
 After BootstrapFewShot works well:
 
 ```yaml
@@ -415,6 +482,27 @@ dspy:
     gepa_auto: light # Start conservative
     gepa_use_history_examples: true
 ```
+
+**Option B: Bootstrap directly with GEPA (no initial training data)**
+
+Start fresh with GEPA using only execution history:
+
+```yaml
+dspy:
+  optimization:
+    enabled: true
+    use_gepa: true
+    gepa_auto: light
+    gepa_use_history_examples: true # Bootstrap mode
+    # No examples_path needed - uses history only
+```
+
+The system will:
+
+1. Detect no initial training data
+2. Automatically harvest history examples (quality ≥8.0)
+3. Use history as training data
+4. Run GEPA optimization
 
 ### 5. Monitor Optimization
 
@@ -488,16 +576,19 @@ dspy:
 1. Inconsistent training examples
 2. Too few examples
 3. Examples don't match actual usage
+4. No high-quality history available (bootstrap mode)
 
 **Solutions:**
 
 1. Review and clean training data
 2. Add more diverse examples (aim for 20+)
-3. Use execution history to supplement:
+3. Use execution history to supplement or bootstrap:
    ```yaml
    gepa_use_history_examples: true
-   gepa_history_min_quality: 7.0
+   gepa_history_min_quality: 7.0 # Lower threshold if needed
+   gepa_history_limit: 300 # Increase limit for more examples
    ```
+4. **For bootstrap mode**: Ensure system has run enough workflows to accumulate history with quality ≥8.0
 
 ### Long Compilation Time
 
@@ -577,13 +668,13 @@ Compare BootstrapFewShot vs. GEPA:
 
 ```bash
 # Test BootstrapFewShot
-vim config/workflow_config.yaml  # Set use_gepa: false
+vim src/agentic_fleet/config/workflow_config.yaml  # Set use_gepa: false
 rm .var/logs/compiled_supervisor.pkl
 uv run python console.py evaluate --dataset data/evaluation_tasks.jsonl
 mv .var/logs/evaluation/evaluation_summary.json results_bootstrap.json
 
 # Test GEPA
-vim config/workflow_config.yaml  # Set use_gepa: true
+vim src/agentic_fleet/config/workflow_config.yaml  # Set use_gepa: true
 rm .var/logs/compiled_supervisor.pkl
 uv run python console.py evaluate --dataset data/evaluation_tasks.jsonl
 mv .var/logs/evaluation/evaluation_summary.json results_gepa.json

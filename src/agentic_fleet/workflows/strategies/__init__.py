@@ -15,6 +15,7 @@ from typing import TYPE_CHECKING, Any
 
 from agent_framework._workflows import WorkflowOutputEvent
 
+from agentic_fleet.utils.infra.langfuse import create_agent_framework_span
 from agentic_fleet.utils.infra.logging import setup_logger
 
 from ...utils.models import ExecutionMode, RoutingDecision
@@ -67,28 +68,35 @@ async def run_execution_phase(
     subtasks: list[str] = list(routing.subtasks)
     tool_usage: list[dict[str, Any]] = []
 
-    if routing.mode is ExecutionMode.PARALLEL:
-        result, usage = await _PARALLEL_STRATEGY.execute(
-            routing=routing, task=task, context=context
-        )
-        tool_usage.extend(usage)
-    elif routing.mode is ExecutionMode.SEQUENTIAL:
-        result, usage = await _SEQUENTIAL_STRATEGY.execute(
-            routing=routing, task=task, context=context
-        )
-        tool_usage.extend(usage)
-    else:
-        # DISCUSSION does not currently have a non-streaming executor; fall back to delegated.
-        delegate = assigned_agents[0] if assigned_agents else None
-        if delegate is None:
-            raise ExecutionPhaseError("Delegated execution requires at least one assigned agent.")
-        result, usage = await execute_delegated(
-            agents_map,
-            delegate,
-            task,
-            thread=context.conversation_thread,
-        )
-        tool_usage.extend(usage)
+    with create_agent_framework_span(
+        "run_execution_phase",
+        phase="execution",
+        metadata={"mode": str(routing.mode), "agents": assigned_agents},
+    ):
+        if routing.mode is ExecutionMode.PARALLEL:
+            result, usage = await _PARALLEL_STRATEGY.execute(
+                routing=routing, task=task, context=context
+            )
+            tool_usage.extend(usage)
+        elif routing.mode is ExecutionMode.SEQUENTIAL:
+            result, usage = await _SEQUENTIAL_STRATEGY.execute(
+                routing=routing, task=task, context=context
+            )
+            tool_usage.extend(usage)
+        else:
+            # DISCUSSION does not currently have a non-streaming executor; fall back to delegated.
+            delegate = assigned_agents[0] if assigned_agents else None
+            if delegate is None:
+                raise ExecutionPhaseError(
+                    "Delegated execution requires at least one assigned agent."
+                )
+            result, usage = await execute_delegated(
+                agents_map,
+                delegate,
+                task,
+                thread=context.conversation_thread,
+            )
+            tool_usage.extend(usage)
 
     logger.info("Execution result: %s...", str(result)[:200])
     logger.info("Execution tool usage: %d items", len(tool_usage))
@@ -118,45 +126,51 @@ async def run_execution_phase_streaming(
     # Get conversation thread from context for multi-turn support
     thread = context.conversation_thread
 
-    if routing.mode is ExecutionMode.PARALLEL:
-        async for event in execute_parallel_streaming(
-            agents_map,
-            list(routing.assigned_to),
-            list(routing.subtasks),
-            thread=thread,
-        ):
-            yield event
-        return
+    # Add Langfuse span for streaming execution phase
+    with create_agent_framework_span(
+        "run_execution_phase_streaming",
+        phase="execution",
+        metadata={"mode": str(routing.mode), "agents": list(routing.assigned_to)},
+    ):
+        if routing.mode is ExecutionMode.PARALLEL:
+            async for event in execute_parallel_streaming(
+                agents_map,
+                list(routing.assigned_to),
+                list(routing.subtasks),
+                thread=thread,
+            ):
+                yield event
+            return
 
-    if routing.mode is ExecutionMode.SEQUENTIAL:
-        async for event in execute_sequential_streaming(
-            agents_map,
-            list(routing.assigned_to),
-            task,
-            enable_handoffs=context.enable_handoffs,
-            handoff=context.handoff,
-            thread=thread,
-        ):
-            yield event
-        return
+        if routing.mode is ExecutionMode.SEQUENTIAL:
+            async for event in execute_sequential_streaming(
+                agents_map,
+                list(routing.assigned_to),
+                task,
+                enable_handoffs=context.enable_handoffs,
+                handoff=context.handoff,
+                thread=thread,
+            ):
+                yield event
+            return
 
-    if routing.mode is ExecutionMode.DISCUSSION:
-        async for event in execute_discussion_streaming(
-            agents_map,
-            list(routing.assigned_to),
-            task,
-            reasoner=context.dspy_supervisor,
-            progress_callback=context.progress_callback,
-            thread=thread,
-        ):
-            yield event
-        return
+        if routing.mode is ExecutionMode.DISCUSSION:
+            async for event in execute_discussion_streaming(
+                agents_map,
+                list(routing.assigned_to),
+                task,
+                reasoner=context.dspy_supervisor,
+                progress_callback=context.progress_callback,
+                thread=thread,
+            ):
+                yield event
+            return
 
-    delegate = routing.assigned_to[0] if routing.assigned_to else None
-    if delegate is None:
-        raise ExecutionPhaseError("Delegated execution requires at least one assigned agent.")
-    async for event in execute_delegated_streaming(agents_map, delegate, task, thread=thread):
-        yield event
+        delegate = routing.assigned_to[0] if routing.assigned_to else None
+        if delegate is None:
+            raise ExecutionPhaseError("Delegated execution requires at least one assigned agent.")
+        async for event in execute_delegated_streaming(agents_map, delegate, task, thread=thread):
+            yield event
 
 
 __all__ = [

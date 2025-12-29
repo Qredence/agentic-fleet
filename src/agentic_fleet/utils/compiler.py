@@ -56,55 +56,142 @@ def compile_reasoner(
             # Note: on_complete was already called in try block if load succeeded,
             # so we don't call on_error here - we'll continue with compilation below
 
-    if not os.path.exists(examples_path):
-        progress_callback.on_error(f"No training data found at {examples_path}")
-        return module
-
-    progress_callback.on_progress(f"Loading training examples from {examples_path}...")
-    try:
-        with open(examples_path) as f:
-            data = json.load(f)
-    except Exception as exc:
-        progress_callback.on_error("Failed to load training data", exc)
-        return module
+    # Load initial training data (if available)
+    data: list[dict[str, Any]] = []
+    if os.path.exists(examples_path):
+        progress_callback.on_progress(f"Loading training examples from {examples_path}...")
+        try:
+            with open(examples_path) as f:
+                data = json.load(f)
+            if not isinstance(data, list):
+                logger.warning(f"Training data at {examples_path} is not a list, ignoring")
+                data = []
+        except Exception as exc:
+            logger.warning(f"Failed to load training data from {examples_path}: {exc}")
+            data = []
+    else:
+        logger.info(
+            f"No initial training data at {examples_path}. "
+            "Will use history data if available (bootstrap mode)."
+        )
 
     if optimizer == "gepa" and allow_gepa_optimization:
         gepa_options = gepa_options or {}
         extra_examples: list[dict[str, Any]] = list(gepa_options.get("extra_examples", []))
 
-        if gepa_options.get("use_history_examples"):
-            progress_callback.on_progress("Harvesting history examples...")
+        # Harvest history examples if requested OR if no initial training data (bootstrap mode)
+        # Self-improvement mode automatically enables history harvesting
+        use_history = gepa_options.get("use_history_examples", False) or gepa_options.get(
+            "is_self_improvement", False
+        )
+        bootstrap_mode = not data  # No initial training data
+
+        if use_history or bootstrap_mode:
+            progress_callback.on_progress("Harvesting high-quality history examples...")
             history_examples = harvest_history_examples(
                 min_quality=gepa_options.get("history_min_quality", 8.0),
                 limit=gepa_options.get("history_limit", 200),
             )
             if history_examples:
                 extra_examples.extend(history_examples)
-                progress_callback.on_progress(f"Appended {len(history_examples)} history examples")
+                progress_callback.on_progress(
+                    f"Harvested {len(history_examples)} history examples "
+                    f"({'bootstrap mode' if bootstrap_mode else 'augmentation mode'})"
+                )
+            else:
+                if bootstrap_mode:
+                    progress_callback.on_progress(
+                        "No high-quality history examples found. "
+                        "GEPA will use zero-shot mode (no optimization)."
+                    )
+                else:
+                    progress_callback.on_progress("No high-quality history examples found")
 
+        # Prepare datasets with proper validation
         progress_callback.on_progress("Preparing GEPA datasets...")
         trainset, valset = prepare_gepa_datasets(
             base_examples_path=examples_path,
-            base_records=data,
-            extra_examples=extra_examples,
+            base_records=data if data else [],
+            extra_examples=extra_examples if extra_examples else None,
             val_split=gepa_options.get("val_split", 0.2),
             seed=gepa_options.get("seed", 13),
         )
 
+        # Bootstrap mode: if no initial data but history exists, use history as training data
+        if not trainset:
+            if extra_examples:
+                logger.info(
+                    f"Bootstrap mode: Using {len(extra_examples)} history examples as training data"
+                )
+                # Convert history examples directly to training set
+                # Split into train/val if we have enough examples
+                if len(extra_examples) > 4:
+                    val_split = gepa_options.get("val_split", 0.2)
+                    val_size = max(1, int(len(extra_examples) * val_split))
+                    val_examples = extra_examples[:val_size]
+                    train_examples = extra_examples[val_size:]
+                    trainset = convert_to_dspy_examples(train_examples)
+                    valset = convert_to_dspy_examples(val_examples)
+                else:
+                    # Too few examples - use all for training
+                    trainset = convert_to_dspy_examples(extra_examples)
+                    valset = []
+                progress_callback.on_progress(
+                    f"Bootstrap mode: {len(trainset)} training, {len(valset)} validation examples"
+                )
+            else:
+                error_msg = (
+                    "No training examples available. "
+                    "Either provide initial training data or enable history harvesting with --use-history. "
+                    "GEPA requires at least some training examples to optimize."
+                )
+                progress_callback.on_error(error_msg)
+                logger.error(error_msg)
+                return module
+
+        # Check for stats_only mode (used for self-improvement preview)
+        if gepa_options.get("stats_only", False):
+            progress_callback.on_complete(
+                f"Self-improvement preview complete: {len(trainset)} potential training examples "
+                "identified from high-quality history."
+            )
+            return module
+
+        # Validate optimization budget parameters
+        auto = gepa_options.get("auto")
+        max_full_evals = gepa_options.get("max_full_evals")
+        max_metric_calls = gepa_options.get("max_metric_calls")
+        max_iterations = gepa_options.get("max_iterations")
+
+        # Run GEPA optimization with improved error handling
         progress_callback.on_progress("Running GEPA optimization...")
-        compiled = optimize_with_gepa(
-            module,
-            trainset,
-            valset,
-            auto=gepa_options.get("auto", "light"),
-            max_full_evals=gepa_options.get("max_full_evals"),
-            max_metric_calls=gepa_options.get("max_metric_calls"),
-            reflection_model=gepa_options.get("reflection_model"),
-            perfect_score=gepa_options.get("perfect_score", 1.0),
-            log_dir=gepa_options.get("log_dir", ".var/logs/gepa"),
-            progress_callback=progress_callback,
-        )
-        progress_callback.on_complete("GEPA optimization complete")
+        try:
+            compiled = optimize_with_gepa(
+                module,
+                trainset,
+                valset if valset else None,
+                auto=auto,
+                max_full_evals=max_full_evals,
+                max_metric_calls=max_metric_calls,
+                max_iterations=max_iterations,
+                reflection_model=gepa_options.get("reflection_model"),
+                perfect_score=gepa_options.get("perfect_score", 1.0),
+                log_dir=gepa_options.get("log_dir", ".var/logs/gepa"),
+                progress_callback=progress_callback,
+                enable_tool_optimization=gepa_options.get("enable_tool_optimization", False),
+                num_threads=gepa_options.get("num_threads"),
+            )
+            progress_callback.on_complete("GEPA optimization complete")
+        except ValueError as ve:
+            # Parameter validation errors
+            progress_callback.on_error(f"GEPA parameter error: {ve}")
+            logger.error(f"GEPA optimization failed due to parameter error: {ve}")
+            return module
+        except Exception as exc:
+            # Other optimization errors
+            progress_callback.on_error(f"GEPA optimization failed: {exc}")
+            logger.error(f"GEPA optimization failed: {exc}", exc_info=True)
+            return module
 
     else:
         # Bootstrap Fallback
@@ -264,12 +351,25 @@ def load_compiled_module(path: str, module_type: str | None = None) -> Any | Non
 
         module = module_factories[module_type]()
 
-        # Load weights using DSPy native load
-        if path.endswith(".pkl"):
-            module.load(path, allow_pickle=True)
-        else:
-            module.load(path)
-        return module
+        # Use DSPy's native load method - handles both JSON and pickle formats
+        try:
+            if path.endswith(".pkl"):
+                module.load(path, allow_pickle=True)
+            else:
+                module.load(path)
+            return module
+        except (TypeError, ValueError, AttributeError) as load_error:
+            # Corrupted or incompatible cache file - log and clean up
+            logger.warning(
+                f"Failed to load compiled module from {path}: {load_error}. "
+                "The cache file may be corrupted or incompatible. Removing it."
+            )
+            try:
+                os.remove(path)
+                logger.debug(f"Removed corrupted cache file: {path}")
+            except OSError as remove_error:
+                logger.debug(f"Could not remove corrupted cache file {path}: {remove_error}")
+            return None
 
     except Exception as e:
         logger.error(f"Failed to load compiled module from {path}: {e}", exc_info=True)

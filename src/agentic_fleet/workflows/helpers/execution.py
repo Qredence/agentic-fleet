@@ -7,6 +7,7 @@ work estimation, and OpenAI client configuration.
 from __future__ import annotations
 
 import os
+import threading
 from typing import Any
 
 import openai
@@ -14,6 +15,19 @@ import openai
 from agentic_fleet.utils.infra.logging import setup_logger
 
 logger = setup_logger(__name__)
+
+# Langfuse integration for OpenAI tracing
+try:
+    from langfuse.openai import AsyncOpenAI as LangfuseAsyncOpenAI
+
+    _LANGFUSE_AVAILABLE = True
+except ImportError:
+    _LANGFUSE_AVAILABLE = False
+    LangfuseAsyncOpenAI = None  # type: ignore[assignment]
+
+# Cache auth check result to avoid repeated authentication checks
+_langfuse_auth_checked: bool | None = None
+_langfuse_auth_lock = threading.Lock()
 
 
 def synthesize_results(results: list[Any]) -> str:
@@ -117,8 +131,52 @@ def create_openai_client_with_store(
     # We'll need to handle this via extra_body in the actual request
     # For now, we store it as a client attribute for later use
     client = openai.AsyncOpenAI(**kwargs)
+
+    # Wrap with Langfuse if available and properly initialized
+    if _LANGFUSE_AVAILABLE and LangfuseAsyncOpenAI:
+        global _langfuse_auth_checked
+
+        try:
+            # Check if Langfuse is properly initialized (with thread-safe caching)
+            if _langfuse_auth_checked is None:
+                with _langfuse_auth_lock:
+                    # Double-check pattern to avoid race condition
+                    if _langfuse_auth_checked is None:
+                        from langfuse import get_client
+
+                        langfuse_client = get_client()
+                        _langfuse_auth_checked = bool(
+                            langfuse_client and langfuse_client.auth_check()
+                        )
+
+            if _langfuse_auth_checked:
+                # Create Langfuse-wrapped client with framework metadata
+                wrapped_client = LangfuseAsyncOpenAI(**kwargs)
+                if reasoning_effort is not None:
+                    wrapped_client._reasoning_effort = reasoning_effort  # type: ignore[attr-defined]
+
+                # Add framework metadata to identify Agent Framework calls
+                # This will be included in trace metadata
+                wrapped_client._framework = "Microsoft Agent Framework"  # type: ignore[attr-defined]
+                wrapped_client._component = "agent-execution"  # type: ignore[attr-defined]
+
+                logger.info(
+                    "OpenAI client wrapped with Langfuse tracing (Agent Framework) - "
+                    "traces will appear in Langfuse UI"
+                )
+                return wrapped_client
+            else:
+                logger.debug(
+                    "Langfuse client not authenticated - OpenAI client will not be wrapped with Langfuse tracing"
+                )
+        except Exception as e:
+            logger.debug("Failed to wrap OpenAI client with Langfuse: %s", e)
+            # Cache the failure to avoid repeated attempts
+            with _langfuse_auth_lock:
+                _langfuse_auth_checked = False
+
+    # Fallback to standard client
     if reasoning_effort is not None:
-        # Store reasoning effort as client attribute for use in requests
         client._reasoning_effort = reasoning_effort  # type: ignore[attr-defined]
 
     if default_query:

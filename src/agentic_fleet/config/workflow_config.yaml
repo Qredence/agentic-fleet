@@ -1,6 +1,6 @@
 # DSPy Configuration
 dspy:
-  model: gpt-5.2 # High-capacity model for DSPy tasks
+  model: gpt-5-mini # High-capacity model for DSPy tasks
   routing_model: gpt-5-mini # Fast model for analysis/routing phases (Plan #4)
   temperature: 1.0
   max_tokens: 16000
@@ -17,6 +17,34 @@ dspy:
   use_typed_signatures: true # Enable Pydantic-based typed signatures for structured outputs
   enable_routing_cache: true # Cache routing decisions to avoid redundant LLM calls
   routing_cache_ttl_seconds: 300 # TTL for routing cache entries (5 minutes)
+
+  # Dynamic Prompt Signatures
+  # Agent instructions can be generated dynamically using DSPy signatures defined in
+  # src/agentic_fleet/dspy_modules/signatures.py, enabling context-aware, optimizer-tunable
+  # prompts instead of static templates.
+  #
+  # Currently Implemented:
+  # - PlannerInstructionSignature: Generates specialized instructions for the Planner/Orchestrator
+  #   agent based on available agents and workflow goals. Used when an agent has
+  #   instructions: prompts.planner in the agents: section below.
+  #
+  # How it works:
+  # 1. workflow_config.yaml defines agents with instructions: prompts.{agent_name}
+  # 2. AgentFactory (src/agentic_fleet/agents/coordinator.py) reads the config
+  # 3. _resolve_instructions() checks if dynamic prompt generation is available
+  # 4. For planner: Uses dspy.ChainOfThought(PlannerInstructionSignature) to generate instructions
+  # 5. For other agents: Falls back to static prompts from agents/prompts.py
+  #
+  # Benefits: Offline optimization via DSPy's GEPA optimizer makes prompts tunable and
+  # context-aware rather than static. The goal is to migrate all agents to use DSPy signatures.
+  #
+  # Future: AgentInstructionSignature exists for expansion to other agents (executor, coder, etc.)
+  # See: src/agentic_fleet/agents/coordinator.py (AgentFactory._resolve_instructions)
+  dynamic_prompts:
+    enabled: true # Enable dynamic prompt generation (requires enable_dspy_agents: true)
+    signatures_path: src/agentic_fleet/dspy_modules/signatures.py
+    # Current implementation: Only planner uses dynamic prompts via PlannerInstructionSignature
+    # Other agents (executor, coder, verifier, etc.) use static prompts from prompts.py
 
   # Azure AI Foundry Configuration
   foundry:
@@ -36,12 +64,9 @@ dspy:
     #   2) gepa_max_full_evals: <int>      (hard cap on full evaluation cycles)
     #   3) gepa_max_metric_calls: <int>    (hard cap on metric scoring calls)
     # If more than one is set, the console/runner will resolve priority: auto > max_full_evals > max_metric_calls.
-    # For FAST completion we disable auto and metric calls, and set a TINY full eval count.
-    # (Previous long run was due to auto mode performing many internal reflection cycles.)
-    # gepa_auto: light  # DISABLED for speed
-    # Switched from full eval cap (still expensive) to metric call cap for ultra-fast run.
-    # gepa_max_full_evals: 3  # (previous setting) commented out; full eval cycles still slow
-    gepa_max_metric_calls: 3 # Reduced from 10 to 3 for faster execution
+    gepa_auto: light # Using light preset for balanced optimization speed
+    # gepa_max_full_evals: 3  # Disabled - using gepa_auto instead
+    # gepa_max_metric_calls: 3 # Disabled - using gepa_auto instead
     gepa_reflection_model: gpt-5-mini # Use fast model for reflection to reduce latency
     gepa_reflection_minibatch_size: 2 # Smaller batches for faster reflection cycles
     gepa_log_dir: .var/logs/dspy/gepa
@@ -93,6 +118,10 @@ workflow:
     retry_attempts: 2
     enable_parallel: true # Enable parallel agent execution where possible
     max_parallel_agents: 3 # Maximum concurrent agents
+
+  # Checkpointing configuration for workflow resumption
+  checkpointing:
+    checkpoint_dir: .var/checkpoints # Directory to store workflow checkpoints; set via config or defaults to .var/checkpoints
 
   quality:
     refinement_threshold: 8.0
@@ -155,14 +184,16 @@ agents:
 
   # New expanded agent roster (configuration-driven; keeps legacy agents for compatibility)
   planner:
-    model: gpt-5.2 # Changed from Kimi-K2-Thinking (not supported by Responses API)
+    model: gpt-5-mini # Changed from Kimi-K2-Thinking (not supported by Responses API)
     tools: []
     temperature: 0.5
-    instructions: prompts.planner
+    instructions: prompts.planner # Uses PlannerInstructionSignature for dynamic generation (DSPy-optimized)
     enable_dspy: true
     cache_ttl: 300
     timeout: 60
 
+  # Other agents (executor, coder, verifier, etc.) currently use static prompts from prompts.py
+  # Future: Can be migrated to use AgentInstructionSignature for dynamic generation
   executor:
     model: gpt-5-mini
     tools: []
@@ -173,7 +204,7 @@ agents:
     timeout: 60
 
   coder:
-    model: gpt-5.1-codex-mini
+    model: gpt-5-mini
     tools:
       - HostedCodeInterpreterTool
     temperature: 0.3
@@ -213,29 +244,33 @@ agents:
     cache_ttl: 300
     timeout: 120
 
-  # Microsoft Foundry Hosted Agent - Code Interpreter
-  # This agent is hosted on Microsoft Foundry with Code Interpreter enabled in the portal
   codex_agent:
-    type: foundry
-    agent_id: codex-agent
-    description: "Python code execution agent with Code Interpreter for file generation, data analysis, and computations"
-    capabilities:
-      - code_interpreter
-      - file_generation
-      - data_analysis
-      - python_execution
+    model: gpt-5-mini
+    tools:
+      - HostedCodeInterpreterTool
+    temperature: 0.3
+    instructions: prompts.coder
+    enable_dspy: true
+    cache_ttl: 300
     timeout: 120
     cleanup_files: false # Keep generated files for user download
-  # FinancialAnalyst:
-  #   type: foundry
-  #   agent_id: "asst_0123456789abcdef" # Replace with actual Agent ID
-  #   description: "A specialized financial analyst agent hosted on Azure."
-  #   tools:
-  #     - name: "bing_search"
-  #     - name: "stock_data_api"
-  #   capabilities:
-  #     - "market_analysis"
-  #     - "financial_forecasting"
+    description: "Python code execution agent with Code Interpreter for file generation, data analysis, and computations"
+    capabilities:
+      - file_generation
+      - data_analysis
+
+# Microsoft Foundry Hosted Agent - Code Interpreter
+# This agent is hosted on Microsoft Foundry with Code Interpreter enabled in the portal
+# FinancialAnalyst:
+#   type: foundry
+#   agent_id: "asst_0123456789abcdef" # Replace with actual Agent ID
+#   description: "A specialized financial analyst agent hosted on Azure."
+#   tools:
+#     - name: "bing_search"
+#     - name: "stock_data_api"
+#   capabilities:
+#     - "market_analysis"
+#     - "financial_forecasting"
 
 # Tool Configuration
 tools:
@@ -254,7 +289,7 @@ logging:
   verbose: true
   # Log verbose GPT-5 reasoning tokens to execution history (default: false)
   # Enable for debugging/evaluation; disable in production to reduce storage
-  log_reasoning: false
+  log_reasoning: true
 
 # UI Routing Configuration
 # Maps StreamEventType (and optional kind) to EventCategory and UIHint for frontend rendering
@@ -408,13 +443,18 @@ ui_routing:
 # Tracing / Observability
 tracing:
   enabled: true # Set to false to disable all tracing
-  otlp_endpoint: http://localhost:4317 # AI Toolkit / OpenTelemetry Collector endpoint (corrected port)
-  capture_sensitive: true # Capture prompts & completions (set to true only for debugging - GDPR/privacy risk)
+  otlp_endpoint: ${OTLP_ENDPOINT:-https://cloud.langfuse.com/api/public/otel} # Langfuse OTLP endpoint; configurable via OTLP_ENDPOINT env var for region-specific endpoints (us.cloud.langfuse.com, cloud.langfuse.com, etc.)
+  capture_sensitive: false # Capture prompts & completions (set to true only for debugging - GDPR/privacy risk). Default: false for production.
   # Azure Monitor / AI Foundry export (optional)
   # Set connection string to export traces to Microsoft AI Foundry
   # Get this from: Foundry Portal > Your Project > Tracing > Manage data source > Connection string
   # Or set APPLICATIONINSIGHTS_CONNECTION_STRING env var
   azure_monitor_connection_string: # e.g., "InstrumentationKey=xxx;IngestionEndpoint=https://xxx.applicationinsights.azure.com/"
+  # NOTE: Data Residency & Compliance
+  # If using Langfuse for tracing sensitive workloads, ensure:
+  # 1. OTLP_ENDPOINT is set to a region-specific endpoint (us.cloud.langfuse.com for US, cloud.langfuse.com for EU)
+  # 2. A Data Processing Agreement (DPA) is in place with Langfuse
+  # 3. For highly sensitive data, use a Langfuse plan with data-masking or disable capture_sensitive
 
 # Evaluation Framework
 evaluation:

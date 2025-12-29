@@ -179,7 +179,7 @@ uv run agentic-fleet run -m "Task" --no-compile
 3. Use faster model:
 
 ```yaml
-# config/workflow_config.yaml
+# src/agentic_fleet/config/workflow_config.yaml
 dspy:
   model: gpt-5-mini # Faster than gpt-4.1
 ```
@@ -235,7 +235,7 @@ ConfigurationError: Invalid configuration: ...
 1. Check YAML syntax:
 
 ```bash
-python3 -c "import yaml; yaml.safe_load(open('config/workflow_config.yaml'))"
+python3 -c "import yaml; yaml.safe_load(open('src/agentic_fleet/config/workflow_config.yaml'))"
 ```
 
 2. Validate configuration:

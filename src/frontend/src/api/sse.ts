@@ -12,15 +12,10 @@
  * - Native keep-alive support
  */
 
-import { API_BASE_URL } from "./config";
+import { getStreamApiBase } from "./config";
+import { sseApi } from "./client";
 import type { StreamEvent } from "./types";
-
-/**
- * Chat API prefix - uses /api (no version) for streaming endpoints.
- * This is intentionally different from API_PREFIX (/api/v1) used for REST endpoints.
- * The backend registers streaming routes at /api for frontend compatibility.
- */
-const CHAT_API_PREFIX = "/api";
+import { StreamEventSchema } from "./validation";
 
 // =============================================================================
 // Types
@@ -60,10 +55,19 @@ export class ChatSSEClient {
   private callbacks: ChatSSECallbacks = {};
   private currentWorkflowId: string | null = null;
   private currentConversationId: string | null = null;
+  private currentUrl: string | null = null;
+  private lastConversationId: string = "";
+  private lastMessage: string = "";
+  private lastOptions: ChatSSEOptions = {};
+  private heartbeatTimer: ReturnType<typeof setTimeout> | null = null;
+  private lastHeartbeat: number = Date.now();
+  private heartbeatTimeout = 30000; // 30 seconds without heartbeat = dead connection
 
-  /**
-   * Get current connection status.
-   */
+  // Reconnection state
+  private reconnectAttempts = 0;
+  private maxReconnectAttempts = 5;
+  private reconnectDelay = 1000; // Start with 1 second
+  private reconnectTimer: ReturnType<typeof setTimeout> | null = null;
   get connectionStatus(): SSEConnectionStatus {
     return this.status;
   }
@@ -105,12 +109,14 @@ export class ChatSSEClient {
     this.disconnect();
 
     this.currentConversationId = conversationId;
+    this.lastConversationId = conversationId;
+    this.lastMessage = message;
+    this.lastOptions = options;
     this.setStatus("connecting");
 
     // Build SSE URL with query parameters
-    const baseUrl = API_BASE_URL || "";
     const url = new URL(
-      `${baseUrl}${CHAT_API_PREFIX}/chat/${conversationId}/stream`,
+      `${getStreamApiBase()}/chat/${conversationId}/stream`,
       window.location.origin,
     );
     url.searchParams.set("message", message);
@@ -122,25 +128,54 @@ export class ChatSSEClient {
       url.searchParams.set("enable_checkpointing", "true");
     }
 
+    // Store URL for reconnection attempts
+    this.currentUrl = url.toString();
+
+    // Store connection parameters for reconnection
+    this.lastMessage = message;
+    this.lastOptions = options;
+    this.reconnectAttempts = 0;
+    this.reconnectDelay = 1000;
+
     // Create EventSource connection
-    this.eventSource = new EventSource(url.toString());
+    this.createEventSourceConnection(this.currentUrl);
+  }
+
+  /**
+   * Create and attach event handlers to an EventSource.
+   */
+  private createEventSourceConnection(url: string): void {
+    this.eventSource = new EventSource(url);
 
     this.eventSource.onopen = () => {
       this.setStatus("connected");
+      this.lastHeartbeat = Date.now();
+      this.startHeartbeatCheck();
     };
 
     this.eventSource.onmessage = (event: MessageEvent) => {
       this.handleMessage(event.data);
+      this.lastHeartbeat = Date.now(); // Update heartbeat on any message
     };
 
     this.eventSource.onerror = () => {
-      // EventSource auto-reconnects, but we track the error
-      if (this.eventSource?.readyState === EventSource.CLOSED) {
+      const readyState = this.eventSource?.readyState;
+
+      // EventSource.CONNECTING = 0, EventSource.OPEN = 1, EventSource.CLOSED = 2
+      if (readyState === EventSource.CLOSED) {
+        // Connection closed unexpectedly - attempt to reconnect
         this.setStatus("error");
         this.callbacks.onError?.(
           new Error("SSE connection closed unexpectedly"),
         );
-        this.cleanup();
+        // Attempt to reconnect with exponential backoff
+        this.handleReconnection();
+      } else if (readyState === EventSource.CONNECTING) {
+        // Still connecting - this is normal during initial connection
+        // Don't treat as error yet
+      } else {
+        // Unknown state - treat as error
+        this.setStatus("error");
       }
     };
   }
@@ -150,13 +185,48 @@ export class ChatSSEClient {
    */
   private handleMessage(data: string): void {
     try {
-      const event: StreamEvent = JSON.parse(data);
+      // Handle empty or whitespace-only data
+      if (!data || !data.trim()) {
+        return;
+      }
+
+      const parsed = JSON.parse(data);
+
+      // Guard against null or non-object parsed values
+      if (!parsed || typeof parsed !== "object") {
+        console.warn(
+          "[SSE] Invalid event data: expected object, got",
+          typeof parsed,
+        );
+        return;
+      }
+
+      // Validate event structure in development
+      if (import.meta.env.DEV && StreamEventSchema) {
+        try {
+          const validation = StreamEventSchema.safeParse(parsed);
+          if (!validation.success) {
+            console.warn("[SSE] Invalid event structure:", validation.error);
+          }
+        } catch (validationErr) {
+          // Catch any errors during validation (e.g., schema issues)
+          console.warn("[SSE] Validation error:", validationErr);
+        }
+      }
+
+      const event: StreamEvent = parsed;
 
       // Track workflow ID from connected event
       if (event.type === "connected" && event.data?.workflow_id) {
         this.currentWorkflowId = event.data.workflow_id as string;
       } else if (event.workflow_id) {
         this.currentWorkflowId = event.workflow_id;
+      }
+
+      // Handle heartbeat events
+      if (event.type === "heartbeat") {
+        this.lastHeartbeat = Date.now();
+        return; // Don't emit heartbeat events to callbacks
       }
 
       // Emit event to callback
@@ -174,6 +244,75 @@ export class ChatSSEClient {
       }
     } catch (err) {
       console.error("Failed to parse SSE event:", err, data);
+      this.callbacks.onError?.(
+        new Error(
+          `Failed to parse SSE event: ${err instanceof Error ? err.message : "Unknown error"}`,
+        ),
+      );
+    }
+  }
+
+  /**
+   * Handle reconnection with exponential backoff.
+   */
+  private async handleReconnection(): Promise<void> {
+    if (this.reconnectAttempts >= this.maxReconnectAttempts) {
+      this.setStatus("error");
+      this.callbacks.onError?.(
+        new Error(
+          `Connection failed after ${this.maxReconnectAttempts} attempts. Please try again.`,
+        ),
+      );
+      this.cleanup();
+      return;
+    }
+
+    this.reconnectAttempts++;
+    const delay = Math.min(
+      this.reconnectDelay * Math.pow(2, this.reconnectAttempts - 1),
+      30000, // Max 30 seconds
+    );
+
+    this.setStatus("connecting");
+
+    this.reconnectTimer = setTimeout(() => {
+      this.connect(this.lastConversationId, this.lastMessage, this.lastOptions);
+    }, delay);
+  }
+
+  /**
+   * Start heartbeat check to detect dead connections.
+   */
+  private startHeartbeatCheck(): void {
+    this.stopHeartbeatCheck();
+
+    this.heartbeatTimer = setInterval(() => {
+      const timeSinceLastHeartbeat = Date.now() - this.lastHeartbeat;
+
+      if (timeSinceLastHeartbeat > this.heartbeatTimeout) {
+        console.warn("SSE heartbeat timeout - connection may be dead");
+        this.setStatus("error");
+        this.callbacks.onError?.(
+          new Error("Connection timeout - no heartbeat received"),
+        );
+        // Close the dead connection and attempt reconnection
+        this.stopHeartbeatCheck();
+        if (this.eventSource) {
+          this.eventSource.close();
+          this.eventSource = null;
+        }
+        this.handleReconnection();
+      }
+    }, 5000); // Check every 5 seconds
+  }
+
+  /**
+   * Stop heartbeat check.
+   */
+  private stopHeartbeatCheck(): void {
+    if (this.heartbeatTimer) {
+      clearInterval(this.heartbeatTimer);
+      this.heartbeatTimer = null;
     }
   }
 
@@ -186,18 +325,7 @@ export class ChatSSEClient {
     }
 
     try {
-      // Use direct fetch to bypass /api/v1 prefix - streaming endpoints are at /api
-      const baseUrl = API_BASE_URL || "";
-      const url = `${baseUrl}${CHAT_API_PREFIX}/chat/${this.currentConversationId}/cancel?workflow_id=${this.currentWorkflowId}`;
-      const response = await fetch(url, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-      });
-      if (!response.ok) {
-        throw new Error(
-          `Cancel failed: ${response.status} ${response.statusText}`,
-        );
-      }
+      await sseApi.cancel(this.currentConversationId, this.currentWorkflowId);
     } catch (err) {
       console.error("Failed to cancel stream:", err);
     }
@@ -216,24 +344,12 @@ export class ChatSSEClient {
       throw new Error("No active stream to respond to");
     }
 
-    // Use direct fetch to bypass /api/v1 prefix - streaming endpoints are at /api
-    const baseUrl = API_BASE_URL || "";
-    const url = `${baseUrl}${CHAT_API_PREFIX}/chat/${this.currentConversationId}/respond?workflow_id=${this.currentWorkflowId}`;
-    const fetchResponse = await fetch(url, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        request_id: requestId,
-        response,
-      }),
-    });
-
-    if (!fetchResponse.ok) {
-      const errorText = await fetchResponse.text().catch(() => "Unknown error");
-      throw new Error(
-        `HITL response failed: ${fetchResponse.status} ${errorText}`,
-      );
-    }
+    await sseApi.submitResponse(
+      this.currentConversationId,
+      this.currentWorkflowId,
+      requestId,
+      response,
+    );
   }
 
   /**
@@ -248,11 +364,22 @@ export class ChatSSEClient {
    * Cleanup resources.
    */
   private cleanup(): void {
+    this.stopHeartbeatCheck();
+
+    // Clear reconnection timer
+    if (this.reconnectTimer) {
+      clearTimeout(this.reconnectTimer);
+      this.reconnectTimer = null;
+    }
+
     if (this.eventSource) {
       this.eventSource.close();
       this.eventSource = null;
     }
+
     this.currentWorkflowId = null;
+    this.reconnectAttempts = 0;
+    this.reconnectDelay = 1000;
   }
 
   /**

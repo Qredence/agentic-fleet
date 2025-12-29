@@ -11,9 +11,9 @@ if TYPE_CHECKING:
         AgentFactory,
         create_workflow_agents,
         get_default_agent_metadata,
-        validate_tool,
     )
     from .foundry import FoundryAgentAdapter, FoundryAgentConfig, FoundryHostedAgent
+    from .helpers import validate_tool
 
 __all__ = [
     "AgentFactory",
@@ -30,10 +30,14 @@ def __getattr__(name: str) -> Any:
         from . import coordinator as _coordinator
 
         return getattr(_coordinator, name)
-    if name in ("create_workflow_agents", "validate_tool", "get_default_agent_metadata"):
+    if name in ("create_workflow_agents", "get_default_agent_metadata"):
         from . import coordinator as _coordinator
 
         return getattr(_coordinator, name)
+    if name == "validate_tool":
+        from . import helpers as _helpers
+
+        return getattr(_helpers, name)
     if name in ("FoundryAgentAdapter", "FoundryAgentConfig", "FoundryHostedAgent"):
         from . import foundry as _foundry
 

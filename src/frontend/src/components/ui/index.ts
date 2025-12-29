@@ -78,9 +78,18 @@ export {
   TooltipProvider,
   TooltipTrigger,
 } from "./tooltip";
+export {
+  Toast,
+  ToastAction,
+  ToastClose,
+  ToastTitle,
+  ToastDescription,
+  ToastComponent,
+  type ToastProps,
+} from "./toast";
+export { Toaster, type ToastVariant, type ToastData } from "./toaster";
 
 // prompt-kit components
 export { Reasoning, ReasoningTrigger, ReasoningContent } from "./reasoning";
 export { Markdown as PromptKitMarkdown } from "./markdown";
 export { ResponseStream } from "./response-stream";
-export { TextShimmer as PromptKitTextShimmer } from "./text-shimmer";

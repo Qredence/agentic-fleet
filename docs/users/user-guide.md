@@ -138,7 +138,7 @@ Each CLI invocation triggers the same five-phase pipeline described in
 
 The CLI surfaces these phases through the `--verbose` stream and also records
 timings/decisions in `.var/logs/execution_history.jsonl` for later inspection via
-`uv run python src/agentic_fleet/scripts/analyze_history.py`.
+`uv run python -m agentic_fleet.scripts.analyze_history`.
 
 ### Programmatic Usage
 
@@ -253,7 +253,7 @@ Every workflow execution follows 5 phases:
 
 ### Configuration Files
 
-The framework uses YAML-based configuration in `config/workflow_config.yaml` (source of truth).
+The framework uses YAML-based configuration in `src/agentic_fleet/config/workflow_config.yaml` (source of truth).
 
 Common path-related settings (excerpt):
 
@@ -339,20 +339,22 @@ async for event in workflow.run_stream("Your task here"):
     elif hasattr(event, 'data'):
         # Final result event
         result = event.data
-
-    #### Human-in-the-loop (HITL) responses (WebSocket)
-
-    When using the web UI (or any WebSocket client), workflows may emit request events that require a client response.
-    Clients can respond with `workflow.response` messages to unblock execution.
-
-    #### Checkpointing and resume
-
-    AgenticFleet follows agent-framework checkpoint semantics:
-
-    - For **new runs**, checkpointing is enabled by configuring checkpoint storage (opt-in flag), not by sending a `checkpoint_id`.
-    - For **resume**, send a `workflow.resume` message containing `checkpoint_id`.
-    - `checkpoint_id` is **resume-only** (message XOR checkpoint_id).
 ```
+
+#### Human-in-the-loop (HITL) responses
+
+When using the web UI (SSE) or WebSocket clients, workflows may emit request events that require a client response.
+
+- **SSE clients**: respond via `POST /api/chat/{conversation_id}/respond?workflow_id=...` with `request_id` + payload.
+- **WebSocket clients (legacy)**: send a `workflow.response` message to unblock execution.
+
+#### Checkpointing and resume
+
+AgenticFleet follows agent-framework checkpoint semantics:
+
+- For **new runs**, checkpointing is enabled via `enable_checkpointing` (server configures storage).
+- For **resume**, use the legacy WebSocket endpoint and send `workflow.resume` with `checkpoint_id`.
+- `checkpoint_id` is **resume-only** (message XOR checkpoint_id).
 
 ### Complex Multi-Step Tasks
 
@@ -668,21 +670,21 @@ Use the built-in analyzer:
 
 ```bash
 # Show overall summary and last 10 executions
-uv run python src/agentic_fleet/scripts/analyze_history.py
+uv run python -m agentic_fleet.scripts.analyze_history
 
 # Show all statistics
-uv run python src/agentic_fleet/scripts/analyze_history.py --all
+uv run python -m agentic_fleet.scripts.analyze_history --all
 
 # Show specific information
-uv run python src/agentic_fleet/scripts/analyze_history.py --routing    # Routing mode distribution
-uv run python src/agentic_fleet/scripts/analyze_history.py --agents     # Agent usage stats
-uv run python src/agentic_fleet/scripts/analyze_history.py --timing     # Time breakdown by phase
+uv run python -m agentic_fleet.scripts.analyze_history --routing    # Routing mode distribution
+uv run python -m agentic_fleet.scripts.analyze_history --agents     # Agent usage stats
+uv run python -m agentic_fleet.scripts.analyze_history --timing     # Time breakdown by phase
 ```
 
 ### Programmatic History Access
 
 ```python
-from agentic_fleet.utils.history_manager import HistoryManager
+from agentic_fleet.utils.storage.history import HistoryManager
 
 manager = HistoryManager(history_format="jsonl")
 
@@ -913,22 +915,58 @@ except ConfigurationError as e:
 - Read [Architecture](../developers/architecture.md) for technical architecture
 - Read [Contributing](../developers/contributing.md) for development guidelines
 - Explore `examples/` directory for sample code
-- Check `config/workflow_config.yaml` for all configuration options
+- Check `src/agentic_fleet/config/workflow_config.yaml` for all configuration options
 
 ## GEPA Optimization
 
-Reflective prompt evolution is available via the built-in GEPA command:
+Reflective prompt evolution is available via the built-in GEPA command. GEPA can start with **no initial training data** and bootstrap entirely from execution history.
+
+### Bootstrap Mode: Start with No Training Data
+
+GEPA can automatically learn from execution history without requiring initial training examples:
 
 ```bash
+# Bootstrap mode: Use history as training data
 uv run agentic-fleet gepa-optimize \
   --auto medium \
-  --max-full-evals 60 \
   --use-history
 ```
 
-- Enable GEPA globally by setting `dspy.optimization.use_gepa: true` in `config/workflow_config.yaml`.
+**What happens:**
+
+1. System detects no initial training data
+2. Automatically harvests high-quality executions (quality ≥8.0) from `.var/logs/execution_history.jsonl`
+3. Converts history to training examples
+4. Runs GEPA optimization using history as the training dataset
+5. Saves optimized module to `.var/logs/compiled_supervisor.pkl`
+
+### Augmentation Mode: Enhance Existing Training
+
+GEPA can also augment existing training data with history:
+
+```bash
+# Combine initial data + history
+uv run agentic-fleet gepa-optimize \
+  --auto medium \
+  --examples data/supervisor_examples.json \
+  --use-history \
+  --history-min-quality 8.0 \
+  --history-limit 200
+```
+
+### Configuration
+
+- Enable GEPA globally by setting `dspy.optimization.use_gepa: true` in `src/agentic_fleet/config/workflow_config.yaml`.
 - Customize search intensity with `--auto` (`light`, `medium`, `heavy`) or the matching config key.
 - Add `--use-history` to merge high-quality records from `.var/logs/execution_history.*` into the training split. Tune `--history-min-quality` and `--history-limit` as needed.
+- **Bootstrap mode**: Omit `--examples` to use history as the sole training source.
 - Results are cached at `.var/logs/compiled_supervisor.pkl`. Delete the cache or pass `--no-cache` to force a fresh optimization run.
 
-Under the hood, the command configures `dspy.GEPA` with the routing feedback metric defined in `src/agentic_fleet/utils/gepa_optimizer.py`, ensuring actionable text feedback for each trajectory.
+### Benefits
+
+- **Cold start**: No need to manually create initial training examples
+- **Self-improvement**: System learns from its own high-quality executions
+- **Incremental learning**: Improves as more history accumulates over time
+- **Quality filtering**: Only uses executions with quality score ≥8.0 (configurable)
+
+Under the hood, the command configures `dspy.GEPA` with the routing feedback metric defined in `src/agentic_fleet/dspy_modules/gepa/feedback.py`, ensuring actionable text feedback for each trajectory.

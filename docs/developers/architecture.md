@@ -315,7 +315,7 @@ sequenceDiagram
   CLI-->>U: exit 0
 ```
 
-> Entry point: [`cli/console.py`](src/agentic_fleet/cli/console.py:39) provides the Typer CLI used to start workflows.
+> Entry point: [`cli/console.py`](../../src/agentic_fleet/cli/console.py#L39) provides the Typer CLI used to start workflows.
 
 ### Agent-Framework Integration Summary
 
@@ -324,7 +324,7 @@ sequenceDiagram
 | Component            | Agent-Framework Usage                                   | Location                          |
 | -------------------- | ------------------------------------------------------- | --------------------------------- |
 | **Workflow Graph**   | `WorkflowBuilder().set_start_executor().add_edge()`     | `workflows/builder.py:79-87`      |
-| **Executors**        | All extend `agent_framework.Executor` with `@handler`   | `workflows/executors.py`          |
+| **Executors**        | All extend `agent_framework.Executor` with `@handler`   | `workflows/executors/`            |
 | **Workflow Runtime** | `workflow_builder.build().as_agent()` → `WorkflowAgent` | `workflows/supervisor.py:275-276` |
 | **Execution**        | `workflow_agent.run()` / `run_stream()`                 | `workflows/supervisor.py:66, 116` |
 | **Chat Agents**      | `ChatAgent` with `OpenAIResponsesClient`                | `agents/coordinator.py:96-115`    |
@@ -355,32 +355,32 @@ async for event in workflow_agent.run_stream(task_msg):
 
 ### Module Structure
 
-- `src/workflows/` - Flattened orchestration logic
+- `src/agentic_fleet/workflows/` - Orchestration logic
   - `supervisor.py` - Main entry point and workflow runtime
   - `builder.py` - WorkflowBuilder configuration
-  - `executors.py` - All phase executors (Analysis, Routing, Progress, Quality)
+  - `executors/` - Phase executors (Analysis, Routing, Execution, Progress, Quality)
   - `strategies.py` - Execution strategies (delegated, sequential, parallel)
   - `handoff.py` - Handoff logic
   - `context.py` - `SupervisorContext` definition
   - `models.py` - Shared data models
-  - `messages.py` - Message handling
-  - `helpers.py` - Routing helpers
-  - `utils.py` - Shared utilities
+  - `helpers/` - Execution helpers and thread utilities
+  - `initialization.py` - Bootstraps supervisor contexts and caches
   - `exceptions.py` - Custom exceptions
 
-- `src/dspy_modules/` - DSPy integration (aligned with dspy.ai best practices)
-  - `reasoner.py` - `DSPyReasoner` module orchestrating analysis, routing, progress, and quality. Uses enhanced signatures (`EnhancedTaskRouting`, `JudgeEvaluation`) by default for better workflow integration. Verbose about reasoning traces via `get_execution_summary()`.
-  - `workflow_signatures.py` - **Canonical workflow-oriented signatures**: `EnhancedTaskRouting`, `JudgeEvaluation`, `WorkflowHandoffDecision` (follows dspy.ai signature patterns)
+- `src/agentic_fleet/dspy_modules/` - DSPy integration
+  - `reasoner.py` - `DSPyReasoner` orchestrating analysis, routing, progress, and quality
   - `signatures.py` - Core DSPy signatures: `TaskAnalysis`, `TaskRouting`, `QualityAssessment`, `ProgressEvaluation`
-  - `agent_signatures.py` - Dynamic agent instruction signatures (e.g., `PlannerInstructionSignature`)
-  - `handoff_signatures.py` - Handoff-specific DSPy signatures: `HandoffDecision`, `HandoffProtocol`, `HandoffQualityAssessment`
+  - `typed_models.py` - Pydantic output models for typed signatures
+  - `assertions.py` - DSPy assertions/constraints
+  - `gepa/` - GEPA optimization modules
+  - `nlu.py` + `nlu_signatures.py` - NLU endpoints and signatures
 
-- `src/agents/` - **Canonical agent layer** (single source of truth)
-  - `coordinator.py` - `AgentFactory` for YAML-based agent creation, `create_workflow_agents` for default workflow agents, `validate_tool` utility
-  - `prompts.py` - Consolidated prompt templates (static fallbacks)
-  - `base.py` - Base agent classes
+- `src/agentic_fleet/agents/` - Agent layer
+  - `coordinator.py` - `AgentFactory` and agent creation
+  - `prompts.py` - Prompt templates
+  - `helpers.py` - Agent helper utilities
 
-- `src/cli/` - Command-line interface (modular structure)
+- `src/agentic_fleet/cli/` - Command-line interface (modular structure)
   - `cli/console.py` - Minimal Typer app (~61 lines) that registers commands
   - `runner.py` - `WorkflowRunner` for executing workflows
   - `display.py` - Rich console display utilities
@@ -396,7 +396,7 @@ async for event in workflow_agent.run_stream(task_msg):
     - `improve.py` - Self-improvement command
     - `evaluate.py` - Batch evaluation command
 
-- `src/utils/` - Utilities (organized into subpackages)
+- `src/agentic_fleet/utils/` - Utilities (organized into subpackages)
   - `cfg/` - Configuration utilities
     - `config_loader.py` - YAML/environment configuration loading
     - `config_schema.py` - Pydantic configuration validation
@@ -478,7 +478,7 @@ Tools are registered in the `ToolRegistry` and made available to DSPy modules fo
 
 ## Configuration
 
-Configuration is loaded from `config/workflow_config.yaml` and validated using Pydantic schemas. Environment variables override YAML settings.
+Configuration is loaded from `src/agentic_fleet/config/workflow_config.yaml` and validated using Pydantic schemas. Environment variables override YAML settings.
 
 ## History Management
 
@@ -506,7 +506,7 @@ The codebase has been refactored to improve maintainability and reduce complexit
   - `workflows/` flattened structure (executors, strategies, logic in single level)
   - `workflows/supervisor.py` is the main entry point
   - Execution strategies in `workflows/strategies.py`
-  - Executors in `workflows/executors.py`
+  - Executors in `workflows/executors/`
   - Shared typed models in `workflows/models.py`
   - Shared utilities in `workflows/utils.py`
 
@@ -536,8 +536,8 @@ Custom exception hierarchy:
 Typical slow phases and tuning guidance:
 
 - DSPy compilation on first run
-  - Use cached compiled reasoner on subsequent runs; clear via [`scripts/manage_cache.py`](src/agentic_fleet/scripts/manage_cache.py)
-  - Reduce GEPA effort in `config/workflow_config.yaml` e.g. `gepa_max_metric_calls`, `max_bootstrapped_demos`
+- Use cached compiled reasoner on subsequent runs; clear via [`scripts/manage_cache.py`](../../src/agentic_fleet/scripts/manage_cache.py)
+  - Reduce GEPA effort in `src/agentic_fleet/config/workflow_config.yaml` e.g. `gepa_max_metric_calls`, `max_bootstrapped_demos`
   - Temporarily set `DSPY_COMPILE=false` for rapid iteration
 - External tool calls and network latency
   - Prefer lighter Reasoner model e.g. `dspy.model: gpt-5-mini`
@@ -552,7 +552,7 @@ Typical slow phases and tuning guidance:
 Measure and diagnose latency using history analytics:
 
 ```bash
-uv run python src/agentic_fleet/scripts/analyze_history.py --timing
+uv run python -m agentic_fleet.scripts.analyze_history --timing
 ```
 
 Focus improvements on compilation time, external API latency, and minimizing unnecessary refinement rounds.

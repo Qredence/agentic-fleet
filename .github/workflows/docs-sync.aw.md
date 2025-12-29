@@ -1,6 +1,7 @@
 ---
 name: Documentation Sync
 description: Automatically updates documentation when code changes are detected in src/.
+engine: copilot
 on:
   push:
     branches: [main]
@@ -16,7 +17,6 @@ permissions:
 
 imports:
   - ../agents/docs-agent.md
-  - shared/engine-fleet.md
 
 timeout-minutes: 15
 
