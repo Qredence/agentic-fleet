@@ -48,8 +48,8 @@ class DSPyManager:
             with cls._lock:
                 if cls._instance is None:
                     instance = super().__new__(cls)
-                    instance._initialized = False  # Set flag before assigning to _instance
                     cls._instance = instance
+                    instance._initialized = False  # Set flag after assigning to _instance
         return cls._instance
 
     def __init__(self) -> None:
@@ -85,7 +85,7 @@ class DSPyManager:
                     return
 
                 # Initialize Langfuse SDK client
-                langfuse_client = get_client()
+                langfuse_client = get_client()  # type: ignore[possibly-undefined]
                 if not langfuse_client.auth_check():
                     logger.warning("Langfuse authentication failed - tracing disabled")
                     return
@@ -96,7 +96,7 @@ class DSPyManager:
                 # Instrument DSPy
                 if not self._dspy_instrumented:
                     self._setup_opentelemetry()
-                    DSPyInstrumentor().instrument()
+                    DSPyInstrumentor().instrument()  # type: ignore[possibly-undefined]
                     self._dspy_instrumented = True
                     logger.info("DSPy instrumentation enabled for Langfuse tracing")
 

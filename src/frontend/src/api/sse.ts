@@ -295,7 +295,13 @@ export class ChatSSEClient {
         this.callbacks.onError?.(
           new Error("Connection timeout - no heartbeat received"),
         );
+        // Close the dead connection and attempt reconnection
         this.stopHeartbeatCheck();
+        if (this.eventSource) {
+          this.eventSource.close();
+          this.eventSource = null;
+        }
+        this.handleReconnection();
       }
     }, 5000); // Check every 5 seconds
   }

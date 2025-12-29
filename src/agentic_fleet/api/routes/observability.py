@@ -58,9 +58,13 @@ def _convert_langfuse_object_to_dict(obj: Any) -> dict[str, Any]:
     """
     # Try standard serialization methods first
     if hasattr(obj, "dict") and callable(obj.dict):
-        return obj.dict()
+        result = obj.dict()
+        if isinstance(result, dict):
+            return result
     if hasattr(obj, "model_dump") and callable(obj.model_dump):
-        return obj.model_dump()
+        result = obj.model_dump()
+        if isinstance(result, dict):
+            return result
 
     # Fallback: extract only known safe attributes
     # These are common public fields across Langfuse SDK versions
@@ -130,7 +134,7 @@ async def get_workflow_trace(workflow_id: str) -> dict[str, Any]:
             raise HTTPException(status_code=503, detail="Langfuse integration is not configured.")
 
         # Fetch trace details
-        trace = langfuse.fetch_trace(workflow_id)
+        trace = langfuse.fetch_trace(workflow_id)  # type: ignore[attr-defined]
 
         if not trace:
             safe_workflow_id = sanitize_for_logging(workflow_id)
@@ -204,8 +208,8 @@ async def list_recent_traces(limit: int = 10, offset: int = 0) -> list[dict[str,
         if not langfuse:
             return []
 
-        traces = langfuse.fetch_traces(limit=limit, offset=offset)
-        return [t.dict() if hasattr(t, "dict") else vars(t) for t in traces.data]
+        traces = langfuse.fetch_traces(limit=limit, offset=offset)  # type: ignore[attr-defined]
+        return [_convert_langfuse_object_to_dict(t) for t in traces.data]
     except Exception as e:
         logger.error(f"Failed to list traces: {e}")
         return []

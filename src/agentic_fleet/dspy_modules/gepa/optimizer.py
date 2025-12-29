@@ -510,7 +510,16 @@ def optimize_with_gepa(
         gepa_kwargs.pop("is_self_improvement", None)  # Metadata flag, not GEPA config
         gepa_kwargs.pop("stats_only", None)  # Metadata flag, not GEPA config
         gepa_kwargs.pop("max_iterations", None)  # Already converted to max_full_evals if needed
-        gepa_kwargs.pop("enable_tool_optimization", None)  # Not supported by GEPA __init__
+        # Handle enable_tool_optimization - not currently supported by GEPA
+        if "enable_tool_optimization" in gepa_kwargs:
+            value = gepa_kwargs.pop("enable_tool_optimization")
+            if value:
+                logger.warning(
+                    "GEPA optimizer does not currently support 'enable_tool_optimization'; "
+                    "ignoring provided value %r. If this parameter is now supported in your "
+                    "DSPy/GEPA version, update the optimizer integration to pass it through.",
+                    value,
+                )
 
         # Merge any remaining kwargs
         optimizer_kwargs.update(gepa_kwargs)

@@ -40,7 +40,7 @@ try:
             # Fetch trace data
             trace = client.fetch_trace(trace_id)  # type: ignore[attr-defined]
             if not trace:
-                logger.warning(f"Trace {trace_id} not found")
+                logger.warning("Trace %s not found", trace_id)
                 return {"error": "Trace not found"}
 
             # Extract input and output from trace
@@ -160,10 +160,16 @@ Explanation: <your explanation>
 except ImportError:
     logger.debug("Langfuse not available - evaluation utilities disabled")
 
-    def evaluate_with_llm_judge(*args: Any, **kwargs: Any) -> dict[str, Any]:  # noqa: ARG001
+    def evaluate_with_llm_judge(  # type: ignore[no-redef]
+        *args: Any,  # noqa: ARG001
+        **kwargs: Any,  # noqa: ARG001
+    ) -> dict[str, Any]:
         """Placeholder for evaluate_with_llm_judge when Langfuse is unavailable."""
         return {"error": "Langfuse not available"}
 
-    def add_custom_score(*args: Any, **kwargs: Any) -> bool:  # noqa: ARG001
+    def add_custom_score(  # type: ignore[no-redef]
+        *args: Any,  # noqa: ARG001
+        **kwargs: Any,  # noqa: ARG001
+    ) -> bool:
         """Placeholder for add_custom_score when Langfuse is unavailable."""
         return False
