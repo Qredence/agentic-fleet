@@ -8,6 +8,7 @@ from __future__ import annotations
 
 from typing import Any
 
+from agentic_fleet.utils.infra.langfuse import create_dspy_span
 from agentic_fleet.utils.infra.logging import setup_logger
 from agentic_fleet.utils.infra.telemetry import optional_span
 
@@ -38,7 +39,11 @@ class PredictionMethods:
             - mode: 'handoff', 'standard', or 'fast_path'
             - reasoning: Why this mode was chosen
         """
-        with optional_span("DSPyReasoner.select_workflow_mode", attributes={"task": task}):
+        # Use dual-tracing
+        with (
+            create_dspy_span("select_workflow_mode", module_name="strategy_selector"),
+            optional_span("DSPyReasoner.select_workflow_mode", attributes={"task": task}),
+        ):
             logger.info(f"Selecting workflow mode for task: {task[:100]}...")
 
             # Fast check for trivial tasks to avoid DSPy overhead
@@ -84,7 +89,11 @@ class PredictionMethods:
         Returns:
             Dictionary containing analysis results (complexity, capabilities, etc.)
         """
-        with optional_span("DSPyReasoner.analyze_task", attributes={"task": task}):
+        # Use dual-tracing
+        with (
+            create_dspy_span("analyze_task", module_name="analyzer"),
+            optional_span("DSPyReasoner.analyze_task", attributes={"task": task}),
+        ):
             logger.info(f"Analyzing task: {task[:100]}...")
 
             # Perform NLU analysis first
@@ -131,10 +140,12 @@ class PredictionMethods:
             result = {
                 "intent": intent_data["intent"],
                 "intent_confidence": intent_data["confidence"],
-                "complexity": prediction.complexity,
-                "required_capabilities": self._parse_capabilities(prediction.required_capabilities),
+                "complexity": getattr(prediction, "complexity", "medium"),
+                "required_capabilities": self._parse_capabilities(
+                    getattr(prediction, "required_capabilities", [])
+                ),
                 "estimated_steps": max(1, int(getattr(prediction, "estimated_steps", 1))),
-                "preferred_tools": self._parse_tools(prediction.preferred_tools),
+                "preferred_tools": self._parse_tools(getattr(prediction, "preferred_tools", [])),
                 "needs_web_search": getattr(prediction, "needs_web_search", False),
                 "search_query": getattr(prediction, "search_query", ""),
                 "time_sensitive": getattr(prediction, "time_sensitive", False)
@@ -171,7 +182,10 @@ class PredictionMethods:
         """
         from .reasoner_utils import _generate_cache_key
 
-        with optional_span("DSPyReasoner.route_task", attributes={"task": task}):
+        with (
+            create_dspy_span("route_task", module_name="router"),
+            optional_span("DSPyReasoner.route_task", attributes={"task": task}),
+        ):
             logger.info(f"Routing task: {task[:100]}...")
 
             # Generate team description for cache key
@@ -279,11 +293,18 @@ class PredictionMethods:
         Returns:
             Direct response text
         """
-        with optional_span("DSPyReasoner.generate_simple_response", attributes={"task": task}):
+        with (
+            create_dspy_span("generate_simple_response", module_name="simple_responder"),
+            optional_span("DSPyReasoner.generate_simple_response", attributes={"task": task}),
+        ):
             logger.info(f"Simple response for: {task[:50]}...")
             try:
                 prediction = self.reasoner.simple_responder(task=task)
-                return getattr(prediction, "response", "")
+                # Try both "response" and "answer" attributes for compatibility
+                response = getattr(prediction, "response", getattr(prediction, "answer", ""))
+                if not response:
+                    return "I could not generate a simple response."
+                return response
             except Exception as e:
                 logger.error(f"Simple response generation failed: {e}")
                 return f"I encountered an error while generating a response: {e}"
@@ -299,7 +320,10 @@ class PredictionMethods:
         Returns:
             Dictionary containing quality assessment
         """
-        with optional_span("DSPyReasoner.assess_quality"):
+        with (
+            create_dspy_span("assess_quality", module_name="quality_assessor"),
+            optional_span("DSPyReasoner.assess_quality"),
+        ):
             logger.info(f"Assessing quality for task: {task[:50]}...")
 
             if self.reasoner.use_typed_signatures:
@@ -330,17 +354,25 @@ class PredictionMethods:
         Returns:
             Dictionary containing progress evaluation
         """
-        with optional_span("DSPyReasoner.evaluate_progress"):
+        with (
+            create_dspy_span("evaluate_progress", module_name="progress_evaluator"),
+            optional_span("DSPyReasoner.evaluate_progress"),
+        ):
             logger.info(f"Evaluating progress for task: {task[:50]}...")
 
             prediction = self.reasoner.progress_evaluator(task=task, result=result, **kwargs)
+            # Handle both "state" and "action" attributes for backward compatibility
+            state = getattr(prediction, "state", getattr(prediction, "action", "complete"))
+            remaining_work = getattr(
+                prediction, "remaining_work", getattr(prediction, "feedback", "")
+            )
             return {
-                "state": prediction.state,
-                "percentage_complete": prediction.percentage_complete,
-                "remaining_work": prediction.remaining_work,
-                "next_steps": prediction.next_steps,
-                "confidence": prediction.confidence,
-                "reasoning": prediction.reasoning,
+                "state": state,
+                "percentage_complete": getattr(prediction, "percentage_complete", 100),
+                "remaining_work": remaining_work,
+                "next_steps": getattr(prediction, "next_steps", []),
+                "confidence": getattr(prediction, "confidence", 1.0),
+                "reasoning": getattr(prediction, "reasoning", ""),
             }
 
     def decide_tools(
@@ -361,50 +393,52 @@ class PredictionMethods:
         Returns:
             Dictionary containing tool plan
         """
-        with optional_span("DSPyReasoner.decide_tools", attributes={"task": task}):
+        with (
+            create_dspy_span("decide_tools", module_name="tool_planner"),
+            optional_span("DSPyReasoner.decide_tools", attributes={"task": task}),
+        ):
             logger.info(f"Planning tools for task: {task[:50]}...")
 
-            # Get available tools from registry
+            # Get available tools from registry using public API
             tool_context = ""
             if self.reasoner.tool_registry:
-                available_tools = self.reasoner.tool_registry.list_tools()
+                available_tools = self.reasoner.tool_registry.get_all_available_tools()
                 if available_tools:
                     tool_context = "\n".join(
                         f"- {t.name}: {t.description}" for t in available_tools[:10]
                     )
 
             # Use typed or standard planner
+            prediction = self.reasoner.tool_planner(
+                task=task,
+                context=context,
+                available_tools=tool_context,
+                agent_assignments=", ".join(agents) if agents else "",
+                **kwargs,
+            )
+
+            # Handle both typed and standard signatures, with fallbacks
             if self.reasoner.use_typed_signatures:
-                prediction = self.reasoner.tool_planner(
-                    task=task,
-                    context=context,
-                    available_tools=tool_context,
-                    agent_assignments=", ".join(agents) if agents else "",
-                    **kwargs,
-                )
                 return {
-                    "selected_tools": prediction.selected_tools,
-                    "tool_sequence": prediction.tool_sequence,
-                    "tool_goals": prediction.tool_goals,
-                    "estimated_duration": prediction.estimated_duration,
-                    "alternatives": prediction.alternatives,
-                    "reasoning": prediction.reasoning,
+                    "selected_tools": getattr(
+                        prediction, "selected_tools", getattr(prediction, "tool_plan", [])
+                    ),
+                    "tool_sequence": getattr(prediction, "tool_sequence", []),
+                    "tool_goals": getattr(prediction, "tool_goals", ""),
+                    "estimated_duration": getattr(prediction, "estimated_duration", ""),
+                    "alternatives": getattr(prediction, "alternatives", []),
+                    "reasoning": getattr(prediction, "reasoning", ""),
                 }
             else:
-                prediction = self.reasoner.tool_planner(
-                    task=task,
-                    context=context,
-                    available_tools=tool_context,
-                    agent_assignments=", ".join(agents) if agents else "",
-                    **kwargs,
-                )
                 return {
-                    "selected_tools": prediction.selected_tools,
-                    "sequence": prediction.sequence,
-                    "goals": prediction.goals,
-                    "estimated_time": prediction.estimated_time,
-                    "alternatives": prediction.alternatives,
-                    "reasoning": prediction.reasoning,
+                    "selected_tools": getattr(
+                        prediction, "selected_tools", getattr(prediction, "tool_plan", [])
+                    ),
+                    "sequence": getattr(prediction, "sequence", []),
+                    "goals": getattr(prediction, "goals", ""),
+                    "estimated_time": getattr(prediction, "estimated_time", ""),
+                    "alternatives": getattr(prediction, "alternatives", []),
+                    "reasoning": getattr(prediction, "reasoning", ""),
                 }
 
     # Helper methods
@@ -421,25 +455,31 @@ class PredictionMethods:
         """
         return _format_team_description(agents)
 
-    def _parse_capabilities(self, capabilities_str: str) -> list[str]:
-        """Parse capabilities string into list."""
-        if not capabilities_str:
+    def _parse_capabilities(self, capabilities: str | list[str]) -> list[str]:
+        """Parse capabilities string or list into list."""
+        if not capabilities:
             return []
-        return [c.strip() for c in capabilities_str.split(",") if c.strip()]
+        if isinstance(capabilities, list):
+            return [c.strip() if isinstance(c, str) else str(c) for c in capabilities if c]
+        return [c.strip() for c in capabilities.split(",") if c.strip()]
 
-    def _parse_tools(self, tools_str: str) -> list[str]:
-        """Parse tools string into list."""
-        if not tools_str:
+    def _parse_tools(self, tools: str | list[str]) -> list[str]:
+        """Parse tools string or list into list."""
+        if not tools:
             return []
-        return [t.strip() for t in tools_str.split(",") if t.strip()]
+        if isinstance(tools, list):
+            return [t.strip() if isinstance(t, str) else str(t) for t in tools if t]
+        return [t.strip() for t in tools.split(",") if t.strip()]
 
     def _get_tool_context(self) -> str:
         """Get formatted tool context for analysis."""
         if not self.reasoner.tool_registry:
             return ""
 
-        tools = self.reasoner.tool_registry.list_tools()
+        # Get all available tools using public API
+        tools = self.reasoner.tool_registry.get_all_available_tools()
         if not tools:
             return ""
 
+        # Format tool descriptions (limit to 5 tools)
         return "\n".join(f"- {tool.name}: {tool.description}" for tool in tools[:5])

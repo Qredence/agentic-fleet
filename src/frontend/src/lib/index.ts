@@ -6,3 +6,5 @@ export {
   wrapCodeInMarkdown,
   ensureCodeFormatting,
 } from "./codeDetection";
+export * from "./constants";
+export * from "./preferences";

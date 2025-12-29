@@ -4,7 +4,7 @@ This project integrates the `agentic-fleet` core as a custom engine for GitHub A
 
 ## Custom Engine Setup
 
-The custom engine is defined in [.github/workflows/shared/engine-fleet.md](.github/workflows/shared/engine-fleet.md). It allows any `.aw.md` workflow to use the `agentic-fleet` CLI instead of the default Copilot engine.
+The custom engine is defined in [.github/workflows/shared/engine-fleet.md](../../.github/workflows/shared/engine-fleet.md). It allows any `.aw.md` workflow to use the `agentic-fleet` CLI instead of the default Copilot engine.
 
 ### Benefits
 
@@ -18,16 +18,45 @@ When running as a custom engine, the fleet participates in two types of self-opt
 
 ### 1. DSPy Module Optimization
 
-Every run captures execution history in `.var/logs/execution_history.jsonl`. You can use this data to optimize the fleet's reasoning:
+Every run captures execution history in `.var/logs/execution_history.jsonl`. You can use this data to optimize the fleet's reasoning in two ways:
+
+#### Bootstrap Mode: Start with No Training Data
+
+GEPA can start with zero initial training data and bootstrap entirely from execution history:
 
 ```bash
-# Run optimization using captured history
-uv run agentic-fleet optimize --use-history
+# Bootstrap mode: Use history as training data (no initial examples needed)
+uv run agentic-fleet gepa-optimize --auto light --use-history
 ```
+
+The system will:
+
+1. Detect no initial training data
+2. Automatically harvest high-quality executions (quality ≥8.0)
+3. Convert history to training examples
+4. Run GEPA optimization using history as the training dataset
+
+#### Augmentation Mode: Enhance Existing Training
+
+GEPA can also augment existing training data with history:
+
+```bash
+# Combine initial data + history
+uv run agentic-fleet gepa-optimize \
+  --examples data/supervisor_examples.json \
+  --use-history \
+  --history-min-quality 8.0
+```
+
+**Benefits:**
+
+- **Cold start**: No need to manually create initial training examples
+- **Self-improvement**: System learns from its own high-quality executions
+- **Incremental**: Improves as more history accumulates over time
 
 ### 2. Workflow Optimization (Q)
 
-The `q` agent ([q.md](.github/workflows/q.md)) analyzes logs and audits from all agentic workflows. It can:
+The `q` agent ([q.md](../../.github/workflows/q.md)) analyzes logs and audits from all agentic workflows. It can:
 
 - Identify missing tools.
 - Suggest permission changes.

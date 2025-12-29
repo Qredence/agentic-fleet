@@ -21,6 +21,7 @@ from .deps import (
     SettingsDep,
     WorkflowDep,
     get_conversation_manager,
+    get_or_create_workflow,
     get_session_manager,
     get_workflow,
 )
@@ -35,6 +36,7 @@ __all__ = [
     # Router
     "api_router",
     "get_conversation_manager",
+    "get_or_create_workflow",
     "get_session_manager",
     "get_workflow",
 ]

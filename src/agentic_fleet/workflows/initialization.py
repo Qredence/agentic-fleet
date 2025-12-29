@@ -16,7 +16,8 @@ from agentic_fleet.utils.storage import HistoryManager
 from ..agents import AgentFactory, validate_tool
 from ..dspy_modules.lifecycle import configure_dspy_settings
 from ..dspy_modules.reasoner import DSPyReasoner
-from ..utils.agent_framework import ensure_agent_framework_shims
+
+# agent_framework is now a direct dependency; legacy shim compatibility layer removed
 from ..utils.cache import TTLCache
 from ..utils.cfg import load_config, validate_agentic_fleet_env
 from ..utils.tool_registry import ToolRegistry
@@ -49,7 +50,18 @@ def _create_shared_components(
     config: WorkflowConfig,
 ) -> tuple[AsyncOpenAI, ToolRegistry]:
     """Create and configure shared components (OpenAI client, DSPy, ToolRegistry)."""
+    # Initialize Langfuse early (before creating OpenAI clients) to ensure
+    # both DSPy and Agent Framework traces are properly captured
+    try:
+        from agentic_fleet.dspy_modules.lifecycle import initialize_langfuse
+
+        initialize_langfuse()
+        logger.debug("Langfuse initialized early for tracing (DSPy + Agent Framework)")
+    except Exception as e:
+        logger.debug(f"Langfuse early initialization skipped: {e}")
+
     # Create shared OpenAI client once (reused for all agents and supervisor)
+    # This will use LangfuseAsyncOpenAI wrapper if Langfuse is available
     openai_client = create_openai_client_with_store(config.enable_completion_storage)
     logger.info("Created shared OpenAI client for all agents")
 
@@ -183,7 +195,7 @@ async def initialize_workflow_context(
         Exception: If creation of any configured agent fails.
     """
     config = config or WorkflowConfig()
-    ensure_agent_framework_shims()
+    # agent_framework is a required dependency - no shims needed
 
     init_start = datetime.now()
     logger.info("=" * 80)

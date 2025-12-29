@@ -79,11 +79,11 @@ Traditional approaches require manual prompt engineering and agent coordination.
 
 | Package         | Purpose                                  | Key Files                                         |
 | --------------- | ---------------------------------------- | ------------------------------------------------- |
-| `workflows/`    | Orchestration & 5-phase pipeline         | `supervisor.py`, `executors.py`, `strategies.py`  |
+| `workflows/`    | Orchestration & 5-phase pipeline         | `supervisor.py`, `executors/`, `strategies.py`    |
 | `dspy_modules/` | DSPy signatures, reasoning, typed models | `reasoner.py`, `signatures.py`, `typed_models.py` |
 | `agents/`       | Agent creation and prompts               | `coordinator.py`, `prompts.py`                    |
 | `tools/`        | Tool adapters (Tavily, Code, MCP)        | `tavily_tool.py`, `hosted_code_adapter.py`        |
-| `app/`          | FastAPI server, WebSocket streaming      | `main.py`, `routers/`                             |
+| `api/`          | FastAPI server, SSE/WebSocket streaming  | `routes/`, `events/`                              |
 | `utils/`        | Configuration, tracing, storage          | `cfg/`, `infra/`, `storage/`                      |
 
 ### Five-Phase Execution Pipeline
@@ -130,7 +130,7 @@ Every task flows through a structured pipeline:
 agentic-fleet run -m "Research quantum computing advances" --verbose
 
 # Start development server
-agentic-fleet dev
+make dev
 
 # List available agents
 agentic-fleet list-agents
@@ -171,14 +171,14 @@ asyncio.run(main())
 
 ```bash
 # Start both backend (8000) and frontend (5173)
-agentic-fleet dev
+make dev
 
 # Or separately
-make backend     # FastAPI on :8000
-make frontend    # React on :5173
+make backend       # FastAPI on :8000
+make frontend-dev  # React on :5173
 ```
 
-**Backend API**: `/api/ws/chat` (WebSocket), `/api/chat` (REST)
+**Backend API**: `/api/chat/{conversation_id}/stream` (SSE, recommended), `/api/ws/chat` (WebSocket, legacy)
 **Frontend**: React + React Query + Zustand
 
 ### Configuration-Driven Architecture
@@ -190,26 +190,29 @@ AgenticFleet is configuration-driven, with all settings in `workflow_config.yaml
 ```yaml
 # DSPy settings
 dspy:
-  model: gpt-4.1-mini # Model for routing decisions
+  model: gpt-5.2 # Primary DSPy model
+  routing_model: gpt-5-mini # Fast model for routing decisions
   require_compiled: false # Fail-fast if no compiled cache
   enable_routing_cache: true # Cache routing decisions
-  routing_cache_ttl: 300 # Cache TTL in seconds
+  routing_cache_ttl_seconds: 300 # Cache TTL in seconds
 
 # Workflow settings
 workflow:
-  max_rounds: 15 # Max execution rounds
-  enable_streaming: true # Real-time event streaming
-  quality_threshold: 7.0 # Minimum quality score
+  supervisor:
+    max_rounds: 15 # Max execution rounds
+    enable_streaming: true # Real-time event streaming
+  quality:
+    quality_threshold: 7.0 # Minimum quality score
 
 # Agent definitions
 agents:
   researcher:
-    model: gpt-4.1
+    model: gpt-4.1-mini
     temperature: 0.7
     tools: [TavilySearchTool]
 
   analyst:
-    model: gpt-4.1
+    model: gpt-5.1-codex
     temperature: 0.5
     tools: [HostedCodeInterpreterTool]
 ```
@@ -264,7 +267,7 @@ src/agentic_fleet/
 │
 ├── workflows/              # Orchestration (5-phase pipeline)
 │   ├── supervisor.py       # Main entry point, fast-path detection
-│   ├── executors.py        # Phase executors (Analysis, Routing, etc.)
+│   ├── executors/          # Phase executors (Analysis, Routing, etc.)
 │   ├── strategies.py       # Execution modes (delegated/sequential/parallel)
 │   ├── builder.py          # WorkflowBuilder configuration
 │   └── context.py          # SupervisorContext definition
@@ -280,9 +283,9 @@ src/agentic_fleet/
 │   ├── hosted_code_adapter.py  # Code interpreter
 │   └── browser_tool.py     # Browser automation
 │
-├── app/                    # FastAPI backend
-│   ├── main.py             # Application entry
-│   └── routers/            # API routes (chat, nlu, dspy)
+├── api/                    # FastAPI backend
+│   ├── routes/             # API routes (chat, nlu, dspy)
+│   └── events/             # Stream event mapping and routing
 │
 ├── config/                 # Configuration
 │   └── workflow_config.yaml # Source of truth
@@ -342,7 +345,7 @@ The heart of AgenticFleet is its 5-phase execution pipeline, built on agent-fram
 
 **Purpose**: Understand what the task requires before making routing decisions.
 
-**Executor**: `AnalysisExecutor` (`workflows/executors.py`)
+**Executor**: `AnalysisExecutor` (`workflows/executors/analysis.py`)
 
 **DSPy Signature**: `TaskAnalysis`
 
@@ -382,7 +385,7 @@ class TaskAnalysis(dspy.Signature):
 
 **Purpose**: Select the optimal agents and execution mode for the task.
 
-**Executor**: `RoutingExecutor` (`workflows/executors.py`)
+**Executor**: `RoutingExecutor` (`workflows/executors/routing.py`)
 
 **DSPy Signature**: `EnhancedTaskRouting` (with typed outputs)
 
@@ -412,7 +415,7 @@ class TaskRoutingOutput(BaseModel):
 
 **Purpose**: Execute the routed task using the selected strategy.
 
-**Executor**: `ExecutionExecutor` (`workflows/executors.py`)
+**Executor**: `ExecutionExecutor` (`workflows/executors/execution.py`)
 
 **Strategies**: `workflows/strategies.py`
 
@@ -484,7 +487,7 @@ async def execute_parallel(agents, subtasks, context):
 
 **Purpose**: Determine if the task is complete or needs refinement.
 
-**Executor**: `ProgressExecutor` (`workflows/executors.py`)
+**Executor**: `ProgressExecutor` (`workflows/executors/progress.py`)
 
 **DSPy Signature**: `ProgressEvaluation`
 
@@ -522,7 +525,7 @@ class ProgressEvaluation(dspy.Signature):
 
 **Purpose**: Score the output and identify areas for improvement.
 
-**Executor**: `QualityExecutor` (`workflows/executors.py`)
+**Executor**: `QualityExecutor` (`workflows/executors/quality.py`)
 
 **DSPy Signature**: `QualityAssessment`
 
@@ -890,7 +893,7 @@ class DSPyReasoner:
 agentic-fleet optimize
 
 # Or via script
-uv run python src/agentic_fleet/scripts/optimize_reasoner.py
+uv run python scripts/optimize_reasoner.py
 ```
 
 **Compilation Process**:
@@ -1067,8 +1070,8 @@ agentic-fleet run -m "Your task" --verbose
 # Specify execution mode
 agentic-fleet run -m "Your task" --mode sequential
 
-# Start dev server on custom port
-agentic-fleet dev --port 8080
+# Start dev servers (backend + frontend)
+make dev
 
 # Export history as JSON
 agentic-fleet history --format json --output history.json
@@ -1083,7 +1086,7 @@ from agentic_fleet.workflows import create_supervisor_workflow
 
 # Create workflow
 workflow = await create_supervisor_workflow(
-    config_path="config/workflow_config.yaml",
+    config_path="src/agentic_fleet/config/workflow_config.yaml",
     compile_dspy=False,  # Use cached modules
 )
 
@@ -1175,57 +1178,18 @@ src/frontend/
 **Zustand Store** (`stores/chatStore.ts`):
 
 ```typescript
-interface ChatState {
-  messages: Message[];
-  isStreaming: boolean;
-  currentAgent: string | null;
+import { useChatStore } from "@/stores/chatStore";
 
-  sendMessage: (content: string) => Promise<void>;
-  cancelStream: () => void;
-  clearMessages: () => void;
-}
+const { sendMessage, cancelStream } = useChatStore.getState();
 
-const useChatStore = create<ChatState>((set, get) => ({
-  messages: [],
-  isStreaming: false,
-  currentAgent: null,
+// Streams via SSE under the hood
+await sendMessage("Hello from the web UI");
 
-  sendMessage: async (content) => {
-    set({ isStreaming: true });
-
-    const ws = new ReconnectingWebSocket("/api/ws/chat");
-    ws.send(JSON.stringify({ message: content }));
-
-    ws.onmessage = (event) => {
-      const data = JSON.parse(event.data);
-      handleStreamEvent(data, set);
-    };
-  },
-}));
+// Cancel an in-flight stream
+await cancelStream();
 ```
 
-**API Hooks** (`api/hooks.ts`):
-
-```typescript
-// Chat hook with WebSocket streaming
-export function useChat() {
-  const { messages, sendMessage, isStreaming } = useChatStore();
-
-  return {
-    messages,
-    sendMessage,
-    isStreaming,
-  };
-}
-
-// Sessions hook with React Query
-export function useSessions() {
-  return useQuery({
-    queryKey: ["sessions"],
-    queryFn: () => api.get("/api/sessions"),
-  });
-}
-```
+**React Query Hooks** live in `src/frontend/src/api/hooks.ts` (sessions, agents, history, etc.).
 
 ---
 
@@ -1407,12 +1371,12 @@ Response
 
 ### Common Commands Reference
 
-| Task             | Command                                                      |
-| ---------------- | ------------------------------------------------------------ |
-| Install          | `make install`                                               |
-| Run tests        | `make test`                                                  |
-| Start dev        | `make dev`                                                   |
-| Clear DSPy cache | `make clear-cache`                                           |
-| Start tracing    | `make tracing-start`                                         |
-| Run optimization | `agentic-fleet optimize`                                     |
-| Analyze history  | `uv run python src/agentic_fleet/scripts/analyze_history.py` |
+| Task             | Command                                                  |
+| ---------------- | -------------------------------------------------------- |
+| Install          | `make install`                                           |
+| Run tests        | `make test`                                              |
+| Start dev        | `make dev`                                               |
+| Clear DSPy cache | `make clear-cache`                                       |
+| Start tracing    | `make tracing-start`                                     |
+| Run optimization | `agentic-fleet optimize`                                 |
+| Analyze history  | `uv run python -m agentic_fleet.scripts.analyze_history` |

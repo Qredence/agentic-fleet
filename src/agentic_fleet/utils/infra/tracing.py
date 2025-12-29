@@ -120,6 +120,23 @@ def initialize_tracing(config: dict[str, Any] | None = None) -> bool:
         or cfg_tracing.get("otlp_endpoint")
     )
 
+    # Auto-detect Langfuse credentials and configure OTLP endpoint if present
+    # This ensures Agent Framework traces are exported to Langfuse
+    # Only override if no explicit OTLP endpoint was set
+    if not otlp_endpoint:
+        langfuse_public_key = os.getenv("LANGFUSE_PUBLIC_KEY")
+        langfuse_secret_key = os.getenv("LANGFUSE_SECRET_KEY")
+        langfuse_base_url = os.getenv("LANGFUSE_BASE_URL", "https://cloud.langfuse.com")
+
+        # If Langfuse credentials are present, configure OTLP endpoint automatically
+        if langfuse_public_key and langfuse_secret_key:
+            langfuse_otlp_endpoint = f"{langfuse_base_url}/api/public/otel"
+            logger.info(
+                "Langfuse credentials detected - configuring Agent Framework "
+                f"observability to export to Langfuse: {langfuse_otlp_endpoint}"
+            )
+            otlp_endpoint = langfuse_otlp_endpoint
+
     connection_string = _get_connection_string() or cfg_tracing.get(
         "azure_monitor_connection_string"
     )

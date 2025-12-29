@@ -1,0 +1,75 @@
+/* =============================================
+  Opinionated resets (adapted from OpenAI apps-sdk-ui)
+============================================= */
+@layer base {
+  html,
+  :host {
+    font-synthesis-weight: none;
+  }
+
+  textarea {
+    resize: none;
+  }
+
+  img,
+  svg {
+    flex-grow: 0;
+    flex-shrink: 0;
+  }
+
+  input,
+  textarea,
+  select,
+  optgroup {
+    appearance: none;
+    box-shadow: none;
+    filter: none;
+    outline-offset: 0;
+    outline-width: 2px;
+  }
+
+  a,
+  button,
+  input,
+  label,
+  select,
+  textarea,
+  :where([aria-role="button"]) {
+    touch-action: manipulation;
+  }
+
+  button {
+    text-transform: none;
+    vertical-align: middle;
+  }
+
+  button:not(:disabled),
+  [role="button"]:not(:disabled) {
+    cursor: pointer;
+  }
+
+  pre {
+    white-space: pre-wrap;
+  }
+
+  table {
+    border-spacing: 0;
+  }
+
+  blockquote,
+  q {
+    quotes: none;
+  }
+
+  blockquote::before,
+  blockquote::after,
+  q::before,
+  q::after {
+    content: none;
+  }
+}
+
+/* =============================================
+  Dark mode directive for Tailwind v4
+============================================= */
+@custom-variant dark (&:is(.dark *));

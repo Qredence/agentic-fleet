@@ -29,6 +29,59 @@ class DSPyService:
     def __init__(self, workflow: SupervisorWorkflow) -> None:
         self.workflow = workflow
 
+    def _extract_field_info(self, field_name: str, field: Any, signature: Any) -> dict[str, str]:  # noqa: ARG002
+        """Extract field information from a signature field."""
+        desc = ""
+        prefix = ""
+
+        # Try json_schema_extra (Pydantic v2)
+        if hasattr(field, "json_schema_extra"):
+            extra = field.json_schema_extra or {}
+            if isinstance(extra, dict):
+                desc = extra.get("desc", "") or extra.get("description", "")
+                prefix = extra.get("prefix", "")
+
+        # Try metadata (Pydantic v1/Field)
+        if not desc and hasattr(field, "description"):
+            desc = field.description
+
+        # Try dspy.InputField/OutputField attributes
+        if not prefix and hasattr(field, "prefix"):
+            prefix = field.prefix
+
+        return {"name": field_name, "desc": str(desc), "prefix": str(prefix)}
+
+    def _categorize_field(
+        self, field_name: str, field_info: dict[str, str], signature: Any
+    ) -> tuple[list[dict[str, str]], list[dict[str, str]]]:
+        """Categorize a field as input or output."""
+        inputs: list[dict[str, str]] = []
+        outputs: list[dict[str, str]] = []
+
+        if hasattr(signature, "input_fields") and field_name in signature.input_fields:
+            inputs.append(field_info)
+        elif hasattr(signature, "output_fields") and field_name in signature.output_fields:
+            outputs.append(field_info)
+        else:
+            inputs.append(field_info)
+
+        return inputs, outputs
+
+    def _extract_demos(self, predictor: Any) -> list[dict[str, str]]:
+        """Extract demos from a predictor."""
+        demos: list[dict[str, str]] = []
+        if hasattr(predictor, "demos"):
+            demos_list = getattr(predictor, "demos", None) or []
+            for demo in demos_list:
+                demo_dict: dict[str, str] = {}
+                try:
+                    for k, v in demo.items():
+                        demo_dict[str(k)] = str(v)
+                except Exception as exc:
+                    logger.warning("Malformed demo skipped: %s", exc)
+                demos.append(demo_dict)
+        return demos
+
     def get_predictor_prompts(self) -> dict[str, Any]:
         """Extract prompts from all DSPy predictors."""
         if not self.workflow.dspy_reasoner:
@@ -46,7 +99,6 @@ class DSPyService:
                 continue
 
             instructions = getattr(signature, "instructions", "")
-
             inputs: list[dict[str, str]] = []
             outputs: list[dict[str, str]] = []
 
@@ -56,44 +108,14 @@ class DSPyService:
                 fields = signature.__annotations__
 
             for field_name, field in fields.items():
-                desc = ""
-                prefix = ""
+                field_info = self._extract_field_info(field_name, field, signature)
+                field_inputs, field_outputs = self._categorize_field(
+                    field_name, field_info, signature
+                )
+                inputs.extend(field_inputs)
+                outputs.extend(field_outputs)
 
-                # Try json_schema_extra (Pydantic v2)
-                if hasattr(field, "json_schema_extra"):
-                    extra = field.json_schema_extra or {}
-                    if isinstance(extra, dict):
-                        desc = extra.get("desc", "") or extra.get("description", "")
-                        prefix = extra.get("prefix", "")
-
-                # Try metadata (Pydantic v1/Field)
-                if not desc and hasattr(field, "description"):
-                    desc = field.description
-
-                # Try dspy.InputField/OutputField attributes
-                if not prefix and hasattr(field, "prefix"):
-                    prefix = field.prefix
-
-                field_info = {"name": field_name, "desc": str(desc), "prefix": str(prefix)}
-
-                if hasattr(signature, "input_fields") and field_name in signature.input_fields:
-                    inputs.append(field_info)
-                elif hasattr(signature, "output_fields") and field_name in signature.output_fields:
-                    outputs.append(field_info)
-                else:
-                    inputs.append(field_info)
-
-            demos: list[dict[str, str]] = []
-            if hasattr(predictor, "demos"):
-                demos_list = getattr(predictor, "demos", None) or []
-                for demo in demos_list:
-                    demo_dict: dict[str, str] = {}
-                    try:
-                        for k, v in demo.items():
-                            demo_dict[str(k)] = str(v)
-                    except Exception as exc:
-                        logger.warning("Malformed demo skipped: %s", exc)
-                    demos.append(demo_dict)
+            demos = self._extract_demos(predictor)
 
             prompts[name] = {
                 "instructions": instructions,

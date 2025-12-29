@@ -1,0 +1,62 @@
+/* =============================================
+   AgenticFleet Design System
+
+   Import manifest for Tailwind v4 and design tokens.
+   Each file has a single responsibility:
+
+   1. tailwindcss       - Tailwind CSS v4 core
+   2. base.css          - CSS reset & base styles
+   3. variables-*       - Design tokens (primitive → semantic → component)
+   4. animations.css    - @keyframes definitions
+   5. sidebar.css       - Sidebar CSS variables (light/dark)
+   6. theme.css         - Tailwind @theme configuration
+   7. globals.css       - Global element styles
+   8. utilities.css     - Custom utility classes
+ ============================================= */
+
+/* Tailwind CSS v4 */
+@import "tailwindcss";
+
+/* Design System Variables (load order matters) */
+@import "./styles/base.css";
+@import "./styles/variables-primitive.css";
+@import "./styles/variables-semantic.css";
+@import "./styles/variables-components.css";
+
+/* Animations & Theme */
+@import "./styles/animations.css";
+@import "./styles/sidebar.css";
+@import "./styles/theme.css";
+
+/* Global Styles & Utilities */
+@import "./styles/globals.css";
+@import "./styles/utilities.css";
+
+/* Streamdown styles (AI-optimized markdown renderer) */
+@source "../node_modules/streamdown/dist/*.js";
+
+/* =============================================
+   Base Layer
+ ============================================= */
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  body {
+    @apply bg-background text-foreground;
+  }
+}
+
+/* =============================================
+   Root & Body Styles
+ ============================================= */
+#root {
+  background-color: var(--color-surface-tertiary);
+}
+
+body {
+  background-color: var(--gray-1000);
+  color: var(--gray-0);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+}

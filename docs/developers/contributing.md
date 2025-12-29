@@ -3,14 +3,14 @@
 ## Development Setup
 
 1. Clone the repository
-2. (Optional) Create virtual environment: `uv python -m venv venv && source venv/bin/activate`
-3. From the repo root, install dependencies via uv: `uv sync`
+2. From the repo root, install dependencies: `make install`
+3. Install frontend deps (if needed): `make frontend-install`
 4. Verify the CLI: `uv run agentic-fleet --help`
 
 ## Code Style
 
-- **Formatting**: Use `ruff format` with the project config (`pyproject.toml`)
-- **Linting**: Use `ruff` (configured in `pyproject.toml`)
+- **Formatting**: Use `make format` (Ruff)
+- **Linting**: Use `make lint` (Ruff)
 - **Type Checking**: Use `ty` (Python 3.12 target; config in `pyproject.toml`)
 - **Naming**: snake_case for functions, PascalCase for classes
 
@@ -25,11 +25,11 @@
 
 - `src/` - Source code (package root)
 - `tests/` - Test files
-- `config/` - Configuration files
-- `data/` - Training data
+- `src/agentic_fleet/config/` - Configuration files
+- `src/agentic_fleet/data/` - Training data
 - `examples/` - Example scripts
 - `docs/` - Documentation
-- `scripts/` - Utility scripts
+- `src/agentic_fleet/scripts/` - Utility scripts
 
 ## Import Organization
 
@@ -51,17 +51,17 @@ import typer
 from rich import Console
 
 # Local imports
-from agentic_fleet.workflows.supervisor_workflow import SupervisorWorkflow
+from agentic_fleet.workflows import SupervisorWorkflow
 ```
 
 ## Adding New Features
 
 ### Adding a New Agent
 
-1. Add config in `config/workflow_config.yaml` under `agents:`
+1. Add config in `src/agentic_fleet/config/workflow_config.yaml` under `agents:`
 2. Instantiate in `agents/coordinator.py:_create_agent()` using factory method
 3. Add to team description in `reasoner.py:get_execution_summary()`
-4. Add training examples in `data/supervisor_examples.json`
+4. Add training examples in `src/agentic_fleet/data/supervisor_examples.json`
 
 ### Adding a New DSPy Signature
 
@@ -83,11 +83,10 @@ from agentic_fleet.workflows.supervisor_workflow import SupervisorWorkflow
 
 ## Pull Requests
 
-1. Ensure all tests pass: `PYTHONPATH=. uv run pytest -q`
-2. Run formatter: `uv run ruff format .`
-3. Run linter: `uv run flake8`
-4. Run type checker: `uv run ty check src`
-5. Update documentation if needed
+1. Ensure all tests pass: `make test`
+2. Run formatter: `make format`
+3. Run linter/type checks: `make check`
+4. Update documentation if needed
 
 ## Documentation
 

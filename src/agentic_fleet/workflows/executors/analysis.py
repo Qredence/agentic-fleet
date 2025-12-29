@@ -176,6 +176,7 @@ class AnalysisExecutor(Executor):
                         "simple_mode": False,
                         "reasoning": analysis_dict.get("reasoning", ""),
                         "intent": analysis_dict.get("intent"),
+                        "intent_confidence": analysis_dict.get("intent_confidence"),
                     }
 
                 if conversation_context:

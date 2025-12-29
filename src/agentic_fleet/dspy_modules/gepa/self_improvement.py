@@ -389,25 +389,10 @@ class SelfImprovementEngine:
 
     def _load_existing_examples(self, examples_file: str) -> list[dict[str, Any]]:
         """Load existing training examples."""
+        from agentic_fleet.utils.serialization import load_json
+
         examples_path = Path(examples_file)
-
-        if not examples_path.exists():
-            logger.warning("Training examples file not found: %s", _sanitize_for_log(examples_file))
-            return []
-
-        try:
-            with open(examples_path) as f:
-                raw = json.load(f)
-                # Ensure we return a list[dict[str, Any]]; discard malformed content
-                if isinstance(raw, list) and all(isinstance(item, dict) for item in raw):
-                    return raw  # type: ignore[return-value]
-                logger.warning(
-                    "Training examples file did not contain a list of objects; ignoring content"
-                )
-                return []
-        except Exception as e:
-            logger.error("Failed to load existing examples: %s", _sanitize_for_log(str(e)))
-            return []
+        return load_json(examples_path, default=[], validate_list=True)
 
     def _add_new_examples(
         self,

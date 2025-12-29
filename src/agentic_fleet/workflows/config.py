@@ -40,6 +40,8 @@ class WorkflowConfig:
     # These can be disabled in "light" profile to reduce LM calls.
     enable_progress_eval: bool = True
     enable_quality_eval: bool = True
+    # Disable completion storage by default to avoid unnecessary data retention
+    # and large storage usage; enable explicitly via configuration when needed.
     enable_completion_storage: bool = False
     agent_models: dict[str, str] | None = None
     agent_temperatures: dict[str, float] | None = None
@@ -88,6 +90,8 @@ class WorkflowConfig:
     enable_routing_cache: bool = True
     # TTL for routing cache entries (in seconds)
     routing_cache_ttl_seconds: int = 300
+    # Checkpoint directory for storing workflow checkpoints
+    checkpoint_dir: str = ".var/checkpoints"
 
     # ------------------------------------------------------------------
     # Backward-compatibility: some tests expect a ``config`` attribute
@@ -212,6 +216,16 @@ def build_workflow_config_from_yaml(
         else {}
     )
 
+    checkpoint_cfg = (
+        yaml_config.get("workflow", {}).get("checkpointing", {})
+        if isinstance(yaml_config.get("workflow"), dict)
+        else {}
+    )
+    checkpoint_dir_value = checkpoint_cfg.get("checkpoint_dir", ".var/checkpoints")
+    if checkpoint_dir_value is None:
+        checkpoint_dir_value = ".var/checkpoints"
+    checkpoint_dir_value = str(checkpoint_dir_value)
+
     return WorkflowConfig(
         max_rounds=max_rounds or supervisor_cfg.get("max_rounds", 15),
         max_stalls=supervisor_cfg.get("max_stalls", 3),
@@ -262,4 +276,5 @@ def build_workflow_config_from_yaml(
         use_typed_signatures=yaml_config.get("dspy", {}).get("use_typed_signatures", True),
         enable_routing_cache=yaml_config.get("dspy", {}).get("enable_routing_cache", True),
         routing_cache_ttl_seconds=yaml_config.get("dspy", {}).get("routing_cache_ttl_seconds", 300),
+        checkpoint_dir=checkpoint_dir_value,
     )

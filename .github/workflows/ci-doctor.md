@@ -13,16 +13,14 @@ permissions:
   issues: read
   checks: read
 
-engine:
-  id: copilot
+engine: codex
 
 steps:
-  - name: Ensure log directory and file
+  - name: Fix workspace permissions
     run: |
-      mkdir -p /tmp/gh-aw/sandbox/agent/logs/
-      touch /tmp/gh-aw/sandbox/agent/logs/empty.log
-      echo "Contents of /tmp/gh-aw/sandbox/agent/logs/:"
-      ls -la /tmp/gh-aw/sandbox/agent/logs/
+      # Ensure the workspace is accessible by the agent container (UID 1000)
+      sudo chown -R 1000:1000 .
+      sudo chmod -R a+rwX .
 
 timeout-minutes: 20
 

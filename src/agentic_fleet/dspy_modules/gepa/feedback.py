@@ -241,7 +241,21 @@ class RoutingFeedbackMetric:
         self, gold: Any, pred: Any, trace=None, pred_name=None, pred_trace=None
     ) -> ScoreWithFeedback:
         """
-        Calculate score and generate feedback.
+        Calculate score and generate feedback following DSPy GEPA best practices.
+
+        This method implements the GEPAFeedbackMetric interface required by dspy.GEPA.
+        It provides both numerical scoring (0.0 to perfect_score) and detailed textual
+        feedback for the optimizer to use in prompt refinement.
+
+        Args:
+            gold: Ground truth example (dspy.Example with expected routing decision)
+            pred: Predicted example (dspy.Example with model's routing decision)
+            trace: Optional execution trace (for debugging)
+            pred_name: Optional prediction name (for debugging)
+            pred_trace: Optional prediction trace (for debugging)
+
+        Returns:
+            ScoreWithFeedback containing score (float) and feedback (str)
         """
         # Extract task for edge-case detection
         task = getattr(gold, "task", getattr(pred, "task", ""))

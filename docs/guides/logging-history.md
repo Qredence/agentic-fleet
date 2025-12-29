@@ -118,7 +118,7 @@ uv run agentic-fleet run -m "Your question here" --verbose 2>&1 | tee .var/logs/
 
 ## Configuration
 
-Edit `config/workflow_config.yaml` to customize logging:
+Edit `src/agentic_fleet/config/workflow_config.yaml` to customize logging:
 
 ```yaml
 logging:
