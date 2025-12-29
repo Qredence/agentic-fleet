@@ -277,10 +277,6 @@ def _format_orchestrator_thought(event: StreamEvent, short_id: str) -> str:
     return f"[{short_id}] 💭 {event.kind}: {event.message}"
 
 
-def _format_orchestrator_message(event: StreamEvent, short_id: str) -> str:
-    return f"[{short_id}] 📢 {event.message}"
-
-
 def _format_reasoning_delta(_event: StreamEvent, short_id: str) -> str:
     return f"[{short_id}] 🧠 reasoning delta"
 

@@ -138,7 +138,6 @@ def create_openai_client_with_store(
 
         try:
             # Check if Langfuse is properly initialized (with thread-safe caching)
-            global _langfuse_auth_checked
             if _langfuse_auth_checked is None:
                 with _langfuse_auth_lock:
                     # Double-check pattern to avoid race condition

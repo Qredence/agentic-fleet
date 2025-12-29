@@ -72,6 +72,7 @@ def handle_analysis_message(
     """Handle AnalysisMessage events."""
     # Defensive check: ensure data.analysis is present before accessing its attributes
     if not getattr(data, "analysis", None):
+        logger.debug("AnalysisMessage received without analysis data, skipping")
         return None, accumulated_reasoning
 
     event_type = StreamEventType.ORCHESTRATOR_THOUGHT
