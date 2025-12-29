@@ -86,6 +86,8 @@ dependencies = [
     "openinference-instrumentation==0.1.42",
     "langfuse==3.11.0",
     "openinference-instrumentation-dspy==0.1.32",
+    "psycopg2-binary>=2.9.11",
+    "chromadb>=1.4.0",
 ]
 requires-python = ">=3.12,<4"
 
