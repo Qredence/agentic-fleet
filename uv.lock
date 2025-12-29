@@ -490,7 +490,7 @@ requires-dist = [
     { name = "tenacity", specifier = ">=8.2.3" },
     { name = "textual", specifier = ">=6.5.0" },
     { name = "tiktoken", specifier = ">=0.12.0,<1.0" },
-    { name = "typer", specifier = ">=0.20.0,<0.21.0" },
+    { name = "typer", specifier = ">=0.20.0,<0.22.0" },
     { name = "uvicorn", extras = ["standard"], specifier = ">=0.24.0" },
     { name = "websockets", specifier = ">=10.4" },
 ]
