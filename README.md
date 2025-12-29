@@ -92,7 +92,9 @@ agentic-fleet dev
 
 ```bash
 # Quick start with Docker Compose
-git clone https://github.com/Qredence/agentic-fleet.git && cd agentic-fleet
+# Clone the repo (skip if you're already in the project directory)
+git clone https://github.com/Qredence/agentic-fleet.git
+cd agentic-fleet
 cp .env.example .env  # Add your OPENAI_API_KEY
 docker compose up -d
 
