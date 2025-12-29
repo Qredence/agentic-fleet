@@ -22,8 +22,8 @@ def parse_frontmatter(content: str) -> tuple[dict, str]:
             import json
 
             try:
-                metadata = json.loads(parts[1].strip())
-            except json.JSONDecodeError:
+                metadata = yaml.safe_load(parts[1].strip())
+            except yaml.YAMLError:
                 metadata = {}
             return metadata, parts[2].strip()
     return {}, content
