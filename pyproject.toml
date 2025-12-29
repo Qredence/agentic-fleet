@@ -84,7 +84,7 @@ dependencies = [
     "opentelemetry-exporter-otlp-proto-http>=1.38.0",
     "azure-ai-projects==2.0.0b2",
     "openinference-instrumentation==0.1.42",
-    "langfuse==3.11.0",
+    "langfuse==3.11.2",
     "openinference-instrumentation-dspy==0.1.32",
 ]
 requires-python = ">=3.12,<4"
