@@ -16,6 +16,8 @@ lib/
 !src/frontend/src/lib/**
 !src/frontend/src/shared/lib/
 !src/frontend/src/shared/lib/**
+!src/frontend/src/features/workflow/lib/
+!src/frontend/src/features/workflow/lib/**
 lib64/
 parts/
 sdist/
@@ -23,13 +25,13 @@ wheels/
 *.egg-info/
 .installed.cfg
 *.egg
-
+# conductor/
 # Virtual Environment
 .venv/
 venv/
 ENV/
 env/
-
+.junie/
 # IDE
 .idea/
 .cursor/
@@ -46,6 +48,10 @@ env/
 .trae/
 .gemini/
 .kilocode/
+.factory/
+.fleet/
+.skills/
+.conductor/
 
 # Generated reports
 report/
@@ -133,8 +139,7 @@ memory-bank/
 .claude/skills/python-backend-reviewer/references/best_practices.md
 .claude/skills/python-backend-reviewer/references/python_antipatterns.md
 .claude/skills/python-backend-reviewer/references/refactoring_patterns.md
-.claude/skills/python-backend-reviewer/scripts/analyze_imports.py
-.claude/skills/python-backend-reviewer/scripts/complexity_analyzer.py
-.claude/skills/python-backend-reviewer/scripts/concurrency_analyzer.py
-.claude/skills/python-backend-reviewer/scripts/detect_duplicates.py
 .claude/python-backend-reviewer.skill
+conductor/setup_state.json
+conductor/tech-stack.md
+conductor/tracks.md

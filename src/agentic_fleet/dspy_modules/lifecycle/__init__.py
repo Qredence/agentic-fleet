@@ -13,6 +13,7 @@ from .manager import (
     get_current_lm,
     get_dspy_lm,
     get_reflection_lm,
+    initialize_langfuse,
     reset_dspy_manager,
 )
 
@@ -21,5 +22,6 @@ __all__ = [
     "get_current_lm",
     "get_dspy_lm",
     "get_reflection_lm",
+    "initialize_langfuse",
     "reset_dspy_manager",
 ]

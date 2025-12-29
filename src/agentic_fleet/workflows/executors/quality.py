@@ -68,8 +68,8 @@ class QualityExecutor(Executor):
                     retry_backoff = max(0.0, float(cfg.dspy_retry_backoff_seconds))
                     quality_dict = await async_call_with_retry(
                         self.supervisor.assess_quality,
-                        requirements=progress_msg.task,
-                        results=progress_msg.result,
+                        task=progress_msg.task,
+                        result=progress_msg.result,
                         attempts=retry_attempts,
                         backoff_seconds=retry_backoff,
                     )

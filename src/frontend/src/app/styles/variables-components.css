@@ -1,0 +1,166 @@
+/* =============================================
+  Component Design Tokens (adapted from OpenAI apps-sdk-ui)
+  These define specific component styling
+============================================= */
+
+:root {
+  /* =============================================
+    Alert
+  ============================================= */
+  --alert-border-radius: var(--radius-xl);
+  --alert-gap: 0.75rem;
+  --alert-gutter: 1rem;
+  --alert-font-size: var(--font-text-sm-size);
+  --alert-line-height: var(--font-text-sm-line-height);
+  --alert-title-font-weight: var(--font-weight-semibold);
+
+  /* =============================================
+    Avatar
+  ============================================= */
+  --avatar-radius: var(--radius-full);
+  --avatar-size: 28px;
+  --avatar-font-size-scaling: 0.5;
+  --avatar-image-border-color: var(--alpha-15);
+
+  /* =============================================
+    Badge
+  ============================================= */
+  --badge-gutter-sm: calc(var(--control-gutter-2xs) - 1px);
+  --badge-gutter-md: var(--control-gutter-2xs);
+  --badge-gutter-lg: var(--control-gutter-xs);
+  --badge-size-sm: calc(var(--control-size-3xs) - 2px);
+  --badge-size-md: var(--control-size-3xs);
+  --badge-size-lg: var(--control-size-2xs);
+  --badge-radius-sm: var(--radius-xs);
+  --badge-radius-md: var(--radius-xs);
+  --badge-radius-lg: var(--radius-sm);
+  --badge-font-size-sm: var(--font-text-xs-size);
+  --badge-font-size-md: var(--font-text-sm-size);
+  --badge-font-size-lg: var(--font-text-sm-size);
+  --badge-font-weight-sm: var(--font-weight-semibold);
+  --badge-font-weight-md: var(--font-weight-semibold);
+  --badge-font-weight-lg: var(--font-weight-semibold);
+
+  /* =============================================
+    Button
+  ============================================= */
+  --button-gap-sm: 3px;
+  --button-gap-md: 4px;
+  --button-gap-lg: 6px;
+  --button-font-weight: var(--font-weight-medium);
+
+  /* =============================================
+    Input
+  ============================================= */
+  --input-gap-xs: 4px;
+  --input-gap-sm: 6px;
+  --input-gap-md: 8px;
+  --input-gap-lg: 10px;
+  --input-text-color: var(--color-text);
+  --input-placeholder-text-color: var(--color-text-tertiary);
+  --input-outline-border-color: var(--color-border-primary-outline);
+  --input-outline-border-color-hover: var(--alpha-30);
+  --input-outline-border-color-focus: var(--alpha-50);
+  --input-soft-background-color: var(--color-background-primary-soft-alpha);
+  --input-soft-border-color-focus: var(--alpha-20);
+  --input-border-color-invalid: var(--red-600);
+
+  /* =============================================
+    Link
+  ============================================= */
+  --link-font-weight: inherit;
+  --link-gap: 0.125rem;
+  --link-radius: var(--radius-sm);
+  --link-underline-decoration-offset: 0.1em;
+  --link-primary-text-color: var(--blue-300);
+  --link-primary-text-color-hover: var(--blue-400);
+
+  /* =============================================
+    Chat
+  ============================================= */
+  --chat-max-width: 800px;
+  --chat-gutter: 1.25rem;
+  --chat-background-color: var(--color-surface);
+  --thread-gutter: 1rem;
+  --composer-gutter: 0.75rem;
+  --composer-compact-gutter: 0.5rem;
+  --composer-radius: var(--radius-4xl);
+  --composer-background-color: var(--color-surface-elevated);
+  --smoothing-background-color: var(--color-surface);
+  --user-message-background-color: var(--alpha-08);
+  --user-message-text-color: var(--color-text);
+  --source-list-gutter: var(--thread-gutter);
+
+  /* =============================================
+    CodeBlock
+  ============================================= */
+  --codeblock-background-color: var(--gray-900);
+  --codeblock-syntax-1: var(--yellow-100);
+  --codeblock-syntax-2: var(--blue-200);
+  --codeblock-syntax-3: var(--green-300);
+  --codeblock-syntax-4: var(--pink-500);
+  --codeblock-syntax-5: var(--purple-300);
+
+  /* =============================================
+    Dialog / Modal
+  ============================================= */
+  --dialog-min-width: 250px;
+  --dialog-max-width: 450px;
+  --dialog-container-inner-padding: 1.25rem;
+  --dialog-backdrop-dim-background: rgb(0 0 0 / 50%);
+  --dialog-backdrop-fade-background: rgb(24 24 24 / 60%);
+  --modal-backdrop-background: rgb(0 0 0 / 50%);
+  --modal-container-inner-padding: 1.25rem;
+
+  /* =============================================
+    Menu
+  ============================================= */
+  --menu-gutter: 0.375rem;
+  --menu-radius: var(--radius-xl);
+  --menu-font-size: var(--font-text-sm-size);
+  --menu-line-height: var(--font-text-sm-line-height);
+  --menu-item-background-color: var(--alpha-10);
+  --menu-item-padding: 0.375rem 0.5rem;
+  --menu-item-gap: 0.375rem;
+  --menu-separator-background-color: var(--color-border);
+
+  /* =============================================
+    Popover
+  ============================================= */
+  --popover-radius: var(--radius-xl);
+
+  /* =============================================
+    Segmented Control
+  ============================================= */
+  --segmented-control-gap: 2px;
+  --segmented-control-gutter: 2px;
+  --segmented-control-background: var(--gray-800);
+  --segmented-control-font-weight: var(--font-weight-semibold);
+  --segmented-control-thumb-background: var(--gray-700);
+  --segmented-control-thumb-shadow: 0 1px 4px -1px rgb(0 0 0 / 20%);
+
+  /* =============================================
+    Slider
+  ============================================= */
+  --slider-track-color: var(--gray-700);
+  --slider-range-color: var(--gray-500);
+
+  /* =============================================
+    Switch
+  ============================================= */
+  --switch-track-width: 32px;
+  --switch-track-height: 19px;
+  --switch-track-color: var(--gray-600);
+  --switch-track-color-hover: var(--gray-550);
+  --switch-track-color-checked: var(--blue-400);
+  --switch-track-color-checked-disabled: var(--blue-700);
+  --switch-track-color-disabled: var(--gray-700);
+  --switch-thumb-offset: 3px;
+  --switch-thumb-size: calc(
+    var(--switch-track-height) - 2 * var(--switch-thumb-offset)
+  );
+  --switch-thumb-shadow: 0 1px 2px rgb(0 0 0 / 20%);
+  --switch-thumb-color: var(--gray-0);
+  --switch-thumb-color-disabled: var(--gray-300);
+  --switch-label-gap: 0.5rem;
+}

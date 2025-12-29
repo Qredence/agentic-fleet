@@ -1,3 +1,12 @@
+/**
+ * ResponseStream Component
+ *
+ * CUSTOM COMPONENT - Not from shadcn/ui registry.
+ *
+ * A text streaming component with typewriter and fade animation modes.
+ * Uses Framer Motion for smooth fade-in animations.
+ * Supports both static strings and AsyncIterable streams.
+ */
 import { cn } from "@/lib/utils";
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import { motion } from "motion/react";

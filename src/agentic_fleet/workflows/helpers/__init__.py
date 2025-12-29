@@ -31,6 +31,7 @@ from .routing import (
     normalize_routing_decision,
     prepare_subtasks,
 )
+from .thread_utils import thread_has_history
 
 __all__ = [
     # Fast path
@@ -52,4 +53,6 @@ __all__ = [
     "prepare_subtasks",
     "refine_results",
     "synthesize_results",
+    # Thread utilities
+    "thread_has_history",
 ]

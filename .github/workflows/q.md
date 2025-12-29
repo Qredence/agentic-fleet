@@ -20,14 +20,6 @@ permissions:
 
 network: defaults
 
-steps:
-  - name: Ensure log directory and file
-    run: |
-      mkdir -p /tmp/gh-aw/sandbox/agent/logs/
-      touch /tmp/gh-aw/sandbox/agent/logs/empty.log
-      echo "Contents of /tmp/gh-aw/sandbox/agent/logs/:"
-      ls -la /tmp/gh-aw/sandbox/agent/logs/
-
 safe-outputs:
   add-comment:
     max: 1
@@ -39,11 +31,12 @@ safe-outputs:
 
 tools:
   agentic-workflows:
+  web-search:
   bash:
   edit:
 
 timeout-minutes: 15
-source: githubnext/agentics/workflows/q.md@40621ee463af2bbaa0539328d6bc643c1c11c1f0
+source: githubnext/agentics/workflows/q.md@697e9d890f9a084587b8380f1bcd29eec4adb4bd
 ---
 
 # Q - Agentic Workflow Optimizer
@@ -160,11 +153,12 @@ Use bash and file inspection tools to:
 
 ### Phase 3: Research Solutions
 
-Use repository-local sources to ground your recommendations:
+Use web-search to research:
 
-1. **Project docs**: Search for relevant guidance in this repository (e.g., `.github/aw/`, `docs/`, and workflow README notes)
-2. **Tool behavior**: Prefer evidence from live logs/audits over generic advice
-3. **If blocked**: If you truly need external research tools that are not available, report it using the missing-tool safe output and proceed with best-effort improvements based on available data
+1. **Best Practices**: Search for "GitHub Actions agentic workflow best practices"
+2. **Tool Documentation**: Look up documentation for missing or misconfigured tools
+3. **Performance Optimization**: Find strategies for reducing token usage and improving efficiency
+4. **Error Resolutions**: Research solutions for identified error patterns
 
 ### Phase 4: Workflow Improvements
 

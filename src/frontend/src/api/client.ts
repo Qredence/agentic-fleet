@@ -5,7 +5,8 @@
  * Uses the typed HTTP layer with retry logic and error handling.
  */
 
-import { http } from "@/api/http";
+import { http, requestWithPrefix } from "@/api/http";
+import { getStreamApiBase } from "./config";
 import type {
   Conversation,
   WorkflowSession,
@@ -25,6 +26,7 @@ import type {
   ReasonerSummary,
   DSPySignatures,
   DSPyPrompts,
+  TraceDetails,
 } from "./types";
 
 // =============================================================================
@@ -63,6 +65,11 @@ export const conversationsApi = {
     const conversation = await conversationsApi.get(id);
     return conversation.messages || [];
   },
+
+  /**
+   * Delete a conversation by ID.
+   */
+  delete: (id: string) => http.delete(`/conversations/${id}`),
 };
 
 // =============================================================================
@@ -152,17 +159,56 @@ export const evaluationApi = {
   },
 };
 
-// Self-Improvement logic is now consolidated into Optimization API.
+// =============================================================================
+// Improvement API (Deprecated - Use optimizationApi instead)
+// =============================================================================
+
 export const improvementApi = {
   /**
-   * @deprecated Consolidated into optimizationApi.run - Use `optimizationApi.run({ module_name, auto_mode, user_id })` instead.
-   * This method was removed in v2.0 when self-improvement and optimization were unified under the GEPA optimization service.
-   * See migration guide: https://github.com/Qredence/agentic-fleet/blob/main/docs/migration/optimization-api.md
+   * @deprecated Use optimizationApi.run() instead
    */
-  trigger: (_request: unknown) => {
-    throw new Error(
-      "improvementApi.trigger() has been removed. Use optimizationApi.run() instead. " +
-        "Example: optimizationApi.run({ module_name: 'supervisor', auto_mode: 'medium', user_id: 'user-123' })",
+  trigger: () => {
+    throw new Error("Use optimizationApi.run() instead");
+  },
+};
+
+// =============================================================================
+// SSE API
+// =============================================================================
+
+export const sseApi = {
+  /**
+   * Cancel a running SSE workflow.
+   */
+  cancel: (conversationId: string, workflowId: string) => {
+    const params = new URLSearchParams({ workflow_id: workflowId });
+    return requestWithPrefix<void>(
+      getStreamApiBase(),
+      `/chat/${encodeURIComponent(conversationId)}/cancel?${params.toString()}`,
+      { method: "POST" },
+    );
+  },
+
+  /**
+   * Submit a human-in-the-loop response.
+   */
+  submitResponse: (
+    conversationId: string,
+    workflowId: string,
+    requestId: string,
+    response: unknown,
+  ) => {
+    const params = new URLSearchParams({ workflow_id: workflowId });
+    return requestWithPrefix<void>(
+      getStreamApiBase(),
+      `/chat/${encodeURIComponent(conversationId)}/respond?${params.toString()}`,
+      {
+        method: "POST",
+        body: {
+          request_id: requestId,
+          response,
+        },
+      },
     );
   },
 };
@@ -211,6 +257,33 @@ export const dspyApi = {
    * List all available DSPy signatures.
    */
   getSignatures: () => http.get<DSPySignatures>("/dspy/signatures"),
+};
+
+// =============================================================================
+// Observability API
+// =============================================================================
+
+export const observabilityApi = {
+  /**
+   * Fetch full trace details for a workflow.
+   */
+  getTrace: (workflowId: string) =>
+    http.get<TraceDetails>(
+      `/observability/trace/${encodeURIComponent(workflowId)}`,
+    ),
+
+  /**
+   * List recent workflow traces.
+   */
+  listTraces: (params?: { limit?: number; offset?: number }) => {
+    const query = new URLSearchParams();
+    if (params?.limit !== undefined) query.set("limit", String(params.limit));
+    if (params?.offset !== undefined)
+      query.set("offset", String(params.offset));
+    return http.get<TraceDetails[]>(
+      `/observability/traces?${query.toString()}`,
+    );
+  },
 };
 
 // =============================================================================
@@ -275,11 +348,10 @@ export const api = {
   // Agents
   listAgents: agentsApi.list,
 
-  // Optimization / Evaluation / Improvement
+  // Optimization / Evaluation
   optimize: optimizationApi.run,
   optimizeStatus: optimizationApi.status,
   history: evaluationApi.history,
-  // selfImprove: improvementApi.trigger, // Removed as it's now consolidated
 
   // DSPy Management
   dspyPrompts: dspyApi.getPrompts,
@@ -290,4 +362,8 @@ export const api = {
   dspyReasonerSummary: dspyApi.getReasonerSummary,
   dspyClearRoutingCache: dspyApi.clearRoutingCache,
   dspySignatures: dspyApi.getSignatures,
+
+  // Observability
+  getTrace: observabilityApi.getTrace,
+  listTraces: observabilityApi.listTraces,
 };

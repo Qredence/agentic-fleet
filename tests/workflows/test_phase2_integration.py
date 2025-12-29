@@ -29,7 +29,7 @@ class TestDecisionModuleInjection:
 
         reasoner.set_decision_modules(routing_module=mock_routing_module)
 
-        assert reasoner._router is mock_routing_module
+        assert reasoner.router is mock_routing_module
 
     def test_set_decision_modules_injects_quality_module(self):
         """Test that quality module is properly injected."""
@@ -38,7 +38,7 @@ class TestDecisionModuleInjection:
 
         reasoner.set_decision_modules(quality_module=mock_quality_module)
 
-        assert reasoner._quality_assessor is mock_quality_module
+        assert reasoner.quality_assessor is mock_quality_module
 
     def test_set_decision_modules_injects_tool_planning_module(self):
         """Test that tool planning module is properly injected."""
@@ -47,7 +47,7 @@ class TestDecisionModuleInjection:
 
         reasoner.set_decision_modules(tool_planning_module=mock_tool_planning_module)
 
-        assert reasoner._tool_planner is mock_tool_planning_module
+        assert reasoner.tool_planner is mock_tool_planning_module
 
     def test_set_decision_modules_injects_all_modules(self):
         """Test that all decision modules can be injected at once."""
@@ -62,16 +62,16 @@ class TestDecisionModuleInjection:
             tool_planning_module=mock_tool_planning,
         )
 
-        assert reasoner._router is mock_routing
-        assert reasoner._quality_assessor is mock_quality
-        assert reasoner._tool_planner is mock_tool_planning
+        assert reasoner.router is mock_routing
+        assert reasoner.quality_assessor is mock_quality
+        assert reasoner.tool_planner is mock_tool_planning
 
     def test_set_decision_modules_accepts_none_values(self):
         """Test that None values don't overwrite existing modules."""
         reasoner = DSPyReasoner()
         # Initialize modules first
         reasoner._ensure_modules_initialized()
-        original_router = reasoner._router
+        original_router = reasoner.router
 
         # Call with None values
         reasoner.set_decision_modules(
@@ -79,7 +79,7 @@ class TestDecisionModuleInjection:
         )
 
         # Original module should be unchanged
-        assert reasoner._router is original_router
+        assert reasoner.router is original_router
 
 
 class TestSupervisorContextDecisionModules:
@@ -177,9 +177,9 @@ class TestWorkflowDecisionModuleIntegration:
         # Verify modules were injected into reasoner
         assert workflow.context.dspy_supervisor is not None
         reasoner = workflow.context.dspy_supervisor
-        assert reasoner._router is mock_routing
-        assert reasoner._quality_assessor is mock_quality
-        assert reasoner._tool_planner is mock_tool_planning
+        assert reasoner.router is mock_routing
+        assert reasoner.quality_assessor is mock_quality
+        assert reasoner.tool_planner is mock_tool_planning
 
     @pytest.mark.asyncio
     async def test_create_supervisor_workflow_without_modules(self):

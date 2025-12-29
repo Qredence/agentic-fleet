@@ -48,56 +48,56 @@ The codebase follows a **layered API → Services → Workflows → DSPy → Age
 
 ## Runtime Layout
 
-| Path                               | Purpose                                                                                                               |
-| ---------------------------------- | --------------------------------------------------------------------------------------------------------------------- | --- |
-| `main.py`                          | FastAPI app entrypoint (middleware + lifespan + router mounting).                                                     |
-| `api/`                             | **FastAPI Service Layer**: versioned router aggregation, DI (`deps.py`), lifespan (`lifespan.py`), and route modules. |
-| `api/deps.py`                      | Dependency injection (DB sessions, Auth, Clients)                                                                     |
-| `api/lifespan.py`                  | Startup/Shutdown events (initializing DSPy, connections)                                                              |
-| `api/middleware.py`                | FastAPI-level middleware (CORS, Auth, Logging)                                                                        |
-| `api/routes/`                      | Primary API endpoints (chat.py, optimization.py, workflows.py, nlu.py)                                                |
-| `api/v1/events/`                   | Event classification + mapping for UI/CLI surfaces.                                                                   |
-| `services/`                        | **Async Business Logic Layer**: bridges API to workflows                                                              |
-| `services/agent_service.py`        | Factory for creating and managing agents                                                                              |
-| `services/chat_service.py`         | Manages conversation logic and agent routing                                                                          |
-| `services/chat_sse.py`             | Server-Sent Events (SSE) streaming logic                                                                              |
-| `services/chat_websocket.py`       | Real-time WebSocket communication logic                                                                               |
-| `services/optimization_service.py` | Bridges API to GEPA optimization loops                                                                                |
-| `services/workflow_service.py`     | Orchestrates complex multi-agent workflows                                                                            |
-| `workflows/`                       | **Orchestration Layer**: 5-phase pipeline management.                                                                 |
-| `workflows/supervisor.py`          | Main entry point for `DSPyReasoner`, fast-path detection.                                                             |
-| `workflows/builder.py`             | `WorkflowBuilder` configuration and setup.                                                                            |
-| `workflows/initialization.py`      | Bootstraps supervisor contexts, agent catalogs, and shared caches.                                                    |
-| `workflows/strategies.py`          | Execution strategies: `delegated`, `sequential`, and `parallel`.                                                      |
-| `workflows/executors.py`           | Logic for specific phases: Analysis, Routing, Execution, Progress, Quality.                                           |
-| `workflows/handoff.py`             | Structured agent handoff management and context logic.                                                                |
-| `workflows/context.py`             | `SupervisorContext` definition for managing state across workflow phases.                                             |
-| `workflows/config.py`              | Dataclasses that mirror `config/workflow_config.yaml`.                                                                |
-| `workflows/models.py`              | Shared data models (AnalysisResult, RoutingPlan, etc.) and types.                                                     |
-| `workflows/narrator.py`            | DSPy-based event narration for user-friendly messages.                                                                |
-| `dspy_modules/`                    | **Intelligence Layer**: DSPy signatures and reasoner implementation.                                                  |
-| `dspy_modules/reasoner.py`         | Central DSPy orchestrator for internal LM calls                                                                       |
-| `dspy_modules/signatures.py`       | GEPA-evolved signatures for task routing and analysis                                                                 |
-| `dspy_modules/typed_models.py`     | Pydantic models for validated, type-safe outputs                                                                      |
-| `dspy_modules/assertions.py`       | Computational constraints for self-correction                                                                         |
-| `dspy_modules/optimizer.py`        | GEPA loop for reflective prompt evolution                                                                             |
-| `dspy_modules/refinement.py`       | BestOfN and iterative improvement logic                                                                               |
-| `dspy_modules/nlu.py`              | DSPy-backed NLU module with lazy-loaded predictors.                                                                   |
-| `agents/`                          | **Runtime Layer**: Agent definitions and MS Agent Framework integration.                                              |
-| `agents/coordinator.py`            | AgentFactory—bridge between DSPy logic and Agent Framework execution.                                                 |
-| `agents/base.py`                   | `DSPyEnhancedAgent` mixin with caching, tool awareness, and telemetry hooks.                                          |
-| `agents/foundry.py`                | Azure AI Foundry integration                                                                                          |
-| `agents/prompts.py`                | Centralized prompt modules                                                                                            |
-| `tools/`                           | **Capability Layer**: Tool adapters (Tavily, browser, MCP, code interpreter).                                         |
-| `utils/`                           | **Infrastructure Layer**: Configuration, tracing, storage, caching.                                                   |
-| `utils/cfg/`                       | Configuration loading and environment settings                                                                        |
-| `utils/infra/`                     | Telemetry (OpenTelemetry), tracing, resilience, logging                                                               |
-| `utils/storage/`                   | Persistence (Cosmos DB) and conversation history                                                                      |
-| `models/`                          | **Shared Data Models**: Pydantic schemas for API requests/responses.                                                  | \   |
-| `evaluation/`                      | Batch evaluation engine and metrics.                                                                                  |
-| `config/workflow_config.yaml`      | Authoritative configuration for DSPy settings, agent rosters, routing thresholds.                                     |
-| `data/`                            | Training examples and evaluation datasets.                                                                            | \   |
-| `cli/`                             | Modular CLI structure with command separation.                                                                        |
+| Path                                            | Purpose                                                                                                               |
+| ----------------------------------------------- | --------------------------------------------------------------------------------------------------------------------- | --- |
+| `main.py`                                       | FastAPI app entrypoint (middleware + lifespan + router mounting).                                                     |
+| `api/`                                          | **FastAPI Service Layer**: versioned router aggregation, DI (`deps.py`), lifespan (`lifespan.py`), and route modules. |
+| `api/deps.py`                                   | Dependency injection (DB sessions, Auth, Clients)                                                                     |
+| `api/lifespan.py`                               | Startup/Shutdown events (initializing DSPy, connections)                                                              |
+| `api/middleware.py`                             | FastAPI-level middleware (CORS, Auth, Logging)                                                                        |
+| `api/routes/`                                   | Primary API endpoints (chat.py, optimization.py, workflows.py, nlu.py)                                                |
+| `api/v1/events/`                                | Event classification + mapping for UI/CLI surfaces.                                                                   |
+| `services/`                                     | **Async Business Logic Layer**: bridges API to workflows                                                              |
+| `services/agents.py`                            | Factory for creating and managing agents                                                                              |
+| `services/conversation.py`                      | Conversation management + persistence                                                                                 |
+| `services/chat_sse.py`                          | Server-Sent Events (SSE) streaming logic (recommended)                                                                |
+| `services/chat_websocket.py`                    | Legacy WebSocket streaming logic                                                                                      |
+| `services/optimization_service.py`              | Bridges API to GEPA optimization loops                                                                                |
+| `services/workflows.py`                         | Orchestrates complex multi-agent workflows                                                                            |
+| `workflows/`                                    | **Orchestration Layer**: 5-phase pipeline management.                                                                 |
+| `workflows/supervisor.py`                       | Main entry point for `DSPyReasoner`, fast-path detection.                                                             |
+| `workflows/builder.py`                          | `WorkflowBuilder` configuration and setup.                                                                            |
+| `workflows/initialization.py`                   | Bootstraps supervisor contexts, agent catalogs, and shared caches.                                                    |
+| `workflows/strategies.py`                       | Execution strategies: `delegated`, `sequential`, and `parallel`.                                                      |
+| `workflows/executors/`                          | Logic for specific phases: Analysis, Routing, Execution, Progress, Quality.                                           |
+| `workflows/handoff.py`                          | Structured agent handoff management and context logic.                                                                |
+| `workflows/context.py`                          | `SupervisorContext` definition for managing state across workflow phases.                                             |
+| `workflows/config.py`                           | Dataclasses that mirror `src/agentic_fleet/config/workflow_config.yaml`.                                              |
+| `workflows/models.py`                           | Shared data models (AnalysisResult, RoutingPlan, etc.) and types.                                                     |
+| `workflows/narrator.py`                         | DSPy-based event narration for user-friendly messages.                                                                |
+| `dspy_modules/`                                 | **Intelligence Layer**: DSPy signatures and reasoner implementation.                                                  |
+| `dspy_modules/reasoner.py`                      | Central DSPy orchestrator for internal LM calls                                                                       |
+| `dspy_modules/signatures.py`                    | GEPA-evolved signatures for task routing and analysis                                                                 |
+| `dspy_modules/typed_models.py`                  | Pydantic models for validated, type-safe outputs                                                                      |
+| `dspy_modules/assertions.py`                    | Computational constraints for self-correction                                                                         |
+| `dspy_modules/optimizer.py`                     | GEPA loop for reflective prompt evolution                                                                             |
+| `dspy_modules/refinement.py`                    | BestOfN and iterative improvement logic                                                                               |
+| `dspy_modules/nlu.py`                           | DSPy-backed NLU module with lazy-loaded predictors.                                                                   |
+| `agents/`                                       | **Runtime Layer**: Agent definitions and MS Agent Framework integration.                                              |
+| `agents/coordinator.py`                         | AgentFactory—bridge between DSPy logic and Agent Framework execution.                                                 |
+| `agents/base.py`                                | `DSPyEnhancedAgent` mixin with caching, tool awareness, and telemetry hooks.                                          |
+| `agents/foundry.py`                             | Azure AI Foundry integration                                                                                          |
+| `agents/prompts.py`                             | Centralized prompt modules                                                                                            |
+| `tools/`                                        | **Capability Layer**: Tool adapters (Tavily, browser, MCP, code interpreter).                                         |
+| `utils/`                                        | **Infrastructure Layer**: Configuration, tracing, storage, caching.                                                   |
+| `utils/cfg/`                                    | Configuration loading and environment settings                                                                        |
+| `utils/infra/`                                  | Telemetry (OpenTelemetry), tracing, resilience, logging                                                               |
+| `utils/storage/`                                | Persistence (Cosmos DB) and conversation history                                                                      |
+| `models/`                                       | **Shared Data Models**: Pydantic schemas for API requests/responses.                                                  | \   |
+| `evaluation/`                                   | Batch evaluation engine and metrics.                                                                                  |
+| `src/agentic_fleet/config/workflow_config.yaml` | Authoritative configuration for DSPy settings, agent rosters, routing thresholds.                                     |
+| `data/`                                         | Training examples and evaluation datasets.                                                                            | \   |
+| `cli/`                                          | Modular CLI structure with command separation.                                                                        |
 
 ## Services Layer (New in v0.7.0)
 
@@ -107,10 +107,10 @@ The services layer provides **async business logic** that bridges API routes to 
 
 | Service                   | Purpose                                                        |
 | ------------------------- | -------------------------------------------------------------- |
-| `chat_service.py`         | Conversation management, agent routing decisions               |
+| `conversation.py`         | Conversation management, agent routing decisions               |
 | `chat_sse.py`             | Server-Sent Events streaming implementation                    |
 | `chat_websocket.py`       | Real-time WebSocket for bidirectional communication (1065 LOC) |
-| `workflow_service.py`     | Entry point for multi-agent workflow orchestration             |
+| `workflows.py`            | Entry point for multi-agent workflow orchestration             |
 | `optimization_service.py` | Bridges API to GEPA optimization loops                         |
 
 ### Design Principle
@@ -141,7 +141,7 @@ The services layer provides **async business logic** that bridges API routes to 
 
 ## Agent Factory & YAML wiring
 
-- `agents/coordinator.AgentFactory` is the single entry point for instantiating agent-framework `ChatAgent` instances. It expects declarative configuration from `config/workflow_config.yaml`.
+- `agents/coordinator.AgentFactory` is the single entry point for instantiating agent-framework `ChatAgent` instances. It expects declarative configuration from `src/agentic_fleet/config/workflow_config.yaml`.
 - Instructions can reference prompt helpers (e.g., `instructions: prompts.executor`). The factory resolves these by calling `agents.prompts.get_<name>_instructions`.
 - Tools are resolved in priority order: first via `ToolRegistry` metadata, then by reflecting over classes in `agentic_fleet.tools`.
 - Keep behaviour declarative—modify the YAML, prompt helpers, and doc updates together.
@@ -186,7 +186,7 @@ E --> F[Final output]
 
 ## Configuration & Environment
 
-- `config/workflow_config.yaml` governs DSPy models, GEPA optimization knobs, agent definitions, tool toggles, quality thresholds, tracing, and evaluation settings.
+- `src/agentic_fleet/config/workflow_config.yaml` governs DSPy models, GEPA optimization knobs, agent definitions, tool toggles, quality thresholds, tracing, and evaluation settings.
 - Required environment variable: `OPENAI_API_KEY`. Optional: `OPENAI_BASE_URL`, `TAVILY_API_KEY`, `DSPY_COMPILE`, `ENABLE_OTEL`, `OTLP_ENDPOINT`.
 - Load `.env` for local development; production deployments should inject secrets via managed stores.
 
@@ -203,7 +203,7 @@ E --> F[Final output]
 
 ### Modular Workflow Architecture
 
-- **`workflows/executors.py` consolidation** – All executors live behind a stable facade module.
+- **`workflows/executors/` layout** – All executors live under a stable package path.
 - **Builder + initialization split** – `workflows/builder.py` focuses on wiring executors, while `workflows/initialization.py` prepares shared caches.
 - **Config dataclasses** – `workflows/config.py` and `utils/cfg/` keep the YAML contract type-safe.
 - **Streaming helpers** – `services/chat_sse.py` and `services/chat_websocket.py` isolate SSE/WebSocket wiring.

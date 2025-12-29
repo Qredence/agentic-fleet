@@ -628,28 +628,17 @@ class HistoryManager:
 
     def _load_jsonl(self, history_file: Path, limit: int | None = None) -> list[dict[str, Any]]:
         """Load history from JSONL file."""
-        executions = []
-        with open(history_file) as f:
-            for line in f:
-                if line.strip():
-                    try:
-                        executions.append(json.loads(line))
-                    except json.JSONDecodeError as e:
-                        logger.warning(f"Failed to parse JSONL line: {e}")
-                        continue
+        from agentic_fleet.utils.serialization import load_jsonl
 
-        # Return last N entries if limit specified
-        if limit:
-            return executions[-limit:]
-        return executions
+        return load_jsonl(history_file, limit=limit, default=[])
 
     def _load_json(self, history_file: Path, limit: int | None = None) -> list[dict[str, Any]]:
         """Load history from JSON file."""
-        with open(history_file) as f:
-            executions = json.load(f)
+        from agentic_fleet.utils.serialization import load_json
 
+        executions = load_json(history_file, default=[], validate_list=True)
         # Return last N entries if limit specified
-        if limit:
+        if limit and len(executions) > limit:
             return executions[-limit:]
         return executions
 

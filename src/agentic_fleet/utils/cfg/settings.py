@@ -32,7 +32,7 @@ class AppSettings(BaseSettings):
 
     # Azure AI Foundry
     AZURE_AI_PROJECT_CONNECTION_STRING: str | None = None
-    AZURE_AI_MODEL_DEPLOYMENT_NAME: str = "gpt-4"
+    AZURE_AI_MODEL_DEPLOYMENT_NAME: str = "gpt-4.1-mini"
 
     # Deep Research
     TAVILY_API_KEY: str | None = None

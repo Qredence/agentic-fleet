@@ -57,7 +57,7 @@ handoff = await handoff_manager.create_handoff_package(
 ### Configuration
 
 ```yaml
-# config/workflow_config.yaml
+# src/agentic_fleet/config/workflow_config.yaml
 workflow:
   handoff:
     enabled: true

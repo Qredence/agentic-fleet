@@ -1,5 +1,7 @@
 // Hooks - barrel export
 export { useTheme } from "./useTheme";
 export { useIsMobile } from "./use-mobile";
-export { useSidebar } from "./use-sidebar";
-export { usePromptInput } from "./use-prompt-input";
+
+// Note: useSidebar and usePromptInput were removed during migration
+// useSidebar is now exported from @/features/layout/hooks
+// usePromptInput should be inlined where needed

@@ -1,9 +1,29 @@
+/**
+ * Markdown Component
+ *
+ * CUSTOM COMPONENT - Not from shadcn/ui registry.
+ *
+ * A markdown renderer using Streamdown for streaming markdown support.
+ * Integrates with the custom CodeBlock component for syntax highlighting.
+ */
 import { cn } from "@/lib/utils";
-import { memo } from "react";
-import type { Components } from "react-markdown";
+import { memo, type ComponentPropsWithoutRef } from "react";
+import type { StreamdownProps } from "streamdown";
 import remarkBreaks from "remark-breaks";
 import { Streamdown } from "streamdown";
-import { CodeBlock, CodeBlockCode } from "@/components/message/code-block";
+import {
+  CodeBlock,
+  CodeBlockCode,
+} from "@/features/chat/components/code-block";
+
+type Components = NonNullable<StreamdownProps["components"]>;
+
+interface HastNode {
+  position?: {
+    start: { line: number };
+    end: { line: number };
+  };
+}
 
 export type MarkdownProps = {
   children: string;
@@ -19,14 +39,22 @@ function extractLanguage(className?: string): string {
 }
 
 const INITIAL_COMPONENTS: Partial<Components> = {
-  strong: function StrongComponent({ className, children, ...props }) {
+  strong: function StrongComponent({
+    className,
+    children,
+    ...props
+  }: ComponentPropsWithoutRef<"strong"> & { node?: HastNode }) {
     return (
       <strong className={cn("font-semibold", className)} {...props}>
         {children}
       </strong>
     );
   },
-  code: function CodeComponent({ className, children, ...props }) {
+  code: function CodeComponent({
+    className,
+    children,
+    ...props
+  }: ComponentPropsWithoutRef<"code"> & { node?: HastNode }) {
     const isInline =
       !props.node?.position?.start.line ||
       props.node?.position?.start.line === props.node?.position?.end.line;
@@ -53,7 +81,9 @@ const INITIAL_COMPONENTS: Partial<Components> = {
       </CodeBlock>
     );
   },
-  pre: function PreComponent({ children }) {
+  pre: function PreComponent({
+    children,
+  }: ComponentPropsWithoutRef<"pre"> & { node?: HastNode }) {
     return <>{children}</>;
   },
 };

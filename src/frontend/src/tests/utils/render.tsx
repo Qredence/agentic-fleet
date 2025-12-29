@@ -11,6 +11,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { SidebarProvider } from "@/components/ui/sidebar";
 import { ThemeProvider } from "@/contexts";
 import { TooltipProvider } from "@/components/ui/tooltip";
+import { MemoryRouter } from "react-router-dom";
 /**
  * Creates a new QueryClient for each test
  */
@@ -36,7 +37,9 @@ function AllTheProviders({ children }: { children: React.ReactNode }) {
     <ThemeProvider defaultTheme="light">
       <QueryClientProvider client={queryClient}>
         <TooltipProvider>
-          <SidebarProvider>{children}</SidebarProvider>
+          <MemoryRouter>
+            <SidebarProvider>{children}</SidebarProvider>
+          </MemoryRouter>
         </TooltipProvider>
       </QueryClientProvider>
     </ThemeProvider>
@@ -53,7 +56,9 @@ function EssentialProviders({ children }: { children: React.ReactNode }) {
   return (
     <ThemeProvider defaultTheme="light">
       <QueryClientProvider client={queryClient}>
-        <TooltipProvider>{children}</TooltipProvider>
+        <TooltipProvider>
+          <MemoryRouter>{children}</MemoryRouter>
+        </TooltipProvider>
       </QueryClientProvider>
     </ThemeProvider>
   );

@@ -6,12 +6,12 @@ This guide will get you from zero to running your first multi-agent task in abou
 
 Before you begin, make sure you have:
 
-| Requirement    | Version                  | How to Check                                         |
-| -------------- | ------------------------ | ---------------------------------------------------- |
-| Python         | 3.10+ (3.12 recommended) | `python --version`                                   |
-| Git            | Any recent version       | `git --version`                                      |
-| OpenAI API Key | Required                 | [Get one here](https://platform.openai.com/api-keys) |
-| Tavily API Key | Optional (recommended)   | [Free tier available](https://tavily.com)            |
+| Requirement    | Version                | How to Check                                         |
+| -------------- | ---------------------- | ---------------------------------------------------- |
+| Python         | 3.12+                  | `python --version`                                   |
+| Git            | Any recent version     | `git --version`                                      |
+| OpenAI API Key | Required               | [Get one here](https://platform.openai.com/api-keys) |
+| Tavily API Key | Optional (recommended) | [Free tier available](https://tavily.com)            |
 
 > **Why Tavily?** It enables web search capabilities for the Researcher agent. Without it, research tasks won't have access to current information.
 
@@ -33,6 +33,7 @@ We use `uv` for fast, reliable Python dependency management:
 ```bash
 # Recommended: Use Make (handles everything)
 make install
+make frontend-install
 
 # Or directly with uv
 uv sync
@@ -83,7 +84,7 @@ TAVILY_API_KEY=tvly-your-tavily-key-here
 make test
 
 # Or run a quick sanity check
-agentic-fleet list-agents
+uv run agentic-fleet list-agents
 ```
 
 You should see output like:
@@ -258,7 +259,7 @@ For a richer experience, use the web interface:
 
 ```bash
 # Start both backend and frontend
-agentic-fleet dev
+make dev
 ```
 
 Then open http://localhost:5173 in your browser.
@@ -273,17 +274,11 @@ Then open http://localhost:5173 in your browser.
 | **Conversation History**   | Past conversations persist           |
 | **Agent Activity**         | Monitor what each agent is doing     |
 
-### Custom Ports
+### Backend/Frontend Only
 
 ```bash
-# Use different ports
-agentic-fleet dev --backend-port 8080 --frontend-port 3000
-
-# Backend only (API access)
-agentic-fleet dev --no-frontend
-
-# Frontend only (connect to existing backend)
-agentic-fleet dev --no-backend
+make backend        # Backend only (port 8000)
+make frontend-dev   # Frontend only (port 5173)
 ```
 
 ---
@@ -432,7 +427,7 @@ Get a free key at [tavily.com](https://tavily.com).
 make clear-cache
 
 # Or manually
-uv run python src/agentic_fleet/scripts/manage_cache.py --clear
+uv run python -m agentic_fleet.scripts.manage_cache --clear
 ```
 
 ### Check System Health
@@ -449,10 +444,7 @@ make test-config
 
 ```bash
 # Analyze past executions
-uv run python src/agentic_fleet/scripts/analyze_history.py
-
-# See routing statistics
-uv run python src/agentic_fleet/scripts/analyze_history.py --routing
+make analyze-history
 ```
 
 ---
@@ -481,15 +473,15 @@ You're now ready to use AgenticFleet! Here's your learning path:
 
 ## Quick Reference
 
-| Task              | Command                                                      |
-| ----------------- | ------------------------------------------------------------ |
-| Run a task        | `agentic-fleet run -m "Your task"`                           |
-| Start dev servers | `agentic-fleet dev`                                          |
-| List agents       | `agentic-fleet list-agents`                                  |
-| Verbose output    | `agentic-fleet run -m "Task" --verbose`                      |
-| Clear cache       | `make clear-cache`                                           |
-| Run tests         | `make test`                                                  |
-| See history       | `uv run python src/agentic_fleet/scripts/analyze_history.py` |
+| Task              | Command                                                  |
+| ----------------- | -------------------------------------------------------- |
+| Run a task        | `agentic-fleet run -m "Your task"`                       |
+| Start dev servers | `make dev`                                               |
+| List agents       | `agentic-fleet list-agents`                              |
+| Verbose output    | `agentic-fleet run -m "Task" --verbose`                  |
+| Clear cache       | `make clear-cache`                                       |
+| Run tests         | `make test`                                              |
+| See history       | `uv run python -m agentic_fleet.scripts.analyze_history` |
 
 ---
 

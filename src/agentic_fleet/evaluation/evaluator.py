@@ -65,28 +65,13 @@ class Evaluator:
 
     def _load_tasks(self) -> list[dict[str, Any]]:
         """Load tasks from the dataset file."""
-        if not self.dataset_path.exists():
-            return []
-        tasks: list[dict[str, Any]] = []
+        from agentic_fleet.utils.serialization import load_json, load_jsonl
+
         if self.dataset_path.suffix == ".jsonl":
-            with self.dataset_path.open() as f:
-                for line in f:
-                    line = line.strip()
-                    if not line:
-                        continue
-                    try:
-                        tasks.append(json.loads(line))
-                    except json.JSONDecodeError:
-                        logger.warning(f"Skipping malformed JSONL line: {line[:100]}")
-                        continue
+            tasks = load_jsonl(self.dataset_path, default=[])
         else:
-            try:
-                data = json.loads(self.dataset_path.read_text())
-                if isinstance(data, list):
-                    tasks = [t for t in data if isinstance(t, dict)]
-            except Exception as e:
-                logger.error(f"Failed to load dataset {self.dataset_path}: {e}")
-                pass
+            tasks = load_json(self.dataset_path, default=[], validate_list=True)
+
         if self.max_tasks and len(tasks) > self.max_tasks:
             tasks = tasks[: self.max_tasks]
         return tasks
@@ -97,14 +82,10 @@ class Evaluator:
 
     def _load_baseline(self) -> dict[str, Any]:
         """Load baseline snapshot if it exists."""
+        from agentic_fleet.utils.serialization import load_json
+
         path = self._baseline_path()
-        if not path.exists():
-            return {}
-        try:
-            data = json.loads(path.read_text())
-            return data if isinstance(data, dict) else {}
-        except Exception:
-            return {}
+        return load_json(path, default={})
 
     def _compute_output_hash(self, text: str) -> str:
         """Compute SHA256 hash of output text for drift detection."""
