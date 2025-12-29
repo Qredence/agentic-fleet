@@ -279,8 +279,13 @@ class FleetAgent:
                             "matched_keyword": keyword,
                         }
                     )
-                except Exception:
-                    pass
+                except Exception as e:
+                    logging.warning(
+                        "Failed to load context block '%s' from '%s': %s",
+                        keyword,
+                        full_path,
+                        e,
+                    )
 
         return {
             "session_id": self.session_id,
