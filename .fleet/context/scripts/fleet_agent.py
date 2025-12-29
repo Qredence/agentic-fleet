@@ -10,6 +10,7 @@ from typing import Any
 import chromadb
 import yaml
 from psycopg2 import pool
+import logging
 
 SCRIPTS_DIR = Path(__file__).resolve().parent
 sys.path.insert(0, str(SCRIPTS_DIR))
@@ -222,9 +223,15 @@ class FleetAgent:
                         if search_results["documents"]:
                             results["chroma"][coll_key] = search_results
                     except Exception:
-                        pass
+                        # Best-effort: log and continue if a specific collection query fails.
+                        logging.exception(
+                            "ChromaDB query failed for collection '%s' (key '%s')",
+                            coll_name,
+                            coll_key,
+                        )
             except Exception:
-                pass
+                # Best-effort: log and continue if ChromaDB configuration or access fails.
+                logging.exception("ChromaDB search failed; proceeding without Chroma results.")
 
         return results
 
