@@ -26,10 +26,12 @@ A context-aware development assistant for AgenticFleet that maintains persistent
 ## Memory Architecture
 
 ### Dual Storage
+
 - **ChromaDB (Semantic)**: Skills, patterns, code snippets with embedding-based search
 - **NeonDB (Structured)**: Sessions, users, analytics, skill metadata with SQL queries
 
 ### Context Layers
+
 1. **Core Memory** (`.fleet/context/core/`): Always loaded
    - `project.md`: Architecture, conventions, tech stack
    - `human.md`: User preferences, communication style
@@ -45,22 +47,26 @@ A context-aware development assistant for AgenticFleet that maintains persistent
 ## Usage Examples
 
 ### Learn a Pattern
+
 ```
 /fleet-agent learn --name "add_dspy_agent" --category "agent" --content "Create agent via AgentFactory with DSPyEnhancedAgent wrapper..."
 ```
 
 ### Recall Information
+
 ```
 /fleet-agent recall "DSPy typed signatures"
 /fleet-agent context "add a new agent for web search"
 ```
 
 ### Analyze Code
+
 ```
 /fleet-agent analyze src/agents/coordinator.py
 ```
 
 ### Session Management
+
 ```
 /fleet-agent session start
 /fleet-agent session status
@@ -69,16 +75,16 @@ A context-aware development assistant for AgenticFleet that maintains persistent
 
 ## Commands
 
-| Command | Description |
-|---------|-------------|
+| Command                                                 | Description                    |
+| ------------------------------------------------------- | ------------------------------ |
 | `learn --name <name> --category <cat> --content <code>` | Save pattern to both databases |
-| `recall <query>` | Search NeonDB + ChromaDB |
-| `context <task>` | Load relevant context blocks |
-| `analyze <file>` | Analyze code structure |
-| `session start` | Start new session |
-| `session status` | Show current session |
-| `session summary <text>` | Save session summary |
-| `stats` | Show development metrics |
+| `recall <query>`                                        | Search NeonDB + ChromaDB       |
+| `context <task>`                                        | Load relevant context blocks   |
+| `analyze <file>`                                        | Analyze code structure         |
+| `session start`                                         | Start new session              |
+| `session status`                                        | Show current session           |
+| `session summary <text>`                                | Save session summary           |
+| `stats`                                                 | Show development metrics       |
 
 ## Auto-Learning
 
@@ -91,7 +97,7 @@ description: How to create a DSPy signature with TypedPredictor
 implementation: |
   class TaskAnalysisOutput(BaseModel):
       complexity: Literal["low", "medium", "high"]
-      
+
   class TaskAnalysis(dspy.Signature):
       task: str = dspy.InputField(desc="Task to analyze")
       analysis: TaskAnalysisOutput = dspy.OutputField()
@@ -106,5 +112,6 @@ Invocation: `uv run python .fleet/context/scripts/fleet_agent.py <command>`
 Dependencies: `neon_memory.py`, `chroma_driver.py`, `memory_loader.py`
 
 ## See Also
+
 - `memory-system-guide.md`: Complete memory system documentation
 - `.fleet/context/MEMORY.md`: Memory hierarchy and commands

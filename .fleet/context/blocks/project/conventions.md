@@ -11,6 +11,7 @@ updated: 2024-12-29
 ## Code Style
 
 ### Python
+
 - **Formatter**: Ruff
 - **Line length**: 100 characters
 - **Python version**: 3.12+ syntax
@@ -18,6 +19,7 @@ updated: 2024-12-29
 - **Docstrings**: Required for public functions/classes
 
 ### TypeScript/React
+
 - **Formatter**: Prettier
 - **Framework**: React 19 + Vite
 - **Styling**: Tailwind CSS
@@ -25,7 +27,9 @@ updated: 2024-12-29
 ## Git Conventions
 
 ### Commit Messages
+
 Follow conventional commits:
+
 ```
 type(scope): description
 
@@ -37,6 +41,7 @@ test(api): add chat service tests
 ```
 
 ### Branch Naming
+
 ```
 feature/description
 fix/description
@@ -45,6 +50,7 @@ docs/description
 ```
 
 ### Pull Requests
+
 - Use PR template (`.github/pull_request_template.md`)
 - Require passing CI checks
 - Link related issues
@@ -52,11 +58,13 @@ docs/description
 ## File Organization
 
 ### New Endpoints
+
 1. Add route in `api/routes/`
 2. Add service logic in `services/`
 3. Add tests in `tests/api/`
 
 ### New Agents
+
 1. Add agent in `agents/`
 2. Update `workflow_config.yaml`
 3. Add tests in `tests/agents/`
@@ -64,9 +72,11 @@ docs/description
 ## Environment
 
 ### Required Variables
+
 - `OPENAI_API_KEY` - Required for LLM calls
 - `TAVILY_API_KEY` - Optional for web search
 
 ### Optional Variables
+
 - `DSPY_COMPILE` - Enable DSPy compilation
 - `LOG_JSON` - JSON logging (default: true)

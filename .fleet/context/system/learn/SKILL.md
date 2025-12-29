@@ -16,9 +16,11 @@ uv run python .fleet/context/scripts/memory_manager.py learn --file <path_to_mar
 ```
 
 ## Arguments
+
 - `--file`: The absolute or relative path to the markdown file you want to learn.
 
 ## Best Practices
+
 - Ensure the markdown file has a clear title (# Title).
 - The file should contain reusable information, not just ephemeral session data.
 - Save the file in `.fleet/context/skills/` before learning it to keep the source organized.

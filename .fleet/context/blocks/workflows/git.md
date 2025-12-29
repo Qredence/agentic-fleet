@@ -21,6 +21,7 @@ main
 ## Daily Workflow
 
 ### Starting Work
+
 ```bash
 # Ensure main is up to date
 git checkout main
@@ -31,6 +32,7 @@ git checkout -b feature/my-feature
 ```
 
 ### During Development
+
 ```bash
 # Stage and commit frequently
 git add -p                    # Interactive staging
@@ -41,6 +43,7 @@ git push -u origin feature/my-feature
 ```
 
 ### Before PR
+
 ```bash
 # Rebase on latest main
 git fetch origin
@@ -62,6 +65,7 @@ type(scope): description
 ```
 
 ### Types
+
 - `feat` - New feature
 - `fix` - Bug fix
 - `docs` - Documentation
@@ -70,6 +74,7 @@ type(scope): description
 - `chore` - Maintenance
 
 ### Examples
+
 ```
 feat(api): add streaming endpoint for chat
 fix(workflow): resolve race condition in routing

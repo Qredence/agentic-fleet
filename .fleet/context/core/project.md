@@ -116,9 +116,10 @@ agentic-fleet optimize  # Runs GEPA optimization
 ```
 
 Configuration in `workflow_config.yaml`:
+
 ```yaml
 dspy:
-  require_compiled: false  # Set true in production
+  require_compiled: false # Set true in production
   use_typed_signatures: true
   enable_routing_cache: true
   routing_cache_ttl_seconds: 300
@@ -179,16 +180,16 @@ HandoffManager                      # Manage handoff flow
 
 ## Key Technologies
 
-| Technology | Role | Version/Pattern |
-|------------|------|-----------------|
-| **DSPy** | Prompt optimization, typed signatures | 3.x with TypedPredictor |
-| **Agent Framework** | ChatAgent, Workflow, Thread | Microsoft Magentic Fleet |
-| **FastAPI** | HTTP/WebSocket server | 0.115+ |
-| **React 19** | Frontend | Vite + Tailwind |
-| **Pydantic** | Type validation | 2.x |
-| **ChromaDB** | Semantic memory | Memory system |
-| **OpenTelemetry** | Tracing | Jaeger, Langfuse |
-| **Azure** | Cosmos DB, AI Foundry | Optional |
+| Technology          | Role                                  | Version/Pattern          |
+| ------------------- | ------------------------------------- | ------------------------ |
+| **DSPy**            | Prompt optimization, typed signatures | 3.x with TypedPredictor  |
+| **Agent Framework** | ChatAgent, Workflow, Thread           | Microsoft Magentic Fleet |
+| **FastAPI**         | HTTP/WebSocket server                 | 0.115+                   |
+| **React 19**        | Frontend                              | Vite + Tailwind          |
+| **Pydantic**        | Type validation                       | 2.x                      |
+| **ChromaDB**        | Semantic memory                       | Memory system            |
+| **OpenTelemetry**   | Tracing                               | Jaeger, Langfuse         |
+| **Azure**           | Cosmos DB, AI Foundry                 | Optional                 |
 
 ## Development Commands
 
@@ -206,6 +207,7 @@ agentic-fleet run -m "task"  # CLI task execution
 ## Configuration
 
 All runtime settings in `src/agentic_fleet/config/workflow_config.yaml`:
+
 - DSPy models, routing cache, typed signatures
 - Agent configurations (model, tools, instructions)
 - Workflow phases (timeouts, thresholds, max rounds)

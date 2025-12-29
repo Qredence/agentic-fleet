@@ -11,6 +11,7 @@ updated: 2024-12-29
 ## Creating a PR
 
 1. **Title**: Use conventional commit format
+
    ```
    feat(api): add new chat streaming endpoint
    ```
@@ -28,23 +29,27 @@ updated: 2024-12-29
 ## Review Checklist
 
 ### Code Quality
+
 - [ ] Types are correct and complete
 - [ ] No unnecessary complexity
 - [ ] Functions are focused and testable
 - [ ] Error handling is appropriate
 
 ### Testing
+
 - [ ] Tests pass (`make test`)
 - [ ] New code has tests
 - [ ] Edge cases covered
 - [ ] No flaky tests introduced
 
 ### Documentation
+
 - [ ] Docstrings for public APIs
 - [ ] README updated if needed
 - [ ] CHANGELOG entry added
 
 ### Security
+
 - [ ] No secrets in code
 - [ ] Input validation present
 - [ ] No SQL injection risks
@@ -53,12 +58,14 @@ updated: 2024-12-29
 ## Reviewer Guidelines
 
 ### Approval Criteria
+
 - All CI checks pass
 - At least one approval
 - No unresolved comments
 - No merge conflicts
 
 ### Feedback Style
+
 - Be specific and constructive
 - Suggest solutions, not just problems
 - Use "nit:" prefix for minor suggestions
