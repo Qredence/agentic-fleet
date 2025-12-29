@@ -334,8 +334,7 @@ Suggested next steps:
 
 **Output:**
 
-- Critical issues (confidence 75-100)
-- Important issues (confidence 50-74)
+- Critical issues (confidence 80-100)
 - Specific fixes with file:line references
 - Project guideline references
 
