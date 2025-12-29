@@ -1,3 +1,12 @@
+/**
+ * Reasoning Component
+ *
+ * CUSTOM COMPONENT - Not from shadcn/ui registry.
+ *
+ * A collapsible component for displaying AI reasoning/thought process.
+ * Auto-expands during streaming and can be manually toggled.
+ * Follows shadcn/ui patterns (cn utility, TypeScript types).
+ */
 import { cn } from "@/lib/utils";
 import { ChevronDownIcon } from "lucide-react";
 import React, {

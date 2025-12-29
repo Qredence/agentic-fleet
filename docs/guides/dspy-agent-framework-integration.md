@@ -311,7 +311,7 @@ from agentic_fleet.agents.coordinator import AgentFactory
 from agentic_fleet.utils.config_loader import load_config
 
 # Load configuration
-config = load_config("config/workflow_config.yaml")
+config = load_config("src/agentic_fleet/config/workflow_config.yaml")
 
 # Create agent factory
 factory = AgentFactory()
@@ -494,7 +494,7 @@ export ENABLE_DSPY_AGENTS=false
 ## Next Steps
 
 1. **Run the demo**: `python examples/dspy_agent_framework_demo.py`
-2. **Review configuration**: Check `config/workflow_config.yaml`
+2. **Review configuration**: Check `src/agentic_fleet/config/workflow_config.yaml`
 3. **Monitor performance**: Track metrics in logs
 4. **Optimize**: Adjust timeouts, caching, and refinement settings
 

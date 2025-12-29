@@ -48,11 +48,7 @@ from importlib.metadata import PackageNotFoundError
 from importlib.metadata import version as _get_version
 from typing import TYPE_CHECKING
 
-from agentic_fleet.utils.agent_framework import (
-    ensure_agent_framework_shims as _ensure_agent_framework_shims,
-)
-
-_ensure_agent_framework_shims()
+# agent_framework is a required dependency - no shims needed
 
 if TYPE_CHECKING:
     # Core infrastructure

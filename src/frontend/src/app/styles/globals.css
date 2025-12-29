@@ -1,0 +1,80 @@
+/* =============================================
+  Opinionated globals (adapted from OpenAI apps-sdk-ui)
+============================================= */
+@layer base {
+  html,
+  :host {
+    color: var(--color-text);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    letter-spacing: var(--font-tracking-normal);
+  }
+
+  * {
+    scrollbar-color: var(--scrollbar-color) transparent;
+    scrollbar-width: thin;
+  }
+
+  [data-exiting] {
+    pointer-events: none;
+  }
+
+  ::placeholder {
+    color: var(--color-text-tertiary);
+  }
+
+  b,
+  strong {
+    font-weight: var(--font-weight-semibold);
+  }
+}
+
+/* =============================================
+  Custom Scrollbar (Webkit)
+============================================= */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--scrollbar-color);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--alpha-40);
+}
+
+/* =============================================
+  Focus Styles
+============================================= */
+:focus-visible {
+  outline: 2px solid var(--color-ring);
+  outline-offset: 2px;
+}
+
+/* =============================================
+  Border Defaults
+============================================= */
+* {
+  border-color: var(--color-border);
+  outline-color: color-mix(in srgb, var(--color-ring) 50%, transparent);
+}
+
+/* =============================================
+  Reduced Motion
+============================================= */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}

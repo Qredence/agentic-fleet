@@ -48,7 +48,7 @@ def load_config(config_path: str | None = None, validate: bool = True) -> dict[s
     """Load and validate configuration from YAML file with caching."""
     # Resolve config path
     if config_path is None:
-        cwd_default = Path("config/workflow_config.yaml")
+        cwd_default = Path("src/agentic_fleet/config/workflow_config.yaml")
         pkg_default = _package_root() / "config" / "workflow_config.yaml"
         config_file = cwd_default if cwd_default.exists() else pkg_default
     else:

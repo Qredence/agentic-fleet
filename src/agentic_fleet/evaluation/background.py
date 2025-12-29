@@ -56,6 +56,10 @@ def schedule_quality_evaluation(
     async def _run() -> None:
         try:
             if not task.strip() or not answer.strip():
+                logger.debug(
+                    "Skipping quality evaluation: empty task or answer (workflow_id=%s)",
+                    workflow_id,
+                )
                 return
 
             from agentic_fleet.dspy_modules.answer_quality import score_answer_with_dspy
@@ -63,6 +67,14 @@ def schedule_quality_evaluation(
             metrics = await asyncio.to_thread(score_answer_with_dspy, task, answer)
             score = _score_0_to_10(metrics)
             flag = metrics.get("quality_flag") if isinstance(metrics, dict) else None
+
+            # Log quality evaluation results for debugging
+            logger.info(
+                "Quality evaluation complete (workflow_id=%s, score=%.1f/10, flag=%s)",
+                workflow_id,
+                score,
+                flag or "none",
+            )
 
             details = {
                 "answer_quality": {
@@ -108,7 +120,12 @@ def schedule_quality_evaluation(
                         exc,
                     )
         except Exception as exc:
-            logger.debug("Background evaluation failed (workflow_id=%s): %s", workflow_id, exc)
+            logger.error(
+                "Background evaluation failed (workflow_id=%s): %s",
+                workflow_id,
+                exc,
+                exc_info=True,
+            )
 
     task_obj = asyncio.create_task(_run())
     _background_tasks.add(task_obj)

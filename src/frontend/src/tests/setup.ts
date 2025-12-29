@@ -1,5 +1,37 @@
 import "@testing-library/jest-dom/vitest";
+import React from "react";
 import { afterAll, beforeAll, vi } from "vitest";
+import type { ReactNode } from "react";
+
+// Types for Virtuoso mock
+interface VirtuosoMockProps {
+  data?: unknown[];
+  itemContent: (index: number, data: unknown) => ReactNode;
+  className?: string;
+}
+
+// Mock react-virtuoso to render items synchronously in tests so queries can find content
+// The real Virtuoso relies on browser measurement APIs which are flaky in jsdom.
+vi.mock("react-virtuoso", () => {
+  const Virtuoso = ({ data, itemContent, className }: VirtuosoMockProps) => {
+    return (
+      // Render a simple container with items expanded so tests can query text
+      React.createElement(
+        "div",
+        { className },
+        data?.map((d: unknown, i: number) =>
+          React.createElement(
+            "div",
+            { key: i, "data-testid": `virtuoso-item-${i}` },
+            itemContent(i, d),
+          ),
+        ),
+      )
+    );
+  };
+
+  return { Virtuoso };
+});
 
 // Polyfill for browser APIs that don't exist in jsdom but don't need mocking
 

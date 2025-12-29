@@ -57,6 +57,17 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     settings = get_settings()
     app.state.settings = settings
 
+    # Phase 0: Initialize Langfuse and DSPy instrumentation EARLY
+    # This must happen before any DSPy modules are loaded or used
+    # to ensure native DSPy traces are captured
+    try:
+        from agentic_fleet.dspy_modules.lifecycle import initialize_langfuse
+
+        initialize_langfuse()
+        logger.info("Langfuse and DSPy instrumentation initialized early for native tracing")
+    except Exception as e:
+        logger.debug(f"Langfuse early initialization skipped: {e}")
+
     # Phase 1: Load and validate compiled DSPy artifacts with fail-fast enforcement
     try:
         # Load workflow config to get DSPy settings
@@ -66,6 +77,7 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
 
         # Initialize tracing early using YAML config so `tracing.enabled: true`
         # works without requiring environment flags.
+        # This will configure Agent Framework observability to export to Langfuse
         initialize_tracing(config)
         dspy_config = config.get("dspy", {})
         require_compiled = dspy_config.get("require_compiled", False)

@@ -1084,5 +1084,85 @@
       "BrowserTool (CopilotResearchAgent): open the identified MS docs, SDK references, and sample repos to extract exact code blocks, config fields, and endpoint details.",
       "(Local execution via CodexAgent): implement and execute a short prototype based on extracted code (note: execution environment availability must be confirmed)."
     ]
+  },
+  {
+    "task": "Provide an in depth analysis on Letta Code",
+    "team": "Analyst: Data analysis expert",
+    "available_tools": "- TavilySearchTool/TavilyMCPTool (available to Researcher): Search the web for real-time information using Tavily. Provides accurate, up-to-date results with source citations. [Capabilities: web_search, real_time, citations]",
+    "context": "Self-improvement: Quality score 9.1/10",
+    "assigned_to": "Planner,ResearcherAgent,CopilotResearcher,AnalystAgent,CodexAgent,Coder,WriterAgent,ReviewerAgent,Verifier,Generator,Executor",
+    "mode": "sequential",
+    "tool_requirements": ["TavilySearchTool", "BrowserTool"]
+  },
+  {
+    "task": "After many observations, it's seen that the sun rises in the east every morning",
+    "team": "Writer: Content creation",
+    "available_tools": "No tools available",
+    "context": "Self-improvement: Quality score 9.0/10",
+    "assigned_to": "researcher,writer,reviewer",
+    "mode": "sequential",
+    "tool_requirements": []
+  },
+  {
+    "task": "how to greatly setup observability to open telemetry for complex agentic system",
+    "team": "Writer: Content creation",
+    "available_tools": "- TavilySearchTool/TavilyMCPTool (available to Researcher): Search the web for real-time information using Tavily. Provides accurate, up-to-date results with source citations. [Capabilities: web_search, real_time, citations]",
+    "context": "Self-improvement: Quality score 8.4/10",
+    "assigned_to": "Planner,ResearcherAgent,CopilotResearchAgent,AnalystAgent,Coder,CodexAgent,VerifierAgent,ReviewerAgent,WriterAgent,Generator,Executor",
+    "mode": "sequential",
+    "tool_requirements": [
+      "TavilySearchTool \u2014 gather latest OTEL specs, sensor SDK updates, and 2024+ community recommendations",
+      "BrowserTool \u2014 fetch and archive vendor docs, exporter setup guides, and example configs",
+      "CodexAgent (code execution) \u2014 create and run PoC instrumentation and Otel Collector configurations",
+      "Coder \u2014 generate language-specific instrumentation snippets and CI/test scripts",
+      "Internal staging environment / test harness \u2014 run validation and load tests (not an external tool in this list but required environment)"
+    ]
+  },
+  {
+    "task": "Search for the latest rumors and confirmed features of the iPhone 16 and Google Pixel 9. Create a comparison table of their expected specs.",
+    "team": "Researcher: Web research specialist\nWriter: Content creation",
+    "available_tools": "- TavilySearchTool/TavilyMCPTool (available to Researcher): Search the web for real-time information using Tavily. Provides accurate, up-to-date results with source citations. [Capabilities: web_search, real_time, citations]",
+    "context": "Self-improvement: Quality score 8.4/10",
+    "assigned_to": "Researcher,ResearcherAgent,CopilotResearcher,AnalystAgent,WriterAgent,ReviewerAgent,VerifierAgent",
+    "mode": "sequential",
+    "tool_requirements": [
+      "tavily_search",
+      "TavilySearchTool: query 'iPhone 16 confirmed features', 'iPhone 16 rumors', 'iPhone 16 specs leak 2024/2025'",
+      "TavilySearchTool: query 'Google Pixel 9 confirmed features', 'Pixel 9 rumors', 'Pixel 9 specs leak 2024/2025'",
+      "BrowserTool: open and extract full text/spec tables from the top Tavily-listed sources (manufacturer pages, reliable leaks, I/O/WWDC coverage, reputable outlets)",
+      "TavilySearchTool (follow-ups): re-run targeted searches if gaps remain (e.g., battery capacity, chipset details)"
+    ]
+  },
+  {
+    "task": "Analyze the way GEPA works VS other kind of training",
+    "team": "Writer: Content creation",
+    "available_tools": "- TavilySearchTool/TavilyMCPTool (available to Researcher): Search the web for real-time information using Tavily. Provides accurate, up-to-date results with source citations. [Capabilities: web_search, real_time, citations]",
+    "context": "Self-improvement: Quality score 7.8/10",
+    "assigned_to": "PlannerAgent,ResearcherAgent,CopilotResearcherAgent,AnalystAgent,CoderAgent,WriterAgent,ReviewerAgent,VerifierAgent,GeneratorAgent",
+    "mode": "sequential",
+    "tool_requirements": [
+      "tavily_search (ResearcherAgent / CopilotResearcherAgent) \u2014 locate definitions, papers, blog posts, benchmarks, and recent discussions about GEPA and comparator training types",
+      "browser (CopilotResearcherAgent) \u2014 fetch full-text where Tavily results point to paywalled or complex pages and extract relevant passages/figures",
+      "codex_agent / CoderAgent \u2014 run short analyses, produce comparison tables, and generate diagrams or simple visualizations if data is available",
+      "internal notes & shared doc (PlannerAgent) \u2014 collect artifacts and hand off to Analyst/Writer"
+    ]
+  },
+  {
+    "task": "How does strategic decision-making in game theory scenarios utilize logical reasoning to predict outcomes?",
+    "team": "Writer: Content creation",
+    "available_tools": "No tools available",
+    "context": "Self-improvement: Quality score 7.5/10",
+    "assigned_to": "Planner,ResearcherAgent,AnalystAgent,WriterAgent,ReviewerAgent,Verifier,Generator",
+    "mode": "sequential",
+    "tool_requirements": []
+  },
+  {
+    "task": "what is microsoft foundry ? make a full breakdown and reason hard",
+    "team": "Writer: Content creation",
+    "available_tools": "- TavilySearchTool/TavilyMCPTool (available to Researcher): Search the web for real-time information using Tavily. Provides accurate, up-to-date results with source citations. [Capabilities: web_search, real_time, citations]",
+    "context": "Self-improvement: Quality score 7.3/10",
+    "assigned_to": "ResearcherAgent,Copilot_Researcher,AnalystAgent,WriterAgent,ReviewerAgent,VerifierAgent",
+    "mode": "sequential",
+    "tool_requirements": ["TavilySearchTool", "BrowserTool"]
   }
 ]

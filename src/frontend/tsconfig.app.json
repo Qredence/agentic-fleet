@@ -8,9 +8,10 @@
     "types": ["vite/client", "vitest/globals"],
     "skipLibCheck": true,
     "noEmit": true,
-    "baseUrl": ".",
     "paths": {
-      "@/*": ["./src/*"]
+      "@/*": ["./src/*"],
+      "@app/*": ["./src/app/*"],
+      "@features/*": ["./src/features/*"]
     },
     /* Bundler mode */
     "moduleResolution": "bundler",
