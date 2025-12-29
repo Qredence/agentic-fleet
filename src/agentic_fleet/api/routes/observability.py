@@ -31,11 +31,17 @@ def sanitize_for_logging(text: str | None) -> str:
     """
     if text is None:
         return ""
-    # Remove all control characters (0x00-0x1f includes CR, LF, tabs) and extended control (0x7f-0x9f)
-    cleaned = re.sub(r"[\x00-\x1f\x7f-\x9f]", " ", text)
-    # Collapse runs of whitespace to a single space
+    # First, defensively remove explicit newline characters
+    # to ensure the value cannot span multiple log lines.
+    cleaned = text.replace("\r", " ").replace("\n", " ")
+    # Remove all control characters (0x00-0x1f includes CR, LF, tabs)
+    # and extended control characters (0x7f-0x9f).
+    cleaned = re.sub(r"[\x00-\x1f\x7f-\x9f]", " ", cleaned)
+    # Collapse runs of whitespace to a single space.
     cleaned = re.sub(r"\s+", " ", cleaned).strip()
-    # Finally, drop any remaining characters outside a conservative safe set
+    # Restrict to printable ASCII characters only.
+    cleaned = re.sub(r"[^\x20-\x7e]", "", cleaned)
+    # Finally, drop any remaining characters outside a conservative safe set.
     return re.sub(r"[^\w\-\.@:/ ]", "", cleaned)
 
 
