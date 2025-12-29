@@ -97,10 +97,8 @@ class TestQualityScoreInResponseCompleted:
         )
 
         # Mock the stream_chat method to capture events
-        async def capture_events(*args, **kwargs):
-            # This is a simplified test - in reality we'd need to mock the full workflow stream
-            # For now, we test the quality scoring logic directly
-            pass
+        # This is a simplified test - in reality we'd need to mock the full workflow stream.
+        # For now, we test the quality scoring logic directly.
 
         # Test that score_answer_with_dspy is called and returns reasonable values
         with patch("agentic_fleet.services.chat_sse.score_answer_with_dspy") as mock_score:
