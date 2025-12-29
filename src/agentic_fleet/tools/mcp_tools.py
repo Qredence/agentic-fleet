@@ -131,7 +131,9 @@ class Context7DeepWikiTool(BaseMCPTool):
         Args:
             mcp_url: URL of the Context7 DeepWiki MCP server (defaults to CONTEXT7_DEEPWIKI_MCP_URL env var)
         """
-        from ..utils.telemetry import optional_span  # Avoid circular import at module level
+        from agentic_fleet.utils.infra.telemetry import (
+            optional_span,  # Avoid circular import at module level
+        )
 
         self._optional_span = optional_span
 
@@ -192,7 +194,9 @@ class PackageSearchMCPTool(BaseMCPTool):
         Args:
             mcp_url: URL of the Package Search MCP server (defaults to PACKAGE_SEARCH_MCP_URL env var)
         """
-        from ..utils.telemetry import optional_span  # Avoid circular import at module level
+        from agentic_fleet.utils.infra.telemetry import (
+            optional_span,  # Avoid circular import at module level
+        )
 
         self._optional_span = optional_span
 

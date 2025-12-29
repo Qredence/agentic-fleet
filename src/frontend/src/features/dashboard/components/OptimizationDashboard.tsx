@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useState } from "react";
+// import { useRef } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -13,50 +13,44 @@ import {
 import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { TextShimmer } from "@/features/chat/components/text-shimmer";
-import {
-  useEvaluationHistory,
-  useOptimizationRun,
-  useOptimizationStatus,
-  useTriggerSelfImprove,
-  useDSPyConfig,
-  useDSPyCacheInfo,
-  useReasonerSummary,
-  useDSPySignatures,
-  useClearDSPyCache,
-  useClearRoutingCache,
-} from "@/api/hooks";
-import type { SelfImproveStats, HistoryExecutionEntry } from "@/api/types";
-import { cn } from "@/lib/utils";
+import { TextShimmer } from "@/features/chat";
+import { useOptimizationDashboard } from "@/features/dashboard/hooks/useOptimizationDashboard";
+import { OptimizationControls } from "./OptimizationControls";
+// import { cn } from "@/lib/utils";
+import { ChatHeader } from "@/features/layout";
+import { SidebarTrigger } from "@/components/ui/sidebar";
 import {
   Activity,
   Zap,
   Database,
   TrendingUp,
-  Play,
-  RefreshCw,
   CheckCircle2,
   XCircle,
-  Clock,
   Loader2,
   Sparkles,
   BarChart3,
-  History,
+  History as HistoryIcon,
   ChevronLeft,
   ChevronRight,
   Settings2,
   Target,
-  Layers,
-  Cpu,
-  BrainCircuit,
-  Trash2,
-  HardDrive,
   FileCode,
   Hash,
   AlertTriangle,
   ChevronDown,
   ChevronUp,
+  BrainCircuit,
+  Trash2,
+  HardDrive,
 } from "lucide-react";
+
+import {
+  StatusBadge,
+  StatCard,
+  ProgressRing,
+  HistoryEntry,
+  QualityChart,
+} from "./shared";
 
 // ============================================================================
 // Animation Variants
@@ -85,550 +79,80 @@ const itemVariants = {
   },
 } as const;
 
-const pulseVariants = {
-  idle: { scale: 1 },
-  active: {
-    scale: [1, 1.05, 1] as number[],
-    transition: {
-      duration: 2,
-      repeat: Infinity,
-      ease: "easeInOut" as const,
-    },
-  },
-};
-
-// ============================================================================
-// Status Badge Component
-// ============================================================================
-
-interface StatusBadgeProps {
-  status: string;
-}
-
-function StatusBadge({ status }: StatusBadgeProps) {
-  const variant = useMemo(() => {
-    switch (status) {
-      case "completed":
-      case "cached":
-        return "success";
-      case "running":
-      case "started":
-        return "info";
-      case "failed":
-        return "destructive";
-      default:
-        return "secondary";
-    }
-  }, [status]);
-
-  return (
-    <Badge variant={variant} className="font-mono text-xs uppercase">
-      {status}
-    </Badge>
-  );
-}
-
-// ============================================================================
-// Stat Card Component
-// ============================================================================
-
-interface StatCardProps {
-  label: string;
-  value: string | number;
-  icon: React.ReactNode;
-  description?: string;
-}
-
-function StatCard({ label, value, icon, description }: StatCardProps) {
-  return (
-    <motion.div variants={itemVariants}>
-      <Card className="relative overflow-hidden">
-        <CardContent className="p-4">
-          <div className="flex items-start justify-between">
-            <div className="space-y-1">
-              <p className="text-muted-foreground text-sm font-medium">
-                {label}
-              </p>
-              <p className="font-mono text-2xl font-bold tabular-nums">
-                {value}
-              </p>
-              {description && (
-                <p className="text-muted-foreground text-xs">{description}</p>
-              )}
-            </div>
-            <div className="bg-primary/10 text-primary rounded-lg p-2">
-              {icon}
-            </div>
-          </div>
-        </CardContent>
-        {/* Decorative gradient */}
-        <div className="from-primary/5 pointer-events-none absolute inset-0 bg-linear-to-br to-transparent" />
-      </Card>
-    </motion.div>
-  );
-}
-
-// ============================================================================
-// Progress Ring Component (SVG-based)
-// ============================================================================
-
-interface ProgressRingProps {
-  progress: number;
-  status: "idle" | "running" | "completed" | "failed";
-}
-
-function ProgressRing({ progress, status }: ProgressRingProps) {
-  const size = 120;
-  const strokeWidth = 8;
-  const radius = (size - strokeWidth) / 2;
-  const circumference = radius * 2 * Math.PI;
-  const offset = circumference - (progress / 100) * circumference;
-
-  const statusColors = useMemo(
-    () => ({
-      idle: { stroke: "stroke-muted", fill: "text-muted-foreground" },
-      running: { stroke: "stroke-primary", fill: "text-primary" },
-      completed: { stroke: "stroke-primary", fill: "text-primary" },
-      failed: { stroke: "stroke-destructive", fill: "text-destructive" },
-    }),
-    [],
-  );
-
-  const { stroke, fill } = statusColors[status];
-
-  return (
-    <motion.div
-      className="relative"
-      variants={pulseVariants}
-      animate={status === "running" ? "active" : "idle"}
-    >
-      <svg width={size} height={size} className="-rotate-90">
-        {/* Background track */}
-        <circle
-          cx={size / 2}
-          cy={size / 2}
-          r={radius}
-          fill="none"
-          stroke="currentColor"
-          strokeWidth={strokeWidth}
-          className="text-muted/30"
-        />
-        {/* Progress arc */}
-        <motion.circle
-          cx={size / 2}
-          cy={size / 2}
-          r={radius}
-          fill="none"
-          strokeWidth={strokeWidth}
-          strokeDasharray={circumference}
-          strokeLinecap="round"
-          className={cn(stroke, "transition-colors duration-300")}
-          initial={{ strokeDashoffset: circumference }}
-          animate={{ strokeDashoffset: offset }}
-          transition={{ duration: 0.5, ease: "easeOut" }}
-        />
-      </svg>
-      <div className="absolute inset-0 flex flex-col items-center justify-center">
-        <span className={cn("font-mono text-2xl font-bold tabular-nums", fill)}>
-          {Math.round(progress)}%
-        </span>
-        <span className="text-muted-foreground text-xs uppercase tracking-wider">
-          {status}
-        </span>
-      </div>
-    </motion.div>
-  );
-}
-
-// ============================================================================
-// Quality Distribution Chart
-// ============================================================================
-
-interface QualityChartProps {
-  distribution: Record<string, number>;
-}
-
-function QualityChart({ distribution }: QualityChartProps) {
-  const entries = Object.entries(distribution);
-  const maxValue = Math.max(...entries.map(([, v]) => v), 1);
-
-  const barColors = [
-    "bg-primary",
-    "bg-secondary",
-    "bg-muted-foreground",
-    "bg-destructive",
-  ];
-
-  return (
-    <div className="space-y-3">
-      {entries.map(([label, count], index) => (
-        <div key={label}>
-          <div className="text-muted-foreground mb-1 flex items-center justify-between text-xs">
-            <span>{label}</span>
-            <span className="font-mono tabular-nums">{count}</span>
-          </div>
-          <div className="bg-muted h-2 overflow-hidden rounded-full">
-            <motion.div
-              className={cn("h-full", barColors[index % barColors.length])}
-              initial={{ width: 0 }}
-              animate={{ width: `${(count / maxValue) * 100}%` }}
-              transition={{
-                duration: 0.5,
-                delay: index * 0.1,
-                ease: "easeOut",
-              }}
-            />
-          </div>
-        </div>
-      ))}
-    </div>
-  );
-}
-
-// ============================================================================
-// History Entry Component
-// ============================================================================
-
-interface HistoryEntryProps {
-  entry: HistoryExecutionEntry;
-  index: number;
-}
-
-function HistoryEntry({ entry, index }: HistoryEntryProps) {
-  const workflowId = entry.workflowId ?? entry.workflow_id ?? "unknown";
-  const task = typeof entry.task === "string" ? entry.task : "(no task)";
-  const score =
-    typeof entry.quality?.score === "number"
-      ? entry.quality.score.toFixed(1)
-      : "—";
-  const status = typeof entry.status === "string" ? entry.status : "unknown";
-
-  const scoreNum = entry.quality?.score;
-  const scoreBadgeVariant = useMemo(() => {
-    if (scoreNum === undefined) return "secondary";
-    if (scoreNum >= 9) return "success";
-    if (scoreNum >= 8) return "info";
-    if (scoreNum >= 7) return "warning";
-    return "destructive";
-  }, [scoreNum]);
-
-  return (
-    <motion.div
-      initial={{ opacity: 0, x: -10 }}
-      animate={{ opacity: 1, x: 0 }}
-      transition={{ delay: index * 0.05 }}
-      className="hover:bg-muted/50 group flex items-start gap-3 rounded-lg p-3 transition-colors"
-    >
-      {/* Status indicator */}
-      <div
-        className={cn(
-          "mt-1.5 h-2 w-2 shrink-0 rounded-full",
-          status === "completed"
-            ? "bg-primary"
-            : status === "failed"
-              ? "bg-destructive"
-              : status === "running"
-                ? "animate-pulse bg-primary"
-                : "bg-muted-foreground",
-        )}
-      />
-
-      {/* Content */}
-      <div className="min-w-0 flex-1">
-        <p
-          className="text-foreground truncate text-sm font-medium"
-          title={task}
-        >
-          {task}
-        </p>
-        <div className="text-muted-foreground mt-1 flex flex-wrap items-center gap-2 text-xs">
-          <code className="bg-muted rounded px-1.5 py-0.5 font-mono">
-            {workflowId.slice(0, 8)}
-          </code>
-          {entry.mode && (
-            <Badge variant="outline" className="text-xs">
-              {entry.mode}
-            </Badge>
-          )}
-        </div>
-      </div>
-
-      {/* Score */}
-      <Badge variant={scoreBadgeVariant} className="shrink-0 font-mono">
-        {score}
-      </Badge>
-    </motion.div>
-  );
-}
-
-// ============================================================================
-// Optimizer Selector Component
-// ============================================================================
-
-interface OptimizerSelectorProps {
-  value: "bootstrap" | "gepa";
-  onChange: (value: "bootstrap" | "gepa") => void;
-  disabled?: boolean;
-}
-
-function OptimizerSelector({
-  value,
-  onChange,
-  disabled,
-}: OptimizerSelectorProps) {
-  return (
-    <div className="flex gap-2">
-      {(["bootstrap", "gepa"] as const).map((opt) => (
-        <Button
-          key={opt}
-          type="button"
-          variant={value === opt ? "default" : "outline"}
-          size="sm"
-          onClick={() => onChange(opt)}
-          disabled={disabled}
-          className="flex-1"
-        >
-          {opt === "bootstrap" ? (
-            <Layers className="mr-1.5 size-4" />
-          ) : (
-            <Cpu className="mr-1.5 size-4" />
-          )}
-          {opt.charAt(0).toUpperCase() + opt.slice(1)}
-        </Button>
-      ))}
-    </div>
-  );
-}
-
-// ============================================================================
-// GEPA Preset Selector Component
-// ============================================================================
-
-interface GepaPresetSelectorProps {
-  value: "light" | "medium" | "heavy";
-  onChange: (value: "light" | "medium" | "heavy") => void;
-  disabled?: boolean;
-}
-
-function GepaPresetSelector({
-  value,
-  onChange,
-  disabled,
-}: GepaPresetSelectorProps) {
-  const presets = [
-    { value: "light" as const, label: "Light", desc: "Fast, lower cost" },
-    { value: "medium" as const, label: "Medium", desc: "Balanced" },
-    { value: "heavy" as const, label: "Heavy", desc: "Thorough, higher cost" },
-  ];
-
-  return (
-    <div className="grid grid-cols-3 gap-2">
-      {presets.map((preset) => (
-        <Button
-          key={preset.value}
-          type="button"
-          variant={value === preset.value ? "default" : "outline"}
-          size="sm"
-          onClick={() => onChange(preset.value)}
-          disabled={disabled}
-          className="flex-col py-3"
-        >
-          <span>{preset.label}</span>
-          <span className="text-[10px] font-normal opacity-70">
-            {preset.desc}
-          </span>
-        </Button>
-      ))}
-    </div>
-  );
-}
-
 // ============================================================================
 // Main Optimization Dashboard Component
 // ============================================================================
 
 export function OptimizationDashboard() {
-  // ----- State -----
-  const [jobId, setJobId] = useState<string>("");
-  const [historyOffset, setHistoryOffset] = useState(0);
-  const historyLimit = 10;
-
-  const [optimizer, setOptimizer] = useState<"bootstrap" | "gepa">("gepa");
-  const [gepaPreset, setGepaPreset] = useState<"light" | "medium" | "heavy">(
-    "light",
-  );
-  const [minQuality, setMinQuality] = useState("8.0");
-  const [maxExamples, setMaxExamples] = useState("20");
-  const [harvestHistory, setHarvestHistory] = useState(true);
-
-  // Validation errors
-  const [minQualityError, setMinQualityError] = useState<string | null>(null);
-  const [maxExamplesError, setMaxExamplesError] = useState<string | null>(null);
-
-  // Validation function
-  const validateInputs = useCallback((): boolean => {
-    let isValid = true;
-
-    // Validate minQuality (should be a number between 0 and 10)
-    const minQualityNum = Number(minQuality);
-    if (isNaN(minQualityNum) || minQuality.trim() === "") {
-      setMinQualityError("Must be a valid number");
-      isValid = false;
-    } else if (minQualityNum < 0 || minQualityNum > 10) {
-      setMinQualityError("Must be between 0 and 10");
-      isValid = false;
-    } else {
-      setMinQualityError(null);
-    }
-
-    // Validate maxExamples (should be a positive integer)
-    const maxExamplesNum = Number(maxExamples);
-    if (isNaN(maxExamplesNum) || maxExamples.trim() === "") {
-      setMaxExamplesError("Must be a valid number");
-      isValid = false;
-    } else if (!Number.isInteger(maxExamplesNum) || maxExamplesNum < 1) {
-      setMaxExamplesError("Must be a positive integer");
-      isValid = false;
-    } else {
-      setMaxExamplesError(null);
-    }
-
-    return isValid;
-  }, [minQuality, maxExamples]);
-
-  // ----- Hooks -----
-  const optimizationRun = useOptimizationRun({
-    onSuccess: (result) => {
-      const nextJobId = result.job_id ?? "";
-      if (nextJobId) setJobId(nextJobId);
-    },
-  });
-
-  const optimizationStatus = useOptimizationStatus(jobId || null);
-
-  const historyQuery = useEvaluationHistory(
-    { limit: historyLimit, offset: historyOffset },
-    { placeholderData: (previous) => previous ?? [] },
-  );
-
-  const selfImprove = useTriggerSelfImprove();
-
-  // DSPy Management Hooks
-  const dspyConfig = useDSPyConfig();
-  const dspyCacheInfo = useDSPyCacheInfo();
-  const reasonerSummary = useReasonerSummary();
-  const dspySignatures = useDSPySignatures();
-  const clearCache = useClearDSPyCache();
-  const clearRoutingCache = useClearRoutingCache();
-
-  // Signatures expanded state
-  const [expandedSignatures, setExpandedSignatures] = useState<Set<string>>(
-    new Set(),
-  );
-
-  // ----- Computed values -----
-  const currentStatus = optimizationStatus.data?.status ?? "idle";
-  const currentMessage =
-    optimizationStatus.data?.message ?? "Ready to optimize";
-  const currentProgress = (optimizationStatus.data?.progress ?? 0) * 100;
-
-  const ringStatus = useMemo(() => {
-    if (currentStatus === "started" || currentStatus === "running")
-      return "running";
-    if (currentStatus === "completed" || currentStatus === "cached")
-      return "completed";
-    if (currentStatus === "failed") return "failed";
-    return "idle";
-  }, [currentStatus]);
-
-  const selfImproveStats: SelfImproveStats | undefined =
-    selfImprove.data?.stats;
-  const isOptimizing =
-    currentStatus === "started" || currentStatus === "running";
-
-  // ----- Handlers -----
-  const handleStartOptimization = useCallback(() => {
-    if (!validateInputs()) {
-      return; // Don't submit if validation fails
-    }
-    optimizationRun.mutate({
-      optimizer,
-      use_cache: true,
-      gepa_auto: optimizer === "gepa" ? gepaPreset : null,
-      harvest_history: harvestHistory,
-      min_quality: Number(minQuality),
-    });
-  }, [
+  // Use the centralized hook for all state management
+  const {
+    // State
+    jobId,
+    setJobId,
+    historyOffset,
+    setHistoryOffset,
+    historyLimit,
     optimizer,
+    setOptimizer,
     gepaPreset,
-    harvestHistory,
+    setGepaPreset,
     minQuality,
+    setMinQuality,
+    maxExamples,
+    setMaxExamples,
+    maxIterations,
+    setMaxIterations,
+    harvestHistory,
+    setHarvestHistory,
+    historyHarvestLimit,
+    setHistoryHarvestLimit,
+    minQualityError,
+    setMinQualityError,
+    maxExamplesError,
+    setMaxExamplesError,
+    maxIterationsError,
+    setMaxIterationsError,
+    expandedSignatures,
+    // Hooks
     optimizationRun,
-    validateInputs,
-  ]);
-
-  const handleTriggerSelfImprove = useCallback(
-    (statsOnly: boolean) => {
-      if (!validateInputs()) {
-        return; // Don't submit if validation fails
-      }
-      selfImprove.mutate({
-        min_quality: Number(minQuality),
-        max_examples: Number(maxExamples),
-        stats_only: statsOnly,
-      });
-    },
-    [minQuality, maxExamples, selfImprove, validateInputs],
-  );
-
-  const handleClearCache = useCallback(() => {
-    clearCache.mutate();
-  }, [clearCache]);
-
-  const handleClearRoutingCache = useCallback(() => {
-    clearRoutingCache.mutate();
-  }, [clearRoutingCache]);
-
-  const toggleSignature = useCallback((name: string) => {
-    setExpandedSignatures((prev) => {
-      const next = new Set(prev);
-      if (next.has(name)) {
-        next.delete(name);
-      } else {
-        next.add(name);
-      }
-      return next;
-    });
-  }, []);
-
-  // Helper to format bytes
-  const formatBytes = useCallback((bytes?: number): string => {
-    if (bytes === undefined || bytes === null) return "—";
-    if (bytes < 1024) return `${bytes} B`;
-    if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
-    return `${(bytes / (1024 * 1024)).toFixed(2)} MB`;
-  }, []);
+    optimizationStatus,
+    historyQuery,
+    selfImprove,
+    dspyConfig,
+    dspyCacheInfo,
+    reasonerSummary,
+    dspySignatures,
+    clearCache,
+    clearRoutingCache,
+    // Computed
+    currentStatus,
+    currentMessage,
+    currentProgress,
+    ringStatus,
+    selfImproveStats,
+    isOptimizing,
+    // Handlers
+    handleStartOptimization,
+    handleTriggerSelfImprove,
+    handleClearCache,
+    handleClearRoutingCache,
+    toggleSignature,
+    formatBytes,
+  } = useOptimizationDashboard();
 
   // ============================================================================
   // Render
   // ============================================================================
 
   return (
-    <div className="bg-background flex h-full w-full flex-col">
+    <div className="flex h-full w-full flex-col">
       {/* Header */}
-      <div className="border-border border-b px-6 py-4">
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-foreground text-xl font-semibold tracking-tight">
-              Optimization Control
-            </h1>
-            <p className="text-muted-foreground mt-0.5 text-sm">
-              DSPy compilation, self-improvement, and performance monitoring
-            </p>
-          </div>
-          <StatusBadge status={currentStatus} />
-        </div>
-      </div>
+      <ChatHeader
+        title="Optimization Control"
+        sidebarTrigger={<SidebarTrigger />}
+        className="bg-transparent sticky top-0 z-10"
+        actions={<StatusBadge status={currentStatus} />}
+      />
 
       {/* Main Content */}
       <div className="flex-1 overflow-auto">
@@ -655,6 +179,11 @@ export function OptimizationDashboard() {
                   <p className="text-muted-foreground mt-1 font-mono text-xs">
                     {jobId ? `${jobId.slice(0, 12)}...` : "No active job"}
                   </p>
+                  {optimizationStatus.data?.progress_message && (
+                    <p className="text-muted-foreground mt-2 text-xs">
+                      {optimizationStatus.data.progress_message}
+                    </p>
+                  )}
                 </div>
               </Card>
             </motion.div>
@@ -675,7 +204,8 @@ export function OptimizationDashboard() {
               <StatCard
                 label="Avg. Score"
                 value={
-                  selfImproveStats?.average_quality_score !== undefined
+                  selfImproveStats?.average_quality_score !== undefined &&
+                  selfImproveStats.average_quality_score > 0
                     ? selfImproveStats.average_quality_score.toFixed(1)
                     : "—"
                 }
@@ -690,11 +220,6 @@ export function OptimizationDashboard() {
                 label="Quality Threshold"
                 value={selfImproveStats?.min_quality_threshold ?? minQuality}
                 icon={<TrendingUp className="size-5" />}
-              />
-              <StatCard
-                label="Examples Added"
-                value={selfImprove.data?.new_examples_added ?? 0}
-                icon={<Zap className="size-5" />}
               />
             </div>
           </div>
@@ -715,7 +240,7 @@ export function OptimizationDashboard() {
                 DSPy
               </TabsTrigger>
               <TabsTrigger value="history">
-                <History className="mr-1.5 size-4" />
+                <HistoryIcon className="mr-1.5 size-4" />
                 History
               </TabsTrigger>
             </TabsList>
@@ -724,127 +249,27 @@ export function OptimizationDashboard() {
             <TabsContent value="optimize">
               <div className="grid gap-6 lg:grid-cols-2">
                 {/* Configuration */}
-                <motion.div variants={itemVariants}>
-                  <Card>
-                    <CardHeader>
-                      <CardTitle className="flex items-center gap-2">
-                        <Settings2 className="size-5" />
-                        Configuration
-                      </CardTitle>
-                      <CardDescription>
-                        Configure the optimization parameters
-                      </CardDescription>
-                    </CardHeader>
-                    <CardContent className="space-y-4">
-                      {/* Optimizer */}
-                      <div>
-                        <label className="text-muted-foreground mb-2 block text-sm font-medium">
-                          Optimizer
-                        </label>
-                        <OptimizerSelector
-                          value={optimizer}
-                          onChange={setOptimizer}
-                          disabled={isOptimizing}
-                        />
-                      </div>
-
-                      {/* GEPA Preset */}
-                      <AnimatePresence mode="wait">
-                        {optimizer === "gepa" && (
-                          <motion.div
-                            key="gepa-preset"
-                            initial={{ opacity: 0, height: 0 }}
-                            animate={{ opacity: 1, height: "auto" }}
-                            exit={{ opacity: 0, height: 0 }}
-                            transition={{ duration: 0.2 }}
-                          >
-                            <label className="text-muted-foreground mb-2 block text-sm font-medium">
-                              GEPA Preset
-                            </label>
-                            <GepaPresetSelector
-                              value={gepaPreset}
-                              onChange={setGepaPreset}
-                              disabled={isOptimizing}
-                            />
-                          </motion.div>
-                        )}
-                      </AnimatePresence>
-
-                      {/* Min Quality + Harvest */}
-                      <div className="grid grid-cols-2 gap-3">
-                        <div>
-                          <label className="text-muted-foreground mb-2 block text-sm font-medium">
-                            Min Quality
-                          </label>
-                          <Input
-                            inputMode="decimal"
-                            value={minQuality}
-                            onChange={(e) => {
-                              setMinQuality(e.target.value);
-                              setMinQualityError(null); // Clear error on change
-                            }}
-                            disabled={isOptimizing}
-                            placeholder="8.0"
-                            className={minQualityError ? "border-red-500" : ""}
-                          />
-                          {minQualityError && (
-                            <p className="mt-1 text-xs text-red-500">
-                              {minQualityError}
-                            </p>
-                          )}
-                        </div>
-                        <div>
-                          <label className="text-muted-foreground mb-2 block text-sm font-medium">
-                            Harvest History
-                          </label>
-                          <Button
-                            type="button"
-                            variant={harvestHistory ? "default" : "outline"}
-                            className="w-full"
-                            onClick={() => setHarvestHistory(!harvestHistory)}
-                            disabled={isOptimizing}
-                          >
-                            {harvestHistory ? "Enabled" : "Disabled"}
-                          </Button>
-                        </div>
-                      </div>
-
-                      <Separator />
-
-                      {/* Start Button */}
-                      <Button
-                        onClick={handleStartOptimization}
-                        disabled={optimizationRun.isPending || isOptimizing}
-                        className="w-full"
-                        size="lg"
-                      >
-                        {optimizationRun.isPending ? (
-                          <>
-                            <Loader2 className="mr-2 size-4 animate-spin" />
-                            Starting...
-                          </>
-                        ) : isOptimizing ? (
-                          <>
-                            <RefreshCw className="mr-2 size-4 animate-spin" />
-                            Running...
-                          </>
-                        ) : (
-                          <>
-                            <Play className="mr-2 size-4" />
-                            Start Optimization
-                          </>
-                        )}
-                      </Button>
-
-                      {optimizationRun.isError && (
-                        <div className="bg-destructive/10 border-destructive/20 text-destructive flex items-center gap-2 rounded-lg border px-3 py-2 text-sm">
-                          <XCircle className="size-4" />
-                          Failed to start optimization
-                        </div>
-                      )}
-                    </CardContent>
-                  </Card>
-                </motion.div>
+                <OptimizationControls
+                  optimizer={optimizer}
+                  setOptimizer={setOptimizer}
+                  gepaPreset={gepaPreset}
+                  setGepaPreset={setGepaPreset}
+                  minQuality={minQuality}
+                  setMinQuality={setMinQuality}
+                  maxIterations={maxIterations}
+                  setMaxIterations={setMaxIterations}
+                  harvestHistory={harvestHistory}
+                  setHarvestHistory={setHarvestHistory}
+                  historyHarvestLimit={historyHarvestLimit}
+                  setHistoryHarvestLimit={setHistoryHarvestLimit}
+                  minQualityError={minQualityError}
+                  setMinQualityError={setMinQualityError}
+                  maxIterationsError={maxIterationsError}
+                  setMaxIterationsError={setMaxIterationsError}
+                  isOptimizing={isOptimizing}
+                  optimizationRun={optimizationRun}
+                  handleStartOptimization={handleStartOptimization}
+                />
 
                 {/* Status */}
                 <motion.div variants={itemVariants}>
@@ -886,12 +311,30 @@ export function OptimizationDashboard() {
                           </span>
                           <span className="font-mono text-sm">
                             {Math.round(currentProgress)}%
+                            {optimizationStatus.data?.progress_current !==
+                              undefined &&
+                              optimizationStatus.data?.progress_total !==
+                                undefined && (
+                                <span className="text-muted-foreground ml-1">
+                                  ({optimizationStatus.data.progress_current}/
+                                  {optimizationStatus.data.progress_total})
+                                </span>
+                              )}
                           </span>
                         </div>
                         <Progress value={currentProgress} className="h-2" />
                         <p className="text-muted-foreground text-xs">
                           {currentMessage}
                         </p>
+                        {optimizationStatus.data?.progress_duration && (
+                          <p className="text-muted-foreground mt-1 text-xs">
+                            Duration:{" "}
+                            {Math.round(
+                              optimizationStatus.data.progress_duration,
+                            )}
+                            s
+                          </p>
+                        )}
                       </div>
 
                       {/* Timestamps */}
@@ -1018,29 +461,18 @@ export function OptimizationDashboard() {
 
                       {/* Result Message */}
                       <AnimatePresence mode="wait">
-                        {selfImprove.data && (
+                        {optimizationRun.isSuccess && (
                           <motion.div
                             key="result"
                             initial={{ opacity: 0, y: 10 }}
                             animate={{ opacity: 1, y: 0 }}
                             exit={{ opacity: 0, y: -10 }}
-                            className={cn(
-                              "flex items-start gap-2 rounded-lg border p-3 text-sm",
-                              selfImprove.data.status === "completed"
-                                ? "bg-primary/10 border-primary/20 text-primary"
-                                : selfImprove.data.status === "no_op"
-                                  ? "bg-muted border-border text-muted-foreground"
-                                  : "bg-destructive/10 border-destructive/20 text-destructive",
-                            )}
+                            className="bg-primary/10 border-primary/20 text-primary flex items-start gap-2 rounded-lg border p-3 text-sm"
                           >
-                            {selfImprove.data.status === "completed" ? (
-                              <CheckCircle2 className="mt-0.5 size-4 shrink-0" />
-                            ) : selfImprove.data.status === "no_op" ? (
-                              <Clock className="mt-0.5 size-4 shrink-0" />
-                            ) : (
-                              <XCircle className="mt-0.5 size-4 shrink-0" />
-                            )}
-                            <span>{selfImprove.data.message}</span>
+                            <CheckCircle2 className="mt-0.5 size-4 shrink-0" />
+                            <span>
+                              Self-improvement job started! Job ID: {jobId}
+                            </span>
                           </motion.div>
                         )}
                       </AnimatePresence>
@@ -1501,7 +933,7 @@ export function OptimizationDashboard() {
                     <div className="flex items-center justify-between">
                       <div>
                         <CardTitle className="flex items-center gap-2">
-                          <History className="size-5" />
+                          <HistoryIcon className="size-5" />
                           Execution History
                         </CardTitle>
                         <CardDescription>
@@ -1511,7 +943,8 @@ export function OptimizationDashboard() {
                       <div className="flex items-center gap-1">
                         <Button
                           variant="ghost"
-                          size="icon-sm"
+                          size="sm"
+                          className="size-8 p-0"
                           onClick={() =>
                             setHistoryOffset((v) =>
                               Math.max(0, v - historyLimit),
@@ -1528,7 +961,8 @@ export function OptimizationDashboard() {
                         </span>
                         <Button
                           variant="ghost"
-                          size="icon-sm"
+                          size="sm"
+                          className="size-8 p-0"
                           onClick={() =>
                             setHistoryOffset((v) => v + historyLimit)
                           }

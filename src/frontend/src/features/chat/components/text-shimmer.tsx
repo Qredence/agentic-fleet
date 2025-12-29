@@ -17,9 +17,21 @@ export function TextShimmer({
   duration = 2,
   spread = 2,
 }: TextShimmerProps) {
-  const MotionComponent = motion.create(
-    Component as keyof JSX.IntrinsicElements,
-  );
+  // Pre-create motion components for common element types
+  const motionComponents = {
+    p: motion.create("p"),
+    span: motion.create("span"),
+    div: motion.create("div"),
+    h1: motion.create("h1"),
+    h2: motion.create("h2"),
+    h3: motion.create("h3"),
+  } as const;
+
+  type SupportedElement = keyof typeof motionComponents;
+
+  const MotionComponent =
+    motionComponents[Component as SupportedElement] ??
+    motion.create(Component as keyof JSX.IntrinsicElements);
 
   const dynamicSpread = useMemo(() => {
     return children.length * spread;
@@ -28,7 +40,7 @@ export function TextShimmer({
   return (
     <MotionComponent
       className={cn(
-        "relative inline-block bg-[length:250%_100%,auto] bg-clip-text",
+        "relative inline-block bg-size-[250%_100%,auto] bg-clip-text",
         "text-transparent [--base-color:#a1a1aa] [--base-gradient-color:#000]",
         "[--bg:linear-gradient(90deg,#0000_calc(50%-var(--spread)),var(--base-gradient-color),#0000_calc(50%+var(--spread)))] [background-repeat:no-repeat,padding-box]",
         "dark:[--base-color:#71717a] dark:[--base-gradient-color:#ffffff] dark:[--bg:linear-gradient(90deg,#0000_calc(50%-var(--spread)),var(--base-gradient-color),#0000_calc(50%+var(--spread)))]",

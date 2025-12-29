@@ -13,13 +13,10 @@ AgenticFleet includes a React-based web interface for interacting with the multi
 
 ### Starting the Frontend
 
-The easiest way to start the frontend is with the CLI:
+The easiest way to start the frontend is with Make:
 
 ```bash
 # Start both backend and frontend
-agentic-fleet dev
-
-# Or using Make
 make dev
 ```
 
@@ -27,19 +24,6 @@ This starts:
 
 - **Backend**: http://localhost:8000 (FastAPI)
 - **Frontend**: http://localhost:5173 (Vite dev server)
-
-### Custom Ports
-
-```bash
-# Custom ports via CLI
-agentic-fleet dev --backend-port 8080 --frontend-port 3000
-
-# Backend only (for API development)
-agentic-fleet dev --no-frontend
-
-# Frontend only (when backend is already running)
-agentic-fleet dev --no-backend
-```
 
 ### Using Make
 
@@ -142,72 +126,66 @@ The frontend uses:
 - **Vite** for development and building
 - **Tailwind CSS** for styling
 - **shadcn/ui** for UI components
-- **WebSocket** for real-time streaming
+- **Server-Sent Events (SSE)** for real-time streaming (recommended)
 
 ### Key Files
 
-| Path                           | Purpose                                   |
-| ------------------------------ | ----------------------------------------- |
-| `src/frontend/src/App.tsx`     | Main application component                |
-| `hooks/useChat.ts`             | Chat state management and WebSocket logic |
-| `api/client.ts`                | REST API client                           |
-| `api/types.ts`                 | TypeScript type definitions               |
-| `components/ChatMessage.tsx`   | Message rendering component               |
-| `components/workflow/`         | Workflow visualization components         |
-| `lib/reconnectingWebSocket.ts` | WebSocket with auto-reconnection          |
+| Path                                    | Purpose                                   |
+| --------------------------------------- | ----------------------------------------- |
+| `src/frontend/src/root/App.tsx`         | App shell + routing                       |
+| `src/frontend/src/stores/chatStore.ts`  | Chat state management and streaming logic |
+| `src/frontend/src/api/sse.ts`           | SSE client for chat streaming             |
+| `src/frontend/src/api/client.ts`        | REST API client                           |
+| `src/frontend/src/api/types.ts`         | TypeScript type definitions               |
+| `src/frontend/src/components/chat/`     | Chat and message rendering components     |
+| `src/frontend/src/components/workflow/` | Workflow visualization components         |
 
-### WebSocket Protocol
+### SSE Streaming Protocol (Recommended)
 
-The frontend communicates with the backend via WebSocket at `/api/ws/chat`:
+The frontend streams events via SSE at `/api/chat/{conversation_id}/stream`:
 
-1. Client connects and sends a `ChatRequest` JSON payload (new run)
+1. Client opens an SSE connection with query params (`message`, `reasoning_effort`, `enable_checkpointing`)
 2. Server streams `StreamEvent` messages
-3. If the workflow emits a human-in-the-loop request, the client can reply with a `workflow.response` message
-4. Client can send `{"type": "cancel"}` to abort
-5. Server sends `{"type": "done"}` when complete
-
-Supported client message types:
-
-- **New run**: `ChatRequest` (includes `message` and optional `enable_checkpointing`)
-- **Resume**: `{"type": "workflow.resume", "checkpoint_id": "..."}`
-- **HITL response**: `{"type": "workflow.response", ... }`
-- **Cancel**: `{"type": "cancel"}`
+3. If the workflow emits a human-in-the-loop request, the client submits a response via REST:
+   - `POST /api/chat/{conversation_id}/respond?workflow_id=...`
+4. Client can cancel via REST:
+   - `POST /api/chat/{conversation_id}/cancel?workflow_id=...`
+5. Server emits `{type: "done"}` when complete
 
 Checkpoint semantics (agent-framework):
 
-- `checkpoint_id` is **resume-only** (message XOR checkpoint_id).
-- For new runs, checkpointing is enabled via `enable_checkpointing` (the server configures checkpoint storage).
-- To resume, send `workflow.resume` with a `checkpoint_id` and **do not** send a `message`.
+- `enable_checkpointing=true` enables checkpoint storage on the server.
+- Resume is supported via the legacy WebSocket endpoint (`/api/ws/chat`) using `workflow.resume`.
 
 ### Message Flow Diagrams
 
 These diagrams show the expected message flow for the web UI. They are intentionally aligned with agent-framework semantics:
 
 - **New run** uses `message` (and may opt into `enable_checkpointing`)
-- **Resume** uses `checkpoint_id` only
-- **HITL** uses `workflow.response` to unblock execution when the server emits a request
+- **HITL (SSE)** uses the REST `respond` endpoint to unblock execution
+- **Resume** uses `checkpoint_id` only via legacy WebSocket
 
-#### New Run (Streaming)
+#### New Run (Streaming via SSE)
 
 ```mermaid
 sequenceDiagram
 	participant U as User
 	participant FE as Frontend (Web UI)
-	participant WS as Backend WS (/api/ws/chat)
+	participant SSE as Backend SSE (/api/chat/{conversation_id}/stream)
 	participant WF as Supervisor Workflow
 
 	U->>FE: Type message + send
-	FE->>WS: ChatRequest {message, conversation_id, enable_checkpointing?}
-	WS->>WF: run_stream(message)
+	FE->>SSE: GET stream?message=...&enable_checkpointing=...
+	SSE->>WF: run_stream(message)
 
 	loop Stream events
-		WF-->>WS: StreamEvent
-		WS-->>FE: StreamEvent
+		WF-->>SSE: StreamEvent
+		SSE-->>FE: StreamEvent
 		FE-->>U: Render tokens/steps
 	end
 
-	WF-->>WS: done
-	WS-->>FE: {type: "done"}
+	WF-->>SSE: done
+	SSE-->>FE: {type: "done"}
 ```
 
 #### Human-in-the-Loop (HITL) Request + Response
@@ -215,25 +193,25 @@ sequenceDiagram
 ```mermaid
 sequenceDiagram
 	participant FE as Frontend (Web UI)
-	participant WS as Backend WS (/api/ws/chat)
+	participant SSE as Backend SSE (/api/chat/{conversation_id}/stream)
 	participant WF as Supervisor Workflow
 
-	WF-->>WS: request event (needs user input)
-	WS-->>FE: StreamEvent {type: "request", ...}
+	WF-->>SSE: request event (needs user input)
+	SSE-->>FE: StreamEvent {type: "request", ...}
 
-	FE->>WS: {type: "workflow.response", request_id, data}
-	WS->>WF: forward response
+	FE->>SSE: POST /api/chat/{conversation_id}/respond?workflow_id=...
+	SSE->>WF: forward response
 
 	loop Stream events
-		WF-->>WS: StreamEvent
-		WS-->>FE: StreamEvent
+		WF-->>SSE: StreamEvent
+		SSE-->>FE: StreamEvent
 	end
 
-	WF-->>WS: done
-	WS-->>FE: {type: "done"}
+	WF-->>SSE: done
+	SSE-->>FE: {type: "done"}
 ```
 
-#### Resume from a Checkpoint
+#### Resume from a Checkpoint (WebSocket legacy)
 
 ```mermaid
 sequenceDiagram
@@ -261,9 +239,9 @@ See `src/frontend/AGENTS.md` for detailed frontend architecture documentation.
 
 1. Ensure dependencies are installed: `make frontend-install`
 2. Check that port 5173 is available
-3. Verify backend is running if using `--no-backend`
+3. Verify backend is running if using `make frontend-dev`
 
-### WebSocket Connection Failed
+### SSE Connection Failed
 
 1. Check that backend is running on the expected port
 2. Verify CORS settings allow your origin
@@ -276,7 +254,7 @@ See `src/frontend/AGENTS.md` for detailed frontend architecture documentation.
 
 ### Hot Reload Not Working
 
-1. Restart the dev server: `agentic-fleet dev`
+1. Restart the dev server: `make dev`
 2. Clear browser cache
 3. Check for syntax errors in modified files
 

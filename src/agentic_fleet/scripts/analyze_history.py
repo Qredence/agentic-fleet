@@ -7,7 +7,6 @@ Supports both JSONL (default/preferred) and legacy JSON formats.
 
 from __future__ import annotations
 
-import json
 import statistics
 from pathlib import Path
 from typing import Any
@@ -17,16 +16,12 @@ from agentic_fleet.utils.cfg import DEFAULT_HISTORY_PATH
 
 def load_history() -> list[dict[str, Any]]:
     """Load execution history from JSON or JSONL file."""
+    from agentic_fleet.utils.serialization import load_json, load_jsonl
 
     # Try JSONL first (new format)
     jsonl_file = Path(DEFAULT_HISTORY_PATH)
     if jsonl_file.exists():
-        executions = []
-        with open(jsonl_file) as f:
-            for line in f:
-                line = line.strip()
-                if line:
-                    executions.append(json.loads(line))
+        executions = load_jsonl(jsonl_file)
         if executions:
             print(f"✓ Loaded {len(executions)} executions from {jsonl_file}")
             return executions
@@ -34,10 +29,10 @@ def load_history() -> list[dict[str, Any]]:
     # Fall back to legacy JSON format
     json_file = jsonl_file.with_suffix(".json")
     if json_file.exists():
-        with open(json_file) as f:
-            executions = json.load(f)
-        print(f"✓ Loaded {len(executions)} executions from {json_file}")
-        return executions
+        executions = load_json(json_file, default=[], validate_list=True)
+        if executions:
+            print(f"✓ Loaded {len(executions)} executions from {json_file}")
+            return executions
 
     print(f"❌ No execution history found at {jsonl_file} or {json_file}")
     return []

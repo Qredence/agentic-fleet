@@ -6,9 +6,12 @@ for the DSPyReasoner class.
 
 from __future__ import annotations
 
+from typing import Any
+
 import dspy
 
-from ..utils.logger import setup_logger
+from agentic_fleet.utils.infra.logging import setup_logger
+
 from .nlu import DSPyNLU, get_nlu_module
 from .signatures import (
     EnhancedTaskRouting,
@@ -34,6 +37,50 @@ logger = setup_logger(__name__)
 
 # Module-level cache for DSPy module instances (stateless, can be shared)
 _MODULE_CACHE: dict[str, dspy.Module] = {}
+
+
+def _get_predictor_signature(pred: dspy.Module) -> Any | None:
+    """Safely extract signature from any predictor type.
+
+    Works with both Predict objects (which have signature directly) and
+    ChainOfThought objects (which need to access inner Predict).
+
+    Args:
+        pred: DSPy predictor module (Predict, ChainOfThought, etc.)
+
+    Returns:
+        Signature object if found, None otherwise
+    """
+    # Direct signature access
+    if hasattr(pred, "signature"):
+        return pred.signature
+
+    # For ChainOfThought, try to get from inner predictor
+    if hasattr(pred, "named_predictors"):
+        try:
+            inner_preds = list(pred.named_predictors())
+            if inner_preds:
+                inner_pred = inner_preds[0][1]
+                return getattr(inner_pred, "signature", None)
+        except Exception as exc:
+            # Best-effort: if inner predictor inspection fails, treat as no signature
+            logger.debug("Failed to extract inner predictor signature from %r: %s", pred, exc)
+
+    return None
+
+
+def _get_typed_predictor_class() -> type[dspy.Module]:
+    """Return DSPy's typed predictor class if available, otherwise Predict."""
+    typed_predictor = getattr(dspy, "TypedPredictor", None)
+    if typed_predictor is None:
+        return dspy.Predict
+    return typed_predictor
+
+
+def _build_typed_predictor(signature: Any) -> dspy.Module:
+    """Instantiate a typed predictor with the given signature."""
+    predictor_cls = _get_typed_predictor_class()
+    return predictor_cls(signature)
 
 
 class ModuleManager:
@@ -82,7 +129,7 @@ class ModuleManager:
             analyzer_key = f"{cache_key_prefix}_analyzer"
             if analyzer_key not in _MODULE_CACHE:
                 if self.use_typed_signatures:
-                    _MODULE_CACHE[analyzer_key] = dspy.ChainOfThought(TypedTaskAnalysis)
+                    _MODULE_CACHE[analyzer_key] = _build_typed_predictor(TypedTaskAnalysis)
                 else:
                     _MODULE_CACHE[analyzer_key] = dspy.ChainOfThought(TaskAnalysis)
             self._analyzer = _MODULE_CACHE[analyzer_key]
@@ -93,7 +140,7 @@ class ModuleManager:
                 router_key = f"{cache_key_prefix}_router"
                 if router_key not in _MODULE_CACHE:
                     if self.use_typed_signatures:
-                        _MODULE_CACHE[router_key] = dspy.Predict(TypedEnhancedRouting)
+                        _MODULE_CACHE[router_key] = _build_typed_predictor(TypedEnhancedRouting)
                     else:
                         _MODULE_CACHE[router_key] = dspy.Predict(EnhancedTaskRouting)
                 self._router = _MODULE_CACHE[router_key]
@@ -102,14 +149,19 @@ class ModuleManager:
                     strategy_key = f"{cache_key_prefix}_strategy"
                     if strategy_key not in _MODULE_CACHE:
                         if self.use_typed_signatures:
-                            _MODULE_CACHE[strategy_key] = dspy.ChainOfThought(TypedWorkflowStrategy)
+                            _MODULE_CACHE[strategy_key] = _build_typed_predictor(
+                                TypedWorkflowStrategy
+                            )
                         else:
                             _MODULE_CACHE[strategy_key] = dspy.ChainOfThought(WorkflowStrategy)
                     self._strategy_selector = _MODULE_CACHE[strategy_key]
             else:
                 router_key = f"{cache_key_prefix}_router"
                 if router_key not in _MODULE_CACHE:
-                    _MODULE_CACHE[router_key] = dspy.Predict(TaskRouting)
+                    if self.use_typed_signatures:
+                        _MODULE_CACHE[router_key] = _build_typed_predictor(TaskRouting)
+                    else:
+                        _MODULE_CACHE[router_key] = dspy.Predict(TaskRouting)
                 self._router = _MODULE_CACHE[router_key]
 
         # Initialize quality assessor
@@ -117,7 +169,7 @@ class ModuleManager:
             qa_key = f"quality_assessor{typed_suffix}"
             if qa_key not in _MODULE_CACHE:
                 if self.use_typed_signatures:
-                    _MODULE_CACHE[qa_key] = dspy.ChainOfThought(TypedQualityAssessment)
+                    _MODULE_CACHE[qa_key] = _build_typed_predictor(TypedQualityAssessment)
                 else:
                     _MODULE_CACHE[qa_key] = dspy.ChainOfThought(QualityAssessment)
             self._quality_assessor = _MODULE_CACHE[qa_key]
@@ -127,7 +179,7 @@ class ModuleManager:
             pe_key = f"progress_evaluator{typed_suffix}"
             if pe_key not in _MODULE_CACHE:
                 if self.use_typed_signatures:
-                    _MODULE_CACHE[pe_key] = dspy.ChainOfThought(TypedProgressEvaluation)
+                    _MODULE_CACHE[pe_key] = _build_typed_predictor(TypedProgressEvaluation)
                 else:
                     _MODULE_CACHE[pe_key] = dspy.ChainOfThought(ProgressEvaluation)
             self._progress_evaluator = _MODULE_CACHE[pe_key]
@@ -137,7 +189,7 @@ class ModuleManager:
             tp_key = f"tool_planner{typed_suffix}"
             if tp_key not in _MODULE_CACHE:
                 if self.use_typed_signatures:
-                    _MODULE_CACHE[tp_key] = dspy.ChainOfThought(TypedToolPlan)
+                    _MODULE_CACHE[tp_key] = _build_typed_predictor(TypedToolPlan)
                 else:
                     _MODULE_CACHE[tp_key] = dspy.ChainOfThought(ToolPlan)
             self._tool_planner = _MODULE_CACHE[tp_key]
@@ -194,26 +246,60 @@ class ModuleManager:
         return predictors
 
     def get_named_predictors(self) -> list[tuple[str, dspy.Module]]:
-        """Get all DSPy predictors with names."""
+        """Get all DSPy predictors with names.
+
+        Returns original predictors (ChainOfThought, Predict, etc.) to maintain
+        module structure for GEPA optimization. Signature access is handled via
+        property accessors added to ChainOfThought objects.
+        """
         self.ensure_modules_initialized()
         predictors = []
 
+        # Add signature accessor to ChainOfThought predictors for GEPA compatibility
+        def _ensure_signature_access(pred: dspy.Module) -> dspy.Module:
+            """Ensure predictor has signature accessible for GEPA.
+
+            For ChainOfThought objects, extracts and caches the signature from
+            the inner Predict object to make it accessible for GEPA optimization.
+            This maintains the module structure while allowing GEPA to access signatures.
+            """
+            # Only patch predictors that don't have signature
+            if not hasattr(pred, "signature"):
+                sig = _get_predictor_signature(pred)
+                if sig:
+                    # Store signature directly on the predictor object
+                    # This makes it accessible to GEPA without breaking structure
+                    pred.signature = sig
+                    pred_type_name = type(pred).__name__
+                    logger.debug(f"Added signature access to {pred_type_name} predictor")
+            return pred
+
         if self._analyzer:
-            predictors.append(("analyzer", self._analyzer))
+            predictors.append(("analyzer", _ensure_signature_access(self._analyzer)))
         if self._router:
-            predictors.append(("router", self._router))
+            predictors.append(("router", _ensure_signature_access(self._router)))
         if self._strategy_selector:
-            predictors.append(("strategy_selector", self._strategy_selector))
+            predictors.append(
+                ("strategy_selector", _ensure_signature_access(self._strategy_selector))
+            )
         if self._quality_assessor:
-            predictors.append(("quality_assessor", self._quality_assessor))
+            predictors.append(
+                ("quality_assessor", _ensure_signature_access(self._quality_assessor))
+            )
         if self._progress_evaluator:
-            predictors.append(("progress_evaluator", self._progress_evaluator))
+            predictors.append(
+                ("progress_evaluator", _ensure_signature_access(self._progress_evaluator))
+            )
         if self._tool_planner:
-            predictors.append(("tool_planner", self._tool_planner))
+            predictors.append(("tool_planner", _ensure_signature_access(self._tool_planner)))
         if self._simple_responder:
-            predictors.append(("simple_responder", self._simple_responder))
+            predictors.append(
+                ("simple_responder", _ensure_signature_access(self._simple_responder))
+            )
         if self._group_chat_selector:
-            predictors.append(("group_chat_selector", self._group_chat_selector))
+            predictors.append(
+                ("group_chat_selector", _ensure_signature_access(self._group_chat_selector))
+            )
 
         return predictors
 

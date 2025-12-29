@@ -59,17 +59,17 @@ class Conversation(BaseModel):
     """A chat conversation history.
 
     Attributes:
-        id: Unique conversation ID.
+        conversation_id: Unique conversation ID.
         title: Conversation title.
         created_at: Creation timestamp.
         updated_at: Last update timestamp.
         messages: List of messages in the conversation.
     """
 
-    id: str
+    conversation_id: str = Field(alias="id")
     title: str
     created_at: datetime = Field(default_factory=datetime.now)
     updated_at: datetime = Field(default_factory=datetime.now)
     messages: list[Message] = Field(default_factory=list)
 
-    model_config = ConfigDict(from_attributes=True)
+    model_config = ConfigDict(from_attributes=True, populate_by_name=True)

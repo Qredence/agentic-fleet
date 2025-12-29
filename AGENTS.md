@@ -28,14 +28,37 @@
 - Frontend tests: `make test-frontend`; E2E: `make test-e2e` (requires dev servers; install Playwright browsers with `npx playwright install chromium`).
 - Lint/format: `make lint`, `make format`; type-check: `make type-check`; quick all-in-one: `make check`.
 
+## Architecture Overview (v0.7.0 FastAPI-First)
+
+The codebase follows a **layered API → Services → Workflows → DSPy → Agents** architecture:
+
+```
+src/agentic_fleet/
+├── api/              # FastAPI web layer (routes, middleware, deps)
+├── services/         # Async business logic (chat, workflow, optimization)
+├── workflows/        # 5-phase orchestration pipeline
+├── dspy_modules/     # DSPy signatures, reasoner, GEPA optimization
+├── agents/           # Microsoft Agent Framework integration
+├── tools/            # Tool adapters (Tavily, browser, MCP)
+├── utils/            # Infrastructure (cfg/, infra/, storage/)
+├── models/           # Shared Pydantic schemas
+├── evaluation/       # Batch evaluation and metrics
+└── config/           # workflow_config.yaml (source of truth)
+```
+
 ## Agents & Orchestration
 
-- Stack: DSPy + Microsoft `agent-framework` . Agents live under `src/agentic_fleet/agents/`; orchestration in `src/agentic_fleet/workflows/`; DSPy reasoning in `src/agentic_fleet/dspy_modules/`.
+- Stack: DSPy + Microsoft `agent-framework`. Agents live under `src/agentic_fleet/agents/`; orchestration in `src/agentic_fleet/workflows/`; DSPy reasoning in `src/agentic_fleet/dspy_modules/`.
 - **5-Phase Pipeline** (v0.6.6): `analysis → routing → execution → progress → quality`. Judge phase removed for ~66% latency reduction.
 - **Smart Fast-Path** (v0.6.7): Simple tasks (factual questions, math, greetings) bypass multi-agent routing via `is_simple_task()` and get direct LLM responses in <1 second.
   - Important: fast-path is intentionally **disabled on follow-up turns** (when a conversation thread already has history) so multi-turn context is not lost.
 - **Offline Layer (Production)**: DSPy compilation should be treated as **offline-only** via `agentic-fleet optimize` (cached under `.var/logs/compiled_supervisor.pkl`). Set `dspy.require_compiled: true` in `src/agentic_fleet/config/workflow_config.yaml` to fail-fast if artifacts are missing. Development can optionally start **background compilation** when enabled.
 - **Dynamic Prompts**: Agent instructions (e.g., Planner) are generated dynamically via DSPy signatures (`PlannerInstructionSignature`) and optimized offline.
+- **Services Layer**: `services/` provides async business logic layer bridging API routes to workflows:
+  - `chat_service.py` — conversation management and agent routing
+  - `chat_sse.py` / `chat_websocket.py` — real-time streaming
+  - `workflow_service.py` — multi-agent orchestration entry point
+  - `optimization_service.py` — GEPA optimization job management
 - **Middleware**: `ChatMiddleware` handles cross-cutting concerns. `BridgeMiddleware` captures runtime history for offline learning.
 - Routing/quality loops configured via `config/workflow_config.yaml`; history & tracing in `.var/logs/execution_history.jsonl`.
 - **Group Chat**: Multi-agent discussions are supported via `DSPyGroupChatManager` and `GroupChatBuilder`. Workflows can participate as agents using the `workflow.as_agent()` pattern.

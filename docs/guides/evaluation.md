@@ -77,7 +77,7 @@ When extracted from history, tasks include additional fields:
 
 ## Configuration
 
-Enable and tune via `config/workflow_config.yaml`:
+Enable and tune via `src/agentic_fleet/config/workflow_config.yaml`:
 
 ```yaml
 evaluation:

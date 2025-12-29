@@ -6,13 +6,13 @@ from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 
-from agentic_fleet.core.conversation_store import ConversationStore
-from agentic_fleet.core.settings import get_settings
 from agentic_fleet.dspy_modules.compiled_registry import load_required_compiled_modules
 from agentic_fleet.services.conversation import ConversationManager, WorkflowSessionManager
-from agentic_fleet.services.optimization_jobs import OptimizationJobManager
+from agentic_fleet.services.optimization_service import get_optimization_service
 from agentic_fleet.utils.cfg import load_config
-from agentic_fleet.utils.tracing import initialize_tracing
+from agentic_fleet.utils.cfg.settings import get_settings
+from agentic_fleet.utils.infra.tracing import initialize_tracing
+from agentic_fleet.utils.storage.conversation import ConversationStore
 from agentic_fleet.workflows.supervisor import create_supervisor_workflow
 
 logger = logging.getLogger(__name__)
@@ -57,6 +57,17 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     settings = get_settings()
     app.state.settings = settings
 
+    # Phase 0: Initialize Langfuse and DSPy instrumentation EARLY
+    # This must happen before any DSPy modules are loaded or used
+    # to ensure native DSPy traces are captured
+    try:
+        from agentic_fleet.dspy_modules.lifecycle import initialize_langfuse
+
+        initialize_langfuse()
+        logger.info("Langfuse and DSPy instrumentation initialized early for native tracing")
+    except Exception as e:
+        logger.debug(f"Langfuse early initialization skipped: {e}")
+
     # Phase 1: Load and validate compiled DSPy artifacts with fail-fast enforcement
     try:
         # Load workflow config to get DSPy settings
@@ -66,6 +77,7 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
 
         # Initialize tracing early using YAML config so `tracing.enabled: true`
         # works without requiring environment flags.
+        # This will configure Agent Framework observability to export to Langfuse
         initialize_tracing(config)
         dspy_config = config.get("dspy", {})
         require_compiled = dspy_config.get("require_compiled", False)
@@ -150,7 +162,7 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     app.state.conversation_manager = ConversationManager(
         ConversationStore(settings.conversations_path)
     )
-    app.state.optimization_jobs = OptimizationJobManager()
+    app.state.optimization_service = get_optimization_service()
 
     logger.info(
         "AgenticFleet API ready: max_concurrent_workflows=%s, conversations_path=%s",
@@ -163,7 +175,7 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     logger.info("Shutting down AgenticFleet API...")
     app.state.session_manager = None
     app.state.conversation_manager = None
-    app.state.optimization_jobs = None
+    app.state.optimization_service = None
     app.state.dspy_artifacts = None
     app.state.dspy_quality_module = None
     app.state.dspy_routing_module = None

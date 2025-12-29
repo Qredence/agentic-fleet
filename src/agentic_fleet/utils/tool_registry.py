@@ -12,7 +12,8 @@ import logging
 from dataclasses import dataclass, field
 from typing import Any, Protocol, cast, runtime_checkable
 
-from ..utils.cache import CacheStats, TTLCache  # type: ignore
+from agentic_fleet.utils.ttl_cache import CacheStats, TTLCache  # type: ignore
+
 from ..workflows.exceptions import ToolError
 
 logger = logging.getLogger(__name__)
@@ -332,6 +333,24 @@ class ToolRegistry:
             for name in tool_names
             if name in self._tools and self._tools[name].available
         ]
+
+    def get_all_tools(self) -> list[ToolMetadata]:
+        """
+        Get all registered tools as a list of ToolMetadata objects.
+
+        Returns:
+            List of all ToolMetadata objects (both available and unavailable)
+        """
+        return list(self._tools.values())
+
+    def get_all_available_tools(self) -> list[ToolMetadata]:
+        """
+        Get all available tools as a list of ToolMetadata objects.
+
+        Returns:
+            List of ToolMetadata objects for tools that are currently available
+        """
+        return [tool for tool in self._tools.values() if tool.available]
 
     def can_execute_tool(self, tool_name: str) -> bool:
         """

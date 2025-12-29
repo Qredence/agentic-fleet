@@ -10,6 +10,7 @@ analysis succeeds without altering runtime behavior.
 from __future__ import annotations
 
 import asyncio
+import logging
 from typing import TYPE_CHECKING, Any, TypedDict
 
 from agent_framework._serialization import SerializationMixin
@@ -17,7 +18,7 @@ from agent_framework._tools import ToolProtocol
 
 from agentic_fleet.tools.base import SchemaToolMixin
 from agentic_fleet.utils.cfg import env_config
-from agentic_fleet.utils.resilience import external_api_retry
+from agentic_fleet.utils.infra.resilience import external_api_retry
 
 try:  # Optional dependency — keep import non-fatal at module load time
     from tavily import TavilyClient  # type: ignore[import]
@@ -26,6 +27,8 @@ try:  # Optional dependency — keep import non-fatal at module load time
 except (ImportError, ModuleNotFoundError) as exc:
     TavilyClient = None  # type: ignore[assignment]
     _tavily_import_error = exc
+
+logger = logging.getLogger(__name__)
 
 
 if TYPE_CHECKING:
@@ -56,18 +59,28 @@ class TavilySearchTool(SchemaToolMixin, ToolProtocol, SerializationMixin):
             max_results: Maximum number of search results to return
         """
         self.api_key = api_key or env_config.tavily_api_key
+        self._disabled = False
+        self._disabled_reason: str | None = None
+
         if not self.api_key:
-            raise ValueError("TAVILY_API_KEY must be set in environment or passed to constructor")
+            logger.warning(
+                "TAVILY_API_KEY not set. TavilySearchTool will operate in disabled mode. "
+                "Web search queries will return an informative message instead of real results."
+            )
+            self._disabled = True
+            self._disabled_reason = "Missing TAVILY_API_KEY environment variable"
+            self.client = None
+        elif TavilyClient is None:
+            logger.warning(
+                "The 'tavily-python' package is not installed. TavilySearchTool will operate in disabled mode."
+            )
+            self._disabled = True
+            self._disabled_reason = "tavily-python package not installed"
+            self.client = None
+        else:
+            # TavilyClient constructor accepts 'api_key' kwarg
+            self.client = TavilyClient(api_key=self.api_key)  # type: ignore[call-arg]
 
-        if TavilyClient is None:
-            # Defer hard failure until instantiation so the package remains optional at import time
-            raise ImportError(
-                "The 'tavily-python' package is required to use TavilySearchTool. "
-                "Install it with 'pip install tavily-python'."
-            ) from _tavily_import_error
-
-        # TavilyClient constructor accepts 'api_key' kwarg
-        self.client = TavilyClient(api_key=self.api_key)  # type: ignore[call-arg]
         self.max_results = max_results
         # Primary runtime name retained for backward compatibility; registry will
         # add alias 'TavilySearchTool'.
@@ -135,6 +148,14 @@ class TavilySearchTool(SchemaToolMixin, ToolProtocol, SerializationMixin):
                 followed by numbered search results with title, source URL, and
                 content; or an error/no-results message.
         """
+        # Return informative message if tool is disabled
+        if self._disabled:
+            return (
+                f"⚠️ Web search is currently unavailable ({self._disabled_reason}). "
+                f"Unable to search for: '{query}'. "
+                "Please configure the TAVILY_API_KEY environment variable to enable real-time web search."
+            )
+
         try:
             search_depth = kwargs.get("search_depth", "advanced")
             topic = kwargs.get("topic", "general")

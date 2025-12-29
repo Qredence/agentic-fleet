@@ -13,11 +13,12 @@ from typing import Any
 
 from agent_framework._workflows import Executor, WorkflowContext
 
+from agentic_fleet.utils.infra.logging import setup_logger
+from agentic_fleet.utils.infra.resilience import async_call_with_retry
+from agentic_fleet.utils.infra.telemetry import optional_span
+
 from ...dspy_modules.reasoner import DSPyReasoner
-from ...utils.logger import setup_logger
 from ...utils.memory import get_process_rss_mb
-from ...utils.resilience import async_call_with_retry
-from ...utils.telemetry import optional_span
 from ..context import SupervisorContext
 from ..conversation_context import (
     render_conversation_context,
@@ -175,6 +176,7 @@ class AnalysisExecutor(Executor):
                         "simple_mode": False,
                         "reasoning": analysis_dict.get("reasoning", ""),
                         "intent": analysis_dict.get("intent"),
+                        "intent_confidence": analysis_dict.get("intent_confidence"),
                     }
 
                 if conversation_context:

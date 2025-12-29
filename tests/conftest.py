@@ -11,11 +11,8 @@ SRC = ROOT / "src"
 if str(SRC) not in sys.path:
     sys.path.insert(0, str(SRC))
 
-# Ensure agent-framework shims are applied before any tests import `agent_framework`
-# internals directly (some upstream distributions ship an empty root module).
-from agentic_fleet.utils.agent_framework_shims import ensure_agent_framework_shims  # noqa: E402
-
-ensure_agent_framework_shims()
+# agent_framework is a required dependency - no shims needed
+# All imports use direct agent_framework imports (e.g., from agent_framework._types import ...)
 
 # Keep DSPy disk cache inside the workspace so it remains writable in sandboxed CI.
 # Consolidated under .var/cache/ following project conventions.

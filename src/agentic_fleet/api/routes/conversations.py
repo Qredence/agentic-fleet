@@ -32,9 +32,15 @@ async def create_conversation(
     response_model=list[Conversation],
     summary="List all conversations",
 )
-async def list_conversations(manager: ConversationManagerDep) -> list[Conversation]:
+async def list_conversations(
+    manager: ConversationManagerDep,
+    limit: int = 25,
+    offset: int = 0,
+) -> list[Conversation]:
     """List all available conversations."""
-    return manager.list_conversations()
+    conversations = manager.list_conversations()
+    # Apply pagination (slicing)
+    return conversations[offset : offset + limit]
 
 
 @router.get(
@@ -54,3 +60,21 @@ async def get_conversation(
             detail=f"Conversation {conversation_id} not found",
         )
     return conversation
+
+
+@router.delete(
+    "/conversations/{conversation_id}",
+    status_code=status.HTTP_204_NO_CONTENT,
+    summary="Delete a conversation",
+)
+async def delete_conversation(
+    conversation_id: str,
+    manager: ConversationManagerDep,
+) -> None:
+    """Delete a conversation by ID."""
+    deleted = manager.delete_conversation(conversation_id)
+    if not deleted:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Conversation {conversation_id} not found",
+        )

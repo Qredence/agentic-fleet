@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import asyncio
+import json
 import logging
 import os
 import sys
@@ -12,8 +13,9 @@ from dotenv import load_dotenv
 from rich.console import Console
 from rich.panel import Panel
 
+from agentic_fleet.utils.infra.logging import setup_logger
+
 from ...utils.error_utils import sanitize_error_message
-from ...utils.logger import setup_logger
 from ..display import display_result, show_help, show_status
 from ..runner import WorkflowRunner
 from ..utils import init_tracing
@@ -101,6 +103,11 @@ def run(
         "--mode",
         help="Workflow mode (auto, standard, group_chat, concurrent, handoff)",
     ),
+    output_json: bool = typer.Option(
+        False,
+        "--json",
+        help="Output raw JSON result to stdout (disables rich formatting)",
+    ),
 ) -> None:
     """
     Run the DSPy-enhanced workflow with a message.
@@ -109,31 +116,47 @@ def run(
         agentic-fleet run "Analyze renewable energy trends"
         agentic-fleet run -m "Write a blog post" --no-stream
         agentic-fleet run --model gpt-5-mini "Compare AWS vs Azure AI"
+        agentic-fleet run --json "Analyze this code" > result.json
     """
     # Setup logging
-    setup_logger("dspy_agent_framework", "DEBUG" if verbose else "INFO")
+    if output_json:
+        # Disable all logging to stdout when JSON output is requested
+        logging.getLogger().setLevel(logging.ERROR)
+        setup_logger("dspy_agent_framework", "ERROR")
+    else:
+        setup_logger("dspy_agent_framework", "DEBUG" if verbose else "INFO")
 
     # Tracing (optional) - call early so agent creation is instrumented
     init_tracing()
 
-    # Check API key
-    if not os.getenv("OPENAI_API_KEY"):
-        console.print("[bold red]Error: OPENAI_API_KEY not found in environment[/bold red]")
-        console.print("Please set it in .env file or export it")
+    # Check API keys (allow OpenAI, Azure, or Gemini)
+    has_openai = bool(os.getenv("OPENAI_API_KEY"))
+    has_azure = bool(os.getenv("AZURE_OPENAI_API_KEY") or os.getenv("AZURE_AI_PROJECT_ENDPOINT"))
+    has_gemini = bool(os.getenv("GEMINI_API_KEY") or os.getenv("GOOGLE_API_KEY"))
+
+    if not (has_openai or has_azure or has_gemini):
+        console.print(
+            "[bold red]Error: No valid AI provider API key found in environment[/bold red]"
+        )
+        console.print("Please set OPENAI_API_KEY, AZURE_OPENAI_API_KEY, or GEMINI_API_KEY")
         raise typer.Exit(1)
 
-    runner = WorkflowRunner(verbose=verbose)
+    runner = WorkflowRunner(verbose=verbose if not output_json else False)
 
     # Pick message from option or positional argument (option takes precedence)
     message_input = message or task or ""
 
     async def process_message(msg: str) -> None:
         """Process a single message."""
-        if stream:
+        if stream and not output_json:
             await runner.run_with_streaming(msg)
         else:
             result = await runner.run_without_streaming(msg)
-            display_result(result)
+            if output_json:
+                # Print raw JSON to stdout
+                print(json.dumps(result, indent=2))
+            else:
+                display_result(result)
 
     # Initialize workflow with model parameter
     async def init_runner() -> None:
@@ -141,7 +164,8 @@ def run(
 
         # Handle Auto Mode
         if mode == "auto" and message_input:
-            console.print("[dim]Auto-detecting workflow mode...[/dim]")
+            if not output_json:
+                console.print("[dim]Auto-detecting workflow mode...[/dim]")
             try:
                 # Quick DSPy init for decision
                 import dspy
@@ -162,16 +186,19 @@ def run(
                     # or we can run it here. Let's map it to 'standard' but let supervisor handle fast path.
                     # Actually supervisor has fast path check.
                     final_mode = "standard"
-                    console.print(
-                        "[bold green]Auto-detected:[/bold green] Fast Path (via Standard)"
-                    )
+                    if not output_json:
+                        console.print(
+                            "[bold green]Auto-detected:[/bold green] Fast Path (via Standard)"
+                        )
                 else:
                     final_mode = detected
-                    console.print(f"[bold green]Auto-detected:[/bold green] {final_mode}")
-                    console.print(f"[dim]Reasoning: {decision.get('reasoning')}[/dim]")
+                    if not output_json:
+                        console.print(f"[bold green]Auto-detected:[/bold green] {final_mode}")
+                        console.print(f"[dim]Reasoning: {decision.get('reasoning')}[/dim]")
 
             except Exception as e:
-                logger.warning(f"Auto-detection failed: {e}. Defaulting to standard.")
+                if not output_json:
+                    logger.warning(f"Auto-detection failed: {e}. Defaulting to standard.")
                 final_mode = "standard"
 
         await runner.initialize_workflow(

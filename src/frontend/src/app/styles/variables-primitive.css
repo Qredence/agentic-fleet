@@ -1,0 +1,220 @@
+/* =============================================
+  Primitive Design Tokens (adapted from OpenAI apps-sdk-ui)
+  These are the foundational color values
+============================================= */
+
+:root {
+  /* =============================================
+    Gray Scale (Dark mode optimized - default)
+  ============================================= */
+  --gray-0: #ffffff;
+  --gray-25: #fcfcfc;
+  --gray-50: #f9f9f9;
+  --gray-75: #f3f3f3;
+  --gray-100: #ededed;
+  --gray-150: #dfdfdf;
+  --gray-200: #cdcdcd;
+  --gray-250: #b9b9b9;
+  --gray-300: #afafaf;
+  --gray-350: #9f9f9f;
+  --gray-400: #8f8f8f;
+  --gray-450: #767676;
+  --gray-500: #5d5d5d;
+  --gray-550: #4f4f4f;
+  --gray-600: #414141;
+  --gray-650: #393939;
+  --gray-700: #303030;
+  --gray-750: #282828;
+  --gray-800: #212121;
+  --gray-850: #1c1c1c;
+  --gray-900: #181818;
+  --gray-925: #161616;
+  --gray-950: #131313;
+  --gray-975: #101010;
+  --gray-1000: #0d0d0d;
+
+  /* =============================================
+    Alpha Transparency
+  ============================================= */
+  --alpha-base: #ffffff;
+  --alpha-0: rgb(255 255 255 / 0%);
+  --alpha-02: rgb(255 255 255 / 2%);
+  --alpha-04: rgb(255 255 255 / 4%);
+  --alpha-05: rgb(255 255 255 / 5%);
+  --alpha-06: rgb(255 255 255 / 6%);
+  --alpha-08: rgb(255 255 255 / 8%);
+  --alpha-10: rgb(255 255 255 / 10%);
+  --alpha-12: rgb(255 255 255 / 12%);
+  --alpha-15: rgb(255 255 255 / 15%);
+  --alpha-16: rgb(255 255 255 / 16%);
+  --alpha-20: rgb(255 255 255 / 20%);
+  --alpha-25: rgb(255 255 255 / 25%);
+  --alpha-30: rgb(255 255 255 / 30%);
+  --alpha-35: rgb(255 255 255 / 35%);
+  --alpha-40: rgb(255 255 255 / 40%);
+  --alpha-50: rgb(255 255 255 / 50%);
+  --alpha-60: rgb(255 255 255 / 60%);
+  --alpha-70: rgb(255 255 255 / 70%);
+
+  /* =============================================
+    Consistent Contrast
+  ============================================= */
+  --white: #ffffff;
+  --black: #000000;
+
+  /* =============================================
+    Green
+  ============================================= */
+  --green-25: #edfaf2;
+  --green-50: #d9f4e4;
+  --green-75: #b8ebcc;
+  --green-100: #8cdfad;
+  --green-200: #66d492;
+  --green-300: #40c977;
+  --green-400: #04b84c;
+  --green-500: #00a240;
+  --green-600: #008635;
+  --green-700: #00692a;
+  --green-800: #004f1f;
+  --green-900: #003716;
+  --green-950: #011c0b;
+  --green-1000: #001207;
+
+  /* =============================================
+    Red
+  ============================================= */
+  --red-25: #fff0f0;
+  --red-50: #ffd9d9;
+  --red-75: #ffc6c5;
+  --red-100: #ffa4a2;
+  --red-200: #ff8583;
+  --red-300: #ff6764;
+  --red-400: #fa423e;
+  --red-500: #e02e2a;
+  --red-600: #ba2623;
+  --red-700: #911e1b;
+  --red-800: #6e1615;
+  --red-900: #4d100e;
+  --red-950: #280b0a;
+  --red-1000: #1f0909;
+
+  /* =============================================
+    Pink
+  ============================================= */
+  --pink-25: #fff4f9;
+  --pink-50: #ffe8f3;
+  --pink-75: #ffd4e8;
+  --pink-100: #ffbada;
+  --pink-200: #ffa3ce;
+  --pink-300: #ff8cc1;
+  --pink-400: #ff66ad;
+  --pink-500: #e04c91;
+  --pink-600: #ba437a;
+  --pink-700: #963c67;
+  --pink-800: #6e2c4a;
+  --pink-900: #4d1f34;
+  --pink-950: #29101c;
+  --pink-1000: #1a0a11;
+
+  /* =============================================
+    Orange
+  ============================================= */
+  --orange-25: #fff5f0;
+  --orange-50: #ffe7d9;
+  --orange-75: #ffcfb4;
+  --orange-100: #ffb790;
+  --orange-200: #ff9e6c;
+  --orange-300: #ff8549;
+  --orange-400: #fb6a22;
+  --orange-500: #e25507;
+  --orange-600: #b9480d;
+  --orange-700: #923b0f;
+  --orange-800: #6d2e0f;
+  --orange-900: #4a2206;
+  --orange-950: #281105;
+  --orange-1000: #211107;
+
+  /* =============================================
+    Yellow
+  ============================================= */
+  --yellow-25: #fffbed;
+  --yellow-50: #fff6d9;
+  --yellow-75: #ffeeb8;
+  --yellow-100: #ffe48c;
+  --yellow-200: #ffdb66;
+  --yellow-300: #ffd240;
+  --yellow-400: #ffc300;
+  --yellow-500: #e0ac00;
+  --yellow-600: #ba8e00;
+  --yellow-700: #916f00;
+  --yellow-800: #6e5400;
+  --yellow-900: #4d3b00;
+  --yellow-950: #261d00;
+  --yellow-1000: #1a1400;
+
+  /* =============================================
+    Purple
+  ============================================= */
+  --purple-25: #f9f5fe;
+  --purple-50: #efe5fe;
+  --purple-75: #e0cefd;
+  --purple-100: #ceb0fb;
+  --purple-200: #be95fa;
+  --purple-300: #ad7bf9;
+  --purple-400: #924ff7;
+  --purple-500: #8046d9;
+  --purple-600: #6b3ab4;
+  --purple-700: #532d8d;
+  --purple-800: #3f226a;
+  --purple-900: #2c184a;
+  --purple-950: #160c25;
+  --purple-1000: #100a19;
+
+  /* =============================================
+    Blue
+  ============================================= */
+  --blue-25: #f5faff;
+  --blue-50: #e5f3ff;
+  --blue-75: #cce6ff;
+  --blue-100: #99ceff;
+  --blue-200: #66b5ff;
+  --blue-300: #339cff;
+  --blue-400: #0285ff;
+  --blue-500: #0169cc;
+  --blue-600: #004f99;
+  --blue-700: #003f7a;
+  --blue-800: #013566;
+  --blue-900: #00284d;
+  --blue-950: #000e1a;
+  --blue-1000: #000d19;
+
+  /* =============================================
+    Sizes
+  ============================================= */
+  --hairline: 1px;
+
+  /* =============================================
+    Shadow Geometry
+  ============================================= */
+  --shadow-color: 0 0 0;
+  --elevation-100-geo: 0 1px 2px -1px;
+  --elevation-200-geo: 0 2px 4px -1px;
+  --elevation-300-geo: 0 4px 8px -2px;
+  --elevation-400-geo: 0 8px 16px -4px;
+
+  /* Dark mode shadow defaults */
+  --shadow-alpha-100: 0.2;
+  --shadow-alpha-200: 0.2;
+  --shadow-alpha-300: 0.36;
+  --shadow-alpha-400: 0.3;
+  --shadow-hairline-width: 1px;
+  --shadow-hairline-color: rgb(255 255 255 / 10%);
+}
+
+@media (resolution >= 150dpi), (resolution >= 1.5dppx) {
+  :root {
+    --hairline: 0.5px;
+    --shadow-hairline-width: 0.5px;
+    --shadow-hairline-color: rgb(255 255 255 / 12%);
+  }
+}

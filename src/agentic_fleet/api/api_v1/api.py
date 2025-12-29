@@ -13,7 +13,8 @@ from agentic_fleet.api.routes import (
     dspy,
     history,
     nlu,
-    optimize,
+    observability,
+    optimization,
     sessions,
     workflows,
 )
@@ -27,6 +28,7 @@ api_router.include_router(history.router, tags=["history"])
 api_router.include_router(sessions.router, tags=["sessions"])
 api_router.include_router(dspy.router, tags=["dspy"])
 api_router.include_router(nlu.router, tags=["nlu"])
-api_router.include_router(optimize.router, tags=["optimization"])
+api_router.include_router(optimization.router)  # Mounted at /optimization
+api_router.include_router(observability.router)
 
 __all__ = ["api_router"]

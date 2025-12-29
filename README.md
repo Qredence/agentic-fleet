@@ -1,25 +1,168 @@
+# AgenticFleet
+
 <p align="center">
-  <img src="assets/banner.png" alt="AgenticFleet" width="100%"/>
+  <img src="assets/banner.png" alt="AgenticFleet" width="800"/>
 </p>
 
 <p align="center">
   <a href="./LICENSE"><img src="https://img.shields.io/badge/License-MIT-yellow.svg" alt="License: MIT"/></a>
-  <a href="https://pepy.tech/projects/agentic-fleet"><img src="https://static.pepy.tech/personalized-badge/agentic-fleet?period=total&units=INTERNATIONAL_SYSTEM&left_color=GREY&right_color=BLUE&left_text=downloads" alt="PyPI Downloads"/></a>
-  <a href="https://deepwiki.com/qredence/agentic-fleet"><img src="https://deepwiki.com/badge.svg" alt="Ask DeepWiki"/></a>
   <a href="https://pypi.org/project/agentic-fleet/"><img src="https://img.shields.io/pypi/v/agentic-fleet?color=blue" alt="PyPI Version"/></a>
   <a href="https://pypi.org/project/agentic-fleet/"><img src="https://img.shields.io/pypi/pyversions/agentic-fleet" alt="Python Versions"/></a>
-  <a href="https://coderabbit.ai"><img src="https://img.shields.io/coderabbit/prs/github/Qredence/agentic-fleet?utm_source=oss&utm_medium=github&utm_campaign=Qredence%2Fagentic-fleet&labelColor=171717&color=FF570A&link=https%3A%2F%2Fcoderabbit.ai&label=CodeRabbit+Reviews" alt="CodeRabbit Pull Request Reviews"/></a>
+  <a href="https://pepy.tech/projects/agentic-fleet"><img src="https://static.pepy.tech/personalized-badge/agentic-fleet?period=total&units=INTERNATIONAL_SYSTEM&left_color=GREY&right_color=BLUE&left_text=downloads" alt="PyPI Downloads"/></a>
+  <a href="https://deepwiki.com/qredence/agentic-fleet"><img src="https://deepwiki.com/badge.svg" alt="Ask DeepWiki"/></a>
+  <a href="https://coderabbit.ai"><img src="https://img.shields.io/coderabbit/prs/github/Qredence/agentic-fleet?label=CodeRabbit+Reviews&labelColor=171717&color=FF570A" alt="CodeRabbit Pull Request Reviews"/></a>
 </p>
 
-<h3 align="center">
-  <b>Self-Optimizing Multi-Agent Orchestration</b>
-</h3>
-
-<p align="center">
-  Intelligent task routing with <a href="https://github.com/stanfordnlp/dspy">DSPy</a> • Robust execution with <a href="https://github.com/microsoft/agent-framework">Microsoft Agent Framework</a>
-</p>
+<p align="center"><b>Self-optimizing multi-agent orchestration powered by DSPy + Microsoft Agent Framework.</b></p>
 
 ---
+
+## Project Name and Description
+
+**AgenticFleet** is a production-ready multi-agent orchestration runtime that routes tasks to specialized agents through a five-phase pipeline (analysis → routing → execution → progress → quality). It combines DSPy for structured reasoning with the Microsoft Agent Framework for reliable execution, streaming rich events to both CLI and web clients.
+
+## 🛠️ Technology Stack
+
+- **Backend:** Python 3.12 / 3.13, FastAPI, Typer CLI, [DSPy](https://github.com/stanfordnlp/dspy), [Microsoft Agent Framework](https://github.com/microsoft/agent-framework) (Magentic Fleet pattern), Pydantic v2
+- **Package Manager:** [uv](https://github.com/astral-sh/uv) (Python), [npm](https://www.npmjs.com/) (Frontend)
+- **Orchestration & Tools:** ToolRegistry adapters (Tavily search, browser automation, code execution, MCP), offline-compiled DSPy modules
+- **Frontend:** React 19, TypeScript, Vite, Tailwind CSS, Radix UI, Shadcn UI, Lucide Icons; real-time SSE/WebSocket streaming
+- **Infrastructure & Storage:** Azure Cosmos DB (primary store), SQLite/local persistence, Docker + Docker Compose
+- **Observability & Evaluation:** OpenTelemetry (Jaeger, Azure Monitor), Azure AI Evaluation, Langfuse; retries via Tenacity; async concurrency with AnyIO/Asyncer
+
+## 📋 Requirements
+
+- **Python:** 3.12 or 3.13
+- **Dependency Manager:** [uv](https://github.com/astral-sh/uv)
+- **Node.js:** 18+ (for the frontend)
+- **API Keys:** OpenAI API Key (required), Tavily API Key (optional, for web search)
+- **Optional:** Docker + Docker Compose, Azure credentials for Cosmos/monitoring
+
+## 🚀 Getting Started
+
+### Installation
+
+```bash
+# Clone the repository
+git clone https://github.com/Qredence/agentic-fleet.git
+cd agentic-fleet
+
+# Full development setup (Python + Frontend + Pre-commit)
+make dev-setup
+
+# Or individual steps:
+# make install            # Python deps via uv
+# make frontend-install   # Frontend deps via npm
+
+# Configure environment
+cp .env.example .env
+# Set OPENAI_API_KEY and other variables in .env
+```
+
+### Run Commands
+
+```bash
+# Full stack development (backend + frontend)
+make dev
+
+# Backend only (port 8000)
+make backend
+
+# Frontend only (port 5173)
+make frontend-dev
+
+# Interactive CLI console
+make run
+
+# Single task via CLI
+uv run agentic-fleet run -m "Research the latest advances in AI agents" --verbose
+```
+
+## 📜 Scripts
+
+The project uses a `Makefile` to centralize development commands:
+
+| Command              | Description                                              |
+| :------------------- | :------------------------------------------------------- |
+| `make install`       | Install/sync Python dependencies via `uv`                |
+| `make dev-setup`     | Full development setup (install + frontend + pre-commit) |
+| `make dev`           | Run backend + frontend together (full stack)             |
+| `make backend`       | Run backend only (port 8000)                             |
+| `make frontend-dev`  | Run frontend only (port 5173)                            |
+| `make test`          | Run backend tests (fast)                                 |
+| `make test-all`      | Run all tests (backend + frontend)                       |
+| `make check`         | Quick quality check (lint + type-check)                  |
+| `make qa`            | Full QA suite (lint + format + type + all tests)         |
+| `make format`        | Format backend code with Ruff                            |
+| `make lint`          | Run Ruff linter on backend                               |
+| `make type-check`    | Run `ty` type checker                                    |
+| `make clear-cache`   | Clear compiled DSPy cache                                |
+| `make tracing-start` | Start OpenTelemetry collector + Jaeger UI                |
+| `make tracing-stop`  | Stop the tracing collector                               |
+
+## 🔑 Environment Variables
+
+Key variables from `.env.example`:
+
+| Variable                  | Description                                | Required           |
+| :------------------------ | :----------------------------------------- | :----------------- |
+| `OPENAI_API_KEY`          | OpenAI API key                             | Yes                |
+| `TAVILY_API_KEY`          | Tavily API key for web search              | No (Recommended)   |
+| `PROJECT_PATH`            | Local path to agentic-fleet repo (for MCP) | No                 |
+| `DSPY_COMPILE`            | Enable DSPy supervisor compilation         | No (Default: true) |
+| `AZURE_OPENAI_*`          | Azure OpenAI configuration                 | No                 |
+| `AGENTICFLEET_USE_COSMOS` | Enable Azure Cosmos DB integration         | No                 |
+| `ENABLE_OTEL`             | Enable OpenTelemetry tracing               | No                 |
+| `LANGFUSE_*`              | Langfuse tracing keys                      | No                 |
+
+## 🧪 Testing
+
+We use **pytest** for backend testing and **vitest** (via npm) for frontend.
+
+```bash
+# Run all backend tests
+make test
+
+# Run all tests (Backend + Frontend)
+make test-all
+
+# Specific test suite
+uv run pytest tests/workflows/test_supervisor_workflow.py
+
+# With coverage
+uv run pytest --cov=src --cov-report=term-missing tests/
+```
+
+## 📂 Project Structure
+
+```
+.
+├── src/
+│   ├── agentic_fleet/    # Backend source code
+│   │   ├── workflows/    # SupervisorWorkflow and execution phases
+│   │   ├── agents/       # Agent definitions and Factory
+│   │   ├── tools/        # Tool adapters (Tavily, Browser, MCP)
+│   │   ├── dspy_modules/ # DSPy signatures and reasoner
+│   │   ├── api/          # FastAPI routes and services
+│   │   ├── config/       # YAML configurations
+│   │   ├── utils/        # Infra, storage, and config utilities
+│   │   └── cli/          # Typer CLI implementation
+│   └── frontend/         # React 19 + Vite + Tailwind UI
+├── tests/                # Pytest suites (unit, integration)
+├── scripts/              # Helper scripts and benchmarks
+├── docs/                 # Detailed documentation
+├── .var/                 # Runtime artifacts (logs, caches) - gitignored
+├── pyproject.toml        # Python project metadata and dependencies
+└── Makefile              # Development command shortcuts
+```
+
+## 📄 License
+
+This project is licensed under the **MIT License**. See [LICENSE](LICENSE) for details.
+
+---
+
+Helpful links: [Copilot instructions](.github/copilot-instructions.md) · [prompts](.github/prompts/README.md) · [system overview](docs/developers/system-overview.md)
 
 ## ✨ What is AgenticFleet?
 
@@ -67,7 +210,8 @@ Every task flows through intelligent orchestration:
 ```bash
 # Clone and install
 git clone https://github.com/Qredence/agentic-fleet.git && cd agentic-fleet
-uv sync  # or: pip install agentic-fleet
+make install            # installs Python deps via uv
+make frontend-install   # installs frontend deps via npm
 
 # Configure environment
 cp .env.example .env
@@ -79,13 +223,13 @@ cp .env.example .env
 
 ```bash
 # Interactive CLI
-agentic-fleet
+make run
 
 # Single task
 agentic-fleet run -m "Research the latest advances in AI agents" --verbose
 
 # Development server (backend + frontend)
-agentic-fleet dev
+make dev
 ```
 
 ## 📖 Usage
@@ -183,7 +327,7 @@ All runtime settings are in `src/agentic_fleet/config/workflow_config.yaml`:
 ```yaml
 dspy:
   model: gpt-5.2 # Primary model for DSPy tasks
-  routing_model: grok-4-fast # Fast model for routing decisions
+  routing_model: gpt-5-mini # Fast model for routing decisions
   use_typed_signatures: true # Pydantic-validated outputs
   enable_routing_cache: true # Cache routing decisions
   routing_cache_ttl_seconds: 300 # Cache TTL (5 minutes)
@@ -237,7 +381,7 @@ agents:
 
 ```
 src/agentic_fleet/
-├── workflows/        # Orchestration: supervisor.py (entry), executors.py (5 phases)
+├── workflows/        # Orchestration: supervisor.py (entry), executors/ (5 phases)
 │   ├── supervisor.py # Main workflow entry + fast-path detection
 │   ├── executors.py  # AnalysisExecutor, RoutingExecutor, ExecutionExecutor, etc.
 │   └── strategies.py # Execution modes (delegated/sequential/parallel)
@@ -248,7 +392,7 @@ src/agentic_fleet/
 │   └── assertions.py # DSPy assertions for validation
 ├── agents/           # Agent definitions & AgentFactory (coordinator.py)
 ├── tools/            # Tavily, browser, MCP bridges, code interpreter
-├── app/              # FastAPI backend, WebSocket streaming
+├── api/              # FastAPI backend, WebSocket/SSE streaming
 ├── config/           # workflow_config.yaml (source of truth)
 ├── utils/            # Organized into subpackages:
 │   ├── cfg/          # Configuration loading
@@ -303,15 +447,10 @@ make clear-cache       # Clear DSPy cache after module changes
 
 ## 🆕 What's New in v0.6.95
 
-### Highlights
-
 - **Secure-by-Default Tracing** – `capture_sensitive` defaults to `false` everywhere
 - **Package Reorganization** – `utils/` split into `cfg/`, `infra/`, `storage/` subpackages
 - **Cosmos DB Fixes** – Single-partition queries, user-scoped history loads
 - **Cache Telemetry Redaction** – Task previews redacted by default
-
-### Core Features (v0.6.9+)
-
 - **Typed DSPy Signatures** – Pydantic models for validated, type-safe outputs
 - **DSPy Assertions** – Hard constraints and soft suggestions for routing validation
 - **Routing Cache** – TTL-based caching (5 min) for routing decisions

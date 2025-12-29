@@ -73,19 +73,19 @@ uv run agentic-fleet self-improve --min-quality 8.5 --max-examples 15
 
 ```bash
 # Run self-improvement analysis
-uv run python src/agentic_fleet/scripts/self_improve.py
+uv run python -m agentic_fleet.scripts.self_improve
 
 # View statistics only
-uv run python src/agentic_fleet/scripts/self_improve.py --stats-only
+uv run python -m agentic_fleet.scripts.self_improve --stats-only
 
 # Customize parameters
-uv run python src/agentic_fleet/scripts/self_improve.py --min-quality 9.0 --max-examples 20 --lookback 50
+uv run python -m agentic_fleet.scripts.self_improve --min-quality 9.0 --max-examples 20 --lookback 50
 ```
 
 ### Programmatic Usage
 
 ```python
-from agentic_fleet.utils.self_improvement import SelfImprovementEngine
+from agentic_fleet.dspy_modules.gepa import SelfImprovementEngine
 
 # Create engine
 engine = SelfImprovementEngine(
@@ -215,7 +215,7 @@ Check if self-improvement is working:
 
 ```bash
 # View quality statistics
-uv run python src/agentic_fleet/scripts/analyze_history.py --all
+uv run python -m agentic_fleet.scripts.analyze_history --all
 
 # Look for improving average quality scores over time
 ```
@@ -346,7 +346,7 @@ research_tasks = [
 2. Run more tasks to build history
 3. Review quality assessments in history:
    ```bash
-   uv run python src/agentic_fleet/scripts/analyze_history.py --all
+   uv run python -m agentic_fleet.scripts.analyze_history --all
    ```
 
 ### Examples Not Improving Routing
@@ -378,7 +378,7 @@ research_tasks = [
 
 **Solution**: The system automatically deduplicates. If you see many similar examples:
 
-1. Review fingerprinting logic in `src/agentic_fleet/utils/self_improvement.py`
+1. Review fingerprinting logic in `src/agentic_fleet/dspy_modules/gepa/self_improvement.py`
 2. Manually edit `src/agentic_fleet/data/supervisor_examples.json` to remove unwanted examples
 
 ## Performance Considerations
@@ -445,7 +445,7 @@ uv run agentic-fleet self-improve
 
 ```bash
 # Review overall improvement
-uv run python src/agentic_fleet/scripts/analyze_history.py --all
+uv run python -m agentic_fleet.scripts.analyze_history --all
 
 # Look for:
 # - Average quality score trending up

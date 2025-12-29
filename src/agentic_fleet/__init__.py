@@ -13,8 +13,7 @@ orchestration primitives, event streaming, and tool execution.
         - ``ConversationStore``, ``HistoryManager`` - Storage backends
 
     Services:
-        - ``AgentFactory``, ``DSPyEnhancedAgent`` - Agent creation
-        - ``DSPyReasoner``, ``TaskAnalysis`` - DSPy reasoning
+        - ``AgentFactory``, ``DSPyReasoner`` - Agent creation
         - ``SupervisorWorkflow``, ``create_supervisor_workflow`` - Orchestration
         - ``ConversationManager`` - Conversation persistence
 
@@ -38,7 +37,7 @@ Example:
     Or using the new clean imports:
 
     ```python
-    from agentic_fleet.core import get_settings, setup_logger
+    from agentic_fleet.utils.cfg import get_settings, setup_logger
     from agentic_fleet.services import AgentFactory, DSPyReasoner
     ```
 """
@@ -49,24 +48,10 @@ from importlib.metadata import PackageNotFoundError
 from importlib.metadata import version as _get_version
 from typing import TYPE_CHECKING
 
-from agentic_fleet.utils.agent_framework_shims import (
-    ensure_agent_framework_shims as _ensure_agent_framework_shims,
-)
-
-_ensure_agent_framework_shims()
+# agent_framework is a required dependency - no shims needed
 
 if TYPE_CHECKING:
     # Core infrastructure
-    from agentic_fleet.core import (
-        AppSettings,
-        ConversationStore,
-        HistoryManager,
-        TTLCache,
-        get_settings,
-        initialize_tracing,
-        setup_logger,
-    )
-
     # Legacy imports (preserved for backward compat)
     from agentic_fleet.evaluation import Evaluator, compute_metrics
 
@@ -79,7 +64,20 @@ if TYPE_CHECKING:
         create_supervisor_workflow,
     )
     from agentic_fleet.tools import BrowserTool, TavilyMCPTool, TavilySearchTool
+    from agentic_fleet.utils.cache import TTLCache
+    from agentic_fleet.utils.cfg import (
+        AppSettings,
+        get_settings,
+    )
+    from agentic_fleet.utils.infra import (
+        initialize_tracing,
+        setup_logger,
+    )
     from agentic_fleet.utils.models import ExecutionMode, RoutingDecision
+    from agentic_fleet.utils.storage import (
+        ConversationStore,
+        HistoryManager,
+    )
     from agentic_fleet.utils.tool_registry import ToolMetadata, ToolRegistry
     from agentic_fleet.workflows import WorkflowConfig
 
@@ -121,23 +119,33 @@ def __getattr__(name: str) -> object:
     """Lazy import for public API to avoid circular imports."""
     # Core infrastructure (new clean API)
     if name in ("AppSettings", "get_settings"):
-        from agentic_fleet.core import AppSettings, get_settings
+        from agentic_fleet.utils.cfg import AppSettings, get_settings
 
         return AppSettings if name == "AppSettings" else get_settings
 
-    if name in ("setup_logger", "initialize_tracing"):
-        from agentic_fleet.core import initialize_tracing, setup_logger
+    if name == "setup_logger":
+        from agentic_fleet.utils.infra.logging import setup_logger
 
-        return setup_logger if name == "setup_logger" else initialize_tracing
+        return setup_logger
+
+    if name == "initialize_tracing":
+        from agentic_fleet.utils.infra.tracing import initialize_tracing
+
+        return initialize_tracing
 
     if name in ("ConversationStore", "HistoryManager", "TTLCache"):
-        from agentic_fleet.core import ConversationStore, HistoryManager, TTLCache
+        if name == "ConversationStore":
+            from agentic_fleet.utils.storage.conversation import ConversationStore
 
-        return {
-            "ConversationStore": ConversationStore,
-            "HistoryManager": HistoryManager,
-            "TTLCache": TTLCache,
-        }[name]
+            return ConversationStore
+        if name == "HistoryManager":
+            from agentic_fleet.utils.storage.history import HistoryManager
+
+            return HistoryManager
+        if name == "TTLCache":
+            from agentic_fleet.utils.ttl_cache import TTLCache
+
+            return TTLCache
 
     # Services (new clean API)
     if name == "DSPyReasoner":

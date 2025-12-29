@@ -12,13 +12,9 @@ Usage:
 from __future__ import annotations
 
 from agentic_fleet.agents.base import DSPyEnhancedAgent
-from agentic_fleet.agents.coordinator import (
-    AgentFactory,
-    create_workflow_agents,
-    get_default_agent_metadata,
-    validate_tool,
-)
+from agentic_fleet.agents.coordinator import AgentFactory, create_workflow_agents
 from agentic_fleet.agents.foundry import FoundryAgentAdapter
+from agentic_fleet.agents.helpers import get_default_agent_metadata, validate_tool
 from agentic_fleet.agents.prompts import (
     get_coder_instructions,
     get_copilot_researcher_instructions,

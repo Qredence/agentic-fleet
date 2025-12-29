@@ -1,16 +1,12 @@
 """Tools package for agent framework integration."""
 
-from agentic_fleet.utils.agent_framework_shims import ensure_agent_framework_shims
-
-ensure_agent_framework_shims()
-
-from .azure_search_provider import AzureAISearchContextProvider  # noqa: E402
-from .base import SchemaToolMixin  # noqa: E402
-from .base_mcp_tool import BaseMCPTool  # noqa: E402
-from .browser_tool import BrowserTool  # noqa: E402
-from .hosted_code_adapter import HostedCodeInterpreterAdapter  # noqa: E402
-from .mcp_tools import Context7DeepWikiTool, PackageSearchMCPTool, TavilyMCPTool  # noqa: E402
-from .tavily_tool import TavilySearchTool  # noqa: E402
+from .azure_search_provider import AzureAISearchContextProvider
+from .base import SchemaToolMixin
+from .base_mcp_tool import BaseMCPTool
+from .browser_tool import BrowserTool
+from .hosted_code_adapter import HostedCodeInterpreterAdapter
+from .mcp_tools import Context7DeepWikiTool, PackageSearchMCPTool, TavilyMCPTool
+from .tavily_tool import TavilySearchTool
 
 __all__ = [
     "AzureAISearchContextProvider",

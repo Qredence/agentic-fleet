@@ -1,16 +1,19 @@
+import { useRef, useState, memo } from "react";
+import { Virtuoso, type VirtuosoHandle } from "react-virtuoso";
 import type { Message as ChatMessage } from "@/api/types";
 import { cn } from "@/lib/utils";
-import { Copy } from "lucide-react";
+import { Copy, Terminal } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ScrollButton } from "./scroll-button";
-import { ChatContainerContent, ChatContainerRoot } from "./chat-container";
-import { TextShimmer } from "./text-shimmer";
+import { Sheet, SheetContent } from "@/components/ui/sheet";
+import { TracePanel } from "./TracePanel";
+
 import {
   Message,
   MessageAction,
   MessageActions,
   MessageContent,
-} from "./message";
+} from "@/features/chat/components";
 
 export type ChatMessagesProps = {
   messages: ChatMessage[];
@@ -19,8 +22,146 @@ export type ChatMessagesProps = {
   onCopy?: (content: string) => void;
   rootClassName?: string;
   contentClassName?: string;
+  streamSpeed?: number;
+  fadeDuration?: number;
+  segmentDelay?: number;
 };
 
+// Extracted User Message Component
+const UserMessageItem = memo(
+  ({ message, messageKey }: { message: ChatMessage; messageKey: string }) => (
+    <div className="flex flex-col pb-6">
+      <Message
+        key={messageKey}
+        className="mx-auto w-full max-w-3xl justify-end px-4"
+      >
+        <div className="flex w-full justify-end">
+          <MessageContent
+            className="text-foreground border-border/50 max-w-[85%] rounded-2xl border px-4 py-2.5 backdrop-blur-sm sm:max-w-[75%] whitespace-pre-wrap break-normal"
+            style={{
+              backgroundColor: "var(--color-background-primary-soft)",
+            }}
+          >
+            {message.content}
+          </MessageContent>
+        </div>
+      </Message>
+    </div>
+  ),
+);
+UserMessageItem.displayName = "UserMessageItem";
+
+// Extracted Assistant Message Component
+const AssistantMessageItem = memo(
+  ({
+    message,
+    messageKey,
+    isStreaming,
+    streamSpeed,
+    fadeDuration,
+    segmentDelay,
+    renderTrace,
+    onSelectMessage,
+    onCopy,
+  }: {
+    message: ChatMessage;
+    messageKey: string;
+    isStreaming: boolean;
+    streamSpeed: number;
+    fadeDuration: number;
+    segmentDelay: number;
+    renderTrace?: (
+      message: ChatMessage,
+      isStreaming: boolean,
+    ) => React.ReactNode;
+    onSelectMessage: (message: ChatMessage) => void;
+    onCopy?: (content: string) => void;
+  }) => (
+    <div className="flex flex-col pb-6">
+      <Message
+        key={messageKey}
+        className="mx-auto w-full max-w-3xl flex-col gap-2 px-4 items-start"
+      >
+        {renderTrace && ((message.steps?.length ?? 0) > 0 || isStreaming)
+          ? renderTrace(message, isStreaming)
+          : null}
+
+        <div className="group flex w-full flex-col gap-0">
+          <MessageContent
+            className={cn(
+              "text-foreground prose flex-1 rounded-lg bg-transparent p-0",
+              isStreaming && "whitespace-pre-wrap",
+            )}
+            markdown={true}
+            isStreaming={isStreaming}
+            streamSpeed={streamSpeed}
+            fadeDuration={fadeDuration}
+            segmentDelay={segmentDelay}
+          >
+            {typeof message.content === "string"
+              ? message.content
+              : JSON.stringify(message.content)}
+          </MessageContent>
+
+          {!isStreaming && (
+            <MessageActions className="-ml-2.5 flex gap-0 opacity-0 transition-opacity duration-150 group-hover:opacity-100">
+              {message.workflow_id && (
+                <MessageAction tooltip="Debug Trace" delayDuration={100}>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="rounded-full text-blue-500 hover:text-blue-600 hover:bg-blue-50/50"
+                    onClick={() => onSelectMessage(message)}
+                    aria-label="View trace"
+                  >
+                    <Terminal className="size-4" />
+                  </Button>
+                </MessageAction>
+              )}
+              <MessageAction tooltip="Copy" delayDuration={100}>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="rounded-full"
+                  onClick={() => {
+                    const contentStr =
+                      typeof message.content === "string"
+                        ? message.content
+                        : JSON.stringify(message.content);
+                    if (onCopy) {
+                      onCopy(contentStr);
+                    } else {
+                      void navigator.clipboard.writeText(contentStr);
+                    }
+                  }}
+                  aria-label="Copy response"
+                >
+                  <Copy className="size-4" />
+                </Button>
+              </MessageAction>
+            </MessageActions>
+          )}
+        </div>
+      </Message>
+    </div>
+  ),
+);
+AssistantMessageItem.displayName = "AssistantMessageItem";
+
+/**
+ * Render the chat message list with distinct layouts for assistant and user messages, optional trace rendering, per-message copy actions, and a bottom-centered scroll button.
+ *
+ * - Assistant messages are left-aligned, support markdown rendering, and show a streaming cursor when the last assistant message is streaming.
+ * - User messages are right-aligned and shown in a compact bubble.
+ *
+ * @param messages - Array of chat messages to render.
+ * @param isLoading - When true, the last assistant message is treated as streaming and displays a streaming cursor.
+ * @param renderTrace - Optional function to render trace UI for an assistant message: called with (message, isStreaming).
+ * @param onCopy - Optional handler called with a message's content when the copy action is invoked; if omitted, the browser clipboard is used.
+ * @param rootClassName - Optional additional class name applied to the root chat container.
+ * @param contentClassName - Optional additional class name applied to the content container.
+ * @returns A React element containing the rendered messages and scroll control.
+ */
 export function ChatMessages({
   messages,
   isLoading = false,
@@ -28,100 +169,95 @@ export function ChatMessages({
   onCopy,
   rootClassName,
   contentClassName,
+  streamSpeed = 50,
+  fadeDuration = 200,
+  segmentDelay = 30,
 }: ChatMessagesProps) {
+  const virtuosoRef = useRef<VirtuosoHandle>(null);
+  const [atBottom, setAtBottom] = useState(true);
+  const [selectedMessage, setSelectedMessage] = useState<ChatMessage | null>(
+    null,
+  );
+
   return (
-    <ChatContainerRoot className={cn("h-full", rootClassName)}>
-      <ChatContainerContent className={cn("px-5 py-12", contentClassName)}>
-        <div className="flex flex-col gap-8">
-          {messages.map((message, index) => {
-            const isAssistant = message.role === "assistant";
-            const isLastMessage = index === messages.length - 1;
-            const isStreaming = isAssistant && isLastMessage && isLoading;
-            // Use message ID if available, fallback to content-based key for stability
-            // Avoid pure index keys which cause reconciliation issues
-            const messageKey =
-              message.id ||
-              `${message.role}-${message.created_at || index}-${message.content.slice(0, 20)}`;
+    <div className={cn("h-full w-full relative flex flex-col", rootClassName)}>
+      <Virtuoso
+        ref={virtuosoRef}
+        data={messages}
+        style={{ height: "100%", width: "100%" }}
+        className={cn("px-4 py-8", contentClassName)}
+        followOutput={atBottom ? "auto" : false}
+        atBottomStateChange={setAtBottom}
+        itemContent={(index, message) => {
+          const isAssistant = message.role === "assistant";
+          const isLastMessage = index === messages.length - 1;
+          const isStreaming = isAssistant && isLastMessage && isLoading;
+          // Use message ID if available, fallback to content-based key for stability
+          // Avoid pure index keys which cause reconciliation issues
+          const messageKey =
+            message.id ||
+            `${message.role}-${message.created_at || index}-${String(message.content).slice(0, 20)}`;
 
-            if (!isAssistant) {
-              return (
-                <Message
-                  key={messageKey}
-                  className="mx-auto w-full max-w-3xl justify-end px-6"
-                >
-                  <MessageContent className="bg-muted text-foreground max-w-[85%] rounded-3xl px-5 py-2.5 sm:max-w-[75%] whitespace-pre-wrap break-normal">
-                    {message.content}
-                  </MessageContent>
-                </Message>
-              );
-            }
-
+          if (!isAssistant) {
             return (
-              <Message
+              <UserMessageItem
                 key={messageKey}
-                className="mx-auto w-full max-w-3xl flex-col gap-2 px-6 items-start"
-              >
-                {renderTrace ? renderTrace(message, isStreaming) : null}
-
-                <div className="group flex w-full flex-col gap-0">
-                  <MessageContent
-                    className={cn(
-                      "text-foreground prose flex-1 rounded-lg bg-transparent p-0",
-                      isStreaming && "whitespace-pre-wrap",
-                    )}
-                    markdown={!isStreaming}
-                  >
-                    {isStreaming ? (
-                      message.content.trim() ? (
-                        <>
-                          {message.content}
-                          <span className="ml-0.5 inline-block w-2 animate-pulse align-baseline">
-                            ▍
-                          </span>
-                        </>
-                      ) : (
-                        <TextShimmer className="text-sm">
-                          Thinking...
-                        </TextShimmer>
-                      )
-                    ) : (
-                      message.content
-                    )}
-                  </MessageContent>
-
-                  {!isStreaming && (
-                    <MessageActions className="-ml-2.5 flex gap-0 opacity-0 transition-opacity duration-150 group-hover:opacity-100">
-                      <MessageAction tooltip="Copy" delayDuration={100}>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="rounded-full"
-                          onClick={() => {
-                            if (onCopy) {
-                              onCopy(message.content);
-                            } else {
-                              void navigator.clipboard.writeText(
-                                message.content,
-                              );
-                            }
-                          }}
-                          aria-label="Copy response"
-                        >
-                          <Copy className="size-4" />
-                        </Button>
-                      </MessageAction>
-                    </MessageActions>
-                  )}
-                </div>
-              </Message>
+                message={message}
+                messageKey={messageKey}
+              />
             );
-          })}
-        </div>
-      </ChatContainerContent>
+          }
 
-      <div className="absolute bottom-4 left-1/2 flex w-full max-w-3xl -translate-x-1/2 justify-end px-5">
-        <ScrollButton className="shadow-sm" />
+          return (
+            <AssistantMessageItem
+              key={messageKey}
+              message={message}
+              messageKey={messageKey}
+              isStreaming={isStreaming}
+              streamSpeed={streamSpeed}
+              fadeDuration={fadeDuration}
+              segmentDelay={segmentDelay}
+              renderTrace={renderTrace}
+              onSelectMessage={setSelectedMessage}
+              onCopy={onCopy}
+            />
+          );
+        }}
+      />
+
+      <div className="absolute bottom-4 left-1/2 flex w-full max-w-3xl -translate-x-1/2 justify-end px-4 pointer-events-none">
+        <div className="pointer-events-auto">
+          <ScrollButton
+            className="shadow-sm"
+            isAtBottom={atBottom}
+            onClick={() =>
+              virtuosoRef.current?.scrollToIndex({
+                index: messages.length - 1,
+                behavior: "smooth",
+              })
+            }
+          />
+        </div>
       </div>
-    </ChatContainerRoot>
+
+      <Sheet
+        open={!!selectedMessage}
+        onOpenChange={(open) => !open && setSelectedMessage(null)}
+      >
+        <SheetContent
+          side="right"
+          className="sm:max-w-150 p-0 overflow-hidden border-l border-border/40 shadow-2xl"
+        >
+          {selectedMessage && (
+            <TracePanel
+              message={selectedMessage}
+              isStreaming={false}
+              isLoading={false}
+              onWorkflowResponse={() => {}}
+            />
+          )}
+        </SheetContent>
+      </Sheet>
+    </div>
   );
 }

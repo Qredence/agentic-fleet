@@ -5,10 +5,16 @@
  */
 
 // Configuration
-export { API_BASE_URL, API_PREFIX, getWebSocketUrl } from "./config";
+export {
+  API_BASE_URL,
+  API_PREFIX,
+  STREAM_API_PREFIX,
+  getStreamApiBase,
+  getWebSocketUrl,
+} from "./config";
 
 // HTTP client
-export { http, request } from "./http";
+export { http, request, requestWithPrefix } from "./http";
 
 // API clients
 export {
@@ -19,13 +25,14 @@ export {
   nluApi,
   optimizationApi,
   evaluationApi,
-  improvementApi,
+  dspyApi,
+  observabilityApi,
+  sseApi,
   healthApi,
 } from "./client";
 
 // React Query hooks
 export {
-  queryKeys,
   useConversations,
   useConversation,
   useConversationMessages,
@@ -39,9 +46,10 @@ export {
   useOptimizationRun,
   useOptimizationStatus,
   useEvaluationHistory,
-  useTriggerSelfImprove,
   useInvalidateConversations,
 } from "./hooks";
+
+export { queryKeys } from "./queryKeys";
 
 // Provider
 export { QueryProvider } from "./QueryProvider";
@@ -83,16 +91,17 @@ export type {
   IntentResponse,
   EntityRequest,
   EntityResponse,
-  // Optimization / Evaluation / Improvement types
+  // Optimization / Evaluation types
   OptimizationRequest,
   OptimizationResult,
   HistoryExecutionEntry,
   HistoryQualityMetrics,
-  SelfImproveRequest,
-  SelfImproveResponse,
-  SelfImproveStats,
   // Error types
   ApiError,
+  // Tracing and Observability types
+  Observation,
+  TraceDetails,
 } from "./types";
 
 export { ApiRequestError } from "./types";
+export { formatApiError, type FormattedApiError } from "./error";

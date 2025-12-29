@@ -5,37 +5,8 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
-import React, {
-  createContext,
-  useContext,
-  useLayoutEffect,
-  useRef,
-  useState,
-} from "react";
-
-type PromptInputContextType = {
-  isLoading: boolean;
-  value: string;
-  setValue: (value: string) => void;
-  maxHeight: number | string;
-  onSubmit?: () => void;
-  disabled?: boolean;
-  textareaRef: React.RefObject<HTMLTextAreaElement | null>;
-};
-
-const PromptInputContext = createContext<PromptInputContextType>({
-  isLoading: false,
-  value: "",
-  setValue: () => {},
-  maxHeight: 240,
-  onSubmit: undefined,
-  disabled: false,
-  textareaRef: React.createRef<HTMLTextAreaElement>(),
-});
-
-function usePromptInput() {
-  return useContext(PromptInputContext);
-}
+import { PromptInputContext, usePromptInput } from "../hooks";
+import React, { useLayoutEffect, useRef, useState } from "react";
 
 export type PromptInputProps = {
   isLoading?: boolean;
@@ -63,6 +34,14 @@ function PromptInput({
   const [internalValue, setInternalValue] = useState(value || "");
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
+  // Sync internal state when controlled value changes
+  React.useEffect(() => {
+    if (value !== undefined) {
+      setInternalValue(value);
+    }
+  }, [value]);
+
+  // Always update internal state first, then call onValueChange
   const handleChange = (newValue: string) => {
     setInternalValue(newValue);
     onValueChange?.(newValue);
@@ -78,7 +57,7 @@ function PromptInput({
       value={{
         isLoading,
         value: value ?? internalValue,
-        setValue: onValueChange ?? handleChange,
+        setValue: handleChange,
         maxHeight,
         onSubmit,
         disabled,
@@ -88,16 +67,12 @@ function PromptInput({
       <div
         onClick={handleClick}
         className={cn(
-          "border-input cursor-text rounded-3xl border p-2 shadow-xs",
+          "cursor-text rounded-3xl border border-border/60 bg-card p-2 shadow-md transition-all duration-200",
+          "ring-offset-background focus-within:ring-2 focus-within:ring-foreground/10 focus-within:ring-offset-2",
+          "hover:border-border",
           disabled && "cursor-not-allowed opacity-60",
           className,
         )}
-        style={{
-          backgroundColor: "var(--color-background-primary-soft)",
-          boxShadow:
-            "0px 0px 0px 0px rgba(0, 0, 0, 0), 0px 0px 0px 0px rgba(0, 0, 0, 0), 0px 0px 0px 0px rgba(0, 0, 0, 0), 0px 1px 2px 0px rgba(0, 0, 0, 0.05), 0px 4px 12px 0px rgba(0, 0, 0, 0.15)",
-          backdropFilter: "blur(85.5px)",
-        }}
         {...props}
       >
         {children}
@@ -170,7 +145,7 @@ function PromptInputTextarea({
       onChange={handleChange}
       onKeyDown={handleKeyDown}
       className={cn(
-        "text-foreground placeholder:text-muted-foreground min-h-[44px] w-full resize-none border-none bg-transparent shadow-none outline-none focus-visible:ring-0 focus-visible:ring-offset-0 focus-visible:outline-none!",
+        "text-foreground placeholder:text-muted-foreground min-h-11 w-full resize-none border-none bg-transparent shadow-none outline-none focus-visible:ring-0 focus-visible:ring-offset-0 focus-visible:outline-none!",
         className,
       )}
       rows={1}
@@ -205,7 +180,7 @@ function PromptInputAction({
   tooltip,
   children,
   className,
-  side = "left",
+  side = "top",
   ...props
 }: PromptInputActionProps) {
   const { disabled } = usePromptInput();

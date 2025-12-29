@@ -9,8 +9,12 @@ import {
   useQuery,
   useMutation,
   useQueryClient,
+  useInfiniteQuery,
+  type InfiniteData,
   type UseQueryOptions,
   type UseMutationOptions,
+  type UseInfiniteQueryOptions,
+  type QueryKey,
 } from "@tanstack/react-query";
 import {
   conversationsApi,
@@ -19,9 +23,9 @@ import {
   healthApi,
   optimizationApi,
   evaluationApi,
-  improvementApi,
   dspyApi,
 } from "./client";
+import { queryKeys } from "./queryKeys";
 import type {
   Conversation,
   Message,
@@ -30,8 +34,6 @@ import type {
   OptimizationResult,
   OptimizationRequest,
   HistoryExecutionEntry,
-  SelfImproveRequest,
-  SelfImproveResponse,
   DSPyConfig,
   DSPyStats,
   CacheInfo,
@@ -42,51 +44,14 @@ import type {
 import type { HealthResponse, ReadinessResponse } from "./client";
 
 // =============================================================================
-// Query Keys
+// Error Types
 // =============================================================================
 
-export const queryKeys = {
-  conversations: {
-    all: ["conversations"] as const,
-    list: () => [...queryKeys.conversations.all, "list"] as const,
-    detail: (id: string) =>
-      [...queryKeys.conversations.all, "detail", id] as const,
-    messages: (id: string) =>
-      [...queryKeys.conversations.all, "messages", id] as const,
-  },
-  sessions: {
-    all: ["sessions"] as const,
-    list: () => [...queryKeys.sessions.all, "list"] as const,
-    detail: (id: string) => [...queryKeys.sessions.all, "detail", id] as const,
-  },
-  agents: {
-    all: ["agents"] as const,
-    list: () => [...queryKeys.agents.all, "list"] as const,
-  },
-  optimization: {
-    all: ["optimization"] as const,
-    status: (jobId: string) =>
-      [...queryKeys.optimization.all, "status", jobId] as const,
-  },
-  history: {
-    all: ["history"] as const,
-    page: (limit: number, offset: number) =>
-      [...queryKeys.history.all, "page", limit, offset] as const,
-  },
-  health: {
-    check: ["health", "check"] as const,
-    ready: ["health", "ready"] as const,
-  },
-  dspy: {
-    all: ["dspy"] as const,
-    config: () => [...queryKeys.dspy.all, "config"] as const,
-    stats: () => [...queryKeys.dspy.all, "stats"] as const,
-    cache: () => [...queryKeys.dspy.all, "cache"] as const,
-    reasonerSummary: () => [...queryKeys.dspy.all, "reasoner-summary"] as const,
-    signatures: () => [...queryKeys.dspy.all, "signatures"] as const,
-    prompts: () => [...queryKeys.dspy.all, "prompts"] as const,
-  },
-} as const;
+interface ApiError {
+  response?: { status?: number };
+  message?: string;
+  [key: string]: unknown;
+}
 
 // =============================================================================
 // Conversations Hooks
@@ -97,8 +62,40 @@ export function useConversations(
 ) {
   return useQuery({
     queryKey: queryKeys.conversations.list(),
-    queryFn: conversationsApi.list,
+    queryFn: () => conversationsApi.list(),
     staleTime: 30_000, // 30 seconds
+    ...options,
+  });
+}
+
+/**
+ * Infinite query hook for conversations with pagination support.
+ * Use this for components that need to load conversations in pages.
+ */
+export function useInfiniteConversations(
+  options?: Omit<
+    UseInfiniteQueryOptions<
+      Conversation[],
+      Error,
+      InfiniteData<Conversation[]>,
+      QueryKey,
+      number
+    >,
+    "queryKey" | "queryFn" | "getNextPageParam" | "initialPageParam"
+  >,
+) {
+  return useInfiniteQuery({
+    queryKey: queryKeys.conversations.listInfinite(),
+    queryFn: ({ pageParam = 0 }) =>
+      conversationsApi.list({ limit: 25, offset: pageParam as number }),
+    getNextPageParam: (lastPage, allPages) => {
+      if (lastPage.length < 25) {
+        return undefined;
+      }
+      return allPages.length * 25;
+    },
+    initialPageParam: 0,
+    staleTime: 30_000,
     ...options,
   });
 }
@@ -150,9 +147,38 @@ export function useCreateConversation(
       );
       // Set detail cache
       queryClient.setQueryData(
-        queryKeys.conversations.detail(newConversation.id),
+        queryKeys.conversations.detail(newConversation.conversation_id),
         newConversation,
       );
+    },
+    ...options,
+  });
+}
+
+export function useDeleteConversation(
+  options?: UseMutationOptions<void, Error, string>,
+) {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (id: string) => {
+      await conversationsApi.delete(id);
+    },
+    onSuccess: (_data, deletedId) => {
+      // Remove from list cache
+      queryClient.setQueryData<Conversation[]>(
+        queryKeys.conversations.list(),
+        (old) =>
+          old?.filter((conv) => conv.conversation_id !== deletedId) ?? [],
+      );
+      // Remove detail cache
+      queryClient.removeQueries({
+        queryKey: queryKeys.conversations.detail(deletedId),
+      });
+      // Invalidate list to refetch
+      void queryClient.invalidateQueries({
+        queryKey: queryKeys.conversations.list(),
+      });
     },
     ...options,
   });
@@ -167,7 +193,7 @@ export function useSessions(
 ) {
   return useQuery({
     queryKey: queryKeys.sessions.list(),
-    queryFn: sessionsApi.list,
+    queryFn: () => sessionsApi.list(),
     staleTime: 10_000, // 10 seconds
     ...options,
   });
@@ -222,7 +248,7 @@ export function useAgents(
 ) {
   return useQuery({
     queryKey: queryKeys.agents.list(),
-    queryFn: agentsApi.list,
+    queryFn: () => agentsApi.list(),
     staleTime: 5 * 60_000, // 5 minutes - agents don't change often
     ...options,
   });
@@ -237,7 +263,7 @@ export function useHealthCheck(
 ) {
   return useQuery({
     queryKey: queryKeys.health.check,
-    queryFn: healthApi.check,
+    queryFn: () => healthApi.check(),
     staleTime: 30_000,
     retry: false,
     ...options,
@@ -249,7 +275,7 @@ export function useReadinessCheck(
 ) {
   return useQuery({
     queryKey: queryKeys.health.ready,
-    queryFn: healthApi.ready,
+    queryFn: () => healthApi.ready(),
     staleTime: 10_000,
     retry: false,
     ...options,
@@ -272,7 +298,7 @@ export function useOptimizationRun(
 export function useOptimizationStatus(
   jobId: string | null,
   options?: Omit<
-    UseQueryOptions<OptimizationResult>,
+    UseQueryOptions<OptimizationResult, Error>,
     "queryKey" | "queryFn" | "enabled" | "refetchInterval"
   >,
 ) {
@@ -280,10 +306,36 @@ export function useOptimizationStatus(
     queryKey: queryKeys.optimization.status(jobId ?? ""),
     queryFn: () => optimizationApi.status(jobId!),
     enabled: !!jobId,
+    retry: (failureCount, error) => {
+      // Don't retry on 404 (job not found) - stop polling immediately
+      const apiError = error as unknown as ApiError;
+      if (apiError?.response?.status === 404) {
+        return false;
+      }
+      // Retry other errors up to 2 times
+      return failureCount < 2;
+    },
     refetchInterval: (query) => {
+      // Stop polling if we got a 404 error (job not found)
+      if (query.state.error) {
+        const apiError = query.state.error as unknown as ApiError;
+        if (apiError?.response?.status === 404) {
+          return false;
+        }
+      }
+
       const status = query.state.data?.status;
-      if (!status) return 2000;
-      return status === "started" || status === "running" ? 2000 : false;
+      if (!status) return 5000; // Poll every 5s when no status yet
+
+      // Only poll for active jobs - stop polling for terminal states
+      const isActive =
+        status === "pending" || status === "running" || status === "started";
+      if (isActive) {
+        return 2000; // Poll every 2s for active jobs
+      }
+
+      // Stop polling for completed, failed, cached, or any other terminal state
+      return false;
     },
     ...options,
   });
@@ -304,14 +356,8 @@ export function useEvaluationHistory(
   });
 }
 
-export function useTriggerSelfImprove(
-  options?: UseMutationOptions<SelfImproveResponse, Error, SelfImproveRequest>,
-) {
-  return useMutation({
-    mutationFn: improvementApi.trigger,
-    ...options,
-  });
-}
+// Self-Improvement logic combined with Optimization
+// useTriggerSelfImprove removed in favor of useOptimizationRun
 
 // =============================================================================
 // DSPy Management Hooks
@@ -322,7 +368,7 @@ export function useDSPyConfig(
 ) {
   return useQuery({
     queryKey: queryKeys.dspy.config(),
-    queryFn: dspyApi.getConfig,
+    queryFn: () => dspyApi.getConfig(),
     staleTime: 60_000, // 1 minute
     ...options,
   });
@@ -333,7 +379,7 @@ export function useDSPyStats(
 ) {
   return useQuery({
     queryKey: queryKeys.dspy.stats(),
-    queryFn: dspyApi.getStats,
+    queryFn: () => dspyApi.getStats(),
     staleTime: 10_000, // 10 seconds
     ...options,
   });
@@ -344,7 +390,7 @@ export function useDSPyCacheInfo(
 ) {
   return useQuery({
     queryKey: queryKeys.dspy.cache(),
-    queryFn: dspyApi.getCacheInfo,
+    queryFn: () => dspyApi.getCacheInfo(),
     staleTime: 30_000, // 30 seconds
     ...options,
   });
@@ -355,7 +401,7 @@ export function useReasonerSummary(
 ) {
   return useQuery({
     queryKey: queryKeys.dspy.reasonerSummary(),
-    queryFn: dspyApi.getReasonerSummary,
+    queryFn: () => dspyApi.getReasonerSummary(),
     staleTime: 10_000, // 10 seconds
     ...options,
   });
@@ -366,7 +412,7 @@ export function useDSPySignatures(
 ) {
   return useQuery({
     queryKey: queryKeys.dspy.signatures(),
-    queryFn: dspyApi.getSignatures,
+    queryFn: () => dspyApi.getSignatures(),
     staleTime: 5 * 60_000, // 5 minutes - signatures rarely change
     ...options,
   });
@@ -377,7 +423,7 @@ export function useDSPyPrompts(
 ) {
   return useQuery({
     queryKey: queryKeys.dspy.prompts(),
-    queryFn: dspyApi.getPrompts,
+    queryFn: () => dspyApi.getPrompts(),
     staleTime: 60_000, // 1 minute
     ...options,
   });

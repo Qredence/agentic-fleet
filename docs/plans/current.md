@@ -198,25 +198,54 @@ src/agentic_fleet/utils/
 - Legacy imports continue to work via re-exports in `utils/__init__.py`
 - No breaking changes for existing code
 
-### Files Modified
+---
 
-1. `src/agentic_fleet/utils/__init__.py` - Added re-exports for new subpackages
-2. `src/agentic_fleet/utils/cfg/__init__.py` - New package
-3. `src/agentic_fleet/utils/infra/__init__.py` - New package
-4. `src/agentic_fleet/utils/storage/__init__.py` - New package
-5. All files importing from `utils.config` - Updated to `utils.cfg`
+## Docs Refactor Pass (Top-Level + Index + Tech Stack)
 
-### Test Results
+**Status**: In Progress
+**Date**: 2025-12-22 (started), 2025-12-28 (updated)
 
-- All 499+ tests passing
-- No regressions from restructuring
-- Import compatibility verified
+### Goal
+
+Align top-level docs and navigation with the current repository structure, Makefile workflows, and observability stack.
+
+### Scope
+
+- `README.md` (quick start, run commands, directory structure, config snippets)
+- `docs/INDEX.md` (navigation + setup guidance)
+- `conductor/tech-stack.md` (stack accuracy)
+- `docs/developers/*` (architecture, system overview, contributing, internals)
+- `docs/users/*` (getting started, frontend, user guide, config)
+- `docs/developers/*` (system overview, architecture, contributing, internals)
+- `docs/users/*` (getting started, frontend, user guide, configuration)
+
+### Plan
+
+1. Audit current docs against Makefile targets, repo structure, and config defaults.
+2. Update quick start and run instructions to match `make` targets.
+3. Correct directory structure references to reflect `api/` and `workflows/executors/`.
+4. Normalize observability/metrics references to OpenTelemetry/OTLP.
+5. Refresh developer docs for path/command drift (api/ vs app/, executors/).
+6. Refresh user docs for setup/feature flow and streaming transport (SSE-first).
+7. Validate references against Makefile and streaming routes.
+8. Consolidate tracing documentation into a single source of truth.
+
+### Progress
+
+- Updated README install/run instructions to `make install`, `make frontend-install`, `make dev`.
+- Adjusted README directory structure references and routing model example.
+- Updated docs index setup notes and frontend state management reference.
+- Corrected tech stack metrics/telemetry to OpenTelemetry/OTLP.
+- Updated developer docs (system overview, architecture, internals, contributing) for api/ and executors/ paths.
+- Refreshed user docs (getting started, frontend, user guide) for make-based setup and SSE-first streaming.
+- Normalized config/script paths across docs (`src/agentic_fleet/config/workflow_config.yaml`, `python -m agentic_fleet.scripts.*`).
+- Consolidated tracing guides into `docs/guides/tracing.md` and `docs/guides/tracing-quick-reference.md`.
 
 ---
 
 ## Frontend Restructure Design
 
-**Status**: ✅ Partially Completed
+**Status**: ✅ Mostly Completed
 **Date**: 2025-12-15 (started), 2025-12-17 (updated)
 **Document**: `docs/plans/2025-12-15-frontend-restructure-design.md`
 
@@ -248,14 +277,14 @@ Feature-based structure with:
 - Created `features/dashboard/` with components subdirectory
 - Added barrel exports (`index.ts`) for each feature
 - Migrated chat-related components to feature structure
+- Enabled code splitting with `React.lazy()` (App.tsx)
+- Performance optimization (bundle splitting via lazy loading)
 
 #### ⚠️ Remaining Work
 
 - Add `shared/` directory for reusable components
 - Update path aliases in Vite config
-- Enable code splitting with `React.lazy()`
 - Consolidate duplicate test folders
-- Performance optimization (bundle splitting)
 
 ---
 

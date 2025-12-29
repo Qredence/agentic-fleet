@@ -5,7 +5,7 @@
   "tsx": true,
   "tailwind": {
     "config": "tailwind.config.ts",
-    "css": "src/index.css",
+    "css": "src/app/index.css",
     "baseColor": "neutral",
     "cssVariables": true,
     "prefix": ""
@@ -20,6 +20,9 @@
   },
   "registries": {
     "@prompt-kit": "https://www.prompt-kit.com/c/{name}.json",
-    "@motion-primitives": "https://motion-primitives.com/c/{name}.json"
+    "@motion-primitives": "https://motion-primitives.com/c/{name}.json",
+    "@blocks": "https://blocks.so/r/{name}.json",
+    "@pureui": "https://pure.kam-ui.com/r/{name}.json",
+    "@ai-elements": "https://registry.ai-sdk.dev/{name}.json"
   }
 }

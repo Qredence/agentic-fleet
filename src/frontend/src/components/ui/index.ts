@@ -1,6 +1,7 @@
 // shadcn/ui primitives - barrel export
 export { Avatar, AvatarFallback, AvatarImage } from "./avatar";
-export { Button, buttonVariants } from "./button";
+export { Button } from "./button";
+export { buttonVariants } from "./button-variants";
 export { Badge, badgeVariants } from "./badge";
 export {
   Card,
@@ -48,12 +49,24 @@ export {
   SidebarContent,
   SidebarFooter,
   SidebarGroup,
+  SidebarGroupAction,
+  SidebarGroupContent,
   SidebarGroupLabel,
   SidebarHeader,
+  SidebarInput,
   SidebarInset,
   SidebarMenu,
+  SidebarMenuAction,
+  SidebarMenuBadge,
   SidebarMenuButton,
+  SidebarMenuItem,
+  SidebarMenuSkeleton,
+  SidebarMenuSub,
+  SidebarMenuSubButton,
+  SidebarMenuSubItem,
   SidebarProvider,
+  SidebarRail,
+  SidebarSeparator,
   SidebarTrigger,
 } from "./sidebar";
 export { Skeleton } from "./skeleton";
@@ -65,3 +78,18 @@ export {
   TooltipProvider,
   TooltipTrigger,
 } from "./tooltip";
+export {
+  Toast,
+  ToastAction,
+  ToastClose,
+  ToastTitle,
+  ToastDescription,
+  ToastComponent,
+  type ToastProps,
+} from "./toast";
+export { Toaster, type ToastVariant, type ToastData } from "./toaster";
+
+// prompt-kit components
+export { Reasoning, ReasoningTrigger, ReasoningContent } from "./reasoning";
+export { Markdown as PromptKitMarkdown } from "./markdown";
+export { ResponseStream } from "./response-stream";

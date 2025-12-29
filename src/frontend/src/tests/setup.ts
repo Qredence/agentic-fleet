@@ -1,7 +1,68 @@
-import "@testing-library/jest-dom";
+import "@testing-library/jest-dom/vitest";
+import React from "react";
 import { afterAll, beforeAll, vi } from "vitest";
+import type { ReactNode } from "react";
+
+// Types for Virtuoso mock
+interface VirtuosoMockProps {
+  data?: unknown[];
+  itemContent: (index: number, data: unknown) => ReactNode;
+  className?: string;
+}
+
+// Mock react-virtuoso to render items synchronously in tests so queries can find content
+// The real Virtuoso relies on browser measurement APIs which are flaky in jsdom.
+vi.mock("react-virtuoso", () => {
+  const Virtuoso = ({ data, itemContent, className }: VirtuosoMockProps) => {
+    return (
+      // Render a simple container with items expanded so tests can query text
+      React.createElement(
+        "div",
+        { className },
+        data?.map((d: unknown, i: number) =>
+          React.createElement(
+            "div",
+            { key: i, "data-testid": `virtuoso-item-${i}` },
+            itemContent(i, d),
+          ),
+        ),
+      )
+    );
+  };
+
+  return { Virtuoso };
+});
 
 // Polyfill for browser APIs that don't exist in jsdom but don't need mocking
+
+// localStorage/sessionStorage mock for jsdom
+// Many components (chatStore, ThemeContext) depend on storage APIs
+const createStorageMock = () => {
+  const store = new Map<string, string>();
+  return {
+    getItem: (key: string) => store.get(key) ?? null,
+    setItem: (key: string, value: string) => store.set(key, value),
+    removeItem: (key: string) => store.delete(key),
+    clear: () => store.clear(),
+    get length() {
+      return store.size;
+    },
+    key: (index: number) => {
+      const keys = Array.from(store.keys());
+      return keys[index] ?? null;
+    },
+  };
+};
+
+Object.defineProperty(window, "localStorage", {
+  value: createStorageMock(),
+  writable: true,
+});
+
+Object.defineProperty(window, "sessionStorage", {
+  value: createStorageMock(),
+  writable: true,
+});
 
 // ResizeObserver polyfill for DOM tests
 globalThis.ResizeObserver =

@@ -43,7 +43,6 @@ function ChatContainerContent({
   return (
     <StickToBottom.Content
       className={cn("flex w-full flex-col", className)}
-      style={{ backgroundColor: "var(--color-surface)" }}
       {...props}
     >
       {children}

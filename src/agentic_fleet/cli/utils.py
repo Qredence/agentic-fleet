@@ -27,7 +27,7 @@ def init_tracing() -> dict[str, Any]:
     except Exception as exc:
         logger.debug(f"MLflow autologging not enabled: {exc}")
     try:
-        from ..utils.tracing import initialize_tracing
+        from agentic_fleet.utils.infra.tracing import initialize_tracing
 
         initialize_tracing(cfg)
     except Exception as exc:  # pragma: no cover - tracing optional

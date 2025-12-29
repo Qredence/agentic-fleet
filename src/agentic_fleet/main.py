@@ -19,8 +19,8 @@ from agentic_fleet.api.lifespan import lifespan
 from agentic_fleet.api.main import api_router
 from agentic_fleet.api.middleware import RequestIDMiddleware
 from agentic_fleet.api.routes import chat as chat_routes
-from agentic_fleet.core.settings import get_settings
-from agentic_fleet.utils.tracing import initialize_tracing
+from agentic_fleet.utils.cfg.settings import get_settings
+from agentic_fleet.utils.infra.tracing import initialize_tracing
 
 
 def _configure_logging() -> None:
