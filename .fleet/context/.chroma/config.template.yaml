@@ -1,0 +1,12 @@
+# Chroma Configuration
+# Copy this to config.yaml and fill in your values
+
+collections:
+  semantic: agentic-fleet-semantic
+  procedural: agentic-fleet-procedural
+  episodic: agentic-fleet-episodic
+
+cloud:
+  tenant: "default_tenant"
+  database: "default_database"
+  api_key: "your-api-key-here"

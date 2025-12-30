@@ -1,0 +1,22 @@
+# Fleet Agent - Context-Aware Development Assistant
+# Reference: .fleet/context/system/fleet-agent/SKILL.md
+
+## Description
+Context-aware development assistant for AgenticFleet with auto-learning and dual memory (NeonDB + ChromaDB).
+
+## Usage
+```
+@fleet-agent learn --name <name> --category <cat> --content <code>
+@fleet-agent recall <query>
+@fleet-agent context <task>
+@fleet-agent analyze <file>
+@fleet-agent session start|status|summary <text>
+```
+
+## Implementation
+Main: `.fleet/context/scripts/fleet_agent.py`
+Command: `uv run python .fleet/context/scripts/fleet_agent.py <command>`
+
+## See Also
+- `.fleet/context/system/fleet-agent/SKILL.md` (main skill definition)
+- `.fleet/context/scripts/fleet_agent.py` (implementation)

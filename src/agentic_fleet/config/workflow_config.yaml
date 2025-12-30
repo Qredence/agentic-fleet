@@ -259,6 +259,20 @@ agents:
       - file_generation
       - data_analysis
 
+  documentation:
+    model: gpt-5-mini
+    tools: []
+    temperature: 0.5
+    instructions: prompts.documentation
+    enable_dspy: true
+    cache_ttl: 600
+    timeout: 60
+    description: "Creates documentation, README files, code comments, and technical guides"
+    capabilities:
+      - documentation
+      - readme_generation
+      - code_comments
+
 # Microsoft Foundry Hosted Agent - Code Interpreter
 # This agent is hosted on Microsoft Foundry with Code Interpreter enabled in the portal
 # FinancialAnalyst:
