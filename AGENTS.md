@@ -5,7 +5,7 @@ This repo is bootstrapping the `agentic_fleet` v2.0 architecture (Microsoft Agen
 
 ## Repo layout
 - `agentic-fleet/` contains the Python package and its source tree.
-- `agentic-fleet/src/agentic_fleet/` is the package root.
+- `src/agentic_fleet/` is the package root.
 
 ## Commands
 - Tests: `uv run python tests/verify_phase_2.py`, `uv run python tests/verify_phase_3.py`, `uv run python tests/verify_phase_5.py`.
@@ -14,7 +14,7 @@ This repo is bootstrapping the `agentic_fleet` v2.0 architecture (Microsoft Agen
 
 ## Conventions
 - Use `uv` for Python env/deps and for running commands (`uv run ...`).
-- Keep all source under `agentic-fleet/src/agentic_fleet/`.
+- Keep all source under `src/agentic_fleet/`.
 - Update `PLANS.md` when making multi-step changes.
 - Database: SQLModel sync engine, initialized on startup; configure `DATABASE_URL` in `.env`.
 - DSPy state: set `FLEET_STATE_DIR` to control where optimized planner JSON is stored (default `.context/state`).

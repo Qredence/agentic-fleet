@@ -11,7 +11,7 @@ Establish the type-safe DSPy cognitive layer (Pydantic models, signatures, valid
 - Provide minimal `pyproject.toml` and `README.md` scaffolding.
 
 ### Plan
-1. Scaffold the `agentic-fleet/src/agentic_fleet/` directory tree and placeholder files.
+1. Scaffold the `src/agentic_fleet/` directory tree and placeholder files.
 2. Implement Pydantic models and DSPy signatures in `signatures.py`.
 3. Add Pydantic validators in `validation.py` and team registry in `config.py`.
 4. Sanity check imports/type hints and document next steps.

@@ -75,7 +75,7 @@ uv run python tests/verify_phase_5.py
 ## 📂 Project Structure
 
 ```text
-agentic-fleet/
+.
 ├── src/agentic_fleet/
 │   ├── agents/          # Agent Framework implementations (Router, BaseAgent)
 │   ├── dspy_modules/    # DSPy signatures, modules, and validators
