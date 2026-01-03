@@ -1,0 +1,14 @@
+.venv/
+__pycache__/
+*.pyc
+.context/
+var/
+*.db
+
+# IDE and Junie
+.idea/
+.junie/
+.pytest_cache/
+
+# Generated DSPy artifacts
+planner_opt.json

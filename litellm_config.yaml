@@ -1,0 +1,89 @@
+model_list:
+  # --- 🧠 TIER 1: The "Planner" & "Router" Models (High Intelligence) ---
+model_list:
+  # Vertex AI Models
+  - model_name: gemini-3-flash-preview
+    litellm_params:
+      model: vertex_ai/gemini-3-flash-preview
+      vertex_project: os.environ/GOOGLE_CLOUD_PROJECT
+      vertex_location: os.environ/VERTEX_LOCATION
+      rpm: 6
+  - model_name: kimi-k2-thinking-maas
+    litellm_params:
+      model: vertex_ai/moonshotai/kimi-k2-thinking-maas
+      vertex_project: os.environ/GOOGLE_CLOUD_PROJECT
+      vertex_location: os.environ/VERTEX_LOCATION
+  - model_name: deepseek-v3.2-maas
+    litellm_params:
+      model: vertex_ai/deepseek-ai/deepseek-v3.2-maas
+      vertex_project: os.environ/GOOGLE_CLOUD_PROJECT
+      vertex_location: os.environ/VERTEX_LOCATION
+
+
+
+  # Deepinfra (DeepSeek)
+  - model_name: deepseek-v3.2
+    litellm_params:
+      model: deepinfra/deepseek-ai/deepseek-v3.2
+      api_key: os.environ/DEEPINFRA_API_KEY
+
+  # NVIDIA NIM
+  - model_name: nvidia/nemotron-3-nano-30b-a3b
+    litellm_params:
+      model: nvidia_nim/nvidia/nemotron-3-nano-30b-a3b
+      api_key: os.environ/DEEPINFRA_API_KEY
+
+  # GitHub Models
+  - model_name: github-gpt-5-mini
+    litellm_params:
+      model: github/gpt-5-mini
+      api_key: secret_manager/github-token
+
+
+
+  # Alias: qwen-thinking -> Vertex AI Qwen3 Next 80B Thinking
+  - model_name: qwen-thinking
+    litellm_params:
+      model: vertex_ai/qwen/qwen3-next-80b-a3b-thinking-maas
+
+  # Alias: gemini-3-pro -> Vertex AI Gemini 3 Pro
+  - model_name: gemini-3-pro
+    litellm_params:
+      model: vertex_ai/gemini-3-pro-preview
+
+  # --- ⚡ TIER 2: The "Worker" Models (Fast Execution) ---
+
+  # Alias: nemotron-30b -> DeepInfra Nvidia Nemotron 30B
+  - model_name: nemotron-30b
+    litellm_params:
+      model: deepinfra/nvidia/Nemotron-3-Nano-30B-A3B
+
+  # Alias: gemini-3-flash -> Gemini 3 Flash Preview
+  - model_name: gemini-3-flash
+    litellm_params:
+      model: gemini-3-flash-preview
+
+  # Google AI API Models (using GOOGLE_API_KEY from .env)
+  - model_name: gemini-3-pro-preview
+    litellm_params:
+      model: gemini-3-pro-preview
+      provider: google
+      api_key: os.environ/GOOGLE_API_KEY
+
+  - model_name: gemini-3-flash-preview
+    litellm_params:
+      model: gemini-3-flash-preview
+      provider: google
+      api_key: os.environ/GOOGLE_API_KEY
+
+  # --- 🔍 TIER 3: Specialized Analysis ---
+
+  # Alias: kimi-k2 -> Vertex AI Kimi k2 Thinking
+  - model_name: kimi-k2
+    litellm_params:
+      model: vertex_ai/moonshotai/kimi-k2-thinking-maas
+
+general_settings:
+  # The proxy will look for this key in its database/env
+  # We don't hardcode the master key here if using DB, but we define settings.
+  alerting: ["slack"]

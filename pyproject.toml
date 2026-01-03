@@ -1,0 +1,48 @@
+[build-system]
+requires = ["hatchling>=1.25.0"]
+build-backend = "hatchling.build"
+
+[project]
+name = "agentic-fleet"
+version = "0.1.0"
+description = "Agentic Fleet v2.0 (Microsoft Agent Framework + DSPy)"
+readme = "README.md"
+requires-python = ">=3.13.9"
+dependencies = [
+    "agent-framework>=1.0.0b251223",
+    "anthropic>=0.75.0",
+    "asyncer>=0.0.7",
+    "asyncpg>=0.29.0",
+    "azure-functions>=1.19.0",
+    "azure-identity>=1.16.0",
+    "azure-monitor-opentelemetry>=1.0.0",
+    "dspy-ai>=3.0.0",
+    "fastapi>=0.110.0",
+    "google-genai>=1.0.0",
+    "langfuse>=2.30.0",
+    "litellm[proxy]>=1.40.0",
+    "openai>=1.30.0",
+    "opentelemetry-api>=1.24.0",
+    "opentelemetry-instrumentation-fastapi>=0.45.0",
+    "psycopg2-binary>=2.9.11",
+    "pydantic>=2.7.0",
+    "pydantic-settings>=2.2.0",
+    "python-dotenv>=1.2.1",
+    "redis>=5.0.0",
+    "sqlalchemy>=2.0.30",
+    "sqlmodel>=0.0.22",
+    "uvicorn[standard]>=0.29.0",
+    "websockets>=12.0",
+]
+
+[tool.hatch.build.targets.wheel]
+packages = ["agentic_fleet"]
+
+[dependency-groups]
+dev = [
+    "pytest>=9.0.2",
+    "pytest-asyncio>=1.3.0",
+]
+
+[tool.hatch.build]
+package-dir = {"" = "src"}
