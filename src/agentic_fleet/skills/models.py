@@ -137,7 +137,7 @@ class SkillMemoryIndex(BaseModel):
 class SkillMetadata(BaseModel):
     """Metadata extracted from SKILL.md YAML frontmatter."""
 
-    model_config = ConfigDict(extra="forbid")
+    model_config = ConfigDict(extra="allow")
 
     skill_id: str = Field(..., description="Unique identifier for the skill")
     name: str = Field(..., description="Human-readable skill name")
@@ -179,7 +179,7 @@ class SkillContent(BaseModel):
 class Skill(BaseModel):
     """Complete skill representation combining metadata and content."""
 
-    model_config = ConfigDict(extra="forbid")
+    model_config = ConfigDict(extra="allow")
 
     metadata: SkillMetadata
     content: SkillContent
