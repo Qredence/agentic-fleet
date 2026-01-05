@@ -62,7 +62,7 @@ jobs:
 
       - name: Auto-commit fixes
         if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-        uses: stefanzweifel/git-auto-commit-action@8621497c8c39c72f3e2a999a26b4ca1b5058a842 # v5
+        uses: stefanzweifel/git-auto-commit-action@04702edda442b2e678b25b537cec683a1493fcb9 # v5
         with:
           commit_message: "style: auto-fix lint and formatting issues [skip ci]"
           commit_user_name: "github-actions[bot]"
