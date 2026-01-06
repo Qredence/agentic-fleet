@@ -35,9 +35,7 @@ if TYPE_CHECKING:
         validate_agentic_fleet_env,
     )
     from agentic_fleet.utils.compiler import compile_reasoner
-    from agentic_fleet.utils.infra.tracing import get_meter, get_tracer, initialize_tracing
-    from agentic_fleet.utils.models import ExecutionMode, RoutingDecision
-    from agentic_fleet.utils.profiling import (
+    from agentic_fleet.utils.infra.profiling import (
         PerformanceTracker,
         get_performance_stats,
         log_performance_summary,
@@ -46,6 +44,8 @@ if TYPE_CHECKING:
         timed_operation,
         track_operation,
     )
+    from agentic_fleet.utils.infra.tracing import get_meter, get_tracer, initialize_tracing
+    from agentic_fleet.utils.models import ExecutionMode, RoutingDecision
     from agentic_fleet.utils.tool_registry import ToolMetadata, ToolRegistry
     from agentic_fleet.utils.ttl_cache import TTLCache, cache_agent_response
 
@@ -147,7 +147,7 @@ def __getattr__(name: str) -> object:
         "log_performance_summary",
         "reset_performance_stats",
     ):
-        from agentic_fleet.utils.profiling import (
+        from agentic_fleet.utils.infra.profiling import (
             PerformanceTracker,
             get_performance_stats,
             log_performance_summary,
