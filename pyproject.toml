@@ -29,7 +29,6 @@ dependencies = [
     "agent-framework-core==1.0.0b251223",
     "agent-framework-azure-ai==1.0.0b251223",
     "agent-framework-azure-ai-search==1.0.0b251223",
-
     # ── Azure SDK ─────────────────────────────────────────────────────────────
     "azure-ai-agents==1.2.0b5",
     "azure-ai-evaluation>=1.12.0,<2.0",
@@ -37,7 +36,6 @@ dependencies = [
     "azure-cosmos==4.14.3",
     "azure-identity>=1.25.1,<2.0",
     "azure-search-documents>=11.6.0",
-
     # ── Observability & Tracing ───────────────────────────────────────────────
     "azure-monitor-opentelemetry>=1.8.3",
     "azure-monitor-opentelemetry-exporter>=1.0.0b46",
@@ -47,53 +45,46 @@ dependencies = [
     "langfuse>=3.11.2,<4.0",
     "prometheus-client>=0.16.0",
     "prometheus-fastapi-instrumentator>=6.1.0",
-
     # ── Web Framework ─────────────────────────────────────────────────────────
     "fastapi[standard]>=0.120.1,<1.0",
     "uvicorn[standard]>=0.24.0",
     "httpx>=0.24.0",
     "aiohttp>=3.9.0",
     "websockets>=10.4",
-
     # ── Database & Storage ────────────────────────────────────────────────────
     "databases[asyncpg]>=0.7.0,<1.0",
     "aiosqlite>=0.20.0",
     "sqlalchemy>=2.0.44",
     "psycopg2-binary>=2.9.11",
     "chromadb>=1.4.0",
-
     # ── DSPy & AI ─────────────────────────────────────────────────────────────
-    "dspy>=3.1.0b1",
+    "dspy>=3.0.4",
     "gepa[dspy]>=0.0.17,<1.0",
     "openai>=2.5.1",
-    "litellm>=1.70.0",
+    "litellm>=1.7.3,<2.0",
     "tiktoken>=0.12.0,<1.0",
     "tavily-python>=0.7.12",
     "mlflow>=3.8.1",
     "mcp>=1.21.0",
     "playwright>=1.40.0",
-
     # ── Data & Validation ─────────────────────────────────────────────────────
     "pydantic>=2.12.5,<3.0",
     "pydantic-settings>=2.3.2,<3.0",
     "pyyaml>=6.0.3,<7.0",
     "python-dotenv>=1.2.1,<2.0",
     "python-json-logger>=2.0.7",
-
     # ── CLI & TUI ─────────────────────────────────────────────────────────────
     "typer>=0.21.0,<0.22.0",
     "rich>=14.2.0",
     "prompt-toolkit>=3.0.47,<4.0",
     "textual>=6.5.0",
     "click>=8.1.0",
-
     # ── Async & Concurrency ───────────────────────────────────────────────────
     "anyio>=4.11.0,<5.0",
     "asyncer>=0.0.8,<1.0",
     "aiofiles>=25.1.0,<26.0",
     "tenacity>=8.2.3",
     "aiomqtt>=1.0.0",
-
     # ── Serialization & Utilities ─────────────────────────────────────────────
     "dill>=0.3.8",
     "requests>=2.28.0",
@@ -101,7 +92,6 @@ dependencies = [
     "statsd>=3.3.0",
     "pytz>=2024.1",
     "setuptools>=80.9.0",
-
     # ── Data Science (consider moving to [viz] extra) ─────────────────────────
     "pandas>=1.5.0",
     "numpy>=2.4.0",
@@ -109,7 +99,6 @@ dependencies = [
     "matplotlib>=3.6.0",
     "seaborn>=0.11.0",
     "plotly>=5.10.0",
-
     # ── Jupyter ───────────────────────────────────────────────────────────────
     "ipykernel>=7.0.1,<8.0",
 ]

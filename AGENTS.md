@@ -432,6 +432,91 @@ Deploys: App Service, Cosmos DB, Azure OpenAI, Key Vault, and supporting resourc
 4. `src/agentic_fleet/dspy_modules/reasoner.py` — DSPy module manager
 5. `src/agentic_fleet/api/events/mapping.py` — Event routing (maps workflow events → UI)
 
+## Git Hooks
+
+Enhanced git hooks enforce quality standards and automation:
+
+### Available Hooks
+
+| Hook                 | Purpose                                       | Command to install   |
+| -------------------- | --------------------------------------------- | -------------------- |
+| `pre-commit`         | Run linting, type checking, config validation | `make hooks-install` |
+| `pre-push`           | Prevent committing .var/ files, run tests     | `make hooks-install` |
+| `prepare-commit-msg` | Auto-prefix commits with scope                | `make hooks-install` |
+| `post-checkout`      | Sync dependencies on branch switch            | `make hooks-install` |
+
+### Installation
+
+```bash
+# Install all hooks (pre-commit framework + enhanced hooks)
+make setup-hooks
+
+# Install enhanced hooks only
+make hooks-install
+
+# Update hooks to latest version
+make hooks-update
+
+# Remove enhanced hooks
+make hooks-uninstall
+```
+
+### What Hooks Do
+
+1. **Pre-commit Hook**:
+   - Validates `.env` file (prevents empty API keys)
+   - Checks `workflow_config.yaml` syntax
+   - Warns about DSPy compilation issues
+   - Prevents committing `.var/` directory files
+   - Runs `make check` for quick quality validation
+
+2. **Pre-push Hook**:
+   - Validates Git LFS configuration
+   - Prevents pushing `.var/` files
+   - Prevents pushing compiled DSPy cache (`.pkl`)
+   - Checks workflow config structure
+   - Optionally runs fast tests
+
+3. **Prepare-commit-msg Hook**:
+   - Auto-prefixes commits with scope (`backend:`, `frontend:`, `dspy:`, etc.)
+   - Suggests emoji based on changed files
+   - Maintains conventional commit format
+
+4. **Post-checkout Hook**:
+   - Detects dependency changes (`uv.lock`, `package.json`)
+   - Offers to sync dependencies automatically
+   - Detects DSPy signature changes
+   - Offers to clear DSPy cache
+   - Shows helpful next steps after checkout
+
+### Factory Hooks Configuration
+
+Factory hooks provide AI-assisted automation for common development tasks. Configuration in `.factory/hooks.yaml`:
+
+```yaml
+hooks:
+  - name: validate-config
+    description: Validate workflow config before changes
+    trigger: before-file-change
+    pattern: src/agentic_fleet/config/workflow_config.yaml
+    command: make test-config
+
+  - name: clear-dspy-cache
+    description: Clear DSPy cache when signatures change
+    trigger: after-file-change
+    pattern: src/agentic_fleet/dspy_modules/signatures.py
+    command: make clear-cache
+
+  - name: validate-imports
+    description: Validate Python imports
+    trigger: before-file-change
+    pattern: "**/*.py"
+    exclude: "**/tests/**"
+    command: uv run ruff check --select=I --fix .
+```
+
+See `.factory/hooks.yaml` for complete configuration.
+
 ## Additional Resources
 
 - **DSPy Documentation**: https://dspy.ai

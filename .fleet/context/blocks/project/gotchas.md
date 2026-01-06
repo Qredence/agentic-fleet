@@ -3,7 +3,7 @@ label: project-gotchas
 description: Footguns, common pitfalls, and things to watch out for. Learn from past mistakes.
 limit: 4000
 scope: project
-updated: 2024-12-29
+updated: 2024-12-30
 ---
 
 # Project Gotchas
@@ -76,3 +76,45 @@ npx playwright install chromium
 2. **Don't use `pip` directly** - Always use `uv`
 3. **Don't skip type hints** - Required for public APIs
 4. **Don't hardcode paths** - Use config or environment variables
+
+## Git Hygiene
+
+### Files Tracked Despite Gitignore
+
+**Problem**: Files committed before being added to `.gitignore` remain tracked.
+**Solution**: Untrack without deleting locally:
+
+```bash
+git rm --cached -r <path>
+```
+
+### Gitignored Directories That Accumulate
+
+These directories are gitignored but may accumulate locally:
+
+| Directory               | Purpose                    | Safe to Delete |
+| ----------------------- | -------------------------- | -------------- |
+| `.data/`                | Legacy cache (use `.var/`) | Yes            |
+| `.factory/`             | AI tool artifacts          | Yes            |
+| `.junie/`               | JetBrains AI tool          | Yes            |
+| `.kilocode/`            | AI tool                    | Yes            |
+| `.letta/`               | Memory tool config         | Check first    |
+| `.idea/`                | JetBrains IDE settings     | Yes            |
+| `report/`               | Generated reports (jscpd)  | Yes            |
+| `.github/aw/logs/run-*` | Agentic Workflow run logs  | Yes            |
+
+### GitHub Agentic Workflows Logs
+
+**Best Practice**: The `.github/aw/logs/` directory uses a pattern to ignore logs but preserve the `.gitignore`:
+
+```gitignore
+# .github/aw/logs/.gitignore
+*
+!.gitignore
+```
+
+To clean up accumulated run logs:
+
+```bash
+rm -rf .github/aw/logs/run-*
+```

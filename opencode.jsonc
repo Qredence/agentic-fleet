@@ -12,6 +12,9 @@
     },
     "instructions": [
         ".fleet/context/core/*.md",
-        ".fleet/context/SKILL.md"
+        ".fleet/context/SKILL.md",
+        ".claude/skills/initiate_memory/*.md",
+        ".claude/skills/feature-dev/agents/*.md"
+
     ]
 }

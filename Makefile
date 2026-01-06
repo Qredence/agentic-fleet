@@ -73,7 +73,11 @@ help:
 	@echo "$(GREEN)Utilities:$(NC)"
 	@echo "  clean             Remove cache and build artifacts"
 	@echo "  version           Show current version"
-	@echo "  pre-commit-install  Install git pre-commit hooks"
+	@echo "  pre-commit-install Install git pre-commit hooks"
+	@echo "  hooks-install     Install enhanced git hooks"
+	@echo "  hooks-uninstall   Remove enhanced git hooks"
+	@echo "  hooks-update      Update enhanced git hooks"
+	@echo "  setup-hooks       Install all hooks (pre-commit + enhanced)"
 	@echo ""
 
 # ============================================================================
@@ -86,7 +90,7 @@ install:
 	@echo ""
 	@echo "Next: Run 'make frontend-install' to install frontend dependencies"
 
-dev-setup: install frontend-install pre-commit-install init-var
+dev-setup: install frontend-install setup-hooks init-var
 	@echo ""
 	@echo "$(GREEN)✓ Development environment setup complete$(NC)"
 	@echo ""
@@ -203,6 +207,36 @@ qa: format lint type-check frontend-lint frontend-format test-fast test-frontend
 pre-commit-install:
 	uv run pre-commit install
 	@echo "$(GREEN)✓ Pre-commit hooks installed$(NC)"
+
+# ============================================================================
+# Hooks Commands
+# ============================================================================
+hooks-install:
+	@echo "$(CYAN)Installing enhanced git hooks...$(NC)"
+	@chmod +x .githooks/*
+	@cp .githooks/pre-commit .git/hooks/ 2>/dev/null || true
+	@cp .githooks/pre-push .git/hooks/ 2>/dev/null || true
+	@cp .githooks/prepare-commit-msg .git/hooks/ 2>/dev/null || true
+	@cp .githooks/post-checkout .git/hooks/ 2>/dev/null || true
+	@echo "$(GREEN)✓ Enhanced git hooks installed$(NC)"
+	@echo "  Available hooks:"
+	@echo "  • pre-commit        - Quality checks before commit"
+	@echo "  • pre-push          - Validation before push"
+	@echo "  • prepare-commit-msg - Auto-prefix commits"
+	@echo "  • post-checkout     - Dependency sync on branch switch"
+
+hooks-uninstall:
+	@echo "$(CYAN)Removing enhanced git hooks...$(NC)"
+	@rm -f .git/hooks/pre-commit .git/hooks/pre-push \
+		.git/hooks/prepare-commit-msg .git/hooks/post-checkout
+	@echo "$(GREEN)✓ Enhanced git hooks removed$(NC)"
+
+hooks-update:
+	$(MAKE) hooks-uninstall
+	$(MAKE) hooks-install
+
+setup-hooks: pre-commit-install hooks-install
+	@echo "$(GREEN)✓ All hooks setup complete$(NC)"
 
 # ============================================================================
 # DSPy & Optimization Commands

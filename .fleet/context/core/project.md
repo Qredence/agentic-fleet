@@ -1,218 +1,152 @@
 # Project Context: AgenticFleet
 
-## Architecture Overview
+## Overview
 
-AgenticFleet is a production-ready **multi-agent orchestration system** combining DSPy + Microsoft Agent Framework. It automatically routes tasks to specialized AI agents through a **5-phase pipeline** (Analysis → Routing → Execution → Progress → Quality).
+**AgenticFleet** is a production-ready multi-agent orchestration system combining DSPy + Microsoft Agent Framework. It automatically routes tasks to specialized AI agents through a **5-phase pipeline** (Analysis → Routing → Execution → Progress → Quality).
 
-### Layered Architecture
+| Attribute       | Value                             |
+| --------------- | --------------------------------- |
+| Version         | 0.6.98                            |
+| Python          | 3.12+ / 3.13                      |
+| License         | MIT                               |
+| Package Manager | uv (Python), npm (Frontend)       |
+| Repository      | github.com/Qredence/agentic-fleet |
+
+## Architecture
+
+### Layered Structure
 
 ```
 src/agentic_fleet/
-├── api/              # FastAPI web layer (routes, middleware, deps)
+├── api/              # FastAPI web layer
 │   ├── api_v1/       # Versioned API
 │   ├── events/       # Event mapping (workflow → UI)
-│   └── routes/       # Route handlers (chat, workflow, nlu, dspy)
-├── services/         # Async business logic (chat, workflow, optimization)
+│   └── routes/       # Route handlers (chat, workflow, nlu, dspy, observability)
+├── services/         # Async business logic
+│   ├── chat_sse.py / chat_websocket.py  # Real-time streaming
+│   ├── optimization_service.py          # GEPA optimization jobs
+│   └── dspy_service.py                   # DSPy program management
 ├── workflows/        # 5-phase orchestration pipeline
-│   ├── supervisor.py # Main entry point with fast-path detection
-│   ├── executors/    # Phase executors (Analysis, Routing, Execution, Progress, Quality)
-│   ├── strategies/   # Execution modes (delegated/sequential/parallel/handoff/discussion)
-│   └── helpers/      # Utilities (is_simple_task, context management)
+│   ├── supervisor.py # Main entry point (1520 lines)
+│   ├── executors/    # Phase executors
+│   ├── strategies/   # Execution modes (delegated/sequential/parallel/discussion)
+│   └── helpers/      # Fast-path, routing, quality utilities
 ├── dspy_modules/     # DSPy intelligence layer
 │   ├── reasoner.py   # DSPyReasoner (orchestrates all DSPy modules)
-│   ├── signatures.py # Typed signatures (TaskAnalysis, TaskRouting, QualityAssessment)
-│   ├── typed_models.py # Pydantic output models for structured outputs
-│   ├── assertions.py # DSPy Assert/Suggest for routing validation
-│   ├── reasoner_modules.py # Module management and initialization
-│   └── gepa/         # GEPA optimization (automatic prompt tuning)
+│   ├── signatures.py # Typed signatures with Pydantic outputs
+│   ├── typed_models.py # Pydantic output models
+│   └── gepa/         # GEPA optimization
 ├── agents/           # Microsoft Agent Framework integration
-│   ├── coordinator.py # AgentFactory (creates ChatAgent from YAML config)
-│   ├── base.py       # DSPyEnhancedAgent (wraps ChatAgent with DSPy reasoning)
-│   └── prompts.py    # Static agent prompts
+│   ├── coordinator.py # AgentFactory (creates ChatAgent from YAML)
+│   └── base.py       # DSPyEnhancedAgent wrapper
 ├── tools/            # Tool adapters
-│   ├── tavily_tool.py    # Web search
-│   ├── hosted_code_adapter.py # Code interpreter
-│   ├── mcp_adapter.py     # MCP tools
-│   └── base.py           # SchemaToolMixin, ToolProtocol
+│   ├── tavily_tool.py, browser_tool.py, mcp_tools.py
+│   └── hosted_code_adapter.py
 ├── models/           # Shared Pydantic schemas
 ├── config/           # workflow_config.yaml (source of truth)
-├── data/             # Training data (golden_dataset.json, supervisor_examples.json)
-├── utils/            # Organized into subpackages
-│   ├── cfg/          # Configuration loading
-│   ├── infra/        # Tracing, resilience, telemetry, logging
-│   └── storage/      # Cosmos DB, history, persistence
-└── cli/              # Typer CLI commands
+├── cli/              # Typer CLI (agentic-fleet command)
+└── utils/            # Infrastructure (cfg/, infra/, storage/)
+```
+
+### Frontend Structure
+
+```
+src/frontend/src/
+├── api/              # React Query + HTTP/WebSocket clients
+├── features/         # Feature modules (chat, dashboard, layout, workflow)
+├── components/       # Reusable UI (ui/ for shadcn primitives)
+├── hooks/            # Custom React hooks
+├── lib/              # Utility functions
+└── tests/            # Vitest + React Testing Library
 ```
 
 ## Five-Phase Pipeline
 
-Every task flows through intelligent orchestration:
-
-1. **Analysis** (`AnalysisExecutor`): DSPy extracts task complexity (low/medium/high), required capabilities, and tool recommendations
+1. **Analysis** (`AnalysisExecutor`): DSPy extracts task complexity, required capabilities, tool recommendations
 2. **Routing** (`RoutingExecutor`): Selects agents, execution mode, creates subtasks, generates tool plan
-3. **Execution** (`ExecutionExecutor`): Runs agents via strategies (delegated/sequential/parallel/handoff/discussion)
+3. **Execution** (`ExecutionExecutor`): Runs agents via strategies (parallel/sequential/delegated)
 4. **Progress** (`ProgressEvaluator`): Evaluates completion status, decides if refinement needed
 5. **Quality** (`QualityExecutor`): Scores output 0-10, identifies gaps, suggests improvements
 
-**Fast-Path**: Simple queries (greetings, math, factual) bypass pipeline via `is_simple_task()` check in `supervisor.py` (<1s response). Disabled on follow-up turns to preserve history.
+**Fast-Path**: Simple queries bypass pipeline via `is_simple_task()` check (<1s response). Disabled on follow-up turns.
+
+## Agent Configuration
+
+Agents defined in `workflow_config.yaml`:
+
+| Agent              | Model         | Tools                                    | Purpose                                   |
+| ------------------ | ------------- | ---------------------------------------- | ----------------------------------------- |
+| researcher         | gpt-4.1-mini  | TavilySearchTool                         | Web research                              |
+| analyst            | gpt-5.1-codex | HostedCodeInterpreterTool                | Data analysis                             |
+| writer             | gpt-5.1-chat  | -                                        | Content creation                          |
+| planner            | gpt-5-mini    | -                                        | Task orchestration (DSPy dynamic prompts) |
+| coder              | gpt-5-mini    | HostedCodeInterpreterTool                | Code generation                           |
+| copilot_researcher | gpt-5-mini    | PackageSearch, Context7, Tavily, Browser | Enhanced research                         |
+| documentation      | gpt-5-mini    | -                                        | Documentation generation                  |
 
 ## DSPy Integration
 
-### Typed Signatures with Pydantic (v0.6.9+)
+### Typed Signatures (Pydantic)
 
-All DSPy signatures use Pydantic models for structured outputs via `dspy.TypedPredictor`:
+All DSPy signatures use Pydantic models for structured outputs:
 
 ```python
-# signatures.py
 class TaskRouting(dspy.Signature):
     task: str = dspy.InputField(desc="The task to route")
     team: str = dspy.InputField(desc="Description of available agents")
-    context: str = dspy.InputField(desc="Optional execution context")
-
-    decision: RoutingDecisionOutput = dspy.OutputField(
-        desc="Structured routing decision with agents, mode, subtasks, and tools"
-    )
-
-# typed_models.py
-class RoutingDecisionOutput(BaseModel):
-    assigned_to: list[str] = Field(min_length=1)
-    execution_mode: Literal["delegated", "sequential", "parallel"]
-    subtasks: list[str] = Field(default_factory=list)
-    tool_requirements: list[str] = Field(default_factory=list)
-    tool_plan: list[str] = Field(default_factory=list)
-    reasoning: str = Field(description="Reasoning for the routing decision")
+    decision: RoutingDecisionOutput = dspy.OutputField()  # Pydantic model
 ```
 
-### DSPy Assertions for Validation
+### Key DSPy Features
 
-Routing validation via `dspy.Assert` (hard constraint) and `dspy.Suggest` (soft guidance):
+- **Routing Cache**: TTL 5 minutes, max 1024 entries
+- **GEPA Optimization**: Offline prompt tuning (`agentic-fleet optimize`)
+- **Dynamic Prompts**: Planner uses `PlannerInstructionSignature` for context-aware instructions
+- **Compiled Artifacts**: `.var/cache/dspy/compiled_reasoner.json`
 
-```python
-# assertions.py
-def validate_agent_exists(assigned_agents, available_agents) -> bool:
-    """Check all assigned agents exist in available pool."""
-    Assert(len(assigned_agents) > 0, "Must assign at least one agent")
-    for agent in assigned_agents:
-        Assert(agent.lower() in [a.lower() for a in available_agents],
-               f"Agent {agent} not in available pool")
-```
-
-### Routing Cache (v0.6.9+)
-
-Cached routing decisions with TTL (5 minutes) to reduce LLM calls:
-
-```python
-# reasoner.py
-self._routing_cache = RoutingCache(ttl_seconds=300, max_size=1024)
-```
-
-### GEPA Optimization
-
-Offline prompt optimization via GEPA (Genetic Prompt Algorithm):
-
-```bash
-agentic-fleet optimize  # Runs GEPA optimization
-# Outputs: .var/cache/dspy/compiled_reasoner.json
-```
-
-Configuration in `workflow_config.yaml`:
+### Configuration
 
 ```yaml
 dspy:
-  require_compiled: false # Set true in production
+  model: gpt-5-mini
+  routing_model: gpt-5-mini
   use_typed_signatures: true
   enable_routing_cache: true
-  routing_cache_ttl_seconds: 300
+  require_compiled: false # Set true in production
 ```
-
-## Microsoft Agent Framework Integration
-
-### ChatAgent Creation via AgentFactory
-
-Agents created from YAML config using `AgentFactory`:
-
-```python
-# coordinator.py
-class AgentFactory:
-    def create_agent(self, name: str, agent_config: dict) -> ChatAgent:
-        # Supports local agents, Azure Foundry agents
-        # Dynamic prompt generation via DSPy (PlannerInstructionSignature)
-        # Tool resolution via ToolRegistry
-```
-
-### DSPy-Enhanced Agents
-
-`DSPyEnhancedAgent` wraps `ChatAgent` with DSPy reasoning strategies:
-
-```python
-# base.py
-class DSPyEnhancedAgent(ChatAgent):
-    def __init__(self, enable_dspy: bool = True,
-                 reasoning_strategy: str = "chain_of_thought"):
-        # ReAct: tool-augmented reasoning
-        # ProgramOfThought: code-like reasoning
-        # ChainOfThought: standard CoT
-```
-
-### Workflow and Checkpointing
-
-Uses agent-framework Workflow for orchestration with checkpoint storage:
-
-```python
-# supervisor.py
-from agent_framework._workflows import (
-    WorkflowStartedEvent, WorkflowStatusEvent, WorkflowOutputEvent,
-    ExecutorCompletedEvent, RequestInfoEvent,  # HITL support
-    FileCheckpointStorage, InMemoryCheckpointStorage
-)
-```
-
-### Agent Handoffs
-
-Direct agent-to-agent transfers supported:
-
-```python
-# strategies.py
-execute_sequential_with_handoffs()  # Sequential with handoffs
-format_handoff_input()              # Format context transfer
-HandoffManager                      # Manage handoff flow
-```
-
-## Key Technologies
-
-| Technology          | Role                                  | Version/Pattern          |
-| ------------------- | ------------------------------------- | ------------------------ |
-| **DSPy**            | Prompt optimization, typed signatures | 3.x with TypedPredictor  |
-| **Agent Framework** | ChatAgent, Workflow, Thread           | Microsoft Magentic Fleet |
-| **FastAPI**         | HTTP/WebSocket server                 | 0.115+                   |
-| **React 19**        | Frontend                              | Vite + Tailwind          |
-| **Pydantic**        | Type validation                       | 2.x                      |
-| **ChromaDB**        | Semantic memory                       | Memory system            |
-| **OpenTelemetry**   | Tracing                               | Jaeger, Langfuse         |
-| **Azure**           | Cosmos DB, AI Foundry                 | Optional                 |
 
 ## Development Commands
 
-```bash
-make install           # Python deps via uv
-make dev               # Backend :8000 + Frontend :5173
-make test              # Pytest
-make check             # Ruff + ty type-check
-make format            # Ruff formatting
-make clear-cache       # Clear DSPy cache
-agentic-fleet optimize # GEPA optimization
-agentic-fleet run -m "task"  # CLI task execution
-```
+| Task              | Command                                     |
+| ----------------- | ------------------------------------------- |
+| Install deps      | `make install`                              |
+| Dev servers       | `make dev` (backend :8000 + frontend :5173) |
+| Tests             | `make test` / `make test-fast`              |
+| Frontend tests    | `make test-frontend`                        |
+| Lint + type check | `make check`                                |
+| Full QA           | `make qa`                                   |
+| Format            | `make format`                               |
+| Clear DSPy cache  | `make clear-cache`                          |
+| Optimize          | `agentic-fleet optimize`                    |
+| CLI run           | `agentic-fleet run -m "task"`               |
 
-## Configuration
+## CLI Entry Points
 
-All runtime settings in `src/agentic_fleet/config/workflow_config.yaml`:
+Three aliases available:
 
-- DSPy models, routing cache, typed signatures
-- Agent configurations (model, tools, instructions)
-- Workflow phases (timeouts, thresholds, max rounds)
-- Execution strategies (parallel threshold, timeout)
-- Quality assessment (thresholds, judge model)
+- `agentic-fleet`
+- `agenticfleet`
+- `fleet`
+
+## Key Files
+
+| File                          | Purpose                                  |
+| ----------------------------- | ---------------------------------------- |
+| `workflows/supervisor.py`     | Main orchestration entry point           |
+| `agents/coordinator.py`       | AgentFactory - creates agents from YAML  |
+| `dspy_modules/reasoner.py`    | DSPyReasoner - orchestrates DSPy modules |
+| `config/workflow_config.yaml` | All runtime settings                     |
+| `api/events/mapping.py`       | Event routing (workflow → UI)            |
 
 ## Runtime Data
 
@@ -237,3 +171,37 @@ All runtime settings in `src/agentic_fleet/config/workflow_config.yaml`:
 - Config-driven (reference `workflow_config.yaml`, don't hardcode)
 - Conventional commits format
 - uv for Python, npm for frontend (not bun)
+
+## CI/CD
+
+- **Pre-commit**: Ruff (lint + format), Prettier, end-of-file-fixer
+- **CI**: `ci.yml` - tests, type checking, linting
+- **Agentic Workflows**: `ci-doctor.md`, `q.md`, `docs-sync.aw.md`
+- **Release**: `release.yml` - automated releases
+
+## Test Status
+
+- **Backend**: 635 passed, 3 failed (tracing tests need update)
+- **Frontend**: Vitest with jsdom, React Testing Library
+- **E2E**: Playwright (requires dev servers)
+
+## Dependencies
+
+Core dependencies:
+
+- `agent-framework==1.0.0b251223` (Microsoft Agent Framework)
+- `dspy` (DSPy for prompt optimization)
+- `fastapi[standard]>=0.120.1`
+- `azure-*` packages for Azure integration
+- `langfuse` for observability
+
+## Environment Variables
+
+**Required**: `OPENAI_API_KEY`
+
+**Optional**:
+
+- `TAVILY_API_KEY` (web search)
+- `DSPY_COMPILE=false` (skip recompilation)
+- `AZURE_OPENAI_ENDPOINT` + `AZURE_OPENAI_API_KEY` (Azure OpenAI)
+- `AGENTICFLEET_USE_COSMOS=true` (Cosmos DB integration)
