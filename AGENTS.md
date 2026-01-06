@@ -424,6 +424,25 @@ cd infrastructure/azure/standard-agent-setup
 
 Deploys: App Service, Cosmos DB, Azure OpenAI, Key Vault, and supporting resources.
 
+## CI/CD
+
+GitHub Actions workflows ensure code quality and test coverage:
+
+**Main Pipeline (`.github/workflows/ci.yml`)**:
+
+- **Quality Job**: Unified job running lint (Ruff), type-check (`ty`), and security scan (Bandit) in parallel
+- **Test Job**: Matrix testing (Python 3.12/3.13, Linux/macOS)
+- **Frontend Job**: Vitest unit tests
+- **Build Job**: Verifies buildability (depends on quality, test, frontend)
+
+**Auxiliary Workflows**:
+
+- `codeql.yml` - Security analysis (weekly schedule + manual)
+- `dependency-review.yml` - Dependency checks (manual, non-blocking)
+- `docs-sync.aw.md` - Documentation generation (manual)
+
+**Note**: PR triggers removed from auxiliary workflows. Use `workflow_dispatch` to run manually.
+
 ## Files to Read First
 
 1. `src/agentic_fleet/config/workflow_config.yaml` — All runtime settings

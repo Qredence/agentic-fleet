@@ -31,21 +31,13 @@ from agentic_fleet.dspy_modules.assertions import (
 )
 
 # =============================================================================
-# Handoff Signatures
+# NLU Module (signatures now included in nlu.py)
 # =============================================================================
-from agentic_fleet.dspy_modules.handoff_signatures import HandoffDecision, HandoffProtocol
-
-# =============================================================================
-# NLU Module
-# =============================================================================
-from agentic_fleet.dspy_modules.nlu import DSPyNLU, get_nlu_module
-
-# =============================================================================
-# NLU Signatures
-# =============================================================================
-from agentic_fleet.dspy_modules.nlu_signatures import (
+from agentic_fleet.dspy_modules.nlu import (
+    DSPyNLU,
     EntityExtraction,
     IntentClassification,
+    get_nlu_module,
 )
 
 # =============================================================================
@@ -53,6 +45,9 @@ from agentic_fleet.dspy_modules.nlu_signatures import (
 # =============================================================================
 from agentic_fleet.dspy_modules.reasoner import DSPyReasoner
 
+# =============================================================================
+# Handoff Signatures (now in signatures.py)
+# =============================================================================
 # =============================================================================
 # Signatures - Task Analysis & Routing
 # =============================================================================
@@ -62,6 +57,8 @@ from agentic_fleet.dspy_modules.reasoner import DSPyReasoner
 from agentic_fleet.dspy_modules.signatures import (
     AgentInstructionSignature,
     EnhancedTaskRouting,
+    HandoffDecision,
+    HandoffProtocol,
     PlannerInstructionSignature,
     ProgressEvaluation,
     QualityAssessment,
