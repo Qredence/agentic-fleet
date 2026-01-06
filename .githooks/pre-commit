@@ -1,0 +1,248 @@
+#!/usr/bin/env bash
+# Enhanced pre-commit hook for AgenticFleet
+# Runs comprehensive quality checks before allowing commits
+
+set -euo pipefail  # Exit on error, undefined vars, pipe failures
+
+# Colors for output
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+YELLOW='\033[0;33m'
+BLUE='\033[0;36m'
+NC='\033[0m' # No Color
+
+# Timing function
+start_time=$(date +%s)
+
+# Helper functions
+log_info() { echo -e "${BLUE}ℹ${NC} $1"; }
+log_success() { echo -e "${GREEN}✓${NC} $1"; }
+log_warning() { echo -e "${YELLOW}⚠${NC} $1"; }
+log_error() { echo -e "${RED}✗${NC} $1"; }
+log_header() { echo -e "\n${BLUE}🔍${NC} $1"; }
+
+# Check if we should skip certain checks
+SKIP_QUALITY=${AGENTICFLEET_SKIP_QUALITY_CHECKS:-false}
+SKIP_DSPY=${AGENTICFLEET_SKIP_DSPY_CHECKS:-false}
+
+log_header "AgenticFleet Pre-Commit Checks"
+echo "Starting comprehensive validation..."
+
+# =============================================================================
+# 1. STANDARD PRE-COMMIT HOOKS
+# =============================================================================
+log_info "Running standard pre-commit hooks..."
+if command -v pre-commit >/dev/null 2>&1; then
+    if pre-commit run --all-files >/dev/null 2>&1; then
+        log_success "Standard pre-commit hooks passed"
+    else
+        log_error "Standard pre-commit hooks failed"
+        echo "Run 'pre-commit run --all-files' to see detailed errors"
+        exit 1
+    fi
+else
+    log_warning "pre-commit not found, skipping standard checks"
+fi
+
+# =============================================================================
+# 2. ENVIRONMENT VALIDATION
+# =============================================================================
+log_info "Validating environment configuration..."
+
+# Check .env file
+if [ -f .env ]; then
+    log_info "Checking .env file configuration..."
+
+    # Check for empty OPENAI_API_KEY
+    if grep -q "OPENAI_API_KEY=\"\"" .env 2>/dev/null; then
+        log_error "OPENAI_API_KEY is empty in .env file"
+        echo "  Please set your OpenAI API key in .env file"
+        exit 1
+    fi
+
+    # Check for missing OPENAI_API_KEY
+    if ! grep -q "OPENAI_API_KEY=" .env 2>/dev/null; then
+        log_warning "OPENAI_API_KEY not found in .env file"
+        echo "  Some features may not work correctly without it"
+    else
+        log_success ".env file looks good"
+    fi
+else
+    log_warning ".env file not found"
+    echo "  Copy .env.example to .env and configure your API keys"
+fi
+
+# =============================================================================
+# 3. CONFIGURATION VALIDATION
+# =============================================================================
+log_info "Validating configuration files..."
+
+# Validate workflow_config.yaml with detailed error reporting
+config_validation_output=$(python3 -c "
+import yaml
+import sys
+try:
+    with open('src/agentic_fleet/config/workflow_config.yaml', 'r') as f:
+        config = yaml.safe_load(f)
+
+    # Basic structure validation
+    missing_keys = []
+    if 'agents' not in config:
+        missing_keys.append('agents')
+    if 'dspy' not in config:
+        missing_keys.append('dspy')
+
+    if missing_keys:
+        print(f'WARNING: Missing required config sections: {missing_keys}')
+        sys.exit(1)  # Warning but allow commit
+    else:
+        print('SUCCESS: Config validation passed')
+
+except yaml.YAMLError as e:
+    print(f'YAML_ERROR: {e}')
+    sys.exit(2)
+except FileNotFoundError:
+    print('FILE_NOT_FOUND: workflow_config.yaml not found')
+    sys.exit(2)
+except Exception as e:
+    print(f'VALIDATION_ERROR: {e}')
+    sys.exit(2)
+" 2>&1)
+
+config_exit_code=$?
+
+case $config_exit_code in
+    0)
+        log_success "Configuration validation passed"
+        ;;
+    1)
+        log_warning "Configuration has warnings but proceeding"
+        echo "$config_validation_output" | grep -E "^WARNING:" | sed 's/^WARNING:/  /'
+        ;;
+    2)
+        log_error "Configuration validation failed"
+        echo "$config_validation_output" | grep -E "^(YAML_ERROR|FILE_NOT_FOUND|VALIDATION_ERROR):" | sed 's/^[A-Z_]*://' | sed 's/^/  /'
+        exit 1
+        ;;
+    *)
+        log_error "Configuration validation failed with unknown error"
+        echo "$config_validation_output"
+        exit 1
+        ;;
+esac
+
+# =============================================================================
+# 4. CODE QUALITY CHECKS
+# =============================================================================
+if [ "$SKIP_QUALITY" = "true" ]; then
+    log_warning "Skipping quality checks (AGENTICFLEET_SKIP_QUALITY_CHECKS=true)"
+else
+    log_info "Running code quality checks..."
+
+    # Run make check with error capture
+    quality_output=$(make check 2>&1)
+    quality_exit=$?
+
+    if [ $quality_exit -eq 0 ]; then
+        log_success "Code quality checks passed"
+    else
+        log_warning "Code quality checks failed - showing details:"
+        echo "$quality_output" | head -20
+        echo ""
+        log_info "Run 'make check' for full details"
+        log_info "Run 'make format' to auto-fix formatting issues"
+        # Don't fail the commit for quality issues - just warn
+    fi
+fi
+
+# =============================================================================
+# 5. DSPY COMPILATION CHECKS
+# =============================================================================
+if [ "$SKIP_DSPY" = "true" ]; then
+    log_warning "Skipping DSPy checks (AGENTICFLEET_SKIP_DSPY_CHECKS=true)"
+else
+    log_info "Checking DSPy compilation status..."
+
+    if [ -f ".var/logs/compiled_supervisor.pkl" ]; then
+        # Check for compilation warnings with detailed output
+        dspy_check_output=$(python3 -c "
+import json
+import os
+import sys
+meta_path = '.var/logs/compiled_supervisor.pkl.meta'
+if os.path.exists(meta_path):
+    try:
+        with open(meta_path, 'r') as f:
+            meta = json.load(f)
+        warnings = meta.get('compilation_warnings', [])
+        if warnings:
+            print(f'WARNING: {len(warnings)} DSPy compilation warnings found')
+            for warning in warnings[:3]:  # Show first 3 warnings
+                print(f'  - {warning}')
+            if len(warnings) > 3:
+                print(f'  ... and {len(warnings) - 3} more')
+            sys.exit(1)
+        else:
+            print('SUCCESS: No DSPy compilation warnings')
+    except Exception as e:
+        print(f'ERROR: Failed to check DSPy metadata: {e}')
+        sys.exit(2)
+else
+    print('INFO: No DSPy compilation metadata found')
+" 2>&1)
+
+        dspy_exit_code=$?
+
+        case $dspy_exit_code in
+            0) log_success "DSPy compilation checks passed" ;;
+            1) log_warning "DSPy compilation has warnings - consider recompiling" ;;
+            2) log_error "DSPy compilation check failed"
+               echo "$dspy_check_output" | grep -E "^ERROR:" | sed 's/^ERROR:/  /'
+               exit 1 ;;
+        esac
+    else
+        log_info "No DSPy cache found - skipping compilation checks"
+    fi
+fi
+
+# =============================================================================
+# 6. SECURITY CHECKS
+# =============================================================================
+log_info "Running security checks..."
+
+# Check for accidentally staged .var/ files
+if git diff --cached --name-only | grep -q "^\.var/"; then
+    log_error "Attempting to commit files from .var/ directory"
+    echo "  .var/ contains runtime data (cache, logs) and should not be committed"
+    echo "  Run: git rm --cached -r .var/"
+    echo "  Or add .var/ to .gitignore if needed"
+    exit 1
+fi
+
+# Check for sensitive files
+sensitive_files=$(git diff --cached --name-only | grep -E "\.(key|pem|env|secret)$" || true)
+if [ -n "$sensitive_files" ]; then
+    log_warning "Potentially sensitive files detected:"
+    echo "$sensitive_files" | sed 's/^/  - /'
+    echo "  Please verify these files should be committed"
+fi
+
+# =============================================================================
+# 7. FINAL REPORT
+# =============================================================================
+end_time=$(date +%s)
+duration=$((end_time - start_time))
+
+echo ""
+log_success "All pre-commit checks completed successfully!"
+echo -e "${BLUE}⏱${NC}  Total time: ${duration}s"
+echo ""
+echo -e "${GREEN}🎉 Ready to commit!${NC}"
+
+# Optional: Show commit stats
+staged_files=$(git diff --cached --name-only | wc -l | tr -d ' ')
+if [ "$staged_files" -gt 0 ]; then
+    echo -e "${BLUE}📊 Commit stats:${NC} $staged_files files staged"
+fi
+
+exit 0
