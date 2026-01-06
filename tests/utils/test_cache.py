@@ -65,7 +65,7 @@ async def test_cache_agent_response_redacts_task_preview_by_default(monkeypatch)
     monkeypatch.delenv("ENABLE_SENSITIVE_DATA", raising=False)
     monkeypatch.delenv("TRACING_SENSITIVE_DATA", raising=False)
     monkeypatch.delenv("AGENTICFLEET_CAPTURE_SENSITIVE", raising=False)
-    monkeypatch.setattr("agentic_fleet.utils.cache.mirror_cache_entry", fake_mirror)
+    monkeypatch.setattr("agentic_fleet.utils.ttl_cache.mirror_cache_entry", fake_mirror)
 
     class DummyAgent:
         name = "TestAgent"
@@ -92,7 +92,7 @@ async def test_cache_agent_response_includes_task_preview_when_enabled(monkeypat
         captured["entry"] = entry
 
     monkeypatch.setenv("ENABLE_SENSITIVE_DATA", "true")
-    monkeypatch.setattr("agentic_fleet.utils.cache.mirror_cache_entry", fake_mirror)
+    monkeypatch.setattr("agentic_fleet.utils.ttl_cache.mirror_cache_entry", fake_mirror)
 
     class DummyAgent:
         name = "TestAgent"
