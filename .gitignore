@@ -58,7 +58,7 @@ report/
 # Environment variables
 .env
 .env.local
-
+.githooks/
 # Testing
 .pytest_cache/
 .ruff_cache/

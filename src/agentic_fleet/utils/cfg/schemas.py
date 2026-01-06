@@ -19,6 +19,33 @@ from typing import Any, Literal
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 # =============================================================================
+# LiteLLM Model Validation
+# =============================================================================
+
+_LITELLM_ALLOWED_MODELS = {
+    "deepinfra/nvidia/Nemotron-3-Nano-30B-A3B",
+    "deepinfra/deepseek-ai/DeepSeek-V3.2",
+    "deepinfra/deepseek-ai/DeepSeek-R1-0528",
+    "gemini/gemini-3-flash-preview",
+    "gemini/gemini-3-pro-preview",
+    "nvidia_nim/nvidia/nemotron-3-nano-30b-a3b",
+}
+
+
+def _validate_litellm_model(value: str, field_name: str) -> str:
+    if not value:
+        return value
+    if "/" in value and value not in _LITELLM_ALLOWED_MODELS:
+        allowed = ", ".join(sorted(_LITELLM_ALLOWED_MODELS))
+        raise ValueError(
+            f"Unsupported model '{value}' for {field_name}. "
+            f"Allowed LiteLLM models: {allowed}. "
+            "Update scripts/validate_litellm_models.sh and schema if adding new models."
+        )
+    return value
+
+
+# =============================================================================
 # DSPy Configuration
 # =============================================================================
 
@@ -43,6 +70,13 @@ class DSPyOptimizationConfig(BaseModel):
     gepa_val_split: float = Field(default=0.2, ge=0.0, le=0.5)
     gepa_seed: int = Field(default=13, ge=0)
 
+    @field_validator("gepa_reflection_model")
+    @classmethod
+    def validate_gepa_reflection_model(cls, v: str | None) -> str | None:
+        if v is None:
+            return v
+        return _validate_litellm_model(v, "dspy.optimization.gepa_reflection_model")
+
 
 class DSPyConfig(BaseModel):
     """DSPy configuration."""
@@ -57,6 +91,18 @@ class DSPyConfig(BaseModel):
     enable_routing_cache: bool = True  # Cache routing decisions
     routing_cache_ttl_seconds: int = Field(default=300, ge=0)  # Cache TTL in seconds
     optimization: DSPyOptimizationConfig = DSPyOptimizationConfig()
+
+    @field_validator("model")
+    @classmethod
+    def validate_model(cls, v: str) -> str:
+        return _validate_litellm_model(v, "dspy.model")
+
+    @field_validator("routing_model")
+    @classmethod
+    def validate_routing_model(cls, v: str | None) -> str | None:
+        if v is None:
+            return v
+        return _validate_litellm_model(v, "dspy.routing_model")
 
 
 # =============================================================================
@@ -100,6 +146,13 @@ class QualityConfig(BaseModel):
     judge_model: str | None = None
     judge_reasoning_effort: Literal["minimal", "medium", "maximal"] = "medium"
 
+    @field_validator("judge_model")
+    @classmethod
+    def validate_judge_model(cls, v: str | None) -> str | None:
+        if v is None:
+            return v
+        return _validate_litellm_model(v, "workflow.quality.judge_model")
+
 
 class HandoffConfig(BaseModel):
     """Handoff workflow configuration."""
@@ -134,6 +187,11 @@ class AgentConfig(BaseModel):
     instructions: str | None = None
 
     model_config = ConfigDict(extra="allow")
+
+    @field_validator("model")
+    @classmethod
+    def validate_agent_model(cls, v: str) -> str:
+        return _validate_litellm_model(v, "agents.*.model")
 
 
 class AgentsConfig(BaseModel):

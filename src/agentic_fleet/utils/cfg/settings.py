@@ -12,12 +12,12 @@ class AppSettings(BaseSettings):
 
     # App Info
     APP_NAME: str = "agentic-fleet"
-    APP_VERSION: str = "0.6.95"
+    APP_VERSION: str = "0.7.1"
     DEBUG: bool = False
 
     # Aliases for easier access
     app_name: str = "agentic-fleet"
-    app_version: str = "0.6.95"
+    app_version: str = "0.7.1"
 
     # Concurrency
     max_concurrent_workflows: int = 10

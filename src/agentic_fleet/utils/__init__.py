@@ -27,7 +27,6 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from agentic_fleet.utils.cache import TTLCache
     from agentic_fleet.utils.cfg import (
         env_config,
         get_agent_model,
@@ -36,9 +35,7 @@ if TYPE_CHECKING:
         validate_agentic_fleet_env,
     )
     from agentic_fleet.utils.compiler import compile_reasoner
-    from agentic_fleet.utils.infra.tracing import get_meter, get_tracer, initialize_tracing
-    from agentic_fleet.utils.models import ExecutionMode, RoutingDecision
-    from agentic_fleet.utils.profiling import (
+    from agentic_fleet.utils.infra.profiling import (
         PerformanceTracker,
         get_performance_stats,
         log_performance_summary,
@@ -47,7 +44,10 @@ if TYPE_CHECKING:
         timed_operation,
         track_operation,
     )
+    from agentic_fleet.utils.infra.tracing import get_meter, get_tracer, initialize_tracing
+    from agentic_fleet.utils.models import ExecutionMode, RoutingDecision
     from agentic_fleet.utils.tool_registry import ToolMetadata, ToolRegistry
+    from agentic_fleet.utils.ttl_cache import TTLCache, cache_agent_response
 
 __all__ = [
     "ExecutionMode",
@@ -56,6 +56,7 @@ __all__ = [
     "TTLCache",
     "ToolMetadata",
     "ToolRegistry",
+    "cache_agent_response",
     "compile_reasoner",
     "env_config",
     "get_agent_model",
@@ -119,9 +120,14 @@ def __getattr__(name: str) -> object:
         }[name]
 
     if name == "TTLCache":
-        from agentic_fleet.utils.cache import TTLCache
+        from agentic_fleet.utils.ttl_cache import TTLCache
 
         return TTLCache
+
+    if name == "cache_agent_response":
+        from agentic_fleet.utils.ttl_cache import cache_agent_response
+
+        return cache_agent_response
 
     if name in ("initialize_tracing", "get_tracer", "get_meter"):
         from agentic_fleet.utils.infra.tracing import get_meter, get_tracer, initialize_tracing
@@ -141,7 +147,7 @@ def __getattr__(name: str) -> object:
         "log_performance_summary",
         "reset_performance_stats",
     ):
-        from agentic_fleet.utils.profiling import (
+        from agentic_fleet.utils.infra.profiling import (
             PerformanceTracker,
             get_performance_stats,
             log_performance_summary,

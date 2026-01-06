@@ -272,12 +272,10 @@ def get_reasoner_source_hash() -> str:
         module_dir / "reasoner_cache.py",
         module_dir / "reasoner_modules.py",
         module_dir / "reasoner_predictions.py",
-        module_dir / "signatures.py",
+        module_dir / "signatures.py",  # Includes handoff signatures
         module_dir / "typed_models.py",
         module_dir / "assertions.py",
-        module_dir / "nlu.py",
-        module_dir / "nlu_signatures.py",
-        module_dir / "handoff_signatures.py",
+        module_dir / "nlu.py",  # Includes NLU signatures
         module_dir / "answer_quality.py",
     ]
 

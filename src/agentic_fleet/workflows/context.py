@@ -15,10 +15,10 @@ import openai
 from agentic_fleet.utils.storage import HistoryManager
 
 from ..dspy_modules.reasoner import DSPyReasoner
-from ..utils.cache import TTLCache
 from ..utils.compiler import compile_reasoner
 from ..utils.progress import LoggingProgressCallback, NullProgressCallback, ProgressCallback
 from ..utils.tool_registry import ToolRegistry
+from ..utils.ttl_cache import TTLCache
 from .config import WorkflowConfig
 from .handoff import HandoffManager
 

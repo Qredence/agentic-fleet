@@ -187,6 +187,34 @@ uv run pytest tests/workflows/test_supervisor.py -v
 uv run pytest --cov=src/agentic_fleet --cov-report=html
 ```
 
+### CI/CD Workflows
+
+GitHub Actions workflows handle automated testing and quality checks:
+
+**Main CI Pipeline (`.github/workflows/ci.yml`)**:
+
+- **Quality**: Runs linting, type checking, and security scanning in parallel
+  - Ruff formatter and linter
+  - `ty` type checker
+  - Bandit security scan (optional, uploads report on failure)
+- **Test**: Matrix testing across Python versions (3.12, 3.13) and OS (Linux, macOS)
+- **Frontend**: Vitest unit tests for React frontend
+- **Build**: Verifies package buildability (runs after all checks pass)
+
+**Auxiliary Workflows**:
+
+- `codeql.yml` - Security analysis (weekly schedule + manual trigger)
+- `dependency-review.yml` - Dependency vulnerability checks (manual trigger, non-blocking)
+- `docs-sync.aw.md` - Auto-doc generation (manual trigger)
+
+**Removed Workflows** (consolidated or deprecated):
+
+- `label-sync.yml` - No longer needed (labels managed manually)
+- `stale.yml` - Removed to reduce noise
+- `agentic-workflows.yml` - Merged into main CI pipeline
+
+> **Note**: External contributors can open PRs without secrets. CI will skip jobs requiring secrets automatically.
+
 ### Running the Dev Server
 
 ```bash

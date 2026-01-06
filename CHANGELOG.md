@@ -1,96 +1,213 @@
 # Changelog
 
-## Unreleased (2025-12-27)
+## v0.7.1 (2026-01-06) – Code Refactoring & Infrastructure Improvements
 
 ### Highlights
 
-- Frontend architecture migration to feature-based structure (app/ + features/) for better scalability.
-- SSE API refactoring with centralized HTTP client and improved error handling.
-- E2E testing infrastructure with Playwright integration.
-- Stream event logging enhancements with improved formatting and mapping.
-- New skills: changelog-tracker and codebase-explorer for better project maintenance.
-- MCP configuration support for tool integration.
+#### Utils Module Consolidation
+
+- **Cache Implementation Unification** – Consolidated duplicate cache implementations into `utils/ttl_cache.py` as single source of truth for TTL and LRU caching.
+- **Profiling Module Cleanup** – Removed `utils/profiling.py` re-export shim, relocated memory monitoring to `utils/infra/profiling.py` alongside performance tracking.
+- **Import Path Simplification** – Cleaner import paths throughout codebase with direct imports from consolidated modules.
+
+#### CI/CD & Testing Improvements
+
+- **GitHub Actions Updates** – Modernized all CI/CD workflows with latest action versions and improved reliability.
+- **Test Suite Fixes** – Skipped tracing tests requiring unavailable agent-framework APIs to prevent CI failures.
+- **Code Quality Maintenance** – Fixed import sorting issues in DSPy modules and improved code structure readability.
 
 ### Changes
 
 #### Backend
 
-- Added new history utilities under `src/agentic_fleet/utils/storage/` (conversation, history, persistence, job_store) plus `utils/storage/cosmos.py` for Cosmos-backed history storage.
-- Added history management API surface in `src/agentic_fleet/api/routes/history.py` and integrated it into `api/api_v1/api.py` routing.
-- Added new optimization endpoints and rewired optimization routes (`api/routes/optimization.py`), replacing older optimize route wiring.
-- Expanded workflow event mapping in `src/agentic_fleet/api/events/mapping.py` to reflect new event categories.
-- Introduced background quality evaluation runner in `src/agentic_fleet/evaluation/background.py` and updated `scripts/self_improve.py`/`scripts/evaluate_history.py` to use the new evaluation flow.
-- Restructured DSPy module layout into subpackages (`dspy_modules/gepa`, `dspy_modules/lifecycle`) and refreshed signatures in `dspy_modules/signatures.py`.
-- Added new DSPy optimizer utilities in `dspy_modules/optimizer.py` and program wrappers in `dspy_modules/programs.py`.
-- Refactored workflow execution plumbing (`workflows/builder.py`, `workflows/context.py`, executors/_, strategies/_, `workflows/supervisor.py`) to align with the new module structure.
-- Added `utils/infra/` layer (logging, profiling, resilience, telemetry, tracing) and updated imports to use the new infra package.
-- Added `utils/cfg/` configuration helpers (loader, env, settings) and shifted config usage away from deprecated core modules.
-- Removed deprecated core modules under `src/agentic_fleet/core/` and replaced usage across services/CLI.
-- Cleaned service layer imports and added `services/optimization_service.py` plus supporting changes in `services/dspy_programs.py`, `services/chat_sse.py`, and `services/chat_websocket.py`.
-- Added tool registry updates (`utils/tool_registry.py`) and MCP tooling adjustments in `tools/mcp_tools.py`.
-- Added dependencies for OpenInference and Langfuse in `pyproject.toml` and updated wiring where needed.
-- **SSE API Refactoring**: Centralized SSE API requests to shared HTTP client with unified stream prefix handling (#484, #485).
-- **Stream Event Logging**: Refactored stream event logging map with enhanced formatting and improved error handling (#487).
-- **Chat Helpers**: Enhanced response formatting and error handling in chat helpers and optimization service.
-- **Error Formatting**: Introduced dedicated error formatting utility and improved chat transport handling.
-- **Reasoner Modules**: Updated DSPy reasoner modules with improved message handling and thread management (#486).
+- **`utils/ttl_cache.py`**: Extended with cache_agent_response decorator from consolidated `utils/cache.py`.
+- **`utils/infra/profiling.py`**: Added memory monitoring functions (`get_process_rss_bytes`, `get_process_rss_mb`) from `utils/memory.py`.
+- **`utils/__init__.py`**: Updated lazy loaders and import paths for consolidated modules.
+- **Import Updates**: Updated imports across workflow executors, DSPy modules, and services to use new consolidated paths.
+- **File Removals**: Deleted `utils/cache.py`, `utils/memory.py`, and `utils/profiling.py` after functionality consolidation.
 
-#### Frontend
+#### CI/CD
 
-- **Major Architecture Migration**: Migrated from component-based to feature-based architecture:
-  - New `src/frontend/src/app/` directory with Next.js-style routing.
-  - New `src/frontend/src/features/` directory for feature-based modules (chat, dashboard, etc.).
-  - New `src/frontend/src/tests/features/` for feature-aligned tests.
-  - Deprecated old `components/` structure (chat/, dashboard/, layout/, message/, workflow/).
-  - See `src/frontend/MIGRATION_SUMMARY.md` for detailed migration guide.
-- **E2E Testing**: Added Playwright infrastructure with `src/frontend/e2e/` and `playwright.config.ts`.
-- Restructured UI into pages/stores pattern with new chat/layout components and sidebar workflows.
-- Introduced design tokens and a refreshed component set (tabs, tooltip, textarea, etc.).
-- Removed unused shared UI components and legacy styles.
-- Updated API hooks and SSE client for improved error handling and type safety.
-- **SSE Client Reconnection**: Restored automatic reconnection logic with exponential backoff (up to 5 attempts, max 30s delay) to handle transient network failures.
-- Enhanced UI components: markdown, reasoning, response-stream, sidebar, and text-shimmer.
+- **GitHub Actions**: Updated to latest semver action versions for better security and compatibility.
+- **Test Filtering**: Added conditional test skipping for unavailable agent-framework tracing APIs.
 
-#### Docs
+#### Code Quality
 
-- Added docs-sync workflow docs plus new agentic workflow optimization guide and internal plans.
-- Added `src/frontend/MIGRATION_SUMMARY.md` documenting the frontend architecture migration.
-- Added `src/frontend/REGISTRIES.md` for component registry documentation.
-- Fixed file path references for workflow configuration in documentation.
+- **Import Sorting**: Fixed import block organization in DSPy modules (`nlu.py`, `programs.py`).
+- **Code Structure**: Refactored for improved readability and maintainability across multiple modules.
 
-#### Tests
+### Bug Fixes
 
-- Added optimization API tests plus new frontend chat/dashboard tests.
-- Removed obsolete optimization/self-improvement tests.
-- Added E2E test infrastructure with Playwright for end-to-end testing.
-- Added feature-aligned tests in `src/frontend/src/tests/features/`.
-- Updated test setup and utilities for better test isolation.
-
-#### CI/Infra
-
-- Added docs-sync workflow automation and Q agentic workflow optimizer workflow.
-- Added new skills for Letta Code:
-  - `changelog-tracker`: Track and summarize repository changes into CHANGELOG.md.
-  - `codebase-explorer`: Systematically explore and analyze codebase architecture.
-- Added `.mcp.json` configuration for Model Context Protocol tool integration.
-- Removed changelog tracker scripts and related documentation (now using skill-based approach).
-- Fixed code quality issues in skills:
-  - `collect_changes.py`: Fixed `_git_log_since` fallback consistency to use `HEAD~1..HEAD` range.
-  - `SKILL.md`: Fixed British/American English inconsistency ("analyses" → "analysis").
-  - `module_boundary_checklist.md`: Fixed typo ("Formatation" → "Formatting").
-  - `dependency_analysis_examples.md`: Fixed file extension (`.pyx` → `.py`).
-  - `find_separation_of_concerns.py`: Added missing `import sys` and fixed invalid rglob brace expansion.
-  - `trace_dependencies.py`: Added missing `import sys` and `import os`, fixed invalid rglob brace expansion, and fixed reverse-dependency logic inversion.
-- Frontend architecture compliance:
-  - Removed duplicate `text-shimmer.tsx` from `components/ui/` (custom component now only in `features/chat/components/`).
-  - Moved `usePromptInput` hook from `components/hooks/` to proper `features/chat/hooks/` location per guidelines.
+- **Tracing Tests**: Fixed CI failures by conditionally skipping tests requiring unavailable APIs.
+- **Import Issues**: Resolved import path inconsistencies after module consolidation.
 
 ### Migration Notes
 
-- Deprecated `agentic_fleet.core.*` modules removed; update external imports to new service/utility equivalents.
-- **Frontend Architecture Migration**: Old component-based structure in `src/frontend/src/components/` is deprecated. New development should use feature-based architecture in `src/frontend/src/features/` with routing in `src/frontend/src/app/`. See `src/frontend/MIGRATION_SUMMARY.md` for detailed migration guide.
-- **SSE API Changes**: SSE API requests now use centralized HTTP client with unified stream prefix. Update custom SSE clients to use `src/frontend/src/api/sse.ts` utilities.
-- **E2E Testing**: New E2E tests require dev servers running (`make dev` first). Tests are in `src/frontend/e2e/`.
+- **Import Paths**: Update any direct imports from removed modules:
+  - `from agentic_fleet.utils.cache import ...` → `from agentic_fleet.utils.ttl_cache import ...`
+  - `from agentic_fleet.utils.memory import ...` → `from agentic_fleet.utils.infra.profiling import ...`
+  - `from agentic_fleet.utils.profiling import ...` → `from agentic_fleet.utils.infra.profiling import ...`
+
+### Stats
+
+- **10 commits** in this release
+- **25+ files changed**
+- **-300+ LOC** (removed duplicate code)
+- **Import path consolidation** across 15+ modules
+
+---
+
+## v0.7.0 (2025-12-29) – Memory System, Frontend Architecture & Langfuse Integration
+
+### Highlights
+
+#### Two-Tier Memory System (v0.8.0 Preview)
+
+- **Persistent Memory Architecture** – New `.fleet/context/` directory with hierarchical memory blocks for cross-session learning.
+- **Core Memory Blocks** – Always in-context files (`project.md`, `human.md`, `persona.md`) provide consistent project and user context.
+- **Semantic Search** – Chroma Cloud integration for procedural/episodic memory with similarity-based retrieval.
+- **Neon PostgreSQL Integration** – Alternative memory storage via Neon serverless PostgreSQL with full schema and driver support.
+- **Memory Commands** – `/init`, `/learn`, `/recall`, `/reflect` for managing agent memory lifecycle.
+- **Skill System** – Learned patterns stored as skills and indexed for future retrieval.
+
+#### Documentation Agent
+
+- **New Documentation Agent** – Specialized agent for creating and maintaining documentation, configured in `workflow_config.yaml`.
+- **Dynamic Instructions** – `get_documentation_instructions()` function in `prompts.py` for customizable agent behavior.
+- **Full Tool Access** – Documentation agent has access to TavilySearchTool, HostedCodeInterpreterTool, and FileSearchTool.
+
+#### Claude Code Skills
+
+- **Python Backend Reviewer** – Comprehensive code review skill with best practices, anti-patterns, and refactoring references.
+- **Feature Development Workflow** – Multi-agent skill with code-architect, code-explorer, and code-reviewer agents.
+- **Changelog Generator** – Skill for tracking and summarizing repository changes.
+- **Code Analysis Scripts** – Import analyzer, complexity analyzer, concurrency analyzer, and duplicate detector.
+
+#### Frontend Feature-Based Architecture
+
+- **Major Migration** – Migrated from component-based to feature-based architecture (`app/` + `features/`).
+- **React Router 7** – New app shell with modern routing patterns.
+- **Memoized Components** – User and assistant message components with performance optimizations.
+- **Streamdown Integration** – Replaced react-markdown with streamdown for better streaming markdown rendering.
+- **E2E Testing** – Playwright infrastructure for end-to-end testing.
+
+#### Langfuse Observability Integration
+
+- **Dual Tracing** – OpenTelemetry + Langfuse for comprehensive observability.
+- **Session Tracking** – Langfuse session management for conversation-level tracing.
+- **Evaluation Helpers** – Langfuse-based quality evaluation utilities.
+- **Quick Reference Docs** – New integration guides for Langfuse setup and usage.
+
+#### SSE API & Event System Refactoring
+
+- **Centralized HTTP Client** – Unified SSE API requests with shared HTTP client (#484, #485).
+- **Modular Event Handlers** – Event mapping split into domain-specific handlers (agent, chat, executor, workflow).
+- **Enhanced Logging** – Refactored stream event logging with improved formatting (#487).
+- **Error Formatting** – Dedicated error formatting utility for consistent error responses.
+
+### Changes
+
+#### Backend
+
+- **Memory System**: Added `.fleet/context/` with core blocks, topic blocks, skills, and Chroma integration.
+- **Neon Memory Storage**: New scripts in `.fleet/context/scripts/`:
+  - `neon_driver.py` – Neon PostgreSQL connection driver
+  - `neon_memory.py` – Full memory management with CRUD operations
+  - `neon_schema.py` – Database schema initialization
+  - `neon_learn.py` – Skill indexing to Neon
+  - `neon_recall.py` – Semantic search in Neon
+- **Documentation Agent**: Added `get_documentation_instructions()` in `agents/prompts.py` and configured in `workflow_config.yaml`.
+- **Event Handlers**: Modular event handler architecture in `api/events/handlers/` (agent, chat, executor, workflow handlers).
+- **Observability Routes**: New `/api/v1/observability` endpoints for trace details and span retrieval.
+- **Langfuse Integration**: Added `utils/infra/langfuse.py` and `evaluation/langfuse_eval.py` for tracing and evaluation.
+- **Conversation Storage**: Enhanced with JSON file support and improved upsert methods.
+- **Serialization Utilities**: New `utils/serialization.py` for consistent data serialization.
+- **Middleware Improvements**: Enhanced middleware with debug logging and cleaner code patterns.
+- **Agent Helpers**: New `agents/helpers.py` with message handling utilities.
+- **DSPy Lifecycle**: New `dspy_modules/lifecycle.py` for module lifecycle management.
+- **Reasoner Enhancements**: Signature access and dual-tracing support in DSPy reasoner.
+- **Quality Score SSE**: Quality scores now included in SSE responses for real-time feedback.
+- **Dependencies**: Added `psycopg2-binary` for Neon PostgreSQL support.
+- Removed deprecated `agent_framework_shims` and legacy executors.
+- Removed deprecated `create_db_tables` script and empty `utils/agent_framework` directory.
+
+#### Frontend
+
+- **Architecture Migration**: Feature-based structure with `app/`, `features/`, and domain-specific components.
+- **React Router 7**: New app shell with `App.tsx`, `providers.tsx`, and centralized routing.
+- **Memoized Messages**: Performance-optimized user and assistant message components.
+- **Streamdown**: Replaced react-markdown dependency with streamdown for streaming markdown.
+- **Query Keys**: Extracted to separate `api/queryKeys.ts` file for maintainability.
+- **Type Safety**: Enhanced component props typing for markdown and other components.
+- **Error Handling**: Improved API error handling with dedicated error utilities.
+- **SSE Reconnection**: Automatic reconnection with exponential backoff (up to 5 attempts, max 30s delay).
+- **E2E Tests**: Playwright tests in `e2e/chat.spec.ts` and `e2e/dashboard.spec.ts`.
+- **Workflow Lib**: Explicit imports for CI compatibility.
+- Removed duplicate `text-shimmer.tsx` and relocated `usePromptInput` hook per guidelines.
+
+#### Docs
+
+- **Langfuse Integration**: Comprehensive guides in `docs/integrations/`:
+  - `langfuse-integration.md` – Full setup and configuration
+  - `langfuse-quick-reference.md` – Quick reference card
+  - `langfuse-sessions.md` – Session management patterns
+- **Memory System**: Full documentation in `.fleet/context/MEMORY.md` and `SKILL.md`.
+- **Frontend Docs**: Added `MIGRATION_SUMMARY.md` and `REGISTRIES.md`.
+- **Current Plans**: Updated with documentation refactor progress.
+- Fixed file path references for workflow configuration.
+
+#### Tests
+
+- **New Test Files**:
+  - `tests/dspy_modules/test_lifecycle.py` – DSPy module lifecycle tests
+  - `tests/services/test_chat_sse_quality_score.py` – Quality score SSE tests
+  - `tests/app/events/test_mapping_handlers.py` – Modular event handler tests
+- **E2E Infrastructure**: Playwright with `playwright.config.ts` for end-to-end testing.
+- **Test Updates**: Updated middleware concurrency, reasoner, and phase2 integration tests.
+- Removed obsolete optimization/self-improvement tests and component snapshots.
+
+#### CI/Infra
+
+- **Claude Code Skills**: Added comprehensive skills for multi-agent development:
+  - `python-backend-reviewer.skill` – Full Python backend review with references
+  - `feature-dev/` – Multi-agent feature development workflow
+  - `change-log-generator/` – Changelog tracking skill
+  - `initiate-memory/` – Memory system initialization skill
+- **OpenCode Configuration**: Added `opencode.jsonc` for MCP context configuration.
+- **Memory System Skills**: `initiate-memory` skill for memory initialization.
+- **Conductor Setup**: Added `.conductor/` directory for plan management.
+- **CI Doctor**: Enhanced failure reporting and permission fixes.
+- **Code Quality**: Security fixes for log injection vulnerabilities.
+- **Prettier Formatting**: Applied consistent formatting to UI components.
+- Updated `.gitignore` to track shared knowledge blocks and exclude `.conductor/`, `.fleet/`.
+
+### Bug Fixes
+
+- **Type Safety**: Added type cast to resolve possibly-missing-attribute warnings.
+- **Frontend CI**: Made workflow lib import explicit for CI compatibility.
+- **Observability**: Fixed TraceDetails model configuration with ConfigDict.
+- **Conversation**: Simplified upsert method by directly accessing conversation_id.
+- **Security**: Fixed log injection vulnerabilities (CodeQL alerts).
+- **Test Mapping**: Updated mapping handler tests for modular architecture.
+- **Empty Except**: Fixed empty exception handlers with proper logging.
+- **Variable Reuse**: Fixed variable defined multiple times issues.
+
+### Migration Notes
+
+- **Memory System**: Initialize with `uv run python .fleet/context/scripts/memory_manager.py init`.
+- **Frontend Architecture**: Old `components/` structure deprecated. Use `features/` for new development.
+- **SSE API**: Update custom SSE clients to use `src/frontend/src/api/sse.ts` utilities.
+- **E2E Tests**: Require dev servers running (`make dev` first).
+- **Deprecated Modules**: `agentic_fleet.core.*` modules removed; update imports to new service/utility equivalents.
+
+### Stats
+
+- **94 commits** in this release
+- **357 files changed**
+- **+29,578 insertions**, **-13,671 deletions**
+- **26 test files** added or updated
+
+---
 
 ## v0.6.95 (2025-12-16) – Package Reorganization & Security Defaults
 

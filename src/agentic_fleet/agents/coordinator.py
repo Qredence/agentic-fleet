@@ -133,6 +133,18 @@ class AgentFactory:
             if not model_id:
                 raise ValueError(f"Agent '{name}' missing required 'model' field")
 
+            if (
+                "/" in model_id
+                and not env_config.use_litellm_proxy
+                and not env_config.use_azure_openai
+            ):
+                raise ValueError(
+                    f"Agent '{name}' uses provider-prefixed model '{model_id}', "
+                    "but LiteLLM proxy is not configured. "
+                    "Set LITELLM_PROXY_URL (and LITELLM_API_KEY) or switch this agent "
+                    "to an OpenAI/Azure deployment name."
+                )
+
             if span is not None:
                 span.set_attribute("agent.model_id", model_id)
 
@@ -163,9 +175,19 @@ class AgentFactory:
                 if context_provider_names:
                     span.set_attribute("agent.context_providers", ",".join(context_provider_names))
 
-            # Determine API credentials based on Azure vs standard OpenAI
-            # Azure OpenAI takes precedence if configured
-            if env_config.use_azure_openai:
+            # Determine API credentials based on LiteLLM proxy, Azure, or standard OpenAI
+            # LiteLLM proxy takes highest precedence if configured
+            if env_config.use_litellm_proxy:
+                # Use LiteLLM proxy with standard OpenAI-compatible endpoint
+                # Format: /v1/chat/completions with model in request body
+                api_key = env_config.litellm_api_key
+                base_url = f"{env_config.litellm_proxy_url}/v1"
+                effective_model_id = model_id  # Pass model as-is (e.g., deepinfra/...)
+                logger.info(
+                    f"Using LiteLLM proxy for agent '{name}': "
+                    f"model={effective_model_id}, endpoint={base_url}"
+                )
+            elif env_config.use_azure_openai:
                 # Use Azure OpenAI Responses API
                 api_key = env_config.azure_openai_api_key
                 # Azure endpoint should be in format: https://<resource>.openai.azure.com/
@@ -184,7 +206,8 @@ class AgentFactory:
 
             if not api_key:
                 raise ValueError(
-                    "API key required: Set OPENAI_API_KEY for OpenAI or "
+                    "API key required: Set LITELLM_API_KEY + LITELLM_PROXY_URL for LiteLLM, "
+                    "OPENAI_API_KEY for OpenAI, or "
                     "AZURE_OPENAI_API_KEY + AZURE_OPENAI_ENDPOINT for Azure OpenAI"
                 )
 

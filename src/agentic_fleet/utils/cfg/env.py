@@ -208,6 +208,25 @@ class EnvConfig:
     def cosmos_endpoint(self) -> str:
         return self._get_cached("cosmos_endpoint", lambda: get_env_var("AZURE_COSMOS_ENDPOINT", ""))
 
+    # -------------------------------------------------------------------------
+    # LiteLLM Configuration
+    # -------------------------------------------------------------------------
+
+    @property
+    def litellm_proxy_url(self) -> str:
+        """LiteLLM proxy base URL (LITELLM_PROXY_URL)."""
+        return self._get_cached("litellm_proxy_url", lambda: get_env_var("LITELLM_PROXY_URL", ""))
+
+    @property
+    def litellm_api_key(self) -> str:
+        """LiteLLM API key (LITELLM_API_KEY)."""
+        return self._get_cached("litellm_api_key", lambda: get_env_var("LITELLM_API_KEY", ""))
+
+    @property
+    def use_litellm_proxy(self) -> bool:
+        """Check if LiteLLM proxy should be used (proxy URL is set)."""
+        return self._get_cached("use_litellm_proxy", lambda: bool(self.litellm_proxy_url))
+
     @property
     def cosmos_key(self) -> str:
         return self._get_cached("cosmos_key", lambda: get_env_var("AZURE_COSMOS_KEY", ""))

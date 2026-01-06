@@ -160,7 +160,17 @@ def initialize_tracing(config: dict[str, Any] | None = None) -> bool:
 
     # Primary: Use Agent Framework's built-in observability setup
     try:
-        from agent_framework.observability import setup_observability
+        # Use a dynamic import + getattr to avoid static type-checking errors when
+        # the installed `agent_framework.observability` module may not expose the
+        # helper symbol at type-check time. This keeps runtime behavior the same
+        # while avoiding `ty` unresolved-member diagnostics.
+        import importlib
+
+        af_obs = importlib.import_module("agent_framework.observability")
+        configure = getattr(af_obs, "configure_otel_providers", None)
+
+        if not callable(configure):
+            raise ImportError("agent_framework.observability.configure_otel_providers not found")
 
         # Build kwargs dynamically based on what's configured
         kwargs: dict[str, Any] = {"enable_sensitive_data": enable_sensitive_data}
@@ -174,7 +184,7 @@ def initialize_tracing(config: dict[str, Any] | None = None) -> bool:
         if vs_code_port_int:
             kwargs["vs_code_extension_port"] = vs_code_port_int
 
-        setup_observability(**kwargs)
+        configure(**kwargs)
 
         # Log what was configured
         destinations = []
@@ -200,7 +210,7 @@ def initialize_tracing(config: dict[str, Any] | None = None) -> bool:
 
     except ImportError as e:
         logger.warning(
-            "agent_framework.observability not available: %s. "
+            "agent_framework.observability not available or missing helper: %s. "
             "Ensure agent-framework>=1.0.0b251120 is installed.",
             e,
         )
