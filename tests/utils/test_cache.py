@@ -2,7 +2,7 @@ import time
 
 import pytest
 
-from agentic_fleet.utils.cache import TTLCache, cache_agent_response
+from agentic_fleet.utils.ttl_cache import TTLCache, cache_agent_response
 
 
 def test_ttlcache_expires_and_tracks_stats():
