@@ -1,7 +1,7 @@
 # DSPy Configuration
 dspy:
-  model: deepinfra/deepseek-ai/DeepSeek-V3.2 # General purpose, cost-effective, strong code capabilities
-  routing_model: deepinfra/nvidia/Nemotron-3-Nano-30B-A3B # Ultra-fast routing for low latency
+  model: gpt-5-mini # High-capacity model for DSPy tasks
+  routing_model: gpt-5-mini # Fast model for analysis/routing phases (Plan #4)
   temperature: 1.0
   max_tokens: 16000
   compiled_reasoner_path: .var/cache/dspy/compiled_reasoner.json
@@ -51,7 +51,7 @@ dspy:
     enabled: true
     project_connection_string: ${AZURE_AI_PROJECT_ENDPOINT}
     # Optional: Semantic narrator model name in Foundry
-    narrator_model: gemini/gemini-3-flash-preview # Fast event narration
+    narrator_model: gpt-5.1-nano
 
   optimization:
     enabled: true
@@ -67,7 +67,7 @@ dspy:
     gepa_auto: light # Using light preset for balanced optimization speed
     # gepa_max_full_evals: 3  # Disabled - using gepa_auto instead
     # gepa_max_metric_calls: 3 # Disabled - using gepa_auto instead
-    gepa_reflection_model: deepinfra/nvidia/Nemotron-3-Nano-30B-A3B # Fast reflection for high-frequency calls
+    gepa_reflection_model: gpt-5-mini # Use fast model for reflection to reduce latency
     gepa_reflection_minibatch_size: 2 # Smaller batches for faster reflection cycles
     gepa_log_dir: .var/logs/dspy/gepa
     gepa_perfect_score: 1.0
@@ -131,7 +131,7 @@ workflow:
     judge_threshold: 7.0 # Trigger refinement when Judge score < 7.0 (raised from 5.0)
 
     max_refinement_rounds: 1 # Set to 1 to satisfy schema validation, but disabled via enable_refinement
-    judge_model: gemini/gemini-3-flash-preview # Advanced reasoning for quality assessment
+    judge_model: gpt-5-mini # Use gpt-5-mini for faster evaluation
     judge_reasoning_effort: minimal # Use low reasoning effort for Judge
     judge_timeout_seconds: 30 # Timeout for judge evaluation (new)
     refinement_min_improvement: 1.0 # Skip refinement if not improving by 1 point
@@ -148,7 +148,7 @@ workflow:
 # Agent Configuration
 agents:
   researcher:
-    model: gemini/gemini-3-flash-preview # Fast web search + multimodal
+    model: gpt-4.1-mini
     tools:
       - TavilySearchTool # Requires TAVILY_API_KEY environment variable
     temperature: 0.5
@@ -157,7 +157,7 @@ agents:
     timeout: 60 # Task timeout in seconds
 
   analyst:
-    model: deepinfra/deepseek-ai/DeepSeek-V3.2 # Strong code analysis
+    model: gpt-5.1-codex
     tools:
       - HostedCodeInterpreterTool
     temperature: 0.3
@@ -167,7 +167,7 @@ agents:
     strategy: "react" # Switch to ReAct for stability
 
   writer:
-    model: deepinfra/deepseek-ai/DeepSeek-V3.2 # Balanced writing quality
+    model: gpt-5.1-chat
     tools: []
     temperature: 0.7
     enable_dspy: true
@@ -175,7 +175,7 @@ agents:
     timeout: 60
 
   reviewer:
-    model: gemini/gemini-3-pro-preview # Advanced reasoning for reviews
+    model: gpt-5-mini # Changed from DeepSeek-R1-0528 (not supported by Responses API)
     tools: []
     temperature: 0.2
     enable_dspy: true
@@ -184,7 +184,7 @@ agents:
 
   # New expanded agent roster (configuration-driven; keeps legacy agents for compatibility)
   planner:
-    model: deepinfra/deepseek-ai/DeepSeek-V3.2 # Task decomposition
+    model: gpt-5-mini # Changed from Kimi-K2-Thinking (not supported by Responses API)
     tools: []
     temperature: 0.5
     instructions: prompts.planner # Uses PlannerInstructionSignature for dynamic generation (DSPy-optimized)
@@ -195,7 +195,7 @@ agents:
   # Other agents (executor, coder, verifier, etc.) currently use static prompts from prompts.py
   # Future: Can be migrated to use AgentInstructionSignature for dynamic generation
   executor:
-    model: deepinfra/deepseek-ai/DeepSeek-V3.2 # General execution
+    model: gpt-5-mini
     tools: []
     temperature: 0.6
     instructions: prompts.executor
@@ -204,7 +204,7 @@ agents:
     timeout: 60
 
   coder:
-    model: deepinfra/deepseek-ai/DeepSeek-V3.2 # Strong code generation
+    model: gpt-5-mini
     tools:
       - HostedCodeInterpreterTool
     temperature: 0.3
@@ -214,7 +214,7 @@ agents:
     timeout: 90
 
   verifier:
-    model: gemini/gemini-3-pro-preview # Reasoning for verification
+    model: gpt-5-mini
     tools: []
     temperature: 0.5
     instructions: prompts.verifier
@@ -223,7 +223,7 @@ agents:
     timeout: 60
 
   generator:
-    model: gemini/gemini-3-flash-preview # Fast generation
+    model: gpt-5-mini
     tools: []
     temperature: 0.8
     instructions: prompts.generator
@@ -232,7 +232,7 @@ agents:
     timeout: 60
 
   copilot_researcher:
-    model: gemini/gemini-3-pro-preview # Complex multi-tool research
+    model: gpt-5-mini
     tools:
       - PackageSearchMCPTool
       - Context7DeepWikiTool
@@ -245,7 +245,7 @@ agents:
     timeout: 120
 
   codex_agent:
-    model: deepinfra/deepseek-ai/DeepSeek-V3.2 # Code interpreter
+    model: gpt-5-mini
     tools:
       - HostedCodeInterpreterTool
     temperature: 0.3
@@ -260,7 +260,7 @@ agents:
       - data_analysis
 
   documentation:
-    model: deepinfra/deepseek-ai/DeepSeek-V3.2 # Doc generation
+    model: gpt-5-mini
     tools: []
     temperature: 0.5
     instructions: prompts.documentation
@@ -301,7 +301,7 @@ logging:
   save_history: true
   history_file: .var/logs/execution_history.jsonl
   verbose: true
-  # Log verbose reasoning tokens to execution history (default: false)
+  # Log verbose GPT-5 reasoning tokens to execution history (default: false)
   # Enable for debugging/evaluation; disable in production to reduce storage
   log_reasoning: true
 
@@ -382,7 +382,7 @@ ui_routing:
       priority: high
       collapsible: false
 
-  # Reasoning events (chain-of-thought)
+  # Reasoning events (GPT-5 chain-of-thought)
   reasoning_delta:
     _default:
       category: reasoning

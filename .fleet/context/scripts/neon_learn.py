@@ -3,7 +3,7 @@
 
 import os
 import sys
-from datetime import date, datetime
+from datetime import datetime
 from pathlib import Path
 
 import yaml
@@ -19,25 +19,14 @@ def parse_frontmatter(content: str) -> tuple[dict, str]:
     if content.startswith("---"):
         parts = content.split("---", 2)
         if len(parts) >= 3:
+            import json
+
             try:
                 metadata = yaml.safe_load(parts[1].strip())
             except yaml.YAMLError:
                 metadata = {}
             return metadata, parts[2].strip()
     return {}, content
-
-
-def serialize_metadata(metadata: dict) -> dict:
-    """Convert metadata values to JSON-serializable types."""
-    result = {}
-    for key, value in metadata.items():
-        if isinstance(value, (date, datetime)):
-            result[key] = value.isoformat()
-        elif isinstance(value, list):
-            result[key] = [str(v) if isinstance(v, (date, datetime)) else v for v in value]
-        else:
-            result[key] = value
-    return result
 
 
 def load_neon_config():
@@ -72,21 +61,7 @@ def learn_skill(file_path: str):
     content = path.read_text()
     metadata, body = parse_frontmatter(content)
 
-    # Determine skill name: prefer frontmatter 'name' or 'title',
-    # then parent directory name (for SKILL.md format), then filename stem
-    name_from_meta = metadata.get("name")
-    title_from_meta = metadata.get("title")
-
-    if name_from_meta:
-        skill_name = str(name_from_meta)
-    elif title_from_meta:
-        skill_name = str(title_from_meta).lower().replace(" ", "-")
-    elif path.stem.lower() == "skill" and path.parent.name != "skills":
-        # Format: .fleet/context/skills/{skill-name}/SKILL.md
-        skill_name = path.parent.name
-    else:
-        skill_name = path.stem
-
+    skill_name = metadata.get("name", path.stem)
     category = metadata.get("category", metadata.get("scope", "general"))
     description = metadata.get("description", "")
 
@@ -98,20 +73,16 @@ def learn_skill(file_path: str):
     print("\n[1/2] Saving to NeonDB...")
     try:
         memory = NeonMemory()
-        # Serialize metadata to handle date objects
-        safe_metadata = serialize_metadata(
-            {
-                "source_file": str(path),
-                "learned_at": datetime.now().isoformat(),
-                **metadata,
-            }
-        )
         memory.save_skill(
             skill_name=skill_name,
             category=category,
             description=description,
             implementation=body[:5000] if len(body) > 5000 else body,
-            metadata=safe_metadata,
+            metadata={
+                "source_file": str(path),
+                "learned_at": datetime.now().isoformat(),
+                **metadata,
+            },
         )
         print(f"  ✓ Saved to NeonDB: {skill_name}")
         memory._close()
