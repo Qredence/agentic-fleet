@@ -32,7 +32,7 @@ echo "Starting comprehensive validation..."
 # 1. STANDARD PRE-COMMIT HOOKS
 # =============================================================================
 log_info "Running standard pre-commit hooks..."
-if command -v pre-commit >/dev/null 2>&1; then
+if command -v pre-commit >/dev/null 2>&1 && [ -z "$GIT_HOOK_TEST" ]; then
     if pre-commit run --all-files >/dev/null 2>&1; then
         log_success "Standard pre-commit hooks passed"
     else
@@ -41,7 +41,7 @@ if command -v pre-commit >/dev/null 2>&1; then
         exit 1
     fi
 else
-    log_warning "pre-commit not found, skipping standard checks"
+    log_info "Skipping standard pre-commit hooks (not available or in test mode)"
 fi
 
 # =============================================================================
@@ -134,25 +134,21 @@ esac
 # =============================================================================
 # 4. CODE QUALITY CHECKS
 # =============================================================================
-if [ "$SKIP_QUALITY" = "true" ]; then
-    log_warning "Skipping quality checks (AGENTICFLEET_SKIP_QUALITY_CHECKS=true)"
+log_info "Running code quality checks..."
+
+# Run make check with error capture
+quality_output=$(make check 2>&1)
+quality_exit=$?
+
+if [ $quality_exit -eq 0 ]; then
+    log_success "Code quality checks passed"
 else
-    log_info "Running code quality checks..."
-
-    # Run make check with error capture
-    quality_output=$(make check 2>&1)
-    quality_exit=$?
-
-    if [ $quality_exit -eq 0 ]; then
-        log_success "Code quality checks passed"
-    else
-        log_warning "Code quality checks failed - showing details:"
-        echo "$quality_output" | head -20
-        echo ""
-        log_info "Run 'make check' for full details"
-        log_info "Run 'make format' to auto-fix formatting issues"
-        # Don't fail the commit for quality issues - just warn
-    fi
+    log_error "Code quality checks failed"
+    echo "$quality_output" | head -20
+    echo ""
+    log_info "Run 'make check' for full details"
+    log_info "Run 'make format' to auto-fix formatting issues"
+    exit 1
 fi
 
 # =============================================================================
