@@ -16,11 +16,11 @@ from agentic_fleet.utils.storage import HistoryManager
 from ..agents import AgentFactory, validate_tool
 from ..dspy_modules.lifecycle import configure_dspy_settings
 from ..dspy_modules.reasoner import DSPyReasoner
-
-# agent_framework is now a direct dependency; legacy shim compatibility layer removed
-from ..utils.cache import TTLCache
 from ..utils.cfg import load_config, validate_agentic_fleet_env
 from ..utils.tool_registry import ToolRegistry
+
+# agent_framework is now a direct dependency; legacy shim compatibility layer removed
+from ..utils.ttl_cache import TTLCache
 from .config import WorkflowConfig
 from .context import (
     CompilationState,

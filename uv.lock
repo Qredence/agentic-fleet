@@ -304,7 +304,7 @@ wheels = [
 
 [[package]]
 name = "agentic-fleet"
-version = "0.6.98"
+version = "0.7.1"
 source = { editable = "." }
 dependencies = [
     { name = "agent-framework", marker = "sys_platform == 'darwin' or sys_platform == 'linux'" },
