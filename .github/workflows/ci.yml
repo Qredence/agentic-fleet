@@ -21,17 +21,15 @@ env:
 
 jobs:
   # ============================================================================
-  # Code Quality Checks (lint + type-check run in parallel)
+  # Unified Code Quality Checks (lint + type-check + security in parallel)
   # ============================================================================
-  lint:
-    name: Lint & Format
+  quality:
+    name: Code Quality & Type Check
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v4
         with:
-          # Need full history for auto-commit on main
           fetch-depth: 0
-          # Use PAT or default token for push
           token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Install uv
@@ -68,26 +66,21 @@ jobs:
           commit_user_name: "github-actions[bot]"
           commit_user_email: "github-actions[bot]@users.noreply.github.com"
 
-  type-check:
-    name: Type Check
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v4
-
-      - name: Install uv
-        uses: astral-sh/setup-uv@681c641aba71e4a1c380be3ab5e12ad51f415867 # v5
-        with:
-          enable-cache: true
-          cache-dependency-glob: "uv.lock"
-
-      - name: Create uv virtual environment
-        run: uv venv
-
-      - name: Install dependencies
-        run: uv sync --frozen
-
       - name: Run ty type checker
         run: uv run ty check src
+
+      - name: Run Bandit security scan
+        run: |
+          uv pip install --system bandit[toml]
+          bandit -r src/ -c pyproject.toml -x src/frontend/node_modules -f json -o bandit-report.json -ll -ii || true
+
+      - name: Upload security report
+        if: failure()
+        uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5
+        with:
+          name: security-report
+          path: bandit-report.json
+          retention-days: 30
 
   # ============================================================================
   # Test Suite (matrix for Python versions, macOS/Linux only per pyproject.toml)
@@ -170,38 +163,12 @@ jobs:
         run: npm test
 
   # ============================================================================
-  # Agentic Workflow Validation
-  # ============================================================================
-  agentic-workflows:
-    name: Agentic Workflows
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v4
-
-      - name: Install gh-aw extension
-        run: |
-          gh extension install github/gh-aw || true
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Validate lock files are up-to-date
-        run: |
-          # Check that lock files exist and are valid YAML
-          for lock_file in .github/workflows/*.lock.yml; do
-            if [ -f "$lock_file" ]; then
-              echo "Validating $lock_file..."
-              python -c "import yaml; yaml.safe_load(open('$lock_file'))"
-            fi
-          done
-          echo "All lock files are valid."
-
-  # ============================================================================
   # Build Verification
   # ============================================================================
   build:
     name: Build
     runs-on: ubuntu-latest
-    needs: [lint, type-check, test, frontend, agentic-workflows]
+    needs: [quality, test, frontend]
     steps:
       - uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v4
 

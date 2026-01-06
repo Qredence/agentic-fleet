@@ -5,10 +5,7 @@ description: |
   identifying missing tools, and detecting inefficiencies.
 
 on:
-  slash_command:
-    name: q
-  reaction: rocket
-  stop-after: +1mo
+  workflow_dispatch:
 
 roles: [admin, maintainer, write]
 
