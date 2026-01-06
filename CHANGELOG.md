@@ -1,5 +1,62 @@
 # Changelog
 
+## v0.7.1 (2026-01-06) – Code Refactoring & Infrastructure Improvements
+
+### Highlights
+
+#### Utils Module Consolidation
+
+- **Cache Implementation Unification** – Consolidated duplicate cache implementations into `utils/ttl_cache.py` as single source of truth for TTL and LRU caching.
+- **Profiling Module Cleanup** – Removed `utils/profiling.py` re-export shim, relocated memory monitoring to `utils/infra/profiling.py` alongside performance tracking.
+- **Import Path Simplification** – Cleaner import paths throughout codebase with direct imports from consolidated modules.
+
+#### CI/CD & Testing Improvements
+
+- **GitHub Actions Updates** – Modernized all CI/CD workflows with latest action versions and improved reliability.
+- **Test Suite Fixes** – Skipped tracing tests requiring unavailable agent-framework APIs to prevent CI failures.
+- **Code Quality Maintenance** – Fixed import sorting issues in DSPy modules and improved code structure readability.
+
+### Changes
+
+#### Backend
+
+- **`utils/ttl_cache.py`**: Extended with cache_agent_response decorator from consolidated `utils/cache.py`.
+- **`utils/infra/profiling.py`**: Added memory monitoring functions (`get_process_rss_bytes`, `get_process_rss_mb`) from `utils/memory.py`.
+- **`utils/__init__.py`**: Updated lazy loaders and import paths for consolidated modules.
+- **Import Updates**: Updated imports across workflow executors, DSPy modules, and services to use new consolidated paths.
+- **File Removals**: Deleted `utils/cache.py`, `utils/memory.py`, and `utils/profiling.py` after functionality consolidation.
+
+#### CI/CD
+
+- **GitHub Actions**: Updated to latest semver action versions for better security and compatibility.
+- **Test Filtering**: Added conditional test skipping for unavailable agent-framework tracing APIs.
+
+#### Code Quality
+
+- **Import Sorting**: Fixed import block organization in DSPy modules (`nlu.py`, `programs.py`).
+- **Code Structure**: Refactored for improved readability and maintainability across multiple modules.
+
+### Bug Fixes
+
+- **Tracing Tests**: Fixed CI failures by conditionally skipping tests requiring unavailable APIs.
+- **Import Issues**: Resolved import path inconsistencies after module consolidation.
+
+### Migration Notes
+
+- **Import Paths**: Update any direct imports from removed modules:
+  - `from agentic_fleet.utils.cache import ...` → `from agentic_fleet.utils.ttl_cache import ...`
+  - `from agentic_fleet.utils.memory import ...` → `from agentic_fleet.utils.infra.profiling import ...`
+  - `from agentic_fleet.utils.profiling import ...` → `from agentic_fleet.utils.infra.profiling import ...`
+
+### Stats
+
+- **10 commits** in this release
+- **25+ files changed**
+- **-300+ LOC** (removed duplicate code)
+- **Import path consolidation** across 15+ modules
+
+---
+
 ## v0.7.0 (2025-12-29) – Memory System, Frontend Architecture & Langfuse Integration
 
 ### Highlights
