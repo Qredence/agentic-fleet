@@ -1,4 +1,4 @@
-.PHONY: help install dev-setup sync clean test test-fast test-config test-e2e test-frontend test-all lint format type-check check run pre-commit-install dev backend frontend-install frontend-dev build-frontend analyze-history self-improve init-var clear-cache qa frontend-lint frontend-format evaluate-history tracing-start tracing-stop optimize security docs docs-serve version
+.PHONY: help install dev-setup sync clean test test-fast test-config test-e2e test-frontend test-all lint format type-check check run pre-commit-install dev backend frontend-install frontend-dev build-frontend analyze-history self-improve init-var clear-cache qa frontend-lint frontend-format evaluate-history tracing-start tracing-stop optimize security docs docs-serve version hooks-install hooks-uninstall hooks-update setup-hooks benchmark diagnostic-server generate-openapi validate-models
 
 # ============================================================================
 # Variables
@@ -73,6 +73,10 @@ help:
 	@echo "$(GREEN)Utilities:$(NC)"
 	@echo "  clean             Remove cache and build artifacts"
 	@echo "  version           Show current version"
+	@echo "  benchmark         Run API performance benchmark"
+	@echo "  diagnostic-server Start diagnostic server"
+	@echo "  generate-openapi  Generate OpenAPI specification"
+	@echo "  validate-models   Validate LiteLLM model configurations"
 	@echo "  pre-commit-install Install git pre-commit hooks"
 	@echo "  hooks-install     Install enhanced git hooks"
 	@echo "  hooks-uninstall   Remove enhanced git hooks"
@@ -292,6 +296,22 @@ tracing-stop:
 # ============================================================================
 version:
 	@$(PYTHON) -c "from agentic_fleet import __version__; print(f'AgenticFleet v{__version__}')"
+
+benchmark:
+	@echo "$(CYAN)Running API benchmark...$(NC)"
+	$(PYTHON) scripts/benchmark_api.py
+
+diagnostic-server:
+	@echo "$(CYAN)Starting diagnostic server...$(NC)"
+	$(PYTHON) scripts/diagnostic_server.py
+
+generate-openapi:
+	@echo "$(CYAN)Generating OpenAPI spec...$(NC)"
+	$(PYTHON) scripts/generate_openapi.py
+
+validate-models:
+	@echo "$(CYAN)Validating LiteLLM models...$(NC)"
+	@bash scripts/validate_litellm_models.sh
 
 clean:
 	@echo "$(CYAN)Cleaning build artifacts...$(NC)"

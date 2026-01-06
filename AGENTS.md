@@ -38,18 +38,29 @@ AgenticFleet is a multi-agent orchestration system combining DSPy + Microsoft Ag
 | Backend only         | `make backend`                                      |
 | Frontend only        | `make frontend-dev`                                 |
 | Run tests            | `make test`                                         |
+| Run tests fast       | `make test-fast` (parallel execution)               |
 | Run single test      | `uv run pytest tests/path/test_file.py::test_name`  |
 | Frontend tests       | `make test-frontend` (Vitest)                       |
+| Config validation    | `make test-config` (validate workflow config)       |
 | E2E tests            | `make test-e2e` (Playwright, requires dev servers)  |
 | All tests            | `make test-all`                                     |
 | Lint + type check    | `make check` (fast, run before commits)             |
 | Full QA suite        | `make qa` (lint + format + type + all tests)        |
 | Format code          | `make format`                                       |
 | Frontend lint        | `make frontend-lint`                                |
+| Security scan        | `make security` (bandit)                            |
 | Clear DSPy cache     | `make clear-cache` (after modifying DSPy modules)   |
-| Evaluate history     | `make evaluate-history` (DSPy-based evaluation)     |
+| Analyze history      | `make analyze-history` (execution patterns)         |
+| Self-improvement     | `make self-improve` (optimization cycle)            |
 | Start tracing        | `make tracing-start` (Jaeger UI at :16686)          |
 | Stop tracing         | `make tracing-stop`                                 |
+| Build docs           | `make docs` (requires docs group)                   |
+| Serve docs           | `make docs-serve` (localhost:8080)                  |
+| Show version         | `make version`                                      |
+| API benchmark        | `make benchmark`                                    |
+| Diagnostic server    | `make diagnostic-server`                            |
+| Generate OpenAPI     | `make generate-openapi`                             |
+| Validate models      | `make validate-models`                              |
 | CLI task             | `agentic-fleet run -m "your task" --verbose`        |
 | CLI evaluate         | `agentic-fleet eval` (run evaluations with tracing) |
 | CLI optimize         | `agentic-fleet optimize` (DSPy optimization)        |

@@ -160,7 +160,7 @@ def initialize_tracing(config: dict[str, Any] | None = None) -> bool:
 
     # Primary: Use Agent Framework's built-in observability setup
     try:
-        from agent_framework.observability import setup_observability
+        from agent_framework.observability import configure_otel_providers
 
         # Build kwargs dynamically based on what's configured
         kwargs: dict[str, Any] = {"enable_sensitive_data": enable_sensitive_data}
@@ -174,7 +174,7 @@ def initialize_tracing(config: dict[str, Any] | None = None) -> bool:
         if vs_code_port_int:
             kwargs["vs_code_extension_port"] = vs_code_port_int
 
-        setup_observability(**kwargs)
+        configure_otel_providers(**kwargs)
 
         # Log what was configured
         destinations = []

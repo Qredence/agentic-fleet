@@ -22,7 +22,7 @@ import dspy
 if TYPE_CHECKING:
     from ..dspy_modules.reasoner import DSPyReasoner
 
-from ..dspy_modules.handoff_signatures import (
+from ..dspy_modules.signatures import (
     HandoffDecision,
     HandoffProtocol,
     HandoffQualityAssessment,
