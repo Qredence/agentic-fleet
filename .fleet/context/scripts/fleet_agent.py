@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """fleet-agent - Context-aware development assistant with dual memory (NeonDB + ChromaDB)."""
 
+import logging
 import os
 import sys
 from datetime import datetime
@@ -10,7 +11,6 @@ from typing import Any
 import chromadb
 import yaml
 from psycopg2 import pool
-import logging
 
 SCRIPTS_DIR = Path(__file__).resolve().parent
 sys.path.insert(0, str(SCRIPTS_DIR))

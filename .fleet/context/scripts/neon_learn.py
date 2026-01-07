@@ -19,8 +19,6 @@ def parse_frontmatter(content: str) -> tuple[dict, str]:
     if content.startswith("---"):
         parts = content.split("---", 2)
         if len(parts) >= 3:
-            import json
-
             try:
                 metadata = yaml.safe_load(parts[1].strip())
             except yaml.YAMLError:
