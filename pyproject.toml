@@ -32,9 +32,9 @@ dependencies = [
     "requests>=2.28.0",
     "pydantic>=2.12.3,<3.0",
     "tiktoken>=0.12.0,<1.0",
-    "agent-framework==1.0.0b251211",
-    "agent-framework-core==1.0.0b251211",
-    "agent-framework-azure-ai==1.0.0b251211",
+    "agent-framework==1.0.0b251223",
+    "agent-framework-core==1.0.0b251223",
+    "agent-framework-azure-ai==1.0.0b251223",
     "rich>=14.2.0",
     "prompt-toolkit>=3.0.47,<4.0",
     "ipykernel>=7.0.1,<8.0",
@@ -77,7 +77,7 @@ dependencies = [
     "tenacity>=8.2.3",
     "prometheus-fastapi-instrumentator>=6.1.0",
     "python-json-logger>=2.0.7",
-    "agent-framework-azure-ai-search==1.0.0b251211",
+    "agent-framework-azure-ai-search==1.0.0b251223",
     "azure-search-documents>=11.6.0",
     "azure-monitor-opentelemetry>=1.8.3",
     "azure-monitor-opentelemetry-exporter>=1.0.0b46",
@@ -106,15 +106,15 @@ azure = [
 
 # UI and interactive features
 ui = [
-    "agent-framework-devui==1.0.0b251211",
+    "agent-framework-devui==1.0.0b251223",
     "rich>=14.2.0",
     "prompt-toolkit>=3.0.47,<4.0",
 ]
 
 # Optional Agent Framework integrations
-a2a = ["agent-framework-a2a==1.0.0b251211"]
-declarative = ["agent-framework-declarative==1.0.0b251211"]
-azurefunctions = ["agent-framework-azurefunctions==1.0.0b251211"]
+a2a = ["agent-framework-a2a==1.0.0b251223"]
+declarative = ["agent-framework-declarative==1.0.0b251223"]
+azurefunctions = ["agent-framework-azurefunctions==1.0.0b251223"]
 
 # Evaluation and testing
 evaluation = ["azure-ai-evaluation>=1.12.0,<2.0"]
