@@ -288,7 +288,7 @@ Feature-based structure with:
 
 ---
 
-## Recent Improvements (v0.6.95)
+## Recent Improvements (v0.7.1)
 
 **Date**: 2025-12-17
 

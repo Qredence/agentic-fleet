@@ -1,17 +1,21 @@
 """Performance profiling and monitoring utilities.
 
-This module provides tools for tracking and logging slow operations in AgenticFleet.
+This module provides tools for tracking and logging slow operations in AgenticFleet,
+as well as memory usage monitoring for resource tracking.
 """
 
 from __future__ import annotations
 
 import inspect
 import logging
+import os
 import time
 from collections.abc import Callable
 from contextlib import contextmanager
 from functools import wraps
 from typing import Any, TypeVar
+
+import psutil
 
 logger = logging.getLogger(__name__)
 
@@ -237,3 +241,39 @@ def reset_performance_stats(operation_name: str | None = None) -> None:
         operation_name: Optional operation name. If None, resets all.
     """
     _global_tracker.reset(operation_name)
+
+
+# Memory Monitoring Utilities
+
+
+def get_process_rss_bytes(pid: int | None = None) -> int:
+    """Return resident set size (RSS) in bytes for the given PID (or current process).
+
+    Args:
+        pid: Optional process ID. If None, uses current process.
+
+    Returns:
+        RSS in bytes
+
+    Example:
+        >>> rss = get_process_rss_bytes()
+        >>> print(f"Memory usage: {rss / 1024 / 1024:.2f} MB")
+    """
+    process = psutil.Process(pid or os.getpid())
+    return int(process.memory_info().rss)
+
+
+def get_process_rss_mb(pid: int | None = None) -> float:
+    """Return resident set size (RSS) in MB for the given PID (or current process).
+
+    Args:
+        pid: Optional process ID. If None, uses current process.
+
+    Returns:
+        RSS in megabytes
+
+    Example:
+        >>> mem_mb = get_process_rss_mb()
+        >>> print(f"Memory usage: {mem_mb:.2f} MB")
+    """
+    return get_process_rss_bytes(pid) / (1024 * 1024)

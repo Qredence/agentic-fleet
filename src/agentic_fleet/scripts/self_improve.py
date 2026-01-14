@@ -16,7 +16,7 @@ from rich.console import Console
 from rich.panel import Panel
 from rich.table import Table
 
-from agentic_fleet.dspy_modules.gepa import SelfImprovementEngine
+from agentic_fleet.dspy_modules.optimization import SelfImprovementEngine
 from agentic_fleet.utils.cfg import DEFAULT_EXAMPLES_PATH
 
 # Add project root to path

@@ -1,68 +1,102 @@
- .PHONY: help install dev-setup sync clean test test-config test-e2e test-frontend test-all lint format type-check check run pre-commit-install dev backend frontend-install frontend-dev build-frontend analyze-history self-improve init-var clear-cache qa frontend-lint frontend-format evaluate-history tracing-start tracing-stop
+.PHONY: help install dev-setup sync clean test test-fast test-config test-e2e test-frontend test-all lint format type-check check run pre-commit-install dev backend frontend-install frontend-dev build-frontend analyze-history self-improve init-var clear-cache qa frontend-lint frontend-format evaluate-history tracing-start tracing-stop optimize security docs docs-serve version hooks-install hooks-uninstall hooks-update setup-hooks benchmark diagnostic-server generate-openapi validate-models
 
-# Centralized variables
+# ============================================================================
+# Variables
+# ============================================================================
 FRONTEND_DIR := src/frontend
 PYTHON := uv run python
 PYTEST := uv run pytest
 PYTEST_OPTS := -q --tb=short
+PYTEST_PARALLEL := -n auto  # Use all CPU cores
 
-# Default target
+# Colors for output
+GREEN := \033[0;32m
+YELLOW := \033[0;33m
+CYAN := \033[0;36m
+NC := \033[0m  # No Color
+
+# ============================================================================
+# Default Target
+# ============================================================================
 help:
-	@echo "AgenticFleet - Development Commands"
-	@echo "===================================="
 	@echo ""
-	@echo "Setup:"
-	@echo "  make install           Install/sync dependencies (first time or update)"
-	@echo "  make dev-setup         Full development setup (install + frontend + pre-commit)"
-	@echo "  make sync              Sync dependencies from lockfile"
-	@echo "  make frontend-install  Install frontend dependencies"
+	@echo "$(CYAN)AgenticFleet - Development Commands$(NC)"
+	@echo "======================================"
 	@echo ""
-	@echo "Development:"
-	@echo "  make run               Run the main application"
-	@echo "  make dev               Run backend + frontend together (full stack)"
-	@echo "  make backend           Run backend only (port 8000)"
-	@echo "  make frontend-dev      Run frontend only (port 5173)"
-	@echo "  make build-frontend    Build frontend for production (outputs to backend/ui)"
+	@echo "$(GREEN)Setup:$(NC)"
+	@echo "  install           Install/sync dependencies (first time or update)"
+	@echo "  dev-setup         Full development setup (install + frontend + hooks)"
+	@echo "  sync              Sync dependencies from lockfile"
+	@echo "  frontend-install  Install frontend dependencies"
+	@echo "  init-var          Initialize .var/ directory structure"
 	@echo ""
-	@echo "Testing:"
-	@echo "  make test              Run backend tests (fast)"
-	@echo "  make test-frontend     Run frontend unit tests"
-	@echo "  make test-all          Run all tests (backend + frontend)"
-	@echo "  make test-config       Run configuration validation"
-	@echo "  make test-e2e          Run end-to-end tests (requires dev running)"
+	@echo "$(GREEN)Development:$(NC)"
+	@echo "  dev               Run backend + frontend together (full stack)"
+	@echo "  backend           Run backend only (port 8000)"
+	@echo "  frontend-dev      Run frontend only (port 5173)"
+	@echo "  run               Run CLI application"
+	@echo "  build-frontend    Build frontend for production"
 	@echo ""
-	@echo "Code Quality:"
-	@echo "  make lint              Run Ruff linter (backend)"
-	@echo "  make format            Format code with Ruff (backend)"
-	@echo "  make frontend-lint     Run ESLint (frontend)"
-	@echo "  make frontend-format   Format code with Prettier (frontend)"
-	@echo "  make type-check        Run ty type checker"
-	@echo "  make check             Quick quality check (lint + type-check)"
-	@echo "  make qa                Full QA suite (lint + format + type + all tests)"
+	@echo "$(GREEN)Testing:$(NC)"
+	@echo "  test              Run backend tests"
+	@echo "  test-fast         Run backend tests in parallel (faster)"
+	@echo "  test-frontend     Run frontend unit tests"
+	@echo "  test-all          Run all tests (backend + frontend)"
+	@echo "  test-config       Validate workflow configuration"
+	@echo "  test-e2e          Run E2E tests (requires dev servers)"
 	@echo ""
-	@echo "Tools:"
-	@echo "  make pre-commit-install  Install pre-commit hooks"
-	@echo "  make clean             Remove cache and build artifacts"
-	@echo "  make init-var          Initialize .var/ directory structure"
-	@echo "  make clear-cache       Clear compiled DSPy cache"
-	@echo "  make analyze-history   Analyze workflow execution history"
-	@echo "  make evaluate-history  Run DSPy-based evaluation on execution history"
-	@echo "  make self-improve      Run self-improvement analysis"
+	@echo "$(GREEN)Code Quality:$(NC)"
+	@echo "  check             Quick check (lint + type-check)"
+	@echo "  qa                Full QA suite (lint + format + type + tests)"
+	@echo "  lint              Run Ruff linter"
+	@echo "  format            Format code with Ruff"
+	@echo "  type-check        Run ty type checker"
+	@echo "  frontend-lint     Run ESLint on frontend"
+	@echo "  frontend-format   Format frontend with Prettier"
+	@echo "  security          Run security scan (bandit)"
 	@echo ""
-	@echo "Tracing & Visualization (OpenTelemetry):"
-	@echo "  make tracing-start     Start OpenTelemetry collector + Jaeger UI (port 16686)"
-	@echo "  make tracing-stop      Stop the tracing collector"
+	@echo "$(GREEN)DSPy & Optimization:$(NC)"
+	@echo "  optimize          Run GEPA optimization on DSPy modules"
+	@echo "  evaluate-history  Evaluate execution history with DSPy"
+	@echo "  analyze-history   Analyze workflow execution patterns"
+	@echo "  self-improve      Run self-improvement cycle"
+	@echo "  clear-cache       Clear compiled DSPy cache"
+	@echo ""
+	@echo "$(GREEN)Documentation:$(NC)"
+	@echo "  docs              Build documentation (requires docs group)"
+	@echo "  docs-serve        Serve documentation locally"
+	@echo ""
+	@echo "$(GREEN)Observability:$(NC)"
+	@echo "  tracing-start     Start Jaeger + OTEL collector (port 16686)"
+	@echo "  tracing-stop      Stop tracing infrastructure"
+	@echo ""
+	@echo "$(GREEN)Utilities:$(NC)"
+	@echo "  clean             Remove cache and build artifacts"
+	@echo "  version           Show current version"
+	@echo "  benchmark         Run API performance benchmark"
+	@echo "  diagnostic-server Start diagnostic server"
+	@echo "  generate-openapi  Generate OpenAPI specification"
+	@echo "  validate-models   Validate LiteLLM model configurations"
+	@echo "  pre-commit-install Install git pre-commit hooks"
+	@echo "  hooks-install     Install enhanced git hooks"
+	@echo "  hooks-uninstall   Remove enhanced git hooks"
+	@echo "  hooks-update      Update enhanced git hooks"
+	@echo "  setup-hooks       Install all hooks (pre-commit + enhanced)"
 	@echo ""
 
-# Setup commands
+# ============================================================================
+# Setup Commands
+# ============================================================================
 install:
+	@echo "$(CYAN)Installing dependencies...$(NC)"
 	GIT_LFS_SKIP_SMUDGE=1 uv sync --all-extras
-	@echo "✓ Python dependencies installed"
+	@echo "$(GREEN)✓ Python dependencies installed$(NC)"
 	@echo ""
 	@echo "Next: Run 'make frontend-install' to install frontend dependencies"
 
-dev-setup: install frontend-install pre-commit-install
-	@echo "✓ Development environment setup complete"
+dev-setup: install frontend-install setup-hooks init-var
+	@echo ""
+	@echo "$(GREEN)✓ Development environment setup complete$(NC)"
 	@echo ""
 	@echo "Next steps:"
 	@echo "  1. Create .env file: cp .env.example .env"
@@ -73,20 +107,30 @@ sync:
 	GIT_LFS_SKIP_SMUDGE=1 uv sync
 
 frontend-install:
-	@echo "Installing frontend dependencies..."
+	@echo "$(CYAN)Installing frontend dependencies...$(NC)"
 	cd $(FRONTEND_DIR) && npm install
-	@echo "✓ Frontend dependencies installed"
+	@echo "$(GREEN)✓ Frontend dependencies installed$(NC)"
 
-# Run application
+init-var:
+	@mkdir -p .var/cache/dspy
+	@mkdir -p .var/logs/gepa
+	@mkdir -p .var/logs/evaluation
+	@mkdir -p .var/data/db
+	@mkdir -p .var/checkpoints
+	@echo "$(GREEN)✓ Initialized .var/ directory structure$(NC)"
+
+# ============================================================================
+# Development Commands
+# ============================================================================
 run:
-	uv run python -m agentic_fleet
+	uv run agentic-fleet run
 
-# Full stack development (backend + frontend)
 dev:
-	@echo "Starting AgenticFleet Full Stack Development..."
+	@echo "$(CYAN)Starting AgenticFleet Full Stack Development...$(NC)"
 	@echo ""
-	@echo "Backend:  http://localhost:8000"
-	@echo "Frontend: http://localhost:5173"
+	@echo "  Backend:  http://localhost:8000"
+	@echo "  Frontend: http://localhost:5173"
+	@echo "  API Docs: http://localhost:8000/docs"
 	@echo ""
 	@echo "Press Ctrl+C to stop both services"
 	@echo ""
@@ -97,109 +141,184 @@ dev:
 		cd $(FRONTEND_DIR) && npm run dev & \
 		wait'
 
-
-# DevUI backend server only
 backend:
-	@echo "Starting minimal backend on http://localhost:8000"
+	@echo "$(CYAN)Starting backend on http://localhost:8000$(NC)"
 	uv run uvicorn agentic_fleet.main:app --reload --port 8000 --log-level info
 
-# Frontend dev server only
 frontend-dev:
-	@echo "Starting frontend on http://localhost:5173"
+	@echo "$(CYAN)Starting frontend on http://localhost:5173$(NC)"
 	cd $(FRONTEND_DIR) && npm run dev
 
-# Build frontend for production
 build-frontend:
-	@echo "Building frontend for production..."
+	@echo "$(CYAN)Building frontend for production...$(NC)"
 	cd $(FRONTEND_DIR) && npm run build
-	@echo "✓ Frontend built to src/agentic_fleet/ui"
+	@echo "$(GREEN)✓ Frontend built$(NC)"
 
-# Testing
+# ============================================================================
+# Testing Commands
+# ============================================================================
 test:
 	$(PYTEST) $(PYTEST_OPTS) tests/
 
+test-fast:
+	@echo "$(CYAN)Running tests in parallel...$(NC)"
+	$(PYTEST) $(PYTEST_OPTS) $(PYTEST_PARALLEL) tests/
+
 test-frontend:
-	@echo "Running frontend unit tests..."
+	@echo "$(CYAN)Running frontend unit tests...$(NC)"
 	cd $(FRONTEND_DIR) && npm run test:run
 
 test-all: test test-frontend
-	@echo "✓ All tests passed (backend + frontend)"
+	@echo "$(GREEN)✓ All tests passed$(NC)"
 
 test-config:
-	$(PYTHON) -c "from agentic_fleet.utils.cfg import load_config; cfg = load_config(); agent_count = len(cfg.get('agents', {})); print(f'✓ Loaded workflow_config.yaml ({agent_count} agents)')"
+	@$(PYTHON) -c "from agentic_fleet.utils.cfg import load_config; cfg = load_config(); print(f'$(GREEN)✓ Config valid: {len(cfg.get(\"agents\", {}))} agents$(NC)')"
 
 test-e2e:
-	@echo "Running E2E tests (requires backend + frontend running)..."
+	@echo "$(CYAN)Running E2E tests (requires dev servers)...$(NC)"
 	cd $(FRONTEND_DIR) && npx playwright test
 
-# Code quality
+# ============================================================================
+# Code Quality Commands
+# ============================================================================
 lint:
 	uv run ruff check .
-
-frontend-lint:
-	@echo "Running frontend linter..."
-	cd $(FRONTEND_DIR) && npm run lint
 
 format:
 	uv run ruff check --fix .
 	uv run ruff format .
 
-frontend-format:
-	@echo "Formatting frontend code..."
-	cd $(FRONTEND_DIR) && npm run format
-
 type-check:
 	uv run ty check src
 
-# Quick quality check (fast, no tests)
+frontend-lint:
+	cd $(FRONTEND_DIR) && npm run lint
+
+frontend-format:
+	cd $(FRONTEND_DIR) && npm run format
+
+security:
+	@echo "$(CYAN)Running security scan...$(NC)"
+	uv run bandit -r src/agentic_fleet -ll -ii
+	@echo "$(GREEN)✓ Security scan complete$(NC)"
+
 check: lint type-check
-	@echo "✓ Quick quality checks passed!"
+	@echo "$(GREEN)✓ Quick checks passed$(NC)"
 
-# Full QA suite (comprehensive)
-qa: lint format type-check frontend-lint test-all
-	@echo "✓ Full QA complete: All checks passed!"
+qa: format lint type-check frontend-lint frontend-format test-fast test-frontend
+	@echo "$(GREEN)✓ Full QA complete$(NC)"
 
-# Pre-commit
 pre-commit-install:
 	uv run pre-commit install
-	@echo "✓ Pre-commit hooks installed"
+	@echo "$(GREEN)✓ Pre-commit hooks installed$(NC)"
 
-# Analysis tools
-analyze-history:
-	@echo "Analyzing workflow execution history..."
-	$(PYTHON) -m agentic_fleet.scripts.analyze_history
+# ============================================================================
+# Hooks Commands
+# ============================================================================
+hooks-install:
+	@echo "$(CYAN)Installing enhanced git hooks...$(NC)"
+	@chmod +x .githooks/*
+	@cp .githooks/pre-commit .git/hooks/ 2>/dev/null || true
+	@cp .githooks/pre-push .git/hooks/ 2>/dev/null || true
+	@cp .githooks/prepare-commit-msg .git/hooks/ 2>/dev/null || true
+	@cp .githooks/post-checkout .git/hooks/ 2>/dev/null || true
+	@echo "$(GREEN)✓ Enhanced git hooks installed$(NC)"
+	@echo "  Available hooks:"
+	@echo "  • pre-commit        - Quality checks before commit"
+	@echo "  • pre-push          - Validation before push"
+	@echo "  • prepare-commit-msg - Auto-prefix commits"
+	@echo "  • post-checkout     - Dependency sync on branch switch"
+
+hooks-uninstall:
+	@echo "$(CYAN)Removing enhanced git hooks...$(NC)"
+	@rm -f .git/hooks/pre-commit .git/hooks/pre-push \
+		.git/hooks/prepare-commit-msg .git/hooks/post-checkout
+	@echo "$(GREEN)✓ Enhanced git hooks removed$(NC)"
+
+hooks-update:
+	$(MAKE) hooks-uninstall
+	$(MAKE) hooks-install
+
+setup-hooks: pre-commit-install hooks-install
+	@echo "$(GREEN)✓ All hooks setup complete$(NC)"
+
+# ============================================================================
+# DSPy & Optimization Commands
+# ============================================================================
+optimize:
+	@echo "$(CYAN)Running GEPA optimization...$(NC)"
+	uv run agentic-fleet optimize
 
 evaluate-history:
-	@echo "Running DSPy-based evaluation on execution history..."
+	@echo "$(CYAN)Evaluating execution history...$(NC)"
 	$(PYTHON) scripts/evaluate_history.py
 
+analyze-history:
+	@echo "$(CYAN)Analyzing execution patterns...$(NC)"
+	$(PYTHON) -m agentic_fleet.scripts.analyze_history
+
 self-improve:
-	@echo "Running self-improvement analysis..."
+	@echo "$(CYAN)Running self-improvement cycle...$(NC)"
 	$(PYTHON) -m agentic_fleet.scripts.self_improve
 
-# Initialize .var/ directory structure for runtime data
-init-var:
-	@mkdir -p .var/cache/dspy
-	@mkdir -p .var/logs/gepa
-	@mkdir -p .var/logs/evaluation
-	@mkdir -p .var/data/db
-	@echo "✓ Initialized .var/ directory structure"
-
-# Clear compiled DSPy cache
 clear-cache:
 	@rm -f .var/logs/compiled_supervisor.pkl .var/logs/compiled_supervisor.pkl.meta
-	@echo "✓ Cleared compiled DSPy cache"
+	@rm -rf .var/cache/dspy/*
+	@echo "$(GREEN)✓ DSPy cache cleared$(NC)"
 
-# Cleanup
+# ============================================================================
+# Documentation Commands
+# ============================================================================
+docs:
+	@echo "$(CYAN)Building documentation...$(NC)"
+	uv run --group docs mkdocs build
+	@echo "$(GREEN)✓ Documentation built to site/$(NC)"
+
+docs-serve:
+	@echo "$(CYAN)Serving documentation at http://localhost:8080$(NC)"
+	uv run --group docs mkdocs serve -a localhost:8080
+
+# ============================================================================
+# Observability Commands
+# ============================================================================
+tracing-start:
+	@echo "$(CYAN)Starting tracing infrastructure...$(NC)"
+	@bash scripts/start_tracing.sh
+	@echo ""
+	@echo "  Jaeger UI: http://localhost:16686"
+
+tracing-stop:
+	@bash scripts/stop_tracing.sh
+	@echo "$(GREEN)✓ Tracing stopped$(NC)"
+
+# ============================================================================
+# Utility Commands
+# ============================================================================
+version:
+	@$(PYTHON) -c "from agentic_fleet import __version__; print(f'AgenticFleet v{__version__}')"
+
+benchmark:
+	@echo "$(CYAN)Running API benchmark...$(NC)"
+	$(PYTHON) scripts/benchmark_api.py
+
+diagnostic-server:
+	@echo "$(CYAN)Starting diagnostic server...$(NC)"
+	$(PYTHON) scripts/diagnostic_server.py
+
+generate-openapi:
+	@echo "$(CYAN)Generating OpenAPI spec...$(NC)"
+	$(PYTHON) scripts/generate_openapi.py
+
+validate-models:
+	@echo "$(CYAN)Validating LiteLLM models...$(NC)"
+	@bash scripts/validate_litellm_models.sh
+
 clean:
+	@echo "$(CYAN)Cleaning build artifacts...$(NC)"
 	find . -type d -name "__pycache__" -exec rm -rf {} + 2>/dev/null || true
 	find . -type d -name "*.egg-info" -exec rm -rf {} + 2>/dev/null || true
 	find . -type d -name ".pytest_cache" -exec rm -rf {} + 2>/dev/null || true
 	find . -type d -name ".ruff_cache" -exec rm -rf {} + 2>/dev/null || true
-	@echo "✓ Cleaned cache directories"
-# Tracing & Visualization
-tracing-start:
-	@bash scripts/start_tracing.sh
-
-tracing-stop:
-	@bash scripts/stop_tracing.sh
+	find . -type f -name "*.pyc" -delete 2>/dev/null || true
+	rm -rf build/ dist/ site/
+	@echo "$(GREEN)✓ Cleaned$(NC)"
