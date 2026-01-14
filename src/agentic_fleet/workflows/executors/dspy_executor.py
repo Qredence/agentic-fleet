@@ -18,7 +18,7 @@ from agentic_fleet.utils.infra.logging import setup_logger
 from agentic_fleet.utils.infra.resilience import async_call_with_retry
 from agentic_fleet.utils.infra.telemetry import optional_span
 
-from ...utils.memory import get_process_rss_mb
+from ...utils.infra.profiling import get_process_rss_mb
 from ..context import SupervisorContext
 from .base import handler
 

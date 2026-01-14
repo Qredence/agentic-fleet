@@ -12,7 +12,7 @@ from typing import Any
 
 from dspy.teleprompt import BootstrapFewShot
 
-from agentic_fleet.dspy_modules.gepa.optimizer import (
+from agentic_fleet.dspy_modules.optimization.gepa import (
     convert_to_dspy_examples,
     harvest_history_examples,
     optimize_with_gepa,

@@ -445,7 +445,7 @@ make clear-cache       # Clear DSPy cache after module changes
 | [Tracing](docs/guides/tracing.md)                                   | OpenTelemetry and Jaeger setup                   |
 | [Contributing](docs/developers/contributing.md)                     | Development guidelines                           |
 
-## 🆕 What's New in v0.6.95
+## 🆕 What's New in v0.7.1
 
 - **Secure-by-Default Tracing** – `capture_sensitive` defaults to `false` everywhere
 - **Package Reorganization** – `utils/` split into `cfg/`, `infra/`, `storage/` subpackages

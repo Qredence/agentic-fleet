@@ -20,7 +20,7 @@ from agent_framework._types import AgentRunResponse, AgentRunResponseUpdate, Cha
 from agentic_fleet.utils.infra.logging import setup_logger
 from agentic_fleet.utils.infra.telemetry import PerformanceTracker, optional_span
 
-from ..utils.cache import TTLCache
+from ..utils.ttl_cache import TTLCache
 
 if TYPE_CHECKING:
     from agent_framework.openai import OpenAIChatClient, OpenAIResponsesClient

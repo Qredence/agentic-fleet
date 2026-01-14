@@ -3,10 +3,6 @@ name: Documentation Sync
 description: Automatically updates documentation when code changes are detected in src/.
 engine: copilot
 on:
-  push:
-    branches: [main]
-    paths:
-      - "src/**"
   workflow_dispatch:
 
 permissions:
