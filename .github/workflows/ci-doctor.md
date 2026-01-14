@@ -1,8 +1,6 @@
 ---
 name: CI Doctor (PR)
 on:
-  pull_request:
-    types: [opened, synchronize, reopened, ready_for_review]
   workflow_dispatch:
 
 # Keep the main job read-only; use safe-outputs for write operations.

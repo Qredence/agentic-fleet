@@ -15,7 +15,7 @@ from agentic_fleet.utils.infra.resilience import async_call_with_retry
 from agentic_fleet.utils.infra.telemetry import optional_span
 
 from ...dspy_modules.reasoner import DSPyReasoner
-from ...utils.memory import get_process_rss_mb
+from ...utils.infra.profiling import get_process_rss_mb
 from ...utils.models import RoutingDecision
 from ..context import SupervisorContext
 from ..models import ExecutionMessage, ProgressMessage, ProgressReport

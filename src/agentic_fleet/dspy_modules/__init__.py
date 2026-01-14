@@ -16,7 +16,6 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from agentic_fleet.dspy_modules.handoff_signatures import HandoffDecision, HandoffProtocol
     from agentic_fleet.dspy_modules.lifecycle import (
         configure_dspy_settings,
         get_current_lm,
@@ -28,6 +27,8 @@ if TYPE_CHECKING:
     from agentic_fleet.dspy_modules.signatures import (
         AgentInstructionSignature,
         EnhancedTaskRouting,
+        HandoffDecision,
+        HandoffProtocol,
         PlannerInstructionSignature,
         ProgressEvaluation,
         QualityAssessment,
@@ -93,6 +94,8 @@ def __getattr__(name: str) -> object:
     if name in (
         "AgentInstructionSignature",
         "EnhancedTaskRouting",
+        "HandoffDecision",
+        "HandoffProtocol",
         "PlannerInstructionSignature",
         "ProgressEvaluation",
         "QualityAssessment",
@@ -103,6 +106,8 @@ def __getattr__(name: str) -> object:
         from agentic_fleet.dspy_modules.signatures import (
             AgentInstructionSignature,
             EnhancedTaskRouting,
+            HandoffDecision,
+            HandoffProtocol,
             PlannerInstructionSignature,
             ProgressEvaluation,
             QualityAssessment,
@@ -114,6 +119,8 @@ def __getattr__(name: str) -> object:
         return {
             "AgentInstructionSignature": AgentInstructionSignature,
             "EnhancedTaskRouting": EnhancedTaskRouting,
+            "HandoffDecision": HandoffDecision,
+            "HandoffProtocol": HandoffProtocol,
             "PlannerInstructionSignature": PlannerInstructionSignature,
             "ProgressEvaluation": ProgressEvaluation,
             "QualityAssessment": QualityAssessment,
@@ -121,10 +128,5 @@ def __getattr__(name: str) -> object:
             "TaskRouting": TaskRouting,
             "WorkflowStrategy": WorkflowStrategy,
         }[name]
-
-    if name in ("HandoffDecision", "HandoffProtocol"):
-        from agentic_fleet.dspy_modules.handoff_signatures import HandoffDecision, HandoffProtocol
-
-        return HandoffDecision if name == "HandoffDecision" else HandoffProtocol
 
     raise AttributeError(f"module {__name__!r} has no attribute {name!r}")

@@ -2,7 +2,7 @@
 
 Welcome to AgenticFleet documentation. This index organizes documentation by audience to help you find what you need quickly.
 
-**Current Version:** v0.6.95 (see `pyproject.toml` for latest)
+**Current Version:** v0.7.1 (see `pyproject.toml` for latest)
 
 ## Quick Start
 

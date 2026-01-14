@@ -1,0 +1,23 @@
+# NeonDB Configuration
+# Copy this to config.yaml and fill in your values
+
+# Connection settings
+cloud:
+  host: "your-endpoint.neon.tech"
+  database: "neondb"
+  user: "your-username"
+  password: "your-password"
+  # Neon uses pooled connections by default, set to false for autocommit
+  pool: true
+
+# Connection pool settings
+pooling:
+  min_size: 2
+  max_size: 10
+  idle_timeout: 300 # seconds
+  connection_timeout: 30 # seconds
+
+# SSL/TLS settings (Neon requires SSL)
+ssl:
+  enabled: true
+  reject_unauthorized: true

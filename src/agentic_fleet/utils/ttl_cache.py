@@ -8,15 +8,24 @@ Features:
 - Asyncio lock for thread safety
 - Metrics tracking (hits, misses, evictions)
 - Conversation isolation via cache key prefixes
+- Agent response caching decorator with Cosmos mirroring support
 """
 
 from __future__ import annotations
 
 import asyncio
+import hashlib
+import logging
+import os
 import threading as _threading
 import time
 from collections import OrderedDict
+from collections.abc import Callable
 from dataclasses import dataclass
+from functools import wraps
+from typing import Any
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass
@@ -341,11 +350,110 @@ class SyncTTLCache[K, V]:
             return [entry.value for entry in self._cache.values() if now < entry.expires_at]
 
 
+# Helper functions for cache decorator
+
+
+def _truthy_env(name: str) -> bool:
+    """Check if environment variable is truthy."""
+    value = os.getenv(name, "").strip().lower()
+    return value in {"1", "true", "yes", "on"}
+
+
+def _capture_sensitive_for_telemetry() -> bool:
+    """Return True if sensitive user inputs may be captured for telemetry.
+
+    We intentionally require an explicit opt-in via environment variables.
+    This mirrors the tracing module's conventions.
+    """
+    return (
+        _truthy_env("ENABLE_SENSITIVE_DATA")
+        or _truthy_env("TRACING_SENSITIVE_DATA")
+        or _truthy_env("AGENTICFLEET_CAPTURE_SENSITIVE")
+    )
+
+
+def _generate_cache_key(task: str, agent_name: str) -> str:
+    """Generate cache key from task and agent name.
+
+    Args:
+        task: Task string
+        agent_name: Agent identifier
+
+    Returns:
+        MD5 hash as cache key
+    """
+    content = f"{task}:{agent_name}"
+    # MD5 used for cache key generation, not security
+    return hashlib.md5(content.encode(), usedforsecurity=False).hexdigest()
+
+
+# Agent Response Caching Decorator
+
+
+def cache_agent_response(
+    ttl: int = 300,
+) -> Callable[[Callable[..., Any]], Callable[..., Any]]:
+    """Decorator for caching agent responses with optional Cosmos mirroring.
+
+    Args:
+        ttl: Time-to-live in seconds for cached responses
+
+    Usage:
+        @cache_agent_response(ttl=300)
+        async def run_cached(self, task: str) -> ChatMessage:
+            return await self.execute(task)
+    """
+    cache: SyncTTLCache[str, Any] = SyncTTLCache(ttl_seconds=ttl)
+
+    def decorator(func: Callable[..., Any]) -> Callable[..., Any]:
+        @wraps(func)
+        async def wrapper(self: Any, task: str, *args: Any, **kwargs: Any) -> Any:
+            # Generate cache key from task and agent name
+            agent_name = getattr(self, "name", "unknown")
+            cache_key = _generate_cache_key(task, agent_name)
+
+            # Check cache first
+            cached = cache.get(cache_key)
+            if cached is not None:
+                logger.debug(f"Cache hit for {agent_name}: {task[:50]}...")
+                return cached
+
+            # Execute and cache
+            result = await func(self, task, *args, **kwargs)
+            cache.set(cache_key, result)
+
+            # Mirror to Cosmos (if enabled)
+            try:
+                from agentic_fleet.utils.storage.cosmos import mirror_cache_entry
+
+                payload: dict[str, Any] = {
+                    "agentName": agent_name,
+                    "ttlSeconds": ttl,
+                    "responseType": type(result).__name__,
+                    "taskLength": len(task),
+                }
+                if _capture_sensitive_for_telemetry():
+                    payload["taskPreview"] = task[:256]
+                else:
+                    payload["taskPreview"] = "[redacted]"
+
+                mirror_cache_entry(cache_key, payload)
+            except Exception as exc:  # pragma: no cover - defensive
+                logger.debug("Failed to mirror cache entry: %s", exc)
+
+            return result
+
+        return wrapper
+
+    return decorator
+
+
 __all__ = [
     "AsyncTTLCache",
     "CacheStats",
     "SyncTTLCache",
     "TTLCache",
+    "cache_agent_response",
 ]
 
 TTLCache = SyncTTLCache

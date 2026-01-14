@@ -134,12 +134,32 @@ class DSPyManager:
 
     def _create_lm_instance(self, model: str, enable_cache: bool, **kwargs: Any) -> dspy.LM:
         """Internal method to create a new LM instance."""
-        if env_config.use_azure_openai:
+        # Priority: LiteLLM > Azure OpenAI > Provider-prefixed > Standard OpenAI
+        if env_config.use_litellm_proxy:
+            return self._create_litellm_lm(model, **kwargs)
+        elif env_config.use_azure_openai:
             return self._create_azure_lm(model, **kwargs)
         elif "/" in model:
             return self._create_provider_lm(model, **kwargs)
         else:
             return self._create_openai_lm(model, **kwargs)
+
+    def _create_litellm_lm(self, model: str, **kwargs: Any) -> dspy.LM:
+        """Create LM instance for LiteLLM proxy routing."""
+        # Standard OpenAI-compatible endpoint: /v1/chat/completions
+        api_base = f"{env_config.litellm_proxy_url}/v1"
+        api_key = env_config.litellm_api_key
+
+        litellm_kwargs = {
+            "api_key": api_key,
+            "api_base": api_base,
+        }
+
+        merged_kwargs = {**litellm_kwargs, **kwargs}
+        logger.info(f"Using LiteLLM proxy: model={model}, endpoint={api_base}")
+
+        # Pass model as-is (e.g., deepinfra/deepseek-ai/DeepSeek-V3.2)
+        return dspy.LM(model, **merged_kwargs)  # type: ignore
 
     def _create_azure_lm(self, model: str, **kwargs: Any) -> dspy.LM:
         deployment = env_config.azure_openai_deployment or model

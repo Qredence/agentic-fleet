@@ -445,7 +445,7 @@ make clear-cache       # Clear DSPy cache after module changes
 | [Tracing](docs/guides/tracing.md)                                   | OpenTelemetry and Jaeger setup                   |
 | [Contributing](docs/developers/contributing.md)                     | Development guidelines                           |
 
-## 🆕 What's New in v0.6.95
+## 🆕 What's New in v0.7.1
 
 - **Secure-by-Default Tracing** – `capture_sensitive` defaults to `false` everywhere
 - **Package Reorganization** – `utils/` split into `cfg/`, `infra/`, `storage/` subpackages
@@ -488,6 +488,16 @@ make test               # Run tests
 - Use [conventional commits](https://www.conventionalcommits.org/) (optional but appreciated)
 
 See [CONTRIBUTING.md](CONTRIBUTING.md) for detailed guidelines.
+
+## 👥 Contributors
+
+Thanks to all the amazing people who have contributed to AgenticFleet! 💜
+
+<p align="center">
+  <a href="https://github.com/Qredence/agentic-fleet/graphs/contributors">
+    <img src="https://contrib.rocks/image?repo=Qredence/agentic-fleet" alt="Contributors" />
+  </a>
+</p>
 
 ## 📄 License
 

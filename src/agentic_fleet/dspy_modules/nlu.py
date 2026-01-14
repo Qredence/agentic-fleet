@@ -3,18 +3,48 @@
 This module implements the DSPyNLU class, which uses DSPy signatures to perform
 NLU tasks such as intent classification and entity extraction. It supports
 lazy loading of compiled modules for performance.
+
+NLU Signatures are defined inline to reduce file fragmentation.
 """
 
 from __future__ import annotations
 
 import logging
 import os
+from collections.abc import Sequence
 from typing import Any
 
 import dspy
 
 from ..utils.cfg import DEFAULT_NLU_CACHE_PATH
-from .nlu_signatures import EntityExtraction, IntentClassification
+
+# =============================================================================
+# NLU Signatures (merged from nlu_signatures.py)
+# =============================================================================
+
+
+class IntentClassification(dspy.Signature):
+    """Classify the intent of a user's input."""
+
+    text: str = dspy.InputField(desc="The user's input text")
+    possible_intents: str = dspy.InputField(desc="Comma-separated list of possible intents")
+
+    intent: str = dspy.OutputField(desc="The classified intent")
+    confidence: float = dspy.OutputField(desc="Confidence score between 0.0 and 1.0")
+    reasoning: str = dspy.OutputField(desc="Reasoning for the classification")
+
+
+class EntityExtraction(dspy.Signature):
+    """Extract named entities from text."""
+
+    text: str = dspy.InputField(desc="The user's input text")
+    entity_types: str = dspy.InputField(desc="Comma-separated list of entity types to extract")
+
+    entities: list[dict[str, str]] = dspy.OutputField(
+        desc="List of extracted entities with 'text', 'type', and 'confidence'"
+    )
+    reasoning: str = dspy.OutputField(desc="Reasoning for the extraction")
+
 
 logger = logging.getLogger(__name__)
 
@@ -123,7 +153,7 @@ class DSPyNLU(dspy.Module):
             "reasoning": getattr(prediction, "reasoning", ""),
         }
 
-    def predictors(self) -> list[dspy.Module]:
+    def predictors(self) -> Sequence[dspy.Module]:  # type: ignore[override]
         """Return list of predictors for optimization."""
         self._ensure_modules_initialized()
         return [
@@ -164,3 +194,11 @@ def get_nlu_module() -> DSPyNLU:
 
     # Fallback to fresh instance
     return DSPyNLU()
+
+
+__all__ = [
+    "DSPyNLU",
+    "EntityExtraction",
+    "IntentClassification",
+    "get_nlu_module",
+]

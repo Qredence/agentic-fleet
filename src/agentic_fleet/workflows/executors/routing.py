@@ -17,7 +17,7 @@ from agentic_fleet.utils.infra.telemetry import optional_span
 
 from ...dspy_modules.assertions import detect_task_type, validate_full_routing
 from ...dspy_modules.reasoner import DSPyReasoner
-from ...utils.memory import get_process_rss_mb
+from ...utils.infra.profiling import get_process_rss_mb
 from ...utils.models import ExecutionMode, RoutingDecision, ensure_routing_decision
 from ..context import SupervisorContext
 from ..helpers import detect_routing_edge_cases, normalize_routing_decision
