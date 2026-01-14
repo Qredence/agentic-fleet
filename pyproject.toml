@@ -82,7 +82,7 @@ dependencies = [
     "azure-monitor-opentelemetry>=1.8.3",
     "azure-monitor-opentelemetry-exporter>=1.0.0b46",
     "opentelemetry-exporter-otlp-proto-http>=1.38.0",
-    "azure-ai-projects==2.0.0b2",
+    "azure-ai-projects==2.0.0b3",
     "openinference-instrumentation==0.1.42",
     "langfuse==3.11.0",
     "openinference-instrumentation-dspy==0.1.33",
@@ -99,9 +99,9 @@ requires-python = ">=3.12,<4"
 [project.optional-dependencies]
 # Core Azure integration
 azure = [
-    "azure-ai-agents==1.2.0b5",
+    "azure-ai-agents==1.2.0b6",
     "azure-identity>=1.25.1,<2.0",
-    "azure-ai-projects==2.0.0b2",
+    "azure-ai-projects==2.0.0b3",
 ]
 
 # UI and interactive features
