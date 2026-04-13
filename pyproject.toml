@@ -187,11 +187,11 @@ exclude = [
 # Core development tools (installed by default)
 dev = [
     # Testing
-    "pytest>=8.4.2",
-    "pytest-asyncio>=1.2.0",
-    "pytest-cov>=6.0.0",
+    "pytest>=9.0.3",
+    "pytest-asyncio>=1.3.0",
+    "pytest-cov>=7.1.0",
     # Linting & Formatting
-    "ruff>=0.14.6",
+    "ruff>=0.15.10",
     # Type Checking
     "ty>=0.0.1a27",
     "types-PyYAML>=6.0.0",
