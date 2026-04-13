@@ -194,7 +194,7 @@ dev = [
     "ruff>=0.14.6",
     # Type Checking
     "ty>=0.0.1a27",
-    "types-PyYAML>=6.0.0",
+    "types-PyYAML>=6.0.12.20260408",
     "types-requests>=2.31.0",
     "types-aiofiles>=25.1.0.20251011",
     # Pre-commit hooks
