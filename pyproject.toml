@@ -24,9 +24,9 @@ classifiers = [
 ]
 
 dependencies = [
-    "azure-ai-agents>=1.2.0b5,<1.3",
-    "azure-identity>=1.25.1,<2.0",
-    "azure-cosmos>=4.8.0,<5.0",
+    "azure-ai-agents>=1.2.0b6,<1.3",
+    "azure-identity>=1.25.3,<2.0",
+    "azure-cosmos>=4.15.0,<5.0",
     "python-dotenv>=1.2.1,<2.0",
     "pyyaml>=6.0.3,<7.0",
     "requests>=2.28.0",
@@ -39,7 +39,7 @@ dependencies = [
     "prompt-toolkit>=3.0.47,<4.0",
     "ipykernel>=7.0.1,<8.0",
     "openai>=2.5.1",                                  # Updated from requirements.txt
-    "azure-ai-evaluation>=1.12.0,<2.0",
+    "azure-ai-evaluation>=1.16.5,<2.0",
     "fastapi[standard]>=0.120.1,<1.0",
     "uvicorn[standard]>=0.24.0",
     "httpx>=0.24.0",
@@ -79,10 +79,10 @@ dependencies = [
     "python-json-logger>=2.0.7",
     "agent-framework-azure-ai-search==1.0.0b251211",
     "azure-search-documents>=11.6.0",
-    "azure-monitor-opentelemetry>=1.8.3",
-    "azure-monitor-opentelemetry-exporter>=1.0.0b46",
+    "azure-monitor-opentelemetry>=1.8.7",
+    "azure-monitor-opentelemetry-exporter>=1.0.0b51",
     "opentelemetry-exporter-otlp-proto-http>=1.38.0",
-    "azure-ai-projects==2.0.0b2",
+    "azure-ai-projects==2.0.1",
     "openinference-instrumentation==0.1.42",
     "langfuse==3.11.0",
     "openinference-instrumentation-dspy==0.1.33",
@@ -99,9 +99,9 @@ requires-python = ">=3.12,<4"
 [project.optional-dependencies]
 # Core Azure integration
 azure = [
-    "azure-ai-agents==1.2.0b5",
-    "azure-identity>=1.25.1,<2.0",
-    "azure-ai-projects==2.0.0b2",
+    "azure-ai-agents==1.2.0b6",
+    "azure-identity>=1.25.3,<2.0",
+    "azure-ai-projects==2.0.1",
 ]
 
 # UI and interactive features
@@ -117,10 +117,10 @@ declarative = ["agent-framework-declarative==1.0.0b251211"]
 azurefunctions = ["agent-framework-azurefunctions==1.0.0b251211"]
 
 # Evaluation and testing
-evaluation = ["azure-ai-evaluation>=1.12.0,<2.0"]
+evaluation = ["azure-ai-evaluation>=1.16.5,<2.0"]
 
 # Azure Monitor / AI Foundry tracing export
-tracing = ["azure-monitor-opentelemetry>=1.6.0"]
+tracing = ["azure-monitor-opentelemetry>=1.8.7"]
 
 # Complete installation with all features
 all = ["agentic-fleet[azure,ui,evaluation,tracing]"]
