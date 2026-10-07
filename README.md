@@ -351,6 +351,48 @@ agents:
 
 ## 🏗️ Architecture
 
+### Optional keyless web search
+
+To opt in to [Parallel Search MCP](https://docs.parallel.ai/integrations/mcp/search-mcp),
+replace `TavilySearchTool` with `ParallelSearchMCPTool` in your researcher tool list
+in `src/agentic_fleet/config/workflow_config.yaml`:
+
+```yaml
+agents:
+  researcher:
+    tools: [ParallelSearchMCPTool]
+```
+
+Keep the other researcher settings. The factory loads `web_search` (source URLs
+and excerpts) and `web_fetch` (page extraction) through Streamable HTTP at
+`https://search.parallel.ai/mcp`. No Parallel API key is needed or read; anonymous
+access is free for light use with lower rate limits. Model inference still needs
+your configured model credentials. The shipped tool selection remains Tavily.
+
+After the normal `uv sync` installation, you can also search directly through
+the registry without model credentials:
+
+```python
+import asyncio
+
+from agentic_fleet.tools import ParallelSearchMCPTool
+from agentic_fleet.utils.tool_registry import ToolRegistry
+
+
+async def main():
+    registry = ToolRegistry()
+    registry.register_tool_by_agent("researcher", ParallelSearchMCPTool())
+    result = await registry.execute_tool(
+        "parallel_search",
+        query="Find the Python asyncio documentation",
+        search_queries=["Python asyncio documentation"],
+    )
+    print(result)
+
+
+asyncio.run(main())
+```
+
 ### System Overview
 
 ```

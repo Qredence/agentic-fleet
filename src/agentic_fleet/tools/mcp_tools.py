@@ -2,6 +2,7 @@
 
 Consolidated MCP tool implementations:
 - TavilyMCPTool: Web search via Tavily API
+- ParallelSearchMCPTool: Keyless web search and page extraction via Parallel
 - Context7DeepWikiTool: Deep contextual information
 - PackageSearchMCPTool: Software package search
 
@@ -10,6 +11,7 @@ All tools extend BaseMCPTool from base_mcp_tool.py.
 
 from __future__ import annotations
 
+import asyncio
 import logging
 import os
 from typing import Any
@@ -19,6 +21,53 @@ from agent_framework.exceptions import ToolException, ToolExecutionException
 from .base_mcp_tool import BaseMCPTool
 
 logger = logging.getLogger(__name__)
+
+
+class ParallelSearchMCPTool(BaseMCPTool):
+    """Optional, anonymous Parallel search and fetch over Streamable HTTP.
+
+    Agent Framework loads the server's ``web_search`` and ``web_fetch`` schemas.
+    ``run`` provides the query interface used by ToolRegistry. Anonymous access
+    has lower rate limits; no saved or environment API key is read.
+    """
+
+    def __init__(self) -> None:
+        """Initialize the keyless MCP connection without changing tool defaults."""
+        super().__init__(
+            name="parallel_search",
+            url="https://search.parallel.ai/mcp",
+            description="Search the web and fetch page excerpts with source URLs using Parallel.",
+            headers={"User-Agent": "agentic-fleet (https://github.com/Qredence/agentic-fleet)"},
+        )
+        self._run_lock = asyncio.Lock()
+
+    async def run(self, query: str, **kwargs: Any) -> str:
+        """Search through the registry's query interface.
+
+        Args:
+            query: Natural-language search objective.
+            **kwargs: Optional ``search_queries`` keyword query list (defaults to
+                ``[query]``), ``session_id`` and ``model_name`` from the caller.
+
+        Returns:
+            Search results with source URLs and excerpts, or an empty-response message.
+
+        Raises:
+            ToolException: If the MCP connection or search fails.
+        """
+        arguments = {"objective": query, "search_queries": kwargs.get("search_queries", [query])}
+        for key in ("session_id", "model_name"):
+            if key in kwargs:
+                arguments[key] = kwargs[key]
+
+        # Keep connect/call/disconnect in one task and serialize registry calls.
+        async with self._run_lock:
+            try:
+                await self._ensure_connection()
+                contents = await self.call_tool("web_search", **arguments)
+                return self._format_contents(contents) or "Parallel returned an empty response."
+            finally:
+                await self.close()
 
 
 # =============================================================================

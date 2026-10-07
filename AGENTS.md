@@ -38,6 +38,7 @@ AgenticFleet is a multi-agent orchestration system combining DSPy + Microsoft Ag
 | Backend only         | `make backend`                                      |
 | Frontend only        | `make frontend-dev`                                 |
 | Run tests            | `make test`                                         |
+| Parallel MCP tests   | `make test-parallel-search` (no network or model key) |
 | Run single test      | `uv run pytest tests/path/test_file.py::test_name`  |
 | Frontend tests       | `make test-frontend` (Vitest)                       |
 | E2E tests            | `make test-e2e` (Playwright, requires dev servers)  |

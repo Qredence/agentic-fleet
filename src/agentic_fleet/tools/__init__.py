@@ -5,7 +5,12 @@ from .base import SchemaToolMixin
 from .base_mcp_tool import BaseMCPTool
 from .browser_tool import BrowserTool
 from .hosted_code_adapter import HostedCodeInterpreterAdapter
-from .mcp_tools import Context7DeepWikiTool, PackageSearchMCPTool, TavilyMCPTool
+from .mcp_tools import (
+    Context7DeepWikiTool,
+    PackageSearchMCPTool,
+    ParallelSearchMCPTool,
+    TavilyMCPTool,
+)
 from .tavily_tool import TavilySearchTool
 
 __all__ = [
@@ -15,6 +20,7 @@ __all__ = [
     "Context7DeepWikiTool",
     "HostedCodeInterpreterAdapter",
     "PackageSearchMCPTool",
+    "ParallelSearchMCPTool",
     "SchemaToolMixin",
     "TavilyMCPTool",
     "TavilySearchTool",
