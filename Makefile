@@ -1,4 +1,4 @@
-.PHONY: help install dev-setup sync clean test test-fast test-config test-e2e test-frontend test-all lint format type-check check run pre-commit-install dev backend frontend-install frontend-dev build-frontend analyze-history self-improve init-var clear-cache qa frontend-lint frontend-format evaluate-history tracing-start tracing-stop optimize security docs docs-serve version hooks-install hooks-uninstall hooks-update setup-hooks benchmark diagnostic-server generate-openapi validate-models
+.PHONY: help install dev-setup sync clean test test-parallel-search test-fast test-config test-e2e test-frontend test-all lint format type-check check run pre-commit-install dev backend frontend-install frontend-dev build-frontend analyze-history self-improve init-var clear-cache qa frontend-lint frontend-format evaluate-history tracing-start tracing-stop optimize security docs docs-serve version hooks-install hooks-uninstall hooks-update setup-hooks benchmark diagnostic-server generate-openapi validate-models
 
 # ============================================================================
 # Variables
@@ -39,6 +39,7 @@ help:
 	@echo ""
 	@echo "$(GREEN)Testing:$(NC)"
 	@echo "  test              Run backend tests"
+	@echo "  test-parallel-search  Test optional Parallel MCP integration"
 	@echo "  test-fast         Run backend tests in parallel (faster)"
 	@echo "  test-frontend     Run frontend unit tests"
 	@echo "  test-all          Run all tests (backend + frontend)"
@@ -159,6 +160,9 @@ build-frontend:
 # ============================================================================
 test:
 	$(PYTEST) $(PYTEST_OPTS) tests/
+
+test-parallel-search:
+	$(PYTEST) $(PYTEST_OPTS) tests/tools/test_parallel_search_mcp_tool.py
 
 test-fast:
 	@echo "$(CYAN)Running tests in parallel...$(NC)"
